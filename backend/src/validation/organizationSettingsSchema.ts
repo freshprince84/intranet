@@ -35,16 +35,6 @@ const doorSystemSchema = z.object({
   passcodeType: z.enum(['auto', 'custom']).optional(), // 'auto' = 10-stellig (ohne Sync), 'custom' = 4-stellig (mit Sync)
 }).optional();
 
-// SIRE Settings Schema
-const sireSchema = z.object({
-  apiUrl: z.string().url('Ungültige URL').optional(),
-  apiKey: z.string().optional(),
-  apiSecret: z.string().optional(),
-  enabled: z.boolean().optional(),
-  autoRegisterOnCheckIn: z.boolean().optional(),
-  propertyCode: z.string().optional(),
-}).optional();
-
 // Bold Payment Settings Schema
 const boldPaymentSchema = z.object({
   apiKey: z.string().optional(),
@@ -74,7 +64,6 @@ export const organizationSettingsSchema = z.object({
   // API Settings
   lobbyPms: lobbyPmsSchema,
   doorSystem: doorSystemSchema,
-  sire: sireSchema,
   boldPayment: boldPaymentSchema,
   whatsapp: whatsappSchema,
   
@@ -97,7 +86,6 @@ export const validateOrganizationSettings = (settings: any) => {
 export const apiSettingsSchema = z.object({
   lobbyPms: lobbyPmsSchema,
   doorSystem: doorSystemSchema,
-  sire: sireSchema,
   boldPayment: boldPaymentSchema,
   whatsapp: whatsappSchema,
 }).passthrough();

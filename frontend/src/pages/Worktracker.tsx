@@ -1810,7 +1810,12 @@ const Worktracker: React.FC = () => {
                                                 return (
                                                     <DataCard
                                                         key={task.id}
-                                                        title={task.title}
+                                                        title={
+                                                          <span>
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400">{task.id}:</span>{' '}
+                                                            <span>{task.title}</span>
+                                                          </span>
+                                                        }
                                                         status={{
                                                             label: getStatusText(task.status, 'task', t),
                                                             color: getStatusColor(task.status, 'task'),
@@ -2924,7 +2929,12 @@ const Worktracker: React.FC = () => {
                                                 return (
                                                     <DataCard
                                                         key={task.id}
-                                                        title={task.title}
+                                                        title={
+                                                          <span>
+                                                            <span className="text-xs text-gray-600 dark:text-gray-400">{task.id}:</span>{' '}
+                                                            <span>{task.title}</span>
+                                                          </span>
+                                                        }
                                                         status={{
                                                             label: getStatusText(task.status, 'task', t),
                                                             color: getStatusColor(task.status, 'task'),

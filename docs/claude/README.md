@@ -98,6 +98,9 @@ Für die strukturierte Umsetzung neuer Module existieren detaillierte Schritt-f�
   - [LOBBYPMS_USE_CASES_UND_PROZESSE.md](../implementation_plans/LOBBYPMS_USE_CASES_UND_PROZESSE.md) - Detaillierte Use Cases und Prozess-Flows
   - [LOBBYPMS_WO_IM_SYSTEM_SEHEN.md](../implementation_plans/LOBBYPMS_WO_IM_SYSTEM_SEHEN.md) - Wo im System Use Cases zu finden sind
   - [LOBBYPMS_MOCK_DATEN.md](../implementation_plans/LOBBYPMS_MOCK_DATEN.md) - Mock-Daten für Tests
+  - [LOBBYPMS_BRANCH_MIGRATION_DETAILLIERT.md](../implementation_plans/LOBBYPMS_BRANCH_MIGRATION_DETAILLIERT.md) - ⭐ **NEU**: Vollständige, detaillierte Implementierungsplanung für Branch-Migration (alle Services, APIs, Frontend)
+  - [LOBBYPMS_API_IMPORT_PRO_BRANCH_PLAN.md](../implementation_plans/LOBBYPMS_API_IMPORT_PRO_BRANCH_PLAN.md) - High-Level-Plan für API-Import pro Branch
+  - [LOBBYPMS_BRANCH_SERVICES_ANALYSE.md](../implementation_plans/LOBBYPMS_BRANCH_SERVICES_ANALYSE.md) - Analyse aller Service-Abhängigkeiten
 
 - **Mitarbeiterlebenszyklus** - Vollständiger Lebenszyklus (Onboarding bis Offboarding) für Kolumbien
   - [MITARBEITERLEBENSZYKLUS_IMPLEMENTATION.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_IMPLEMENTATION.md) - Haupt-Implementierungsplan

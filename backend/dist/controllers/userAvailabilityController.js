@@ -11,13 +11,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAvailability = exports.updateAvailability = exports.createAvailability = exports.getAvailabilityById = exports.getAllAvailabilities = void 0;
 const client_1 = require("@prisma/client");
+const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const prisma = new client_1.PrismaClient();
 /**
  * GET /api/shifts/availabilities
  * Holt alle Verfügbarkeiten (optional gefiltert nach userId, branchId, roleId)
  */
 const getAllAvailabilities = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     try {
         const userId = req.query.userId ? parseInt(req.query.userId, 10) : null;
         const branchId = req.query.branchId ? parseInt(req.query.branchId, 10) : null;
@@ -30,9 +31,22 @@ const getAllAvailabilities = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 message: 'Nicht authentifiziert'
             });
         }
-        const where = {
-            userId: finalUserId
-        };
+        const currentUserId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id;
+        const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+        // Prüfe, ob User alle Verfügbarkeiten sehen darf (Permission)
+        let canViewAll = false;
+        if (currentRoleId && currentUserId) {
+            canViewAll = yield (0, permissionMiddleware_1.checkUserPermission)(currentUserId, currentRoleId, 'availability_management', 'read', 'page');
+        }
+        const where = {};
+        // Wenn User Permission hat und kein userId angegeben → zeige alle
+        if (canViewAll && !userId) {
+            // Kein Filter auf userId - zeige alle Verfügbarkeiten
+        }
+        else {
+            // Normaler User: nur eigene Verfügbarkeiten
+            where.userId = finalUserId;
+        }
         if (branchId && !isNaN(branchId)) {
             where.branchId = branchId;
         }
@@ -92,7 +106,7 @@ exports.getAllAvailabilities = getAllAvailabilities;
  * Holt eine Verfügbarkeit nach ID
  */
 const getAvailabilityById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
+    var _a;
     try {
         const { id } = req.params;
         const availabilityId = parseInt(id, 10);
@@ -134,13 +148,23 @@ const getAvailabilityById = (req, res) => __awaiter(void 0, void 0, void 0, func
                 message: 'Verfügbarkeit nicht gefunden'
             });
         }
-        // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Admin)
+        // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Permission)
         const currentUserId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
-        if (availability.userId !== currentUserId && !((_c = (_b = req.user) === null || _b === void 0 ? void 0 : _b.roles) === null || _c === void 0 ? void 0 : _c.some((r) => r.name === 'admin'))) {
-            return res.status(403).json({
-                success: false,
-                message: 'Keine Berechtigung'
-            });
+        const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+        if (availability.userId !== currentUserId) {
+            if (!currentRoleId || !currentUserId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Nicht authentifiziert'
+                });
+            }
+            const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(currentUserId, currentRoleId, 'availability_management', 'read', 'page');
+            if (!hasPermission) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Keine Berechtigung'
+                });
+            }
         }
         res.json({
             success: true,
@@ -161,7 +185,7 @@ exports.getAvailabilityById = getAvailabilityById;
  * Erstellt eine neue Verfügbarkeit
  */
 const createAvailability = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
+    var _a, _b;
     try {
         const { userId, branchId, roleId, dayOfWeek, startTime, endTime, startDate, endDate, type, priority, notes, isActive } = req.body;
         // Wenn kein userId angegeben, verwende den eingeloggten User
@@ -172,13 +196,25 @@ const createAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 message: 'Nicht authentifiziert'
             });
         }
-        // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Admin)
+        // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Permission)
         const currentUserId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id;
-        if (finalUserId !== currentUserId && !((_d = (_c = req.user) === null || _c === void 0 ? void 0 : _c.roles) === null || _d === void 0 ? void 0 : _d.some((r) => r.name === 'admin'))) {
-            return res.status(403).json({
-                success: false,
-                message: 'Keine Berechtigung, Verfügbarkeiten für andere User zu erstellen'
-            });
+        const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+        if (finalUserId !== currentUserId) {
+            // User versucht Verfügbarkeit für anderen User zu erstellen
+            if (!currentRoleId || !currentUserId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Nicht authentifiziert'
+                });
+            }
+            // Prüfe Permission
+            const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(currentUserId, currentRoleId, 'availability_management', 'write', 'page');
+            if (!hasPermission) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Keine Berechtigung, Verfügbarkeiten für andere User zu erstellen'
+                });
+            }
         }
         // Validierung
         if (dayOfWeek !== null && dayOfWeek !== undefined) {
@@ -322,7 +358,7 @@ exports.createAvailability = createAvailability;
  * Aktualisiert eine Verfügbarkeit
  */
 const updateAvailability = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
+    var _a;
     try {
         const { id } = req.params;
         const availabilityId = parseInt(id, 10);
@@ -342,13 +378,23 @@ const updateAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 message: 'Verfügbarkeit nicht gefunden'
             });
         }
-        // Prüfe, ob User Zugriff hat
+        // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Permission)
         const currentUserId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
-        if (existing.userId !== currentUserId && !((_c = (_b = req.user) === null || _b === void 0 ? void 0 : _b.roles) === null || _c === void 0 ? void 0 : _c.some((r) => r.name === 'admin'))) {
-            return res.status(403).json({
-                success: false,
-                message: 'Keine Berechtigung'
-            });
+        const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+        if (existing.userId !== currentUserId) {
+            if (!currentRoleId || !currentUserId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Nicht authentifiziert'
+                });
+            }
+            const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(currentUserId, currentRoleId, 'availability_management', 'write', 'page');
+            if (!hasPermission) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Keine Berechtigung'
+                });
+            }
         }
         const { dayOfWeek, startTime, endTime, startDate, endDate, type, priority, notes, isActive } = req.body;
         const updateData = {};
@@ -484,7 +530,7 @@ exports.updateAvailability = updateAvailability;
  * Löscht eine Verfügbarkeit
  */
 const deleteAvailability = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
+    var _a;
     try {
         const { id } = req.params;
         const availabilityId = parseInt(id, 10);
@@ -504,13 +550,23 @@ const deleteAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 message: 'Verfügbarkeit nicht gefunden'
             });
         }
-        // Prüfe, ob User Zugriff hat
+        // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Permission)
         const currentUserId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
-        if (existing.userId !== currentUserId && !((_c = (_b = req.user) === null || _b === void 0 ? void 0 : _b.roles) === null || _c === void 0 ? void 0 : _c.some((r) => r.name === 'admin'))) {
-            return res.status(403).json({
-                success: false,
-                message: 'Keine Berechtigung'
-            });
+        const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+        if (existing.userId !== currentUserId) {
+            if (!currentRoleId || !currentUserId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Nicht authentifiziert'
+                });
+            }
+            const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(currentUserId, currentRoleId, 'availability_management', 'write', 'page');
+            if (!hasPermission) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Keine Berechtigung'
+                });
+            }
         }
         yield prisma.userAvailability.delete({
             where: { id: availabilityId }

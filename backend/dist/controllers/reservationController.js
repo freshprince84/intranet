@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -17,6 +50,7 @@ const ttlockService_1 = require("../services/ttlockService");
 const reservationNotificationService_1 = require("../services/reservationNotificationService");
 const queueService_1 = require("../services/queueService");
 const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
+const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const prisma = new client_1.PrismaClient();
 /**
  * Utility: Erkennt ob ein String eine Telefonnummer oder Email ist
@@ -34,6 +68,7 @@ function detectContactType(value) {
  * Aktualisiert Telefonnummer/Email des Gastes und sendet WhatsApp-Nachricht
  */
 const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { id } = req.params;
         const { contact } = req.body; // Ein Feld: automatische Erkennung
@@ -85,6 +120,13 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         settings: true,
                     },
                 },
+                branch: {
+                    select: {
+                        id: true,
+                        name: true,
+                        doorSystemSettings: true,
+                    },
+                },
             },
         });
         // NEU: Queue-basierte Verarbeitung (wenn aktiviert)
@@ -125,16 +167,29 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (contactType === 'phone' && updatedReservation.guestPhone) {
             try {
                 // Erstelle Zahlungslink
-                const boldPaymentService = new boldPaymentService_1.BoldPaymentService(reservation.organizationId);
+                const boldPaymentService = updatedReservation.branchId
+                    ? yield boldPaymentService_1.BoldPaymentService.createForBranch(updatedReservation.branchId)
+                    : new boldPaymentService_1.BoldPaymentService(reservation.organizationId);
                 // TODO: Hole Betrag aus Reservierung (aus syncHistory oder extra Feld)
                 const amount = 360000; // Placeholder - sollte aus Reservierung kommen
                 const paymentLink = yield boldPaymentService.createPaymentLink(updatedReservation, amount, 'COP', `Zahlung für Reservierung ${updatedReservation.guestName}`);
                 // Erstelle TTLock Passcode (wenn konfiguriert)
                 let ttlockCode = null;
                 try {
-                    const ttlockService = new ttlockService_1.TTLockService(reservation.organizationId);
-                    const settings = reservation.organization.settings;
-                    const doorSystemSettings = settings === null || settings === void 0 ? void 0 : settings.doorSystem;
+                    const ttlockService = updatedReservation.branchId
+                        ? yield ttlockService_1.TTLockService.createForBranch(updatedReservation.branchId)
+                        : new ttlockService_1.TTLockService(reservation.organizationId);
+                    // Lade Settings aus Branch oder Organisation
+                    const { decryptApiSettings, decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                    let doorSystemSettings = null;
+                    if (updatedReservation.branchId && ((_a = updatedReservation.branch) === null || _a === void 0 ? void 0 : _a.doorSystemSettings)) {
+                        const branchSettings = decryptBranchApiSettings(updatedReservation.branch.doorSystemSettings);
+                        doorSystemSettings = (branchSettings === null || branchSettings === void 0 ? void 0 : branchSettings.doorSystem) || branchSettings;
+                    }
+                    else {
+                        const settings = decryptApiSettings(reservation.organization.settings);
+                        doorSystemSettings = settings === null || settings === void 0 ? void 0 : settings.doorSystem;
+                    }
                     if ((doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds) && doorSystemSettings.lockIds.length > 0) {
                         const lockId = doorSystemSettings.lockIds[0];
                         ttlockCode = yield ttlockService.createTemporaryPasscode(lockId, updatedReservation.checkInDate, updatedReservation.checkOutDate, `Guest: ${updatedReservation.guestName}`);
@@ -173,7 +228,9 @@ ${ttlockCode}
 
 ` : ''}¡Te esperamos!`;
                 // Sende WhatsApp-Nachricht (mit Fallback auf Template)
-                const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
+                const whatsappService = updatedReservation.branchId
+                    ? new whatsappService_1.WhatsAppService(undefined, updatedReservation.branchId)
+                    : new whatsappService_1.WhatsAppService(reservation.organizationId);
                 // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
                 // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
                 const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
@@ -412,7 +469,7 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.createReservation = createReservation;
 /**
  * GET /api/reservations
- * Holt alle Reservierungen für die aktuelle Organisation
+ * Holt alle Reservierungen für die aktuelle Organisation (mit Branch-Filter basierend auf Berechtigungen)
  */
 const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -423,16 +480,75 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 message: 'Organisation-ID fehlt'
             });
         }
+        const userId = parseInt(req.userId, 10);
+        const roleId = parseInt(req.roleId, 10);
+        if (isNaN(userId) || isNaN(roleId)) {
+            return res.status(401).json({
+                success: false,
+                message: 'Nicht authentifiziert'
+            });
+        }
+        // Prüfe Berechtigungen
+        const hasAllBranchesPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, roleId, 'reservations_all_branches', 'read', 'table');
+        const hasOwnBranchPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, roleId, 'reservations_own_branch', 'read', 'table');
+        // Wenn keine der beiden Berechtigungen vorhanden, prüfe Fallback auf alte Berechtigung
+        let hasReservationsPermission = false;
+        if (!hasAllBranchesPermission && !hasOwnBranchPermission) {
+            hasReservationsPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, roleId, 'reservations', 'read', 'table');
+        }
+        // Wenn keine Berechtigung vorhanden, verweigere Zugriff
+        if (!hasAllBranchesPermission && !hasOwnBranchPermission && !hasReservationsPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Keine Berechtigung zum Anzeigen von Reservierungen'
+            });
+        }
+        // Baue Where-Clause auf
+        const whereClause = {
+            organizationId: req.organizationId
+        };
+        // Wenn nur "own_branch" Berechtigung: Filtere nach Branch
+        if (hasOwnBranchPermission && !hasAllBranchesPermission) {
+            // Hole branchId aus UsersBranches (falls vorhanden)
+            const userBranch = yield prisma.usersBranches.findFirst({
+                where: {
+                    userId: userId,
+                    branch: {
+                        organizationId: req.organizationId
+                    }
+                },
+                select: {
+                    branchId: true
+                }
+            });
+            if (userBranch === null || userBranch === void 0 ? void 0 : userBranch.branchId) {
+                whereClause.branchId = userBranch.branchId;
+                console.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung)`);
+            }
+            else {
+                // User hat keine aktive Branch → keine Reservierungen
+                console.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
+                return res.json({
+                    success: true,
+                    data: []
+                });
+            }
+        }
+        // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
         const reservations = yield prisma.reservation.findMany({
-            where: {
-                organizationId: req.organizationId
-            },
+            where: whereClause,
             include: {
                 organization: {
                     select: {
                         id: true,
                         name: true,
                         displayName: true
+                    }
+                },
+                branch: {
+                    select: {
+                        id: true,
+                        name: true
                     }
                 },
                 task: true

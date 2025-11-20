@@ -198,6 +198,10 @@ model Branch {
   organizationId        Int?
   organization          Organization?                @relation(fields: [organizationId], references: [id])
   whatsappSettings      Json? // WhatsApp-Konfiguration pro Branch
+  lobbyPmsSettings      Json? // NEU: LobbyPMS-Konfiguration pro Branch
+  boldPaymentSettings   Json? // NEU: Bold Payment-Konfiguration pro Branch
+  doorSystemSettings    Json? // NEU: TTLock/Türsystem-Konfiguration pro Branch
+  emailSettings         Json? // NEU: Email-Konfiguration pro Branch (SMTP + IMAP)
   requests              Request[]
   tasks                 Task[]
   users                 UsersBranches[]
@@ -209,6 +213,7 @@ model Branch {
   shiftTemplates        ShiftTemplate[]
   shifts                Shift[]
   availabilities        UserAvailability[]
+  reservations          Reservation[] // NEU: Relation zu Reservierungen
 }
 
 model UsersBranches {
@@ -1098,6 +1103,8 @@ model Reservation {
   guestBirthDate           DateTime? // Geburtsdatum (für SIRE)
   organizationId           Int
   organization             Organization                 @relation(fields: [organizationId], references: [id])
+  branchId                 Int?                         // NEU: Optional für Branch-Zuordnung
+  branch                   Branch?                       @relation(fields: [branchId], references: [id])
   taskId                   Int? // Verknüpfter Task
   task                     Task?                        @relation
   createdAt                DateTime                     @default(now())
@@ -1106,6 +1113,7 @@ model Reservation {
   notificationLogs         ReservationNotificationLog[] @relation("NotificationLogs")
 
   @@index([organizationId])
+  @@index([branchId])                                    // NEU: Index für Branch-Queries
   @@index([checkInDate])
   @@index([status])
   @@index([lobbyReservationId])

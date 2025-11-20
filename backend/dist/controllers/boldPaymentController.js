@@ -83,10 +83,12 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 const prisma = new PrismaClient();
                 const reservation = yield prisma.reservation.findUnique({
                     where: { id: reservationId },
-                    select: { organizationId: true }
+                    select: { organizationId: true, branchId: true }
                 });
                 if (reservation) {
-                    const boldPaymentService = new boldPaymentService_1.BoldPaymentService(reservation.organizationId);
+                    const boldPaymentService = reservation.branchId
+                        ? yield boldPaymentService_1.BoldPaymentService.createForBranch(reservation.branchId)
+                        : new boldPaymentService_1.BoldPaymentService(reservation.organizationId);
                     yield boldPaymentService.handleWebhook(payload);
                     yield prisma.$disconnect();
                     return res.json({ success: true, message: 'Webhook verarbeitet' });

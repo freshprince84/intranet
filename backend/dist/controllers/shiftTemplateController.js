@@ -158,17 +158,12 @@ const createShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
                 message: 'endTime ist erforderlich und muss im Format HH:mm sein'
             });
         }
-        // Prüfe, ob Startzeit vor Endzeit liegt
-        const [startHour, startMin] = startTime.split(':').map(Number);
-        const [endHour, endMin] = endTime.split(':').map(Number);
-        const startMinutes = startHour * 60 + startMin;
-        const endMinutes = endHour * 60 + endMin;
-        if (startMinutes >= endMinutes) {
-            return res.status(400).json({
-                success: false,
-                message: 'startTime muss vor endTime liegen'
-            });
-        }
+        // Validierung: Beide Zeiten müssen gültig sein
+        // Nachtschichten über Mitternacht sind erlaubt (z.B. 22:00 - 06:00)
+        // In diesem Fall wird bei der Schicht-Erstellung automatisch ein Tag addiert
+        // Keine weitere Validierung nötig, da beide Fälle gültig sind:
+        // - Normale Schicht: startTime < endTime (z.B. 08:00 - 16:00)
+        // - Nachtschicht: startTime > endTime (z.B. 22:00 - 06:00)
         // Prüfe, ob Template mit diesem Namen bereits existiert
         const existing = yield prisma.shiftTemplate.findUnique({
             where: {
@@ -310,17 +305,12 @@ const updateShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
                     message: 'endTime muss im Format HH:mm sein'
                 });
             }
-            // Prüfe, ob Startzeit vor Endzeit liegt
-            const [startHour, startMin] = finalStartTime.split(':').map(Number);
-            const [endHour, endMin] = finalEndTime.split(':').map(Number);
-            const startMinutes = startHour * 60 + startMin;
-            const endMinutes = endHour * 60 + endMin;
-            if (startMinutes >= endMinutes) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'startTime muss vor endTime liegen'
-                });
-            }
+            // Validierung: Beide Zeiten müssen gültig sein
+            // Nachtschichten über Mitternacht sind erlaubt (z.B. 22:00 - 06:00)
+            // In diesem Fall wird bei der Schicht-Erstellung automatisch ein Tag addiert
+            // Keine weitere Validierung nötig, da beide Fälle gültig sind:
+            // - Normale Schicht: startTime < endTime (z.B. 08:00 - 16:00)
+            // - Nachtschicht: startTime > endTime (z.B. 22:00 - 06:00)
             if (startTime)
                 updateData.startTime = startTime;
             if (endTime)

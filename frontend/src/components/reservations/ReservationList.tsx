@@ -25,6 +25,8 @@ const ReservationList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<ReservationStatus | 'all'>('all');
   const [filterPaymentStatus, setFilterPaymentStatus] = useState<PaymentStatus | 'all'>('all');
+  const [filterBranchId, setFilterBranchId] = useState<number | 'all'>('all');
+  const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -68,8 +70,18 @@ const ReservationList: React.FC = () => {
     }
   };
 
+  const loadBranches = async () => {
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
+      setBranches(response.data || []);
+    } catch (err: any) {
+      console.error('Fehler beim Laden der Branches:', err);
+    }
+  };
+
   useEffect(() => {
     loadReservations();
+    loadBranches();
   }, []);
 
   // Filtere Reservierungen
@@ -84,6 +96,11 @@ const ReservationList: React.FC = () => {
       return false;
     }
 
+    // Branch-Filter
+    if (filterBranchId !== 'all' && reservation.branchId !== filterBranchId) {
+      return false;
+    }
+
     // Such-Filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -92,7 +109,8 @@ const ReservationList: React.FC = () => {
         reservation.guestEmail?.toLowerCase().includes(searchLower) ||
         reservation.guestPhone?.toLowerCase().includes(searchLower) ||
         reservation.roomNumber?.toLowerCase().includes(searchLower) ||
-        reservation.lobbyReservationId?.toLowerCase().includes(searchLower)
+        reservation.lobbyReservationId?.toLowerCase().includes(searchLower) ||
+        reservation.branch?.name.toLowerCase().includes(searchLower)
       );
     }
 
@@ -161,7 +179,7 @@ const ReservationList: React.FC = () => {
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className={`px-4 py-2 rounded-lg border transition-colors ${
-                isFilterOpen || filterStatus !== 'all' || filterPaymentStatus !== 'all'
+                isFilterOpen || filterStatus !== 'all' || filterPaymentStatus !== 'all' || filterBranchId !== 'all'
                   ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200'
                   : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
               }`}
@@ -184,7 +202,7 @@ const ReservationList: React.FC = () => {
         {/* Filter Panel */}
         {isFilterOpen && (
           <div className="mt-4 pt-4 border-t border-gray-300 dark:border-gray-600">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Status Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -221,15 +239,35 @@ const ReservationList: React.FC = () => {
                   <option value={PaymentStatus.REFUNDED}>{t('reservations.paymentStatus.refunded', 'Erstattet')}</option>
                 </select>
               </div>
+
+              {/* Branch Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('branches.name', 'Branch')}
+                </label>
+                <select
+                  value={filterBranchId}
+                  onChange={(e) => setFilterBranchId(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="all">{t('common.all', 'Alle')}</option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Clear Filters */}
-            {(filterStatus !== 'all' || filterPaymentStatus !== 'all') && (
+            {(filterStatus !== 'all' || filterPaymentStatus !== 'all' || filterBranchId !== 'all') && (
               <div className="mt-4">
                 <button
                   onClick={() => {
                     setFilterStatus('all');
                     setFilterPaymentStatus('all');
+                    setFilterBranchId('all');
                   }}
                   className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                 >

@@ -50,6 +50,11 @@ export interface Reservation {
   guestPassportNumber?: string | null;
   guestBirthDate?: string | null; // ISO date string
   organizationId: number;
+  branchId?: number | null;
+  branch?: {
+    id: number;
+    name: string;
+  } | null;
   taskId?: number | null;
   createdAt: string; // ISO datetime string
   updatedAt: string; // ISO datetime string

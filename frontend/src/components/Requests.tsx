@@ -1720,7 +1720,12 @@ const Requests: React.FC = () => {
                   return (
                     <DataCard
                       key={request.id}
-                      title={request.title}
+                      title={
+                        <span>
+                          <span className="text-xs text-gray-600 dark:text-gray-400">{request.id}:</span>{' '}
+                          <span>{request.title}</span>
+                        </span>
+                      }
                       status={{
                         label: getStatusText(request.status, 'request', t),
                         color: getStatusColor(request.status, 'request'),

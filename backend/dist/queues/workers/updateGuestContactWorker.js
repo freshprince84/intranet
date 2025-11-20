@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -26,6 +59,7 @@ const prisma = new client_1.PrismaClient();
  */
 function createUpdateGuestContactWorker(connection) {
     return new bullmq_1.Worker('update-guest-contact', (job) => __awaiter(this, void 0, void 0, function* () {
+        var _a;
         const { reservationId, organizationId, contact, contactType, guestPhone, guestEmail, guestName, } = job.data;
         console.log(`[UpdateGuestContact Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
         // Hole aktuelle Reservierung
@@ -38,6 +72,13 @@ function createUpdateGuestContactWorker(connection) {
                         name: true,
                         displayName: true,
                         settings: true,
+                    },
+                },
+                branch: {
+                    select: {
+                        id: true,
+                        name: true,
+                        doorSystemSettings: true,
                     },
                 },
             },
@@ -54,7 +95,9 @@ function createUpdateGuestContactWorker(connection) {
             try {
                 // Schritt 1: Payment-Link erstellen
                 console.log(`[UpdateGuestContact Worker] Erstelle Payment-Link für Reservierung ${reservationId}...`);
-                const boldPaymentService = new boldPaymentService_1.BoldPaymentService(organizationId);
+                const boldPaymentService = reservation.branchId
+                    ? yield boldPaymentService_1.BoldPaymentService.createForBranch(reservation.branchId)
+                    : new boldPaymentService_1.BoldPaymentService(organizationId);
                 // Konvertiere amount von Decimal zu number (Prisma Decimal hat toNumber() Methode)
                 let amount = 360000; // Default Placeholder
                 if (reservation.amount) {
@@ -73,9 +116,20 @@ function createUpdateGuestContactWorker(connection) {
                 console.log(`[UpdateGuestContact Worker] ✅ Payment-Link erstellt: ${paymentLink}`);
                 // Schritt 2: TTLock Passcode erstellen (wenn konfiguriert)
                 try {
-                    const ttlockService = new ttlockService_1.TTLockService(organizationId);
-                    const settings = reservation.organization.settings;
-                    const doorSystemSettings = settings === null || settings === void 0 ? void 0 : settings.doorSystem;
+                    const ttlockService = reservation.branchId
+                        ? yield ttlockService_1.TTLockService.createForBranch(reservation.branchId)
+                        : new ttlockService_1.TTLockService(organizationId);
+                    // Lade Settings aus Branch oder Organisation
+                    const { decryptApiSettings, decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../../utils/encryption')));
+                    let doorSystemSettings = null;
+                    if (reservation.branchId && ((_a = reservation.branch) === null || _a === void 0 ? void 0 : _a.doorSystemSettings)) {
+                        const branchSettings = decryptBranchApiSettings(reservation.branch.doorSystemSettings);
+                        doorSystemSettings = (branchSettings === null || branchSettings === void 0 ? void 0 : branchSettings.doorSystem) || branchSettings;
+                    }
+                    else {
+                        const settings = decryptApiSettings(reservation.organization.settings);
+                        doorSystemSettings = settings === null || settings === void 0 ? void 0 : settings.doorSystem;
+                    }
                     if ((doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds) && doorSystemSettings.lockIds.length > 0) {
                         const lockId = doorSystemSettings.lockIds[0];
                         console.log(`[UpdateGuestContact Worker] Erstelle TTLock Passcode für Lock ID: ${lockId}...`);
@@ -116,7 +170,9 @@ ${ttlockCode ? `Tu código de acceso TTLock:
 ${ttlockCode}
 
 ` : ''}¡Te esperamos!`;
-                const whatsappService = new whatsappService_1.WhatsAppService(organizationId);
+                const whatsappService = reservation.branchId
+                    ? new whatsappService_1.WhatsAppService(undefined, reservation.branchId)
+                    : new whatsappService_1.WhatsAppService(organizationId);
                 // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
                 // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
                 const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';

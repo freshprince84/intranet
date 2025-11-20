@@ -140,20 +140,6 @@ export const encryptApiSettings = (settings: any): any => {
     };
   }
 
-  // SIRE API Key & Secret
-  if (encrypted.sire?.apiKey) {
-    encrypted.sire = {
-      ...encrypted.sire,
-      apiKey: encryptSecret(encrypted.sire.apiKey)
-    };
-  }
-  if (encrypted.sire?.apiSecret) {
-    encrypted.sire = {
-      ...encrypted.sire,
-      apiSecret: encryptSecret(encrypted.sire.apiSecret)
-    };
-  }
-
   // Bold Payment API Key
   if (encrypted.boldPayment?.apiKey) {
     encrypted.boldPayment = {
@@ -238,28 +224,6 @@ export const decryptApiSettings = (settings: any): any => {
     }
   }
 
-  // SIRE API Key & Secret
-  if (decrypted.sire?.apiKey) {
-    try {
-      decrypted.sire = {
-        ...decrypted.sire,
-        apiKey: decryptSecret(decrypted.sire.apiKey)
-      };
-    } catch (error) {
-      console.error('Error decrypting SIRE API key:', error);
-    }
-  }
-  if (decrypted.sire?.apiSecret) {
-    try {
-      decrypted.sire = {
-        ...decrypted.sire,
-        apiSecret: decryptSecret(decrypted.sire.apiSecret)
-      };
-    } catch (error) {
-      console.error('Error decrypting SIRE API secret:', error);
-    }
-  }
-
   // Bold Payment API Key
   if (decrypted.boldPayment?.apiKey) {
     try {
@@ -318,6 +282,120 @@ export const decryptApiSettings = (settings: any): any => {
       }
     } catch (error) {
       console.error('Error decrypting WhatsApp API secret:', error);
+    }
+  }
+
+  return decrypted;
+};
+
+/**
+ * Verschlüsselt alle API-Keys in BranchSettings
+ * 
+ * @param settings - BranchSettings Objekt (z.B. boldPaymentSettings, doorSystemSettings, etc.)
+ * @returns Settings mit verschlüsselten API-Keys
+ */
+export const encryptBranchApiSettings = (settings: any): any => {
+  if (!settings || typeof settings !== 'object') {
+    return settings;
+  }
+
+  const encrypted = { ...settings };
+
+  // Bold Payment
+  if (encrypted.apiKey && typeof encrypted.apiKey === 'string' && !encrypted.apiKey.includes(':')) {
+    encrypted.apiKey = encryptSecret(encrypted.apiKey);
+  }
+  if (encrypted.merchantId && typeof encrypted.merchantId === 'string' && !encrypted.merchantId.includes(':')) {
+    encrypted.merchantId = encryptSecret(encrypted.merchantId);
+  }
+
+  // TTLock
+  if (encrypted.clientId && typeof encrypted.clientId === 'string' && !encrypted.clientId.includes(':')) {
+    encrypted.clientId = encryptSecret(encrypted.clientId);
+  }
+  if (encrypted.clientSecret && typeof encrypted.clientSecret === 'string' && !encrypted.clientSecret.includes(':')) {
+    encrypted.clientSecret = encryptSecret(encrypted.clientSecret);
+  }
+  if (encrypted.username && typeof encrypted.username === 'string' && !encrypted.username.includes(':')) {
+    encrypted.username = encryptSecret(encrypted.username);
+  }
+  if (encrypted.password && typeof encrypted.password === 'string' && !encrypted.password.includes(':')) {
+    encrypted.password = encryptSecret(encrypted.password);
+  }
+
+  // SIRE
+  if (encrypted.apiKey && typeof encrypted.apiKey === 'string' && !encrypted.apiKey.includes(':')) {
+    encrypted.apiKey = encryptSecret(encrypted.apiKey);
+  }
+  if (encrypted.apiSecret && typeof encrypted.apiSecret === 'string' && !encrypted.apiSecret.includes(':')) {
+    encrypted.apiSecret = encryptSecret(encrypted.apiSecret);
+  }
+
+  // LobbyPMS
+  if (encrypted.apiKey && typeof encrypted.apiKey === 'string' && !encrypted.apiKey.includes(':')) {
+    encrypted.apiKey = encryptSecret(encrypted.apiKey);
+  }
+
+  // WhatsApp (bereits in Branch.whatsappSettings)
+  if (encrypted.apiKey && typeof encrypted.apiKey === 'string' && !encrypted.apiKey.includes(':')) {
+    encrypted.apiKey = encryptSecret(encrypted.apiKey);
+  }
+  if (encrypted.apiSecret && typeof encrypted.apiSecret === 'string' && !encrypted.apiSecret.includes(':')) {
+    encrypted.apiSecret = encryptSecret(encrypted.apiSecret);
+  }
+
+  // Email SMTP
+  if (encrypted.smtpPass && typeof encrypted.smtpPass === 'string' && !encrypted.smtpPass.includes(':')) {
+    encrypted.smtpPass = encryptSecret(encrypted.smtpPass);
+  }
+
+  // Email IMAP (verschachtelt)
+  if (encrypted.imap?.password && typeof encrypted.imap.password === 'string' && !encrypted.imap.password.includes(':')) {
+    encrypted.imap = {
+      ...encrypted.imap,
+      password: encryptSecret(encrypted.imap.password)
+    };
+  }
+
+  return encrypted;
+};
+
+/**
+ * Entschlüsselt alle API-Keys in BranchSettings
+ * 
+ * @param settings - BranchSettings Objekt mit verschlüsselten Keys
+ * @returns Settings mit entschlüsselten API-Keys
+ */
+export const decryptBranchApiSettings = (settings: any): any => {
+  if (!settings || typeof settings !== 'object') {
+    return settings;
+  }
+
+  const decrypted = { ...settings };
+
+  // Versuche alle möglichen verschlüsselten Felder zu entschlüsseln
+  const encryptedFields = ['apiKey', 'apiSecret', 'merchantId', 'clientId', 'clientSecret', 'username', 'password', 'smtpPass'];
+  
+  for (const field of encryptedFields) {
+    if (decrypted[field] && typeof decrypted[field] === 'string' && decrypted[field].includes(':')) {
+      try {
+        decrypted[field] = decryptSecret(decrypted[field]);
+      } catch (error) {
+        console.error(`Error decrypting ${field}:`, error);
+        // Bei Fehler: Feld bleibt wie es ist
+      }
+    }
+  }
+
+  // Email IMAP Password (verschachtelt)
+  if (decrypted.imap?.password && typeof decrypted.imap.password === 'string' && decrypted.imap.password.includes(':')) {
+    try {
+      decrypted.imap = {
+        ...decrypted.imap,
+        password: decryptSecret(decrypted.imap.password)
+      };
+    } catch (error) {
+      console.error('Error decrypting imap.password:', error);
     }
   }
 

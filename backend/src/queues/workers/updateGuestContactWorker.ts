@@ -55,6 +55,13 @@ export function createUpdateGuestContactWorker(connection: any): Worker {
               settings: true,
             },
           },
+          branch: {
+            select: {
+              id: true,
+              name: true,
+              doorSystemSettings: true,
+            },
+          },
         },
       });
 
@@ -72,7 +79,9 @@ export function createUpdateGuestContactWorker(connection: any): Worker {
         try {
           // Schritt 1: Payment-Link erstellen
           console.log(`[UpdateGuestContact Worker] Erstelle Payment-Link für Reservierung ${reservationId}...`);
-          const boldPaymentService = new BoldPaymentService(organizationId);
+          const boldPaymentService = reservation.branchId
+            ? await BoldPaymentService.createForBranch(reservation.branchId)
+            : new BoldPaymentService(organizationId);
           // Konvertiere amount von Decimal zu number (Prisma Decimal hat toNumber() Methode)
           let amount: number = 360000; // Default Placeholder
           if (reservation.amount) {
@@ -96,9 +105,21 @@ export function createUpdateGuestContactWorker(connection: any): Worker {
 
           // Schritt 2: TTLock Passcode erstellen (wenn konfiguriert)
           try {
-            const ttlockService = new TTLockService(organizationId);
-            const settings = reservation.organization.settings as any;
-            const doorSystemSettings = settings?.doorSystem;
+            const ttlockService = reservation.branchId
+              ? await TTLockService.createForBranch(reservation.branchId)
+              : new TTLockService(organizationId);
+            
+            // Lade Settings aus Branch oder Organisation
+            const { decryptApiSettings, decryptBranchApiSettings } = await import('../../utils/encryption');
+            let doorSystemSettings: any = null;
+            
+            if (reservation.branchId && reservation.branch?.doorSystemSettings) {
+              const branchSettings = decryptBranchApiSettings(reservation.branch.doorSystemSettings as any);
+              doorSystemSettings = branchSettings?.doorSystem || branchSettings;
+            } else {
+              const settings = decryptApiSettings(reservation.organization.settings as any);
+              doorSystemSettings = settings?.doorSystem;
+            }
 
             if (doorSystemSettings?.lockIds && doorSystemSettings.lockIds.length > 0) {
               const lockId = doorSystemSettings.lockIds[0];
@@ -150,7 +171,9 @@ ${ttlockCode}
 
 ` : ''}¡Te esperamos!`;
 
-          const whatsappService = new WhatsAppService(organizationId);
+          const whatsappService = reservation.branchId
+            ? new WhatsAppService(undefined, reservation.branchId)
+            : new WhatsAppService(organizationId);
           // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
           // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
           const templateName =

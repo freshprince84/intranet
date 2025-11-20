@@ -605,13 +605,23 @@ class TaskAutomationService {
                     console.warn(`[TaskAutomation] Keine Rolle gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
                     return null;
                 }
-                // Hole erste Branch der Organisation (für Task)
-                const branch = yield prisma.branch.findFirst({
-                    where: { organizationId }
-                });
-                if (!branch) {
-                    console.warn(`[TaskAutomation] Keine Branch gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
-                    return null;
+                // Hole Branch der Reservation (falls vorhanden), sonst erste Branch der Organisation
+                let branchId = null;
+                if (reservation.branchId) {
+                    branchId = reservation.branchId;
+                    console.log(`[TaskAutomation] Verwende Branch ${branchId} aus Reservation`);
+                }
+                else {
+                    // Fallback: Hole erste Branch der Organisation
+                    const branch = yield prisma.branch.findFirst({
+                        where: { organizationId }
+                    });
+                    if (!branch) {
+                        console.warn(`[TaskAutomation] Keine Branch gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
+                        return null;
+                    }
+                    branchId = branch.id;
+                    console.log(`[TaskAutomation] Verwende erste Branch ${branchId} der Organisation (Reservation hat keine branchId)`);
                 }
                 // Prüfe ob bereits ein Task für diese Reservierung existiert
                 const existingTask = yield prisma.task.findUnique({
@@ -641,7 +651,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                         description: taskDescription,
                         status: 'open',
                         roleId: receptionRoleId,
-                        branchId: branch.id,
+                        branchId: branchId,
                         organizationId: organizationId,
                         reservationId: reservation.id,
                         dueDate: reservation.checkInDate,

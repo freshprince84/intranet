@@ -1,0 +1,4997 @@
+[
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/available-rooms",
+    "method": "GET",
+    "success": false,
+    "status": 422,
+    "data": {
+      "error": "The start date field is required."
+    },
+    "error": "Status 422"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/available-rooms",
+    "method": "GET",
+    "success": false,
+    "status": 422,
+    "data": {
+      "error": "The start date field is required."
+    },
+    "error": "Status 422"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/reservations",
+    "method": "GET",
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    },
+    "error": "Status 404"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/reservations",
+    "method": "GET",
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    },
+    "error": "Status 404"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/bookings",
+    "method": "GET",
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    },
+    "error": "Status 404"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/bookings",
+    "method": "GET",
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    },
+    "error": "Status 404"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/reservations",
+    "method": "GET",
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    },
+    "error": "Status 404"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v1/reservations",
+    "method": "GET",
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    },
+    "error": "Status 404"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v1/bookings",
+    "method": "GET",
+    "success": true,
+    "status": 200,
+    "data": {
+      "data": [
+        {
+          "booking_id": 18113730,
+          "creation_date": "2025-11-19 22:46:05",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-20",
+          "end_date": "2025-11-21",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15009875,
+            "type_document": "",
+            "document": "",
+            "name": "Adèle",
+            "surname": "Keib",
+            "second_surname": "",
+            "email": "adele.keib@orange.fr",
+            "phone": "33785198236",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 31200,
+          "total_to_pay": 31200,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18113485,
+          "creation_date": "2025-11-19 22:10:06",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-20",
+          "end_date": "2025-11-23",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15009642,
+            "type_document": "",
+            "document": "",
+            "name": "Flavie",
+            "surname": "Montanino",
+            "second_surname": "",
+            "email": "flavie.montanino@gmail.com",
+            "phone": "33606856105",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 101400,
+          "total_to_pay": 101400,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18113170,
+          "creation_date": "2025-11-19 21:40:09",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-12-10",
+          "end_date": "2025-12-11",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15009392,
+            "type_document": "",
+            "document": "",
+            "name": "rigoberto",
+            "surname": "mena",
+            "second_surname": "",
+            "email": "ridiamsma@mail.com",
+            "phone": "",
+            "country": "México"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 31500,
+          "total_to_pay": 31500,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18112488,
+          "creation_date": "2025-11-19 20:36:07",
+          "category": {
+            "category_id": 34312,
+            "name": "Doble básica"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El abuelo bromista"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-25",
+          "end_date": "2025-11-28",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15008821,
+            "type_document": "",
+            "document": "",
+            "name": "Chris",
+            "surname": "Sutton",
+            "second_surname": "",
+            "email": "chris_444@hotmail.co.uk",
+            "phone": "447732369125",
+            "country": ""
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 270000,
+          "total_to_pay": 270000,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18112466,
+          "creation_date": "2025-11-19 20:33:13",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 7"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-19",
+          "end_date": "2025-11-23",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14110633,
+            "type_document": "Cédula de ciudadanía",
+            "document": "1032511337",
+            "name": "Jose",
+            "surname": "Camperos",
+            "second_surname": "",
+            "email": "cjose.424961@guest.booking.com",
+            "phone": "+57 318 3958468",
+            "country": "Colombia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14110633,
+              "document": "1032511337",
+              "type_document": "Cédula de ciudadanía",
+              "name": "Jose",
+              "surname": "Camperos",
+              "second_surname": "",
+              "email": "cjose.424961@guest.booking.com",
+              "phone": "+57 318 3958468",
+              "country": "Colombia"
+            }
+          ],
+          "note": "Ya pagó por Bancolombia. Te envío el mensaje con el comprobante para que lo registres mañana",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 163845,
+          "total_to_pay": 163845,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18111332,
+          "creation_date": "2025-11-19 18:57:23",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-19",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15007830,
+            "type_document": "",
+            "document": "",
+            "name": "Daniel",
+            "surname": "Oliveira",
+            "second_surname": "",
+            "email": "dolive.422808@guest.booking.com",
+            "phone": "+57 302 4498991",
+            "country": "Colombia"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 42000,
+          "total_to_pay": 42000,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18108045,
+          "creation_date": "2025-11-19 15:37:20",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 6"
+          },
+          "channel": [],
+          "start_date": "2025-11-19",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15005522,
+            "type_document": "Pasaporte",
+            "document": "24H142634",
+            "name": "Melina",
+            "surname": "Bourdin",
+            "second_surname": "Gonzalez",
+            "email": "sricha.870573@guest.booking.com",
+            "phone": "00",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 15005522,
+              "document": "24H142634",
+              "type_document": "Pasaporte",
+              "name": "Melina",
+              "surname": "Bourdin",
+              "second_surname": "Gonzalez",
+              "email": "sricha.870573@guest.booking.com",
+              "phone": "00",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 64200,
+          "total_to_pay_accommodation": 50000,
+          "total_to_pay": 64200,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18106162,
+          "creation_date": "2025-11-19 13:36:11",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-12-30",
+          "end_date": "2026-01-01",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15004051,
+            "type_document": "",
+            "document": "",
+            "name": "Jeanne",
+            "surname": "MULLER--FONTANEL",
+            "second_surname": "",
+            "email": "jmulle.197679@guest.booking.com",
+            "phone": "+525544701468",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 69740,
+          "total_to_pay": 69740,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18106003,
+          "creation_date": "2025-11-19 13:24:42",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": [],
+          "start_date": "2025-11-19",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15003940,
+            "type_document": "Pasaporte",
+            "document": "NYLJL94Lo",
+            "name": "sander",
+            "surname": "van der Sluijs",
+            "second_surname": "Gonzalez",
+            "email": "sricha.870573@guest.booking.com",
+            "phone": "0610305346",
+            "country": "Reino Unido"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 15003940,
+              "document": "NYLJL94Lo",
+              "type_document": "Pasaporte",
+              "name": "sander",
+              "surname": "van der Sluijs",
+              "second_surname": "Gonzalez",
+              "email": "sricha.870573@guest.booking.com",
+              "phone": "0610305346",
+              "country": "Reino Unido"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 50000,
+          "total_to_pay": 50000,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18105197,
+          "creation_date": "2025-11-19 12:34:49",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 7"
+          },
+          "channel": [],
+          "start_date": "2025-11-19",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15003418,
+            "type_document": "Pasaporte",
+            "document": "AP1579788",
+            "name": "Simon",
+            "surname": "Pansi",
+            "second_surname": "Gonzalez",
+            "email": "sricha.870573@guest.booking.com",
+            "phone": "00",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 15003418,
+              "document": "AP1579788",
+              "type_document": "Pasaporte",
+              "name": "Simon",
+              "surname": "Pansi",
+              "second_surname": "Gonzalez",
+              "email": "sricha.870573@guest.booking.com",
+              "phone": "00",
+              "country": "Alemania"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 37450,
+          "total_to_pay_accommodation": 35000,
+          "total_to_pay": 37450,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18102696,
+          "creation_date": "2025-11-19 09:50:07",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-19",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15001812,
+            "type_document": "",
+            "document": "",
+            "name": "Margaux",
+            "surname": "Aloin",
+            "second_surname": "",
+            "email": "margaux.aloin@hotmail.com",
+            "phone": "",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 27300,
+          "total_to_pay": 27300,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18101709,
+          "creation_date": "2025-11-19 08:32:09",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2026-02-26",
+          "end_date": "2026-03-01",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15001318,
+            "type_document": "",
+            "document": "",
+            "name": "NA",
+            "surname": "DAN",
+            "second_surname": "",
+            "email": "skeksdlek@gmail.com",
+            "phone": "8201090764772",
+            "country": "Corea del Sur"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 117000,
+          "total_to_pay": 117000,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18101305,
+          "creation_date": "2025-11-19 07:34:06",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-19",
+          "end_date": "2025-11-21",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15006894,
+            "type_document": "Pasaporte",
+            "document": "RA7566944",
+            "name": "Mack",
+            "surname": "Rennick",
+            "second_surname": "",
+            "email": "office@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Australia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 15006894,
+              "document": "RA7566944",
+              "type_document": "Pasaporte",
+              "name": "Mack",
+              "surname": "Rennick",
+              "second_surname": "",
+              "email": "office@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Australia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 62595,
+          "total_to_pay_accommodation": 58500,
+          "total_to_pay": 62595,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18099646,
+          "creation_date": "2025-11-18 22:04:06",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-12-15",
+          "end_date": "2025-12-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14999555,
+            "type_document": "",
+            "document": "",
+            "name": "Mayte",
+            "surname": "pilon dube",
+            "second_surname": "",
+            "email": "mayte@hotmail.ca",
+            "phone": "",
+            "country": "Canadá"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 94500,
+          "total_to_pay": 94500,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18099636,
+          "creation_date": "2025-11-18 22:03:10",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-12-15",
+          "end_date": "2025-12-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14999548,
+            "type_document": "",
+            "document": "",
+            "name": "Sandrine",
+            "surname": "Harvey",
+            "second_surname": "",
+            "email": "sharve.277800@guest.booking.com",
+            "phone": "+1 514 820 8614",
+            "country": "Canadá"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 97020,
+          "total_to_pay": 97020,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18098951,
+          "creation_date": "2025-11-18 20:52:08",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-22",
+          "end_date": "2025-11-25",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14998939,
+            "type_document": "",
+            "document": "",
+            "name": "Youri",
+            "surname": "Apparicio",
+            "second_surname": "",
+            "email": "youriapp@hotmail.com",
+            "phone": "",
+            "country": "Canadá"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 108000,
+          "total_to_pay": 108000,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18096275,
+          "creation_date": "2025-11-18 17:39:08",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-21",
+          "end_date": "2025-11-22",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14996749,
+            "type_document": "",
+            "document": "",
+            "name": "Ori",
+            "surname": "Hanoch",
+            "second_surname": "",
+            "email": "ohanoc.414998@guest.booking.com",
+            "phone": "+972 58 517 0603",
+            "country": "Israel"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 41580,
+          "total_to_pay": 41580,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18094359,
+          "creation_date": "2025-11-18 15:45:16",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 8"
+          },
+          "channel": [],
+          "start_date": "2025-11-18",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14646908,
+            "type_document": "Pasaporte",
+            "document": "BF700074",
+            "name": "Marcel",
+            "surname": "Parra",
+            "second_surname": "Sierra",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "+50239648046",
+            "country": "Colombia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14646908,
+              "document": "BF700074",
+              "type_document": "Pasaporte",
+              "name": "Marcel",
+              "surname": "Parra",
+              "second_surname": "Sierra",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "+50239648046",
+              "country": "Colombia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 70000,
+          "total_to_pay_accommodation": 70000,
+          "total_to_pay": 70000,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18093235,
+          "creation_date": "2025-11-18 14:42:43",
+          "category": {
+            "category_id": 34284,
+            "name": "Apartamento doble"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El primo deportista"
+          },
+          "channel": [],
+          "start_date": "2025-11-18",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14994713,
+            "type_document": "Cédula de ciudadanía",
+            "document": "11517697",
+            "name": "Hernan",
+            "surname": "Bustos",
+            "second_surname": "",
+            "email": "ssluij.631030@guest.booking.com",
+            "phone": "000",
+            "country": "Colombia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14994713,
+              "document": "11517697",
+              "type_document": "Cédula de ciudadanía",
+              "name": "Hernan",
+              "surname": "Bustos",
+              "second_surname": "",
+              "email": "ssluij.631030@guest.booking.com",
+              "phone": "000",
+              "country": "Colombia"
+            },
+            {
+              "client_id": 14995003,
+              "document": "1090448115",
+              "type_document": "Cédula de ciudadanía",
+              "name": "Sandra",
+              "surname": "Mongui",
+              "second_surname": "",
+              "email": "office@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Colombia"
+            }
+          ],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 340000,
+          "total_to_pay_accommodation": 340000,
+          "total_to_pay": 340000,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18092653,
+          "creation_date": "2025-11-18 14:00:15",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-19",
+          "end_date": "2025-11-26",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 15001938,
+            "type_document": "Pasaporte",
+            "document": "SRDPFRJ",
+            "name": "Guielherme",
+            "surname": "Da silva",
+            "second_surname": "",
+            "email": "office@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Brasil"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 15001938,
+              "document": "SRDPFRJ",
+              "type_document": "Pasaporte",
+              "name": "Guielherme",
+              "surname": "Da silva",
+              "second_surname": "",
+              "email": "office@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Brasil"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 311049,
+          "total_to_pay_accommodation": 290700,
+          "total_to_pay": 311049,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18089562,
+          "creation_date": "2025-11-18 10:39:12",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": [],
+          "start_date": "2025-11-18",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14992354,
+            "type_document": "Pasaporte",
+            "document": "C3JCGV677",
+            "name": "Jacob",
+            "surname": "Fhilipp",
+            "second_surname": "",
+            "email": "office@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14992354,
+              "document": "C3JCGV677",
+              "type_document": "Pasaporte",
+              "name": "Jacob",
+              "surname": "Fhilipp",
+              "second_surname": "",
+              "email": "office@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Alemania"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 48150,
+          "total_to_pay_accommodation": 90000,
+          "total_to_pay": 97150,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18087550,
+          "creation_date": "2025-11-18 01:54:10",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-12-31",
+          "end_date": "2026-01-06",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14991184,
+            "type_document": "",
+            "document": "",
+            "name": "Roger",
+            "surname": "Mendoza Sánchez",
+            "second_surname": "",
+            "email": "rsanch.851847@guest.booking.com",
+            "phone": "+51 962 550 818",
+            "country": "Perú"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 242880,
+          "total_to_pay": 242880,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18086003,
+          "creation_date": "2025-11-17 20:34:48",
+          "category": {
+            "category_id": 34312,
+            "name": "Doble básica"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El abuelo bromista"
+          },
+          "channel": [],
+          "start_date": "2025-11-18",
+          "end_date": "2025-11-19",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14350003,
+            "type_document": "Pasaporte",
+            "document": "NYLJL94LO",
+            "name": "Sander",
+            "surname": "van der Sluijs",
+            "second_surname": "",
+            "email": "ssluij.631030@guest.booking.com",
+            "phone": "+31 6 10305346",
+            "country": "Países Bajos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14350003,
+              "document": "NYLJL94LO",
+              "type_document": "Pasaporte",
+              "name": "Sander",
+              "surname": "van der Sluijs",
+              "second_surname": "",
+              "email": "ssluij.631030@guest.booking.com",
+              "phone": "+31 6 10305346",
+              "country": "Países Bajos"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 100000,
+          "total_to_pay": 105000,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18084588,
+          "creation_date": "2025-11-17 18:28:06",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-12-08",
+          "end_date": "2025-12-09",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14988641,
+            "type_document": "",
+            "document": "",
+            "name": "fidencio",
+            "surname": "perez",
+            "second_surname": "",
+            "email": "fiaidsfmaima@mail.com",
+            "phone": "",
+            "country": "México"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 31500,
+          "total_to_pay": 31500,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18075740,
+          "creation_date": "2025-11-16 20:58:07",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-17",
+          "end_date": "2025-11-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14880891,
+            "type_document": "Pasaporte",
+            "document": "RA074952",
+            "name": "Lukesh Edward",
+            "surname": "Kidd",
+            "second_surname": "",
+            "email": "lukeshkidd@icloud.com",
+            "phone": "",
+            "country": "Nueva Zelanda"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14880891,
+              "document": "RA074952",
+              "type_document": "Pasaporte",
+              "name": "Lukesh Edward",
+              "surname": "Kidd",
+              "second_surname": "",
+              "email": "lukeshkidd@icloud.com",
+              "phone": "",
+              "country": "Nueva Zelanda"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 31200,
+          "total_to_pay_accommodation": 31200,
+          "total_to_pay": 31200,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18070219,
+          "creation_date": "2025-11-16 12:34:08",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14974980,
+            "type_document": "Pasaporte",
+            "document": "25F152779",
+            "name": "Clément Baptiste",
+            "surname": "SEGUY",
+            "second_surname": "",
+            "email": "c.seguy31@gmail.com",
+            "phone": "",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14974980,
+              "document": "25F152779",
+              "type_document": "Pasaporte",
+              "name": "Clément Baptiste",
+              "surname": "SEGUY",
+              "second_surname": "",
+              "email": "c.seguy31@gmail.com",
+              "phone": "",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 35100,
+          "total_to_pay_accommodation": 180100,
+          "total_to_pay": 180100,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18069891,
+          "creation_date": "2025-11-16 12:06:47",
+          "category": {
+            "category_id": 34312,
+            "name": "Doble básica"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El abuelo bromista"
+          },
+          "channel": [],
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14778427,
+            "type_document": "Pasaporte",
+            "document": "156767022",
+            "name": "George",
+            "surname": "Warnes",
+            "second_surname": "",
+            "email": "office@lafamilia-hostel.com",
+            "phone": "+44 7707923776",
+            "country": "Reino Unido"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14771681,
+              "document": "149287887",
+              "type_document": "Pasaporte",
+              "name": "helen",
+              "surname": "tewolde",
+              "second_surname": "",
+              "email": "helen_tewoldex@yahoo.com",
+              "phone": ".",
+              "country": "Reino Unido"
+            },
+            {
+              "client_id": 14778427,
+              "document": "156767022",
+              "type_document": "Pasaporte",
+              "name": "George",
+              "surname": "Warnes",
+              "second_surname": "",
+              "email": "office@lafamilia-hostel.com",
+              "phone": "+44 7707923776",
+              "country": "Reino Unido"
+            }
+          ],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 226000,
+          "total_to_pay_accommodation": 210000,
+          "total_to_pay": 226000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18069843,
+          "creation_date": "2025-11-16 12:02:29",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": [],
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-17",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14751012,
+            "type_document": "Pasaporte",
+            "document": "589625087",
+            "name": "Jacob Mullen",
+            "surname": "Berch",
+            "second_surname": "",
+            "email": "jberch37@gmail.com",
+            "phone": "+1 9034413132",
+            "country": "Estados Unidos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14751012,
+              "document": "589625087",
+              "type_document": "Pasaporte",
+              "name": "Jacob Mullen",
+              "surname": "Berch",
+              "second_surname": "",
+              "email": "jberch37@gmail.com",
+              "phone": "+1 9034413132",
+              "country": "Estados Unidos"
+            }
+          ],
+          "note": "CP2KWSO439C0",
+          "total_guests": 1,
+          "paid_out": 48150,
+          "total_to_pay_accommodation": 45000,
+          "total_to_pay": 48150,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18069746,
+          "creation_date": "2025-11-16 11:53:48",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": [],
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-17",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14751030,
+            "type_document": "Pasaporte",
+            "document": "677974991",
+            "name": "Pierce",
+            "surname": "Rogers",
+            "second_surname": "",
+            "email": "piercearog@gmail.com",
+            "phone": "+1 9034413132",
+            "country": "Estados Unidos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14751030,
+              "document": "677974991",
+              "type_document": "Pasaporte",
+              "name": "Pierce",
+              "surname": "Rogers",
+              "second_surname": "",
+              "email": "piercearog@gmail.com",
+              "phone": "+1 9034413132",
+              "country": "Estados Unidos"
+            }
+          ],
+          "note": "cplno8rvuyby",
+          "total_guests": 1,
+          "paid_out": 48150,
+          "total_to_pay_accommodation": 45000,
+          "total_to_pay": 48150,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18069322,
+          "creation_date": "2025-11-16 11:20:52",
+          "category": {
+            "category_id": 34311,
+            "name": "Doble estándar"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "La hermana extrovertida"
+          },
+          "channel": [],
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-17",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14974096,
+            "type_document": "Pasaporte",
+            "document": "PQ8606517",
+            "name": "Sorsha Mary",
+            "surname": "Brosnan",
+            "second_surname": "",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "+53862255106",
+            "country": "Irlanda"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14974096,
+              "document": "PQ8606517",
+              "type_document": "Pasaporte",
+              "name": "Sorsha Mary",
+              "surname": "Brosnan",
+              "second_surname": "",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "+53862255106",
+              "country": "Irlanda"
+            }
+          ],
+          "note": "CPT8HP7MRO6Q",
+          "total_guests": 1,
+          "paid_out": 104037,
+          "total_to_pay_accommodation": 97231,
+          "total_to_pay": 104037,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18068399,
+          "creation_date": "2025-11-16 09:52:09",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14973217,
+            "type_document": "Pasaporte",
+            "document": "23CK68515",
+            "name": "Noah",
+            "surname": "Nicoud Usage",
+            "second_surname": "",
+            "email": "noahcerni@gmail.com",
+            "phone": "33650212969",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14973217,
+              "document": "23CK68515",
+              "type_document": "Pasaporte",
+              "name": "Noah",
+              "surname": "Nicoud Usage",
+              "second_surname": "",
+              "email": "noahcerni@gmail.com",
+              "phone": "33650212969",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 148500,
+          "total_to_pay_accommodation": 148500,
+          "total_to_pay": 148500,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18068400,
+          "creation_date": "2025-11-16 09:52:09",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-20",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14975744,
+            "type_document": "Pasaporte",
+            "document": "22DE98870",
+            "name": "Emma Erika",
+            "surname": "Taran",
+            "second_surname": "",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14975744,
+              "document": "22DE98870",
+              "type_document": "Pasaporte",
+              "name": "Emma Erika",
+              "surname": "Taran",
+              "second_surname": "",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 148500,
+          "total_to_pay_accommodation": 148500,
+          "total_to_pay": 148500,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18067522,
+          "creation_date": "2025-11-16 07:26:30",
+          "category": {
+            "category_id": 34284,
+            "name": "Apartamento doble"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El primo deportista"
+          },
+          "channel": [],
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14972451,
+            "type_document": "Cédula de ciudadanía",
+            "document": "10967598",
+            "name": "Fernando Ehitel",
+            "surname": "Gonzalez",
+            "second_surname": "Bustamante",
+            "email": "lafamilia-manila@lafamilia-hostel.com",
+            "phone": "3006270546",
+            "country": "Colombia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14972451,
+              "document": "10967598",
+              "type_document": "Cédula de ciudadanía",
+              "name": "Fernando Ehitel",
+              "surname": "Gonzalez",
+              "second_surname": "Bustamante",
+              "email": "lafamilia-manila@lafamilia-hostel.com",
+              "phone": "3006270546",
+              "country": "Colombia"
+            },
+            {
+              "client_id": 14973063,
+              "document": "1067894253",
+              "type_document": "Cédula de ciudadanía",
+              "name": "Yenis Patricia",
+              "surname": "Barrera",
+              "second_surname": "Escudero",
+              "email": "",
+              "phone": "",
+              "country": "Colombia"
+            }
+          ],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 360000,
+          "total_to_pay_accommodation": 360000,
+          "total_to_pay": 360000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18065730,
+          "creation_date": "2025-11-15 21:46:08",
+          "category": {
+            "category_id": 34308,
+            "name": "Apartamento singular"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "La sobrina soñadora"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2026-02-05",
+          "end_date": "2026-02-08",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14970450,
+            "type_document": "",
+            "document": "",
+            "name": "David",
+            "surname": "Vélez",
+            "second_surname": "",
+            "email": "dv9212@gmail.com",
+            "phone": "",
+            "country": "Colombia"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 432000,
+          "total_to_pay": 432000,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18065247,
+          "creation_date": "2025-11-15 20:56:07",
+          "category": {
+            "category_id": 34311,
+            "name": "Doble estándar"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "La hermana extrovertida"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-17",
+          "end_date": "2025-11-21",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14987995,
+            "type_document": "Pasaporte",
+            "document": "130485658",
+            "name": "Jack",
+            "surname": "Egan",
+            "second_surname": "",
+            "email": "office@lafamilia-hostel.com",
+            "phone": "07809880707",
+            "country": "Reino Unido"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14987995,
+              "document": "130485658",
+              "type_document": "Pasaporte",
+              "name": "Jack",
+              "surname": "Egan",
+              "second_surname": "",
+              "email": "office@lafamilia-hostel.com",
+              "phone": "07809880707",
+              "country": "Reino Unido"
+            },
+            {
+              "client_id": 14988035,
+              "document": "557853774",
+              "type_document": "Pasaporte",
+              "name": "Billie",
+              "surname": "Cox",
+              "second_surname": "",
+              "email": "office@lafamilia-hostel.com",
+              "phone": "07809880707",
+              "country": "Reino Unido"
+            }
+          ],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 310000,
+          "total_to_pay_accommodation": 426000,
+          "total_to_pay": 465000,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18065054,
+          "creation_date": "2025-11-15 20:38:07",
+          "category": {
+            "category_id": 34310,
+            "name": "Apartaestudio"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El sobrino curioso"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-17",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14751029,
+            "type_document": "Pasaporte",
+            "document": "A32983027",
+            "name": "Emma",
+            "surname": "Rogers",
+            "second_surname": "",
+            "email": "emmagineart@gmail.com",
+            "phone": "+1 9034413132",
+            "country": "Estados Unidos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14751029,
+              "document": "A32983027",
+              "type_document": "Pasaporte",
+              "name": "Emma",
+              "surname": "Rogers",
+              "second_surname": "",
+              "email": "emmagineart@gmail.com",
+              "phone": "+1 9034413132",
+              "country": "Estados Unidos"
+            }
+          ],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 116844,
+          "total_to_pay_accommodation": 109200,
+          "total_to_pay": 116844,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18062919,
+          "creation_date": "2025-11-15 17:40:09",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 6"
+          },
+          "channel": [],
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-17",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14914463,
+            "type_document": "Pasaporte",
+            "document": "20DF31991",
+            "name": "Anthony",
+            "surname": "Orgawitz",
+            "second_surname": "",
+            "email": "aorgaw.608386@guest.booking.com",
+            "phone": "+61432165421",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14914463,
+              "document": "20DF31991",
+              "type_document": "Pasaporte",
+              "name": "Anthony",
+              "surname": "Orgawitz",
+              "second_surname": "",
+              "email": "aorgaw.608386@guest.booking.com",
+              "phone": "+61432165421",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 50000,
+          "total_to_pay_accommodation": 50000,
+          "total_to_pay": 50000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18060849,
+          "creation_date": "2025-11-15 15:21:14",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 7"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-15",
+          "end_date": "2025-11-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14928336,
+            "type_document": "Pasaporte",
+            "document": "BF613552",
+            "name": "Carlos",
+            "surname": "Marmolejo",
+            "second_surname": "",
+            "email": "cmarmo.521590@guest.booking.com",
+            "phone": "+1 210 914 6227",
+            "country": "Estados Unidos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14928336,
+              "document": "BF613552",
+              "type_document": "Pasaporte",
+              "name": "Carlos",
+              "surname": "Marmolejo",
+              "second_surname": "",
+              "email": "cmarmo.521590@guest.booking.com",
+              "phone": "+1 210 914 6227",
+              "country": "Estados Unidos"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 109920,
+          "total_to_pay_accommodation": 109920,
+          "total_to_pay": 109920,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18060776,
+          "creation_date": "2025-11-15 15:18:37",
+          "category": {
+            "category_id": 34310,
+            "name": "Apartaestudio"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El sobrino curioso"
+          },
+          "channel": [],
+          "start_date": "2025-11-14",
+          "end_date": "2025-11-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14350003,
+            "type_document": "Pasaporte",
+            "document": "NYLJL94LO",
+            "name": "Sander",
+            "surname": "van der Sluijs",
+            "second_surname": "",
+            "email": "ssluij.631030@guest.booking.com",
+            "phone": "+31 6 10305346",
+            "country": "Países Bajos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14350003,
+              "document": "NYLJL94LO",
+              "type_document": "Pasaporte",
+              "name": "Sander",
+              "surname": "van der Sluijs",
+              "second_surname": "",
+              "email": "ssluij.631030@guest.booking.com",
+              "phone": "+31 6 10305346",
+              "country": "Países Bajos"
+            }
+          ],
+          "note": "Tarifa aut. Srita Alejandra",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 76000,
+          "total_to_pay": 76000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18060755,
+          "creation_date": "2025-11-15 15:16:55",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": [],
+          "start_date": "2025-11-15",
+          "end_date": "2025-11-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14350003,
+            "type_document": "Pasaporte",
+            "document": "NYLJL94LO",
+            "name": "Sander",
+            "surname": "van der Sluijs",
+            "second_surname": "",
+            "email": "ssluij.631030@guest.booking.com",
+            "phone": "+31 6 10305346",
+            "country": "Países Bajos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14350003,
+              "document": "NYLJL94LO",
+              "type_document": "Pasaporte",
+              "name": "Sander",
+              "surname": "van der Sluijs",
+              "second_surname": "",
+              "email": "ssluij.631030@guest.booking.com",
+              "phone": "+31 6 10305346",
+              "country": "Países Bajos"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 140000,
+          "total_to_pay": 140000,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18060402,
+          "creation_date": "2025-11-15 14:51:57",
+          "category": {
+            "category_id": 34310,
+            "name": "Apartaestudio"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El sobrino curioso"
+          },
+          "channel": {
+            "channel_id": 0,
+            "name": "Booking Engine"
+          },
+          "start_date": "2025-12-02",
+          "end_date": "2025-12-22",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14963705,
+            "type_document": "",
+            "document": "CC1125291400",
+            "name": "Julian",
+            "surname": "Diaz",
+            "second_surname": "Klevens",
+            "email": "julian7591@gmail.com",
+            "phone": "+14045099270",
+            "country": "Colombia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14963705,
+              "document": "CC1125291400",
+              "type_document": "",
+              "name": "Julian",
+              "surname": "Diaz",
+              "second_surname": "Klevens",
+              "email": "julian7591@gmail.com",
+              "phone": "+14045099270",
+              "country": "Colombia"
+            }
+          ],
+          "note": "Hora de llegada aproximada: 17:30",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 2490000,
+          "total_to_pay": 2490000,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18058548,
+          "creation_date": "2025-11-15 12:32:36",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": [],
+          "start_date": "2025-11-15",
+          "end_date": "2025-11-16",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14948498,
+            "type_document": "Pasaporte",
+            "document": "XGU77R80",
+            "name": "Noah",
+            "surname": "Gruber",
+            "second_surname": "Derre",
+            "email": "noahgruber2000@gmail.com",
+            "phone": "",
+            "country": "Suiza"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14948498,
+              "document": "XGU77R80",
+              "type_document": "Pasaporte",
+              "name": "Noah",
+              "surname": "Gruber",
+              "second_surname": "Derre",
+              "email": "noahgruber2000@gmail.com",
+              "phone": "",
+              "country": "Suiza"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 50000,
+          "total_to_pay_accommodation": 50000,
+          "total_to_pay": 50000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18056413,
+          "creation_date": "2025-11-15 09:54:07",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14959810,
+            "type_document": "Pasaporte",
+            "document": "599869408",
+            "name": "Annie Rose",
+            "surname": "Foldenaur",
+            "second_surname": "",
+            "email": "afoldenaur@gmail.com",
+            "phone": "",
+            "country": "Estados Unidos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14959810,
+              "document": "599869408",
+              "type_document": "Pasaporte",
+              "name": "Annie Rose",
+              "surname": "Foldenaur",
+              "second_surname": "",
+              "email": "afoldenaur@gmail.com",
+              "phone": "",
+              "country": "Estados Unidos"
+            }
+          ],
+          "note": "CPHJTRR3DXC4X",
+          "total_guests": 1,
+          "paid_out": 72225,
+          "total_to_pay_accommodation": 67500,
+          "total_to_pay": 72225,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18056414,
+          "creation_date": "2025-11-15 09:54:07",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 6"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-16",
+          "end_date": "2025-11-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14976318,
+            "type_document": "Pasaporte",
+            "document": "A29589967",
+            "name": "Amara  Grace",
+            "surname": "Wilcox",
+            "second_surname": "",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Estados Unidos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14976318,
+              "document": "A29589967",
+              "type_document": "Pasaporte",
+              "name": "Amara  Grace",
+              "surname": "Wilcox",
+              "second_surname": "",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Estados Unidos"
+            }
+          ],
+          "note": "CPV6H00A03JQ",
+          "total_guests": 1,
+          "paid_out": 72225,
+          "total_to_pay_accommodation": 67500,
+          "total_to_pay": 72225,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18056191,
+          "creation_date": "2025-11-15 09:34:06",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-12-15",
+          "end_date": "2025-12-16",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14959619,
+            "type_document": "",
+            "document": "",
+            "name": "pablo",
+            "surname": "velez",
+            "second_surname": "",
+            "email": "padodoamam@mail.com",
+            "phone": "",
+            "country": "México"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 36000,
+          "total_to_pay": 36000,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18055296,
+          "creation_date": "2025-11-15 07:48:11",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-15",
+          "end_date": "2025-11-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14958896,
+            "type_document": "Pasaporte",
+            "document": "221F81981",
+            "name": "Come Aurelien",
+            "surname": "harmand",
+            "second_surname": "",
+            "email": "charma.199616@guest.booking.com",
+            "phone": "+33 6 25 95 42 01",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14958896,
+              "document": "221F81981",
+              "type_document": "Pasaporte",
+              "name": "Come Aurelien",
+              "surname": "harmand",
+              "second_surname": "",
+              "email": "charma.199616@guest.booking.com",
+              "phone": "+33 6 25 95 42 01",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 123660,
+          "total_to_pay_accommodation": 123660,
+          "total_to_pay": 123660,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18054115,
+          "creation_date": "2025-11-14 23:24:12",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-12-03",
+          "end_date": "2025-12-04",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14957509,
+            "type_document": "",
+            "document": "",
+            "name": "Ronja",
+            "surname": "Sieg",
+            "second_surname": "",
+            "email": "rsieg.591614@guest.booking.com",
+            "phone": "+49 1516 5156016",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 36960,
+          "total_to_pay": 36960,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18049742,
+          "creation_date": "2025-11-14 17:06:11",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-15",
+          "end_date": "2025-11-18",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14953148,
+            "type_document": "Pasaporte",
+            "document": "124855993",
+            "name": "BenjaminJames",
+            "surname": "Wright",
+            "second_surname": "",
+            "email": "bwrigh.181490@guest.booking.com",
+            "phone": "+34 686 29 32 73",
+            "country": "Reino Unido"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14953148,
+              "document": "124855993",
+              "type_document": "Pasaporte",
+              "name": "BenjaminJames",
+              "surname": "Wright",
+              "second_surname": "",
+              "email": "bwrigh.181490@guest.booking.com",
+              "phone": "+34 686 29 32 73",
+              "country": "Reino Unido"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 131200,
+          "total_to_pay_accommodation": 124200,
+          "total_to_pay": 131200,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18047333,
+          "creation_date": "2025-11-14 14:57:19",
+          "category": {
+            "category_id": 34308,
+            "name": "Apartamento singular"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "La sobrina soñadora"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2026-02-11",
+          "end_date": "2026-02-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14951222,
+            "type_document": "",
+            "document": "",
+            "name": "Caroline",
+            "surname": "Hain",
+            "second_surname": "",
+            "email": "chain.255006@guest.booking.com",
+            "phone": "+49 17645630442",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 573170,
+          "total_to_pay": 573170,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18043975,
+          "creation_date": "2025-11-14 11:33:09",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-14",
+          "end_date": "2025-11-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14951629,
+            "type_document": "Pasaporte",
+            "document": "20EF57",
+            "name": "Léo Oliver",
+            "surname": "Hubert",
+            "second_surname": "Hubert",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14951629,
+              "document": "20EF57",
+              "type_document": "Pasaporte",
+              "name": "Léo Oliver",
+              "surname": "Hubert",
+              "second_surname": "Hubert",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 48600,
+          "total_to_pay_accommodation": 48600,
+          "total_to_pay": 48600,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18043593,
+          "creation_date": "2025-11-14 11:09:28",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": [],
+          "start_date": "2025-11-14",
+          "end_date": "2025-11-17",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14891923,
+            "type_document": "Pasaporte",
+            "document": "N14271018",
+            "name": "Valeria",
+            "surname": "Valdez",
+            "second_surname": "Garza",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "México"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14891923,
+              "document": "N14271018",
+              "type_document": "Pasaporte",
+              "name": "Valeria",
+              "surname": "Valdez",
+              "second_surname": "Garza",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "México"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 192700,
+          "total_to_pay_accommodation": 150000,
+          "total_to_pay": 192700,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18043230,
+          "creation_date": "2025-11-14 10:43:55",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": [],
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14948498,
+            "type_document": "Pasaporte",
+            "document": "XGU77R80",
+            "name": "Noah",
+            "surname": "Gruber",
+            "second_surname": "Derre",
+            "email": "noahgruber2000@gmail.com",
+            "phone": "",
+            "country": "Suiza"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14948498,
+              "document": "XGU77R80",
+              "type_document": "Pasaporte",
+              "name": "Noah",
+              "surname": "Gruber",
+              "second_surname": "Derre",
+              "email": "noahgruber2000@gmail.com",
+              "phone": "",
+              "country": "Suiza"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 113000,
+          "total_to_pay_accommodation": 110000,
+          "total_to_pay": 113000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18043171,
+          "creation_date": "2025-11-14 10:40:07",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-14",
+          "end_date": "2025-11-16",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14709514,
+            "type_document": "Pasaporte",
+            "document": "24FD10456",
+            "name": "Calypso",
+            "surname": "BAC",
+            "second_surname": "Derre",
+            "email": "calypso.bac@icloud.com",
+            "phone": "+33 7 83 18 87 44",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14709514,
+              "document": "24FD10456",
+              "type_document": "Pasaporte",
+              "name": "Calypso",
+              "surname": "BAC",
+              "second_surname": "Derre",
+              "email": "calypso.bac@icloud.com",
+              "phone": "+33 7 83 18 87 44",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 99403,
+          "total_to_pay_accommodation": 92900,
+          "total_to_pay": 99403,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18043078,
+          "creation_date": "2025-11-14 10:36:15",
+          "category": {
+            "category_id": 34312,
+            "name": "Doble básica"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El abuelo bromista"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-22",
+          "end_date": "2025-11-23",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14948426,
+            "type_document": "",
+            "document": "",
+            "name": "Swenja",
+            "surname": "Remijn",
+            "second_surname": "",
+            "email": "sremij.460585@guest.booking.com",
+            "phone": "+31 6 13063096",
+            "country": "Países Bajos"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 123200,
+          "total_to_pay": 123200,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18043079,
+          "creation_date": "2025-11-14 10:36:15",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-14",
+          "end_date": "2025-11-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14951916,
+            "type_document": "Cédula de ciudadanía",
+            "document": "94289277",
+            "name": "Oscar",
+            "surname": "Aranzazu",
+            "second_surname": "",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Colombia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14951916,
+              "document": "94289277",
+              "type_document": "Cédula de ciudadanía",
+              "name": "Oscar",
+              "surname": "Aranzazu",
+              "second_surname": "",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Colombia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 52600,
+          "total_to_pay_accommodation": 48600,
+          "total_to_pay": 52600,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18041199,
+          "creation_date": "2025-11-14 07:16:09",
+          "category": {
+            "category_id": 34312,
+            "name": "Doble básica"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El abuelo bromista"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-14",
+          "end_date": "2025-11-16",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14929787,
+            "type_document": "Pasaporte",
+            "document": "45371680",
+            "name": "Frantisek",
+            "surname": "Holik",
+            "second_surname": "yanagawa",
+            "email": "frantisekholik@seznam.cz",
+            "phone": "+81 70 1241 1101",
+            "country": "República Checa"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14929787,
+              "document": "45371680",
+              "type_document": "Pasaporte",
+              "name": "Frantisek",
+              "surname": "Holik",
+              "second_surname": "yanagawa",
+              "email": "frantisekholik@seznam.cz",
+              "phone": "+81 70 1241 1101",
+              "country": "República Checa"
+            }
+          ],
+          "note": "CPPDFNOSO61Z",
+          "total_guests": 2,
+          "paid_out": 200304,
+          "total_to_pay_accommodation": 187200,
+          "total_to_pay": 200304,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18041187,
+          "creation_date": "2025-11-14 07:15:10",
+          "category": {
+            "category_id": 34308,
+            "name": "Apartamento singular"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "La sobrina soñadora"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-12-31",
+          "end_date": "2026-01-02",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14947098,
+            "type_document": "",
+            "document": "",
+            "name": "Emma",
+            "surname": "Callinan",
+            "second_surname": "",
+            "email": "ecalli.632498@guest.booking.com",
+            "phone": "+44 7732 360379",
+            "country": "Reino Unido"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "Approximate time of arrival: between 16:00 and 17:00\nThis guest is interested in your airport shuttle service and would like to get more information from you.",
+          "total_guests": 2,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 332288,
+          "total_to_pay": 332288,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18039978,
+          "creation_date": "2025-11-13 22:45:11",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": [],
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14945780,
+            "type_document": "Pasaporte",
+            "document": "C9G2R1TL7",
+            "name": "Janine",
+            "surname": "Fuldner",
+            "second_surname": "Derre",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14945780,
+              "document": "C9G2R1TL7",
+              "type_document": "Pasaporte",
+              "name": "Janine",
+              "surname": "Fuldner",
+              "second_surname": "Derre",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Alemania"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 40000,
+          "total_to_pay_accommodation": 40000,
+          "total_to_pay": 40000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18038364,
+          "creation_date": "2025-11-13 20:05:02",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": [],
+          "start_date": "2025-11-25",
+          "end_date": "2025-11-26",
+          "checkin_online": true,
+          "holder": {
+            "client_id": 14958827,
+            "type_document": "Cédula de ciudadanía",
+            "document": "82836",
+            "name": "Alejandra",
+            "surname": "Villa",
+            "second_surname": "",
+            "email": "alejandravillatobon@gmail.com",
+            "phone": "",
+            "country": "Albania"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14958827,
+              "document": "82836",
+              "type_document": "Cédula de ciudadanía",
+              "name": "Alejandra",
+              "surname": "Villa",
+              "second_surname": "",
+              "email": "alejandravillatobon@gmail.com",
+              "phone": "",
+              "country": "Albania"
+            }
+          ],
+          "note": " Approximate arrival time: 04:00",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 45000,
+          "total_to_pay": 45000,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18036808,
+          "creation_date": "2025-11-13 18:01:32",
+          "category": {
+            "category_id": 34284,
+            "name": "Apartamento doble"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El primo deportista"
+          },
+          "channel": {
+            "channel_id": 0,
+            "name": "Booking Engine"
+          },
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-16",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14942847,
+            "type_document": "Pasaporte",
+            "document": "X5286941",
+            "name": "Bryan",
+            "surname": "Vuithier",
+            "second_surname": "",
+            "email": "bryan_v_@hotmail.fr",
+            "phone": "+41789025844",
+            "country": "Suiza"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14942847,
+              "document": "X5286941",
+              "type_document": "Pasaporte",
+              "name": "Bryan",
+              "surname": "Vuithier",
+              "second_surname": "",
+              "email": "bryan_v_@hotmail.fr",
+              "phone": "+41789025844",
+              "country": "Suiza"
+            },
+            {
+              "client_id": 14951802,
+              "document": "XON91Y79",
+              "type_document": "Pasaporte",
+              "name": "Raphael",
+              "surname": "Tesu",
+              "second_surname": "Derre",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Suiza"
+            }
+          ],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 570000,
+          "total_to_pay_accommodation": 570000,
+          "total_to_pay": 570000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18032154,
+          "creation_date": "2025-11-13 13:12:55",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 8"
+          },
+          "channel": [],
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14922168,
+            "type_document": "Pasaporte",
+            "document": "AT708785",
+            "name": "Gil Netanel",
+            "surname": "Ishaky",
+            "second_surname": "Derre",
+            "email": "gilishaky1@gmail.com",
+            "phone": "",
+            "country": "Canadá"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14922168,
+              "document": "AT708785",
+              "type_document": "Pasaporte",
+              "name": "Gil Netanel",
+              "surname": "Ishaky",
+              "second_surname": "Derre",
+              "email": "gilishaky1@gmail.com",
+              "phone": "",
+              "country": "Canadá"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 82800,
+          "total_to_pay_accommodation": 80000,
+          "total_to_pay": 82800,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18029351,
+          "creation_date": "2025-11-13 10:13:14",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": [],
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14891923,
+            "type_document": "Pasaporte",
+            "document": "N14271018",
+            "name": "Valeria",
+            "surname": "Valdez",
+            "second_surname": "Garza",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "México"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14891923,
+              "document": "N14271018",
+              "type_document": "Pasaporte",
+              "name": "Valeria",
+              "surname": "Valdez",
+              "second_surname": "Garza",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "México"
+            }
+          ],
+          "note": "CODE 1303",
+          "total_guests": 1,
+          "paid_out": 183750,
+          "total_to_pay_accommodation": 50000,
+          "total_to_pay": 183750,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18029137,
+          "creation_date": "2025-11-13 10:00:07",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14937332,
+            "type_document": "Pasaporte",
+            "document": "C16KFGXV8",
+            "name": "Lia",
+            "surname": "Stenmans",
+            "second_surname": "",
+            "email": "lia.stenmans@gmx.de",
+            "phone": "",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14937332,
+              "document": "C16KFGXV8",
+              "type_document": "Pasaporte",
+              "name": "Lia",
+              "surname": "Stenmans",
+              "second_surname": "",
+              "email": "lia.stenmans@gmx.de",
+              "phone": "",
+              "country": "Alemania"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 35100,
+          "total_to_pay_accommodation": 35100,
+          "total_to_pay": 35100,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18029138,
+          "creation_date": "2025-11-13 10:00:07",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14940255,
+            "type_document": "Pasaporte",
+            "document": "C709CLZVG",
+            "name": "Livia",
+            "surname": "Grafin",
+            "second_surname": "Derre",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14940255,
+              "document": "C709CLZVG",
+              "type_document": "Pasaporte",
+              "name": "Livia",
+              "surname": "Grafin",
+              "second_surname": "Derre",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Alemania"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 35100,
+          "total_to_pay_accommodation": 35100,
+          "total_to_pay": 35100,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18028562,
+          "creation_date": "2025-11-13 09:18:09",
+          "category": {
+            "category_id": 34312,
+            "name": "Doble básica"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El abuelo bromista"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14936930,
+            "type_document": "Pasaporte",
+            "document": "CGU77R80",
+            "name": "Noah",
+            "surname": "Gruber",
+            "second_surname": "Derre",
+            "email": "noahgruber2000@gmail.com",
+            "phone": "",
+            "country": "Suiza"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14936930,
+              "document": "CGU77R80",
+              "type_document": "Pasaporte",
+              "name": "Noah",
+              "surname": "Gruber",
+              "second_surname": "Derre",
+              "email": "noahgruber2000@gmail.com",
+              "phone": "",
+              "country": "Suiza"
+            },
+            {
+              "client_id": 14940526,
+              "document": "XDH77N80",
+              "type_document": "Pasaporte",
+              "name": "Venus",
+              "surname": "Heule",
+              "second_surname": "Derre",
+              "email": "noahgruber2000@gmail.com",
+              "phone": "",
+              "country": "Suiza"
+            }
+          ],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 82000,
+          "total_to_pay_accommodation": 78000,
+          "total_to_pay": 82000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18028442,
+          "creation_date": "2025-11-13 09:08:37",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14926520,
+            "type_document": "Pasaporte",
+            "document": "GC1235418",
+            "name": "Brieke",
+            "surname": "Vandenbulcke",
+            "second_surname": "",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Bélgica"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14926520,
+              "document": "GC1235418",
+              "type_document": "Pasaporte",
+              "name": "Brieke",
+              "surname": "Vandenbulcke",
+              "second_surname": "",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Bélgica"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 189200,
+          "total_to_pay_accommodation": 110000,
+          "total_to_pay": 189200,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18027196,
+          "creation_date": "2025-11-13 06:22:06",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14940776,
+            "type_document": "Pasaporte",
+            "document": "C1FH2NPGY",
+            "name": "Anna",
+            "surname": "Tooter",
+            "second_surname": "Derre",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14940776,
+              "document": "C1FH2NPGY",
+              "type_document": "Pasaporte",
+              "name": "Anna",
+              "surname": "Tooter",
+              "second_surname": "Derre",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Alemania"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 78000,
+          "total_to_pay_accommodation": 78000,
+          "total_to_pay": 78000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18020478,
+          "creation_date": "2025-11-12 15:40:29",
+          "category": {
+            "category_id": 34310,
+            "name": "Apartaestudio"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El sobrino curioso"
+          },
+          "channel": {
+            "channel_id": 0,
+            "name": "Booking Engine"
+          },
+          "start_date": "2025-11-12",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14930422,
+            "type_document": "Pasaporte",
+            "document": "C2MKVVRN9",
+            "name": "Richard",
+            "surname": "Herbst",
+            "second_surname": "",
+            "email": "herbst.richard@gmx.de",
+            "phone": "+4917681658481",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14930422,
+              "document": "C2MKVVRN9",
+              "type_document": "Pasaporte",
+              "name": "Richard",
+              "surname": "Herbst",
+              "second_surname": "",
+              "email": "herbst.richard@gmx.de",
+              "phone": "+4917681658481",
+              "country": "Alemania"
+            },
+            {
+              "client_id": 14937314,
+              "document": "C84HF5L4G",
+              "type_document": "Pasaporte",
+              "name": "Felix",
+              "surname": "Dekant",
+              "second_surname": "Derre",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Alemania"
+            }
+          ],
+          "note": "Ya pagó por link de pago",
+          "total_guests": 2,
+          "paid_out": 280000,
+          "total_to_pay_accommodation": 280000,
+          "total_to_pay": 280000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18020449,
+          "creation_date": "2025-11-12 15:39:14",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-15",
+          "end_date": "2025-11-19",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14930408,
+            "type_document": "Pasaporte",
+            "document": "PA9538783",
+            "name": "Sean",
+            "surname": "Richards",
+            "second_surname": "Gonzalez",
+            "email": "sricha.870573@guest.booking.com",
+            "phone": "+61 490 182 375",
+            "country": "Australia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14930408,
+              "document": "PA9538783",
+              "type_document": "Pasaporte",
+              "name": "Sean",
+              "surname": "Richards",
+              "second_surname": "Gonzalez",
+              "email": "sricha.870573@guest.booking.com",
+              "phone": "+61 490 182 375",
+              "country": "Australia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 156060,
+          "total_to_pay_accommodation": 156060,
+          "total_to_pay": 156060,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18020350,
+          "creation_date": "2025-11-12 15:31:55",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 8"
+          },
+          "channel": [],
+          "start_date": "2025-11-12",
+          "end_date": "2025-11-13",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14922168,
+            "type_document": "Pasaporte",
+            "document": "AT708785",
+            "name": "Gil Netanel",
+            "surname": "Ishaky",
+            "second_surname": "Derre",
+            "email": "gilishaky1@gmail.com",
+            "phone": "",
+            "country": "Canadá"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14922168,
+              "document": "AT708785",
+              "type_document": "Pasaporte",
+              "name": "Gil Netanel",
+              "surname": "Ishaky",
+              "second_surname": "Derre",
+              "email": "gilishaky1@gmail.com",
+              "phone": "",
+              "country": "Canadá"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 35000,
+          "total_to_pay_accommodation": 35000,
+          "total_to_pay": 35000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18019524,
+          "creation_date": "2025-11-12 14:44:08",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-12",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14929787,
+            "type_document": "Pasaporte",
+            "document": "45371680",
+            "name": "Frantisek",
+            "surname": "Holik",
+            "second_surname": "yanagawa",
+            "email": "frantisekholik@seznam.cz",
+            "phone": "+81 70 1241 1101",
+            "country": "República Checa"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14929787,
+              "document": "45371680",
+              "type_document": "Pasaporte",
+              "name": "Frantisek",
+              "surname": "Holik",
+              "second_surname": "yanagawa",
+              "email": "frantisekholik@seznam.cz",
+              "phone": "+81 70 1241 1101",
+              "country": "República Checa"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 73941,
+          "total_to_pay_accommodation": 66300,
+          "total_to_pay": 73941,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18019459,
+          "creation_date": "2025-11-12 14:42:13",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-12",
+          "end_date": "2025-11-16",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14697572,
+            "type_document": "Pasaporte",
+            "document": "19CE64553",
+            "name": "Cyann",
+            "surname": "Bounzel",
+            "second_surname": "",
+            "email": "cbounz.660541@guest.booking.com",
+            "phone": "+33 7 71 25 99 93",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14697572,
+              "document": "19CE64553",
+              "type_document": "Pasaporte",
+              "name": "Cyann",
+              "surname": "Bounzel",
+              "second_surname": "",
+              "email": "cbounz.660541@guest.booking.com",
+              "phone": "+33 7 71 25 99 93",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 199875,
+          "total_to_pay_accommodation": 199875,
+          "total_to_pay": 199875,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18018343,
+          "creation_date": "2025-11-12 13:18:23",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 6"
+          },
+          "channel": [],
+          "start_date": "2025-11-12",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14928916,
+            "type_document": "Pasaporte",
+            "document": "C3FWOFTRT",
+            "name": "Fabian",
+            "surname": "Schlechte",
+            "second_surname": "Derre",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "A",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14928916,
+              "document": "C3FWOFTRT",
+              "type_document": "Pasaporte",
+              "name": "Fabian",
+              "surname": "Schlechte",
+              "second_surname": "Derre",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "A",
+              "country": "Alemania"
+            }
+          ],
+          "note": "NO EXTENDER. Patrick\r\ncLIENTE ENVIADO DE pOBLADO,  Pago alla, por favor arreglar",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 95000,
+          "total_to_pay": 95000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18017446,
+          "creation_date": "2025-11-12 12:24:17",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-12",
+          "end_date": "2025-11-13",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14928336,
+            "type_document": "Pasaporte",
+            "document": "BF613552",
+            "name": "Carlos",
+            "surname": "Marmolejo",
+            "second_surname": "",
+            "email": "cmarmo.521590@guest.booking.com",
+            "phone": "+1 210 914 6227",
+            "country": "Estados Unidos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14928336,
+              "document": "BF613552",
+              "type_document": "Pasaporte",
+              "name": "Carlos",
+              "surname": "Marmolejo",
+              "second_surname": "",
+              "email": "cmarmo.521590@guest.booking.com",
+              "phone": "+1 210 914 6227",
+              "country": "Estados Unidos"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 32060,
+          "total_to_pay_accommodation": 32060,
+          "total_to_pay": 32060,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18017447,
+          "creation_date": "2025-11-12 12:24:17",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-13",
+          "end_date": "2025-11-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14928336,
+            "type_document": "Pasaporte",
+            "document": "BF613552",
+            "name": "Carlos",
+            "surname": "Marmolejo",
+            "second_surname": "",
+            "email": "cmarmo.521590@guest.booking.com",
+            "phone": "+1 210 914 6227",
+            "country": "Estados Unidos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14928336,
+              "document": "BF613552",
+              "type_document": "Pasaporte",
+              "name": "Carlos",
+              "surname": "Marmolejo",
+              "second_surname": "",
+              "email": "cmarmo.521590@guest.booking.com",
+              "phone": "+1 210 914 6227",
+              "country": "Estados Unidos"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 87020,
+          "total_to_pay_accommodation": 87020,
+          "total_to_pay": 87020,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18009085,
+          "creation_date": "2025-11-11 18:48:06",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-12",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14922168,
+            "type_document": "Pasaporte",
+            "document": "AT708785",
+            "name": "Gil Netanel",
+            "surname": "Ishaky",
+            "second_surname": "Derre",
+            "email": "gilishaky1@gmail.com",
+            "phone": "",
+            "country": "Canadá"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14922168,
+              "document": "AT708785",
+              "type_document": "Pasaporte",
+              "name": "Gil Netanel",
+              "surname": "Ishaky",
+              "second_surname": "Derre",
+              "email": "gilishaky1@gmail.com",
+              "phone": "",
+              "country": "Canadá"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 20000,
+          "total_to_pay_accommodation": 20000,
+          "total_to_pay": 20000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18003881,
+          "creation_date": "2025-11-11 14:05:04",
+          "category": {
+            "category_id": 34310,
+            "name": "Apartaestudio"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El sobrino curioso"
+          },
+          "channel": [],
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-12",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14553354,
+            "type_document": "Pasaporte",
+            "document": "GB5145444",
+            "name": "Jules",
+            "surname": "Van Dam",
+            "second_surname": "",
+            "email": "julesvd2003@gmail.com",
+            "phone": "+32 48329 6643",
+            "country": "Bélgica"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14553354,
+              "document": "GB5145444",
+              "type_document": "Pasaporte",
+              "name": "Jules",
+              "surname": "Van Dam",
+              "second_surname": "",
+              "email": "julesvd2003@gmail.com",
+              "phone": "+32 48329 6643",
+              "country": "Bélgica"
+            }
+          ],
+          "note": "",
+          "total_guests": 2,
+          "paid_out": 107000,
+          "total_to_pay_accommodation": 100000,
+          "total_to_pay": 107000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18001864,
+          "creation_date": "2025-11-11 12:07:28",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": [],
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-12",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14917642,
+            "type_document": "Pasaporte",
+            "document": "C0309571",
+            "name": "Huseynov",
+            "surname": "Sahin",
+            "second_surname": "Asgar",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Rusia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14917642,
+              "document": "C0309571",
+              "type_document": "Pasaporte",
+              "name": "Huseynov",
+              "surname": "Sahin",
+              "second_surname": "Asgar",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Rusia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 42800,
+          "total_to_pay_accommodation": 40000,
+          "total_to_pay": 42800,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18001688,
+          "creation_date": "2025-11-11 11:56:09",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 6"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-12",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14917530,
+            "type_document": "Pasaporte",
+            "document": "152579291",
+            "name": "Callum",
+            "surname": "Dewar",
+            "second_surname": "",
+            "email": "callumdewar0112@gmail.com",
+            "phone": "61411105431",
+            "country": "Reino Unido"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14917530,
+              "document": "152579291",
+              "type_document": "Pasaporte",
+              "name": "Callum",
+              "surname": "Dewar",
+              "second_surname": "",
+              "email": "callumdewar0112@gmail.com",
+              "phone": "61411105431",
+              "country": "Reino Unido"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 31200,
+          "total_to_pay_accommodation": 31200,
+          "total_to_pay": 31200,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18000756,
+          "creation_date": "2025-11-11 11:00:07",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-12",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14916978,
+            "type_document": "Pasaporte",
+            "document": "AA7529360",
+            "name": "Felicia",
+            "surname": "Zheng",
+            "second_surname": "Derre",
+            "email": "feliciazheng@hotmail.com",
+            "phone": "+33 7 83 18 87 44",
+            "country": "Swazilandia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14916978,
+              "document": "AA7529360",
+              "type_document": "Pasaporte",
+              "name": "Felicia",
+              "surname": "Zheng",
+              "second_surname": "Derre",
+              "email": "feliciazheng@hotmail.com",
+              "phone": "+33 7 83 18 87 44",
+              "country": "Swazilandia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 31200,
+          "total_to_pay_accommodation": 31200,
+          "total_to_pay": 31200,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 18000657,
+          "creation_date": "2025-11-11 10:51:11",
+          "category": {
+            "category_id": 34284,
+            "name": "Apartamento doble"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El primo deportista"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-13",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14921390,
+            "type_document": "Pasaporte",
+            "document": "PAW587536",
+            "name": "Melanie",
+            "surname": "Arrivi",
+            "second_surname": "Lantto",
+            "email": "office@lafamilia-hostel.com",
+            "phone": "",
+            "country": "España"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14921390,
+              "document": "PAW587536",
+              "type_document": "Pasaporte",
+              "name": "Melanie",
+              "surname": "Arrivi",
+              "second_surname": "Lantto",
+              "email": "office@lafamilia-hostel.com",
+              "phone": "",
+              "country": "España"
+            },
+            {
+              "client_id": 14921453,
+              "document": "PAD433682",
+              "type_document": "Pasaporte",
+              "name": "Ricardo",
+              "surname": "Tatay",
+              "second_surname": "Aliaga",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "España"
+            },
+            {
+              "client_id": 14921509,
+              "document": "PAJ585277",
+              "type_document": "Pasaporte",
+              "name": "Pablo",
+              "surname": "Gil",
+              "second_surname": "Miguel",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "España"
+            },
+            {
+              "client_id": 14921567,
+              "document": "PAP525776",
+              "type_document": "Pasaporte",
+              "name": "Judith",
+              "surname": "Risueño",
+              "second_surname": "Jaume",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "España"
+            }
+          ],
+          "note": "",
+          "total_guests": 4,
+          "paid_out": 240498,
+          "total_to_pay_accommodation": 395498,
+          "total_to_pay": 430498,
+          "checked_in": true,
+          "checked_out": false
+        },
+        {
+          "booking_id": 18000536,
+          "creation_date": "2025-11-11 10:43:20",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": [],
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-12",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14709514,
+            "type_document": "Pasaporte",
+            "document": "24FD10456",
+            "name": "Calypso",
+            "surname": "BAC",
+            "second_surname": "Derre",
+            "email": "calypso.bac@icloud.com",
+            "phone": "+33 7 83 18 87 44",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14709514,
+              "document": "24FD10456",
+              "type_document": "Pasaporte",
+              "name": "Calypso",
+              "surname": "BAC",
+              "second_surname": "Derre",
+              "email": "calypso.bac@icloud.com",
+              "phone": "+33 7 83 18 87 44",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 39000,
+          "total_to_pay_accommodation": 35000,
+          "total_to_pay": 39000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17997790,
+          "creation_date": "2025-11-11 04:00:09",
+          "category": {
+            "category_id": 34310,
+            "name": "Apartaestudio"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El sobrino curioso"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-27",
+          "end_date": "2025-12-01",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14915161,
+            "type_document": "",
+            "document": "",
+            "name": "Hendrik",
+            "surname": "Gebhardt",
+            "second_surname": "",
+            "email": "hgebha.809092@guest.booking.com",
+            "phone": "+49 176 70704072",
+            "country": "Alemania"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 516558,
+          "total_to_pay": 516558,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 17997156,
+          "creation_date": "2025-11-10 22:36:08",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 6"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-12",
+          "end_date": "2025-11-16",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14914463,
+            "type_document": "Pasaporte",
+            "document": "20DF31991",
+            "name": "Anthony",
+            "surname": "Orgawitz",
+            "second_surname": "",
+            "email": "aorgaw.608386@guest.booking.com",
+            "phone": "+61432165421",
+            "country": "Francia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14914463,
+              "document": "20DF31991",
+              "type_document": "Pasaporte",
+              "name": "Anthony",
+              "surname": "Orgawitz",
+              "second_surname": "",
+              "email": "aorgaw.608386@guest.booking.com",
+              "phone": "+61432165421",
+              "country": "Francia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 173440,
+          "total_to_pay_accommodation": 173440,
+          "total_to_pay": 173440,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17995178,
+          "creation_date": "2025-11-10 19:32:08",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-12",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14895168,
+            "type_document": "Pasaporte",
+            "document": "PAM974894",
+            "name": "Susana",
+            "surname": "Gambin",
+            "second_surname": "",
+            "email": "susanagambinmeeson@hotmail.com",
+            "phone": "",
+            "country": "España"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14895168,
+              "document": "PAM974894",
+              "type_document": "Pasaporte",
+              "name": "Susana",
+              "surname": "Gambin",
+              "second_surname": "",
+              "email": "susanagambinmeeson@hotmail.com",
+              "phone": "",
+              "country": "España"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 12000,
+          "total_to_pay_accommodation": 12000,
+          "total_to_pay": 12000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17993123,
+          "creation_date": "2025-11-10 17:12:15",
+          "category": {
+            "category_id": 34311,
+            "name": "Doble estándar"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "La hermana extrovertida"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-15",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14911440,
+            "type_document": "Pasaporte",
+            "document": "X7629578",
+            "name": "Ehrler",
+            "surname": "Matteo",
+            "second_surname": "",
+            "email": "ematte.205655@guest.booking.com",
+            "phone": "+41 76 593 67 78",
+            "country": "Suiza"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14911440,
+              "document": "X7629578",
+              "type_document": "Pasaporte",
+              "name": "Ehrler",
+              "surname": "Matteo",
+              "second_surname": "",
+              "email": "ematte.205655@guest.booking.com",
+              "phone": "+41 76 593 67 78",
+              "country": "Suiza"
+            }
+          ],
+          "note": "CODE: 6778#",
+          "total_guests": 1,
+          "paid_out": 444640,
+          "total_to_pay_accommodation": 444640,
+          "total_to_pay": 444640,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17991975,
+          "creation_date": "2025-11-10 16:06:08",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 7"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-13",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14926520,
+            "type_document": "Pasaporte",
+            "document": "GC1235418",
+            "name": "Brieke",
+            "surname": "Vandenbulcke",
+            "second_surname": "",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Bélgica"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14926520,
+              "document": "GC1235418",
+              "type_document": "Pasaporte",
+              "name": "Brieke",
+              "surname": "Vandenbulcke",
+              "second_surname": "",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Bélgica"
+            }
+          ],
+          "note": "Trasladada - El primo aventurero | Cama 3",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 0,
+          "total_to_pay": 0,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17991976,
+          "creation_date": "2025-11-10 16:06:08",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-12",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14926321,
+            "type_document": "Pasaporte",
+            "document": "GC2554185",
+            "name": "Panen",
+            "surname": "Helles",
+            "second_surname": "Angeline",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Bélgica"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14926321,
+              "document": "GC2554185",
+              "type_document": "Pasaporte",
+              "name": "Panen",
+              "surname": "Helles",
+              "second_surname": "Angeline",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Bélgica"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 31500,
+          "total_to_pay_accommodation": 31500,
+          "total_to_pay": 31500,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17991696,
+          "creation_date": "2025-11-10 15:51:37",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 3"
+          },
+          "channel": [],
+          "start_date": "2025-11-10",
+          "end_date": "2025-11-11",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14880891,
+            "type_document": "Pasaporte",
+            "document": "RA074952",
+            "name": "Lukesh Edward",
+            "surname": "Kidd",
+            "second_surname": "",
+            "email": "lukeshkidd@icloud.com",
+            "phone": "",
+            "country": "Nueva Zelanda"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14880891,
+              "document": "RA074952",
+              "type_document": "Pasaporte",
+              "name": "Lukesh Edward",
+              "surname": "Kidd",
+              "second_surname": "",
+              "email": "lukeshkidd@icloud.com",
+              "phone": "",
+              "country": "Nueva Zelanda"
+            }
+          ],
+          "note": "CODE 8584#",
+          "total_guests": 1,
+          "paid_out": 40000,
+          "total_to_pay_accommodation": 40000,
+          "total_to_pay": 40000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17990814,
+          "creation_date": "2025-11-10 15:00:22",
+          "category": {
+            "category_id": 34310,
+            "name": "Apartaestudio"
+          },
+          "assigned_room": {
+            "type": "privada",
+            "name": "El sobrino curioso"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-10",
+          "end_date": "2025-11-11",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14909885,
+            "type_document": "Pasaporte",
+            "document": "YC5586226",
+            "name": "Lorenzo",
+            "surname": "Pompei",
+            "second_surname": "",
+            "email": "lpompe.324269@guest.booking.com",
+            "phone": "+39 331 501 1767",
+            "country": "Italia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14909885,
+              "document": "YC5586226",
+              "type_document": "Pasaporte",
+              "name": "Lorenzo",
+              "surname": "Pompei",
+              "second_surname": "",
+              "email": "lpompe.324269@guest.booking.com",
+              "phone": "+39 331 501 1767",
+              "country": "Italia"
+            }
+          ],
+          "note": "2096# CODE",
+          "total_guests": 1,
+          "paid_out": 125798,
+          "total_to_pay_accommodation": 125798,
+          "total_to_pay": 125798,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17989381,
+          "creation_date": "2025-11-10 13:39:08",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": [],
+          "start_date": "2025-11-10",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14350003,
+            "type_document": "Pasaporte",
+            "document": "NYLJL94LO",
+            "name": "Sander",
+            "surname": "van der Sluijs",
+            "second_surname": "",
+            "email": "ssluij.631030@guest.booking.com",
+            "phone": "+31 6 10305346",
+            "country": "Países Bajos"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14350003,
+              "document": "NYLJL94LO",
+              "type_document": "Pasaporte",
+              "name": "Sander",
+              "surname": "van der Sluijs",
+              "second_surname": "",
+              "email": "ssluij.631030@guest.booking.com",
+              "phone": "+31 6 10305346",
+              "country": "Países Bajos"
+            }
+          ],
+          "note": "CODE 5346#",
+          "total_guests": 1,
+          "paid_out": 227000,
+          "total_to_pay_accommodation": 175000,
+          "total_to_pay": 227000,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17988746,
+          "creation_date": "2025-11-10 12:52:09",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 4"
+          },
+          "channel": {
+            "channel_id": 18251,
+            "name": "Hostelworld.com"
+          },
+          "start_date": "2025-11-11",
+          "end_date": "2025-11-14",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14908605,
+            "type_document": "Pasaporte",
+            "document": "PB1848954",
+            "name": "Henry",
+            "surname": "Calvert",
+            "second_surname": "",
+            "email": "hcgcalvert@gmail.com",
+            "phone": "61411105431",
+            "country": "Australia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14908605,
+              "document": "PB1848954",
+              "type_document": "Pasaporte",
+              "name": "Henry",
+              "surname": "Calvert",
+              "second_surname": "",
+              "email": "hcgcalvert@gmail.com",
+              "phone": "61411105431",
+              "country": "Australia"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 116930,
+          "total_to_pay_accommodation": 99000,
+          "total_to_pay": 116930,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17988161,
+          "creation_date": "2025-11-10 12:13:20",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 6"
+          },
+          "channel": [],
+          "start_date": "2025-11-10",
+          "end_date": "2025-11-17",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14891934,
+            "type_document": "Pasaporte",
+            "document": "N18826925",
+            "name": "Valeria Ivonne",
+            "surname": "Marquez",
+            "second_surname": "Reza",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "México"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14891934,
+              "document": "N18826925",
+              "type_document": "Pasaporte",
+              "name": "Valeria Ivonne",
+              "surname": "Marquez",
+              "second_surname": "Reza",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "México"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 340450,
+          "total_to_pay_accommodation": 320000,
+          "total_to_pay": 340450,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17988154,
+          "creation_date": "2025-11-10 12:13:05",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": [],
+          "start_date": "2025-11-10",
+          "end_date": "2025-11-13",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14891923,
+            "type_document": "Pasaporte",
+            "document": "N14271018",
+            "name": "Valeria",
+            "surname": "Valdez",
+            "second_surname": "Garza",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "México"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14891923,
+              "document": "N14271018",
+              "type_document": "Pasaporte",
+              "name": "Valeria",
+              "surname": "Valdez",
+              "second_surname": "Garza",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "México"
+            }
+          ],
+          "note": "Trasladada - El abuelo viajero | Cama 3",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 0,
+          "total_to_pay": 0,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17980778,
+          "creation_date": "2025-11-10 11:09:16",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 2"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-10",
+          "end_date": "2025-11-13",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14912489,
+            "type_document": "Pasaporte",
+            "document": "X6222554",
+            "name": "Sarah",
+            "surname": "Reiner",
+            "second_surname": "",
+            "email": "contact@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Suiza"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14912489,
+              "document": "X6222554",
+              "type_document": "Pasaporte",
+              "name": "Sarah",
+              "surname": "Reiner",
+              "second_surname": "",
+              "email": "contact@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Suiza"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 127886,
+          "total_to_pay_accommodation": 119520,
+          "total_to_pay": 127886,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17980780,
+          "creation_date": "2025-11-10 11:09:16",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-10",
+          "end_date": "2025-11-13",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14901282,
+            "type_document": "Pasaporte",
+            "document": "X0E77V31",
+            "name": "Andri",
+            "surname": "Bäggli",
+            "second_surname": "",
+            "email": "abaggl.785232@guest.booking.com",
+            "phone": "+41 77 432 14 67",
+            "country": "Suiza"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14901282,
+              "document": "X0E77V31",
+              "type_document": "Pasaporte",
+              "name": "Andri",
+              "surname": "Bäggli",
+              "second_surname": "",
+              "email": "abaggl.785232@guest.booking.com",
+              "phone": "+41 77 432 14 67",
+              "country": "Suiza"
+            }
+          ],
+          "note": "CODE: 1467#",
+          "total_guests": 1,
+          "paid_out": 127886,
+          "total_to_pay_accommodation": 119520,
+          "total_to_pay": 127886,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17977693,
+          "creation_date": "2025-11-10 08:57:14",
+          "category": {
+            "category_id": 34280,
+            "name": "El primo aventurero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-10",
+          "end_date": "2025-11-12",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14844086,
+            "type_document": "Pasaporte",
+            "document": "L35648253",
+            "name": "Katy",
+            "surname": "Ramos Diaz",
+            "second_surname": "",
+            "email": "kdiaz.593447@guest.booking.com",
+            "phone": "+51 925 370 168",
+            "country": "Perú"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14844086,
+              "document": "L35648253",
+              "type_document": "Pasaporte",
+              "name": "Katy",
+              "surname": "Ramos Diaz",
+              "second_surname": "",
+              "email": "kdiaz.593447@guest.booking.com",
+              "phone": "+51 925 370 168",
+              "country": "Perú"
+            }
+          ],
+          "note": "CODE 5467#",
+          "total_guests": 1,
+          "paid_out": 65520,
+          "total_to_pay_accommodation": 65520,
+          "total_to_pay": 65520,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17977694,
+          "creation_date": "2025-11-10 08:57:14",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-12",
+          "end_date": "2025-11-13",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14939166,
+            "type_document": "Pasaporte",
+            "document": "122634252",
+            "name": "Alexandra",
+            "surname": "Ramos",
+            "second_surname": "Derre",
+            "email": "contact-manila@lafamilia-hostel.com",
+            "phone": "",
+            "country": "Perú"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 14939166,
+              "document": "122634252",
+              "type_document": "Pasaporte",
+              "name": "Alexandra",
+              "surname": "Ramos",
+              "second_surname": "Derre",
+              "email": "contact-manila@lafamilia-hostel.com",
+              "phone": "",
+              "country": "Perú"
+            }
+          ],
+          "note": "",
+          "total_guests": 1,
+          "paid_out": 32760,
+          "total_to_pay_accommodation": 32760,
+          "total_to_pay": 32760,
+          "checked_in": true,
+          "checked_out": true
+        },
+        {
+          "booking_id": 17974612,
+          "creation_date": "2025-11-09 20:12:17",
+          "category": {
+            "category_id": 34282,
+            "name": "El abuelo viajero"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 1"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-21",
+          "end_date": "2025-11-24",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 14896595,
+            "type_document": "",
+            "document": "",
+            "name": "Guilherme",
+            "surname": "Ruggeri Pereira",
+            "second_surname": "",
+            "email": "gperei.538516@guest.booking.com",
+            "phone": "+55 11 94952 6820",
+            "country": "Brasil"
+          },
+          "plan": "STANDARD",
+          "guests": [],
+          "note": "Approximate time of arrival: between 15:00 and 16:00",
+          "total_guests": 1,
+          "paid_out": 0,
+          "total_to_pay_accommodation": 155720,
+          "total_to_pay": 155720,
+          "checked_in": false,
+          "checked_out": false
+        },
+        {
+          "booking_id": 17974538,
+          "creation_date": "2025-11-09 20:03:26",
+          "category": {
+            "category_id": 34281,
+            "name": "La tia artista"
+          },
+          "assigned_room": {
+            "type": "compartida",
+            "name": "Cama 5"
+          },
+          "channel": {
+            "channel_id": 18250,
+            "name": "Booking.com"
+          },
+          "start_date": "2025-11-15",
+          "end_date": "2025-11-17",
+          "checkin_online": false,
+          "holder": {
+            "client_id": 12799570,
+            "type_document": "Cédula de ciudadanía",
+            "document": "85487788",
+            "name": "Harold David",
+            "surname": "Ospino",
+            "second_surname": "meza",
+            "email": "hospin.866585@guest.booking.com",
+            "phone": "+57 311 6475489",
+            "country": "Colombia"
+          },
+          "plan": "STANDARD",
+          "guests": [
+            {
+              "client_id": 12799570,
+              "document": "85487788",
+              "type_document": "Cédula de ciudadanía",
+              "name": "Harold David",
+              "surname": "Ospino",
+              "second_surname": "meza",
+              "email": "hospin.866585@guest.booking.com",
+              "phone": "+57 311 6475489",
+              "country": "Colombia"
+            }
+          ],
+          "note": "Hola buenas noches. Tengo una pregunta, hay gatos en el Hostel ?\r\nCPAACGUEMQ9Z",
+          "total_guests": 1,
+          "paid_out": 96525,
+          "total_to_pay_accommodation": 87210,
+          "total_to_pay": 96525,
+          "checked_in": true,
+          "checked_out": true
+        }
+      ],
+      "meta": {
+        "total_records": 6009,
+        "current_page": 1,
+        "records_per_page": 100,
+        "total_pages": 61
+      }
+    }
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/properties",
+    "method": "GET",
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    },
+    "error": "Status 404"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/properties",
+    "method": "GET",
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    },
+    "error": "Status 404"
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v2/rooms",
+    "method": "GET",
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    },
+    "error": "Status 404"
+  },
+  {
+    "endpoint": "https://app.lobbypms.com/api/api/v2/available-rooms",
+    "method": "GET",
+    "success": false,
+    "status": 200,
+    "data": "<!DOCTYPE html>\n<html>\n<head>\n    <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1\">\n    <title>LobbyPMS</title>\n    <meta name=\"description\" content=\"Administratu hotel en linea\">\n    <meta name=\"keywords\" content=\"hotel hostal pms economico motor reserva reservas huesped\">\n    <link rel=\"icon\" href=\"/public/images/icon.png\" sizes=\"32x32\" />\n    <!--[if lt IE 9]>\n    <script src=\"https://html5shim.googlecode.com/svn/trunk/html5.js\"></script>\n    <![endif]-->\n    <link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css\">\n    <link href=\"https://use.fontawesome.com/releases/v5.0.7/css/all.css\" rel=\"stylesheet\">\n    <link href='https://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>\n     <link href=\"https://app.lobbypms.com/public/lib/siicons/short-classes.min.css\" rel=\"stylesheet\">\n    <style>\n        /* reset */\n        html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,dl,dt,dd,ol,nav ul,nav li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,embed,figure,figcaption,footer,header,hgroup,menu,nav,output,ruby,section,summary,time,mark,audio,video{margin:0;padding:0;border:0;font-size:100%;font:inherit;vertical-align:baseline;}\n        article, aside, details, figcaption, figure,footer, header, hgroup, menu, nav, section {display: block;}\n        ol,ul{list-style:none;margin:0px;padding:0px;}\n        blockquote,q{quotes:none;}\n        blockquote:before,blockquote:after,q:before,q:after{content:'';content:none;}\n        table{border-collapse:collapse;border-spacing:0;}\n        /* start editing from here */\n        a{text-decoration:none;}\n        .txt-rt{text-align:right;}/* text align right */\n        .txt-lt{text-align:left;}/* text align left */\n        .txt-center{text-align:center;}/* text align center */\n        .float-rt{float:right;}/* float right */\n        .float-lt{float:left;}/* float left */\n        .clear{clear:both;}/* clear float */\n        .pos-relative{position:relative;}/* Position Relative */\n        .pos-absolute{position:absolute;}/* Position Absolute */\n        .vertical-base{\tvertical-align:baseline;}/* vertical align baseline */\n        .vertical-top{\tvertical-align:top;}/* vertical align top */\n        .underline{\tpadding-bottom:5px;\tborder-bottom: 1px solid #eee; margin:0 0 20px 0;}/* Add 5px bottom padding and a underline */\n        nav.vertical ul li{\tdisplay:block;}/* vertical menu */\n        nav.horizontal ul li{\tdisplay: inline-block;}/* horizontal menu */\n        img{max-width:100%;}\n        /*end reset*\n         */\n        body{\n            background: url(https://app.lobbypms.com/public/images/404/bg1.png);\n            font-family: \"Century Gothic\",Arial, Helvetica, sans-serif;\n        }\n        .content p{\n            margin: 18px 0px 45px 0px;\n        }\n        .content p{\n            font-family: 'Lato', sans-serif;\n            font-size:2em;\n            color:#666;\n            text-align:center;\n        }\n        .content p span,.logo h1 a{\n            color:#e54040;\n        }\n        .content{\n            text-align:center;\n            padding:115px 0px 0px 0px;\n        }\n        .logo{\n            text-align:center;\n\n\n            background-color: #45aeea;\n            background-image: -moz-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: -webkit-gradient(linear,0 0,0 100%,from(#54b4eb),to(#2fa4e7));\n            background-image: -webkit-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: -o-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: linear-gradient(to bottom,#54b4eb,#2fa4e7);\n            background-repeat: repeat-x;\n            border: 1px solid #1990d5;\n        }\n        .logo h1{\n            font-size:2em;\n            padding: 5px 10px 5px 10px;\n\n            background-color: #45aeea;\n            background-image: -moz-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: -webkit-gradient(linear,0 0,0 100%,from(#54b4eb),to(#2fa4e7));\n            background-image: -webkit-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: -o-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: linear-gradient(to bottom,#54b4eb,#2fa4e7);\n            background-repeat: repeat-x;\n            border: 1px solid #1990d5;\n        }\n        .logo h1 a{\n            font-size:1em;\n        }\n        .copy-right{\n            padding-top:20px;\n        }\n        .copy-right p{\n            font-size:0.9em;\n        }\n        .copy-right p a{\n            background:none;\n            color:#e54040;\n            padding:0px 0px 5px 0px;\n            font-size:0.9em;\n        }\n        .copy-right p a:hover{\n            color:#666;\n        }\n\n    </style>\n</head>\n<body>\n<!--start-wrap--->\n<div class=\"wrap\">\n    <!---start-header---->\n    <!---End-header---->\n    <!--start-content------>\n    <div class=\"content\">\n        <img src=\"https://app.lobbypms.com/public/images/404/error-img.png\" title=\"error\" />\n        <p><span><label>O</label>hh.....</span> Lo sentimos, la p&aacute;gina solicitada no existe.</p>\n        <a href=\"https://app.lobbypms.com/\" class=\"btn btn-primary\">Llevame a casa</a>\n        <div class=\"copy-right\">\n            <p>&#169 LobbyPMS 2025 </p>\n        </div>\n    </div>\n</div>\n<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML=\"window.__CF$cv$params={r:'9a15fc110ac0b755',t:'MTc2MzYyMTEyNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);\";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>\n</html>\n",
+    "error": "HTML-Response statt JSON"
+  },
+  {
+    "endpoint": "https://app.lobbypms.com/api/api/v2/reservations",
+    "method": "GET",
+    "success": false,
+    "status": 200,
+    "data": "<!DOCTYPE html>\n<html>\n<head>\n    <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1\">\n    <title>LobbyPMS</title>\n    <meta name=\"description\" content=\"Administratu hotel en linea\">\n    <meta name=\"keywords\" content=\"hotel hostal pms economico motor reserva reservas huesped\">\n    <link rel=\"icon\" href=\"/public/images/icon.png\" sizes=\"32x32\" />\n    <!--[if lt IE 9]>\n    <script src=\"https://html5shim.googlecode.com/svn/trunk/html5.js\"></script>\n    <![endif]-->\n    <link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css\">\n    <link href=\"https://use.fontawesome.com/releases/v5.0.7/css/all.css\" rel=\"stylesheet\">\n    <link href='https://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>\n     <link href=\"https://app.lobbypms.com/public/lib/siicons/short-classes.min.css\" rel=\"stylesheet\">\n    <style>\n        /* reset */\n        html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,dl,dt,dd,ol,nav ul,nav li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,embed,figure,figcaption,footer,header,hgroup,menu,nav,output,ruby,section,summary,time,mark,audio,video{margin:0;padding:0;border:0;font-size:100%;font:inherit;vertical-align:baseline;}\n        article, aside, details, figcaption, figure,footer, header, hgroup, menu, nav, section {display: block;}\n        ol,ul{list-style:none;margin:0px;padding:0px;}\n        blockquote,q{quotes:none;}\n        blockquote:before,blockquote:after,q:before,q:after{content:'';content:none;}\n        table{border-collapse:collapse;border-spacing:0;}\n        /* start editing from here */\n        a{text-decoration:none;}\n        .txt-rt{text-align:right;}/* text align right */\n        .txt-lt{text-align:left;}/* text align left */\n        .txt-center{text-align:center;}/* text align center */\n        .float-rt{float:right;}/* float right */\n        .float-lt{float:left;}/* float left */\n        .clear{clear:both;}/* clear float */\n        .pos-relative{position:relative;}/* Position Relative */\n        .pos-absolute{position:absolute;}/* Position Absolute */\n        .vertical-base{\tvertical-align:baseline;}/* vertical align baseline */\n        .vertical-top{\tvertical-align:top;}/* vertical align top */\n        .underline{\tpadding-bottom:5px;\tborder-bottom: 1px solid #eee; margin:0 0 20px 0;}/* Add 5px bottom padding and a underline */\n        nav.vertical ul li{\tdisplay:block;}/* vertical menu */\n        nav.horizontal ul li{\tdisplay: inline-block;}/* horizontal menu */\n        img{max-width:100%;}\n        /*end reset*\n         */\n        body{\n            background: url(https://app.lobbypms.com/public/images/404/bg1.png);\n            font-family: \"Century Gothic\",Arial, Helvetica, sans-serif;\n        }\n        .content p{\n            margin: 18px 0px 45px 0px;\n        }\n        .content p{\n            font-family: 'Lato', sans-serif;\n            font-size:2em;\n            color:#666;\n            text-align:center;\n        }\n        .content p span,.logo h1 a{\n            color:#e54040;\n        }\n        .content{\n            text-align:center;\n            padding:115px 0px 0px 0px;\n        }\n        .logo{\n            text-align:center;\n\n\n            background-color: #45aeea;\n            background-image: -moz-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: -webkit-gradient(linear,0 0,0 100%,from(#54b4eb),to(#2fa4e7));\n            background-image: -webkit-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: -o-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: linear-gradient(to bottom,#54b4eb,#2fa4e7);\n            background-repeat: repeat-x;\n            border: 1px solid #1990d5;\n        }\n        .logo h1{\n            font-size:2em;\n            padding: 5px 10px 5px 10px;\n\n            background-color: #45aeea;\n            background-image: -moz-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: -webkit-gradient(linear,0 0,0 100%,from(#54b4eb),to(#2fa4e7));\n            background-image: -webkit-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: -o-linear-gradient(top,#54b4eb,#2fa4e7);\n            background-image: linear-gradient(to bottom,#54b4eb,#2fa4e7);\n            background-repeat: repeat-x;\n            border: 1px solid #1990d5;\n        }\n        .logo h1 a{\n            font-size:1em;\n        }\n        .copy-right{\n            padding-top:20px;\n        }\n        .copy-right p{\n            font-size:0.9em;\n        }\n        .copy-right p a{\n            background:none;\n            color:#e54040;\n            padding:0px 0px 5px 0px;\n            font-size:0.9em;\n        }\n        .copy-right p a:hover{\n            color:#666;\n        }\n\n    </style>\n</head>\n<body>\n<!--start-wrap--->\n<div class=\"wrap\">\n    <!---start-header---->\n    <!---End-header---->\n    <!--start-content------>\n    <div class=\"content\">\n        <img src=\"https://app.lobbypms.com/public/images/404/error-img.png\" title=\"error\" />\n        <p><span><label>O</label>hh.....</span> Lo sentimos, la p&aacute;gina solicitada no existe.</p>\n        <a href=\"https://app.lobbypms.com/\" class=\"btn btn-primary\">Llevame a casa</a>\n        <div class=\"copy-right\">\n            <p>&#169 LobbyPMS 2025 </p>\n        </div>\n    </div>\n</div>\n<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML=\"window.__CF$cv$params={r:'9a15fc166b80745a',t:'MTc2MzYyMTEyOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);\";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>\n</html>\n",
+    "error": "HTML-Response statt JSON"
+  }
+]

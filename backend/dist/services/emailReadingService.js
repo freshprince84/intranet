@@ -79,8 +79,14 @@ class EmailReadingService {
                         reject(err);
                         return;
                     }
-                    // Suche nach ungelesenen Emails
-                    const searchCriteria = ['UNSEEN'];
+                    // Suche nach Emails (auch gelesene) - WICHTIG: Es muss egal sein, ob Email gelesen ist oder nicht
+                    // Prüfe nur Emails der letzten 24 Stunden, um Performance zu gewährleisten
+                    const searchDate = new Date();
+                    searchDate.setHours(searchDate.getHours() - 24);
+                    // IMAP SINCE: node-imap erwartet Format [['SINCE', Date]] - verschachtelt als Array-Element
+                    // Siehe README: imap.search([ 'UNSEEN', ['SINCE', 'May 20, 2010'] ], ...)
+                    // WICHTIG: Kein UNSEEN, damit auch gelesene Emails gefunden werden
+                    const searchCriteria = [['SINCE', searchDate]];
                     // Filter nach Absender
                     if ((filters === null || filters === void 0 ? void 0 : filters.from) && filters.from.length > 0) {
                         searchCriteria.push(['FROM', filters.from]);
