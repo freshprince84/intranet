@@ -171,9 +171,22 @@ export class TTLockService {
       await this.loadSettings();
     }
 
-    // Prüfe ob Token noch gültig ist
-    if (this.accessToken && this.tokenExpiresAt && this.tokenExpiresAt > new Date()) {
-      return this.accessToken;
+    // Prüfe ob Token vorhanden ist
+    // WICHTIG: TTLock Access Token ist unbefristet (hat kein Ablaufdatum)
+    // Wenn Token vorhanden ist, verwende ihn, auch wenn tokenExpiresAt fehlt
+    if (this.accessToken) {
+      // Wenn tokenExpiresAt gesetzt ist und noch gültig, verwende Token
+      if (this.tokenExpiresAt && this.tokenExpiresAt > new Date()) {
+        return this.accessToken;
+      }
+      // Wenn tokenExpiresAt fehlt (z.B. nach Service-Restart), verwende Token trotzdem
+      // Der Token ist unbefristet, daher ist keine Expiration-Prüfung nötig
+      if (!this.tokenExpiresAt) {
+        console.log('[TTLock] Verwende gespeicherten Access Token (unbefristet, tokenExpiresAt fehlt)');
+        return this.accessToken;
+      }
+      // Wenn tokenExpiresAt gesetzt ist, aber abgelaufen, generiere neuen Token
+      console.log('[TTLock] Access Token abgelaufen, generiere neuen Token...');
     }
 
     try {
