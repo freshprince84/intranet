@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
+import { Prisma, NotificationType } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import {
   NotificationCreateInput,
   NotificationUpdateInput,
@@ -7,8 +8,7 @@ import {
   OrganizationNotificationInput
 } from '../types/notification';
 import { validateNotification } from '../validation/notificationValidation';
-
-const prisma = new PrismaClient();
+import { notificationSettingsCache } from '../services/notificationSettingsCache';
 
 // Hilfsfunktion zum Prüfen, ob Benachrichtigung für einen Typ aktiviert ist
 async function isNotificationEnabled(
@@ -16,13 +16,11 @@ async function isNotificationEnabled(
   type: NotificationType,
   relatedEntityType?: string
 ): Promise<boolean> {
-  // Benutzereinstellungen abrufen
-  const userSettings = await prisma.userNotificationSettings.findFirst({
-    where: { userId }
-  });
+  // Benutzereinstellungen aus Cache abrufen (statt direkt von DB)
+  const userSettings = await notificationSettingsCache.getUserSettings(userId);
 
-  // Systemeinstellungen abrufen
-  const systemSettings = await prisma.notificationSettings.findFirst();
+  // Systemeinstellungen aus Cache abrufen (statt direkt von DB)
+  const systemSettings = await notificationSettingsCache.getSystemSettings();
 
   // Wenn keine Systemeinstellungen vorhanden sind, erstelle Standard-Werte
   if (!systemSettings) {
