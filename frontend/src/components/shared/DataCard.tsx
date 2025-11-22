@@ -757,16 +757,6 @@ const DataCard: React.FC<DataCardProps> = ({
                     })}
                 </div>
               )}
-              
-              {/* Actions/Buttons (wenn kein 3-Spalten-Layout) */}
-              {actions && (
-                <div
-                  className="flex items-center space-x-2 flex-wrap justify-end mt-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {actions}
-                </div>
-              )}
             </>
           )}
         </div>

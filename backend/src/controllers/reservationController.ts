@@ -227,8 +227,14 @@ ${ttlockCode}
         // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
         const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
         // Template-Parameter: {{1}} = Gast-Name, {{2}} = Check-in-Link, {{3}} = Payment-Link
-        // Erstelle LobbyPMS Check-in-Link
-        const checkInLink = generateLobbyPmsCheckInLink(updatedReservation);
+        // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
+        // (reservation.guestEmail), nicht mit der geänderten E-Mail aus updatedReservation
+        // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
+        const reservationForCheckInLink = {
+          id: reservation.id,
+          guestEmail: reservation.guestEmail || ''
+        };
+        const checkInLink = generateLobbyPmsCheckInLink(reservationForCheckInLink);
         const templateParams = [updatedReservation.guestName, checkInLink, paymentLink];
         await whatsappService.sendMessageWithFallback(
           updatedReservation.guestPhone,
