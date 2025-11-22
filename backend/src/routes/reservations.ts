@@ -1,7 +1,7 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
-import { getAllReservations, createReservation, updateGuestContact, getReservationById, generatePinAndSendNotification, sendReservationInvitation, getReservationNotificationLogs } from '../controllers/reservationController';
+import { getAllReservations, createReservation, updateGuestContact, getReservationById, generatePinAndSendNotification, sendReservationInvitation, getReservationNotificationLogs, sendPasscode } from '../controllers/reservationController';
 
 const router = express.Router();
 
@@ -32,6 +32,11 @@ router.post('/:id/generate-pin-and-send', (req, res, next) => {
   console.log('[Reservations Route] POST /:id/generate-pin-and-send aufgerufen');
   console.log('[Reservations Route] Reservation ID:', req.params.id);
   generatePinAndSendNotification(req, res).catch(next);
+});
+router.post('/:id/send-passcode', (req, res, next) => {
+  console.log('[Reservations Route] POST /:id/send-passcode aufgerufen');
+  console.log('[Reservations Route] Reservation ID:', req.params.id);
+  sendPasscode(req, res).catch(next);
 });
 router.get('/:id/notification-logs', (req, res, next) => {
   console.log('[Reservations Route] GET /:id/notification-logs aufgerufen');

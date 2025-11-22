@@ -834,6 +834,118 @@ export const generatePinAndSendNotification = async (req: Request, res: Response
 };
 
 /**
+ * POST /api/reservations/:id/send-passcode
+ * Sendet TTLock Passcode mit anpassbaren Kontaktdaten
+ */
+export const sendPasscode = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const reservationId = parseInt(id, 10);
+    const organizationId = req.organizationId;
+    const { guestPhone, guestEmail, customMessage } = req.body;
+
+    if (isNaN(reservationId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ungültige Reservierungs-ID'
+      });
+    }
+
+    if (!organizationId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organisation-ID fehlt'
+      });
+    }
+
+    // Prüfe ob Reservierung existiert und zur Organisation gehört
+    const reservation = await prisma.reservation.findFirst({
+      where: {
+        id: reservationId,
+        organizationId: organizationId
+      },
+      include: {
+        organization: true,
+        branch: true
+      }
+    });
+
+    if (!reservation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservierung nicht gefunden oder gehört nicht zur Organisation'
+      });
+    }
+
+    // Validierung: Mindestens eine Kontaktinfo muss vorhanden sein
+    const finalGuestPhone = guestPhone || reservation.guestPhone;
+    const finalGuestEmail = guestEmail || reservation.guestEmail;
+
+    if (!finalGuestPhone && !finalGuestEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mindestens eine Telefonnummer oder E-Mail-Adresse ist erforderlich'
+      });
+    }
+
+    console.log(`[Reservation] Sende Passcode für Reservierung ${reservationId}`);
+    console.log(`[Reservation] Guest Phone: ${finalGuestPhone || 'N/A'}`);
+    console.log(`[Reservation] Guest Email: ${finalGuestEmail || 'N/A'}`);
+
+    // Rufe Service-Methode auf
+    try {
+      await ReservationNotificationService.sendPasscodeNotification(
+        reservationId,
+        {
+          guestPhone: finalGuestPhone || undefined,
+          guestEmail: finalGuestEmail || undefined,
+          customMessage: customMessage || undefined
+        }
+      );
+      console.log(`[Reservation] ✅ Passcode-Versendung abgeschlossen für Reservierung ${reservationId}`);
+    } catch (error) {
+      console.error(`[Reservation] ❌ Fehler bei Passcode-Versendung für Reservierung ${reservationId}:`, error);
+      if (error instanceof Error) {
+        console.error(`[Reservation] Fehlermeldung: ${error.message}`);
+        console.error(`[Reservation] Stack: ${error.stack}`);
+      }
+      throw error;
+    }
+
+    // Hole aktualisierte Reservierung
+    const updatedReservation = await prisma.reservation.findUnique({
+      where: { id: reservationId },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            displayName: true
+          }
+        }
+      }
+    });
+
+    // Prüfe ob PIN tatsächlich generiert wurde
+    const pinGenerated = updatedReservation?.doorPin !== null && updatedReservation?.doorPin !== undefined;
+
+    res.json({
+      success: true,
+      data: updatedReservation,
+      message: pinGenerated 
+        ? 'Passcode generiert und Mitteilung versendet'
+        : 'Mitteilung versendet, aber Passcode konnte nicht generiert werden (TTLock Fehler)'
+    });
+  } catch (error) {
+    console.error('[Reservation] Fehler beim Versenden des Passcodes:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Fehler beim Versenden des Passcodes'
+    });
+  }
+};
+
+/**
  * GET /api/reservations/:id/notification-logs
  * Holt Log-Historie für eine Reservation
  */

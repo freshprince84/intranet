@@ -2386,6 +2386,34 @@
         "amountRequired": "Amount must be a positive number",
         "createError": "Error creating reservation"
       }
+    },
+    "sendInvitation": {
+      "title": "Send Invitation",
+      "contactInfo": "Contact Information",
+      "message": "Message",
+      "messageLabel": "Message (editable)",
+      "messageVariables": "Available variables: {{guestName}}, {{checkInLink}}, {{paymentLink}}",
+      "preview": "Preview",
+      "send": "Send",
+      "sending": "Sending...",
+      "success": "Invitation sent successfully",
+      "error": "Error sending invitation",
+      "noContact": "Please provide at least one phone number or email address.",
+      "alreadySent": "Already sent on",
+      "canResend": "You can resend the invitation."
+    },
+    "sendPasscode": {
+      "title": "Send Passcode",
+      "contactInfo": "Contact Information",
+      "message": "Message",
+      "messageLabel": "Message (editable)",
+      "messageVariables": "Available variables: {{guestName}}, {{passcode}}",
+      "preview": "Preview",
+      "send": "Send",
+      "sending": "Sending...",
+      "success": "Passcode sent successfully",
+      "error": "Error sending passcode",
+      "noContact": "Please provide at least one phone number or email address."
     }
   },
   "socialSecurity": {

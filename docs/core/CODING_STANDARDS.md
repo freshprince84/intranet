@@ -4,17 +4,40 @@ Dieses Dokument definiert die verbindlichen Coding-Standards für das Intranet-P
 
 ## Inhaltsverzeichnis
 
-1. [⚠️ KRITISCH: Übersetzungen (I18N) - IMMER bei neuen Features!](#-kritisch-übersetzungen-i18n---immer-bei-neuen-features)
-2. [Allgemeine Richtlinien](#allgemeine-richtlinien)
-3. [TypeScript-Standards](#typescript-standards)
-4. [React Best Practices](#react-best-practices)
-5. [HTTP-Client-Standards](#http-client-standards)
-6. [Zeitzonenbehandlung](#zeitzonenbehandlung)
-7. [Fehlerbehandlung](#fehlerbehandlung)
-8. [Kommentare und Dokumentation](#kommentare-und-dokumentation)
-9. [Testing](#testing)
-10. [Performance](#performance)
-11. [DRY-Implementierung für UI-Komponenten](#dry-implementierung-für-ui-komponenten)
+1. [🚨 STRENGSTENS VERBOTEN: Vermutungen bei Analysen und Planungen](#-strengstens-verboten-vermutungen-bei-analysen-und-planungen)
+2. [⚠️ KRITISCH: Übersetzungen (I18N) - IMMER bei neuen Features!](#-kritisch-übersetzungen-i18n---immer-bei-neuen-features)
+3. [Allgemeine Richtlinien](#allgemeine-richtlinien)
+4. [TypeScript-Standards](#typescript-standards)
+5. [React Best Practices](#react-best-practices)
+6. [HTTP-Client-Standards](#http-client-standards)
+7. [Zeitzonenbehandlung](#zeitzonenbehandlung)
+8. [Fehlerbehandlung](#fehlerbehandlung)
+9. [Kommentare und Dokumentation](#kommentare-und-dokumentation)
+10. [Testing](#testing)
+11. [Performance](#performance)
+12. [DRY-Implementierung für UI-Komponenten](#dry-implementierung-für-ui-komponenten)
+
+## 🚨 STRENGSTENS VERBOTEN: Vermutungen bei Analysen und Planungen
+
+**⚠️ ABSOLUTE REGEL - KEINE AUSNAHMEN:**
+- **VERMUTUNGEN SIND STRENGSTENS VERBOTEN** bei allen Analysen, Planungen und Dokumentationen
+- **KEIN Konjunktiv** (sollte, könnte, würde, müsste, etc.)
+- **KEINE Vermutungen** (vielleicht, evtl., möglicherweise, vermutlich, etc.)
+- **KEINE Schätzungen** ohne konkrete Fakten
+- **NUR FAKTEN** - Nur das dokumentieren, was tatsächlich im Code steht oder nachweisbar ist
+
+**Was bedeutet das konkret:**
+- Code genau untersuchen und nur dokumentieren, was tatsächlich vorhanden ist
+- Keine Formulierungen wie "xy sollte gemacht werden" oder "könnte verbessert werden"
+- Keine Formulierungen wie "evtl. ist xy das Problem" oder "vielleicht sollte xy untersucht werden"
+- In Planungsdokumenten nur das reinschreiben, was effektiv gemacht werden soll
+- Nicht Dinge wie "xy untersuchen" - entweder untersuchen und Fakten dokumentieren, oder beim User nachfragen
+- Falls die Anweisung nicht klar ist: **IMMER beim User nachfragen**, statt zu vermuten!
+
+**Beispiele:**
+- ❌ **FALSCH:** "Die Funktion könnte langsamer sein" → ✅ **RICHTIG:** "Die Funktion benötigt 2.5 Sekunden (gemessen)"
+- ❌ **FALSCH:** "Evtl. sollte hier ein Cache verwendet werden" → ✅ **RICHTIG:** "Die Funktion wird 100x pro Sekunde aufgerufen, Cache würde X% Performance verbessern"
+- ❌ **FALSCH:** "Das Problem sollte in Datei X liegen" → ✅ **RICHTIG:** "In Datei X, Zeile Y, steht Code Z, der Problem P verursacht"
 
 ## ⚠️ KRITISCH: Übersetzungen (I18N) - IMMER bei neuen Features!
 

@@ -288,6 +288,7 @@ export const API_ENDPOINTS = {
         UPDATE_GUEST_CONTACT: (id: number) => `/reservations/${id}/guest-contact`,
         GENERATE_PIN_AND_SEND: (id: number) => `/reservations/${id}/generate-pin-and-send`,
         SEND_INVITATION: (id: number) => `/reservations/${id}/send-invitation`,
+        SEND_PASSCODE: (id: number) => `/reservations/${id}/send-passcode`,
         NOTIFICATION_LOGS: (id: number) => `/reservations/${id}/notification-logs`
     },
     // TTLock (Türsystem)
