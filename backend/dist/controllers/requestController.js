@@ -22,6 +22,7 @@ const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
+const filterCache_1 = require("../services/filterCache");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
@@ -40,8 +41,6 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
     try {
         const userId = parseInt(req.userId, 10);
         const organizationId = req.organizationId;
-        // Basis-Filter: Datenisolation (Standalone vs. Organisation)
-        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
         // Filter-Parameter aus Query lesen
         const filterId = req.query.filterId;
         const filterConditions = req.query.filterConditions
@@ -49,71 +48,96 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             : undefined;
         const limit = req.query.limit
             ? parseInt(req.query.limit, 10)
-            : undefined;
+            : 50; // OPTIMIERUNG: Standard-Limit 50 statt alle
+        const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause = {};
         if (filterId) {
-            // Lade Filter von DB
-            const savedFilter = yield prisma_1.prisma.savedFilter.findUnique({
-                where: { id: parseInt(filterId, 10) }
-            });
-            if (savedFilter) {
-                const conditions = JSON.parse(savedFilter.conditions);
-                const operators = JSON.parse(savedFilter.operators);
-                filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'request');
+            // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
+            try {
+                const filterData = yield filterCache_1.filterCache.get(parseInt(filterId, 10));
+                if (filterData) {
+                    const conditions = JSON.parse(filterData.conditions);
+                    const operators = JSON.parse(filterData.operators);
+                    filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'request');
+                }
+                else {
+                    console.warn(`[getAllRequests] Filter ${filterId} nicht gefunden`);
+                }
+            }
+            catch (filterError) {
+                console.error(`[getAllRequests] Fehler beim Laden von Filter ${filterId}:`, filterError);
+                // Fallback: Versuche ohne Filter weiter
             }
         }
         else if (filterConditions) {
             // Direkte Filter-Bedingungen
             filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'request');
         }
-        // Erweitere Filter um private/öffentliche Logik
-        // Private Requests: Nur für requesterId und responsibleId sichtbar
-        // Öffentliche Requests: Für alle User der Organisation sichtbar
-        // WICHTIG: isolationFilter und OR-Bedingung müssen mit AND kombiniert werden,
-        // damit das OR aus isolationFilter nicht überschrieben wird
-        const baseWhereConditions = [
-            isolationFilter,
-            {
+        // OPTIMIERUNG: Vereinfachte WHERE-Klausel für bessere Performance
+        // Kombiniere organizationId direkt in OR-Bedingung statt verschachtelter AND/OR
+        const baseWhereConditions = [];
+        // Isolation-Filter: organizationId (wenn vorhanden)
+        if (organizationId) {
+            baseWhereConditions.push({
                 OR: [
-                    Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
+                    // Öffentliche Requests (isPrivate = false) innerhalb der Organisation
+                    {
+                        isPrivate: false,
+                        organizationId: organizationId
+                    },
                     // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
                     {
                         isPrivate: true,
+                        organizationId: organizationId,
                         OR: [
                             { requesterId: userId },
                             { responsibleId: userId }
                         ]
                     }
                 ]
-            }
-        ];
+            });
+        }
+        else {
+            // Standalone User: Nur eigene Requests
+            baseWhereConditions.push({
+                OR: [
+                    { requesterId: userId },
+                    { responsibleId: userId }
+                ]
+            });
+        }
         // Füge Filter-Bedingungen hinzu (falls vorhanden)
         if (Object.keys(filterWhereClause).length > 0) {
             baseWhereConditions.push(filterWhereClause);
         }
         // Kombiniere alle Filter
-        const whereClause = {
-            AND: baseWhereConditions
-        };
-        const requests = yield prisma_1.prisma.request.findMany(Object.assign(Object.assign({ where: whereClause }, (limit ? { take: limit } : {})), { include: {
-                requester: {
+        const whereClause = baseWhereConditions.length === 1
+            ? baseWhereConditions[0]
+            : { AND: baseWhereConditions };
+        const queryStartTime = Date.now();
+        const requests = yield prisma_1.prisma.request.findMany({
+            where: whereClause,
+            take: limit,
+            include: Object.assign({ requester: {
                     select: userSelect
-                },
-                responsible: {
+                }, responsible: {
                     select: userSelect
-                },
-                branch: {
+                }, branch: {
                     select: branchSelect
-                },
+                } }, (includeAttachments ? {
                 attachments: {
                     orderBy: {
                         uploadedAt: 'desc'
                     }
                 }
-            }, orderBy: {
+            } : {})),
+            orderBy: {
                 createdAt: 'desc'
-            } }));
+            }
+        });
+        const queryDuration = Date.now() - queryStartTime;
+        console.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests in ${queryDuration}ms`);
         // Formatiere die Daten für die Frontend-Nutzung
         const formattedRequests = requests.map(request => ({
             id: request.id,
@@ -129,20 +153,32 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             responsible: request.responsible,
             branch: request.branch,
             createTodo: request.createTodo,
-            attachments: request.attachments.map(att => ({
-                id: att.id,
-                fileName: att.fileName,
-                fileType: att.fileType,
-                fileSize: att.fileSize,
-                filePath: att.filePath,
-                uploadedAt: att.uploadedAt
-            }))
+            // OPTIMIERUNG: Attachments nur wenn geladen
+            attachments: includeAttachments && request.attachments
+                ? request.attachments.map(att => ({
+                    id: att.id,
+                    fileName: att.fileName,
+                    fileType: att.fileType,
+                    fileSize: att.fileSize,
+                    filePath: att.filePath,
+                    uploadedAt: att.uploadedAt
+                }))
+                : []
         }));
         res.json(formattedRequests);
     }
     catch (error) {
-        console.error('Error fetching requests:', error);
-        res.status(500).json({ message: 'Fehler beim Abrufen der Requests' });
+        console.error('[getAllRequests] Error fetching requests:', error);
+        console.error('[getAllRequests] Error details:', {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            filterId: req.query.filterId,
+            userId: req.userId
+        });
+        res.status(500).json({
+            message: 'Fehler beim Abrufen der Requests',
+            error: error instanceof Error ? error.message : String(error)
+        });
     }
 });
 exports.getAllRequests = getAllRequests;

@@ -9,6 +9,7 @@ import { createNotificationIfEnabled } from './notificationController';
 import { parse } from 'date-fns';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { getUserLanguage, getWorktimeNotificationText } from '../utils/translations';
+import { worktimeCache } from '../services/worktimeCache';
 
 export const startWorktime = async (req: Request, res: Response) => {
   try {
@@ -127,6 +128,9 @@ export const startWorktime = async (req: Request, res: Response) => {
 
     console.log(`Zeiterfassung ID ${worktime.id} gespeichert mit Startzeit: ${worktime.startTime.toISOString()}`);
 
+    // OPTIMIERUNG: Cache invalidieren
+    worktimeCache.invalidate(Number(userId));
+
     // Erstelle eine Benachrichtigung, wenn eingeschaltet
     const userLang = await getUserLanguage(Number(userId));
     const notificationText = getWorktimeNotificationText(userLang, 'start', worktime.branch.name);
@@ -186,6 +190,9 @@ export const stopWorktime = async (req: Request, res: Response) => {
     });
     
     console.log(`Gespeicherte Endzeit: ${worktime.endTime.toISOString()}`);
+
+    // OPTIMIERUNG: Cache invalidieren
+    worktimeCache.invalidate(Number(userId));
 
     // Erstelle eine Benachrichtigung, wenn eingeschaltet
     const userLang = await getUserLanguage(Number(userId));
@@ -1071,17 +1078,17 @@ export const getActiveWorktime = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
-    const activeWorktime = await prisma.workTime.findFirst({
-      where: {
-        userId: Number(userId),
-        endTime: null
-      },
-      include: {
-        branch: true
-      }
-    });
+    // OPTIMIERUNG: Verwende Cache für bessere Performance
+    const cached = await worktimeCache.get(Number(userId));
 
-    if (!activeWorktime) {
+    if (!cached) {
+      return res.status(200).json({ 
+        active: false,
+        message: 'Keine aktive Zeiterfassung gefunden' 
+      });
+    }
+
+    if (!cached.active || !cached.worktime) {
       return res.status(200).json({ 
         active: false,
         message: 'Keine aktive Zeiterfassung gefunden' 
@@ -1089,10 +1096,10 @@ export const getActiveWorktime = async (req: Request, res: Response) => {
     }
 
     res.json({
-      ...activeWorktime,
+      ...cached.worktime,
       active: true,
       // organizationId explizit zurückgeben für Frontend-Vergleich
-      organizationId: activeWorktime.organizationId
+      organizationId: cached.worktime.organizationId
     });
   } catch (error) {
     console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);

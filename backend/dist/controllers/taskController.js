@@ -21,6 +21,7 @@ const organization_1 = require("../middleware/organization");
 const lifecycleService_1 = require("../services/lifecycleService");
 const translations_1 = require("../utils/translations");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
+const filterCache_1 = require("../services/filterCache");
 const userSelect = {
     id: true,
     firstName: true,
@@ -36,10 +37,11 @@ const branchSelect = {
 };
 // Alle Tasks abrufen
 const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
+    var _a, _b;
     try {
-        // Datenisolation: Standalone User sehen nur ihre eigenen Tasks
-        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
+        const userId = parseInt(req.userId, 10);
+        const organizationId = req.organizationId;
+        const userRoleId = (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.id;
         // Filter-Parameter aus Query lesen
         const filterId = req.query.filterId;
         const filterConditions = req.query.filterConditions
@@ -47,17 +49,16 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             : undefined;
         const limit = req.query.limit
             ? parseInt(req.query.limit, 10)
-            : undefined;
+            : 50; // OPTIMIERUNG: Standard-Limit 50 statt alle
+        const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause = {};
         if (filterId) {
-            // Lade Filter von DB
-            const savedFilter = yield prisma_1.prisma.savedFilter.findUnique({
-                where: { id: parseInt(filterId, 10) }
-            });
-            if (savedFilter) {
-                const conditions = JSON.parse(savedFilter.conditions);
-                const operators = JSON.parse(savedFilter.operators);
+            // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
+            const filterData = yield filterCache_1.filterCache.get(parseInt(filterId, 10));
+            if (filterData) {
+                const conditions = JSON.parse(filterData.conditions);
+                const operators = JSON.parse(filterData.operators);
                 filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'task');
             }
         }
@@ -65,40 +66,69 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             // Direkte Filter-Bedingungen
             filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'task');
         }
-        // Kombiniere Isolation-Filter mit Filter-Bedingungen
-        const whereConditions = [isolationFilter];
-        if (Object.keys(filterWhereClause).length > 0) {
-            whereConditions.push(filterWhereClause);
+        // OPTIMIERUNG: Vereinfachte WHERE-Klausel für bessere Performance
+        const baseWhereConditions = [];
+        // Isolation-Filter: organizationId (wenn vorhanden)
+        if (organizationId) {
+            const taskFilter = {
+                organizationId: organizationId
+            };
+            // Wenn User eine aktive Rolle hat, füge roleId-Filter hinzu
+            if (userRoleId) {
+                taskFilter.OR = [
+                    { responsibleId: userId },
+                    { qualityControlId: userId },
+                    { roleId: userRoleId }
+                ];
+            }
+            else {
+                // Fallback: Nur eigene Tasks
+                taskFilter.OR = [
+                    { responsibleId: userId },
+                    { qualityControlId: userId }
+                ];
+            }
+            baseWhereConditions.push(taskFilter);
         }
-        const whereClause = whereConditions.length === 1
-            ? whereConditions[0]
-            : { AND: whereConditions };
-        console.log('[getAllTasks] User ID:', req.userId);
-        console.log('[getAllTasks] Organization ID:', req.organizationId);
-        console.log('[getAllTasks] User Role:', (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.id, (_d = (_c = req.userRole) === null || _c === void 0 ? void 0 : _c.role) === null || _d === void 0 ? void 0 : _d.name);
-        console.log('[getAllTasks] Isolation Filter:', JSON.stringify(isolationFilter, null, 2));
-        console.log('[getAllTasks] Filter Where Clause:', JSON.stringify(filterWhereClause, null, 2));
-        const tasks = yield prisma_1.prisma.task.findMany(Object.assign(Object.assign({ where: whereClause }, (limit ? { take: limit } : {})), { include: {
-                responsible: {
+        else {
+            // Standalone User: Nur eigene Tasks
+            baseWhereConditions.push({
+                OR: [
+                    { responsibleId: userId },
+                    { qualityControlId: userId }
+                ]
+            });
+        }
+        // Füge Filter-Bedingungen hinzu (falls vorhanden)
+        if (Object.keys(filterWhereClause).length > 0) {
+            baseWhereConditions.push(filterWhereClause);
+        }
+        // Kombiniere alle Filter
+        const whereClause = baseWhereConditions.length === 1
+            ? baseWhereConditions[0]
+            : { AND: baseWhereConditions };
+        const queryStartTime = Date.now();
+        const tasks = yield prisma_1.prisma.task.findMany({
+            where: whereClause,
+            take: limit,
+            include: Object.assign({ responsible: {
                     select: userSelect
-                },
-                role: {
+                }, role: {
                     select: roleSelect
-                },
-                qualityControl: {
+                }, qualityControl: {
                     select: userSelect
-                },
-                branch: {
+                }, branch: {
                     select: branchSelect
-                },
+                } }, (includeAttachments ? {
                 attachments: {
                     orderBy: {
                         uploadedAt: 'desc'
                     }
                 }
-            } }));
-        console.log('[getAllTasks] Found tasks:', tasks.length);
-        console.log('[getAllTasks] Task roleIds:', tasks.map(t => { var _a; return ({ id: t.id, roleId: t.roleId, roleName: (_a = t.role) === null || _a === void 0 ? void 0 : _a.name, title: t.title }); }));
+            } : {}))
+        });
+        const queryDuration = Date.now() - queryStartTime;
+        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks in ${queryDuration}ms`);
         res.json(tasks);
     }
     catch (error) {

@@ -466,6 +466,8 @@ ${paymentLink}
               .replace(/\{\{guestName\}\}/g, reservation.guestName)
               .replace(/\{\{checkInLink\}\}/g, checkInLink)
               .replace(/\{\{paymentLink\}\}/g, paymentLink);
+            // Setze auch sentMessage für Reservation-Update
+            sentMessage = emailMessage;
           } else {
             // Standard-Nachricht (gleicher Text wie WhatsApp)
             emailMessage = `Hola ${reservation.guestName},
@@ -482,6 +484,8 @@ Por favor, realiza el pago:
 ${paymentLink}
 
 ¡Te esperamos!`;
+            // Setze auch sentMessage für Reservation-Update
+            sentMessage = emailMessage;
           }
 
           // Konvertiere Plain-Text zu HTML (ähnlich wie sendCheckInInvitationEmail)
@@ -566,6 +570,11 @@ ${paymentLink}
             emailSuccess = true;
             console.log(`[ReservationNotification] ✅ Email erfolgreich versendet`);
             
+            // Setze sentMessageAt auch bei Email-Versand
+            if (!sentMessageAt) {
+              sentMessageAt = new Date();
+            }
+            
             // Log erfolgreiche Email-Notification
             try {
               await this.logNotification(
@@ -637,6 +646,7 @@ ${paymentLink}
         };
 
         // Status auf 'notification_sent' setzen, wenn mindestens eine Notification erfolgreich war
+        // sentMessage wird jetzt auch bei Email-Versand gesetzt (Zeile 470, 488)
         if (success && sentMessage) {
           updateData.sentMessage = sentMessage;
           updateData.sentMessageAt = sentMessageAt;

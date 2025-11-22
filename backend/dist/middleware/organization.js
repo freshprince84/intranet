@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.belongsToOrganization = exports.getDataIsolationFilter = exports.getUserOrganizationFilter = exports.getOrganizationFilter = exports.organizationMiddleware = void 0;
+const organizationCache_1 = require("../utils/organizationCache");
 const prisma_1 = require("../utils/prisma");
 const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -17,44 +18,16 @@ const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, voi
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        // Hole aktuelle Rolle und Organisation des Users
-        const userRole = yield prisma_1.prisma.userRole.findFirst({
-            where: {
-                userId: Number(userId),
-                lastUsed: true
-            },
-            include: {
-                role: {
-                    include: {
-                        organization: true,
-                        permissions: true
-                    }
-                }
-            }
-        });
-        if (!userRole) {
+        // ✅ PERFORMANCE: Verwende Cache statt DB-Query bei jedem Request
+        const cachedData = yield organizationCache_1.organizationCache.get(Number(userId));
+        if (!cachedData) {
             console.error('[organizationMiddleware] Keine aktive Rolle gefunden für userId:', userId);
             return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
         }
-        console.log('[organizationMiddleware] UserRole gefunden:', userRole.id, 'OrganizationId:', userRole.role.organizationId);
         // Füge Organisations-Kontext zum Request hinzu
-        // WICHTIG: Kann NULL sein für standalone User (Hamburger-Rolle)
-        req.organizationId = userRole.role.organizationId;
-        req.userRole = userRole;
-        // Hole aktive Branch des Users
-        const userBranch = yield prisma_1.prisma.usersBranches.findFirst({
-            where: {
-                userId: Number(userId),
-                lastUsed: true
-            },
-            select: {
-                branchId: true
-            }
-        });
-        // Setze branchId im Request (kann undefined sein, wenn User keine Branch hat)
-        if (userBranch) {
-            req.branchId = userBranch.branchId;
-        }
+        req.organizationId = cachedData.organizationId;
+        req.userRole = cachedData.userRole;
+        req.branchId = cachedData.branchId;
         next();
     }
     catch (error) {

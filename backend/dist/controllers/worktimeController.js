@@ -52,6 +52,7 @@ const date_fns_tz_1 = require("date-fns-tz");
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
 const translations_1 = require("../utils/translations");
+const worktimeCache_1 = require("../services/worktimeCache");
 const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { branchId, startTime } = req.body;
@@ -149,6 +150,8 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             }
         });
         console.log(`Zeiterfassung ID ${worktime.id} gespeichert mit Startzeit: ${worktime.startTime.toISOString()}`);
+        // OPTIMIERUNG: Cache invalidieren
+        worktimeCache_1.worktimeCache.invalidate(Number(userId));
         // Erstelle eine Benachrichtigung, wenn eingeschaltet
         const userLang = yield (0, translations_1.getUserLanguage)(Number(userId));
         const notificationText = (0, translations_1.getWorktimeNotificationText)(userLang, 'start', worktime.branch.name);
@@ -197,6 +200,8 @@ const stopWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             }
         });
         console.log(`Gespeicherte Endzeit: ${worktime.endTime.toISOString()}`);
+        // OPTIMIERUNG: Cache invalidieren
+        worktimeCache_1.worktimeCache.invalidate(Number(userId));
         // Erstelle eine Benachrichtigung, wenn eingeschaltet
         const userLang = yield (0, translations_1.getUserLanguage)(Number(userId));
         const notificationText = (0, translations_1.getWorktimeNotificationText)(userLang, 'stop', worktime.branch.name);
@@ -972,24 +977,23 @@ const getActiveWorktime = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const activeWorktime = yield prisma_1.prisma.workTime.findFirst({
-            where: {
-                userId: Number(userId),
-                endTime: null
-            },
-            include: {
-                branch: true
-            }
-        });
-        if (!activeWorktime) {
+        // OPTIMIERUNG: Verwende Cache für bessere Performance
+        const cached = yield worktimeCache_1.worktimeCache.get(Number(userId));
+        if (!cached) {
             return res.status(200).json({
                 active: false,
                 message: 'Keine aktive Zeiterfassung gefunden'
             });
         }
-        res.json(Object.assign(Object.assign({}, activeWorktime), { active: true, 
+        if (!cached.active || !cached.worktime) {
+            return res.status(200).json({
+                active: false,
+                message: 'Keine aktive Zeiterfassung gefunden'
+            });
+        }
+        res.json(Object.assign(Object.assign({}, cached.worktime), { active: true, 
             // organizationId explizit zurückgeben für Frontend-Vergleich
-            organizationId: activeWorktime.organizationId }));
+            organizationId: cached.worktime.organizationId }));
     }
     catch (error) {
         console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
