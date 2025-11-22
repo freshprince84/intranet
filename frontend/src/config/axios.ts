@@ -102,11 +102,19 @@ instance.interceptors.response.use(
         // User-State zurücksetzen über Custom Event
         window.dispatchEvent(new CustomEvent('auth:logout'));
         
-        // Kurze Verzögerung, um sicherzustellen, dass Event verarbeitet wird
+        // ✅ PERFORMANCE: Custom Event für React Router Navigation statt window.location.href
+        // Verhindert vollständigen Browser-Reload
+        window.dispatchEvent(new CustomEvent('auth:redirect-to-login', { 
+          detail: { path: '/login' } 
+        }));
+        
+        // Fallback: window.location.href nach 500ms (falls Event nicht verarbeitet wird)
         setTimeout(() => {
-          // Sofortige Weiterleitung zum Login
-          window.location.href = '/login';
-        }, REDIRECT_TIMEOUT);
+          if (window.location.pathname !== '/login' && isRedirecting) {
+            console.warn('[axios] Fallback: window.location.href verwendet (Event nicht verarbeitet)');
+            window.location.href = '/login';
+          }
+        }, 500);
       }
       
       // Fehler weiterwerfen (für ErrorHandler, falls gewünscht)

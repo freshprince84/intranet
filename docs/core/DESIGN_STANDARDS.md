@@ -1642,6 +1642,58 @@ Alle Action-Buttons (`btn-action`) haben folgende Eigenschaften:
 3. Prüfe: Ist der Text im `title` Attribut? → HINZUFÜGEN!
 4. Prüfe: Entspricht der Style dem Standard? → ANPASSEN!
 
+### ⚠️ KRITISCH: Layout- und Positionierungsänderungen - STRENG VERBOTEN!
+
+**WICHTIGSTE REGEL FÜR ALLE FIXES UND ÄNDERUNGEN:**
+- **Buttons, Felder und UI-Elemente DÜRFEN NIEMALS verschoben werden!**
+- **Layout-Änderungen (flex-wrap, grid-Änderungen, position-Änderungen) sind VERBOTEN!**
+- **Die ursprüngliche Position und Anordnung MUSS IMMER beibehalten werden!**
+
+**Verbotene Änderungen:**
+```tsx
+// ❌ VERBOTEN: flex-wrap hinzufügen (ändert Position bei Mobile)
+<div className="flex items-center gap-1.5 flex-wrap">
+
+// ❌ VERBOTEN: Breite ändern (verschiebt Elemente)
+<input className="w-full sm:w-[200px]" />  // War: w-[200px]
+
+// ❌ VERBOTEN: Grid-Layout ändern
+<div className="grid grid-cols-1 sm:grid-cols-2">  // War: grid-cols-1
+
+// ❌ VERBOTEN: Position-Änderungen
+<div className="absolute left-0">  // War: relative
+```
+
+**Erlaubte Änderungen:**
+```tsx
+// ✅ ERLAUBT: Funktionalität hinzufügen (ohne Layout-Änderung)
+<button onClick={handleClick}>  // War: onClick fehlte
+
+// ✅ ERLAUBT: Sichtbarkeit ändern (ohne Position-Änderung)
+{activeTab === 'reservations' && <FilterPane />}  // War: nur todos
+
+// ✅ ERLAUBT: Inhalt ändern (ohne Layout-Änderung)
+const checkInLink = generateLobbyPmsCheckInLink(...);  // War: window.location.origin
+
+// ✅ ERLAUBT: Responsive Klassen hinzufügen (wenn Position gleich bleibt)
+<button className="text-xs sm:text-sm">  // War: text-sm (nur für Konsistenz)
+```
+
+**Regeln für Fixes:**
+1. **NUR Funktionalität ändern** - Keine Layout-Änderungen
+2. **NUR Logik ändern** - Keine CSS-Klassen für Position/Layout
+3. **NUR Inhalt ändern** - Keine Container-Struktur ändern
+4. **Responsive Klassen nur für Konsistenz** - Nicht für Position-Änderungen
+
+**Checkliste vor JEDEM Fix:**
+- [ ] Werden Buttons verschoben? → VERBOTEN!
+- [ ] Werden Felder verschoben? → VERBOTEN!
+- [ ] Wird Layout geändert (flex-wrap, grid, position)? → VERBOTEN!
+- [ ] Wird nur Funktionalität/Logik geändert? → ERLAUBT!
+- [ ] Bleibt die ursprüngliche Position erhalten? → ERFORDERLICH!
+
+**Diese Regel gilt für ALLE Fixes und Änderungen im gesamten System!**
+
 ## Berechtigungsbasierte UI-Anpassung
 
 Die UI muss basierend auf den Berechtigungen des Benutzers angepasst werden. Verwende dafür den `hasPermission`-Hook:

@@ -37,7 +37,8 @@ const Sidebar: React.FC = () => {
     const { hasPermission, isProfileComplete } = usePermissions();
     const { isCollapsed, toggleCollapsed } = useSidebar();
     const [position, setPosition] = useState<'left' | 'right'>('left');
-    const location = useLocation();
+    // ✅ PERFORMANCE: Nur pathname verwenden, nicht gesamtes Location-Objekt (verhindert unnötige Re-Renders)
+    const pathname = useLocation().pathname;
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // Mobile Erkennung
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -82,7 +83,7 @@ const Sidebar: React.FC = () => {
     };
 
     const isActive = (path: string) => {
-        return location.pathname === path;
+        return pathname === path;
     };
 
     const { t } = useTranslation();

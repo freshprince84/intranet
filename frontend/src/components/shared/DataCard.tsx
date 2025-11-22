@@ -656,11 +656,11 @@ const DataCard: React.FC<DataCardProps> = ({
           {hasCenterSection ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start justify-items-start">
               {/* Links: Titel-Bereich (Telefon/Email unter Titel) */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 items-start w-full">
                 {metadata.filter(item => item.section === 'left').map((item, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400"
+                    className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 w-full"
                   >
                     {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                     {item.label && <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
@@ -672,7 +672,7 @@ const DataCard: React.FC<DataCardProps> = ({
               </div>
               
               {/* Mitte: Links (Zahlungslink, Check-in Link) */}
-              <div className="flex flex-col gap-2 items-start sm:items-center">
+              <div className="flex flex-col gap-2 items-center">
                 {metadata.filter(item => item.section === 'center').map((item, index) => (
                   <div
                     key={index}
