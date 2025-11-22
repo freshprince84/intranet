@@ -98,6 +98,10 @@ export class LobbyPmsService {
             this.apiKey = lobbyPmsSettings.apiKey;
             this.propertyId = lobbyPmsSettings.propertyId;
             this.axiosInstance = this.createAxiosInstance();
+            // WICHTIG: Setze organizationId aus Branch (wird für syncReservation benötigt)
+            if (branch.organizationId) {
+              this.organizationId = branch.organizationId;
+            }
             console.log(`[LobbyPMS] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
             return; // Erfolgreich geladen
           }
@@ -169,7 +173,17 @@ export class LobbyPmsService {
    * @returns LobbyPmsService-Instanz
    */
   static async createForBranch(branchId: number): Promise<LobbyPmsService> {
-    const service = new LobbyPmsService(undefined, branchId);
+    // Hole organizationId direkt aus Branch (wie in Dokumentation beschrieben)
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+      select: { organizationId: true }
+    });
+    
+    if (!branch?.organizationId) {
+      throw new Error(`Branch ${branchId} hat keine organizationId`);
+    }
+    
+    const service = new LobbyPmsService(branch.organizationId, branchId);
     await service.loadSettings();
     return service;
   }

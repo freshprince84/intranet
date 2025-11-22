@@ -314,6 +314,15 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
         const checkInDate = new Date();
         const checkOutDate = new Date(checkInDate);
         checkOutDate.setDate(checkOutDate.getDate() + 1); // +1 Tag
+        // Hole Branch-ID aus Request (falls vorhanden) oder erste Branch der Organisation
+        let branchId = req.branchId || null;
+        if (!branchId) {
+            const branch = yield prisma_1.prisma.branch.findFirst({
+                where: { organizationId: req.organizationId },
+                orderBy: { id: 'asc' }
+            });
+            branchId = (branch === null || branch === void 0 ? void 0 : branch.id) || null;
+        }
         const reservationData = {
             guestName: guestName.trim(),
             checkInDate: checkInDate,
@@ -322,7 +331,8 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
             paymentStatus: client_1.PaymentStatus.pending,
             amount: amount,
             currency: currency,
-            organizationId: req.organizationId
+            organizationId: req.organizationId,
+            branchId: branchId
         };
         if (contactType === 'phone') {
             reservationData.guestPhone = contact.trim();
