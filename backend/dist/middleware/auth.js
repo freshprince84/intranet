@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticateToken = exports.authMiddleware = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const prisma_1 = require("../utils/prisma");
+const userCache_1 = require("../services/userCache");
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
 /**
  * Authentication middleware to verify the JWT token
@@ -33,43 +33,34 @@ const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         }
         // Verify the token
         const decoded = jsonwebtoken_1.default.verify(token, SECRET_KEY);
-        // Get the user with roles, including the active role
-        const user = yield prisma_1.prisma.user.findUnique({
-            where: { id: decoded.userId },
-            include: {
-                roles: {
-                    include: {
-                        role: {
-                            include: {
-                                permissions: true
-                            }
-                        }
-                    }
-                },
-                settings: true
-            }
-        });
-        if (!user) {
+        // ✅ PERFORMANCE: Verwende Cache statt DB-Query bei jedem Request
+        const cached = yield userCache_1.userCache.get(decoded.userId);
+        if (!cached || !cached.user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
+        const user = cached.user;
         // Attach the user to the request object
         req.user = user;
         // Set compatibility fields for legacy code
         req.userId = String(user.id);
-        // Find and set active role
-        const activeRole = user.roles.find(r => r.lastUsed);
-        if (activeRole) {
-            req.roleId = String(activeRole.role.id);
-            // Logging entfernt: Zu viele Logs bei jedem Request
-            // Nur bei Fehlern loggen (siehe else-Block)
+        // Set active role from cache
+        if (cached.roleId) {
+            req.roleId = cached.roleId;
         }
         else {
-            // Nur bei Fehlern loggen (wenn keine aktive Rolle gefunden)
-            console.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
-            console.error(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
-            user.roles.forEach(r => {
-                console.error(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
-            });
+            // Fallback: Finde aktive Rolle (sollte nicht nötig sein, da im Cache)
+            const activeRole = user.roles.find(r => r.lastUsed);
+            if (activeRole) {
+                req.roleId = String(activeRole.role.id);
+            }
+            else {
+                // Nur bei Fehlern loggen (wenn keine aktive Rolle gefunden)
+                console.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
+                console.error(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
+                user.roles.forEach(r => {
+                    console.error(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
+                });
+            }
         }
         next();
     }

@@ -1946,7 +1946,6 @@ const Worktracker: React.FC = () => {
                                                 if (reservation.roomNumber) {
                                                     metadata.push({
                                                         icon: <HomeIcon className="h-4 w-4" />,
-                                                        label: t('reservations.room', 'Zimmer'),
                                                         value: reservation.roomNumber,
                                                         section: 'main-second'
                                                     });
@@ -1956,14 +1955,13 @@ const Worktracker: React.FC = () => {
                                                 if (reservation.guestEmail) {
                                                     metadata.push({
                                                         icon: <EnvelopeIcon className="h-4 w-4" />,
-                                                        label: t('reservations.email', 'E-Mail'),
                                                         value: reservation.guestEmail,
                                                         section: 'left'
                                                     });
-                                                } else if (reservation.guestPhone) {
+                                                }
+                                                if (reservation.guestPhone) {
                                                     metadata.push({
                                                         icon: <PhoneIcon className="h-4 w-4" />,
-                                                        label: t('reservations.phone', 'Telefon'),
                                                         value: reservation.guestPhone,
                                                         section: 'left'
                                                     });
@@ -1997,17 +1995,20 @@ const Worktracker: React.FC = () => {
                                                     icon: <LinkIcon className="h-4 w-4" />,
                                                     label: t('reservations.checkInLink', 'Check-in Link'),
                                                     value: (
-                                                        <a 
-                                                            href={checkInLink} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="text-blue-600 dark:text-blue-400 hover:underline break-all"
-                                                        >
-                                                            {checkInLink.length > 30 
-                                                                ? `${checkInLink.substring(0, 30)}...` 
-                                                                : checkInLink}
-                                                        </a>
+                                                        <div className="relative group">
+                                                            <a 
+                                                                href={checkInLink} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-blue-600 dark:text-blue-400 hover:underline"
+                                                            >
+                                                                {t('reservations.checkInLink', 'Check-in Link')}
+                                                            </a>
+                                                            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {checkInLink}
+                                                            </div>
+                                                        </div>
                                                     ),
                                                     section: 'center'
                                                 });
@@ -3084,7 +3085,6 @@ const Worktracker: React.FC = () => {
                                                 if (reservation.roomNumber) {
                                                     metadata.push({
                                                         icon: <HomeIcon className="h-4 w-4" />,
-                                                        label: t('reservations.room', 'Zimmer'),
                                                         value: reservation.roomNumber,
                                                         section: 'main-second'
                                                     });
@@ -3094,14 +3094,13 @@ const Worktracker: React.FC = () => {
                                                 if (reservation.guestEmail) {
                                                     metadata.push({
                                                         icon: <EnvelopeIcon className="h-4 w-4" />,
-                                                        label: t('reservations.email', 'E-Mail'),
                                                         value: reservation.guestEmail,
                                                         section: 'left'
                                                     });
-                                                } else if (reservation.guestPhone) {
+                                                }
+                                                if (reservation.guestPhone) {
                                                     metadata.push({
                                                         icon: <PhoneIcon className="h-4 w-4" />,
-                                                        label: t('reservations.phone', 'Telefon'),
                                                         value: reservation.guestPhone,
                                                         section: 'left'
                                                     });
@@ -3135,17 +3134,20 @@ const Worktracker: React.FC = () => {
                                                     icon: <LinkIcon className="h-4 w-4" />,
                                                     label: t('reservations.checkInLink', 'Check-in Link'),
                                                     value: (
-                                                        <a 
-                                                            href={checkInLink} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="text-blue-600 dark:text-blue-400 hover:underline break-all"
-                                                        >
-                                                            {checkInLink.length > 30 
-                                                                ? `${checkInLink.substring(0, 30)}...` 
-                                                                : checkInLink}
-                                                        </a>
+                                                        <div className="relative group">
+                                                            <a 
+                                                                href={checkInLink} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-blue-600 dark:text-blue-400 hover:underline"
+                                                            >
+                                                                {t('reservations.checkInLink', 'Check-in Link')}
+                                                            </a>
+                                                            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {checkInLink}
+                                                            </div>
+                                                        </div>
                                                     ),
                                                     section: 'center'
                                                 });

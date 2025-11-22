@@ -48,7 +48,7 @@ const WorktimeTracker: React.FC = () => {
     const [showWorkTimeModal, setShowWorkTimeModal] = useState(false);
     const [statusError, setStatusError] = useState<string | null>(null);
     const { user } = useAuth();
-    const { updateTrackingStatus } = useWorktime();
+    const { isTracking: contextTracking, updateTrackingStatus, checkTrackingStatus } = useWorktime();
     const { branches, selectedBranch, setSelectedBranch } = useBranch();
     const { organization } = useOrganization();
 
@@ -150,16 +150,29 @@ const WorktimeTracker: React.FC = () => {
         }
     }, [user?.id, updateTrackingStatus, selectedBranch, organization]);
     
-    // Initiale Prüfung, ob bereits eine aktive Zeiterfassung läuft
+    // ✅ PERFORMANCE: Verwende WorktimeContext statt eigenen Request
+    // Initiale Prüfung: Verwende isTracking aus WorktimeContext (wird bereits beim Seitenaufruf geladen)
     useEffect(() => {
         if (user) {
-            console.log('Benutzer geladen, prüfe aktive Zeiterfassung für Benutzer-ID:', user.id);
-            checkActiveWorktime();
+            // WorktimeContext lädt bereits beim Mount, verwende diesen Status
+            // Nur wenn Context noch nicht geladen, manuell prüfen
+            if (contextTracking !== undefined) {
+                // Context ist geladen, verwende diesen Status
+                setIsTracking(contextTracking);
+                setIsLoading(false);
+            } else {
+                // Fallback: Context noch nicht geladen, warte kurz und prüfe dann
+                const timeout = setTimeout(() => {
+                    checkTrackingStatus().then(() => {
+                        setIsLoading(false);
+                    });
+                }, 100);
+                return () => clearTimeout(timeout);
+            }
         } else {
-            console.log('Warte auf Benutzer-Daten vor dem Prüfen der Zeiterfassung...');
             setIsLoading(false);
         }
-    }, [user, checkActiveWorktime]);
+    }, [user, contextTracking, checkTrackingStatus]);
 
     // Timer-Logik
     useEffect(() => {

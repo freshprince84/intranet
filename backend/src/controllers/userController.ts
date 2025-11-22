@@ -11,6 +11,7 @@ import { getUserLanguage, getUserNotificationText } from '../utils/translations'
 import { organizationMiddleware, getUserOrganizationFilter, getDataIsolationFilter } from '../middleware/organization';
 import { LifecycleService } from '../services/lifecycleService';
 import { userLanguageCache } from '../services/userLanguageCache';
+import { userCache } from '../services/userCache';
 
 interface AuthenticatedRequest extends Request {
     userId: string;
@@ -417,10 +418,12 @@ export const updateUserById = async (req: Request, res: Response) => {
             }
         });
 
-        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        // Cache-Invalidierung: Wenn User-Daten aktualisiert wurden, Caches invalidieren
         if ('language' in updateData && updateData.language !== undefined) {
             userLanguageCache.invalidate(userId);
         }
+        // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
+        userCache.invalidate(userId);
 
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
@@ -672,10 +675,12 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             }
         });
 
-        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        // Cache-Invalidierung: Wenn User-Daten aktualisiert wurden, Caches invalidieren
         if ('language' in updateData && updateData.language !== undefined) {
             userLanguageCache.invalidate(userId);
         }
+        // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
+        userCache.invalidate(userId);
 
         // Prüfe Profilvollständigkeit nach Update (username, email, language - country NICHT nötig)
         const isComplete = !!(
@@ -976,8 +981,10 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
             }
         });
 
-        // Cache-Invalidierung: Wenn User-Rollen geändert wurden, könnte sich die Organisation-Sprache ändern
+        // Cache-Invalidierung: Wenn User-Rollen geändert wurden, Caches invalidieren
         userLanguageCache.invalidate(userId);
+        // ✅ PERFORMANCE: UserCache invalidieren bei Rollen-Änderung
+        userCache.invalidate(userId);
 
         // Benachrichtigung an den Benutzer senden, dessen Rollen aktualisiert wurden
         const userLang = await getUserLanguage(userId);
@@ -1511,6 +1518,12 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             });
         });
 
+        // ✅ PERFORMANCE: UserCache invalidieren bei Rollen-Wechsel
+        userCache.invalidate(userId);
+        // ✅ PERFORMANCE: OrganizationCache invalidieren (lastUsed hat sich geändert)
+        const { organizationCache } = await import('../utils/organizationCache');
+        organizationCache.invalidate(userId);
+
         // Benutzer mit aktualisierten Rollen zurückgeben
         const updatedUser = await prisma.user.findUnique({
             where: { id: userId },
@@ -1818,10 +1831,12 @@ export const updateUser = async (req: Request, res: Response) => {
             }
         });
 
-        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        // Cache-Invalidierung: Wenn User-Daten aktualisiert wurden, Caches invalidieren
         if ('language' in updateData && updateData.language !== undefined) {
             userLanguageCache.invalidate(userId);
         }
+        // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
+        userCache.invalidate(userId);
 
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
