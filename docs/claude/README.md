@@ -32,10 +32,14 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 
 ## Claude-spezifische Funktionen
 
+
 ### Datenbankzugriff und Debugging
 - **[claude_database_access.md](claude_database_access.md)** - Vollständige Anleitung für direkten Datenbankzugriff via MCP und REST-API sowie Frontend-Console-Monitoring
 - **[claude_usage_guidelines.md](claude_usage_guidelines.md)** - Richtlinien für die automatische Tool-Nutzung durch Claude
 - **[log_housekeeping.md](log_housekeeping.md)** - Automatisches Log-Management und Rotation-System für Claude Console Logs
+
+### Performance-Analyse
+- **[PERFORMANCE_ANALYSE_VOLLSTAENDIG.md](../technical/PERFORMANCE_ANALYSE_VOLLSTAENDIG.md)** - ⭐ **NEU**: Vollständige Performance-Analyse mit konkreten Lösungsvorschlägen (2025-01-21)
 
 ### Queue-System
 - **[QUEUE_SYSTEM_README.md](../technical/QUEUE_SYSTEM_README.md)** - Queue-System Dokumentations-Übersicht

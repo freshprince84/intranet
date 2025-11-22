@@ -1,0 +1,54 @@
+[33m68d0701[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix: LobbyPMS Pagination - hole alle Seiten da creation_date_from Filter nicht korrekt funktioniert
+[33maf104a8[m Performance: Optimiere /api/organizations/current und Prisma reconnect-Logik
+[33mec9c6a3[m Performance: getUserLanguage optimiert mit Query-Optimierung und Cache
+[33mb80bf4f[m Fix: Filtere nach creation_date statt Check-in Datum
+[33m53d3ea0[m Revert "Performance: Branch-Settings-Cache implementiert - Reduziert CPU-Last durch Caching von entschlüsselten Settings"
+[33m346826f[m Performance: Branch-Settings-Cache implementiert - Reduziert CPU-Last durch Caching von entschlüsselten Settings
+[33m7edec95[m Fix: Sync-Zeitraum auf letzte 24h bis +30 Tage geändert
+[33m55dcd07[m Fix: Manila propertyId auf 15337 korrigiert, alle Reservierungen gelöscht
+[33m387db7f[m Fix: findBranchByPropertyId berücksichtigt jetzt auch apiKey
+[33m7c87b4f[m Fix: Alle syncReservation Aufrufe verwenden jetzt branchId
+[33m7aba681[m Fix: Entferne gefährlichen Fallback für branchId in syncReservation
+[33m91d1de2[m Fix: organizationId wird jetzt korrekt aus Branch geholt
+[33mf1a1f36[m Fix: Reservierungen ohne Branch-Zuordnung beheben
+[33m8f60399[m Performance: Server-seitiges Filtering implementiert
+[33medf6e13[m feat: add branch settings to all services - add branch settings to all controllers - add branch settings to all queues - add branch settings to all utils - add branch settings to all validation - add branch settings to all services - add branch settings to all models - add branch settings to all migrations - add branch settings to all scripts - add branch settings to all tests
+[33m0e87a7e[m Performance: NotificationSettings Cache implementiert
+[33m9a18767[m Manueller Sync: Alle Branches syncen (wie automatischer Scheduler)
+[33m5a0ed6f[m Script: Prüfe alle Branches LobbyPMS Settings
+[33ma91e8e8[m Script: Prüfe importierte Reservierungen
+[33m2861a27[m Fix: organizationId sicherstellen in syncReservation
+[33m859042b[m Script: Prüfe Branch organizationId
+[33md83a697[m Fix: organizationId wird nicht gesetzt bei Branch-Settings
+[33m5ab45d5[m Fix: booking_id auch in Error-Handling
+[33mcb2feec[m Fix: TypeScript Typen für status und paymentStatus
+[33mb771817[m Fix: LobbyPMS API Mapping - booking_id statt id, korrekte Feldstruktur
+[33mf7e3549[m Script: Prüfe Branch Tokens
+[33m0154fea[m Script: Finde Manila Property ID
+[33mda6708d[m Script: Tausche LobbyPMS API-Tokens zwischen Manila und Parque Poblado
+[33me070e5d[m Script: Teste Property ID 13543 direkt via API
+[33m83c133e[m Script: Verbesserte Property ID Erkennung aus Bookings
+[33m4687c7e[m Script: Prüfe LobbyPMS Property ID Zuordnung
+[33md2feba3[m Phase 6 implementiert: LobbyPMS API Import ersetzt Email-Import
+[33m986a062[m feat: add branch settings to lobbyPmsService - add branch settings to lobbyPmsService - add branch settings to lobbyPmsReservationSyncService - add branch settings to lobbyPmsReservationScheduler - add branch settings to lobbyPmsReservationService - add branch settings to lobbyPmsReservationValidation - add branch settings to lobbyPmsReservationUtils - add branch settings to lobbyPmsReservationValidation
+[33mfd94344[m Update: LobbyPMS Services verbessert
+[33mbbb3a9e[m Fix: LobbyPMS Settings-Struktur korrigiert & Logging verbessert
+[33m55f8ae2[m Fix: LobbyPMS Settings-Struktur korrigiert & Logging verbessert
+[33m8fa3586[m Add: Branch Settings Sync Script & LobbyPMS Reservation Sync Services
+[33md161531[m feat: add branch settings schema and migrate reservations to manila - add branch settings schema - migrate reservations to manila - add branch settings to all services - add branch settings to all controllers - add branch settings to all queues - add branch settings to all utils - add branch settings to all validation - add branch settings to all services
+[33me3cb14a[m SMTP-Konfiguration: Scripts zum Setzen und Prüfen der SMTP-Einstellungen
+[33mc1b0c8e[m schichtplaner phase 3 documentation schichtplaner phase 4 documentation schichtplaner phase 5 documentation schichtplaner phase 6 documentation schichtplaner phase 7 documentation schichtplaner phase 8 documentation schichtplaner phase 9 documentation schichtplaner phase 10 documentation schichtplaner phase 11 documentation schichtplaner phase 12 documentation
+[33m5d43e2d[m Email-Import: Emails werden NICHT mehr verschoben oder markiert
+[33m440372b[m Email-Import: Prüfe auch gelesene Emails der letzten 24 Stunden
+[33m59c4371[m Email-Import: Filter wieder auf UNSEEN gesetzt (wie am Anfang)
+[33mf5fcd0e[m Fix: TTLock Access Token wird jetzt verwendet, auch wenn tokenExpiresAt fehlt (Token ist unbefristet)
+[33m2f9f51c[m Fix: Reservation-Einladungen verwenden jetzt direkt Template Messages (kein Session Message Fallback)
+[33mb218356[m Debug: WhatsApp Status-Updates detailliert loggen
+[33m9b7a493[m Add: Script zum Prüfen des WhatsApp Tokens
+[33m55a715c[m Debug: WhatsApp Token Entschlüsselung debuggen + Fix-Script hinzufügen
+[33m018b182[m Fix: Template-Fallback wird jetzt bei allen Fehlern versucht, nicht nur bei 24h-Fenster-Fehlern
+[33me5e04e8[m Fix: Reservation Notification Logs werden jetzt immer erstellt, auch bei Fehlern
+[33m8e67022[m schichtplaner phase 3 documentation schichtplaner phase 4 documentation
+[33m00b5d56[m schichtplaner phase 2 documentation
+[33m53dae94[m Schichtplaner Status und Plan
+[33m6a7216c[m refactor: app.ts -> index.ts refactoring     - remove app.ts     - remove server.ts     - remove constants/seedPermissions.js     - remove constants/standardFilters.js     - remove controllers/payrollController.js     - remove controllers/reservationController.js     - remove controllers/shiftController.js     - remove controllers/userController.js     - remove middleware/organization.js     - remove middleware/tenantScoping.js     - remove routes/authRoutes.js     - remove routes/authRoutes.js.map     - remove routes/payroll.js     - remove routes/payroll.js.map     - remove routes/roleRoutes.js     - remove routes/roleRoutes.js.map     - remove routes/shifts.js

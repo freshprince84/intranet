@@ -261,41 +261,73 @@ class LobbyPmsService {
                 yield this.loadSettings();
             }
             try {
-                // WICHTIG: Filtere nach creation_date (Erstellungsdatum), NICHT nach Check-in/Check-out!
+                // PROBLEM: creation_date_from Filter funktioniert nicht korrekt in der API
+                // Die API gibt nicht alle Reservierungen zurück, die nach creation_date_from erstellt wurden
+                // LÖSUNG: Hole alle Reservierungen mit Pagination OHNE creation_date_from Filter und filtere client-seitig
                 const params = {
-                    creation_date_from: startDate.toISOString().split('T')[0], // YYYY-MM-DD
+                    per_page: 100, // Maximal 100 pro Seite
                 };
                 if (this.propertyId) {
                     params.property_id = this.propertyId;
                 }
-                const response = yield this.axiosInstance.get('/api/v1/bookings', {
-                    params,
-                    validateStatus: (status) => status < 500 // Akzeptiere 4xx als gültige Antwort
+                // Hole alle Seiten mit Pagination
+                let allReservations = [];
+                let page = 1;
+                let hasMore = true;
+                const maxPages = 200; // Sicherheitslimit (20.000 Reservierungen max)
+                while (hasMore && page <= maxPages) {
+                    const response = yield this.axiosInstance.get('/api/v1/bookings', {
+                        params: Object.assign(Object.assign({}, params), { page }),
+                        validateStatus: (status) => status < 500 // Akzeptiere 4xx als gültige Antwort
+                    });
+                    // Prüfe ob Response HTML ist (404-Seite)
+                    const responseData = response.data;
+                    if (typeof responseData === 'string' && responseData.includes('<!DOCTYPE')) {
+                        throw new Error('LobbyPMS API Endpoint nicht gefunden. Bitte prüfe die API-Dokumentation für den korrekten Endpoint.');
+                    }
+                    // LobbyPMS gibt { data: [...], meta: {...} } zurück
+                    let pageReservations = [];
+                    if (responseData && typeof responseData === 'object' && responseData.data && Array.isArray(responseData.data)) {
+                        pageReservations = responseData.data;
+                    }
+                    else if (Array.isArray(responseData)) {
+                        pageReservations = responseData;
+                    }
+                    else if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
+                        pageReservations = responseData.data;
+                    }
+                    else {
+                        // Debug: Zeige Response-Struktur (nur wenn nicht HTML)
+                        if (typeof responseData !== 'string') {
+                            console.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(responseData, null, 2));
+                        }
+                        throw new Error((responseData && typeof responseData === 'object' && responseData.error) ||
+                            (responseData && typeof responseData === 'object' && responseData.message) ||
+                            'Unbekannter Fehler beim Abrufen der Reservierungen');
+                    }
+                    allReservations = allReservations.concat(pageReservations);
+                    // Prüfe ob es weitere Seiten gibt
+                    const meta = responseData.meta || {};
+                    const totalPages = meta.total_pages || 1;
+                    if (pageReservations.length === 0 || page >= totalPages) {
+                        hasMore = false;
+                    }
+                    else {
+                        page++;
+                    }
+                }
+                // CLIENT-SEITIGES FILTERN nach creation_date (da API-Filter nicht korrekt funktioniert)
+                const filteredReservations = allReservations.filter((reservation) => {
+                    if (!reservation.creation_date) {
+                        return false; // Keine creation_date = nicht inkludieren
+                    }
+                    const creationDate = new Date(reservation.creation_date);
+                    // Filtere nach startDate (inklusive) und endDate (optional, inklusive)
+                    const afterStartDate = creationDate >= startDate;
+                    const beforeEndDate = !endDate || creationDate <= endDate;
+                    return afterStartDate && beforeEndDate;
                 });
-                // Prüfe ob Response HTML ist (404-Seite)
-                const responseData = response.data;
-                if (typeof responseData === 'string' && responseData.includes('<!DOCTYPE')) {
-                    throw new Error('LobbyPMS API Endpoint nicht gefunden. Bitte prüfe die API-Dokumentation für den korrekten Endpoint.');
-                }
-                // LobbyPMS gibt { data: [...], meta: {...} } zurück
-                if (responseData && typeof responseData === 'object' && responseData.data && Array.isArray(responseData.data)) {
-                    return responseData.data;
-                }
-                // Fallback: Direktes Array (wenn API direkt Array zurückgibt)
-                if (Array.isArray(responseData)) {
-                    return responseData;
-                }
-                // Fallback: success-Format
-                if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
-                    return responseData.data;
-                }
-                // Debug: Zeige Response-Struktur (nur wenn nicht HTML)
-                if (typeof responseData !== 'string') {
-                    console.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(responseData, null, 2));
-                }
-                throw new Error((responseData && typeof responseData === 'object' && responseData.error) ||
-                    (responseData && typeof responseData === 'object' && responseData.message) ||
-                    'Unbekannter Fehler beim Abrufen der Reservierungen');
+                return filteredReservations;
             }
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {

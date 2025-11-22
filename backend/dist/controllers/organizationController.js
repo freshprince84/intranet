@@ -718,6 +718,8 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
+        // Prüfe ob Settings geladen werden sollen (Query-Parameter)
+        const includeSettings = req.query.includeSettings === 'true';
         // Hole die aktuelle Rolle des Users
         const userRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
@@ -727,7 +729,24 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
             include: {
                 role: {
                     include: {
-                        organization: true
+                        organization: {
+                            // ✅ PERFORMANCE: Settings nur laden wenn explizit angefragt
+                            select: includeSettings ? undefined : {
+                                id: true,
+                                name: true,
+                                displayName: true,
+                                domain: true,
+                                logo: true,
+                                isActive: true,
+                                maxUsers: true,
+                                subscriptionPlan: true,
+                                country: true,
+                                nit: true,
+                                createdAt: true,
+                                updatedAt: true
+                                // settings wird NICHT geladen (19.8 MB!)
+                            }
+                        }
                     }
                 }
             }
@@ -753,9 +772,13 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
         if (organization && organization.logo === 'null') {
             organization.logo = null;
         }
-        // ✅ ENTschlüssele Settings für Response (Frontend braucht entschlüsselte Werte)
-        if (organization.settings) {
+        // ✅ ENTschlüssele Settings für Response (nur wenn geladen)
+        if (includeSettings && organization.settings) {
             organization.settings = (0, encryption_1.decryptApiSettings)(organization.settings);
+        }
+        else if (!includeSettings) {
+            // Settings nicht geladen - setze auf null für Frontend
+            organization.settings = null;
         }
         res.json(organization);
     }
