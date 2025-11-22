@@ -73,7 +73,8 @@ export const getAllRequests = async (req: Request, res: Response) => {
             : undefined;
         const limit = req.query.limit 
             ? parseInt(req.query.limit as string, 10) 
-            : undefined;
+            : 50; // OPTIMIERUNG: Standard-Limit 50 statt alle
+        const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause: any = {};
@@ -144,7 +145,7 @@ export const getAllRequests = async (req: Request, res: Response) => {
         const queryStartTime = Date.now();
         const requests = await prisma.request.findMany({
             where: whereClause,
-            ...(limit ? { take: limit } : {}),
+            take: limit,
             include: {
                 requester: {
                     select: userSelect
@@ -155,11 +156,14 @@ export const getAllRequests = async (req: Request, res: Response) => {
                 branch: {
                     select: branchSelect
                 },
-                attachments: {
-                    orderBy: {
-                        uploadedAt: 'desc'
+                // OPTIMIERUNG: Attachments nur laden wenn explizit angefragt
+                ...(includeAttachments ? {
+                    attachments: {
+                        orderBy: {
+                            uploadedAt: 'desc'
+                        }
                     }
-                }
+                } : {})
             },
             orderBy: {
                 createdAt: 'desc'
@@ -183,14 +187,17 @@ export const getAllRequests = async (req: Request, res: Response) => {
             responsible: request.responsible,
             branch: request.branch,
             createTodo: request.createTodo,
-            attachments: request.attachments.map(att => ({
-                id: att.id,
-                fileName: att.fileName,
-                fileType: att.fileType,
-                fileSize: att.fileSize,
-                filePath: att.filePath,
-                uploadedAt: att.uploadedAt
-            }))
+            // OPTIMIERUNG: Attachments nur wenn geladen
+            attachments: includeAttachments && request.attachments 
+                ? request.attachments.map(att => ({
+                    id: att.id,
+                    fileName: att.fileName,
+                    fileType: att.fileType,
+                    fileSize: att.fileSize,
+                    filePath: att.filePath,
+                    uploadedAt: att.uploadedAt
+                }))
+                : []
         }));
 
         res.json(formattedRequests);
