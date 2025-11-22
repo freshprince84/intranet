@@ -56,6 +56,7 @@ const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const lifecycleService_1 = require("../services/lifecycleService");
+const userLanguageCache_1 = require("../services/userLanguageCache");
 // Alle Benutzer abrufen
 const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -327,6 +328,10 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 }
             }
         });
+        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        if ('language' in updateData && updateData.language !== undefined) {
+            userLanguageCache_1.userLanguageCache.invalidate(userId);
+        }
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
@@ -540,6 +545,10 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         });
+        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        if ('language' in updateData && updateData.language !== undefined) {
+            userLanguageCache_1.userLanguageCache.invalidate(userId);
+        }
         // Prüfe Profilvollständigkeit nach Update (username, email, language - country NICHT nötig)
         const isComplete = !!(updatedUser.username &&
             updatedUser.email &&
@@ -808,6 +817,8 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
                 }
             }
         });
+        // Cache-Invalidierung: Wenn User-Rollen geändert wurden, könnte sich die Organisation-Sprache ändern
+        userLanguageCache_1.userLanguageCache.invalidate(userId);
         // Benachrichtigung an den Benutzer senden, dessen Rollen aktualisiert wurden
         const userLang = yield (0, translations_1.getUserLanguage)(userId);
         console.log(`[updateUserRoles] User ${userId} Sprache: ${userLang}`);
@@ -1501,6 +1512,10 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 }
             }
         });
+        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        if ('language' in updateData && updateData.language !== undefined) {
+            userLanguageCache_1.userLanguageCache.invalidate(userId);
+        }
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {

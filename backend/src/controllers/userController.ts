@@ -10,6 +10,7 @@ import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getUserNotificationText } from '../utils/translations';
 import { organizationMiddleware, getUserOrganizationFilter, getDataIsolationFilter } from '../middleware/organization';
 import { LifecycleService } from '../services/lifecycleService';
+import { userLanguageCache } from '../services/userLanguageCache';
 
 interface AuthenticatedRequest extends Request {
     userId: string;
@@ -416,6 +417,11 @@ export const updateUserById = async (req: Request, res: Response) => {
             }
         });
 
+        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        if ('language' in updateData && updateData.language !== undefined) {
+            userLanguageCache.invalidate(userId);
+        }
+
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
@@ -665,6 +671,11 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                 }
             }
         });
+
+        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        if ('language' in updateData && updateData.language !== undefined) {
+            userLanguageCache.invalidate(userId);
+        }
 
         // Prüfe Profilvollständigkeit nach Update (username, email, language - country NICHT nötig)
         const isComplete = !!(
@@ -964,6 +975,9 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
                 }
             }
         });
+
+        // Cache-Invalidierung: Wenn User-Rollen geändert wurden, könnte sich die Organisation-Sprache ändern
+        userLanguageCache.invalidate(userId);
 
         // Benachrichtigung an den Benutzer senden, dessen Rollen aktualisiert wurden
         const userLang = await getUserLanguage(userId);
@@ -1803,6 +1817,11 @@ export const updateUser = async (req: Request, res: Response) => {
                 }
             }
         });
+
+        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        if ('language' in updateData && updateData.language !== undefined) {
+            userLanguageCache.invalidate(userId);
+        }
 
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
