@@ -5,23 +5,52 @@ import { TaskAutomationService } from './taskAutomationService';
 import { prisma } from '../utils/prisma';
 
 /**
- * Findet Branch-ID über LobbyPMS property_id
+ * Findet Branch-ID über LobbyPMS property_id UND apiKey
+ * WICHTIG: Da mehrere Branches die gleiche propertyId haben können, muss auch der apiKey geprüft werden!
  * @param propertyId - LobbyPMS Property ID
+ * @param apiKey - LobbyPMS API Key (optional, aber empfohlen für eindeutige Zuordnung)
  * @param organizationId - Organisation ID (optional, für bessere Performance)
  * @returns Branch-ID oder null
  */
-export async function findBranchByPropertyId(propertyId: string, organizationId?: number): Promise<number | null> {
+export async function findBranchByPropertyId(
+  propertyId: string, 
+  apiKey?: string,
+  organizationId?: number
+): Promise<number | null> {
   const branches = await prisma.branch.findMany({
     where: organizationId ? { organizationId } : undefined,
     select: { id: true, lobbyPmsSettings: true }
   });
 
+  // Wenn apiKey vorhanden, prüfe auch diesen für eindeutige Zuordnung
+  if (apiKey) {
+    for (const branch of branches) {
+      if (branch.lobbyPmsSettings) {
+        try {
+          const settings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+          const lobbyPmsSettings = settings?.lobbyPms || settings;
+          const propertyIdMatch = lobbyPmsSettings?.propertyId === propertyId || String(lobbyPmsSettings?.propertyId) === String(propertyId);
+          const apiKeyMatch = lobbyPmsSettings?.apiKey === apiKey;
+          
+          if (propertyIdMatch && apiKeyMatch) {
+            return branch.id;
+          }
+        } catch (error) {
+          // Ignoriere Entschlüsselungsfehler
+        }
+      }
+    }
+  }
+
+  // Fallback: Nur propertyId prüfen (kann mehrdeutig sein!)
   for (const branch of branches) {
     if (branch.lobbyPmsSettings) {
       try {
         const settings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
         const lobbyPmsSettings = settings?.lobbyPms || settings;
         if (lobbyPmsSettings?.propertyId === propertyId || String(lobbyPmsSettings?.propertyId) === String(propertyId)) {
+          // WARNUNG: Mehrere Branches können die gleiche propertyId haben!
+          console.warn(`[findBranchByPropertyId] Mehrere Branches mit propertyId ${propertyId} gefunden, verwende erste (Branch ${branch.id})`);
           return branch.id;
         }
       } catch (error) {

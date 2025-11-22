@@ -178,12 +178,16 @@ const syncReservations = (req, res) => __awaiter(void 0, void 0, void 0, functio
             let errors = [];
             // Erstelle temporären Service für fetchReservationById (ohne branchId)
             const tempService = new lobbyPmsService_1.LobbyPmsService(organizationId);
+            // Lade Settings, damit apiKey verfügbar ist
+            yield tempService.loadSettings();
             for (const reservationId of reservationIds) {
                 try {
                     const lobbyReservation = yield tempService.fetchReservationById(reservationId);
-                    // Finde Branch über property_id
+                    // Finde Branch über property_id UND apiKey (für eindeutige Zuordnung)
+                    // WICHTIG: Da beide Branches die gleiche propertyId haben können, muss auch der apiKey geprüft werden
                     const branchId = lobbyReservation.property_id
-                        ? yield findBranchByPropertyId(lobbyReservation.property_id, organizationId)
+                        ? yield findBranchByPropertyId(lobbyReservation.property_id, tempService.apiKey, // API Key aus Service
+                        organizationId)
                         : null;
                     if (!branchId) {
                         errors.push(`Reservierung ${reservationId}: Keine Branch gefunden für property_id ${lobbyReservation.property_id}`);
@@ -392,9 +396,14 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 message: 'Organisation nicht gefunden'
             });
         }
-        // Finde Branch über property_id
+        // Finde Branch über property_id UND apiKey (für eindeutige Zuordnung)
+        // WICHTIG: Da beide Branches die gleiche propertyId haben können, muss auch der apiKey geprüft werden
         const { findBranchByPropertyId } = yield Promise.resolve().then(() => __importStar(require('../services/lobbyPmsService')));
-        const branchId = yield findBranchByPropertyId(propertyId, organization.id);
+        const tempService = new lobbyPmsService_1.LobbyPmsService(organization.id);
+        // Lade Settings, damit apiKey verfügbar ist
+        yield tempService.loadSettings();
+        const branchId = yield findBranchByPropertyId(propertyId, tempService.apiKey, // API Key aus Service
+        organization.id);
         if (!branchId) {
             console.warn(`[LobbyPMS Webhook] Keine Branch gefunden für Property ID: ${propertyId}`);
             return res.status(404).json({
