@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
+import { organizationCache } from '../utils/organizationCache';
 import { z } from 'zod';
 import multer from 'multer';
 import * as path from 'path';
@@ -743,52 +744,59 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
+    // ✅ PERFORMANCE: Verwende OrganizationCache statt DB-Query
+    const cachedData = await organizationCache.get(Number(userId));
+    
+    if (!cachedData || !cachedData.userRole) {
+      return res.status(404).json({ 
+        message: 'Keine Organisation gefunden',
+        hasOrganization: false,
+        hint: 'Sie haben noch keine Organisation. Bitte erstellen Sie eine oder treten Sie einer bei.'
+      });
+    }
+
     // Prüfe ob Settings geladen werden sollen (Query-Parameter)
     const includeSettings = req.query.includeSettings === 'true';
 
-    // Hole die aktuelle Rolle des Users
-    const userRole = await prisma.userRole.findFirst({
-      where: { 
-        userId: Number(userId),
-        lastUsed: true 
-      },
-      include: {
-        role: {
-          include: {
-            organization: {
-              // ✅ PERFORMANCE: Settings nur laden wenn explizit angefragt
-              select: includeSettings ? undefined : {
-                id: true,
-                name: true,
-                displayName: true,
-                domain: true,
-                logo: true,
-                isActive: true,
-                maxUsers: true,
-                subscriptionPlan: true,
-                country: true,
-                nit: true,
-                createdAt: true,
-                updatedAt: true
-                // settings wird NICHT geladen (19.8 MB!)
-              }
-            }
-          }
+    // Hole Organization-Daten aus Cache (userRole.role.organization ist bereits geladen)
+    let organization = cachedData.userRole.role.organization;
+    
+    // Wenn Settings benötigt werden, lade sie separat
+    if (includeSettings && organization) {
+      const orgWithSettings = await prisma.organization.findUnique({
+        where: { id: organization.id },
+        select: {
+          id: true,
+          name: true,
+          displayName: true,
+          domain: true,
+          logo: true,
+          isActive: true,
+          maxUsers: true,
+          subscriptionPlan: true,
+          country: true,
+          nit: true,
+          createdAt: true,
+          updatedAt: true,
+          settings: true // Settings nur wenn explizit angefragt
         }
-      }
-    });
-
-    // Prüfe ob User eine Rolle hat
-    if (!userRole) {
-      return res.status(404).json({ 
-        message: 'Keine Organisation gefunden',
-        hasOrganization: false,
-        hint: 'Sie haben noch keine Organisation. Bitte erstellen Sie eine oder treten Sie einer bei.'
       });
+      
+      if (orgWithSettings) {
+        organization = orgWithSettings;
+        // ✅ ENTschlüssele Settings für Response
+        const { decryptApiSettings } = await import('../utils/encryption');
+        organization.settings = decryptApiSettings(organization.settings as any);
+      }
+    } else {
+      // Settings nicht geladen - setze auf null für Frontend
+      if (organization) {
+        organization.settings = null;
+      }
     }
 
     // Prüfe ob die Rolle eine Organisation hat
-    if (!userRole.role.organization) {
+    if (!organization) {
       return res.status(404).json({ 
         message: 'Keine Organisation gefunden',
         hasOrganization: false,
@@ -796,19 +804,9 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
       });
     }
 
-    const organization = userRole.role.organization as any;
-    
     // Korrigiere String 'null' zu echtem null
-    if (organization && organization.logo === 'null') {
+    if (organization.logo === 'null') {
       organization.logo = null;
-    }
-
-    // ✅ ENTschlüssele Settings für Response (nur wenn geladen)
-    if (includeSettings && organization.settings) {
-      organization.settings = decryptApiSettings(organization.settings as any);
-    } else if (!includeSettings) {
-      // Settings nicht geladen - setze auf null für Frontend
-      organization.settings = null;
     }
 
     res.json(organization);

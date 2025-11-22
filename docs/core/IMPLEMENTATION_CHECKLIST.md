@@ -311,19 +311,117 @@ export function getNewFeatureNotificationText(
 
 ---
 
-### 7. ✅ Testing
+### 7. ✅ Responsive Design & Mobile Testing - **MUSS IMMER GEMACHT WERDEN!**
+
+**⚠️ WICHTIGSTE REGEL: Responsive Design ist TEIL DER IMPLEMENTIERUNG, nicht optional!**
+
+**Bei JEDER neuen Feature-Implementierung:**
+
+- [ ] **Mobile-Ansicht (<640px) getestet**
+  - Alle Funktionen funktionieren
+  - Alle Buttons sind sichtbar und klickbar
+  - Alle Eingabefelder sind sichtbar und nutzbar
+  - Layout ist korrekt (keine Überlappungen, keine abgeschnittenen Elemente)
+  - Touch-Ziele sind groß genug (mindestens 44x44px)
+
+- [ ] **Desktop-Ansicht (>1024px) getestet**
+  - Alle Funktionen funktionieren
+  - Layout ist korrekt
+  - Alle Features sind verfügbar
+
+- [ ] **Responsive Klassen verwendet**
+  - ❌ FALSCH: Feste Breiten wie `w-[200px]`
+  - ✅ RICHTIG: Responsive Breiten wie `w-full sm:w-[200px]`
+  - ❌ FALSCH: Feste Schriftgrößen ohne responsive Varianten
+  - ✅ RICHTIG: Responsive Schriftgrößen wie `text-xs sm:text-sm`
+
+- [ ] **Tab-Navigation konsistent (falls vorhanden)**
+  - Gleiche responsive Klassen für alle Tabs
+  - Gleiche Schriftgrößen für alle Tabs
+  - Alle Tabs funktionieren bei Mobile UND Desktop
+
+- [ ] **Filter-System funktioniert bei Mobile UND Desktop**
+  - FilterPane öffnet sich korrekt
+  - Filter können angewendet werden
+  - Filter-Button ist sichtbar
+
+- [ ] **Suchfeld funktioniert bei Mobile UND Desktop**
+  - Suchfeld ist sichtbar
+  - Suchfeld ist nutzbar
+  - Suche funktioniert
+
+- [ ] **Buttons sind bei Mobile UND Desktop sichtbar**
+  - Keine Buttons werden bei Mobile ausgeblendet (außer explizit gewünscht)
+  - Responsive Container-Klassen verwendet
+  - Keine Overflow-Probleme
+
+**Siehe auch:**
+- [DESIGN_STANDARDS.md](DESIGN_STANDARDS.md) - Abschnitt "Responsive Design"
+- [TAB_BASED_FEATURES.md](TAB_BASED_FEATURES.md) - Tab-basierte Features Richtlinien
+- [RESPONSIVE_TESTING.md](RESPONSIVE_TESTING.md) - Detaillierte Mobile & Desktop Testing Checkliste
+
+---
+
+### 8. ✅ Tab-basierte Features - **MUSS IMMER GEMACHT WERDEN!**
+
+**⚠️ WICHTIGSTE REGEL: Wenn Tabs verwendet werden, MÜSSEN ALLE Funktionen für ALLE Tabs funktionieren!**
+
+**Bei JEDER Tab-Implementierung:**
+
+- [ ] **Filter-System funktioniert für ALLE Tabs**
+  - FilterPane wird für alle Tabs angezeigt
+  - Filter-States existieren für alle Tabs
+  - Filter-Funktionen existieren für alle Tabs
+  - `getActiveFilterCount` berücksichtigt alle Tabs
+
+- [ ] **Suche funktioniert für ALLE Tabs**
+  - Separate States oder Tab-Abhängigkeit
+  - Responsive (Mobile + Desktop)
+  - Filtert korrekt für alle Tabs
+
+- [ ] **View-Mode Toggle funktioniert für ALLE Tabs**
+  - Tabelle-Ansicht für alle Tabs
+  - Cards-Ansicht für alle Tabs
+
+- [ ] **Spalten-Konfiguration funktioniert für ALLE Tabs**
+  - Card-Metadaten-Mapping existiert für alle Tabs
+  - Mapping-Funktionen existieren für alle Tabs
+  - `onToggleColumnVisibility` funktioniert für alle Tabs
+
+- [ ] **Buttons und Aktionen funktionieren für ALLE Tabs**
+  - Create-Button für alle Tabs (bei Berechtigung)
+  - Sync-Button für alle Tabs (falls vorhanden)
+  - Alle Buttons sind responsive
+
+- [ ] **Daten-Laden funktioniert für ALLE Tabs**
+  - Load-Funktionen existieren für alle Tabs
+  - Loading-States existieren für alle Tabs
+
+- [ ] **Rendering funktioniert für ALLE Tabs**
+  - Rendering-Logik existiert für alle Tabs
+  - Card-Metadaten werden korrekt für alle Tabs generiert
+
+**Siehe auch:**
+- [TAB_BASED_FEATURES.md](TAB_BASED_FEATURES.md) - Vollständige Tab-basierte Features Richtlinien
+
+---
+
+### 9. ✅ Testing
 
 - [ ] **In allen 3 Sprachen getestet** (de, en, es)
 - [ ] **Funktionalität getestet**
 - [ ] **Berechtigungen getestet** (Frontend + Backend)
 - [ ] **Notifications getestet** (werden korrekt erstellt und angezeigt)
 - [ ] **Fehlerbehandlung getestet**
+- [ ] **Mobile-Ansicht getestet** (siehe Punkt 7)
+- [ ] **Desktop-Ansicht getestet** (siehe Punkt 7)
+- [ ] **Alle Tabs getestet** (falls vorhanden, siehe Punkt 8)
 
 ---
 
 ## 📋 Quick-Check vor jedem Commit
 
-Vor jedem Commit diese 6 Fragen stellen:
+Vor jedem Commit diese 9 Fragen stellen:
 
 1. **Sind ALLE Texte übersetzt?** → `grep -r '"[A-ZÄÖÜ]' frontend/src --include="*.tsx" | grep -v "t("`
 2. **Sind ALLE Buttons Icon-only?** → Kein Text in Buttons, nur Icons + title-Attribut
@@ -331,6 +429,9 @@ Vor jedem Commit diese 6 Fragen stellen:
 4. **Sind Notifications implementiert?** → createNotificationIfEnabled aufgerufen? Übersetzungen hinzugefügt?
 5. **Funktioniert es in allen Sprachen?** → In de, en, es testen
 6. **Sind alle DB-Einträge erstellt?** → Seed-File ausgeführt? Berechtigungen in DB vorhanden?
+7. **Funktioniert es bei Mobile?** → Alle Funktionen getestet? Alle Buttons sichtbar? Responsive Klassen verwendet?
+8. **Funktioniert es bei Desktop?** → Alle Funktionen getestet? Layout korrekt?
+9. **Funktionieren ALLE Tabs?** → Falls Tabs vorhanden: Filter, Suche, View-Mode, Spalten-Konfiguration für ALLE Tabs getestet?
 
 ---
 
@@ -366,4 +467,6 @@ const { t } = useTranslation();
 - ❌ Übersetzungen werden NICHT akzeptiert!
 - ❌ Berechtigungen werden NICHT akzeptiert!
 - ❌ Notifications (falls erforderlich) werden NICHT akzeptiert!
+- ❌ Responsive Design (Mobile + Desktop) wird NICHT akzeptiert!
+- ❌ Tab-Funktionalität für alle Tabs wird NICHT akzeptiert!
 

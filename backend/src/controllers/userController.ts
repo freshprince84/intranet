@@ -219,6 +219,11 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
 
+        // ✅ PERFORMANCE: Optional Fields - nur laden wenn explizit angefragt
+        const includeSettings = req.query.includeSettings === 'true';
+        const includeInvoiceSettings = req.query.includeInvoiceSettings === 'true';
+        const includeDocuments = req.query.includeDocuments === 'true';
+
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -238,12 +243,17 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                 language: true,
                 profileComplete: true,
                 identificationNumber: true,
-                settings: true,
-                invoiceSettings: true,
-                identificationDocuments: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1 // Neuestes Dokument
-                },
+                // ✅ PERFORMANCE: Settings nur laden wenn benötigt
+                ...(includeSettings ? { settings: true } : {}),
+                // ✅ PERFORMANCE: InvoiceSettings nur laden wenn benötigt
+                ...(includeInvoiceSettings ? { invoiceSettings: true } : {}),
+                // ✅ PERFORMANCE: Documents nur laden wenn benötigt
+                ...(includeDocuments ? {
+                    identificationDocuments: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1 // Neuestes Dokument
+                    }
+                } : {}),
                 roles: {
                     include: {
                         role: {

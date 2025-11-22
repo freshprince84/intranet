@@ -654,7 +654,7 @@ const DataCard: React.FC<DataCardProps> = ({
         <div className="flex flex-col gap-3 sm:gap-4 mb-3 sm:mb-4">
           {/* 3-Spalten-Layout für Reservations (wenn center-Section vorhanden) */}
           {hasCenterSection ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start justify-items-start">
               {/* Links: Titel-Bereich (Telefon/Email unter Titel) */}
               <div className="flex flex-col gap-2">
                 {metadata.filter(item => item.section === 'left').map((item, index) => (
@@ -672,7 +672,7 @@ const DataCard: React.FC<DataCardProps> = ({
               </div>
               
               {/* Mitte: Links (Zahlungslink, Check-in Link) */}
-              <div className="flex flex-col gap-2 items-center">
+              <div className="flex flex-col gap-2 items-start sm:items-center">
                 {metadata.filter(item => item.section === 'center').map((item, index) => (
                   <div
                     key={index}

@@ -35,7 +35,25 @@ class OrganizationCache {
         include: {
           role: {
             include: {
-              organization: true,
+              organization: {
+                // ✅ PERFORMANCE: Settings NICHT laden (19.8 MB!)
+                // Settings werden nur geladen wenn explizit angefragt (in getCurrentOrganization)
+                select: {
+                  id: true,
+                  name: true,
+                  displayName: true,
+                  domain: true,
+                  logo: true,
+                  isActive: true,
+                  maxUsers: true,
+                  subscriptionPlan: true,
+                  country: true,
+                  nit: true,
+                  createdAt: true,
+                  updatedAt: true
+                  // settings wird NICHT geladen
+                }
+              },
               permissions: true
             }
           }

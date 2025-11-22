@@ -71,8 +71,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const fetchCurrentUser = async (signal?: AbortSignal) => {
         try {
+            // ✅ PERFORMANCE: Beim initialen Laden nur notwendige Daten laden
+            // Settings, invoiceSettings, documents werden nicht benötigt für initiales Laden
             const response = await axiosInstance.get('/users/profile', {
-                signal
+                signal,
+                params: {
+                    includeSettings: 'false',
+                    includeInvoiceSettings: 'false',
+                    includeDocuments: 'false'
+                }
             });
             
             // Prüfe ob Request abgebrochen wurde
