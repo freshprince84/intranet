@@ -201,6 +201,60 @@
 - Code wurde angepasst (nur Branch 3 und 4)
 - CPU-Last bleibt auch zwischen Scheduler-Läufen hoch
 - **FAZIT**: Scheduler ist ausgeschlossen als Hauptursache
+- **HINWEIS**: Logs zeigen noch Fehler für Branch 17/18, aber das ist nicht die Hauptursache der Performance-Probleme
+
+### 🔴 AKTUELLE HAUPTURSACHE (Stand: 2025-11-22 02:10 UTC)
+
+**CPU-Last: 200%** (extrem hoch)
+- Backend-Prozess verbraucht 200% CPU (2 Cores voll ausgelastet)
+- Load Average: 2.29 (hoch für 2-Core-System)
+- **Problem**: System ist praktisch unbrauchbar langsam
+
+**Mögliche Ursachen (in Reihenfolge der Wahrscheinlichkeit):**
+
+1. **🔴 HAUPTURSACHE: Häufige API-Requests ohne Cache (440 Requests/Minute)**
+   - `/api/worktime/active`: **214 Requests** in den letzten 1000 Log-Zeilen (sehr häufig!)
+   - `/api/notifications/unread/count`: 20 Requests
+   - `/api/saved-filters/*`: Viele Requests
+   - **Problem**: Frontend pollt sehr häufig (vermutlich alle 2-3 Sekunden)
+   - **Jeder Request macht**:
+     - Prisma-Query: `findFirst({ where: { userId, endTime: null }, include: { branch: true } })`
+     - Branch-Daten werden geladen → könnte Branch-Settings-Entschlüsselung auslösen
+   - **Kein Caching**: Jeder Request geht zur Datenbank
+   - **Impact**: Bei 214 Requests = 214 DB-Queries + mögliche Entschlüsselungen
+
+2. **Encryption/Decryption Overhead**
+   - Branch-Settings werden bei jedem Branch-Request entschlüsselt
+   - `decryptBranchApiSettings()` wird bei jedem Branch-Request aufgerufen
+   - AES-256-GCM Verschlüsselung ist CPU-intensiv
+   - **Kombiniert mit #1**: Wenn `/api/worktime/active` Branch-Daten lädt, könnte das Entschlüsselung auslösen
+
+3. **Komplexe Datenbankabfragen**
+   - Filter-Logik könnte ineffiziente Prisma-Queries erzeugen
+   - Keine laufenden Queries sichtbar, aber könnte schnell sein
+
+4. **Event Loop Blocking**
+   - Event Loop Lag: 4ms (OK, nicht blockiert)
+   - Aber: 291 write() syscalls in 3 Sekunden (viel Logging?)
+
+5. **Memory/GC Overhead**
+   - Backend verwendet 791MB RAM (20% von 3.8GB)
+   - Könnte durch häufige Objekterstellung verursacht werden
+
+### 📊 Request-Statistik (aus Nginx-Logs)
+
+**Letzte 1000 Log-Zeilen:**
+- `/api/worktime/active`: **214 Requests** (21.4% aller Requests!)
+- `/api/notifications/unread/count`: ~20 Requests
+- `/api/saved-filters/*`: Viele Requests
+- **Gesamt**: ~440 Requests/Minute
+
+**Zeitliche Verteilung:**
+- 00:xx: 51 Requests
+- 01:xx: 136 Requests (Spitze!)
+- 02:xx: 27 Requests
+
+**Fazit**: Frontend pollt `/api/worktime/active` sehr häufig, vermutlich alle 2-3 Sekunden. Jeder Request macht eine DB-Query ohne Cache.
 
 ### Sekundäre Probleme
 
@@ -237,21 +291,30 @@
 
 ## 🎯 EMPFOHLENE NÄCHSTE SCHRITTE
 
-### 1. Server mit neuem Code neu starten (KRITISCH)
-- Code wurde angepasst (nur Branch 3 und 4)
-- Server muss neu gestartet werden, damit neuer Code aktiv wird
+### 1. 🔴 KRITISCH: Caching für `/api/worktime/active` implementieren
+- **Problem**: 214 Requests in kurzer Zeit, jeder macht DB-Query
+- **Lösung**: 
+  - In-Memory Cache mit kurzer TTL (z.B. 5-10 Sekunden)
+  - Oder: Frontend-Polling-Intervall erhöhen (von 2-3 Sekunden auf 10-15 Sekunden)
+- **Erwartete Verbesserung**: 80-90% weniger DB-Queries
 
-### 2. Prisma Connection Pool prüfen
+### 2. Frontend-Polling optimieren
+- Prüfen warum Frontend so häufig pollt
+- Polling-Intervall erhöhen wo möglich
+- WebSocket/SSE für Echtzeit-Updates verwenden statt Polling
+
+### 3. Branch-Settings-Entschlüsselung cachen
+- Entschlüsselte Settings in Memory-Cache speichern
+- TTL: 5-10 Minuten
+- Reduziert CPU-Last durch Verschlüsselung
+
+### 4. Prisma Connection Pool prüfen
 - DATABASE_URL muss `?connection_limit=20&pool_timeout=20` enthalten
 - Falls nicht vorhanden: Hinzufügen und Server neu starten
 
-### 3. Scheduler-Logs überwachen
-- Nach Neustart: Prüfen ob Scheduler nur noch Branch 3 und 4 synchronisiert
+### 5. Performance-Messung
+- Vorher/Nachher-Vergleich nach Cache-Implementierung
 - Prüfen ob CPU-Last sinkt
-
-### 4. Performance-Messung
-- Vorher/Nachher-Vergleich nach Neustart
-- Prüfen ob Performance-Verbesserungen (Cache, Filtering) greifen
 
 ---
 
