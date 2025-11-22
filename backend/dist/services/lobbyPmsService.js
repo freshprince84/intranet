@@ -261,9 +261,9 @@ class LobbyPmsService {
                 yield this.loadSettings();
             }
             try {
+                // WICHTIG: Filtere nach creation_date (Erstellungsdatum), NICHT nach Check-in/Check-out!
                 const params = {
-                    start_date: startDate.toISOString().split('T')[0], // YYYY-MM-DD
-                    end_date: endDate.toISOString().split('T')[0],
+                    creation_date_from: startDate.toISOString().split('T')[0], // YYYY-MM-DD
                 };
                 if (this.propertyId) {
                     params.property_id = this.propertyId;
@@ -533,8 +533,8 @@ class LobbyPmsService {
     /**
      * Synchronisiert alle Reservierungen für einen Zeitraum
      *
-     * @param startDate - Startdatum
-     * @param endDate - Enddatum
+     * @param startDate - Startdatum (creation_date_from)
+     * @param endDate - Wird nicht mehr verwendet (nur für Kompatibilität)
      * @returns Anzahl synchronisierter Reservierungen
      */
     syncReservations(startDate, endDate) {
@@ -543,7 +543,8 @@ class LobbyPmsService {
             if (!this.apiKey) {
                 yield this.loadSettings();
             }
-            const lobbyReservations = yield this.fetchReservations(startDate, endDate);
+            // WICHTIG: fetchReservations filtert jetzt nach creation_date, nicht nach Check-in!
+            const lobbyReservations = yield this.fetchReservations(startDate, endDate || new Date());
             let syncedCount = 0;
             for (const lobbyReservation of lobbyReservations) {
                 try {
