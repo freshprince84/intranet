@@ -154,25 +154,19 @@ const WorktimeTracker: React.FC = () => {
     // Initiale Prüfung: Verwende isTracking aus WorktimeContext (wird bereits beim Seitenaufruf geladen)
     useEffect(() => {
         if (user) {
-            // WorktimeContext lädt bereits beim Mount, verwende diesen Status wenn verfügbar
-            // Nur wenn Context noch nicht geladen (undefined), manuell prüfen
-            if (contextTracking === undefined) {
-                // Context noch nicht geladen, warte kurz und prüfe dann
-                const timeout = setTimeout(() => {
-                    checkTrackingStatus().then(() => {
-                        setIsLoading(false);
-                    });
-                }, 100);
-                return () => clearTimeout(timeout);
-            } else {
+            // WorktimeContext lädt bereits beim Mount, verwende diesen Status
+            // Warte auf contextTracking (kann undefined sein beim ersten Render)
+            if (contextTracking !== undefined) {
                 // Context ist geladen, verwende diesen Status
                 setIsTracking(contextTracking);
                 setIsLoading(false);
             }
+            // Wenn contextTracking noch undefined ist, warten wir einfach
+            // WorktimeContext wird den Status automatisch laden
         } else {
             setIsLoading(false);
         }
-    }, [user, contextTracking, checkTrackingStatus]);
+    }, [user, contextTracking]);
 
     // Timer-Logik
     useEffect(() => {
