@@ -10,6 +10,7 @@ import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import CreateReservationModal from '../components/reservations/CreateReservationModal.tsx';
 import SendInvitationSidepane from '../components/reservations/SendInvitationSidepane.tsx';
+import SendPasscodeSidepane from '../components/reservations/SendPasscodeSidepane.tsx';
 import { Reservation, ReservationStatus, PaymentStatus } from '../types/reservation.ts';
 import { useNavigate } from 'react-router-dom';
 import useMessage from '../hooks/useMessage.ts';
@@ -268,6 +269,9 @@ const Worktracker: React.FC = () => {
     const [generatingPinForReservation, setGeneratingPinForReservation] = useState<number | null>(null);
     const [selectedReservationForInvitation, setSelectedReservationForInvitation] = useState<Reservation | null>(null);
     const [isSendInvitationSidepaneOpen, setIsSendInvitationSidepaneOpen] = useState(false);
+    const [selectedReservationForPasscode, setSelectedReservationForPasscode] = useState<Reservation | null>(null);
+    const [isSendPasscodeSidepaneOpen, setIsSendPasscodeSidepaneOpen] = useState(false);
+    const [isSendPasscodeSidepaneOpen, setIsSendPasscodeSidepaneOpen] = useState(false);
     
     // Reservations Filter States (analog zu Tasks)
     const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
@@ -2259,20 +2263,16 @@ const Worktracker: React.FC = () => {
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleGeneratePinAndSend(reservation.id);
+                                                                    setSelectedReservationForPasscode(reservation);
+                                                                    setIsSendPasscodeSidepaneOpen(true);
                                                                 }}
-                                                                disabled={generatingPinForReservation === reservation.id}
-                                                                className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                title={t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                                                                title={t('reservations.sendPasscode.title', 'Passcode senden')}
                                                             >
-                                                                {generatingPinForReservation === reservation.id ? (
-                                                                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                                                                ) : (
-                                                                    <KeyIcon className="h-4 w-4" />
-                                                                )}
+                                                                <KeyIcon className="h-4 w-4" />
                                                             </button>
                                                             <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                {t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                {t('reservations.sendPasscode.title', 'Passcode senden')}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2421,20 +2421,16 @@ const Worktracker: React.FC = () => {
                                                                                     <button
                                                                                         onClick={(e) => {
                                                                                             e.stopPropagation();
-                                                                                            handleGeneratePinAndSend(reservation.id);
+                                                                                            setSelectedReservationForPasscode(reservation);
+                                                                                            setIsSendPasscodeSidepaneOpen(true);
                                                                                         }}
-                                                                                        disabled={generatingPinForReservation === reservation.id}
-                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                                        title={t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                                                                                        title={t('reservations.sendPasscode.title', 'Passcode senden')}
                                                                                     >
-                                                                                        {generatingPinForReservation === reservation.id ? (
-                                                                                            <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                                                                                        ) : (
-                                                                                            <KeyIcon className="h-4 w-4" />
-                                                                                        )}
+                                                                                        <KeyIcon className="h-4 w-4" />
                                                                                     </button>
                                                                                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                        {t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                                        {t('reservations.sendPasscode.title', 'Passcode senden')}
                                                                                     </div>
                                                                                 </div>
                                                                                 
@@ -3425,20 +3421,16 @@ const Worktracker: React.FC = () => {
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleGeneratePinAndSend(reservation.id);
+                                                                    setSelectedReservationForPasscode(reservation);
+                                                                    setIsSendPasscodeSidepaneOpen(true);
                                                                 }}
-                                                                disabled={generatingPinForReservation === reservation.id}
-                                                                className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                title={t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                                                                title={t('reservations.sendPasscode.title', 'Passcode senden')}
                                                             >
-                                                                {generatingPinForReservation === reservation.id ? (
-                                                                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                                                                ) : (
-                                                                    <KeyIcon className="h-4 w-4" />
-                                                                )}
+                                                                <KeyIcon className="h-4 w-4" />
                                                             </button>
                                                             <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                {t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                {t('reservations.sendPasscode.title', 'Passcode senden')}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -3587,20 +3579,16 @@ const Worktracker: React.FC = () => {
                                                                                     <button
                                                                                         onClick={(e) => {
                                                                                             e.stopPropagation();
-                                                                                            handleGeneratePinAndSend(reservation.id);
+                                                                                            setSelectedReservationForPasscode(reservation);
+                                                                                            setIsSendPasscodeSidepaneOpen(true);
                                                                                         }}
-                                                                                        disabled={generatingPinForReservation === reservation.id}
-                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                                        title={t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                                                                                        title={t('reservations.sendPasscode.title', 'Passcode senden')}
                                                                                     >
-                                                                                        {generatingPinForReservation === reservation.id ? (
-                                                                                            <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                                                                                        ) : (
-                                                                                            <KeyIcon className="h-4 w-4" />
-                                                                                        )}
+                                                                                        <KeyIcon className="h-4 w-4" />
                                                                                     </button>
                                                                                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                        {t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                                        {t('reservations.sendPasscode.title', 'Passcode senden')}
                                                                                     </div>
                                                                                 </div>
                                                                                 
@@ -3715,6 +3703,22 @@ const Worktracker: React.FC = () => {
                         setSelectedReservationForInvitation(null);
                     }}
                     reservation={selectedReservationForInvitation}
+                    onSuccess={async () => {
+                        // Lade Reservations neu, um den aktualisierten Status zu erhalten
+                        await loadReservations();
+                    }}
+                />
+            )}
+
+            {/* Send Passcode Sidepane */}
+            {selectedReservationForPasscode && (
+                <SendPasscodeSidepane
+                    isOpen={isSendPasscodeSidepaneOpen}
+                    onClose={() => {
+                        setIsSendPasscodeSidepaneOpen(false);
+                        setSelectedReservationForPasscode(null);
+                    }}
+                    reservation={selectedReservationForPasscode}
                     onSuccess={async () => {
                         // Lade Reservations neu, um den aktualisierten Status zu erhalten
                         await loadReservations();

@@ -71,6 +71,24 @@ export const reservationService = {
   },
 
   /**
+   * Sendet TTLock Passcode mit anpassbaren Kontaktdaten
+   */
+  async sendPasscode(
+    id: number,
+    options?: {
+      guestPhone?: string;
+      guestEmail?: string;
+      customMessage?: string;
+    }
+  ): Promise<Reservation> {
+    const response = await axiosInstance.post(
+      API_ENDPOINTS.RESERVATION.SEND_PASSCODE(id),
+      options || {}
+    );
+    return response.data.data || response.data;
+  },
+
+  /**
    * Holt Notification-Logs für eine Reservierung
    */
   async getNotificationLogs(id: number): Promise<ReservationNotificationLog[]> {

@@ -1,5 +1,27 @@
 # Rules for vibe coding
 
+## 🚨 STRENGSTENS VERBOTEN: Vermutungen bei Analysen und Planungen
+
+**⚠️ ABSOLUTE REGEL - KEINE AUSNAHMEN:**
+- **VERMUTUNGEN SIND STRENGSTENS VERBOTEN** bei allen Analysen, Planungen und Dokumentationen
+- **KEIN Konjunktiv** (sollte, könnte, würde, müsste, etc.)
+- **KEINE Vermutungen** (vielleicht, evtl., möglicherweise, vermutlich, etc.)
+- **KEINE Schätzungen** ohne konkrete Fakten
+- **NUR FAKTEN** - Nur das dokumentieren, was tatsächlich im Code steht oder nachweisbar ist
+
+**Was bedeutet das konkret:**
+- Code genau untersuchen und nur dokumentieren, was tatsächlich vorhanden ist
+- Keine Formulierungen wie "xy sollte gemacht werden" oder "könnte verbessert werden"
+- Keine Formulierungen wie "evtl. ist xy das Problem" oder "vielleicht sollte xy untersucht werden"
+- In Planungsdokumenten nur das reinschreiben, was effektiv gemacht werden soll
+- Nicht Dinge wie "xy untersuchen" - entweder untersuchen und Fakten dokumentieren, oder beim User nachfragen
+- Falls die Anweisung nicht klar ist: **IMMER beim User nachfragen**, statt zu vermuten!
+
+**Beispiele:**
+- ❌ **FALSCH:** "Die Funktion könnte langsamer sein" → ✅ **RICHTIG:** "Die Funktion benötigt 2.5 Sekunden (gemessen)"
+- ❌ **FALSCH:** "Evtl. sollte hier ein Cache verwendet werden" → ✅ **RICHTIG:** "Die Funktion wird 100x pro Sekunde aufgerufen, Cache würde X% Performance verbessern"
+- ❌ **FALSCH:** "Das Problem sollte in Datei X liegen" → ✅ **RICHTIG:** "In Datei X, Zeile Y, steht Code Z, der Problem P verursacht"
+
 ## Code structure & organization
 
 - **Keep code DRY (Don't Repeat Yourself)**

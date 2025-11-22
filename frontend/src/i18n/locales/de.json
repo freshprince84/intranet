@@ -2443,6 +2443,34 @@
         "amountRequired": "Betrag muss eine positive Zahl sein",
         "createError": "Fehler beim Erstellen der Reservierung"
       }
+    },
+    "sendInvitation": {
+      "title": "Einladung senden",
+      "contactInfo": "Kontaktinformationen",
+      "message": "Nachricht",
+      "messageLabel": "Nachricht (editierbar)",
+      "messageVariables": "Verfügbare Variablen: {{guestName}}, {{checkInLink}}, {{paymentLink}}",
+      "preview": "Vorschau",
+      "send": "Senden",
+      "sending": "Wird gesendet...",
+      "success": "Einladung erfolgreich versendet",
+      "error": "Fehler beim Versenden der Einladung",
+      "noContact": "Bitte geben Sie mindestens eine Telefonnummer oder E-Mail-Adresse an.",
+      "alreadySent": "Bereits versendet am",
+      "canResend": "Sie können die Einladung erneut senden."
+    },
+    "sendPasscode": {
+      "title": "Passcode senden",
+      "contactInfo": "Kontaktinformationen",
+      "message": "Nachricht",
+      "messageLabel": "Nachricht (editierbar)",
+      "messageVariables": "Verfügbare Variablen: {{guestName}}, {{passcode}}",
+      "preview": "Vorschau",
+      "send": "Senden",
+      "sending": "Wird gesendet...",
+      "success": "Passcode erfolgreich versendet",
+      "error": "Fehler beim Versenden des Passcodes",
+      "noContact": "Bitte geben Sie mindestens eine Telefonnummer oder E-Mail-Adresse an."
     }
   },
   "socialSecurity": {

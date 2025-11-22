@@ -2622,6 +2622,34 @@
         "amountRequired": "El monto debe ser un número positivo",
         "createError": "Error al crear la reservación"
       }
+    },
+    "sendInvitation": {
+      "title": "Enviar Invitación",
+      "contactInfo": "Información de Contacto",
+      "message": "Mensaje",
+      "messageLabel": "Mensaje (editable)",
+      "messageVariables": "Variables disponibles: {{guestName}}, {{checkInLink}}, {{paymentLink}}",
+      "preview": "Vista Previa",
+      "send": "Enviar",
+      "sending": "Enviando...",
+      "success": "Invitación enviada exitosamente",
+      "error": "Error al enviar la invitación",
+      "noContact": "Por favor proporcione al menos un número de teléfono o correo electrónico.",
+      "alreadySent": "Ya enviado el",
+      "canResend": "Puede volver a enviar la invitación."
+    },
+    "sendPasscode": {
+      "title": "Enviar Código de Acceso",
+      "contactInfo": "Información de Contacto",
+      "message": "Mensaje",
+      "messageLabel": "Mensaje (editable)",
+      "messageVariables": "Variables disponibles: {{guestName}}, {{passcode}}",
+      "preview": "Vista Previa",
+      "send": "Enviar",
+      "sending": "Enviando...",
+      "success": "Código de acceso enviado exitosamente",
+      "error": "Error al enviar el código de acceso",
+      "noContact": "Por favor proporcione al menos un número de teléfono o correo electrónico."
     }
   }
 }
