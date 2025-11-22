@@ -137,8 +137,21 @@ export class LobbyPmsService {
 
       if (branch?.lobbyPmsSettings) {
         try {
-          const settings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
-          const lobbyPmsSettings = settings?.lobbyPms || settings;
+          // Verwende Cache für Entschlüsselung
+          const { branchSettingsCache } = await import('./branchSettingsCache');
+          let decryptedSettings = branchSettingsCache.getDecryptedBranchSettings(
+            this.branchId!,
+            'lobbyPms',
+            branch.lobbyPmsSettings
+          );
+          
+          // Fallback: Direkte Entschlüsselung (für Migration)
+          if (!decryptedSettings) {
+            const { decryptBranchApiSettings } = await import('../utils/encryption');
+            decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+          }
+          
+          const lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings;
 
           if (lobbyPmsSettings?.apiKey) {
             let apiUrl = lobbyPmsSettings.apiUrl || 'https://api.lobbypms.com';

@@ -75,8 +75,21 @@ export class BoldPaymentService {
 
       if (branch?.boldPaymentSettings) {
         try {
-          const settings = decryptBranchApiSettings(branch.boldPaymentSettings as any);
-          const boldPaymentSettings = settings?.boldPayment || settings;
+          // Verwende Cache für Entschlüsselung
+          const { branchSettingsCache } = await import('./branchSettingsCache');
+          let decryptedSettings = branchSettingsCache.getDecryptedBranchSettings(
+            this.branchId!,
+            'boldPayment',
+            branch.boldPaymentSettings
+          );
+          
+          // Fallback: Direkte Entschlüsselung (für Migration)
+          if (!decryptedSettings) {
+            const { decryptBranchApiSettings } = await import('../utils/encryption');
+            decryptedSettings = decryptBranchApiSettings(branch.boldPaymentSettings as any);
+          }
+          
+          const boldPaymentSettings = decryptedSettings?.boldPayment || decryptedSettings;
 
           if (boldPaymentSettings?.apiKey) {
             this.apiKey = boldPaymentSettings.apiKey;
