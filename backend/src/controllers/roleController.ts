@@ -482,6 +482,18 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
             return role;
         });
 
+        // ✅ PERFORMANCE: UserCache invalidieren für alle User mit dieser Rolle
+        // Hole alle User mit dieser Rolle (wird später auch für Benachrichtigungen benötigt)
+        const usersWithRoleForCache = await prisma.userRole.findMany({
+            where: { roleId: roleId },
+            select: { userId: true }
+        });
+        
+        // Invalidiere Cache für alle betroffenen User
+        for (const userRole of usersWithRoleForCache) {
+            userCache.invalidate(userRole.userId);
+        }
+
         // Benachrichtigung für Administratoren senden
         const admins = await prisma.user.findMany({
             where: {
