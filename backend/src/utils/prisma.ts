@@ -9,8 +9,10 @@ const globalForPrisma = globalThis as unknown as {
 
 // ✅ PERFORMANCE: Prisma Client mit reconnect-Logik
 const createPrismaClient = () => {
+  // TEMPORÄR: Query-Logging aktivieren für Performance-Analyse
+  const enableQueryLogging = process.env.ENABLE_QUERY_LOGGING === 'true' || process.env.NODE_ENV === 'development';
   const client = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    log: enableQueryLogging ? ['query', 'error', 'warn'] : ['error'],
   });
 
   // ✅ Reconnect-Logik: Bei DB-Verbindungsfehlern reconnect versuchen

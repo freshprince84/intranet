@@ -63,9 +63,6 @@ export const getAllRequests = async (req: Request, res: Response) => {
         const userId = parseInt(req.userId as string, 10);
         const organizationId = (req as any).organizationId;
         
-        // Basis-Filter: Datenisolation (Standalone vs. Organisation)
-        const isolationFilter = getDataIsolationFilter(req as any, 'request');
-        
         // Filter-Parameter aus Query lesen
         const filterId = req.query.filterId as string | undefined;
         const filterConditions = req.query.filterConditions 
@@ -85,11 +82,11 @@ export const getAllRequests = async (req: Request, res: Response) => {
                 if (filterData) {
                     const conditions = JSON.parse(filterData.conditions);
                     const operators = JSON.parse(filterData.operators);
-                    filterWhereClause = convertFilterConditionsToPrismaWhere(
-                        conditions,
-                        operators,
-                        'request'
-                    );
+                filterWhereClause = convertFilterConditionsToPrismaWhere(
+                    conditions,
+                    operators,
+                    'request'
+                );
                 } else {
                     console.warn(`[getAllRequests] Filter ${filterId} nicht gefunden`);
                 }
@@ -106,31 +103,39 @@ export const getAllRequests = async (req: Request, res: Response) => {
             );
         }
         
-        // Erweitere Filter um private/öffentliche Logik
-        // Private Requests: Nur für requesterId und responsibleId sichtbar
-        // Öffentliche Requests: Für alle User der Organisation sichtbar
-        // WICHTIG: isolationFilter und OR-Bedingung müssen mit AND kombiniert werden,
-        // damit das OR aus isolationFilter nicht überschrieben wird
-        const baseWhereConditions: any[] = [
-            isolationFilter,
-            {
+        // OPTIMIERUNG: Vereinfachte WHERE-Klausel für bessere Performance
+        // Kombiniere organizationId direkt in OR-Bedingung statt verschachtelter AND/OR
+        const baseWhereConditions: any[] = [];
+        
+        // Isolation-Filter: organizationId (wenn vorhanden)
+        if (organizationId) {
+            baseWhereConditions.push({
                 OR: [
                     // Öffentliche Requests (isPrivate = false) innerhalb der Organisation
                     {
                         isPrivate: false,
-                        ...(organizationId ? { organizationId } : {})
+                        organizationId: organizationId
                     },
                     // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
                     {
                         isPrivate: true,
+                        organizationId: organizationId,
                         OR: [
                             { requesterId: userId },
                             { responsibleId: userId }
                         ]
                     }
                 ]
-            }
-        ];
+            });
+        } else {
+            // Standalone User: Nur eigene Requests
+            baseWhereConditions.push({
+                OR: [
+                    { requesterId: userId },
+                    { responsibleId: userId }
+                ]
+            });
+        }
         
         // Füge Filter-Bedingungen hinzu (falls vorhanden)
         if (Object.keys(filterWhereClause).length > 0) {
@@ -138,9 +143,9 @@ export const getAllRequests = async (req: Request, res: Response) => {
         }
         
         // Kombiniere alle Filter
-        const whereClause: Prisma.RequestWhereInput = {
-            AND: baseWhereConditions
-        };
+        const whereClause: Prisma.RequestWhereInput = baseWhereConditions.length === 1
+            ? baseWhereConditions[0]
+            : { AND: baseWhereConditions };
         
         const queryStartTime = Date.now();
         const requests = await prisma.request.findMany({
@@ -158,11 +163,11 @@ export const getAllRequests = async (req: Request, res: Response) => {
                 },
                 // OPTIMIERUNG: Attachments nur laden wenn explizit angefragt
                 ...(includeAttachments ? {
-                    attachments: {
-                        orderBy: {
-                            uploadedAt: 'desc'
-                        }
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
                     }
+                }
                 } : {})
             },
             orderBy: {
@@ -190,13 +195,13 @@ export const getAllRequests = async (req: Request, res: Response) => {
             // OPTIMIERUNG: Attachments nur wenn geladen
             attachments: includeAttachments && request.attachments 
                 ? request.attachments.map(att => ({
-                    id: att.id,
-                    fileName: att.fileName,
-                    fileType: att.fileType,
-                    fileSize: att.fileSize,
-                    filePath: att.filePath,
-                    uploadedAt: att.uploadedAt
-                }))
+                id: att.id,
+                fileName: att.fileName,
+                fileType: att.fileType,
+                fileSize: att.fileSize,
+                filePath: att.filePath,
+                uploadedAt: att.uploadedAt
+            }))
                 : []
         }));
 
