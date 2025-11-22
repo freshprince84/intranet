@@ -65,7 +65,10 @@ Por favor, realiza el pago:
     if (customMessage) {
       // Generiere LobbyPMS Check-in-Link (analog zu Backend generateLobbyPmsCheckInLink)
       // Format: https://app.lobbypms.com/checkinonline/confirmar?codigo={id}&email={email}&lg={language}
-      const email = guestEmail || reservation.guestEmail || '';
+      // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
+      // (reservation.guestEmail), nicht mit der geänderten E-Mail (guestEmail)
+      // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
+      const email = reservation.guestEmail || '';
       let checkInLink = '[Check-in-Link wird generiert]';
       if (email) {
         const codigo = reservation.id.toString();
@@ -86,7 +89,7 @@ Por favor, realiza el pago:
         .replace(/\{\{paymentLink\}\}/g, paymentLink);
       setPreviewMessage(preview);
     }
-  }, [customMessage, reservation.guestName, reservation.paymentLink, reservation.id, reservation.guestEmail, guestEmail]);
+  }, [customMessage, reservation.guestName, reservation.paymentLink, reservation.id, reservation.guestEmail]);
 
   // Responsive-Verhalten
   useEffect(() => {

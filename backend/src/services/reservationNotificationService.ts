@@ -308,15 +308,17 @@ export class ReservationNotificationService {
 
       // Schritt 2: Check-in-Link erstellen
       try {
-        // Erstelle temporäre Reservation mit guestEmail für Check-in-Link-Generierung
+        // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
+        // (reservation.guestEmail), nicht mit der geänderten E-Mail aus options
+        // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
         const reservationForCheckInLink = {
           id: reservation.id,
-          guestEmail: guestEmail || reservation.guestEmail || ''
+          guestEmail: reservation.guestEmail || ''
         };
         
         checkInLink = generateLobbyPmsCheckInLink(reservationForCheckInLink) || 
           `${process.env.FRONTEND_URL || 'http://localhost:3000'}/check-in/${reservation.id}`;
-        console.log(`[ReservationNotification] ✅ Check-in-Link erstellt: ${checkInLink}`);
+        console.log(`[ReservationNotification] ✅ Check-in-Link erstellt (mit Original-E-Mail): ${checkInLink}`);
       } catch (error) {
         console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Check-in-Links:`, error);
         // Check-in-Link-Fehler ist nicht kritisch - verwende Fallback
