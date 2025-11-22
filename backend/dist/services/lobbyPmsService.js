@@ -13,11 +13,41 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LobbyPmsService = void 0;
+exports.findBranchByPropertyId = findBranchByPropertyId;
 const client_1 = require("@prisma/client");
 const axios_1 = __importDefault(require("axios"));
 const encryption_1 = require("../utils/encryption");
 const taskAutomationService_1 = require("./taskAutomationService");
 const prisma_1 = require("../utils/prisma");
+/**
+ * Findet Branch-ID über LobbyPMS property_id
+ * @param propertyId - LobbyPMS Property ID
+ * @param organizationId - Organisation ID (optional, für bessere Performance)
+ * @returns Branch-ID oder null
+ */
+function findBranchByPropertyId(propertyId, organizationId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const branches = yield prisma_1.prisma.branch.findMany({
+            where: organizationId ? { organizationId } : undefined,
+            select: { id: true, lobbyPmsSettings: true }
+        });
+        for (const branch of branches) {
+            if (branch.lobbyPmsSettings) {
+                try {
+                    const settings = (0, encryption_1.decryptBranchApiSettings)(branch.lobbyPmsSettings);
+                    const lobbyPmsSettings = (settings === null || settings === void 0 ? void 0 : settings.lobbyPms) || settings;
+                    if ((lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.propertyId) === propertyId || String(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.propertyId) === String(propertyId)) {
+                        return branch.id;
+                    }
+                }
+                catch (error) {
+                    // Ignoriere Entschlüsselungsfehler
+                }
+            }
+        }
+        return null;
+    });
+}
 /**
  * Service für LobbyPMS API-Integration
  *

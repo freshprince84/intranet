@@ -150,15 +150,31 @@ export const syncReservations = async (req: AuthenticatedRequest, res: Response)
     const { startDate, endDate, reservationIds } = req.body;
     const organizationId = req.organizationId;
 
-    // Wenn spezifische Reservierungen: Alte Logik beibehalten
+    // Wenn spezifische Reservierungen: Finde Branch über property_id
     if (reservationIds && Array.isArray(reservationIds)) {
-      const service = new LobbyPmsService(organizationId);
+      const { findBranchByPropertyId } = await import('../services/lobbyPmsService');
       let syncedCount = 0;
       let errors: string[] = [];
       
+      // Erstelle temporären Service für fetchReservationById (ohne branchId)
+      const tempService = new LobbyPmsService(organizationId);
+      
       for (const reservationId of reservationIds) {
         try {
-          const lobbyReservation = await service.fetchReservationById(reservationId);
+          const lobbyReservation = await tempService.fetchReservationById(reservationId);
+          
+          // Finde Branch über property_id
+          const branchId = lobbyReservation.property_id 
+            ? await findBranchByPropertyId(lobbyReservation.property_id, organizationId)
+            : null;
+          
+          if (!branchId) {
+            errors.push(`Reservierung ${reservationId}: Keine Branch gefunden für property_id ${lobbyReservation.property_id}`);
+            continue;
+          }
+          
+          // Erstelle Service mit branchId
+          const service = await LobbyPmsService.createForBranch(branchId);
           await service.syncReservation(lobbyReservation);
           syncedCount++;
         } catch (error) {
@@ -386,7 +402,20 @@ export const handleWebhook = async (req: Request, res: Response) => {
       });
     }
 
-    const service = new LobbyPmsService(organization.id);
+    // Finde Branch über property_id
+    const { findBranchByPropertyId } = await import('../services/lobbyPmsService');
+    const branchId = await findBranchByPropertyId(propertyId, organization.id);
+    
+    if (!branchId) {
+      console.warn(`[LobbyPMS Webhook] Keine Branch gefunden für Property ID: ${propertyId}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Branch nicht gefunden'
+      });
+    }
+
+    // Erstelle Service mit branchId
+    const service = await LobbyPmsService.createForBranch(branchId);
 
     // Verarbeite Webhook-Event
     switch (event) {
