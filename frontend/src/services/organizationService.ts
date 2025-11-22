@@ -11,9 +11,10 @@ import {
 
 export const organizationService = {
   // Aktuelle Organisation abrufen
-  getCurrentOrganization: async (signal?: AbortSignal): Promise<Organization> => {
+  getCurrentOrganization: async (signal?: AbortSignal, includeSettings = false): Promise<Organization> => {
     const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATIONS.CURRENT, {
-      signal
+      signal,
+      params: includeSettings ? { includeSettings: 'true' } : {}
     });
     return response.data;
   },
