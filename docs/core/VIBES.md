@@ -162,3 +162,109 @@
   - Implement proper session management
   - Use secure password hashing
   - Enforce strong password policies
+
+## Internationalization (i18n) - CRITICAL
+
+**⚠️ MANDATORY: Translations are PART OF THE IMPLEMENTATION, not optional!**
+
+- **Every new feature MUST have translations in ALL languages (de, en, es)**
+- **NO hardcoded text in components** - Always use `t()` function
+- **Test in all 3 languages** before committing
+
+**Before implementing ANY new feature:**
+1. Identify ALL texts that will be displayed
+2. Add translation keys to `de.json` (German as base)
+3. Add translation keys to `en.json` (English)
+4. Add translation keys to `es.json` (Spanish)
+5. Replace ALL hardcoded texts with `t()` calls
+6. Test in all 3 languages
+
+**Standard usage:**
+```tsx
+// ✅ CORRECT
+const { t } = useTranslation();
+<h2>{t('featureName.title', { defaultValue: 'Title' })}</h2>
+
+// ❌ WRONG - Hardcoded text
+<h2>Title</h2>
+```
+
+**Translation files:**
+- `frontend/src/i18n/locales/de.json`
+- `frontend/src/i18n/locales/en.json`
+- `frontend/src/i18n/locales/es.json`
+
+**See also:**
+- [CODING_STANDARDS.md](CODING_STANDARDS.md) - Full translation rules
+- [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) - Implementation checklist
+
+## Permissions - CRITICAL
+
+**⚠️ MANDATORY: Permissions are PART OF THE IMPLEMENTATION, not optional!**
+
+- **Every new page/table/button MUST have permissions**
+- **Permissions MUST be added to seed.ts**
+- **Frontend AND backend permission checks MUST be implemented**
+
+**Before implementing ANY new feature:**
+1. Add new page/table/button to `ALL_PAGES`/`ALL_TABLES`/`ALL_BUTTONS` in `backend/prisma/seed.ts`
+2. Define permissions for all roles (Admin, User, Hamburger)
+3. Implement frontend permission checks with `usePermissions()` hook
+4. Implement backend permission checks with `checkPermission` middleware
+5. Test seed file: `npx prisma db seed`
+
+**Example:**
+```typescript
+// backend/prisma/seed.ts
+const ALL_PAGES = [
+  'dashboard',
+  'new_feature_page', // ← ADD NEW PAGE
+];
+
+const adminPermissionMap: Record<string, AccessLevel> = {
+  'page_new_feature_page': 'both', // ← DEFINE PERMISSIONS
+};
+```
+
+**See also:**
+- [CODING_STANDARDS.md](CODING_STANDARDS.md) - Full permission rules
+- [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) - Implementation checklist
+- [BERECHTIGUNGSSYSTEM.md](../technical/BERECHTIGUNGSSYSTEM.md) - Permission system documentation
+
+## Notifications - CRITICAL
+
+**⚠️ MANDATORY: Notifications are PART OF THE IMPLEMENTATION, not optional!**
+
+- **Every important action MUST have notifications**
+- **Backend translations MUST be added to `translations.ts`**
+- **Frontend translations MUST be added to i18n locales**
+
+**Before implementing ANY new feature:**
+1. Call `createNotificationIfEnabled` with correct parameters
+2. Use `relatedEntityId` and `relatedEntityType` (NOT `targetId`/`targetType`!)
+3. Add backend translations to `backend/src/utils/translations.ts`
+4. Add frontend translations to `frontend/src/i18n/locales/`
+
+**Example:**
+```typescript
+// ✅ CORRECT
+await createNotificationIfEnabled({
+  userId: assignedUserId,
+  title: notificationText.title,
+  message: notificationText.message,
+  type: NotificationType.task,
+  relatedEntityId: task.id, // ← CORRECT
+  relatedEntityType: 'assigned' // ← CORRECT
+});
+
+// ❌ WRONG - Don't use targetId/targetType
+await createNotificationIfEnabled({
+  targetId: task.id, // ← WRONG!
+  targetType: 'task' // ← WRONG!
+});
+```
+
+**See also:**
+- [CODING_STANDARDS.md](CODING_STANDARDS.md) - Full notification rules
+- [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) - Implementation checklist
+- [NOTIFICATION_SYSTEM.md](../modules/NOTIFICATION_SYSTEM.md) - Notification system documentation

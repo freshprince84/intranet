@@ -4,16 +4,101 @@ Dieses Dokument definiert die verbindlichen Coding-Standards für das Intranet-P
 
 ## Inhaltsverzeichnis
 
-1. [Allgemeine Richtlinien](#allgemeine-richtlinien)
-2. [TypeScript-Standards](#typescript-standards)
-3. [React Best Practices](#react-best-practices)
-4. [HTTP-Client-Standards](#http-client-standards)
-5. [Zeitzonenbehandlung](#zeitzonenbehandlung)
-6. [Fehlerbehandlung](#fehlerbehandlung)
-7. [Kommentare und Dokumentation](#kommentare-und-dokumentation)
-8. [Testing](#testing)
-9. [Performance](#performance)
-10. [DRY-Implementierung für UI-Komponenten](#dry-implementierung-für-ui-komponenten)
+1. [⚠️ KRITISCH: Übersetzungen (I18N) - IMMER bei neuen Features!](#-kritisch-übersetzungen-i18n---immer-bei-neuen-features)
+2. [Allgemeine Richtlinien](#allgemeine-richtlinien)
+3. [TypeScript-Standards](#typescript-standards)
+4. [React Best Practices](#react-best-practices)
+5. [HTTP-Client-Standards](#http-client-standards)
+6. [Zeitzonenbehandlung](#zeitzonenbehandlung)
+7. [Fehlerbehandlung](#fehlerbehandlung)
+8. [Kommentare und Dokumentation](#kommentare-und-dokumentation)
+9. [Testing](#testing)
+10. [Performance](#performance)
+11. [DRY-Implementierung für UI-Komponenten](#dry-implementierung-für-ui-komponenten)
+
+## ⚠️ KRITISCH: Übersetzungen (I18N) - IMMER bei neuen Features!
+
+**🚨 WICHTIGSTE REGEL FÜR ALLE NEUEN FEATURES:**
+- **Übersetzungen sind TEIL DER IMPLEMENTIERUNG, nicht optional!**
+- **JEDE neue Komponente/Seite/Feature MUSS Übersetzungen in ALLEN Sprachen haben (de, en, es)!**
+- **Diese Regel gilt für ALLE neuen Features: Komponenten, Seiten, Modals, Tabs, Formulare, überall!**
+- **Features OHNE vollständige Übersetzungen werden NICHT akzeptiert!**
+
+### 📋 Checkliste vor JEDER Feature-Implementierung:
+
+1. ✅ **Welche Texte werden angezeigt?** → **ALLE identifizieren!**
+2. ✅ **Sind Übersetzungen in `de.json` vorhanden?** → **HINZUFÜGEN!**
+3. ✅ **Sind Übersetzungen in `en.json` vorhanden?** → **HINZUFÜGEN!**
+4. ✅ **Sind Übersetzungen in `es.json` vorhanden?** → **HINZUFÜGEN!**
+5. ✅ **Werden `t()` Funktionen verwendet statt Hardcoded-Text?** → **ANPASSEN!**
+6. ✅ **In allen 3 Sprachen getestet?** → **TESTEN!**
+
+### Standard-Übersetzungsstruktur:
+
+```json
+// frontend/src/i18n/locales/de.json
+{
+  "featureName": {
+    "title": "Titel",
+    "create": "Erstellen",
+    "edit": "Bearbeiten",
+    "name": "Name",
+    "noItems": "Keine Einträge vorhanden",
+    "deleteConfirm": "Wirklich löschen?"
+  }
+}
+```
+
+### Verwendung in Komponenten:
+
+**⚠️ EINHEITLICHER STANDARD - IMMER VERWENDEN:**
+
+```tsx
+// ✅ RICHTIG: Mit defaultValue für Fallback
+const { t } = useTranslation();
+<h2>{t('featureName.title', { defaultValue: 'Titel' })}</h2>
+<button>{t('featureName.create', { defaultValue: 'Erstellen' })}</button>
+
+// ✅ AUCH RICHTIG: Ohne defaultValue, wenn Übersetzung garantiert vorhanden ist
+// (Nur für bereits validierte Übersetzungen)
+<h2>{t('common.save')}</h2>
+
+// ❌ FALSCH: Mit || Operator (veraltet, nicht mehr verwenden!)
+<h2>{t('featureName.title') || 'Titel'}</h2>
+
+// ❌ FALSCH: Hardcoded-Text
+<h2>Titel</h2>
+<button>Erstellen</button>
+```
+
+### WICHTIG: Warum defaultValue?
+
+- Funktioniert auch bei Timing-Problemen (wenn i18n noch nicht initialisiert ist)
+- i18next-Standard (offizielle API)
+- Expliziter Fallback (besser lesbar)
+- Keine Probleme mit falsy-Werten (0, false, etc.)
+
+### Dateien für Übersetzungen:
+
+- `frontend/src/i18n/locales/de.json` - Deutsch
+- `frontend/src/i18n/locales/en.json` - Englisch
+- `frontend/src/i18n/locales/es.json` - Spanisch
+
+### Quick-Check vor jedem Commit:
+
+```bash
+# Suche nach hardcoded deutschen Texten
+grep -r '"[A-ZÄÖÜ][a-zäöüß\s]+"' frontend/src --include="*.tsx" --include="*.ts" | grep -v "t("
+```
+
+**Wenn dieser Befehl Ergebnisse liefert → Übersetzungen fehlen!**
+
+### Weitere Ressourcen:
+
+- [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) - Vollständige Implementierungs-Checkliste
+- [TRANSLATION_PROGRESS.md](../implementation_reports/TRANSLATION_PROGRESS.md) - Übersetzungsfortschritt
+
+---
 
 ## Allgemeine Richtlinien
 
@@ -633,67 +718,16 @@ export const StatusBadge = ({ status, processType }: { status: string, processTy
 3. ✅ Ist der Text im `title` Attribut? → **HINZUFÜGEN!**
 4. ✅ Entspricht der Style dem Standard? → **ANPASSEN!**
 
-### ⚠️ KRITISCH: Übersetzungen - IMMER bei neuen Features hinzufügen!
+### ⚠️ HINWEIS: Übersetzungen
 
-**WICHTIGSTE REGEL FÜR ALLE NEUEN FEATURES:**
-- **Übersetzungen sind TEIL DER IMPLEMENTIERUNG, nicht optional!**
-- **JEDE neue Komponente/Seite/Feature MUSS Übersetzungen in ALLEN Sprachen haben (de, en, es)!**
-- **Diese Regel gilt für ALLE neuen Features: Komponenten, Seiten, Modals, Tabs, Formulare, überall!**
+**Die vollständigen Regeln zu Übersetzungen stehen ganz oben in diesem Dokument!**
 
-**Vor JEDER Feature-Implementierung prüfen:**
-1. ✅ Welche Texte werden angezeigt? → **ALLE identifizieren!**
-2. ✅ Sind Übersetzungen in `de.json` vorhanden? → **HINZUFÜGEN!**
-3. ✅ Sind Übersetzungen in `en.json` vorhanden? → **HINZUFÜGEN!**
-4. ✅ Sind Übersetzungen in `es.json` vorhanden? → **HINZUFÜGEN!**
-5. ✅ Werden `t()` Funktionen verwendet statt Hardcoded-Text? → **ANPASSEN!**
+Siehe: [⚠️ KRITISCH: Übersetzungen (I18N) - IMMER bei neuen Features!](#-kritisch-übersetzungen-i18n---immer-bei-neuen-features)
 
-**Standard-Übersetzungsstruktur:**
-```json
-// frontend/src/i18n/locales/de.json
-{
-  "featureName": {
-    "title": "Titel",
-    "create": "Erstellen",
-    "edit": "Bearbeiten",
-    "name": "Name",
-    "noItems": "Keine Einträge vorhanden",
-    "deleteConfirm": "Wirklich löschen?"
-  }
-}
-```
-
-**Verwendung in Komponenten:**
-
-**⚠️ EINHEITLICHER STANDARD - IMMER VERWENDEN:**
-
-```tsx
-// ✅ RICHTIG: Mit defaultValue für Fallback
-const { t } = useTranslation();
-<h2>{t('featureName.title', { defaultValue: 'Titel' })}</h2>
-<button>{t('featureName.create', { defaultValue: 'Erstellen' })}</button>
-
-// ✅ AUCH RICHTIG: Ohne defaultValue, wenn Übersetzung garantiert vorhanden ist
-// (Nur für bereits validierte Übersetzungen)
-<h2>{t('common.save')}</h2>
-
-// ❌ FALSCH: Mit || Operator (veraltet, nicht mehr verwenden!)
-<h2>{t('featureName.title') || 'Titel'}</h2>
-
-// ❌ FALSCH: Hardcoded-Text
-<h2>Titel</h2>
-<button>Erstellen</button>
-```
-
-**WICHTIG: Warum defaultValue?**
-- Funktioniert auch bei Timing-Problemen (wenn i18n noch nicht initialisiert ist)
-- i18next-Standard (offizielle API)
-- Expliziter Fallback (besser lesbar)
-- Keine Probleme mit falsy-Werten (0, false, etc.)
-
-**Dateien für Übersetzungen:**
-- `frontend/src/i18n/locales/de.json` - Deutsch
-- `frontend/src/i18n/locales/en.json` - Englisch
-- `frontend/src/i18n/locales/es.json` - Spanisch
+**Zusammenfassung:**
+- Übersetzungen sind TEIL DER IMPLEMENTIERUNG, nicht optional!
+- JEDE neue Komponente/Seite/Feature MUSS Übersetzungen in ALLEN Sprachen haben (de, en, es)!
+- Features OHNE vollständige Übersetzungen werden NICHT akzeptiert!
 
 **Standard-Button-Style:**
 ```tsx
@@ -721,6 +755,154 @@ const { t } = useTranslation();
 - Hinzufügen: `PlusIcon`
 
 **Siehe auch:** `docs/core/DESIGN_STANDARDS.md` - Abschnitt "Buttons und Aktionselemente"
+
+### ⚠️ KRITISCH: Berechtigungen - IMMER bei neuen Features hinzufügen!
+
+**🚨 WICHTIGSTE REGEL FÜR ALLE NEUEN FEATURES:**
+- **Berechtigungen sind TEIL DER IMPLEMENTIERUNG, nicht optional!**
+- **JEDE neue Seite/Tabelle/Button MUSS Berechtigungen haben!**
+- **Features OHNE vollständige Berechtigungen werden NICHT akzeptiert!**
+
+**Vor JEDER Feature-Implementierung prüfen:**
+1. ✅ Neue Seite/Tabelle/Button identifiziert? → Zu `seed.ts` hinzufügen!
+2. ✅ Zu `ALL_PAGES` / `ALL_TABLES` / `ALL_BUTTONS` hinzugefügt? → In `backend/prisma/seed.ts`!
+3. ✅ Berechtigungen für alle Rollen definiert? → Admin, User, Hamburger!
+4. ✅ Frontend-Berechtigungen geprüft? → `usePermissions()` Hook verwendet!
+5. ✅ Backend-Berechtigungen geprüft? → `checkPermission` Middleware verwendet!
+6. ✅ Seed-File getestet? → `npx prisma db seed` ausführen!
+
+**Seed-File aktualisieren:**
+```typescript
+// backend/prisma/seed.ts
+
+// 1. Neue Seite/Tabelle/Button zu Arrays hinzufügen
+const ALL_PAGES = [
+  'dashboard',
+  'new_feature_page', // ← NEU
+];
+
+const ALL_TABLES = [
+  'requests',
+  'new_feature_table', // ← NEU
+];
+
+const ALL_BUTTONS = [
+  'user_create',
+  'new_feature_button', // ← NEU
+];
+
+// 2. Berechtigungen für Rollen definieren
+const adminPermissionMap: Record<string, AccessLevel> = {
+  'page_new_feature_page': 'both', // ← NEU
+  'table_new_feature_table': 'both', // ← NEU
+  'button_new_feature_button': 'both', // ← NEU
+};
+```
+
+**Frontend-Berechtigungen:**
+```tsx
+// ✅ RICHTIG
+import { usePermissions } from '../hooks/usePermissions.ts';
+
+const MyComponent = () => {
+  const { hasPermission } = usePermissions();
+  
+  return (
+    <div>
+      {hasPermission('new_feature_page', 'read', 'page') && (
+        <div>Inhalt</div>
+      )}
+    </div>
+  );
+};
+```
+
+**Backend-Berechtigungen:**
+```typescript
+// ✅ RICHTIG
+import { checkPermission } from '../middleware/permissionMiddleware.ts';
+
+router.get(
+  '/api/new-feature',
+  authenticate,
+  checkPermission('new_feature_page', 'read', 'page'),
+  controller.getNewFeature
+);
+```
+
+**Siehe auch:**
+- [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) - Abschnitt "Berechtigungen"
+- [BERECHTIGUNGSSYSTEM.md](../technical/BERECHTIGUNGSSYSTEM.md) - Vollständige Berechtigungssystem-Dokumentation
+
+### ⚠️ KRITISCH: Notifications - IMMER bei neuen Features hinzufügen!
+
+**🚨 WICHTIGSTE REGEL FÜR ALLE NEUEN FEATURES:**
+- **Notifications sind TEIL DER IMPLEMENTIERUNG, nicht optional!**
+- **JEDE wichtige Aktion MUSS Notifications haben!**
+- **Features OHNE vollständige Notifications werden NICHT akzeptiert!**
+
+**Vor JEDER Feature-Implementierung prüfen:**
+1. ✅ Notification erforderlich? → Bei create/update/delete/status-Änderungen!
+2. ✅ `createNotificationIfEnabled` aufgerufen? → Mit korrekten Parametern!
+3. ✅ Backend-Übersetzungen hinzugefügt? → In `backend/src/utils/translations.ts`!
+4. ✅ Frontend-Übersetzungen hinzugefügt? → In `frontend/src/i18n/locales/`!
+5. ✅ `relatedEntityId` und `relatedEntityType` korrekt? → NICHT `targetId`/`targetType`!
+
+**Backend-Notification erstellen:**
+```typescript
+// ✅ RICHTIG
+import { createNotificationIfEnabled } from './notificationController';
+import { NotificationType } from '@prisma/client';
+import { getTaskNotificationText, getUserLanguage } from '../utils/translations';
+
+const language = await getUserLanguage(userId);
+const notificationText = getTaskNotificationText(
+  language,
+  'assigned',
+  task.title
+);
+
+await createNotificationIfEnabled({
+  userId: assignedUserId,
+  title: notificationText.title,
+  message: notificationText.message,
+  type: NotificationType.task,
+  relatedEntityId: task.id, // ← WICHTIG: relatedEntityId
+  relatedEntityType: 'assigned' // ← WICHTIG: relatedEntityType
+});
+```
+
+**Backend-Übersetzungen hinzufügen:**
+```typescript
+// backend/src/utils/translations.ts
+
+const newFeatureNotifications: Record<string, NewFeatureNotificationTranslations> = {
+  de: {
+    created: (featureName: string) => ({
+      title: 'Neues Feature erstellt',
+      message: `Das Feature "${featureName}" wurde erfolgreich erstellt.`
+    })
+  },
+  es: { /* ... */ },
+  en: { /* ... */ }
+};
+
+export function getNewFeatureNotificationText(
+  language: string,
+  type: 'created' | 'updated',
+  featureName: string
+): { title: string; message: string } {
+  // ...
+}
+```
+
+**⚠️ WICHTIG:**
+- **NICHT verwenden:** `targetId` und `targetType` (veraltet!)
+- **IMMER verwenden:** `relatedEntityId` und `relatedEntityType`
+
+**Siehe auch:**
+- [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) - Abschnitt "Notifications"
+- [NOTIFICATION_SYSTEM.md](../modules/NOTIFICATION_SYSTEM.md) - Vollständige Notification-System-Dokumentation
 
 #### Aktions-Buttons in Tabellen
 
