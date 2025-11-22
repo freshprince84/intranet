@@ -79,15 +79,22 @@ export const getAllRequests = async (req: Request, res: Response) => {
         let filterWhereClause: any = {};
         if (filterId) {
             // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
-            const filterData = await filterCache.get(parseInt(filterId, 10));
-            if (filterData) {
-                const conditions = JSON.parse(filterData.conditions);
-                const operators = JSON.parse(filterData.operators);
-                filterWhereClause = convertFilterConditionsToPrismaWhere(
-                    conditions,
-                    operators,
-                    'request'
-                );
+            try {
+                const filterData = await filterCache.get(parseInt(filterId, 10));
+                if (filterData) {
+                    const conditions = JSON.parse(filterData.conditions);
+                    const operators = JSON.parse(filterData.operators);
+                    filterWhereClause = convertFilterConditionsToPrismaWhere(
+                        conditions,
+                        operators,
+                        'request'
+                    );
+                } else {
+                    console.warn(`[getAllRequests] Filter ${filterId} nicht gefunden`);
+                }
+            } catch (filterError) {
+                console.error(`[getAllRequests] Fehler beim Laden von Filter ${filterId}:`, filterError);
+                // Fallback: Versuche ohne Filter weiter
             }
         } else if (filterConditions) {
             // Direkte Filter-Bedingungen
@@ -185,8 +192,17 @@ export const getAllRequests = async (req: Request, res: Response) => {
 
         res.json(formattedRequests);
     } catch (error) {
-        console.error('Error fetching requests:', error);
-        res.status(500).json({ message: 'Fehler beim Abrufen der Requests' });
+        console.error('[getAllRequests] Error fetching requests:', error);
+        console.error('[getAllRequests] Error details:', {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            filterId: req.query.filterId,
+            userId: req.userId
+        });
+        res.status(500).json({ 
+            message: 'Fehler beim Abrufen der Requests',
+            error: error instanceof Error ? error.message : String(error)
+        });
     }
 };
 
