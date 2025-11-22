@@ -18,8 +18,10 @@ const library_1 = require("@prisma/client/runtime/library");
 const globalForPrisma = globalThis;
 // ✅ PERFORMANCE: Prisma Client mit reconnect-Logik
 const createPrismaClient = () => {
+    // TEMPORÄR: Query-Logging aktivieren für Performance-Analyse
+    const enableQueryLogging = process.env.ENABLE_QUERY_LOGGING === 'true' || process.env.NODE_ENV === 'development';
     const client = new client_1.PrismaClient({
-        log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+        log: enableQueryLogging ? ['query', 'error', 'warn'] : ['error'],
     });
     // ✅ Reconnect-Logik: Bei DB-Verbindungsfehlern reconnect versuchen
     const originalQuery = client.$connect;

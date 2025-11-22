@@ -36,8 +36,9 @@ interface TaskParams {
 // Alle Tasks abrufen
 export const getAllTasks = async (req: Request, res: Response) => {
     try {
-        // Datenisolation: Standalone User sehen nur ihre eigenen Tasks
-        const isolationFilter = getDataIsolationFilter(req, 'task');
+        const userId = parseInt(req.userId as string, 10);
+        const organizationId = (req as any).organizationId;
+        const userRoleId = (req as any).userRole?.role?.id;
         
         // Filter-Parameter aus Query lesen
         const filterId = req.query.filterId as string | undefined;
@@ -72,22 +73,52 @@ export const getAllTasks = async (req: Request, res: Response) => {
             );
         }
         
-        // Kombiniere Isolation-Filter mit Filter-Bedingungen
-        const whereConditions: any[] = [isolationFilter];
-        if (Object.keys(filterWhereClause).length > 0) {
-            whereConditions.push(filterWhereClause);
+        // OPTIMIERUNG: Vereinfachte WHERE-Klausel für bessere Performance
+        const baseWhereConditions: any[] = [];
+        
+        // Isolation-Filter: organizationId (wenn vorhanden)
+        if (organizationId) {
+            const taskFilter: any = {
+                organizationId: organizationId
+            };
+            
+            // Wenn User eine aktive Rolle hat, füge roleId-Filter hinzu
+            if (userRoleId) {
+                taskFilter.OR = [
+                    { responsibleId: userId },
+                    { qualityControlId: userId },
+                    { roleId: userRoleId }
+                ];
+            } else {
+                // Fallback: Nur eigene Tasks
+                taskFilter.OR = [
+                    { responsibleId: userId },
+                    { qualityControlId: userId }
+                ];
+            }
+            
+            baseWhereConditions.push(taskFilter);
+        } else {
+            // Standalone User: Nur eigene Tasks
+            baseWhereConditions.push({
+                OR: [
+                    { responsibleId: userId },
+                    { qualityControlId: userId }
+                ]
+            });
         }
         
-        const whereClause = whereConditions.length === 1 
-            ? whereConditions[0] 
-            : { AND: whereConditions };
+        // Füge Filter-Bedingungen hinzu (falls vorhanden)
+        if (Object.keys(filterWhereClause).length > 0) {
+            baseWhereConditions.push(filterWhereClause);
+        }
         
-        console.log('[getAllTasks] User ID:', req.userId);
-        console.log('[getAllTasks] Organization ID:', req.organizationId);
-        console.log('[getAllTasks] User Role:', req.userRole?.role?.id, req.userRole?.role?.name);
-        console.log('[getAllTasks] Isolation Filter:', JSON.stringify(isolationFilter, null, 2));
-        console.log('[getAllTasks] Filter Where Clause:', JSON.stringify(filterWhereClause, null, 2));
+        // Kombiniere alle Filter
+        const whereClause = baseWhereConditions.length === 1
+            ? baseWhereConditions[0]
+            : { AND: baseWhereConditions };
         
+        const queryStartTime = Date.now();
         const tasks = await prisma.task.findMany({
             where: whereClause,
             take: limit,
@@ -114,9 +145,8 @@ export const getAllTasks = async (req: Request, res: Response) => {
                 } : {})
             }
         });
-        
-        console.log('[getAllTasks] Found tasks:', tasks.length);
-        console.log('[getAllTasks] Task roleIds:', tasks.map(t => ({ id: t.id, roleId: t.roleId, roleName: t.role?.name, title: t.title })));
+        const queryDuration = Date.now() - queryStartTime;
+        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks in ${queryDuration}ms`);
         
         res.json(tasks);
     } catch (error) {

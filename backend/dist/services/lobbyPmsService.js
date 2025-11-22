@@ -514,6 +514,10 @@ class LobbyPmsService {
             else if (lobbyReservation.payment_status) {
                 paymentStatus = mapPaymentStatus(lobbyReservation.payment_status);
             }
+            // Setze amount aus totalToPay (für Payment-Link-Erstellung)
+            const amount = totalToPay > 0 ? totalToPay : null;
+            // Setze currency (Standard: COP, könnte auch aus API kommen)
+            const currency = lobbyReservation.currency || 'COP';
             // Hole Branch-ID: Verwende this.branchId (MUSS gesetzt sein!)
             // KEIN Fallback mehr, da dies zu falschen Branch-Zuordnungen führt
             if (!this.branchId) {
@@ -532,6 +536,8 @@ class LobbyPmsService {
                 roomDescription: roomDescription,
                 status: status,
                 paymentStatus: paymentStatus,
+                amount: amount,
+                currency: currency,
                 organizationId: this.organizationId,
                 branchId: branchId,
             };

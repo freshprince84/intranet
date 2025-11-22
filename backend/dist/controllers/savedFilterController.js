@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeFilterFromGroup = exports.addFilterToGroup = exports.deleteFilterGroup = exports.updateFilterGroup = exports.getFilterGroups = exports.createFilterGroup = exports.deleteFilter = exports.saveFilter = exports.getUserSavedFilters = void 0;
 const prisma_1 = require("../utils/prisma");
+const filterCache_1 = require("../services/filterCache");
 // Funktion zum Abrufen aller gespeicherten Filter eines Benutzers für eine Tabelle
 const getUserSavedFilters = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -128,6 +129,8 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         sortDirections: sortDirectionsJson
                     }
                 });
+                // Cache invalidieren
+                filterCache_1.filterCache.invalidate(existingFilter.id);
             }
             else {
                 // Erstelle neuen Filter
@@ -226,6 +229,8 @@ const deleteFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                     id: filterId
                 }
             });
+            // Cache invalidieren
+            filterCache_1.filterCache.invalidate(filterId);
             return res.status(200).json({ message: 'Filter erfolgreich gelöscht' });
         }
         catch (prismaError) {

@@ -569,31 +569,40 @@ export const getAllReservations = async (req: Request, res: Response) => {
       organizationId: req.organizationId
     };
 
+    // OPTIMIERUNG: Verwende branchId aus Request-Kontext statt zusätzlicher Query
     // Wenn nur "own_branch" Berechtigung: Filtere nach Branch
     if (hasOwnBranchPermission && !hasAllBranchesPermission) {
-      // Hole branchId aus UsersBranches (falls vorhanden)
-      const userBranch = await prisma.usersBranches.findFirst({
-        where: {
-          userId: userId,
-          branch: {
-            organizationId: req.organizationId
-          }
-        },
-        select: {
-          branchId: true
-        }
-      });
-
-      if (userBranch?.branchId) {
-        whereClause.branchId = userBranch.branchId;
-        console.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung)`);
+      // Hole branchId aus Request-Kontext (wird in organization-Middleware gesetzt)
+      const branchId = (req as any).branchId;
+      
+      if (branchId) {
+        whereClause.branchId = branchId;
+        console.log(`[Reservation] Filtere nach Branch ${branchId} (own_branch Berechtigung)`);
       } else {
-        // User hat keine aktive Branch → keine Reservierungen
-        console.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
-        return res.json({
-          success: true,
-          data: []
+        // Fallback: Hole branchId aus UsersBranches (falls nicht im Request-Kontext)
+        const userBranch = await prisma.usersBranches.findFirst({
+          where: {
+            userId: userId,
+            branch: {
+              organizationId: req.organizationId
+            }
+          },
+          select: {
+            branchId: true
+          }
         });
+
+        if (userBranch?.branchId) {
+          whereClause.branchId = userBranch.branchId;
+          console.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung, aus DB)`);
+        } else {
+          // User hat keine aktive Branch → keine Reservierungen
+          console.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
+          return res.json({
+            success: true,
+            data: []
+          });
+        }
       }
     }
     // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)

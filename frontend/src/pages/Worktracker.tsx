@@ -1312,8 +1312,10 @@ const Worktracker: React.FC = () => {
                                 
                                 {/* Mitte: Titel */}
                                 <div className="flex items-center">
-                                    <CheckCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
-                                    <h2 className="text-xl font-semibold dark:text-white">{t('tasks.title')}</h2>
+                                    <CheckCircleIcon className="h-4 w-4 sm:h-6 sm:w-6 mr-1 sm:mr-2 dark:text-white" />
+                                    <h2 className="text-base sm:text-xl font-semibold dark:text-white">
+                                        {activeTab === 'todos' ? t('tasks.title') : t('reservations.title', 'Reservations')}
+                                    </h2>
                                 </div>
                                 
                                 {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
@@ -2120,6 +2122,25 @@ const Worktracker: React.FC = () => {
                                                 }
                                                 const actionButtons = hasWritePermission ? (
                                                     <div className="flex items-center space-x-2">
+                                                        {/* Einladung senden Button */}
+                                                        <div className="relative group">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedReservationForInvitation(reservation);
+                                                                    setIsSendInvitationSidepaneOpen(true);
+                                                                }}
+                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                title={t('reservations.sendInvitation', 'Einladung senden')}
+                                                            >
+                                                                <PaperAirplaneIcon className="h-4 w-4" />
+                                                            </button>
+                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('reservations.sendInvitation', 'Einladung senden')}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Key-Button für PIN-Generierung */}
                                                         <div className="relative group">
                                                             <button
                                                                 onClick={(e) => {
