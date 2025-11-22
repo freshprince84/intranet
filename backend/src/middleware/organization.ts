@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../utils/prisma';
+import { organizationCache } from '../utils/organizationCache';
 
 // Erweitere Request-Interface
 declare global {
@@ -20,49 +20,18 @@ export const organizationMiddleware = async (req: Request, res: Response, next: 
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
-    // Hole aktuelle Rolle und Organisation des Users
-    const userRole = await prisma.userRole.findFirst({
-      where: { 
-        userId: Number(userId),
-        lastUsed: true 
-      },
-      include: {
-        role: {
-          include: {
-            organization: true,
-            permissions: true
-          }
-        }
-      }
-    });
+    // ✅ PERFORMANCE: Verwende Cache statt DB-Query bei jedem Request
+    const cachedData = await organizationCache.get(Number(userId));
 
-    if (!userRole) {
+    if (!cachedData) {
       console.error('[organizationMiddleware] Keine aktive Rolle gefunden für userId:', userId);
       return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
     }
     
-    console.log('[organizationMiddleware] UserRole gefunden:', userRole.id, 'OrganizationId:', userRole.role.organizationId);
-
     // Füge Organisations-Kontext zum Request hinzu
-    // WICHTIG: Kann NULL sein für standalone User (Hamburger-Rolle)
-    req.organizationId = userRole.role.organizationId;
-    req.userRole = userRole;
-
-    // Hole aktive Branch des Users
-    const userBranch = await prisma.usersBranches.findFirst({
-      where: {
-        userId: Number(userId),
-        lastUsed: true
-      },
-      select: {
-        branchId: true
-      }
-    });
-
-    // Setze branchId im Request (kann undefined sein, wenn User keine Branch hat)
-    if (userBranch) {
-      req.branchId = userBranch.branchId;
-    }
+    req.organizationId = cachedData.organizationId;
+    req.userRole = cachedData.userRole;
+    req.branchId = cachedData.branchId;
 
     next();
   } catch (error) {
