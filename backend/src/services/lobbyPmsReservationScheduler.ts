@@ -51,15 +51,20 @@ export class LobbyPmsReservationScheduler {
 
   /**
    * Prüft alle Branches auf neue Reservierungen
+   * 
+   * WICHTIG: Synchronisiert nur eingerichtete Branches von Organisation 1:
+   * - Branch 3 (Manila)
+   * - Branch 4 (Parque Poblado)
    */
   private static async checkAllBranches(): Promise<void> {
     try {
-      console.log('[LobbyPmsReservationScheduler] Starte Sync für alle Branches...');
+      console.log('[LobbyPmsReservationScheduler] Starte Sync für eingerichtete Branches...');
 
-      // Hole alle Branches mit Organisation
+      // Hole nur eingerichtete Branches von Organisation 1 (Manila und Parque Poblado)
       const branches = await prisma.branch.findMany({
         where: {
-          organizationId: { not: null }
+          organizationId: 1,
+          id: { in: [3, 4] } // Nur Manila (3) und Parque Poblado (4)
         },
         include: {
           organization: {
