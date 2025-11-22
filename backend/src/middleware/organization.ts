@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { organizationCache } from '../utils/organizationCache';
+import { prisma } from '../utils/prisma';
 
 // Erweitere Request-Interface
 declare global {
