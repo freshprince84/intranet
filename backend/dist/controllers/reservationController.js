@@ -42,7 +42,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getReservationById = exports.getReservationNotificationLogs = exports.generatePinAndSendNotification = exports.sendReservationInvitation = exports.getAllReservations = exports.createReservation = exports.updateGuestContact = void 0;
+exports.getReservationById = exports.getReservationNotificationLogs = exports.sendPasscode = exports.generatePinAndSendNotification = exports.sendReservationInvitation = exports.getAllReservations = exports.createReservation = exports.updateGuestContact = void 0;
 const client_1 = require("@prisma/client");
 const prisma_1 = require("../utils/prisma");
 const whatsappService_1 = require("../services/whatsappService");
@@ -235,8 +235,14 @@ ${ttlockCode}
                 // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
                 const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
                 // Template-Parameter: {{1}} = Gast-Name, {{2}} = Check-in-Link, {{3}} = Payment-Link
-                // Erstelle LobbyPMS Check-in-Link
-                const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(updatedReservation);
+                // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
+                // (reservation.guestEmail), nicht mit der geänderten E-Mail aus updatedReservation
+                // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
+                const reservationForCheckInLink = {
+                    id: reservation.id,
+                    guestEmail: reservation.guestEmail || ''
+                };
+                const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservationForCheckInLink);
                 const templateParams = [updatedReservation.guestName, checkInLink, paymentLink];
                 yield whatsappService.sendMessageWithFallback(updatedReservation.guestPhone, sentMessage, templateName, templateParams);
                 sentMessageAt = new Date();
@@ -766,6 +772,106 @@ const generatePinAndSendNotification = (req, res) => __awaiter(void 0, void 0, v
     }
 });
 exports.generatePinAndSendNotification = generatePinAndSendNotification;
+/**
+ * POST /api/reservations/:id/send-passcode
+ * Sendet TTLock Passcode mit anpassbaren Kontaktdaten
+ */
+const sendPasscode = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const reservationId = parseInt(id, 10);
+        const organizationId = req.organizationId;
+        const { guestPhone, guestEmail, customMessage } = req.body;
+        if (isNaN(reservationId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültige Reservierungs-ID'
+            });
+        }
+        if (!organizationId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Organisation-ID fehlt'
+            });
+        }
+        // Prüfe ob Reservierung existiert und zur Organisation gehört
+        const reservation = yield prisma_1.prisma.reservation.findFirst({
+            where: {
+                id: reservationId,
+                organizationId: organizationId
+            },
+            include: {
+                organization: true,
+                branch: true
+            }
+        });
+        if (!reservation) {
+            return res.status(404).json({
+                success: false,
+                message: 'Reservierung nicht gefunden oder gehört nicht zur Organisation'
+            });
+        }
+        // Validierung: Mindestens eine Kontaktinfo muss vorhanden sein
+        const finalGuestPhone = guestPhone || reservation.guestPhone;
+        const finalGuestEmail = guestEmail || reservation.guestEmail;
+        if (!finalGuestPhone && !finalGuestEmail) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mindestens eine Telefonnummer oder E-Mail-Adresse ist erforderlich'
+            });
+        }
+        console.log(`[Reservation] Sende Passcode für Reservierung ${reservationId}`);
+        console.log(`[Reservation] Guest Phone: ${finalGuestPhone || 'N/A'}`);
+        console.log(`[Reservation] Guest Email: ${finalGuestEmail || 'N/A'}`);
+        // Rufe Service-Methode auf
+        try {
+            yield reservationNotificationService_1.ReservationNotificationService.sendPasscodeNotification(reservationId, {
+                guestPhone: finalGuestPhone || undefined,
+                guestEmail: finalGuestEmail || undefined,
+                customMessage: customMessage || undefined
+            });
+            console.log(`[Reservation] ✅ Passcode-Versendung abgeschlossen für Reservierung ${reservationId}`);
+        }
+        catch (error) {
+            console.error(`[Reservation] ❌ Fehler bei Passcode-Versendung für Reservierung ${reservationId}:`, error);
+            if (error instanceof Error) {
+                console.error(`[Reservation] Fehlermeldung: ${error.message}`);
+                console.error(`[Reservation] Stack: ${error.stack}`);
+            }
+            throw error;
+        }
+        // Hole aktualisierte Reservierung
+        const updatedReservation = yield prisma_1.prisma.reservation.findUnique({
+            where: { id: reservationId },
+            include: {
+                organization: {
+                    select: {
+                        id: true,
+                        name: true,
+                        displayName: true
+                    }
+                }
+            }
+        });
+        // Prüfe ob PIN tatsächlich generiert wurde
+        const pinGenerated = (updatedReservation === null || updatedReservation === void 0 ? void 0 : updatedReservation.doorPin) !== null && (updatedReservation === null || updatedReservation === void 0 ? void 0 : updatedReservation.doorPin) !== undefined;
+        res.json({
+            success: true,
+            data: updatedReservation,
+            message: pinGenerated
+                ? 'Passcode generiert und Mitteilung versendet'
+                : 'Mitteilung versendet, aber Passcode konnte nicht generiert werden (TTLock Fehler)'
+        });
+    }
+    catch (error) {
+        console.error('[Reservation] Fehler beim Versenden des Passcodes:', error);
+        res.status(500).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Fehler beim Versenden des Passcodes'
+        });
+    }
+});
+exports.sendPasscode = sendPasscode;
 /**
  * GET /api/reservations/:id/notification-logs
  * Holt Log-Historie für eine Reservation

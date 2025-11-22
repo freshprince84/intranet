@@ -35,6 +35,11 @@ router.post('/:id/generate-pin-and-send', (req, res, next) => {
     console.log('[Reservations Route] Reservation ID:', req.params.id);
     (0, reservationController_1.generatePinAndSendNotification)(req, res).catch(next);
 });
+router.post('/:id/send-passcode', (req, res, next) => {
+    console.log('[Reservations Route] POST /:id/send-passcode aufgerufen');
+    console.log('[Reservations Route] Reservation ID:', req.params.id);
+    (0, reservationController_1.sendPasscode)(req, res).catch(next);
+});
 router.get('/:id/notification-logs', (req, res, next) => {
     console.log('[Reservations Route] GET /:id/notification-logs aufgerufen');
     console.log('[Reservations Route] Reservation ID:', req.params.id);
