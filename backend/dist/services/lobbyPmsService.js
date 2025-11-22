@@ -430,15 +430,12 @@ class LobbyPmsService {
             else if (lobbyReservation.payment_status) {
                 paymentStatus = mapPaymentStatus(lobbyReservation.payment_status);
             }
-            // Hole Branch-ID: Verwende this.branchId, oder erste Branch der Organisation als Fallback
-            let branchId = this.branchId || null;
-            if (!branchId && this.organizationId) {
-                const branch = yield prisma_1.prisma.branch.findFirst({
-                    where: { organizationId: this.organizationId },
-                    orderBy: { id: 'asc' }
-                });
-                branchId = (branch === null || branch === void 0 ? void 0 : branch.id) || null;
+            // Hole Branch-ID: Verwende this.branchId (MUSS gesetzt sein!)
+            // KEIN Fallback mehr, da dies zu falschen Branch-Zuordnungen führt
+            if (!this.branchId) {
+                throw new Error(`LobbyPmsService.syncReservation: branchId ist nicht gesetzt! Service muss mit createForBranch() erstellt werden.`);
             }
+            const branchId = this.branchId;
             const reservationData = {
                 lobbyReservationId: bookingId,
                 guestName: guestName,

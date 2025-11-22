@@ -85,16 +85,21 @@ class LobbyPmsReservationScheduler {
     }
     /**
      * Prüft alle Branches auf neue Reservierungen
+     *
+     * WICHTIG: Synchronisiert nur eingerichtete Branches von Organisation 1:
+     * - Branch 3 (Manila)
+     * - Branch 4 (Parque Poblado)
      */
     static checkAllBranches() {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
             try {
-                console.log('[LobbyPmsReservationScheduler] Starte Sync für alle Branches...');
-                // Hole alle Branches mit Organisation
+                console.log('[LobbyPmsReservationScheduler] Starte Sync für eingerichtete Branches...');
+                // Hole nur eingerichtete Branches von Organisation 1 (Manila und Parque Poblado)
                 const branches = yield prisma_1.prisma.branch.findMany({
                     where: {
-                        organizationId: { not: null }
+                        organizationId: 1,
+                        id: { in: [3, 4] } // Nur Manila (3) und Parque Poblado (4)
                     },
                     include: {
                         organization: {
