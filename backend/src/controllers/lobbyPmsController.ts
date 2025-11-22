@@ -158,14 +158,21 @@ export const syncReservations = async (req: AuthenticatedRequest, res: Response)
       
       // Erstelle temporären Service für fetchReservationById (ohne branchId)
       const tempService = new LobbyPmsService(organizationId);
+      // Lade Settings, damit apiKey verfügbar ist
+      await (tempService as any).loadSettings();
       
       for (const reservationId of reservationIds) {
         try {
           const lobbyReservation = await tempService.fetchReservationById(reservationId);
           
-          // Finde Branch über property_id
+          // Finde Branch über property_id UND apiKey (für eindeutige Zuordnung)
+          // WICHTIG: Da beide Branches die gleiche propertyId haben können, muss auch der apiKey geprüft werden
           const branchId = lobbyReservation.property_id 
-            ? await findBranchByPropertyId(lobbyReservation.property_id, organizationId)
+            ? await findBranchByPropertyId(
+                lobbyReservation.property_id, 
+                (tempService as any).apiKey, // API Key aus Service
+                organizationId
+              )
             : null;
           
           if (!branchId) {
@@ -402,9 +409,17 @@ export const handleWebhook = async (req: Request, res: Response) => {
       });
     }
 
-    // Finde Branch über property_id
+    // Finde Branch über property_id UND apiKey (für eindeutige Zuordnung)
+    // WICHTIG: Da beide Branches die gleiche propertyId haben können, muss auch der apiKey geprüft werden
     const { findBranchByPropertyId } = await import('../services/lobbyPmsService');
-    const branchId = await findBranchByPropertyId(propertyId, organization.id);
+    const tempService = new LobbyPmsService(organization.id);
+    // Lade Settings, damit apiKey verfügbar ist
+    await (tempService as any).loadSettings();
+    const branchId = await findBranchByPropertyId(
+      propertyId, 
+      (tempService as any).apiKey, // API Key aus Service
+      organization.id
+    );
     
     if (!branchId) {
       console.warn(`[LobbyPMS Webhook] Keine Branch gefunden für Property ID: ${propertyId}`);
