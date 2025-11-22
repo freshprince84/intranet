@@ -15,6 +15,7 @@ const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const prisma_1 = require("../utils/prisma");
+const userCache_1 = require("../services/userCache");
 const userSelect = {
     id: true,
     username: true,
@@ -420,6 +421,16 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
             return role;
         }));
+        // ✅ PERFORMANCE: UserCache invalidieren für alle User mit dieser Rolle
+        // Hole alle User mit dieser Rolle (wird später auch für Benachrichtigungen benötigt)
+        const usersWithRoleForCache = yield prisma_1.prisma.userRole.findMany({
+            where: { roleId: roleId },
+            select: { userId: true }
+        });
+        // Invalidiere Cache für alle betroffenen User
+        for (const userRole of usersWithRoleForCache) {
+            userCache_1.userCache.invalidate(userRole.userId);
+        }
         // Benachrichtigung für Administratoren senden
         const admins = yield prisma_1.prisma.user.findMany({
             where: {
