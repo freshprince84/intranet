@@ -97,6 +97,20 @@ const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
   description: 'asc'
 };
 
+// Default Sortierrichtungen für Reservations Card-Metadaten
+const defaultReservationCardSortDirections: Record<string, 'asc' | 'desc'> = {
+  guestName: 'asc',
+  status: 'asc',
+  paymentStatus: 'asc',
+  checkInDate: 'desc',  // Neueste zuerst (wie aktuell hardcoded)
+  checkOutDate: 'desc',
+  roomNumber: 'asc',
+  guestEmail: 'asc',
+  guestPhone: 'asc',
+  amount: 'desc',
+  arrivalTime: 'desc'
+};
+
 // Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
 // Tabellen-Spalte -> Card-Metadaten (kann Array sein für 1:N Mapping)
 const tableToCardMapping: Record<string, string[]> = {
@@ -340,6 +354,9 @@ const Worktracker: React.FC = () => {
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
     const [displayLimit, setDisplayLimit] = useState<number>(10);
 
+    // Expand/Collapse States für Reservations (analog zu MonthlyReports)
+    const [expandedReservationRows, setExpandedReservationRows] = useState<Set<number>>(new Set());
+
     // View-Mode aus Settings laden
     const viewMode = settings.viewMode || 'cards';
 
@@ -366,6 +383,42 @@ const Worktracker: React.FC = () => {
     const visibleCardMetadata = useMemo(() => {
         return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
     }, [cardMetadataOrder, hiddenCardMetadata]);
+
+    // Lokale Sortierrichtungen für Reservations Cards (nicht persistiert)
+    const [reservationCardSortDirections, setReservationCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
+        if (activeTab === 'reservations') {
+            return defaultReservationCardSortDirections;
+        }
+        return {};
+    });
+
+    // Aktualisiere Sortierrichtungen wenn Tab wechselt
+    useEffect(() => {
+        if (activeTab === 'reservations') {
+            setReservationCardSortDirections(defaultReservationCardSortDirections);
+        }
+    }, [activeTab]);
+
+    // Handler für Sortierrichtung-Änderung bei Reservations
+    const handleReservationCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
+        setReservationCardSortDirections(prev => ({
+            ...prev,
+            [columnId]: direction
+        }));
+    };
+
+    // Toggle-Funktion für Expand/Collapse bei Reservations
+    const toggleReservationExpanded = (reservationId: number) => {
+        setExpandedReservationRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(reservationId)) {
+                newSet.delete(reservationId);
+            } else {
+                newSet.add(reservationId);
+            }
+            return newSet;
+        });
+    };
 
     // CSS-Klasse für Container-Box setzen (für CSS-basierte Schattierungs-Entfernung)
     useEffect(() => {
@@ -1201,14 +1254,93 @@ const Worktracker: React.FC = () => {
             return true;
         });
         
-        // Sortiere nach Check-in-Datum (neueste zuerst)
-        const sorted = [...filtered].sort((a, b) => {
-            return new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime();
-        });
+        // Sortierung basierend auf viewMode
+        let sorted: typeof filtered;
+        if (viewMode === 'cards') {
+            // Multi-Sortierung für Cards-Mode basierend auf cardMetadataOrder und cardSortDirections
+            sorted = [...filtered];
+            const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+            
+            sorted.sort((a, b) => {
+                for (const columnId of sortableColumns) {
+                    const direction = reservationCardSortDirections[columnId] || 'asc';
+                    let valueA: any, valueB: any;
+                    
+                    switch (columnId) {
+                        case 'guestName':
+                            valueA = a.guestName.toLowerCase();
+                            valueB = b.guestName.toLowerCase();
+                            break;
+                        case 'status':
+                            valueA = a.status.toLowerCase();
+                            valueB = b.status.toLowerCase();
+                            break;
+                        case 'paymentStatus':
+                            valueA = a.paymentStatus.toLowerCase();
+                            valueB = b.paymentStatus.toLowerCase();
+                            break;
+                        case 'checkInDate':
+                            valueA = new Date(a.checkInDate).getTime();
+                            valueB = new Date(b.checkInDate).getTime();
+                            break;
+                        case 'checkOutDate':
+                            valueA = new Date(a.checkOutDate).getTime();
+                            valueB = new Date(b.checkOutDate).getTime();
+                            break;
+                        case 'roomNumber':
+                            valueA = (a.roomNumber || '').toLowerCase();
+                            valueB = (b.roomNumber || '').toLowerCase();
+                            break;
+                        case 'guestEmail':
+                            valueA = (a.guestEmail || '').toLowerCase();
+                            valueB = (b.guestEmail || '').toLowerCase();
+                            break;
+                        case 'guestPhone':
+                            valueA = (a.guestPhone || '').toLowerCase();
+                            valueB = (b.guestPhone || '').toLowerCase();
+                            break;
+                        case 'amount':
+                            valueA = typeof a.amount === 'string' ? parseFloat(a.amount) : (a.amount || 0);
+                            valueB = typeof b.amount === 'string' ? parseFloat(b.amount) : (b.amount || 0);
+                            break;
+                        case 'arrivalTime':
+                            valueA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0;
+                            valueB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0;
+                            break;
+                        default:
+                            continue; // Überspringe unbekannte Spalten
+                    }
+                    
+                    // Vergleich basierend auf Typ
+                    let comparison = 0;
+                    if (typeof valueA === 'number' && typeof valueB === 'number') {
+                        comparison = valueA - valueB;
+                    } else {
+                        comparison = String(valueA).localeCompare(String(valueB));
+                    }
+                    
+                    // Sortierrichtung anwenden
+                    if (direction === 'desc') {
+                        comparison = -comparison;
+                    }
+                    
+                    // Wenn unterschiedlich, gebe Vergleich zurück
+                    if (comparison !== 0) {
+                        return comparison;
+                    }
+                }
+                return 0; // Alle Spalten identisch
+            });
+        } else {
+            // Tabellen-Mode: Fallback auf Check-in-Datum (neueste zuerst)
+            sorted = [...filtered].sort((a, b) => {
+                return new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime();
+            });
+        }
         
         console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
         return sorted;
-    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm]);
+    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
@@ -1568,6 +1700,13 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
+                                            sortDirections={viewMode === 'cards' && activeTab === 'reservations' 
+                                                ? reservationCardSortDirections 
+                                                : undefined}
+                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'reservations'
+                                                ? handleReservationCardSortDirectionChange
+                                                : undefined}
+                                            showSortDirection={viewMode === 'cards' && activeTab === 'reservations'}
                                             onClose={() => {}}
                                         />
                                     </div>
@@ -2203,27 +2342,6 @@ const Worktracker: React.FC = () => {
                                                     });
                                                 }
                                                 
-                                                // Versendete Nachricht (als Chatverlauf formatiert)
-                                                if (reservation.sentMessage) {
-                                                    const formatMessageDate = (dateString: string | null) => {
-                                                        if (!dateString) return '';
-                                                        try {
-                                                            return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
-                                                        } catch {
-                                                            return dateString;
-                                                        }
-                                                    };
-                                                    
-                                                    metadata.push({
-                                                        label: t('reservations.sentMessage', 'Versendete Nachricht'),
-                                                        value: reservation.sentMessageAt 
-                                                            ? `${t('reservations.sentAt', 'Versendet am')} ${formatMessageDate(reservation.sentMessageAt)}`
-                                                            : '',
-                                                        descriptionContent: reservation.sentMessage, // String direkt übergeben, DataCard formatiert es
-                                                        section: 'full'
-                                                    });
-                                                }
-                                                
                                                 // Action-Button für PIN-Generierung und Mitteilungsversand
                                                 const hasWritePermission = hasPermission('reservations', 'write', 'table');
                                                 // Debug: Log für Berechtigungsprüfung (nur für erste Reservation) - IMMER loggen
@@ -2277,6 +2395,29 @@ const Worktracker: React.FC = () => {
                                                     </div>
                                                 ) : null;
                                                 
+                                                // Expandable Content für Details (nur wenn sentMessage vorhanden)
+                                                const isExpanded = expandedReservationRows.has(reservation.id);
+                                                const formatMessageDate = (dateString: string | null) => {
+                                                    if (!dateString) return '';
+                                                    try {
+                                                        return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
+                                                    } catch {
+                                                        return dateString;
+                                                    }
+                                                };
+                                                const expandableContent = reservation.sentMessage ? (
+                                                    <div className="mt-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                                        <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                                                            {reservation.sentMessage}
+                                                        </div>
+                                                        {reservation.sentMessageAt && (
+                                                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                                                                {t('reservations.sentAt', 'Versendet am')} {formatMessageDate(reservation.sentMessageAt)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : undefined;
+                                                
                                                 return (
                                                     <DataCard
                                                         key={reservation.id}
@@ -2284,6 +2425,11 @@ const Worktracker: React.FC = () => {
                                                         subtitle={reservation.lobbyReservationId ? `ID: ${reservation.lobbyReservationId}` : undefined}
                                                         metadata={metadata}
                                                         actions={actionButtons}
+                                                        expandable={expandableContent ? {
+                                                            isExpanded: isExpanded,
+                                                            content: expandableContent,
+                                                            onToggle: () => toggleReservationExpanded(reservation.id)
+                                                        } : undefined}
                                                     />
                                                 );
                                             })}
@@ -2741,6 +2887,13 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
+                                            sortDirections={viewMode === 'cards' && activeTab === 'reservations' 
+                                                ? reservationCardSortDirections 
+                                                : undefined}
+                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'reservations'
+                                                ? handleReservationCardSortDirectionChange
+                                                : undefined}
+                                            showSortDirection={viewMode === 'cards' && activeTab === 'reservations'}
                                             onClose={() => {}}
                                         />
                                     </div>
@@ -3372,27 +3525,6 @@ const Worktracker: React.FC = () => {
                                                     });
                                                 }
                                                 
-                                                // Versendete Nachricht (als Chatverlauf formatiert)
-                                                if (reservation.sentMessage) {
-                                                    const formatMessageDate = (dateString: string | null) => {
-                                                        if (!dateString) return '';
-                                                        try {
-                                                            return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
-                                                        } catch {
-                                                            return dateString;
-                                                        }
-                                                    };
-                                                    
-                                                    metadata.push({
-                                                        label: t('reservations.sentMessage', 'Versendete Nachricht'),
-                                                        value: reservation.sentMessageAt 
-                                                            ? `${t('reservations.sentAt', 'Versendet am')} ${formatMessageDate(reservation.sentMessageAt)}`
-                                                            : '',
-                                                        descriptionContent: reservation.sentMessage, // String direkt übergeben, DataCard formatiert es
-                                                        section: 'full'
-                                                    });
-                                                }
-                                                
                                                 // Action-Buttons für Einladung senden und PIN-Generierung
                                                 const hasWritePermission = hasPermission('reservations', 'write', 'table');
                                                 const actionButtons = hasWritePermission ? (
@@ -3435,6 +3567,29 @@ const Worktracker: React.FC = () => {
                                                     </div>
                                                 ) : null;
                                                 
+                                                // Expandable Content für Details (nur wenn sentMessage vorhanden)
+                                                const isExpanded = expandedReservationRows.has(reservation.id);
+                                                const formatMessageDate = (dateString: string | null) => {
+                                                    if (!dateString) return '';
+                                                    try {
+                                                        return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
+                                                    } catch {
+                                                        return dateString;
+                                                    }
+                                                };
+                                                const expandableContent = reservation.sentMessage ? (
+                                                    <div className="mt-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                                        <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                                                            {reservation.sentMessage}
+                                                        </div>
+                                                        {reservation.sentMessageAt && (
+                                                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                                                                {t('reservations.sentAt', 'Versendet am')} {formatMessageDate(reservation.sentMessageAt)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : undefined;
+                                                
                                                 return (
                                                     <DataCard
                                                         key={reservation.id}
@@ -3442,6 +3597,11 @@ const Worktracker: React.FC = () => {
                                                         subtitle={reservation.lobbyReservationId ? `ID: ${reservation.lobbyReservationId}` : undefined}
                                                         metadata={metadata}
                                                         actions={actionButtons}
+                                                        expandable={expandableContent ? {
+                                                            isExpanded: isExpanded,
+                                                            content: expandableContent,
+                                                            onToggle: () => toggleReservationExpanded(reservation.id)
+                                                        } : undefined}
                                                     />
                                                 );
                                             })}

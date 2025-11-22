@@ -287,14 +287,16 @@ class ReservationNotificationService {
                 }
                 // Schritt 2: Check-in-Link erstellen
                 try {
-                    // Erstelle temporäre Reservation mit guestEmail für Check-in-Link-Generierung
+                    // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
+                    // (reservation.guestEmail), nicht mit der geänderten E-Mail aus options
+                    // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
                     const reservationForCheckInLink = {
                         id: reservation.id,
-                        guestEmail: guestEmail || reservation.guestEmail || ''
+                        guestEmail: reservation.guestEmail || ''
                     };
                     checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservationForCheckInLink) ||
                         `${process.env.FRONTEND_URL || 'http://localhost:3000'}/check-in/${reservation.id}`;
-                    console.log(`[ReservationNotification] ✅ Check-in-Link erstellt: ${checkInLink}`);
+                    console.log(`[ReservationNotification] ✅ Check-in-Link erstellt (mit Original-E-Mail): ${checkInLink}`);
                 }
                 catch (error) {
                     console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Check-in-Links:`, error);
@@ -782,6 +784,213 @@ ${paymentLink}
             }
             catch (error) {
                 console.error(`[ReservationNotification] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:`, error);
+                throw error;
+            }
+        });
+    }
+    /**
+     * Sendet TTLock Passcode mit anpassbaren Kontaktdaten
+     *
+     * @param reservationId - ID der Reservierung
+     * @param options - Optionale Parameter (guestPhone, guestEmail, customMessage)
+     */
+    static sendPasscodeNotification(reservationId, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c;
+            try {
+                const reservation = yield prisma_1.prisma.reservation.findUnique({
+                    where: { id: reservationId },
+                    include: { organization: true, branch: true }
+                });
+                if (!reservation) {
+                    throw new Error(`Reservierung ${reservationId} nicht gefunden`);
+                }
+                // Verwende übergebene Kontaktdaten oder Fallback auf Reservierungsdaten
+                const finalGuestPhone = (options === null || options === void 0 ? void 0 : options.guestPhone) || reservation.guestPhone;
+                const finalGuestEmail = (options === null || options === void 0 ? void 0 : options.guestEmail) || reservation.guestEmail;
+                if (!finalGuestPhone && !finalGuestEmail) {
+                    throw new Error('Mindestens eine Telefonnummer oder E-Mail-Adresse ist erforderlich');
+                }
+                // Entschlüssele Settings (aus Branch oder Organisation)
+                const { decryptApiSettings, decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                console.log(`[ReservationNotification] Entschlüssele Settings für Reservation ${reservationId}...`);
+                let decryptedSettings = null;
+                let doorSystemSettings = null;
+                // Lade Settings aus Branch oder Organisation
+                if (reservation.branchId && ((_a = reservation.branch) === null || _a === void 0 ? void 0 : _a.doorSystemSettings)) {
+                    const branchSettings = decryptBranchApiSettings(reservation.branch.doorSystemSettings);
+                    doorSystemSettings = (branchSettings === null || branchSettings === void 0 ? void 0 : branchSettings.doorSystem) || branchSettings;
+                    // Für notificationChannels: Fallback auf Organisation
+                    const orgSettings = decryptApiSettings(reservation.organization.settings);
+                    decryptedSettings = orgSettings;
+                }
+                else {
+                    decryptedSettings = decryptApiSettings(reservation.organization.settings);
+                    doorSystemSettings = decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.doorSystem;
+                }
+                const notificationChannels = ((_b = decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) === null || _b === void 0 ? void 0 : _b.notificationChannels) || ['email'];
+                console.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
+                console.log(`[ReservationNotification] Guest Phone: ${finalGuestPhone || 'N/A'}`);
+                console.log(`[ReservationNotification] Guest Email: ${finalGuestEmail || 'N/A'}`);
+                console.log(`[ReservationNotification] Settings entschlüsselt:`, {
+                    hasDoorSystem: !!doorSystemSettings,
+                    doorSystemProvider: doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.provider,
+                    doorSystemLockIds: doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds
+                });
+                // Erstelle TTLock Passcode
+                let doorPin = null;
+                let doorAppName = null;
+                console.log(`[ReservationNotification] Starte Passcode-Generierung für Reservation ${reservationId}...`);
+                try {
+                    const ttlockService = reservation.branchId
+                        ? yield ttlockService_1.TTLockService.createForBranch(reservation.branchId)
+                        : new ttlockService_1.TTLockService(reservation.organizationId);
+                    console.log(`[ReservationNotification] Door System Settings:`, {
+                        hasDoorSystem: !!doorSystemSettings,
+                        hasLockIds: !!(doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds),
+                        lockIds: doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds,
+                        lockIdsLength: ((_c = doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds) === null || _c === void 0 ? void 0 : _c.length) || 0
+                    });
+                    if ((doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds) && doorSystemSettings.lockIds.length > 0) {
+                        const lockId = doorSystemSettings.lockIds[0]; // Verwende ersten Lock
+                        doorAppName = 'TTLock'; // Oder aus Settings: doorSystemSettings.appName
+                        console.log(`[ReservationNotification] Erstelle TTLock Passcode für Lock ID: ${lockId}`);
+                        console.log(`[ReservationNotification] Check-in Date: ${reservation.checkInDate}`);
+                        console.log(`[ReservationNotification] Check-out Date: ${reservation.checkOutDate}`);
+                        // WICHTIG: checkOutDate muss nach checkInDate liegen (mindestens 1 Tag später)
+                        // Falls beide identisch sind (z.B. bei manuell erstellten Reservierungen), korrigiere
+                        let actualCheckInDate = reservation.checkInDate;
+                        let actualCheckOutDate = reservation.checkOutDate;
+                        // Prüfe ob beide Daten identisch oder checkOutDate vor checkInDate liegt
+                        if (actualCheckOutDate.getTime() <= actualCheckInDate.getTime()) {
+                            console.warn(`[ReservationNotification] ⚠️ checkOutDate ist identisch oder vor checkInDate - korrigiere auf checkInDate + 1 Tag`);
+                            actualCheckOutDate = new Date(actualCheckInDate);
+                            actualCheckOutDate.setDate(actualCheckOutDate.getDate() + 1); // +1 Tag
+                            console.log(`[ReservationNotification] Korrigierte Check-out Date: ${actualCheckOutDate}`);
+                        }
+                        // Erstelle Passcode für Check-in bis Check-out
+                        doorPin = yield ttlockService.createTemporaryPasscode(lockId, actualCheckInDate, actualCheckOutDate, `Guest: ${reservation.guestName}`);
+                        console.log(`[ReservationNotification] ✅ TTLock Passcode erfolgreich generiert: ${doorPin}`);
+                        // Speichere in Reservierung
+                        yield prisma_1.prisma.reservation.update({
+                            where: { id: reservation.id },
+                            data: {
+                                doorPin,
+                                doorAppName,
+                                ttlLockId: String(lockId), // Konvertiere zu String für Prisma
+                                ttlLockPassword: doorPin
+                            }
+                        });
+                        console.log(`[ReservationNotification] ✅ PIN in DB gespeichert für Reservation ${reservationId}`);
+                    }
+                    else {
+                        console.warn(`[ReservationNotification] ⚠️ Keine Lock IDs konfiguriert für Reservation ${reservationId}`);
+                    }
+                }
+                catch (error) {
+                    console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des TTLock Passcodes:`, error);
+                    if (error instanceof Error) {
+                        console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+                        console.error(`[ReservationNotification] Stack: ${error.stack}`);
+                    }
+                    // Weiter ohne PIN
+                }
+                // Erstelle Nachrichtentext (mit oder ohne customMessage)
+                let messageText;
+                if ((options === null || options === void 0 ? void 0 : options.customMessage) && doorPin) {
+                    // Verwende customMessage und ersetze Variablen
+                    messageText = options.customMessage
+                        .replace(/\{\{guestName\}\}/g, reservation.guestName)
+                        .replace(/\{\{passcode\}\}/g, doorPin);
+                }
+                else {
+                    // Standard-Nachricht
+                    messageText = `Hola ${reservation.guestName},
+
+¡Bienvenido a La Familia Hostel!
+
+Tu código de acceso TTLock:
+${doorPin || 'N/A'}
+
+¡Te esperamos!`;
+                }
+                // Versende Benachrichtigungen
+                let whatsappSuccess = false;
+                let emailSuccess = false;
+                if (notificationChannels.includes('email') && finalGuestEmail) {
+                    try {
+                        // Erstelle temporäre Reservierung mit angepassten Kontaktdaten für E-Mail
+                        const emailReservation = Object.assign(Object.assign({}, reservation), { guestEmail: finalGuestEmail, doorPin: doorPin || null, doorAppName: doorAppName || null });
+                        yield this.sendCheckInConfirmationEmail(emailReservation, doorPin, doorAppName);
+                        emailSuccess = true;
+                        console.log(`[ReservationNotification] ✅ E-Mail erfolgreich versendet für Reservierung ${reservationId}`);
+                    }
+                    catch (error) {
+                        console.error(`[ReservationNotification] Fehler beim Versenden der E-Mail:`, error);
+                        // Weiter ohne E-Mail
+                    }
+                }
+                if (notificationChannels.includes('whatsapp') && finalGuestPhone) {
+                    try {
+                        const whatsappService = reservation.branchId
+                            ? new whatsappService_1.WhatsAppService(undefined, reservation.branchId)
+                            : new whatsappService_1.WhatsAppService(reservation.organizationId);
+                        // Verwende customMessage wenn vorhanden, sonst Standard
+                        if ((options === null || options === void 0 ? void 0 : options.customMessage) && doorPin) {
+                            // Sende customMessage direkt
+                            yield whatsappService.sendMessageWithFallback(finalGuestPhone, messageText, undefined, // Kein Template
+                            undefined // Keine Template-Parameter
+                            );
+                        }
+                        else {
+                            // Verwende Standard-Template
+                            const whatsappSuccessResult = yield whatsappService.sendCheckInConfirmation(reservation.guestName, finalGuestPhone, reservation.roomNumber || 'N/A', reservation.roomDescription || 'N/A', doorPin || 'N/A', doorAppName || 'TTLock');
+                            whatsappSuccess = whatsappSuccessResult;
+                        }
+                        if (whatsappSuccess || ((options === null || options === void 0 ? void 0 : options.customMessage) && doorPin)) {
+                            console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
+                            whatsappSuccess = true;
+                        }
+                        else {
+                            console.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
+                        }
+                    }
+                    catch (error) {
+                        console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
+                        if (error instanceof Error) {
+                            console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+                        }
+                        // Weiter ohne WhatsApp - PIN wurde bereits generiert (oder versucht)
+                    }
+                }
+                else {
+                    if (!notificationChannels.includes('whatsapp')) {
+                        console.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
+                    }
+                    if (!finalGuestPhone) {
+                        console.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
+                    }
+                }
+                // Speichere versendete Nachricht in Reservierung
+                if (whatsappSuccess || emailSuccess) {
+                    yield prisma_1.prisma.reservation.update({
+                        where: { id: reservationId },
+                        data: {
+                            sentMessage: messageText,
+                            sentMessageAt: new Date()
+                        }
+                    });
+                }
+                // Prüfe ob PIN tatsächlich generiert wurde
+                if (doorPin) {
+                    console.log(`[ReservationNotification] ✅ Passcode generiert und Mitteilung versendet für Reservierung ${reservationId}`);
+                }
+                else {
+                    console.warn(`[ReservationNotification] ⚠️ Passcode konnte nicht generiert werden, aber Mitteilung versendet für Reservierung ${reservationId}`);
+                }
+            }
+            catch (error) {
+                console.error(`[ReservationNotification] Fehler beim Versenden des Passcodes:`, error);
                 throw error;
             }
         });

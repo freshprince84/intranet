@@ -58,7 +58,7 @@ const prisma_1 = require("../../utils/prisma");
  */
 function createUpdateGuestContactWorker(connection) {
     return new bullmq_1.Worker('update-guest-contact', (job) => __awaiter(this, void 0, void 0, function* () {
-        var _a;
+        var _a, _b;
         const { reservationId, organizationId, contact, contactType, guestPhone, guestEmail, guestName, } = job.data;
         console.log(`[UpdateGuestContact Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
         // Hole aktuelle Reservierung
@@ -175,8 +175,36 @@ ${ttlockCode}
                 // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
                 // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
                 const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
-                // Erstelle LobbyPMS Check-in-Link
-                const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservation);
+                // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
+                // Die Reservation wurde bereits aktualisiert (mit geänderter E-Mail), daher muss
+                // die Original-E-Mail aus der Sync-History geholt werden
+                let originalGuestEmail = reservation.guestEmail || '';
+                try {
+                    // Hole erste Sync-History (beim Import erstellt) für Original-E-Mail
+                    const firstSyncHistory = yield prisma_1.prisma.reservationSyncHistory.findFirst({
+                        where: { reservationId: reservationId },
+                        orderBy: { syncedAt: 'asc' }
+                    });
+                    if ((firstSyncHistory === null || firstSyncHistory === void 0 ? void 0 : firstSyncHistory.syncData) && typeof firstSyncHistory.syncData === 'object') {
+                        const syncData = firstSyncHistory.syncData;
+                        // Versuche Original-E-Mail aus syncData zu holen (aus holder.email oder guest_email)
+                        const originalEmail = ((_b = syncData.holder) === null || _b === void 0 ? void 0 : _b.email) || syncData.guest_email || null;
+                        if (originalEmail) {
+                            originalGuestEmail = originalEmail;
+                            console.log(`[UpdateGuestContact Worker] Verwende Original-E-Mail aus Sync-History: ${originalGuestEmail}`);
+                        }
+                    }
+                }
+                catch (historyError) {
+                    console.warn(`[UpdateGuestContact Worker] ⚠️ Konnte Original-E-Mail aus Sync-History nicht laden, verwende aktuelle:`, historyError);
+                    // Fallback: Verwende aktuelle E-Mail (könnte bereits geändert sein)
+                }
+                // Erstelle LobbyPMS Check-in-Link mit Original-E-Mail
+                const reservationForCheckInLink = {
+                    id: reservation.id,
+                    guestEmail: originalGuestEmail
+                };
+                const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservationForCheckInLink);
                 const templateParams = [guestName, checkInLink, paymentLink];
                 console.log(`[UpdateGuestContact Worker] Template Name (Basis): ${templateName}`);
                 console.log(`[UpdateGuestContact Worker] Template Params: ${JSON.stringify(templateParams)}`);
