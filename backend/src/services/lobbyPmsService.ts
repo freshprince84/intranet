@@ -5,6 +5,35 @@ import { TaskAutomationService } from './taskAutomationService';
 import { prisma } from '../utils/prisma';
 
 /**
+ * Findet Branch-ID über LobbyPMS property_id
+ * @param propertyId - LobbyPMS Property ID
+ * @param organizationId - Organisation ID (optional, für bessere Performance)
+ * @returns Branch-ID oder null
+ */
+export async function findBranchByPropertyId(propertyId: string, organizationId?: number): Promise<number | null> {
+  const branches = await prisma.branch.findMany({
+    where: organizationId ? { organizationId } : undefined,
+    select: { id: true, lobbyPmsSettings: true }
+  });
+
+  for (const branch of branches) {
+    if (branch.lobbyPmsSettings) {
+      try {
+        const settings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+        const lobbyPmsSettings = settings?.lobbyPms || settings;
+        if (lobbyPmsSettings?.propertyId === propertyId || String(lobbyPmsSettings?.propertyId) === String(propertyId)) {
+          return branch.id;
+        }
+      } catch (error) {
+        // Ignoriere Entschlüsselungsfehler
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * LobbyPMS API Response Types
  */
 export interface LobbyPmsReservation {

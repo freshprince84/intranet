@@ -171,14 +171,26 @@ const syncReservations = (req, res) => __awaiter(void 0, void 0, void 0, functio
     try {
         const { startDate, endDate, reservationIds } = req.body;
         const organizationId = req.organizationId;
-        // Wenn spezifische Reservierungen: Alte Logik beibehalten
+        // Wenn spezifische Reservierungen: Finde Branch über property_id
         if (reservationIds && Array.isArray(reservationIds)) {
-            const service = new lobbyPmsService_1.LobbyPmsService(organizationId);
+            const { findBranchByPropertyId } = yield Promise.resolve().then(() => __importStar(require('../services/lobbyPmsService')));
             let syncedCount = 0;
             let errors = [];
+            // Erstelle temporären Service für fetchReservationById (ohne branchId)
+            const tempService = new lobbyPmsService_1.LobbyPmsService(organizationId);
             for (const reservationId of reservationIds) {
                 try {
-                    const lobbyReservation = yield service.fetchReservationById(reservationId);
+                    const lobbyReservation = yield tempService.fetchReservationById(reservationId);
+                    // Finde Branch über property_id
+                    const branchId = lobbyReservation.property_id
+                        ? yield findBranchByPropertyId(lobbyReservation.property_id, organizationId)
+                        : null;
+                    if (!branchId) {
+                        errors.push(`Reservierung ${reservationId}: Keine Branch gefunden für property_id ${lobbyReservation.property_id}`);
+                        continue;
+                    }
+                    // Erstelle Service mit branchId
+                    const service = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
                     yield service.syncReservation(lobbyReservation);
                     syncedCount++;
                 }
@@ -380,7 +392,18 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 message: 'Organisation nicht gefunden'
             });
         }
-        const service = new lobbyPmsService_1.LobbyPmsService(organization.id);
+        // Finde Branch über property_id
+        const { findBranchByPropertyId } = yield Promise.resolve().then(() => __importStar(require('../services/lobbyPmsService')));
+        const branchId = yield findBranchByPropertyId(propertyId, organization.id);
+        if (!branchId) {
+            console.warn(`[LobbyPMS Webhook] Keine Branch gefunden für Property ID: ${propertyId}`);
+            return res.status(404).json({
+                success: false,
+                message: 'Branch nicht gefunden'
+            });
+        }
+        // Erstelle Service mit branchId
+        const service = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
         // Verarbeite Webhook-Event
         switch (event) {
             case 'reservation.created':

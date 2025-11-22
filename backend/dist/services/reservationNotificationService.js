@@ -121,50 +121,74 @@ class ReservationNotificationService {
                         const notificationChannels = lobbyPmsSettings.notificationChannels || ['email'];
                         console.log(`[ReservationNotification] Verarbeite Organisation ${organization.id}...`);
                         // Hole Reservierungen für morgen mit Ankunft nach Threshold
-                        const lobbyPmsService = new lobbyPmsService_1.LobbyPmsService(organization.id);
-                        const tomorrowReservations = yield lobbyPmsService.fetchTomorrowReservations(lateCheckInThreshold);
-                        console.log(`[ReservationNotification] Gefunden: ${tomorrowReservations.length} Reservierungen`);
-                        for (const lobbyReservation of tomorrowReservations) {
+                        // WICHTIG: Iteriere über alle Branches, da fetchTomorrowReservations branch-spezifisch ist
+                        const branches = yield prisma_1.prisma.branch.findMany({
+                            where: { organizationId: organization.id },
+                            select: { id: true, lobbyPmsSettings: true }
+                        });
+                        let totalReservations = 0;
+                        for (const branch of branches) {
                             try {
-                                // Synchronisiere Reservierung in lokale DB
-                                // (Task wird automatisch in syncReservation erstellt)
-                                const reservation = yield lobbyPmsService.syncReservation(lobbyReservation);
-                                // Prüfe ob bereits Einladung versendet wurde
-                                if (reservation.invitationSentAt) {
-                                    console.log(`[ReservationNotification] Einladung bereits versendet für Reservierung ${reservation.id}`);
+                                // Prüfe ob Branch LobbyPMS aktiviert hat
+                                if (!branch.lobbyPmsSettings)
                                     continue;
+                                const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                                const settings = decryptBranchApiSettings(branch.lobbyPmsSettings);
+                                const lobbyPmsSettings = (settings === null || settings === void 0 ? void 0 : settings.lobbyPms) || settings;
+                                if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiKey) || !(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.syncEnabled))
+                                    continue;
+                                // Erstelle Service für Branch
+                                const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branch.id);
+                                const tomorrowReservations = yield lobbyPmsService.fetchTomorrowReservations(lateCheckInThreshold);
+                                totalReservations += tomorrowReservations.length;
+                                for (const lobbyReservation of tomorrowReservations) {
+                                    try {
+                                        // Synchronisiere Reservierung in lokale DB
+                                        // (Task wird automatisch in syncReservation erstellt)
+                                        const reservation = yield lobbyPmsService.syncReservation(lobbyReservation);
+                                        // Prüfe ob bereits Einladung versendet wurde
+                                        if (reservation.invitationSentAt) {
+                                            console.log(`[ReservationNotification] Einladung bereits versendet für Reservierung ${reservation.id}`);
+                                            continue;
+                                        }
+                                        // Erstelle Zahlungslink
+                                        const boldPaymentService = reservation.branchId
+                                            ? yield boldPaymentService_1.BoldPaymentService.createForBranch(reservation.branchId)
+                                            : new boldPaymentService_1.BoldPaymentService(organization.id);
+                                        // TODO: Hole tatsächlichen Betrag aus LobbyPMS
+                                        const amount = 100000; // Placeholder: 100.000 COP
+                                        const paymentLink = yield boldPaymentService.createPaymentLink(reservation, amount, 'COP', `Zahlung für Reservierung ${reservation.guestName}`);
+                                        // Erstelle LobbyPMS Check-in-Link
+                                        const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservation);
+                                        // Versende Benachrichtigungen
+                                        if (notificationChannels.includes('email') && reservation.guestEmail) {
+                                            yield this.sendCheckInInvitationEmail(reservation, checkInLink, paymentLink);
+                                        }
+                                        if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
+                                            const whatsappService = reservation.branchId
+                                                ? new whatsappService_1.WhatsAppService(undefined, reservation.branchId)
+                                                : new whatsappService_1.WhatsAppService(organization.id);
+                                            yield whatsappService.sendCheckInInvitation(reservation.guestName, reservation.guestPhone, checkInLink, paymentLink);
+                                        }
+                                        // Markiere als versendet
+                                        yield prisma_1.prisma.reservation.update({
+                                            where: { id: reservation.id },
+                                            data: { invitationSentAt: new Date() }
+                                        });
+                                        console.log(`[ReservationNotification] Einladung versendet für Reservierung ${reservation.id}`);
+                                    }
+                                    catch (error) {
+                                        console.error(`[ReservationNotification] Fehler bei Reservierung ${lobbyReservation.id}:`, error);
+                                        // Weiter mit nächster Reservierung
+                                    }
                                 }
-                                // Erstelle Zahlungslink
-                                const boldPaymentService = reservation.branchId
-                                    ? yield boldPaymentService_1.BoldPaymentService.createForBranch(reservation.branchId)
-                                    : new boldPaymentService_1.BoldPaymentService(organization.id);
-                                // TODO: Hole tatsächlichen Betrag aus LobbyPMS
-                                const amount = 100000; // Placeholder: 100.000 COP
-                                const paymentLink = yield boldPaymentService.createPaymentLink(reservation, amount, 'COP', `Zahlung für Reservierung ${reservation.guestName}`);
-                                // Erstelle LobbyPMS Check-in-Link
-                                const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservation);
-                                // Versende Benachrichtigungen
-                                if (notificationChannels.includes('email') && reservation.guestEmail) {
-                                    yield this.sendCheckInInvitationEmail(reservation, checkInLink, paymentLink);
-                                }
-                                if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
-                                    const whatsappService = reservation.branchId
-                                        ? new whatsappService_1.WhatsAppService(undefined, reservation.branchId)
-                                        : new whatsappService_1.WhatsAppService(organization.id);
-                                    yield whatsappService.sendCheckInInvitation(reservation.guestName, reservation.guestPhone, checkInLink, paymentLink);
-                                }
-                                // Markiere als versendet
-                                yield prisma_1.prisma.reservation.update({
-                                    where: { id: reservation.id },
-                                    data: { invitationSentAt: new Date() }
-                                });
-                                console.log(`[ReservationNotification] Einladung versendet für Reservierung ${reservation.id}`);
                             }
                             catch (error) {
-                                console.error(`[ReservationNotification] Fehler bei Reservierung ${lobbyReservation.id}:`, error);
-                                // Weiter mit nächster Reservierung
+                                console.error(`[ReservationNotification] Fehler bei Branch ${branch.id}:`, error);
+                                // Weiter mit nächstem Branch
                             }
                         }
+                        console.log(`[ReservationNotification] Organisation ${organization.id}: ${totalReservations} Reservierungen verarbeitet`);
                     }
                     catch (error) {
                         console.error(`[ReservationNotification] Fehler bei Organisation ${organization.id}:`, error);
