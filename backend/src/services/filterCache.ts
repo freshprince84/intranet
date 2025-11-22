@@ -43,6 +43,7 @@ class FilterCache {
     // 1. Prüfe Cache
     const cached = this.cache.get(filterId);
     if (this.isCacheValid(cached)) {
+      console.log(`[FilterCache] ✅ Cache-Hit für Filter ${filterId}`);
       return {
         conditions: cached!.filter.conditions,
         operators: cached!.filter.operators
@@ -73,6 +74,8 @@ class FilterCache {
         },
         timestamp: Date.now()
       });
+
+      console.log(`[FilterCache] 💾 Cache-Miss für Filter ${filterId} - aus DB geladen und gecacht`);
 
       return {
         conditions: savedFilter.conditions,
