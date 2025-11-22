@@ -94,15 +94,8 @@ class BoldPaymentService {
                 });
                 if (branch === null || branch === void 0 ? void 0 : branch.boldPaymentSettings) {
                     try {
-                        // Verwende Cache für Entschlüsselung
-                        const { branchSettingsCache } = yield Promise.resolve().then(() => __importStar(require('./branchSettingsCache')));
-                        let decryptedSettings = branchSettingsCache.getDecryptedBranchSettings(this.branchId, 'boldPayment', branch.boldPaymentSettings);
-                        // Fallback: Direkte Entschlüsselung (für Migration)
-                        if (!decryptedSettings) {
-                            const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
-                            decryptedSettings = decryptBranchApiSettings(branch.boldPaymentSettings);
-                        }
-                        const boldPaymentSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.boldPayment) || decryptedSettings;
+                        const settings = (0, encryption_1.decryptBranchApiSettings)(branch.boldPaymentSettings);
+                        const boldPaymentSettings = (settings === null || settings === void 0 ? void 0 : settings.boldPayment) || settings;
                         if (boldPaymentSettings === null || boldPaymentSettings === void 0 ? void 0 : boldPaymentSettings.apiKey) {
                             this.apiKey = boldPaymentSettings.apiKey;
                             this.merchantId = boldPaymentSettings.merchantId;

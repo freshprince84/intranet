@@ -53,28 +53,20 @@ export class WhatsAppService {
         console.log(`[WhatsApp Service] Branch hat eigene WhatsApp Settings`);
         
         try {
-          // Verwende Cache für Entschlüsselung
-          const { branchSettingsCache } = await import('./branchSettingsCache');
-          let whatsappSettings = branchSettingsCache.getDecryptedBranchSettings(
-            this.branchId!,
-            'whatsapp',
-            branch.whatsappSettings
-          );
-
-          // Fallback: Versuche als verschachteltes Objekt zu entschlüsseln (für Migration)
-          if (!whatsappSettings) {
+          // branch.whatsappSettings enthält direkt die WhatsApp Settings (nicht verschachtelt)
+          // Versuche zu entschlüsseln (falls verschlüsselt)
+          let whatsappSettings: any;
+          try {
+            // Versuche als verschachteltes Objekt zu entschlüsseln
+            const decrypted = decryptApiSettings({ whatsapp: branch.whatsappSettings } as any);
+            whatsappSettings = decrypted?.whatsapp;
+          } catch {
+            // Falls das fehlschlägt, versuche direkt zu entschlüsseln
             try {
-              const { decryptApiSettings } = await import('../utils/encryption');
-              const decrypted = decryptApiSettings({ whatsapp: branch.whatsappSettings } as any);
-              whatsappSettings = decrypted?.whatsapp;
+              whatsappSettings = decryptApiSettings(branch.whatsappSettings as any);
             } catch {
-              try {
-                const { decryptApiSettings } = await import('../utils/encryption');
-                whatsappSettings = decryptApiSettings(branch.whatsappSettings as any);
-              } catch {
-                // Falls auch das fehlschlägt, verwende direkt (unverschlüsselt)
-                whatsappSettings = branch.whatsappSettings as any;
-              }
+              // Falls auch das fehlschlägt, verwende direkt (unverschlüsselt)
+              whatsappSettings = branch.whatsappSettings as any;
             }
           }
 

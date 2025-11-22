@@ -96,15 +96,8 @@ class TTLockService {
                 });
                 if (branch === null || branch === void 0 ? void 0 : branch.doorSystemSettings) {
                     try {
-                        // Verwende Cache für Entschlüsselung
-                        const { branchSettingsCache } = yield Promise.resolve().then(() => __importStar(require('./branchSettingsCache')));
-                        let decryptedSettings = branchSettingsCache.getDecryptedBranchSettings(this.branchId, 'doorSystem', branch.doorSystemSettings);
-                        // Fallback: Direkte Entschlüsselung (für Migration)
-                        if (!decryptedSettings) {
-                            const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
-                            decryptedSettings = decryptBranchApiSettings(branch.doorSystemSettings);
-                        }
-                        const doorSystemSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.doorSystem) || decryptedSettings;
+                        const settings = (0, encryption_1.decryptBranchApiSettings)(branch.doorSystemSettings);
+                        const doorSystemSettings = (settings === null || settings === void 0 ? void 0 : settings.doorSystem) || settings;
                         if ((doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.clientId) && (doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.clientSecret) &&
                             (doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.username) && (doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.password)) {
                             // Prüfe ob Client Secret verschlüsselt ist und entschlüssele es
