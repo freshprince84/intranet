@@ -420,4 +420,5 @@ const Sidebar: React.FC = () => {
     );
 };
 
-export default Sidebar; 
+// ✅ PERFORMANCE: React.memo() verhindert unnötige Re-Renders bei Seitenwechseln
+export default React.memo(Sidebar); 

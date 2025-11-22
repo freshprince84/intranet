@@ -111,7 +111,7 @@ const ReservationDetails: React.FC = () => {
             {error || t('reservations.notFound', 'Reservierung nicht gefunden')}
           </p>
           <button
-            onClick={() => navigate('/reservations')}
+            onClick={() => navigate('/worktracker')}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             {t('common.back', 'Zurück')}
@@ -138,7 +138,7 @@ const ReservationDetails: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => navigate('/reservations')}
+          onClick={() => navigate('/worktracker')}
           className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
         >
           <ArrowLeftIcon className="h-5 w-5 mr-2" />
