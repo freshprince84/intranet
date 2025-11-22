@@ -46,7 +46,8 @@ export const getAllTasks = async (req: Request, res: Response) => {
             : undefined;
         const limit = req.query.limit 
             ? parseInt(req.query.limit as string, 10) 
-            : undefined;
+            : 50; // OPTIMIERUNG: Standard-Limit 50 statt alle
+        const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause: any = {};
@@ -89,7 +90,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
         
         const tasks = await prisma.task.findMany({
             where: whereClause,
-            ...(limit ? { take: limit } : {}),
+            take: limit,
             include: {
                 responsible: {
                     select: userSelect
@@ -103,11 +104,14 @@ export const getAllTasks = async (req: Request, res: Response) => {
                 branch: {
                     select: branchSelect
                 },
-                attachments: {
-                    orderBy: {
-                        uploadedAt: 'desc'
+                // OPTIMIERUNG: Attachments nur laden wenn explizit angefragt
+                ...(includeAttachments ? {
+                    attachments: {
+                        orderBy: {
+                            uploadedAt: 'desc'
+                        }
                     }
-                }
+                } : {})
             }
         });
         
