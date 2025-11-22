@@ -94,54 +94,29 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
             };
         }
         let branches = yield prisma_1.prisma.branch.findMany(queryOptions);
-        // Entschlüssele alle Settings für alle Branches
+        // Entschlüssele alle Settings für alle Branches (mit Cache)
         // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
-        const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+        const { branchSettingsCache } = yield Promise.resolve().then(() => __importStar(require('../services/branchSettingsCache')));
         branches = branches.map((branch) => {
-            // Entschlüssele WhatsApp Settings
+            // Entschlüssele WhatsApp Settings (mit Cache)
             if (branch.whatsappSettings) {
-                try {
-                    branch.whatsappSettings = decryptBranchApiSettings(branch.whatsappSettings);
-                }
-                catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings für Branch ${branch.id}:`, error);
-                }
+                branch.whatsappSettings = branchSettingsCache.getDecryptedBranchSettings(branch.id, 'whatsapp', branch.whatsappSettings) || branch.whatsappSettings;
             }
-            // Entschlüssele LobbyPMS Settings
+            // Entschlüssele LobbyPMS Settings (mit Cache)
             if (branch.lobbyPmsSettings) {
-                try {
-                    branch.lobbyPmsSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
-                }
-                catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings für Branch ${branch.id}:`, error);
-                }
+                branch.lobbyPmsSettings = branchSettingsCache.getDecryptedBranchSettings(branch.id, 'lobbyPms', branch.lobbyPmsSettings) || branch.lobbyPmsSettings;
             }
-            // Entschlüssele Bold Payment Settings
+            // Entschlüssele Bold Payment Settings (mit Cache)
             if (branch.boldPaymentSettings) {
-                try {
-                    branch.boldPaymentSettings = decryptBranchApiSettings(branch.boldPaymentSettings);
-                }
-                catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
-                }
+                branch.boldPaymentSettings = branchSettingsCache.getDecryptedBranchSettings(branch.id, 'boldPayment', branch.boldPaymentSettings) || branch.boldPaymentSettings;
             }
-            // Entschlüssele Door System Settings
+            // Entschlüssele Door System Settings (mit Cache)
             if (branch.doorSystemSettings) {
-                try {
-                    branch.doorSystemSettings = decryptBranchApiSettings(branch.doorSystemSettings);
-                }
-                catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Door System Settings für Branch ${branch.id}:`, error);
-                }
+                branch.doorSystemSettings = branchSettingsCache.getDecryptedBranchSettings(branch.id, 'doorSystem', branch.doorSystemSettings) || branch.doorSystemSettings;
             }
-            // Entschlüssele Email Settings
+            // Entschlüssele Email Settings (mit Cache)
             if (branch.emailSettings) {
-                try {
-                    branch.emailSettings = decryptBranchApiSettings(branch.emailSettings);
-                }
-                catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Email Settings für Branch ${branch.id}:`, error);
-                }
+                branch.emailSettings = branchSettingsCache.getDecryptedBranchSettings(branch.id, 'email', branch.emailSettings) || branch.emailSettings;
             }
             return branch;
         });
@@ -508,47 +483,38 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 emailSettings: true
             }
         });
-        // Entschlüssele alle Settings für Response (Frontend braucht entschlüsselte Werte)
-        const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+        // Invalidiere Cache für aktualisierte Settings
+        const { branchSettingsCache } = yield Promise.resolve().then(() => __importStar(require('../services/branchSettingsCache')));
+        if (whatsappSettings !== undefined) {
+            branchSettingsCache.invalidateBranch(branchId, 'whatsapp');
+        }
+        if (lobbyPmsSettings !== undefined) {
+            branchSettingsCache.invalidateBranch(branchId, 'lobbyPms');
+        }
+        if (boldPaymentSettings !== undefined) {
+            branchSettingsCache.invalidateBranch(branchId, 'boldPayment');
+        }
+        if (doorSystemSettings !== undefined) {
+            branchSettingsCache.invalidateBranch(branchId, 'doorSystem');
+        }
+        if (emailSettings !== undefined) {
+            branchSettingsCache.invalidateBranch(branchId, 'email');
+        }
+        // Entschlüssele alle Settings für Response (mit Cache)
         if (updatedBranch.whatsappSettings) {
-            try {
-                updatedBranch.whatsappSettings = decryptBranchApiSettings(updatedBranch.whatsappSettings);
-            }
-            catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings:', error);
-            }
+            updatedBranch.whatsappSettings = branchSettingsCache.getDecryptedBranchSettings(branchId, 'whatsapp', updatedBranch.whatsappSettings) || updatedBranch.whatsappSettings;
         }
         if (updatedBranch.lobbyPmsSettings) {
-            try {
-                updatedBranch.lobbyPmsSettings = decryptBranchApiSettings(updatedBranch.lobbyPmsSettings);
-            }
-            catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
-            }
+            updatedBranch.lobbyPmsSettings = branchSettingsCache.getDecryptedBranchSettings(branchId, 'lobbyPms', updatedBranch.lobbyPmsSettings) || updatedBranch.lobbyPmsSettings;
         }
         if (updatedBranch.boldPaymentSettings) {
-            try {
-                updatedBranch.boldPaymentSettings = decryptBranchApiSettings(updatedBranch.boldPaymentSettings);
-            }
-            catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings:', error);
-            }
+            updatedBranch.boldPaymentSettings = branchSettingsCache.getDecryptedBranchSettings(branchId, 'boldPayment', updatedBranch.boldPaymentSettings) || updatedBranch.boldPaymentSettings;
         }
         if (updatedBranch.doorSystemSettings) {
-            try {
-                updatedBranch.doorSystemSettings = decryptBranchApiSettings(updatedBranch.doorSystemSettings);
-            }
-            catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Door System Settings:', error);
-            }
+            updatedBranch.doorSystemSettings = branchSettingsCache.getDecryptedBranchSettings(branchId, 'doorSystem', updatedBranch.doorSystemSettings) || updatedBranch.doorSystemSettings;
         }
         if (updatedBranch.emailSettings) {
-            try {
-                updatedBranch.emailSettings = decryptBranchApiSettings(updatedBranch.emailSettings);
-            }
-            catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
-            }
+            updatedBranch.emailSettings = branchSettingsCache.getDecryptedBranchSettings(branchId, 'email', updatedBranch.emailSettings) || updatedBranch.emailSettings;
         }
         res.json(updatedBranch);
     }
