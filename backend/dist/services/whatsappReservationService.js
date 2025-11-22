@@ -35,6 +35,11 @@ class WhatsAppReservationService {
                     console.log(`[WhatsAppReservation] Reservierung ${parsedMessage.reservationId} existiert bereits`);
                     return existingReservation;
                 }
+                // Hole erste Branch der Organisation als Fallback
+                const branch = yield prisma_1.prisma.branch.findFirst({
+                    where: { organizationId },
+                    orderBy: { id: 'asc' }
+                });
                 // Erstelle neue Reservierung
                 const reservation = yield prisma_1.prisma.reservation.create({
                     data: {
@@ -47,7 +52,7 @@ class WhatsAppReservationService {
                         status: client_1.ReservationStatus.confirmed,
                         paymentStatus: client_1.PaymentStatus.pending,
                         organizationId: organizationId,
-                        // Speichere zusätzliche Daten in syncHistory
+                        branchId: (branch === null || branch === void 0 ? void 0 : branch.id) || null
                     }
                 });
                 // Erstelle Sync-History-Eintrag

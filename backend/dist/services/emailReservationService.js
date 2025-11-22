@@ -70,6 +70,11 @@ class EmailReservationService {
                     console.log(`[EmailReservation] Reservation ${parsedEmail.reservationCode} existiert bereits (ID: ${existingReservation.id})`);
                     return existingReservation;
                 }
+                // Hole erste Branch der Organisation als Fallback
+                const branch = yield prisma_1.prisma.branch.findFirst({
+                    where: { organizationId },
+                    orderBy: { id: 'asc' }
+                });
                 // Erstelle Reservation-Daten
                 const reservationData = {
                     lobbyReservationId: parsedEmail.reservationCode,
@@ -80,7 +85,8 @@ class EmailReservationService {
                     paymentStatus: client_1.PaymentStatus.pending,
                     amount: parsedEmail.amount,
                     currency: parsedEmail.currency || 'COP',
-                    organizationId: organizationId
+                    organizationId: organizationId,
+                    branchId: (branch === null || branch === void 0 ? void 0 : branch.id) || null
                 };
                 // Setze Kontaktinformationen
                 if (parsedEmail.guestEmail) {

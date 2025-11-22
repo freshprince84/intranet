@@ -76,6 +76,10 @@ class LobbyPmsService {
                             this.apiKey = lobbyPmsSettings.apiKey;
                             this.propertyId = lobbyPmsSettings.propertyId;
                             this.axiosInstance = this.createAxiosInstance();
+                            // WICHTIG: Setze organizationId aus Branch (wird für syncReservation benötigt)
+                            if (branch.organizationId) {
+                                this.organizationId = branch.organizationId;
+                            }
                             console.log(`[LobbyPMS] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
                             return; // Erfolgreich geladen
                         }
@@ -141,7 +145,15 @@ class LobbyPmsService {
      */
     static createForBranch(branchId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const service = new LobbyPmsService(undefined, branchId);
+            // Hole organizationId direkt aus Branch (wie in Dokumentation beschrieben)
+            const branch = yield prisma_1.prisma.branch.findUnique({
+                where: { id: branchId },
+                select: { organizationId: true }
+            });
+            if (!(branch === null || branch === void 0 ? void 0 : branch.organizationId)) {
+                throw new Error(`Branch ${branchId} hat keine organizationId`);
+            }
+            const service = new LobbyPmsService(branch.organizationId, branchId);
             yield service.loadSettings();
             return service;
         });
@@ -418,6 +430,15 @@ class LobbyPmsService {
             else if (lobbyReservation.payment_status) {
                 paymentStatus = mapPaymentStatus(lobbyReservation.payment_status);
             }
+            // Hole Branch-ID: Verwende this.branchId, oder erste Branch der Organisation als Fallback
+            let branchId = this.branchId || null;
+            if (!branchId && this.organizationId) {
+                const branch = yield prisma_1.prisma.branch.findFirst({
+                    where: { organizationId: this.organizationId },
+                    orderBy: { id: 'asc' }
+                });
+                branchId = (branch === null || branch === void 0 ? void 0 : branch.id) || null;
+            }
             const reservationData = {
                 lobbyReservationId: bookingId,
                 guestName: guestName,
@@ -431,7 +452,7 @@ class LobbyPmsService {
                 status: status,
                 paymentStatus: paymentStatus,
                 organizationId: this.organizationId,
-                branchId: this.branchId || null,
+                branchId: branchId,
             };
             // Upsert: Erstelle oder aktualisiere Reservierung
             const reservation = yield prisma_1.prisma.reservation.upsert({
