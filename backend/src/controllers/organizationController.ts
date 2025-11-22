@@ -743,6 +743,9 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
+    // Prüfe ob Settings geladen werden sollen (Query-Parameter)
+    const includeSettings = req.query.includeSettings === 'true';
+
     // Hole die aktuelle Rolle des Users
     const userRole = await prisma.userRole.findFirst({
       where: { 
@@ -752,7 +755,24 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
       include: {
         role: {
           include: {
-            organization: true
+            organization: {
+              // ✅ PERFORMANCE: Settings nur laden wenn explizit angefragt
+              select: includeSettings ? undefined : {
+                id: true,
+                name: true,
+                displayName: true,
+                domain: true,
+                logo: true,
+                isActive: true,
+                maxUsers: true,
+                subscriptionPlan: true,
+                country: true,
+                nit: true,
+                createdAt: true,
+                updatedAt: true
+                // settings wird NICHT geladen (19.8 MB!)
+              }
+            }
           }
         }
       }
@@ -776,16 +796,19 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
       });
     }
 
-    const organization = userRole.role.organization;
+    const organization = userRole.role.organization as any;
     
     // Korrigiere String 'null' zu echtem null
     if (organization && organization.logo === 'null') {
       organization.logo = null;
     }
 
-    // ✅ ENTschlüssele Settings für Response (Frontend braucht entschlüsselte Werte)
-    if (organization.settings) {
+    // ✅ ENTschlüssele Settings für Response (nur wenn geladen)
+    if (includeSettings && organization.settings) {
       organization.settings = decryptApiSettings(organization.settings as any);
+    } else if (!includeSettings) {
+      // Settings nicht geladen - setze auf null für Frontend
+      organization.settings = null;
     }
 
     res.json(organization);

@@ -43,7 +43,8 @@ const OrganizationSettings: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const org = await organizationService.getCurrentOrganization();
+      // ✅ PERFORMANCE: Settings nur laden wenn wirklich benötigt (in Settings-Seite)
+      const org = await organizationService.getCurrentOrganization(undefined, true);
       setOrganization(org);
       
       // Statistiken laden
