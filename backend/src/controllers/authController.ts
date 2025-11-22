@@ -9,6 +9,8 @@ import crypto from 'crypto';
 import { Prisma } from '@prisma/client';
 import { sendRegistrationEmail, sendPasswordResetEmail } from '../services/emailService';
 import { prisma } from '../utils/prisma';
+import { userCache } from '../services/userCache';
+import { organizationCache } from '../utils/organizationCache';
 
 interface RegisterRequest {
     email: string;
@@ -303,6 +305,47 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
             name: activeRoleOrg.name,
             logo: activeRoleOrg.logo ? (activeRoleOrg.logo === 'null' ? 'String "null" (WIRD KORRIGIERT)' : `${activeRoleOrg.logo.substring(0, 50)}...`) : 'null'
         } : 'null');
+        
+        // ✅ PERFORMANCE: Cache-Warming beim Login
+        // Fülle UserCache und OrganizationCache vor, damit erste Requests sofort Cache-Hits haben
+        try {
+            // Finde aktive Rolle für roleId
+            const activeRoleForCache = user.roles.find(r => r.lastUsed);
+            const roleIdForCache = activeRoleForCache ? String(activeRoleForCache.role.id) : undefined;
+            
+            // UserCache vorfüllen (mit Settings)
+            const userWithSettings = await prisma.user.findUnique({
+                where: { id: user.id },
+                include: {
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: true
+                                }
+                            }
+                        }
+                    },
+                    settings: true
+                }
+            });
+            
+            if (userWithSettings) {
+                userCache.invalidate(user.id); // Alten Cache löschen falls vorhanden
+                // Cache wird beim nächsten Request automatisch gefüllt, aber wir können es auch direkt setzen
+                // Da userCache.get() die Daten lädt und cached, rufen wir es einfach auf
+                await userCache.get(user.id);
+            }
+            
+            // OrganizationCache vorfüllen
+            organizationCache.invalidate(user.id); // Alten Cache löschen falls vorhanden
+            await organizationCache.get(user.id);
+            
+            console.log(`[LOGIN] ✅ Cache-Warming abgeschlossen für User ${user.id}`);
+        } catch (cacheError) {
+            // Cache-Warming-Fehler sollten Login nicht blockieren
+            console.error('[LOGIN] ⚠️ Cache-Warming fehlgeschlagen (nicht kritisch):', cacheError);
+        }
         
         // Bereite die Benutzerinformationen für die Antwort vor
         const userResponse = {

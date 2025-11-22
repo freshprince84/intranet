@@ -21,6 +21,8 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
 const emailService_1 = require("../services/emailService");
 const prisma_1 = require("../utils/prisma");
+const userCache_1 = require("../services/userCache");
+const organizationCache_1 = require("../utils/organizationCache");
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, password, username, first_name, last_name, language } = req.body;
@@ -234,6 +236,43 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             name: activeRoleOrg.name,
             logo: activeRoleOrg.logo ? (activeRoleOrg.logo === 'null' ? 'String "null" (WIRD KORRIGIERT)' : `${activeRoleOrg.logo.substring(0, 50)}...`) : 'null'
         } : 'null');
+        // ✅ PERFORMANCE: Cache-Warming beim Login
+        // Fülle UserCache und OrganizationCache vor, damit erste Requests sofort Cache-Hits haben
+        try {
+            // Finde aktive Rolle für roleId
+            const activeRoleForCache = user.roles.find(r => r.lastUsed);
+            const roleIdForCache = activeRoleForCache ? String(activeRoleForCache.role.id) : undefined;
+            // UserCache vorfüllen (mit Settings)
+            const userWithSettings = yield prisma_1.prisma.user.findUnique({
+                where: { id: user.id },
+                include: {
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: true
+                                }
+                            }
+                        }
+                    },
+                    settings: true
+                }
+            });
+            if (userWithSettings) {
+                userCache_1.userCache.invalidate(user.id); // Alten Cache löschen falls vorhanden
+                // Cache wird beim nächsten Request automatisch gefüllt, aber wir können es auch direkt setzen
+                // Da userCache.get() die Daten lädt und cached, rufen wir es einfach auf
+                yield userCache_1.userCache.get(user.id);
+            }
+            // OrganizationCache vorfüllen
+            organizationCache_1.organizationCache.invalidate(user.id); // Alten Cache löschen falls vorhanden
+            yield organizationCache_1.organizationCache.get(user.id);
+            console.log(`[LOGIN] ✅ Cache-Warming abgeschlossen für User ${user.id}`);
+        }
+        catch (cacheError) {
+            // Cache-Warming-Fehler sollten Login nicht blockieren
+            console.error('[LOGIN] ⚠️ Cache-Warming fehlgeschlagen (nicht kritisch):', cacheError);
+        }
         // Bereite die Benutzerinformationen für die Antwort vor
         const userResponse = {
             id: user.id,

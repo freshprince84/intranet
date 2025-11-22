@@ -1971,18 +1971,15 @@ const Worktracker: React.FC = () => {
                                                 if (reservation.paymentLink) {
                                                     metadata.push({
                                                         icon: <LinkIcon className="h-4 w-4" />,
-                                                        label: t('reservations.paymentLink', 'Zahlungslink'),
                                                         value: (
                                                             <a 
                                                                 href={reservation.paymentLink} 
                                                                 target="_blank" 
                                                                 rel="noopener noreferrer"
                                                                 onClick={(e) => e.stopPropagation()}
-                                                                className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                                                className="text-gray-900 dark:text-white break-all"
                                                             >
-                                                                {reservation.paymentLink.length > 30 
-                                                                    ? `${reservation.paymentLink.substring(0, 30)}...` 
-                                                                    : reservation.paymentLink}
+                                                                {t('reservations.paymentLink', 'Zahlungslink')}
                                                             </a>
                                                         ),
                                                         section: 'center'
@@ -1993,7 +1990,6 @@ const Worktracker: React.FC = () => {
                                                 const checkInLink = `${window.location.origin}/check-in/${reservation.id}`;
                                                 metadata.push({
                                                     icon: <LinkIcon className="h-4 w-4" />,
-                                                    label: t('reservations.checkInLink', 'Check-in Link'),
                                                     value: (
                                                         <div className="relative group">
                                                             <a 
@@ -2001,7 +1997,7 @@ const Worktracker: React.FC = () => {
                                                                 target="_blank" 
                                                                 rel="noopener noreferrer"
                                                                 onClick={(e) => e.stopPropagation()}
-                                                                className="text-blue-600 dark:text-blue-400 hover:underline"
+                                                                className="text-gray-900 dark:text-white"
                                                             >
                                                                 {t('reservations.checkInLink', 'Check-in Link')}
                                                             </a>
@@ -3110,18 +3106,15 @@ const Worktracker: React.FC = () => {
                                                 if (reservation.paymentLink) {
                                                     metadata.push({
                                                         icon: <LinkIcon className="h-4 w-4" />,
-                                                        label: t('reservations.paymentLink', 'Zahlungslink'),
                                                         value: (
                                                             <a 
                                                                 href={reservation.paymentLink} 
                                                                 target="_blank" 
                                                                 rel="noopener noreferrer"
                                                                 onClick={(e) => e.stopPropagation()}
-                                                                className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                                                className="text-gray-900 dark:text-white break-all"
                                                             >
-                                                                {reservation.paymentLink.length > 30 
-                                                                    ? `${reservation.paymentLink.substring(0, 30)}...` 
-                                                                    : reservation.paymentLink}
+                                                                {t('reservations.paymentLink', 'Zahlungslink')}
                                                             </a>
                                                         ),
                                                         section: 'center'
@@ -3132,7 +3125,6 @@ const Worktracker: React.FC = () => {
                                                 const checkInLink = `${window.location.origin}/check-in/${reservation.id}`;
                                                 metadata.push({
                                                     icon: <LinkIcon className="h-4 w-4" />,
-                                                    label: t('reservations.checkInLink', 'Check-in Link'),
                                                     value: (
                                                         <div className="relative group">
                                                             <a 
@@ -3140,7 +3132,7 @@ const Worktracker: React.FC = () => {
                                                                 target="_blank" 
                                                                 rel="noopener noreferrer"
                                                                 onClick={(e) => e.stopPropagation()}
-                                                                className="text-blue-600 dark:text-blue-400 hover:underline"
+                                                                className="text-gray-900 dark:text-white"
                                                             >
                                                                 {t('reservations.checkInLink', 'Check-in Link')}
                                                             </a>
