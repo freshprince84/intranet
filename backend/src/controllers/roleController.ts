@@ -4,6 +4,7 @@ import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getRoleNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, belongsToOrganization, getUserOrganizationFilter } from '../middleware/organization';
 import { prisma } from '../utils/prisma';
+import { userCache } from '../services/userCache';
 
 interface RoleParams {
     id: string;

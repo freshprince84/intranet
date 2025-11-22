@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../utils/prisma';
+import { userCache } from '../services/userCache';
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
 
 // Erweitere den Request-Typ, um den Benutzer hinzuzufügen
@@ -50,26 +51,14 @@ export const authMiddleware = async (
     // Verify the token
     const decoded: any = jwt.verify(token, SECRET_KEY);
     
-    // Get the user with roles, including the active role
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: true
-              }
-            }
-          }
-        },
-        settings: true
-      }
-    });
+    // ✅ PERFORMANCE: Verwende Cache statt DB-Query bei jedem Request
+    const cached = await userCache.get(decoded.userId);
     
-    if (!user) {
+    if (!cached || !cached.user) {
       return res.status(404).json({ message: 'Benutzer nicht gefunden' });
     }
+    
+    const user = cached.user;
     
     // Attach the user to the request object
     req.user = user;
@@ -77,19 +66,22 @@ export const authMiddleware = async (
     // Set compatibility fields for legacy code
     req.userId = String(user.id);
     
-    // Find and set active role
-    const activeRole = user.roles.find(r => r.lastUsed);
-    if (activeRole) {
-      req.roleId = String(activeRole.role.id);
-      // Logging entfernt: Zu viele Logs bei jedem Request
-      // Nur bei Fehlern loggen (siehe else-Block)
+    // Set active role from cache
+    if (cached.roleId) {
+      req.roleId = cached.roleId;
     } else {
-      // Nur bei Fehlern loggen (wenn keine aktive Rolle gefunden)
-      console.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
-      console.error(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
-      user.roles.forEach(r => {
-        console.error(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
-      });
+      // Fallback: Finde aktive Rolle (sollte nicht nötig sein, da im Cache)
+      const activeRole = user.roles.find(r => r.lastUsed);
+      if (activeRole) {
+        req.roleId = String(activeRole.role.id);
+      } else {
+        // Nur bei Fehlern loggen (wenn keine aktive Rolle gefunden)
+        console.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
+        console.error(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
+        user.roles.forEach(r => {
+          console.error(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
+        });
+      }
     }
     
     next();

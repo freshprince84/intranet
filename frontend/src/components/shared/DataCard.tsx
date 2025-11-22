@@ -378,7 +378,7 @@ const DataCard: React.FC<DataCardProps> = ({
               return (
                 <div key={index} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">
                   {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                  <span className="font-medium whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>
+                  {item.label && <span className="font-medium whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
                   <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
                     {typeof item.value === 'string' ? item.value : item.value}
                   </span>
@@ -663,7 +663,7 @@ const DataCard: React.FC<DataCardProps> = ({
                     className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400"
                   >
                     {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                    <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>
+                    {item.label && <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
                     <span className={item.className || 'text-gray-900 dark:text-white'}>
                       {typeof item.value === 'string' ? item.value : item.value}
                     </span>

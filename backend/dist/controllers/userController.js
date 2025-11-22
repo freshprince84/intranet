@@ -57,6 +57,7 @@ const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const lifecycleService_1 = require("../services/lifecycleService");
 const userLanguageCache_1 = require("../services/userLanguageCache");
+const userCache_1 = require("../services/userCache");
 // Alle Benutzer abrufen
 const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -328,10 +329,12 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 }
             }
         });
-        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        // Cache-Invalidierung: Wenn User-Daten aktualisiert wurden, Caches invalidieren
         if ('language' in updateData && updateData.language !== undefined) {
             userLanguageCache_1.userLanguageCache.invalidate(userId);
         }
+        // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
+        userCache_1.userCache.invalidate(userId);
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
@@ -545,10 +548,12 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         });
-        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        // Cache-Invalidierung: Wenn User-Daten aktualisiert wurden, Caches invalidieren
         if ('language' in updateData && updateData.language !== undefined) {
             userLanguageCache_1.userLanguageCache.invalidate(userId);
         }
+        // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
+        userCache_1.userCache.invalidate(userId);
         // Prüfe Profilvollständigkeit nach Update (username, email, language - country NICHT nötig)
         const isComplete = !!(updatedUser.username &&
             updatedUser.email &&
@@ -817,8 +822,10 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
                 }
             }
         });
-        // Cache-Invalidierung: Wenn User-Rollen geändert wurden, könnte sich die Organisation-Sprache ändern
+        // Cache-Invalidierung: Wenn User-Rollen geändert wurden, Caches invalidieren
         userLanguageCache_1.userLanguageCache.invalidate(userId);
+        // ✅ PERFORMANCE: UserCache invalidieren bei Rollen-Änderung
+        userCache_1.userCache.invalidate(userId);
         // Benachrichtigung an den Benutzer senden, dessen Rollen aktualisiert wurden
         const userLang = yield (0, translations_1.getUserLanguage)(userId);
         console.log(`[updateUserRoles] User ${userId} Sprache: ${userLang}`);
@@ -1248,6 +1255,11 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 data: { lastUsed: true }
             });
         }));
+        // ✅ PERFORMANCE: UserCache invalidieren bei Rollen-Wechsel
+        userCache_1.userCache.invalidate(userId);
+        // ✅ PERFORMANCE: OrganizationCache invalidieren (lastUsed hat sich geändert)
+        const { organizationCache } = yield Promise.resolve().then(() => __importStar(require('../utils/organizationCache')));
+        organizationCache.invalidate(userId);
         // Benutzer mit aktualisierten Rollen zurückgeben
         const updatedUser = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
@@ -1512,10 +1524,12 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 }
             }
         });
-        // Cache-Invalidierung: Wenn User.language aktualisiert wurde, Cache invalidieren
+        // Cache-Invalidierung: Wenn User-Daten aktualisiert wurden, Caches invalidieren
         if ('language' in updateData && updateData.language !== undefined) {
             userLanguageCache_1.userLanguageCache.invalidate(userId);
         }
+        // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
+        userCache_1.userCache.invalidate(userId);
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
