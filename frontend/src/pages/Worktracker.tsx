@@ -1381,15 +1381,52 @@ const Worktracker: React.FC = () => {
                                     </h2>
                                 </div>
                                 
-                                {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
+                                {/* Rechte Seite: Suchfeld, Sync-Button (nur Reservations), Filter-Button, Status-Filter, Spalten-Konfiguration */}
                                 <div className="flex items-center gap-1.5">
                                     <input
                                         type="text"
                                         placeholder={t('common.search') + '...'}
-                                        className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-[120px] sm:w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        value={activeTab === 'todos' ? searchTerm : reservationSearchTerm}
+                                        onChange={(e) => {
+                                            if (activeTab === 'todos') {
+                                                setSearchTerm(e.target.value);
+                                            } else {
+                                                setReservationSearchTerm(e.target.value);
+                                            }
+                                        }}
                                     />
+                                    
+                                    {/* Sync-Button für Reservations */}
+                                    {activeTab === 'reservations' && (
+                                        <div className="relative group">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        setSyncingReservations(true);
+                                                        await axiosInstance.post(API_ENDPOINTS.RESERVATIONS.SYNC);
+                                                        showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
+                                                        await loadReservations();
+                                                    } catch (err: any) {
+                                                        console.error('Fehler beim Synchronisieren:', err);
+                                                        showMessage(
+                                                            err.response?.data?.message || t('reservations.syncError', 'Fehler beim Synchronisieren'),
+                                                            'error'
+                                                        );
+                                                    } finally {
+                                                        setSyncingReservations(false);
+                                                    }
+                                                }}
+                                                disabled={syncingReservations}
+                                                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <ArrowPathIcon className={`h-5 w-5 ${syncingReservations ? 'animate-spin' : ''}`} />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {syncingReservations ? t('reservations.syncing', 'Synchronisiere...') : t('reservations.sync', 'Synchronisieren')}
+                                            </div>
+                                        </div>
+                                    )}
                                     
                                     {/* View-Mode Toggle */}
                                     <div className="relative group">
@@ -2508,7 +2545,7 @@ const Worktracker: React.FC = () => {
                                     <input
                                         type="text"
                                         placeholder={t('common.search') + '...'}
-                                        className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        className="w-[120px] sm:w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                         value={activeTab === 'todos' ? searchTerm : reservationSearchTerm}
                                         onChange={(e) => {
                                             if (activeTab === 'todos') {
