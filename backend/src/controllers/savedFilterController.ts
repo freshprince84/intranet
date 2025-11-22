@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../utils/prisma';
+import { filterCache } from '../services/filterCache';
 
 // Schnittstellendefinitionen
 interface SortDirection {
@@ -147,6 +148,8 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
             sortDirections: sortDirectionsJson
           }
         });
+        // Cache invalidieren
+        filterCache.invalidate(existingFilter.id);
       } else {
         // Erstelle neuen Filter
         filter = await prisma.savedFilter.create({
@@ -247,6 +250,8 @@ export const deleteFilter = async (req: AuthenticatedRequest, res: Response) => 
           id: filterId
         }
       });
+      // Cache invalidieren
+      filterCache.invalidate(filterId);
 
       return res.status(200).json({ message: 'Filter erfolgreich gelöscht' });
     } catch (prismaError) {
