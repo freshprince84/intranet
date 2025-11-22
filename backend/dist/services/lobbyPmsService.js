@@ -52,15 +52,13 @@ function findBranchByPropertyId(propertyId, apiKey, organizationId) {
                 }
             }
         }
-        // Fallback: Nur propertyId prüfen (kann mehrdeutig sein!)
+        // Fallback: Nur propertyId prüfen (sollte jetzt eindeutig sein)
         for (const branch of branches) {
             if (branch.lobbyPmsSettings) {
                 try {
                     const settings = (0, encryption_1.decryptBranchApiSettings)(branch.lobbyPmsSettings);
                     const lobbyPmsSettings = (settings === null || settings === void 0 ? void 0 : settings.lobbyPms) || settings;
                     if ((lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.propertyId) === propertyId || String(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.propertyId) === String(propertyId)) {
-                        // WARNUNG: Mehrere Branches können die gleiche propertyId haben!
-                        console.warn(`[findBranchByPropertyId] Mehrere Branches mit propertyId ${propertyId} gefunden, verwende erste (Branch ${branch.id})`);
                         return branch.id;
                     }
                 }
