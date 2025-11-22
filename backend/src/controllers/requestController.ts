@@ -141,6 +141,7 @@ export const getAllRequests = async (req: Request, res: Response) => {
             AND: baseWhereConditions
         };
         
+        const queryStartTime = Date.now();
         const requests = await prisma.request.findMany({
             where: whereClause,
             ...(limit ? { take: limit } : {}),
@@ -164,6 +165,8 @@ export const getAllRequests = async (req: Request, res: Response) => {
                 createdAt: 'desc'
             }
         });
+        const queryDuration = Date.now() - queryStartTime;
+        console.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests in ${queryDuration}ms`);
 
         // Formatiere die Daten für die Frontend-Nutzung
         const formattedRequests = requests.map(request => ({
