@@ -271,7 +271,6 @@ const Worktracker: React.FC = () => {
     const [isSendInvitationSidepaneOpen, setIsSendInvitationSidepaneOpen] = useState(false);
     const [selectedReservationForPasscode, setSelectedReservationForPasscode] = useState<Reservation | null>(null);
     const [isSendPasscodeSidepaneOpen, setIsSendPasscodeSidepaneOpen] = useState(false);
-    const [isSendPasscodeSidepaneOpen, setIsSendPasscodeSidepaneOpen] = useState(false);
     
     // Reservations Filter States (analog zu Tasks)
     const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
