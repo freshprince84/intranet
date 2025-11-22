@@ -859,10 +859,6 @@
         "overdue": "Überfällig",
         "cancelled": "Storniert"
       },
-      "groups": {
-        "users": "Benutzer",
-        "roles": "Rollen"
-      },
       "sortAscending": "Aufsteigend sortieren",
       "sortDescending": "Absteigend sortieren",
       "moveUp": "Priorität erhöhen",

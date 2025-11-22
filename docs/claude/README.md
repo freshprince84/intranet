@@ -53,6 +53,16 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 - **[DESIGN_STANDARDS.md](../core/DESIGN_STANDARDS.md)** - **⚠️ KRITISCH: Button-Design-Regel - KEIN TEXT IN BUTTONS!** Siehe Abschnitt "Buttons und Aktionselemente"
 - **[CODING_STANDARDS.md](../core/CODING_STANDARDS.md)** - **⚠️ KRITISCH: Button-Implementierung - KEIN TEXT IN BUTTONS!** Siehe Abschnitt "Button-Implementierung"
 
+### ⚠️ KRITISCH: Übersetzungen (I18N) - IMMER bei neuen Features!
+- **[CODING_STANDARDS.md](../core/CODING_STANDARDS.md)** - **🚨 WICHTIGSTE REGEL: Übersetzungen sind TEIL DER IMPLEMENTIERUNG!** Siehe Abschnitt ganz oben: "⚠️ KRITISCH: Übersetzungen (I18N)"
+- **[IMPLEMENTATION_CHECKLIST.md](../core/IMPLEMENTATION_CHECKLIST.md)** - **MUSS bei jeder Implementierung befolgt werden!** Übersetzungen sind Punkt 1 der Checkliste!
+- **[TRANSLATION_PROGRESS.md](../implementation_reports/TRANSLATION_PROGRESS.md)** - Übersetzungsfortschritt und fehlende Übersetzungen
+
+**WICHTIGSTE REGEL:**
+- **JEDE neue Komponente/Seite/Feature MUSS Übersetzungen in ALLEN Sprachen haben (de, en, es)!**
+- **Features OHNE vollständige Übersetzungen werden NICHT akzeptiert!**
+- **Vor JEDER Implementierung: Übersetzungen identifizieren → in de.json, en.json, es.json hinzufügen → `t()` verwenden!**
+
 ### Backend-Server-Struktur
 - **⚠️ KRITISCH: Route-Registrierung und Server-Code**
   - **RICHTIG**: `backend/src/index.ts` - Diese Datei wird tatsächlich verwendet

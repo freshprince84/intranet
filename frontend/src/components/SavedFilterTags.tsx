@@ -75,6 +75,19 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     return name;
   };
   
+  // Übersetze Filtergruppen-Namen beim Anzeigen
+  const translateGroupName = (groupName: string): string => {
+    // Standard-Filtergruppen übersetzen
+    if (groupName === 'Roles' || groupName === 'Rollen') {
+      return t('filter.row.groups.roles', 'Rollen');
+    }
+    if (groupName === 'Users' || groupName === 'Benutzer' || groupName === 'Usuarios') {
+      return t('filter.row.groups.users', 'Benutzer');
+    }
+    // Für alle anderen Gruppennamen, gib sie unverändert zurück
+    return groupName;
+  };
+  
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -679,9 +692,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         {sortedGroups.map(group => {
           // Prüfe, ob ein Filter aus dieser Gruppe aktiv ist
           const activeFilterInGroup = group.filters.find(f => getActiveFilterId() === f.id);
+          const translatedGroupName = translateGroupName(group.name);
           const displayName = activeFilterInGroup 
             ? translateFilterName(activeFilterInGroup.name)
-            : `${group.name} (${group.filters.length})`;
+            : `${translatedGroupName} (${group.filters.length})`;
           
           return (
           <div key={group.id} className="relative flex-shrink-0">
@@ -700,7 +714,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                 <ChevronDownIcon className={`h-3 w-3 sm:h-4 sm:w-4 ml-0.5 sm:ml-1 transition-transform ${openGroupDropdowns.has(group.id) ? 'rotate-180' : ''}`} />
               </button>
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                {activeFilterInGroup ? displayName : `${group.name} (${group.filters.length})`}
+                {activeFilterInGroup ? displayName : `${translatedGroupName} (${group.filters.length})`}
               </div>
             </div>
             

@@ -14,6 +14,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 
 ### Einstieg und Übersicht
 - [README.md](README.md) - Diese Übersicht
+- [IMPLEMENTATION_CHECKLIST.md](docs/core/IMPLEMENTATION_CHECKLIST.md) - **⚠️ KRITISCH: MUSS bei jeder Implementierung befolgt werden!** Übersetzungen sind Punkt 1!
 - [DOKUMENTATIONSSTANDARDS.md](docs/core/DOKUMENTATIONSSTANDARDS.md) - Standards für die Dokumentation
 - [CHANGELOG.md](docs/core/CHANGELOG.md) - Änderungsverlauf des Projekts
 - [VIBES.md](docs/core/VIBES.md) - Coding-Stil und Best Practices

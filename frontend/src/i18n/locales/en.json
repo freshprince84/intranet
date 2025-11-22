@@ -992,10 +992,6 @@
         "paid": "Paid",
         "overdue": "Overdue",
         "cancelled": "Cancelled"
-      },
-      "groups": {
-        "users": "Users",
-        "roles": "Roles"
       }
     },
     "operators": {
