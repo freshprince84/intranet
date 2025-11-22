@@ -52,6 +52,8 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 - **[container-structures.md](docs/container-structures.md)** - Konsistente Container-Strukturen für Seiten und Boxen - **MUSS bei neuen Seiten befolgt werden!**
 - **[DESIGN_STANDARDS.md](../core/DESIGN_STANDARDS.md)** - **⚠️ KRITISCH: Button-Design-Regel - KEIN TEXT IN BUTTONS!** Siehe Abschnitt "Buttons und Aktionselemente"
 - **[CODING_STANDARDS.md](../core/CODING_STANDARDS.md)** - **⚠️ KRITISCH: Button-Implementierung - KEIN TEXT IN BUTTONS!** Siehe Abschnitt "Button-Implementierung"
+- **[TAB_BASED_FEATURES.md](../core/TAB_BASED_FEATURES.md)** - **⚠️ KRITISCH: Tab-basierte Features - ALLE Funktionen für ALLE Tabs!** Vollständige Richtlinien für Tab-Implementierungen
+- **[RESPONSIVE_TESTING.md](../core/RESPONSIVE_TESTING.md)** - **⚠️ KRITISCH: Responsive Testing - Mobile UND Desktop!** Detaillierte Mobile & Desktop Testing Checkliste
 
 ### ⚠️ KRITISCH: Übersetzungen (I18N) - IMMER bei neuen Features!
 - **[CODING_STANDARDS.md](../core/CODING_STANDARDS.md)** - **🚨 WICHTIGSTE REGEL: Übersetzungen sind TEIL DER IMPLEMENTIERUNG!** Siehe Abschnitt ganz oben: "⚠️ KRITISCH: Übersetzungen (I18N)"

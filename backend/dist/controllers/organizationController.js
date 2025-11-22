@@ -47,6 +47,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadSignatureMiddleware = exports.uploadTemplateMiddleware = exports.uploadDocumentSignature = exports.getDocumentSignatures = exports.uploadDocumentTemplate = exports.getDocumentTemplates = exports.updateLifecycleRoles = exports.getLifecycleRoles = exports.updateCurrentOrganization = exports.updateOrganizationLanguage = exports.getOrganizationLanguage = exports.searchOrganizations = exports.processJoinRequest = exports.getJoinRequests = exports.createJoinRequest = exports.getCurrentOrganization = exports.getOrganizationStats = exports.deleteOrganization = exports.updateOrganization = exports.createOrganization = exports.getOrganizationById = exports.getAllOrganizations = void 0;
 const prisma_1 = require("../utils/prisma");
+const organizationCache_1 = require("../utils/organizationCache");
 const zod_1 = require("zod");
 const multer_1 = __importDefault(require("multer"));
 const path = __importStar(require("path"));
@@ -718,67 +719,63 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
+        // ✅ PERFORMANCE: Verwende OrganizationCache statt DB-Query
+        const cachedData = yield organizationCache_1.organizationCache.get(Number(userId));
+        if (!cachedData || !cachedData.userRole) {
+            return res.status(404).json({
+                message: 'Keine Organisation gefunden',
+                hasOrganization: false,
+                hint: 'Sie haben noch keine Organisation. Bitte erstellen Sie eine oder treten Sie einer bei.'
+            });
+        }
         // Prüfe ob Settings geladen werden sollen (Query-Parameter)
         const includeSettings = req.query.includeSettings === 'true';
-        // Hole die aktuelle Rolle des Users
-        const userRole = yield prisma_1.prisma.userRole.findFirst({
-            where: {
-                userId: Number(userId),
-                lastUsed: true
-            },
-            include: {
-                role: {
-                    include: {
-                        organization: {
-                            // ✅ PERFORMANCE: Settings nur laden wenn explizit angefragt
-                            select: includeSettings ? undefined : {
-                                id: true,
-                                name: true,
-                                displayName: true,
-                                domain: true,
-                                logo: true,
-                                isActive: true,
-                                maxUsers: true,
-                                subscriptionPlan: true,
-                                country: true,
-                                nit: true,
-                                createdAt: true,
-                                updatedAt: true
-                                // settings wird NICHT geladen (19.8 MB!)
-                            }
-                        }
-                    }
+        // Hole Organization-Daten aus Cache (userRole.role.organization ist bereits geladen)
+        let organization = cachedData.userRole.role.organization;
+        // Wenn Settings benötigt werden, lade sie separat
+        if (includeSettings && organization) {
+            const orgWithSettings = yield prisma_1.prisma.organization.findUnique({
+                where: { id: organization.id },
+                select: {
+                    id: true,
+                    name: true,
+                    displayName: true,
+                    domain: true,
+                    logo: true,
+                    isActive: true,
+                    maxUsers: true,
+                    subscriptionPlan: true,
+                    country: true,
+                    nit: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    settings: true // Settings nur wenn explizit angefragt
                 }
-            }
-        });
-        // Prüfe ob User eine Rolle hat
-        if (!userRole) {
-            return res.status(404).json({
-                message: 'Keine Organisation gefunden',
-                hasOrganization: false,
-                hint: 'Sie haben noch keine Organisation. Bitte erstellen Sie eine oder treten Sie einer bei.'
             });
+            if (orgWithSettings) {
+                organization = orgWithSettings;
+                // ✅ ENTschlüssele Settings für Response
+                const { decryptApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                organization.settings = decryptApiSettings(organization.settings);
+            }
+        }
+        else {
+            // Settings nicht geladen - setze auf null für Frontend
+            if (organization) {
+                organization.settings = null;
+            }
         }
         // Prüfe ob die Rolle eine Organisation hat
-        if (!userRole.role.organization) {
+        if (!organization) {
             return res.status(404).json({
                 message: 'Keine Organisation gefunden',
                 hasOrganization: false,
                 hint: 'Sie haben noch keine Organisation. Bitte erstellen Sie eine oder treten Sie einer bei.'
             });
         }
-        const organization = userRole.role.organization;
         // Korrigiere String 'null' zu echtem null
-        if (organization && organization.logo === 'null') {
+        if (organization.logo === 'null') {
             organization.logo = null;
-        }
-        // ✅ ENTschlüssele Settings für Response (nur wenn geladen)
-        if (includeSettings && organization.settings) {
-            organization.settings = (0, encryption_1.decryptApiSettings)(organization.settings);
-        }
-        else if (!includeSettings) {
-            // Settings nicht geladen - setze auf null für Frontend
-            organization.settings = null;
         }
         res.json(organization);
     }

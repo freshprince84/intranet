@@ -197,32 +197,18 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
+        // ✅ PERFORMANCE: Optional Fields - nur laden wenn explizit angefragt
+        const includeSettings = req.query.includeSettings === 'true';
+        const includeInvoiceSettings = req.query.includeInvoiceSettings === 'true';
+        const includeDocuments = req.query.includeDocuments === 'true';
         const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
-            select: {
-                id: true,
-                username: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                birthday: true,
-                bankDetails: true,
-                contract: true,
-                salary: true,
-                normalWorkingHours: true,
-                gender: true,
-                phoneNumber: true,
-                country: true,
-                language: true,
-                profileComplete: true,
-                identificationNumber: true,
-                settings: true,
-                invoiceSettings: true,
+            select: Object.assign(Object.assign(Object.assign(Object.assign({ id: true, username: true, email: true, firstName: true, lastName: true, birthday: true, bankDetails: true, contract: true, salary: true, normalWorkingHours: true, gender: true, phoneNumber: true, country: true, language: true, profileComplete: true, identificationNumber: true }, (includeSettings ? { settings: true } : {})), (includeInvoiceSettings ? { invoiceSettings: true } : {})), (includeDocuments ? {
                 identificationDocuments: {
                     orderBy: { createdAt: 'desc' },
                     take: 1 // Neuestes Dokument
-                },
-                roles: {
+                }
+            } : {})), { roles: {
                     include: {
                         role: {
                             include: {
@@ -238,8 +224,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                             }
                         }
                     }
-                }
-            }
+                } })
         });
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });

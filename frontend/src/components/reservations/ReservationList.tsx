@@ -139,12 +139,18 @@ const ReservationList: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="text-center">
           <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-          <button
-            onClick={loadReservations}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            {t('common.retry', 'Erneut versuchen')}
-          </button>
+          <div className="relative group inline-block">
+            <button
+              onClick={loadReservations}
+              className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              title={t('common.retry', 'Erneut versuchen')}
+            >
+              <ArrowPathIcon className="h-5 w-5" />
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('common.retry', 'Erneut versuchen')}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -168,34 +174,49 @@ const ReservationList: React.FC = () => {
 
           {/* Filter & Sync & Create Buttons */}
           <div className="flex gap-2">
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              {t('reservations.createReservation.button', 'Neue Reservierung')}
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                title={t('reservations.createReservation.button', 'Neue Reservierung')}
+              >
+                <PlusIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('reservations.createReservation.button', 'Neue Reservierung')}
+              </div>
+            </div>
 
-            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`px-4 py-2 rounded-lg border transition-colors ${
-                isFilterOpen || filterStatus !== 'all' || filterPaymentStatus !== 'all' || filterBranchId !== 'all'
-                  ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200'
-                  : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
-              }`}
-            >
-              <FunnelIcon className="h-5 w-5 inline-block mr-2" />
-              {t('common.filter', 'Filter')}
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`p-2 rounded-md border transition-colors ${
+                  isFilterOpen || filterStatus !== 'all' || filterPaymentStatus !== 'all' || filterBranchId !== 'all'
+                    ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200'
+                    : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                }`}
+                title={t('common.filter', 'Filter')}
+              >
+                <FunnelIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('common.filter', 'Filter')}
+              </div>
+            </div>
 
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              <ArrowPathIcon className={`h-5 w-5 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? t('reservations.syncing', 'Synchronisiere...') : t('reservations.sync', 'Synchronisieren')}
-            </button>
+            <div className="relative group">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title={syncing ? t('reservations.syncing', 'Synchronisiere...') : t('reservations.sync', 'Synchronisieren')}
+              >
+                <ArrowPathIcon className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {syncing ? t('reservations.syncing', 'Synchronisiere...') : t('reservations.sync', 'Synchronisieren')}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -263,16 +284,22 @@ const ReservationList: React.FC = () => {
             {/* Clear Filters */}
             {(filterStatus !== 'all' || filterPaymentStatus !== 'all' || filterBranchId !== 'all') && (
               <div className="mt-4">
-                <button
-                  onClick={() => {
-                    setFilterStatus('all');
-                    setFilterPaymentStatus('all');
-                    setFilterBranchId('all');
-                  }}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  {t('common.clearFilters', 'Filter zurücksetzen')}
-                </button>
+                <div className="relative group inline-block">
+                  <button
+                    onClick={() => {
+                      setFilterStatus('all');
+                      setFilterPaymentStatus('all');
+                      setFilterBranchId('all');
+                    }}
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                    title={t('common.clearFilters', 'Filter zurücksetzen')}
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('common.clearFilters', 'Filter zurücksetzen')}
+                  </div>
+                </div>
               </div>
             )}
           </div>

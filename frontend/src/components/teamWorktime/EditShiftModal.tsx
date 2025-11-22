@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axiosInstance from '../../config/axios.ts';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon, TrashIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TrashIcon, ArrowsRightLeftIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
@@ -481,20 +481,36 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
 
               {/* Footer */}
               <div className="px-6 py-4 border-t dark:border-gray-700 flex-shrink-0 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || loadingData}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? t('common.saving') : t('common.save')}
-                </button>
+                <div className="relative group">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                    title={t('common.cancel')}
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('common.cancel')}
+                  </div>
+                </div>
+                <div className="relative group">
+                  <button
+                    type="submit"
+                    disabled={loading || loadingData}
+                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title={loading ? t('common.saving') : t('common.save')}
+                  >
+                    {loading ? (
+                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <CheckIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {loading ? t('common.saving') : t('common.save')}
+                  </div>
+                </div>
               </div>
             </form>
           </Dialog.Panel>
@@ -561,20 +577,36 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
 
           {/* Footer */}
           <div className="p-4 border-t dark:border-gray-700 flex-shrink-0 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={loading || loadingData}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? t('common.saving') : t('common.save')}
-            </button>
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                title={t('common.cancel')}
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('common.cancel')}
+              </div>
+            </div>
+            <div className="relative group">
+              <button
+                type="submit"
+                disabled={loading || loadingData}
+                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title={loading ? t('common.saving') : t('common.save')}
+              >
+                {loading ? (
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                ) : (
+                  <CheckIcon className="h-5 w-5" />
+                )}
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {loading ? t('common.saving') : t('common.save')}
+              </div>
+            </div>
           </div>
         </form>
       </div>
