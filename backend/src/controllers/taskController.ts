@@ -11,6 +11,7 @@ import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware
 import { LifecycleService } from '../services/lifecycleService';
 import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
 import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
+import { filterCache } from '../services/filterCache';
 
 const userSelect = {
     id: true,
@@ -50,13 +51,11 @@ export const getAllTasks = async (req: Request, res: Response) => {
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause: any = {};
         if (filterId) {
-            // Lade Filter von DB
-            const savedFilter = await prisma.savedFilter.findUnique({
-                where: { id: parseInt(filterId, 10) }
-            });
-            if (savedFilter) {
-                const conditions = JSON.parse(savedFilter.conditions);
-                const operators = JSON.parse(savedFilter.operators);
+            // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
+            const filterData = await filterCache.get(parseInt(filterId, 10));
+            if (filterData) {
+                const conditions = JSON.parse(filterData.conditions);
+                const operators = JSON.parse(filterData.operators);
                 filterWhereClause = convertFilterConditionsToPrismaWhere(
                     conditions,
                     operators,

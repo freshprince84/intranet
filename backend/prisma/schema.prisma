@@ -288,7 +288,16 @@ model Task {
   reservationId    Int?                  @unique
   reservation      Reservation?          @relation(fields: [reservationId], references: [id])
 
+  // Performance-Indizes für Filter-Queries
   @@index([reservationId])
+  @@index([organizationId, status, createdAt(sort: Desc)])
+  @@index([responsibleId])
+  @@index([qualityControlId])
+  @@index([status])
+  @@index([branchId])
+  @@index([roleId])
+  @@index([dueDate])
+  @@index([title]) // Für contains/startsWith/endsWith Filter
 }
 
 model Request {
@@ -312,6 +321,16 @@ model Request {
   responsible    User                     @relation("responsible", fields: [responsibleId], references: [id])
   attachments    RequestAttachment[]
   carticles      RequestCerebroCarticle[]
+
+  // Performance-Indizes für Filter-Queries
+  @@index([organizationId, isPrivate, createdAt(sort: Desc)])
+  @@index([requesterId, isPrivate])
+  @@index([responsibleId, isPrivate])
+  @@index([status])
+  @@index([type])
+  @@index([branchId])
+  @@index([dueDate])
+  @@index([title]) // Für contains/startsWith/endsWith Filter
 }
 
 model Settings {
