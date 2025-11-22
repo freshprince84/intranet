@@ -83,21 +83,8 @@ export class TTLockService {
 
       if (branch?.doorSystemSettings) {
         try {
-          // Verwende Cache für Entschlüsselung
-          const { branchSettingsCache } = await import('./branchSettingsCache');
-          let decryptedSettings = branchSettingsCache.getDecryptedBranchSettings(
-            this.branchId!,
-            'doorSystem',
-            branch.doorSystemSettings
-          );
-          
-          // Fallback: Direkte Entschlüsselung (für Migration)
-          if (!decryptedSettings) {
-            const { decryptBranchApiSettings } = await import('../utils/encryption');
-            decryptedSettings = decryptBranchApiSettings(branch.doorSystemSettings as any);
-          }
-          
-          const doorSystemSettings = decryptedSettings?.doorSystem || decryptedSettings;
+          const settings = decryptBranchApiSettings(branch.doorSystemSettings as any);
+          const doorSystemSettings = settings?.doorSystem || settings;
 
           if (doorSystemSettings?.clientId && doorSystemSettings?.clientSecret && 
               doorSystemSettings?.username && doorSystemSettings?.password) {

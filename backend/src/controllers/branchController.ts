@@ -64,53 +64,53 @@ export const getAllBranches = async (req: Request, res: Response) => {
         
         let branches = await prisma.branch.findMany(queryOptions);
         
-        // Entschlüssele alle Settings für alle Branches (mit Cache)
+        // Entschlüssele alle Settings für alle Branches
         // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
-        const { branchSettingsCache } = await import('../services/branchSettingsCache');
+        const { decryptBranchApiSettings } = await import('../utils/encryption');
         branches = branches.map((branch: any) => {
-            // Entschlüssele WhatsApp Settings (mit Cache)
+            // Entschlüssele WhatsApp Settings
             if (branch.whatsappSettings) {
-                branch.whatsappSettings = branchSettingsCache.getDecryptedBranchSettings(
-                    branch.id,
-                    'whatsapp',
-                    branch.whatsappSettings
-                ) || branch.whatsappSettings;
+                try {
+                    branch.whatsappSettings = decryptBranchApiSettings(branch.whatsappSettings as any);
+                } catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings für Branch ${branch.id}:`, error);
+                }
             }
             
-            // Entschlüssele LobbyPMS Settings (mit Cache)
+            // Entschlüssele LobbyPMS Settings
             if (branch.lobbyPmsSettings) {
-                branch.lobbyPmsSettings = branchSettingsCache.getDecryptedBranchSettings(
-                    branch.id,
-                    'lobbyPms',
-                    branch.lobbyPmsSettings
-                ) || branch.lobbyPmsSettings;
+                try {
+                    branch.lobbyPmsSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+                } catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings für Branch ${branch.id}:`, error);
+                }
             }
             
-            // Entschlüssele Bold Payment Settings (mit Cache)
+            // Entschlüssele Bold Payment Settings
             if (branch.boldPaymentSettings) {
-                branch.boldPaymentSettings = branchSettingsCache.getDecryptedBranchSettings(
-                    branch.id,
-                    'boldPayment',
-                    branch.boldPaymentSettings
-                ) || branch.boldPaymentSettings;
+                try {
+                    branch.boldPaymentSettings = decryptBranchApiSettings(branch.boldPaymentSettings as any);
+                } catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
+                }
             }
             
-            // Entschlüssele Door System Settings (mit Cache)
+            // Entschlüssele Door System Settings
             if (branch.doorSystemSettings) {
-                branch.doorSystemSettings = branchSettingsCache.getDecryptedBranchSettings(
-                    branch.id,
-                    'doorSystem',
-                    branch.doorSystemSettings
-                ) || branch.doorSystemSettings;
+                try {
+                    branch.doorSystemSettings = decryptBranchApiSettings(branch.doorSystemSettings as any);
+                } catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Door System Settings für Branch ${branch.id}:`, error);
+                }
             }
             
-            // Entschlüssele Email Settings (mit Cache)
+            // Entschlüssele Email Settings
             if (branch.emailSettings) {
-                branch.emailSettings = branchSettingsCache.getDecryptedBranchSettings(
-                    branch.id,
-                    'email',
-                    branch.emailSettings
-                ) || branch.emailSettings;
+                try {
+                    branch.emailSettings = decryptBranchApiSettings(branch.emailSettings as any);
+                } catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Email Settings für Branch ${branch.id}:`, error);
+                }
             }
             
             return branch;
@@ -520,63 +520,47 @@ export const updateBranch = async (req: Request, res: Response) => {
             }
         });
 
-        // Invalidiere Cache für aktualisierte Settings
-        const { branchSettingsCache } = await import('../services/branchSettingsCache');
-        if (whatsappSettings !== undefined) {
-            branchSettingsCache.invalidateBranch(branchId, 'whatsapp');
-        }
-        if (lobbyPmsSettings !== undefined) {
-            branchSettingsCache.invalidateBranch(branchId, 'lobbyPms');
-        }
-        if (boldPaymentSettings !== undefined) {
-            branchSettingsCache.invalidateBranch(branchId, 'boldPayment');
-        }
-        if (doorSystemSettings !== undefined) {
-            branchSettingsCache.invalidateBranch(branchId, 'doorSystem');
-        }
-        if (emailSettings !== undefined) {
-            branchSettingsCache.invalidateBranch(branchId, 'email');
-        }
-
-        // Entschlüssele alle Settings für Response (mit Cache)
+        // Entschlüssele alle Settings für Response (Frontend braucht entschlüsselte Werte)
+        const { decryptBranchApiSettings } = await import('../utils/encryption');
+        
         if (updatedBranch.whatsappSettings) {
-            (updatedBranch as any).whatsappSettings = branchSettingsCache.getDecryptedBranchSettings(
-                branchId,
-                'whatsapp',
-                updatedBranch.whatsappSettings
-            ) || updatedBranch.whatsappSettings;
+            try {
+                (updatedBranch as any).whatsappSettings = decryptBranchApiSettings(updatedBranch.whatsappSettings as any);
+            } catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings:', error);
+            }
         }
         
         if (updatedBranch.lobbyPmsSettings) {
-            (updatedBranch as any).lobbyPmsSettings = branchSettingsCache.getDecryptedBranchSettings(
-                branchId,
-                'lobbyPms',
-                updatedBranch.lobbyPmsSettings
-            ) || updatedBranch.lobbyPmsSettings;
+            try {
+                (updatedBranch as any).lobbyPmsSettings = decryptBranchApiSettings(updatedBranch.lobbyPmsSettings as any);
+            } catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+            }
         }
         
         if (updatedBranch.boldPaymentSettings) {
-            (updatedBranch as any).boldPaymentSettings = branchSettingsCache.getDecryptedBranchSettings(
-                branchId,
-                'boldPayment',
-                updatedBranch.boldPaymentSettings
-            ) || updatedBranch.boldPaymentSettings;
+            try {
+                (updatedBranch as any).boldPaymentSettings = decryptBranchApiSettings(updatedBranch.boldPaymentSettings as any);
+            } catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings:', error);
+            }
         }
         
         if (updatedBranch.doorSystemSettings) {
-            (updatedBranch as any).doorSystemSettings = branchSettingsCache.getDecryptedBranchSettings(
-                branchId,
-                'doorSystem',
-                updatedBranch.doorSystemSettings
-            ) || updatedBranch.doorSystemSettings;
+            try {
+                (updatedBranch as any).doorSystemSettings = decryptBranchApiSettings(updatedBranch.doorSystemSettings as any);
+            } catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Door System Settings:', error);
+            }
         }
         
         if (updatedBranch.emailSettings) {
-            (updatedBranch as any).emailSettings = branchSettingsCache.getDecryptedBranchSettings(
-                branchId,
-                'email',
-                updatedBranch.emailSettings
-            ) || updatedBranch.emailSettings;
+            try {
+                (updatedBranch as any).emailSettings = decryptBranchApiSettings(updatedBranch.emailSettings as any);
+            } catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
+            }
         }
 
         res.json(updatedBranch);

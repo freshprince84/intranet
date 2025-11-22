@@ -11,8 +11,8 @@ export class LobbyPmsReservationSyncService {
    * Synchronisiert Reservierungen für einen Branch
    * 
    * @param branchId - Branch-ID
-   * @param startDate - Startdatum (optional, default: letzte 24 Stunden)
-   * @param endDate - Enddatum (optional, default: heute)
+   * @param startDate - Startdatum (optional, default: heute)
+   * @param endDate - Enddatum (optional, default: +30 Tage)
    * @returns Anzahl synchronisierter Reservierungen
    */
   static async syncReservationsForBranch(
@@ -67,9 +67,9 @@ export class LobbyPmsReservationSyncService {
       const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
 
       // Datum-Bereich bestimmen
-      // Standard: Letzte 24 Stunden (nur Reservierungen, die in den letzten 24h angelegt wurden)
+      // Standard: Letzte 24 Stunden bis +30 Tage (für neue und zukünftige Reservierungen)
       const syncStartDate = startDate || new Date(Date.now() - 24 * 60 * 60 * 1000); // -24 Stunden
-      const syncEndDate = endDate || new Date(); // Heute (keine zukünftigen Reservierungen)
+      const syncEndDate = endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 Tage
 
       // Hole Reservierungen von LobbyPMS und synchronisiere sie
       const syncedCount = await lobbyPmsService.syncReservations(syncStartDate, syncEndDate);
