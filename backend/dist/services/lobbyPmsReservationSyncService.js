@@ -100,7 +100,8 @@ class LobbyPmsReservationSyncService {
                 // Erstelle LobbyPMS Service für Branch
                 const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
                 // Datum-Bereich bestimmen
-                const syncStartDate = startDate || new Date();
+                // Standard: Letzte 24 Stunden bis +30 Tage (für neue und zukünftige Reservierungen)
+                const syncStartDate = startDate || new Date(Date.now() - 24 * 60 * 60 * 1000); // -24 Stunden
                 const syncEndDate = endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 Tage
                 // Hole Reservierungen von LobbyPMS und synchronisiere sie
                 const syncedCount = yield lobbyPmsService.syncReservations(syncStartDate, syncEndDate);

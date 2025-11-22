@@ -89,26 +89,33 @@
 
 ---
 
-### 4. Branch Settings Migration (edf6e13 - 20.11.2025)
+### 4. 🔴🔴 Branch Settings Migration (edf6e13 - 20.11.2025) - WAHRSCHENLICHE HAUPTURSACHE
 
 **Was wurde geändert:**
 - **MASSIVE Änderung**: Alle Services, Controller, Queues, Utils, etc. auf Branch-Settings umgestellt
 - **71+ Dateien geändert** (laut Commit-Message)
 - Branch-Settings werden jetzt überall verwendet
+- **Datum**: 20.11.2025 (vor 2 Tagen) - **KORRELIERT MIT PERFORMANCE-VERSCHLECHTERUNG!**
 
 **Code-Änderungen:**
 - Praktisch alle Backend-Dateien betroffen
 - Neue Branch-Settings-Struktur
 - Encryption/Decryption für Branch-Settings
 
-**Mögliche Probleme:**
-- **Viele Dateien geändert**: Höheres Fehlerrisiko
-- **Encryption/Decryption**: Könnte Performance-Impact haben
-- **Settings-Laden**: Wird bei jedem Request gemacht?
+**🔴 KRITISCHES PROBLEM:**
+- **Encryption/Decryption bei jedem Request**: Branch-Settings werden bei jedem Request entschlüsselt
+- **AES-256-GCM Verschlüsselung ist CPU-intensiv**: Jede Entschlüsselung kostet CPU-Zyklen
+- **Bei 214 Requests für `/api/worktime/active`**: 214 Entschlüsselungen pro Minute
+- **Kombiniert mit anderen Requests**: Hunderte Entschlüsselungen pro Minute
+
+**Warum jetzt auf einmal?**
+- **Vorher**: Branch-Settings wurden nicht überall verwendet / nicht entschlüsselt
+- **Nach Migration (20.11.)**: Branch-Settings werden bei JEDEM Request geladen und entschlüsselt
+- **Resultat**: System wurde langsam, obwohl `/api/worktime/active` schon lange existiert
 
 **Status:**
 - ✅ Implementiert
-- ⚠️ Performance-Impact nicht gemessen
+- ❌ **Performance-Impact: HOCH** - System wurde deutlich langsamer nach dieser Änderung
 
 ---
 
@@ -202,6 +209,19 @@
 - CPU-Last bleibt auch zwischen Scheduler-Läufen hoch
 - **FAZIT**: Scheduler ist ausgeschlossen als Hauptursache
 - **HINWEIS**: Logs zeigen noch Fehler für Branch 17/18, aber das ist nicht die Hauptursache der Performance-Probleme
+
+### ✅ Prisma-Refactoring Status (KEIN Problem)
+
+**Status**: Prisma-Refactoring wurde erfolgreich umgesetzt (71 Instanzen → 1 zentrale Instanz)
+- ✅ Server läuft mit zentraler Prisma-Instanz (69 Imports von utils/prisma)
+- ✅ Keine neuen PrismaClient-Instanzen mehr im Code (nur noch 1 in utils/prisma.ts)
+- ✅ Connection Pool ist konfiguriert: `connection_limit=20&pool_timeout=20` in DATABASE_URL
+- ✅ Keine Connection Pool Timeout Fehler in Logs
+- ✅ PostgreSQL zeigt nur 2 aktive Verbindungen (OK)
+
+**Fazit**: Das Prisma-Refactoring ist **NICHT** die Ursache des Performance-Problems.
+
+---
 
 ### 🔴 AKTUELLE HAUPTURSACHE (Stand: 2025-11-22 02:10 UTC)
 
