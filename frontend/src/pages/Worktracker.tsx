@@ -160,7 +160,7 @@ const reservationTableToCardMapping: Record<string, string[]> = {
   'actions': [] // Keine Card-Entsprechung
 };
 
-// Reservations: Reverse Mapping: Card-Metadaten -> Tabellen-Spalten
+// Reservations: Reverse Mapping: Card-Metadaten -> Tabellen-Spalten (1:1 Mapping)
 const reservationCardToTableMapping: Record<string, string> = {
   'guestName': 'guestName',
   'status': 'status',
@@ -194,16 +194,6 @@ const getReservationCardMetadataFromColumnOrder = (columnOrder: string[]): strin
     }
   });
   return cardMetadata;
-};
-
-// Helper-Funktion für LobbyPMS Check-in-Link-Generierung
-const generateLobbyPmsCheckInLink = (reservationId: number, guestEmail: string, language: string = 'GB'): string => {
-    const baseUrl = 'https://app.lobbypms.com/checkinonline/confirmar';
-    const params = new URLSearchParams();
-    params.append('codigo', reservationId.toString());
-    params.append('email', guestEmail);
-    params.append('lg', language);
-    return `${baseUrl}?${params.toString()}`;
 };
 
 const Worktracker: React.FC = () => {
@@ -1392,11 +1382,11 @@ const Worktracker: React.FC = () => {
                                 </div>
                                 
                                 {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
-                                <div className="flex items-center gap-1.5 flex-wrap">
+                                <div className="flex items-center gap-1.5">
                                     <input
                                         type="text"
                                         placeholder={t('common.search') + '...'}
-                                        className="w-full sm:w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
@@ -1573,20 +1563,31 @@ const Worktracker: React.FC = () => {
                             </div>
 
                             {/* Filter-Pane */}
-                            {isFilterModalOpen && (activeTab === 'todos' || activeTab === 'reservations') && (
+                            {isFilterModalOpen && (
                                 <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
-                                    <FilterPane
-                                    columns={activeTab === 'todos'
-                                        ? [...availableColumns, ...filterOnlyColumns]
-                                        : [...availableReservationColumns, ...reservationFilterOnlyColumns]}
-                                    onApply={activeTab === 'todos' ? applyFilterConditions : applyReservationFilterConditions}
-                                    onReset={activeTab === 'todos' ? resetFilterConditions : resetReservationFilterConditions}
-                                    savedConditions={activeTab === 'todos' ? filterConditions : reservationFilterConditions}
-                                    savedOperators={activeTab === 'todos' ? filterLogicalOperators : reservationFilterLogicalOperators}
-                                    savedSortDirections={activeTab === 'todos' ? filterSortDirections : undefined}
-                                    onSortDirectionsChange={activeTab === 'todos' ? setFilterSortDirections : undefined}
-                                    tableId={activeTab === 'todos' ? TODOS_TABLE_ID : RESERVATIONS_TABLE_ID}
-                                />
+                                    {activeTab === 'todos' ? (
+                                        <FilterPane
+                                            columns={[...availableColumns, ...filterOnlyColumns]}
+                                            onApply={applyFilterConditions}
+                                            onReset={resetFilterConditions}
+                                            savedConditions={filterConditions}
+                                            savedOperators={filterLogicalOperators}
+                                            savedSortDirections={filterSortDirections}
+                                            onSortDirectionsChange={setFilterSortDirections}
+                                            tableId={TODOS_TABLE_ID}
+                                        />
+                                    ) : (
+                                        <FilterPane
+                                            columns={[...availableReservationColumns, ...reservationFilterOnlyColumns]}
+                                            onApply={applyReservationFilterConditions}
+                                            onReset={resetReservationFilterConditions}
+                                            savedConditions={reservationFilterConditions}
+                                            savedOperators={reservationFilterLogicalOperators}
+                                            savedSortDirections={reservationFilterSortDirections}
+                                            onSortDirectionsChange={setReservationFilterSortDirections}
+                                            tableId={RESERVATIONS_TABLE_ID}
+                                        />
+                                    )}
                                 </div>
                             )}
 
@@ -2062,30 +2063,29 @@ const Worktracker: React.FC = () => {
                                                 }
                                                 
                                                 // Mitte: Check-in Link (direkt unter Zahlungslink)
-                                                // Generiere LobbyPMS Check-in-Link (analog zu Backend generateLobbyPmsCheckInLink)
                                                 const checkInLink = reservation.guestEmail 
-                                                    ? generateLobbyPmsCheckInLink(reservation.id, reservation.guestEmail)
+                                                    ? `https://app.lobbypms.com/checkinonline/confirmar?codigo=${reservation.id}&email=${encodeURIComponent(reservation.guestEmail)}&lg=GB`
                                                     : null;
                                                 if (checkInLink) {
                                                     metadata.push({
-                                                        icon: <LinkIcon className="h-4 w-4" />,
-                                                        value: (
-                                                            <div className="relative group">
-                                                                <a 
-                                                                    href={checkInLink} 
-                                                                    target="_blank" 
-                                                                    rel="noopener noreferrer"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    className="text-gray-900 dark:text-white"
-                                                                >
-                                                                    {t('reservations.checkInLink', 'Check-in Link')}
-                                                                </a>
-                                                                <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                    {checkInLink}
-                                                                </div>
+                                                    icon: <LinkIcon className="h-4 w-4" />,
+                                                    value: (
+                                                        <div className="relative group">
+                                                            <a 
+                                                                href={checkInLink} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-gray-900 dark:text-white"
+                                                            >
+                                                                {t('reservations.checkInLink', 'Check-in Link')}
+                                                            </a>
+                                                            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {checkInLink}
                                                             </div>
-                                                        ),
-                                                        section: 'center'
+                                                        </div>
+                                                    ),
+                                                    section: 'center'
                                                     });
                                                 }
                                                 
@@ -2504,11 +2504,11 @@ const Worktracker: React.FC = () => {
                                 </div>
                                 
                                 {/* Rechte Seite: Suchfeld, Sync-Button (nur Reservations), Filter-Button, Status-Filter, Spalten-Konfiguration */}
-                                <div className="flex items-center gap-1.5 flex-wrap">
+                                <div className="flex items-center gap-1.5">
                                     <input
                                         type="text"
                                         placeholder={t('common.search') + '...'}
-                                        className="w-full sm:w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                         value={activeTab === 'todos' ? searchTerm : reservationSearchTerm}
                                         onChange={(e) => {
                                             if (activeTab === 'todos') {
@@ -2624,32 +2624,38 @@ const Worktracker: React.FC = () => {
                                                 : settings.columnOrder}
                                             onToggleColumnVisibility={(columnId) => {
                                                 if (viewMode === 'cards') {
-                                                    const tableColumn = activeTab === 'todos' 
-                                                        ? cardToTableMapping[columnId]
-                                                        : reservationCardToTableMapping[columnId];
-                                                    if (tableColumn) {
-                                                        // Spezielle Logik für responsibleAndQualityControl (nur bei Todos)
-                                                        if (activeTab === 'todos' && tableColumn === 'responsibleAndQualityControl') {
-                                                            // Prüfe ob beide bereits ausgeblendet sind
-                                                            const otherCardMeta = columnId === 'responsible' ? 'qualityControl' : 'responsible';
-                                                            const otherHidden = hiddenCardMetadata.has(otherCardMeta);
-                                                            const currentlyHidden = settings.hiddenColumns.includes(tableColumn);
-                                                            
-                                                            if (currentlyHidden && !otherHidden) {
-                                                                // Eine der beiden wird wieder angezeigt, also responsibleAndQualityControl wieder anzeigen
-                                                                toggleColumnVisibility(tableColumn);
-                                                            } else if (!currentlyHidden && otherHidden) {
-                                                                // Die andere ist bereits ausgeblendet, also responsibleAndQualityControl ausblenden
-                                                                toggleColumnVisibility(tableColumn);
-                                                            } else if (!currentlyHidden) {
-                                                                // Erste wird ausgeblendet, responsibleAndQualityControl ausblenden
-                                                                toggleColumnVisibility(tableColumn);
+                                                    if (activeTab === 'todos') {
+                                                        const tableColumn = cardToTableMapping[columnId];
+                                                        if (tableColumn) {
+                                                            // Spezielle Logik für responsibleAndQualityControl
+                                                            if (tableColumn === 'responsibleAndQualityControl') {
+                                                                // Prüfe ob beide bereits ausgeblendet sind
+                                                                const otherCardMeta = columnId === 'responsible' ? 'qualityControl' : 'responsible';
+                                                                const otherHidden = hiddenCardMetadata.has(otherCardMeta);
+                                                                const currentlyHidden = settings.hiddenColumns.includes(tableColumn);
+                                                                
+                                                                if (currentlyHidden && !otherHidden) {
+                                                                    // Eine der beiden wird wieder angezeigt, also responsibleAndQualityControl wieder anzeigen
+                                                                    toggleColumnVisibility(tableColumn);
+                                                                } else if (!currentlyHidden && otherHidden) {
+                                                                    // Die andere ist bereits ausgeblendet, also responsibleAndQualityControl ausblenden
+                                                                    toggleColumnVisibility(tableColumn);
+                                                                } else if (!currentlyHidden) {
+                                                                    // Erste wird ausgeblendet, responsibleAndQualityControl ausblenden
+                                                                    toggleColumnVisibility(tableColumn);
+                                                                } else {
+                                                                    // Beide sind ausgeblendet, eine wird wieder angezeigt
+                                                                    toggleColumnVisibility(tableColumn);
+                                                                }
                                                             } else {
-                                                                // Beide sind ausgeblendet, eine wird wieder angezeigt
+                                                                // Normale Spalte: direkt ein/ausblenden
                                                                 toggleColumnVisibility(tableColumn);
                                                             }
-                                                        } else {
-                                                            // Normale Spalte: direkt ein/ausblenden
+                                                        }
+                                                    } else {
+                                                        // Reservations: 1:1 Mapping
+                                                        const tableColumn = reservationCardToTableMapping[columnId];
+                                                        if (tableColumn) {
                                                             toggleColumnVisibility(tableColumn);
                                                         }
                                                     }
@@ -2667,26 +2673,36 @@ const Worktracker: React.FC = () => {
                                                     const newTableOrder: string[] = [];
                                                     const usedTableColumns = new Set<string>();
                                                     
-                                                    const mapping = activeTab === 'todos' 
-                                                        ? cardToTableMapping 
-                                                        : reservationCardToTableMapping;
-                                                    const availableCols = activeTab === 'todos' 
-                                                        ? availableColumns 
-                                                        : availableReservationColumns;
-                                                    
-                                                    newCardOrder.forEach(cardMeta => {
-                                                        const tableCol = mapping[cardMeta];
-                                                        if (tableCol && !usedTableColumns.has(tableCol)) {
-                                                            usedTableColumns.add(tableCol);
-                                                            newTableOrder.push(tableCol);
-                                                        }
-                                                    });
-                                                    
-                                                    availableCols.forEach(col => {
-                                                        if (!newTableOrder.includes(col.id) && col.id !== 'actions') {
-                                                            newTableOrder.push(col.id);
-                                                        }
-                                                    });
+                                                    if (activeTab === 'todos') {
+                                                        newCardOrder.forEach(cardMeta => {
+                                                            const tableCol = cardToTableMapping[cardMeta];
+                                                            if (tableCol && !usedTableColumns.has(tableCol)) {
+                                                                usedTableColumns.add(tableCol);
+                                                                newTableOrder.push(tableCol);
+                                                            }
+                                                        });
+                                                        
+                                                        availableColumns.forEach(col => {
+                                                            if (!newTableOrder.includes(col.id) && col.id !== 'actions') {
+                                                                newTableOrder.push(col.id);
+                                                            }
+                                                        });
+                                                    } else {
+                                                        // Reservations: 1:1 Mapping
+                                                        newCardOrder.forEach(cardMeta => {
+                                                            const tableCol = reservationCardToTableMapping[cardMeta];
+                                                            if (tableCol && !usedTableColumns.has(tableCol)) {
+                                                                usedTableColumns.add(tableCol);
+                                                                newTableOrder.push(tableCol);
+                                                            }
+                                                        });
+                                                        
+                                                        availableReservationColumns.forEach(col => {
+                                                            if (!newTableOrder.includes(col.id) && col.id !== 'actions') {
+                                                                newTableOrder.push(col.id);
+                                                            }
+                                                        });
+                                                    }
                                                     
                                                     updateColumnOrder(newTableOrder);
                                                 }
@@ -2728,18 +2744,31 @@ const Worktracker: React.FC = () => {
                             </div>
 
                             {/* Filter-Pane */}
-                            {isFilterModalOpen && activeTab === 'todos' && (
+                            {isFilterModalOpen && (
                                 <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
-                                    <FilterPane
-                                    columns={[...availableColumns, ...filterOnlyColumns]}
-                                    onApply={applyFilterConditions}
-                                    onReset={resetFilterConditions}
-                                    savedConditions={filterConditions}
-                                    savedOperators={filterLogicalOperators}
-                                    savedSortDirections={filterSortDirections}
-                                    onSortDirectionsChange={setFilterSortDirections}
-                                    tableId={TODOS_TABLE_ID}
-                                />
+                                    {activeTab === 'todos' ? (
+                                        <FilterPane
+                                            columns={[...availableColumns, ...filterOnlyColumns]}
+                                            onApply={applyFilterConditions}
+                                            onReset={resetFilterConditions}
+                                            savedConditions={filterConditions}
+                                            savedOperators={filterLogicalOperators}
+                                            savedSortDirections={filterSortDirections}
+                                            onSortDirectionsChange={setFilterSortDirections}
+                                            tableId={TODOS_TABLE_ID}
+                                        />
+                                    ) : (
+                                        <FilterPane
+                                            columns={[...availableReservationColumns, ...reservationFilterOnlyColumns]}
+                                            onApply={applyReservationFilterConditions}
+                                            onReset={resetReservationFilterConditions}
+                                            savedConditions={reservationFilterConditions}
+                                            savedOperators={reservationFilterLogicalOperators}
+                                            savedSortDirections={reservationFilterSortDirections}
+                                            onSortDirectionsChange={setReservationFilterSortDirections}
+                                            tableId={RESERVATIONS_TABLE_ID}
+                                        />
+                                    )}
                                 </div>
                             )}
 
@@ -3211,30 +3240,29 @@ const Worktracker: React.FC = () => {
                                                 }
                                                 
                                                 // Mitte: Check-in Link (direkt unter Zahlungslink)
-                                                // Generiere LobbyPMS Check-in-Link (analog zu Backend generateLobbyPmsCheckInLink)
                                                 const checkInLink = reservation.guestEmail 
-                                                    ? generateLobbyPmsCheckInLink(reservation.id, reservation.guestEmail)
+                                                    ? `https://app.lobbypms.com/checkinonline/confirmar?codigo=${reservation.id}&email=${encodeURIComponent(reservation.guestEmail)}&lg=GB`
                                                     : null;
                                                 if (checkInLink) {
                                                     metadata.push({
-                                                        icon: <LinkIcon className="h-4 w-4" />,
-                                                        value: (
-                                                            <div className="relative group">
-                                                                <a 
-                                                                    href={checkInLink} 
-                                                                    target="_blank" 
-                                                                    rel="noopener noreferrer"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    className="text-gray-900 dark:text-white"
-                                                                >
-                                                                    {t('reservations.checkInLink', 'Check-in Link')}
-                                                                </a>
-                                                                <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                    {checkInLink}
-                                                                </div>
+                                                    icon: <LinkIcon className="h-4 w-4" />,
+                                                    value: (
+                                                        <div className="relative group">
+                                                            <a 
+                                                                href={checkInLink} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-gray-900 dark:text-white"
+                                                            >
+                                                                {t('reservations.checkInLink', 'Check-in Link')}
+                                                            </a>
+                                                            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {checkInLink}
                                                             </div>
-                                                        ),
-                                                        section: 'center'
+                                                        </div>
+                                                    ),
+                                                    section: 'center'
                                                     });
                                                 }
                                                 

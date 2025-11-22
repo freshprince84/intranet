@@ -502,4 +502,5 @@ const Header: React.FC = () => {
     );
 };
 
-export default Header; 
+// ✅ PERFORMANCE: React.memo() verhindert unnötige Re-Renders bei Seitenwechseln
+export default React.memo(Header); 

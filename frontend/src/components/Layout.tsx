@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import Header from './Header.tsx';
 import Sidebar from './Sidebar.tsx';
 import { useWorktime } from '../contexts/WorktimeContext.tsx';
@@ -10,8 +10,23 @@ import { useTheme } from '../contexts/ThemeContext.tsx';
 const Layout: React.FC = () => {
   const { isTracking } = useWorktime();
   const { isDarkMode } = useTheme();
+  const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isTabletOrLarger, setIsTabletOrLarger] = useState(window.innerWidth >= 768);
+
+  // ✅ PERFORMANCE: Event-Listener für Navigation ohne Browser-Reload
+  useEffect(() => {
+    const handleRedirect = (event: CustomEvent) => {
+      const path = (event.detail?.path as string) || '/login';
+      navigate(path, { replace: true });
+    };
+    
+    window.addEventListener('auth:redirect-to-login', handleRedirect as EventListener);
+    
+    return () => {
+      window.removeEventListener('auth:redirect-to-login', handleRedirect as EventListener);
+    };
+  }, [navigate]);
 
   // Überwache Bildschirmgröße für responsives Verhalten
   useEffect(() => {
