@@ -1242,7 +1242,7 @@ const Worktracker: React.FC = () => {
             if (reservationSearchTerm) {
                 const searchLower = reservationSearchTerm.toLowerCase();
                 const matchesSearch = 
-                    reservation.guestName.toLowerCase().includes(searchLower) ||
+                    (reservation.guestName && reservation.guestName.toLowerCase().includes(searchLower)) ||
                     (reservation.guestEmail && reservation.guestEmail.toLowerCase().includes(searchLower)) ||
                     (reservation.guestPhone && reservation.guestPhone.toLowerCase().includes(searchLower)) ||
                     (reservation.roomNumber && reservation.roomNumber.toLowerCase().includes(searchLower)) ||
@@ -1268,8 +1268,8 @@ const Worktracker: React.FC = () => {
                     
                     switch (columnId) {
                         case 'guestName':
-                            valueA = a.guestName.toLowerCase();
-                            valueB = b.guestName.toLowerCase();
+                            valueA = (a.guestName || '').toLowerCase();
+                            valueB = (b.guestName || '').toLowerCase();
                             break;
                         case 'status':
                             valueA = a.status.toLowerCase();
@@ -1996,10 +1996,29 @@ const Worktracker: React.FC = () => {
                             ) : activeTab === 'todos' ? (
                                 /* Card-Ansicht - Tasks - ohne Box-Schattierung, Cards auf voller Breite */
                                 <div className="-mx-3 sm:-mx-4 md:-mx-6">
-                                    {loading ? (
-                                        <div className="flex justify-center py-12">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                        </div>
+                                    {/* ✅ PERFORMANCE: Skeleton-Loading für LCP-Element (sofort sichtbar, auch ohne Daten) */}
+                                    {loading && tasks.length === 0 ? (
+                                        <CardGrid>
+                                            {Array(3).fill(null).map((_, i) => (
+                                                <div key={`skeleton-${i}`} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm">
+                                                    <div className="animate-pulse space-y-4">
+                                                        {/* LCP-Element: Titel-Skeleton */}
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+                                                            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded flex-1 min-w-0"></div>
+                                                        </div>
+                                                        {/* Status-Skeleton */}
+                                                        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                                                        {/* Metadaten-Skeleton */}
+                                                        <div className="space-y-2">
+                                                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                                                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                                                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </CardGrid>
                                     ) : error ? (
                                         <div className="flex justify-center py-12 text-red-600 dark:text-red-400">
                                             {error}
@@ -3179,10 +3198,29 @@ const Worktracker: React.FC = () => {
                             ) : activeTab === 'todos' ? (
                                 /* Card-Ansicht - Tasks - ohne Box-Schattierung, Cards auf voller Breite */
                                 <div className="-mx-3 sm:-mx-4 md:-mx-6">
-                                    {loading ? (
-                                        <div className="flex justify-center py-12">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                        </div>
+                                    {/* ✅ PERFORMANCE: Skeleton-Loading für LCP-Element (sofort sichtbar, auch ohne Daten) */}
+                                    {loading && tasks.length === 0 ? (
+                                        <CardGrid>
+                                            {Array(3).fill(null).map((_, i) => (
+                                                <div key={`skeleton-${i}`} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm">
+                                                    <div className="animate-pulse space-y-4">
+                                                        {/* LCP-Element: Titel-Skeleton */}
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+                                                            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded flex-1 min-w-0"></div>
+                                                        </div>
+                                                        {/* Status-Skeleton */}
+                                                        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                                                        {/* Metadaten-Skeleton */}
+                                                        <div className="space-y-2">
+                                                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                                                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                                                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </CardGrid>
                                     ) : error ? (
                                         <div className="flex justify-center py-12 text-red-600 dark:text-red-400">
                                             {error}
