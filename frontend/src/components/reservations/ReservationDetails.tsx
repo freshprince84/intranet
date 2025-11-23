@@ -355,24 +355,7 @@ const ReservationDetails: React.FC = () => {
         />
       )}
 
-      {/* Versendete Nachricht anzeigen */}
-      {reservation.sentMessage && (
-        <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {t('reservations.sentMessage', 'Versendete Nachricht')}
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-            {reservation.sentMessage}
-          </p>
-          {reservation.sentMessageAt && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              {t('reservations.sentAt', 'Versendet am')}: {formatDateTime(reservation.sentMessageAt)}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Notification Logs */}
+      {/* Notification Logs - zeigt alle versendeten Mitteilungen */}
       <div className="mt-6">
         <ReservationNotificationLogs reservationId={reservation.id} />
       </div>

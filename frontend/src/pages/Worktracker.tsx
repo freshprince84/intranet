@@ -11,6 +11,7 @@ import EditTaskModal from '../components/EditTaskModal.tsx';
 import CreateReservationModal from '../components/reservations/CreateReservationModal.tsx';
 import SendInvitationSidepane from '../components/reservations/SendInvitationSidepane.tsx';
 import SendPasscodeSidepane from '../components/reservations/SendPasscodeSidepane.tsx';
+import ReservationNotificationLogs from '../components/reservations/ReservationNotificationLogs.tsx';
 import { Reservation, ReservationStatus, PaymentStatus } from '../types/reservation.ts';
 import { useNavigate } from 'react-router-dom';
 import useMessage from '../hooks/useMessage.ts';
@@ -2453,28 +2454,13 @@ const Worktracker: React.FC = () => {
                                                     </div>
                                                 ) : null;
                                                 
-                                                // Expandable Content für Details (nur wenn sentMessage vorhanden)
+                                                // Expandable Content für Details - zeigt alle Notification-Logs
                                                 const isExpanded = expandedReservationRows.has(reservation.id);
-                                                const formatMessageDate = (dateString: string | null) => {
-                                                    if (!dateString) return '';
-                                                    try {
-                                                        return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
-                                                    } catch {
-                                                        return dateString;
-                                                    }
-                                                };
-                                                const expandableContent = reservation.sentMessage ? (
-                                                    <div className="mt-2 pt-3 border-t border-gray-200 dark:border-gray-700">
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                                                            {reservation.sentMessage}
-                                                        </div>
-                                                        {reservation.sentMessageAt && (
-                                                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                                                                {t('reservations.sentAt', 'Versendet am')} {formatMessageDate(reservation.sentMessageAt)}
-                                                            </div>
-                                                        )}
+                                                const expandableContent = (
+                                                    <div className="mt-2 pt-3">
+                                                        <ReservationNotificationLogs reservationId={reservation.id} />
                                                     </div>
-                                                ) : undefined;
+                                                );
                                                 
                                                 return (
                                                     <DataCard
@@ -3646,28 +3632,13 @@ const Worktracker: React.FC = () => {
                                                     </div>
                                                 ) : null;
                                                 
-                                                // Expandable Content für Details (nur wenn sentMessage vorhanden)
+                                                // Expandable Content für Details - zeigt alle Notification-Logs
                                                 const isExpanded = expandedReservationRows.has(reservation.id);
-                                                const formatMessageDate = (dateString: string | null) => {
-                                                    if (!dateString) return '';
-                                                    try {
-                                                        return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
-                                                    } catch {
-                                                        return dateString;
-                                                    }
-                                                };
-                                                const expandableContent = reservation.sentMessage ? (
-                                                    <div className="mt-2 pt-3 border-t border-gray-200 dark:border-gray-700">
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                                                            {reservation.sentMessage}
-                                                        </div>
-                                                        {reservation.sentMessageAt && (
-                                                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                                                                {t('reservations.sentAt', 'Versendet am')} {formatMessageDate(reservation.sentMessageAt)}
-                                                            </div>
-                                                        )}
+                                                const expandableContent = (
+                                                    <div className="mt-2 pt-3">
+                                                        <ReservationNotificationLogs reservationId={reservation.id} />
                                                     </div>
-                                                ) : undefined;
+                                                );
                                                 
                                                 return (
                                                     <DataCard

@@ -807,7 +807,7 @@ const DataCard: React.FC<DataCardProps> = ({
             )}
           </button>
           {expandable.isExpanded && (
-            <div className="mt-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-2 pt-3">
               {expandable.content}
             </div>
           )}
