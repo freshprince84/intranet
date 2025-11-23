@@ -37,19 +37,36 @@ export const evaluateCondition = (
 
   // String operations
   // Sicherstellen, dass fieldValue und value Strings sind, bevor toLowerCase() aufgerufen wird
-  let strField: string;
-  let strValue: string;
+  let strField: string = '';
+  let strValue: string = '';
   
   try {
-    strField = typeof fieldValue === 'string' ? fieldValue.toLowerCase() : String(fieldValue ?? '').toLowerCase();
-    strValue = typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
+    // Konvertiere fieldValue zu String, auch wenn es ein Objekt ist
+    const fieldValueStr = fieldValue == null ? '' : (typeof fieldValue === 'string' ? fieldValue : String(fieldValue));
+    if (typeof fieldValueStr !== 'string') {
+      return false;
+    }
+    strField = fieldValueStr.toLowerCase();
+    if (strField === undefined || strField === null) {
+      return false;
+    }
+    
+    // Konvertiere value zu String, auch wenn es ein Objekt ist
+    const valueStr = value == null ? '' : (typeof value === 'string' ? value : String(value));
+    if (typeof valueStr !== 'string') {
+      return false;
+    }
+    strValue = valueStr.toLowerCase();
+    if (strValue === undefined || strValue === null) {
+      return false;
+    }
   } catch (error) {
     // Falls toLowerCase() fehlschlägt, gebe false zurück
     return false;
   }
 
-  // Sicherstellen, dass strField und strValue Strings sind
-  if (typeof strField !== 'string' || typeof strValue !== 'string' || strField === undefined || strValue === undefined) {
+  // Sicherstellen, dass strField und strValue Strings sind und nicht undefined
+  if (typeof strField !== 'string' || typeof strValue !== 'string' || strField === undefined || strValue === undefined || strField === null || strValue === null) {
     return false;
   }
 
@@ -63,6 +80,10 @@ export const evaluateCondition = (
     case 'startsWith':
       return strField.startsWith(strValue);
     case 'endsWith':
+      // Zusätzliche Sicherheitsprüfung vor endsWith
+      if (strField == null || typeof strField !== 'string') {
+        return false;
+      }
       return strField.endsWith(strValue);
     case 'before':
     case 'after': {
@@ -336,7 +357,7 @@ export const evaluateResponsibleAndQualityControl = (
   } else if (condition.operator === 'notEquals') {
     return (responsibleText?.toLowerCase() !== valueLower) && (qualityControlText?.toLowerCase() !== valueLower);
   } else if (condition.operator === 'contains') {
-    return (responsibleText?.toLowerCase().includes(valueLower)) || (qualityControlText?.toLowerCase().includes(valueLower));
+    return (responsibleText?.toLowerCase()?.includes(valueLower) ?? false) || (qualityControlText?.toLowerCase()?.includes(valueLower) ?? false);
   }
   
   return false;
