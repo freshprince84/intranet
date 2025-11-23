@@ -619,6 +619,30 @@ export class BoldPaymentService {
                 // Weiter ohne TTLock Code
               }
 
+              // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
+              // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
+              console.log(`[Bold Payment Webhook] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${ttlockCode ? `(${ttlockCode})` : ''} wird nur im Frontend angezeigt`);
+              
+              // Log: Versendung deaktiviert
+              try {
+                await prisma.reservationNotificationLog.create({
+                  data: {
+                    reservationId: reservation.id,
+                    notificationType: 'pin',
+                    channel: 'whatsapp',
+                    success: false,
+                    sentAt: new Date(),
+                    sentTo: updatedReservation.guestPhone || null,
+                    errorMessage: 'WhatsApp-Versendung temporär deaktiviert - Code wird nur im Frontend angezeigt'
+                  }
+                });
+              } catch (logError) {
+                console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags:', logError);
+              }
+
+              // ⚠️ TEMPORÄR AUSKOMMENTIERT - WhatsApp-Versendung nach TTLock-Webhook
+              // TODO: Wieder aktivieren, wenn gewünscht
+              /*
               // Sende WhatsApp-Nachricht mit TTLock Code
               try {
                 const whatsappService = updatedReservation.branchId
@@ -795,6 +819,7 @@ ${ttlockCode}
                 }
                 // Fehler nicht weiterwerfen
               }
+              */
             } else {
               // Keine Kontaktinfo vorhanden - Log erstellen
               try {

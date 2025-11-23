@@ -100,6 +100,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const [visibleTagCount, setVisibleTagCount] = useState(4); // Fallback für SSR
   const [containerWidth, setContainerWidth] = useState(0);
   const [measuredTagWidths, setMeasuredTagWidths] = useState<Map<number, number>>(new Map());
+  const [isMeasuring, setIsMeasuring] = useState(true); // Initial alle Tags rendern für Messung
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Dropdown State für überlaufende Tags
@@ -444,9 +445,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   }, [showOptimisticFilters, tableId]);
 
   const displayFilters = showOptimisticFilters ? optimisticFilters : sortedFilters.filter(f => f != null);
-  const currentVisibleCount = showOptimisticFilters ? optimisticFilters.length : visibleTagCount;
+  // Beim Messen: Alle Tags rendern, sonst nur sichtbare
+  const currentVisibleCount = showOptimisticFilters 
+    ? optimisticFilters.length 
+    : (isMeasuring ? sortedFilters.length : visibleTagCount);
 
-  // Tag-Breiten-Berechnung: Verwende gemessene Breiten wenn verfügbar, sonst Schätzung
+  // Tag-Breiten-Berechnung: Verwende gemessene Breiten wenn verfügbar, sonst aggressive Schätzung
   const averageTagWidth = useMemo(() => {
     if (sortedFilters.length === 0) return 75;
     
@@ -456,32 +460,34 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       return widths.reduce((sum, width) => sum + width, 0) / widths.length;
     }
     
-    // Fallback: Konservativere Schätzung (5.5px pro Zeichen statt 6.5px)
+    // Fallback: Aggressivere Schätzung (4.5px pro Zeichen - optimistischer für große Bildschirme)
     return sortedFilters
       .filter(filter => filter != null)
       .reduce((sum, filter) => {
-        // Konservativere Schätzung: ~5.5px pro Zeichen + 28px Padding + optional Delete-Button
+        // Aggressivere Schätzung: ~4.5px pro Zeichen + 24px Padding + optional Delete-Button
         const deleteButtonWidth = !isStandardFilter(filter.name) ? 18 : 0;
-        return sum + (filter.name.length * 5.5 + 28 + deleteButtonWidth);
+        return sum + (filter.name.length * 4.5 + 24 + deleteButtonWidth);
       }, 0) / sortedFilters.filter(filter => filter != null).length;
   }, [sortedFilters, measuredTagWidths]);
 
   // Optimierte Sichtbarkeits-Berechnung mit useCallback
   const calculateVisibleTags = useCallback(() => {
     if (!containerRef.current || sortedFilters.length === 0) return;
+    // Nicht berechnen während Messung
+    if (isMeasuring) return;
 
     const container = containerRef.current;
     const currentWidth = container.clientWidth;
     
     // Nur neu berechnen wenn sich die Breite signifikant geändert hat (>= 10px statt 45px)
-    if (Math.abs(currentWidth - containerWidth) < 10) return;
+    if (Math.abs(currentWidth - containerWidth) < 10 && containerWidth > 0) return;
     
     setContainerWidth(currentWidth);
     
     // Reduzierte, realistischere UI-Element-Breiten
     const DROPDOWN_BUTTON_WIDTH = 60; // Reduziert von 70
     const GAPS_AND_MARGINS = 8; // Reduziert von 14 (gap-1.5 = 6px, gap-2 = 8px)
-    const BUFFER = 6; // Reduziert von 15 (nur minimaler Sicherheitspuffer)
+    const BUFFER = 4; // Noch weiter reduziert von 6 (minimaler Puffer)
     
     const availableWidth = currentWidth - GAPS_AND_MARGINS - BUFFER;
     
@@ -499,7 +505,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       // Zeige berechnete Anzahl (OHNE -1, damit alle Tags angezeigt werden wenn möglich)
       setVisibleTagCount(Math.min(tagsWithDropdown, sortedFilters.length));
     }
-  }, [sortedFilters, averageTagWidth, containerWidth]);
+  }, [sortedFilters, averageTagWidth, containerWidth, isMeasuring]);
 
   // Debounced ResizeObserver für bessere Performance
   const handleResize = useCallback(() => {
@@ -538,8 +544,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     const widths = new Map<number, number>();
     let hasMeasurements = false;
     
-    // Messen der tatsächlichen Breiten der gerenderten Tags
-    sortedFilters.slice(0, Math.min(visibleTagCount + 5, sortedFilters.length)).forEach((filter, index) => {
+    // Beim ersten Messen: Alle Tags messen (wenn isMeasuring true)
+    // Später: Nur die sichtbaren + ein paar mehr messen
+    const tagsToMeasure = isMeasuring 
+      ? sortedFilters.length 
+      : Math.min(visibleTagCount + 5, sortedFilters.length);
+    
+    sortedFilters.slice(0, tagsToMeasure).forEach((filter) => {
       const tagElement = tagRefs.current.get(filter.id);
       if (tagElement) {
         const width = tagElement.offsetWidth;
@@ -552,13 +563,33 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     
     if (hasMeasurements) {
       setMeasuredTagWidths(widths);
+      // Nach erfolgreicher Messung: Messmodus beenden und neu berechnen
+      if (isMeasuring) {
+        setIsMeasuring(false);
+        // Trigger Neuberechnung durch setTimeout (nach State-Update)
+        setTimeout(() => {
+          if (containerRef.current) {
+            calculateVisibleTags();
+          }
+        }, 0);
+      }
     }
-  }, [sortedFilters, visibleTagCount]);
+  }, [sortedFilters, visibleTagCount, isMeasuring, calculateVisibleTags]);
 
-  // Initial calculation nach Filter-Änderungen
+  // Initial calculation nach Filter-Änderungen (nur wenn nicht im Messmodus)
   useLayoutEffect(() => {
-    calculateVisibleTags();
-  }, [calculateVisibleTags]);
+    if (!isMeasuring) {
+      calculateVisibleTags();
+    }
+  }, [calculateVisibleTags, isMeasuring]);
+  
+  // Reset Messmodus wenn sich Filter ändern
+  useEffect(() => {
+    if (sortedFilters.length > 0) {
+      setIsMeasuring(true);
+      setMeasuredTagWidths(new Map());
+    }
+  }, [sortedFilters.length]);
 
   // Sortiere Gruppen nach order (MUSS vor frühen Returns sein!)
   const sortedGroups = useMemo(() => {
