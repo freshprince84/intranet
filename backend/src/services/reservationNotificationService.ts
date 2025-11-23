@@ -849,6 +849,14 @@ ${paymentLink}
       }
 
       // Versende Benachrichtigungen
+      let emailSuccess = false;
+      let whatsappSuccess = false;
+      let emailError: string | null = null;
+      let whatsappError: string | null = null;
+      const messageText = doorPin 
+        ? `Hola ${reservation.guestName},\n\n¡Bienvenido a La Familia Hostel!\n\nTu código de acceso TTLock:\n${doorPin}\n\n¡Te esperamos!`
+        : null;
+
       if (notificationChannels.includes('email') && reservation.guestEmail) {
         try {
           await this.sendCheckInConfirmationEmail(
@@ -856,9 +864,44 @@ ${paymentLink}
             doorPin,
             doorAppName
           );
+          emailSuccess = true;
+          console.log(`[ReservationNotification] ✅ E-Mail erfolgreich versendet für Reservierung ${reservationId}`);
+          
+          // Log erfolgreiche Email-Notification
+          try {
+            await this.logNotification(
+              reservationId,
+              'pin',
+              'email',
+              true,
+              {
+                sentTo: reservation.guestEmail,
+                message: messageText || undefined
+              }
+            );
+          } catch (logError) {
+            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Email-Notification:`, logError);
+          }
         } catch (error) {
           console.error(`[ReservationNotification] Fehler beim Versenden der E-Mail:`, error);
-          // Weiter ohne E-Mail
+          emailError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der E-Mail';
+          
+          // Log fehlgeschlagene Email-Notification
+          try {
+            await this.logNotification(
+              reservationId,
+              'pin',
+              'email',
+              false,
+              {
+                sentTo: reservation.guestEmail,
+                message: messageText || undefined,
+                errorMessage: emailError
+              }
+            );
+          } catch (logError) {
+            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Email-Notification:`, logError);
+          }
         }
       }
 
@@ -867,7 +910,7 @@ ${paymentLink}
           const whatsappService = reservation.branchId
             ? new WhatsAppService(undefined, reservation.branchId)
             : new WhatsAppService(reservation.organizationId);
-          const whatsappSuccess = await whatsappService.sendCheckInConfirmation(
+          const whatsappSuccessResult = await whatsappService.sendCheckInConfirmation(
             reservation.guestName,
             reservation.guestPhone,
             reservation.roomNumber || 'N/A',
@@ -875,17 +918,67 @@ ${paymentLink}
             doorPin || 'N/A',
             doorAppName || 'TTLock'
           );
+          whatsappSuccess = whatsappSuccessResult;
+          
           if (whatsappSuccess) {
             console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
+            
+            // Log erfolgreiche WhatsApp-Notification
+            try {
+              await this.logNotification(
+                reservationId,
+                'pin',
+                'whatsapp',
+                true,
+                {
+                  sentTo: reservation.guestPhone,
+                  message: messageText || undefined
+                }
+              );
+            } catch (logError) {
+              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche WhatsApp-Notification:`, logError);
+            }
           } else {
             console.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
+            whatsappError = 'WhatsApp-Nachricht konnte nicht versendet werden';
+            
+            // Log fehlgeschlagene WhatsApp-Notification
+            try {
+              await this.logNotification(
+                reservationId,
+                'pin',
+                'whatsapp',
+                false,
+                {
+                  sentTo: reservation.guestPhone,
+                  message: messageText || undefined,
+                  errorMessage: whatsappError
+                }
+              );
+            } catch (logError) {
+              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
+            }
           }
         } catch (error) {
           console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
-          if (error instanceof Error) {
-            console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+          whatsappError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
+          
+          // Log fehlgeschlagene WhatsApp-Notification
+          try {
+            await this.logNotification(
+              reservationId,
+              'pin',
+              'whatsapp',
+              false,
+              {
+                sentTo: reservation.guestPhone,
+                message: messageText || undefined,
+                errorMessage: whatsappError
+              }
+            );
+          } catch (logError) {
+            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
           }
-          // Weiter ohne WhatsApp - PIN wurde bereits generiert (oder versucht)
         }
       } else {
         if (!notificationChannels.includes('whatsapp')) {
@@ -893,6 +986,25 @@ ${paymentLink}
         }
         if (!reservation.guestPhone) {
           console.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
+        }
+      }
+
+      // Log auch wenn PIN nicht generiert werden konnte
+      if (!doorPin) {
+        console.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden für Reservierung ${reservationId}`);
+        try {
+          await this.logNotification(
+            reservationId,
+            'pin',
+            reservation.guestPhone && reservation.guestEmail ? 'both' : (reservation.guestPhone ? 'whatsapp' : (reservation.guestEmail ? 'email' : 'whatsapp')),
+            false,
+            {
+              sentTo: reservation.guestPhone || reservation.guestEmail || undefined,
+              errorMessage: 'PIN konnte nicht generiert werden - keine Lock IDs konfiguriert oder Fehler beim Erstellen'
+            }
+          );
+        } catch (logError) {
+          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein PIN):`, logError);
         }
       }
 
@@ -1065,6 +1177,8 @@ ${doorPin || 'N/A'}
       // Versende Benachrichtigungen
       let whatsappSuccess = false;
       let emailSuccess = false;
+      let emailError: string | null = null;
+      let whatsappError: string | null = null;
 
       if (notificationChannels.includes('email') && finalGuestEmail) {
         try {
@@ -1083,9 +1197,42 @@ ${doorPin || 'N/A'}
           );
           emailSuccess = true;
           console.log(`[ReservationNotification] ✅ E-Mail erfolgreich versendet für Reservierung ${reservationId}`);
+          
+          // Log erfolgreiche Email-Notification
+          try {
+            await this.logNotification(
+              reservationId,
+              'pin',
+              'email',
+              true,
+              {
+                sentTo: finalGuestEmail,
+                message: messageText || undefined
+              }
+            );
+          } catch (logError) {
+            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Email-Notification:`, logError);
+          }
         } catch (error) {
           console.error(`[ReservationNotification] Fehler beim Versenden der E-Mail:`, error);
-          // Weiter ohne E-Mail
+          emailError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der E-Mail';
+          
+          // Log fehlgeschlagene Email-Notification
+          try {
+            await this.logNotification(
+              reservationId,
+              'pin',
+              'email',
+              false,
+              {
+                sentTo: finalGuestEmail,
+                message: messageText || undefined,
+                errorMessage: emailError
+              }
+            );
+          } catch (logError) {
+            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Email-Notification:`, logError);
+          }
         }
       }
 
@@ -1120,15 +1267,63 @@ ${doorPin || 'N/A'}
           
           if (whatsappSuccess) {
             console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
+            
+            // Log erfolgreiche WhatsApp-Notification
+            try {
+              await this.logNotification(
+                reservationId,
+                'pin',
+                'whatsapp',
+                true,
+                {
+                  sentTo: finalGuestPhone,
+                  message: messageText || undefined
+                }
+              );
+            } catch (logError) {
+              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche WhatsApp-Notification:`, logError);
+            }
           } else {
             console.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
+            whatsappError = 'WhatsApp-Nachricht konnte nicht versendet werden';
+            
+            // Log fehlgeschlagene WhatsApp-Notification
+            try {
+              await this.logNotification(
+                reservationId,
+                'pin',
+                'whatsapp',
+                false,
+                {
+                  sentTo: finalGuestPhone,
+                  message: messageText || undefined,
+                  errorMessage: whatsappError
+                }
+              );
+            } catch (logError) {
+              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
+            }
           }
         } catch (error) {
           console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
-          if (error instanceof Error) {
-            console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+          whatsappError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
+          
+          // Log fehlgeschlagene WhatsApp-Notification
+          try {
+            await this.logNotification(
+              reservationId,
+              'pin',
+              'whatsapp',
+              false,
+              {
+                sentTo: finalGuestPhone,
+                message: messageText || undefined,
+                errorMessage: whatsappError
+              }
+            );
+          } catch (logError) {
+            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
           }
-          // Weiter ohne WhatsApp - PIN wurde bereits generiert (oder versucht)
         }
       } else {
         if (!notificationChannels.includes('whatsapp')) {
@@ -1136,6 +1331,25 @@ ${doorPin || 'N/A'}
         }
         if (!finalGuestPhone) {
           console.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
+        }
+      }
+
+      // Log auch wenn PIN nicht generiert werden konnte
+      if (!doorPin) {
+        console.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden für Reservierung ${reservationId}`);
+        try {
+          await this.logNotification(
+            reservationId,
+            'pin',
+            finalGuestPhone && finalGuestEmail ? 'both' : (finalGuestPhone ? 'whatsapp' : (finalGuestEmail ? 'email' : 'whatsapp')),
+            false,
+            {
+              sentTo: finalGuestPhone || finalGuestEmail || undefined,
+              errorMessage: 'PIN konnte nicht generiert werden - keine Lock IDs konfiguriert oder Fehler beim Erstellen'
+            }
+          );
+        } catch (logError) {
+          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein PIN):`, logError);
         }
       }
 

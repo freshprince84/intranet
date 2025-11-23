@@ -96,8 +96,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Responsive Tag-Display States (optimiert)
   const containerRef = useRef<HTMLDivElement>(null);
+  const tagRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const [visibleTagCount, setVisibleTagCount] = useState(4); // Fallback für SSR
   const [containerWidth, setContainerWidth] = useState(0);
+  const [measuredTagWidths, setMeasuredTagWidths] = useState<Map<number, number>>(new Map());
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Dropdown State für überlaufende Tags
@@ -444,18 +446,25 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const displayFilters = showOptimisticFilters ? optimisticFilters : sortedFilters.filter(f => f != null);
   const currentVisibleCount = showOptimisticFilters ? optimisticFilters.length : visibleTagCount;
 
-  // Optimierte Tag-Breiten-Berechnung mit useMemo
+  // Tag-Breiten-Berechnung: Verwende gemessene Breiten wenn verfügbar, sonst Schätzung
   const averageTagWidth = useMemo(() => {
-    if (sortedFilters.length === 0) return 75; // Mittelwert zwischen 70 und 80
+    if (sortedFilters.length === 0) return 75;
     
+    // Wenn wir gemessene Breiten haben, verwende diese
+    if (measuredTagWidths.size > 0) {
+      const widths = Array.from(measuredTagWidths.values());
+      return widths.reduce((sum, width) => sum + width, 0) / widths.length;
+    }
+    
+    // Fallback: Konservativere Schätzung (5.5px pro Zeichen statt 6.5px)
     return sortedFilters
       .filter(filter => filter != null)
       .reduce((sum, filter) => {
-        // Ausgewogene Schätzung: ~6.5px pro Zeichen + 28px Padding + optional Delete-Button
+        // Konservativere Schätzung: ~5.5px pro Zeichen + 28px Padding + optional Delete-Button
         const deleteButtonWidth = !isStandardFilter(filter.name) ? 18 : 0;
-        return sum + (filter.name.length * 6.5 + 28 + deleteButtonWidth);
+        return sum + (filter.name.length * 5.5 + 28 + deleteButtonWidth);
       }, 0) / sortedFilters.filter(filter => filter != null).length;
-  }, [sortedFilters]);
+  }, [sortedFilters, measuredTagWidths]);
 
   // Optimierte Sichtbarkeits-Berechnung mit useCallback
   const calculateVisibleTags = useCallback(() => {
@@ -464,15 +473,15 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     const container = containerRef.current;
     const currentWidth = container.clientWidth;
     
-    // Nur neu berechnen wenn sich die Breite signifikant geändert hat (>= 45px)
-    if (Math.abs(currentWidth - containerWidth) < 45) return;
+    // Nur neu berechnen wenn sich die Breite signifikant geändert hat (>= 10px statt 45px)
+    if (Math.abs(currentWidth - containerWidth) < 10) return;
     
     setContainerWidth(currentWidth);
     
-    // Ausgewogene UI-Element-Breiten für sichere aber effiziente Tag-Anzeige
-    const DROPDOWN_BUTTON_WIDTH = 70; // Mittelwert zwischen 60 und 80
-    const GAPS_AND_MARGINS = 14; // Mittelwert zwischen 12 und 16
-    const BUFFER = 15; // Mittelwert zwischen 10 und 20
+    // Reduzierte, realistischere UI-Element-Breiten
+    const DROPDOWN_BUTTON_WIDTH = 60; // Reduziert von 70
+    const GAPS_AND_MARGINS = 8; // Reduziert von 14 (gap-1.5 = 6px, gap-2 = 8px)
+    const BUFFER = 6; // Reduziert von 15 (nur minimaler Sicherheitspuffer)
     
     const availableWidth = currentWidth - GAPS_AND_MARGINS - BUFFER;
     
@@ -483,14 +492,14 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       // Alle Tags passen rein - zeige alle
       setVisibleTagCount(sortedFilters.length);
     } else {
-      // Reserviere angemessenen Platz für Dropdown, moderate Tag-Anzeige
+      // Reserviere Platz für Dropdown nur wenn nötig
       const availableWithDropdown = availableWidth - DROPDOWN_BUTTON_WIDTH;
       const tagsWithDropdown = Math.max(1, Math.floor(availableWithDropdown / averageTagWidth));
       
-      // Moderate Strategie: Zeige berechnete Anzahl ohne zusätzliche Risiken
-      setVisibleTagCount(Math.min(tagsWithDropdown, sortedFilters.length - 1));
+      // Zeige berechnete Anzahl (OHNE -1, damit alle Tags angezeigt werden wenn möglich)
+      setVisibleTagCount(Math.min(tagsWithDropdown, sortedFilters.length));
     }
-  }, [sortedFilters, averageTagWidth, containerWidth, isStandardFilter]);
+  }, [sortedFilters, averageTagWidth, containerWidth]);
 
   // Debounced ResizeObserver für bessere Performance
   const handleResize = useCallback(() => {
@@ -521,6 +530,30 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       }
     };
   }, [handleResize]);
+
+  // Messung der tatsächlichen Tag-Breiten nach Render
+  useLayoutEffect(() => {
+    if (sortedFilters.length === 0) return;
+    
+    const widths = new Map<number, number>();
+    let hasMeasurements = false;
+    
+    // Messen der tatsächlichen Breiten der gerenderten Tags
+    sortedFilters.slice(0, Math.min(visibleTagCount + 5, sortedFilters.length)).forEach((filter, index) => {
+      const tagElement = tagRefs.current.get(filter.id);
+      if (tagElement) {
+        const width = tagElement.offsetWidth;
+        if (width > 0) {
+          widths.set(filter.id, width);
+          hasMeasurements = true;
+        }
+      }
+    });
+    
+    if (hasMeasurements) {
+      setMeasuredTagWidths(widths);
+    }
+  }, [sortedFilters, visibleTagCount]);
 
   // Initial calculation nach Filter-Änderungen
   useLayoutEffect(() => {
@@ -840,6 +873,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         {displayFilters.slice(0, currentVisibleCount).map(filter => (
           <div
             key={filter.id}
+            ref={(el) => {
+              if (el && !filter.isPlaceholder) {
+                tagRefs.current.set(filter.id, el);
+              } else if (!el) {
+                tagRefs.current.delete(filter.id);
+              }
+            }}
             draggable={true}
             onDragStart={(e) => handleDragStart(e, filter.id)}
             onDragOver={(e) => handleDragOver(e, filter.id, 'filter')}
@@ -884,8 +924,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           </div>
         ))}
         
-        {/* Dropdown nur bei echten Filtern und Platzmangel */}
-        {!showOptimisticFilters && sortedFilters.length > visibleTagCount && (
+        {/* Dropdown nur bei echten Filtern und tatsächlichem Platzmangel */}
+        {!showOptimisticFilters && sortedFilters.length > visibleTagCount && visibleTagCount < sortedFilters.length && (
           <div className="relative flex-shrink-0">
             <div className="relative group">
               <button
