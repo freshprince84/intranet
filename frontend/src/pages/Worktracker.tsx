@@ -387,18 +387,8 @@ const Worktracker: React.FC = () => {
 
     // Lokale Sortierrichtungen für Reservations Cards (nicht persistiert)
     const [reservationCardSortDirections, setReservationCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
-        if (activeTab === 'reservations') {
-            return defaultReservationCardSortDirections;
-        }
-        return {};
+        return defaultReservationCardSortDirections;
     });
-
-    // Aktualisiere Sortierrichtungen wenn Tab wechselt
-    useEffect(() => {
-        if (activeTab === 'reservations') {
-            setReservationCardSortDirections(defaultReservationCardSortDirections);
-        }
-    }, [activeTab]);
 
     // Handler für Sortierrichtung-Änderung bei Reservations
     const handleReservationCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
@@ -999,11 +989,25 @@ const Worktracker: React.FC = () => {
                     const columnEvaluators: any = {
                         'title': (task: Task, cond: FilterCondition) => {
                             const value = (cond.value as string || '').toLowerCase();
+                            if (!task.title || typeof task.title !== 'string') {
+                                console.error('title evaluator: task.title ist undefined oder kein String', { task, cond });
+                                return null;
+                            }
                             const title = task.title.toLowerCase();
+                            if (!title || typeof title !== 'string') {
+                                console.error('title evaluator: title nach toLowerCase() ist undefined oder kein String', { task, cond, title });
+                                return null;
+                            }
                             if (cond.operator === 'equals') return task.title === cond.value;
                             if (cond.operator === 'contains') return title.includes(value);
                             if (cond.operator === 'startsWith') return title.startsWith(value);
-                            if (cond.operator === 'endsWith') return title.endsWith(value);
+                            if (cond.operator === 'endsWith') {
+                                if (title === undefined || title === null) {
+                                    console.error('title evaluator: title ist undefined/null vor endsWith', { task, cond, title, value });
+                                    return false;
+                                }
+                                return title.endsWith(value);
+                            }
                             return null;
                         },
                         'status': (task: Task, cond: FilterCondition) => {
@@ -2279,6 +2283,15 @@ const Worktracker: React.FC = () => {
                                                     });
                                                 }
                                                 
+                                                // Links: Branch (nach Telefon/Email)
+                                                if (reservation.branch) {
+                                                    metadata.push({
+                                                        icon: <BuildingOfficeIcon className="h-4 w-4" />,
+                                                        value: reservation.branch.name,
+                                                        section: 'left'
+                                                    });
+                                                }
+                                                
                                                 // Mitte: Zahlungslink (gleiche Höhe wie Payment Status)
                                                 if (reservation.paymentLink) {
                                                     metadata.push({
@@ -3464,6 +3477,15 @@ const Worktracker: React.FC = () => {
                                                     metadata.push({
                                                         icon: <PhoneIcon className="h-4 w-4" />,
                                                         value: reservation.guestPhone,
+                                                        section: 'left'
+                                                    });
+                                                }
+                                                
+                                                // Links: Branch (nach Telefon/Email)
+                                                if (reservation.branch) {
+                                                    metadata.push({
+                                                        icon: <BuildingOfficeIcon className="h-4 w-4" />,
+                                                        value: reservation.branch.name,
                                                         section: 'left'
                                                     });
                                                 }

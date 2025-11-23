@@ -2353,6 +2353,7 @@
     "nationality": "Nationality",
     "room": "Room",
     "roomNumber": "Room Number",
+    "branch": "Branch",
     "roomNumberRequired": "Room number is required",
     "roomNumberPlaceholder": "e.g. 101",
     "roomDescription": "Room Description",

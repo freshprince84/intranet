@@ -35,11 +35,13 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 ## 🚨 STRENGSTENS VERBOTEN: Vermutungen bei Analysen und Planungen
 
 **⚠️ ABSOLUTE REGEL FÜR CLAUDE - KEINE AUSNAHMEN:**
-- **VERMUTUNGEN SIND STRENGSTENS VERBOTEN** bei allen Analysen, Planungen und Dokumentationen
+- **VERMUTUNGEN SIND ABSOLUT STRENGSTENS VERBOTEN** bei allen Analysen, Planungen und Dokumentationen
 - **KEIN Konjunktiv** (sollte, könnte, würde, müsste, etc.)
 - **KEINE Vermutungen** (vielleicht, evtl., möglicherweise, vermutlich, etc.)
 - **KEINE Schätzungen** ohne konkrete Fakten
 - **NUR FAKTEN** - Nur das dokumentieren, was tatsächlich im Code steht oder nachweisbar ist
+- **URSACHE SUCHEN BIS GEFUNDEN** - Nicht aufhören, bis die tatsächliche Ursache identifiziert ist
+- **BEI UNKLARHEIT NACHFRAGEN** - Immer beim User nachfragen, statt zu vermuten!
 
 **Was bedeutet das konkret:**
 - Code genau untersuchen und nur dokumentieren, was tatsächlich vorhanden ist
@@ -48,6 +50,7 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 - In Planungsdokumenten nur das reinschreiben, was effektiv gemacht werden soll
 - Nicht Dinge wie "xy untersuchen" - entweder untersuchen und Fakten dokumentieren, oder beim User nachfragen
 - Falls die Anweisung nicht klar ist: **IMMER beim User nachfragen**, statt zu vermuten!
+- **URSACHE SYSTEMATISCH SUCHEN** - Alle Code-Pfade prüfen, alle Datenbankeinträge prüfen, bis die Ursache gefunden ist
 
 **Beispiele:**
 - ❌ **FALSCH:** "Die Funktion könnte langsamer sein" → ✅ **RICHTIG:** "Die Funktion benötigt 2.5 Sekunden (gemessen)"

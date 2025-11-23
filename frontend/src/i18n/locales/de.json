@@ -2410,6 +2410,7 @@
     "nationality": "Nationalität",
     "room": "Zimmer",
     "roomNumber": "Zimmernummer",
+    "branch": "Niederlassung",
     "roomNumberRequired": "Zimmernummer ist erforderlich",
     "roomNumberPlaceholder": "z.B. 101",
     "roomDescription": "Zimmerbeschreibung",
