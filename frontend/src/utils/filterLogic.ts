@@ -36,8 +36,22 @@ export const evaluateCondition = (
   }
 
   // String operations
-  const strField = String(fieldValue).toLowerCase();
-  const strValue = String(value).toLowerCase();
+  // Sicherstellen, dass fieldValue und value Strings sind, bevor toLowerCase() aufgerufen wird
+  let strField: string;
+  let strValue: string;
+  
+  try {
+    strField = typeof fieldValue === 'string' ? fieldValue.toLowerCase() : String(fieldValue ?? '').toLowerCase();
+    strValue = typeof value === 'string' ? value.toLowerCase() : String(value ?? '').toLowerCase();
+  } catch (error) {
+    // Falls toLowerCase() fehlschlägt, gebe false zurück
+    return false;
+  }
+
+  // Sicherstellen, dass strField und strValue Strings sind
+  if (typeof strField !== 'string' || typeof strValue !== 'string' || strField === undefined || strValue === undefined) {
+    return false;
+  }
 
   switch (operator) {
     case 'equals':
