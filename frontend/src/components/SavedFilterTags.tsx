@@ -925,7 +925,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         ))}
         
         {/* Dropdown nur bei echten Filtern und tatsächlichem Platzmangel */}
-        {!showOptimisticFilters && sortedFilters.length > visibleTagCount && visibleTagCount < sortedFilters.length && (
+        {!showOptimisticFilters && sortedFilters.length > visibleTagCount && (
           <div className="relative flex-shrink-0">
             <div className="relative group">
               <button
