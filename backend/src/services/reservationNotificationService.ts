@@ -969,24 +969,6 @@ ${paymentLink}
           whatsappError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
         }
         */
-          
-          // Log fehlgeschlagene WhatsApp-Notification
-          try {
-            await this.logNotification(
-              reservationId,
-              'pin',
-              'whatsapp',
-              false,
-              {
-                sentTo: reservation.guestPhone,
-                message: messageText || undefined,
-                errorMessage: whatsappError
-              }
-            );
-          } catch (logError) {
-            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
-          }
-        }
       } else {
         if (!notificationChannels.includes('whatsapp')) {
           console.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
