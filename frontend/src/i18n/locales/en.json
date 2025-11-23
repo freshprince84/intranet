@@ -2369,6 +2369,23 @@
     "onlineCheckInCompleted": "Online check-in completed",
     "notFound": "Reservation not found",
     "checkInDate": "Check-in Date",
+    "checkInOut": "Check-in/Check-out",
+    "columns": {
+      "guestName": "Guest",
+      "status": "Status",
+      "paymentStatus": "Payment Status",
+      "checkInDate": "Check-in",
+      "checkOutDate": "Check-out",
+      "roomNumber": "Room",
+      "branch": "Branch",
+      "guestEmail": "Email",
+      "guestPhone": "Phone",
+      "amount": "Amount",
+      "arrivalTime": "Arrival Time",
+      "actions": "Actions",
+      "onlineCheckInCompleted": "Online Check-in",
+      "doorPin": "Door PIN"
+    },
     "createReservation": {
       "title": "New Reservation",
       "button": "New Reservation",
