@@ -65,11 +65,11 @@ const getOperatorsByColumnType = (columnId: string, t: (key: string) => string):
     { value: 'between', label: t('filter.operators.between') }
   ];
 
-  // Dauer-Operatoren (für Zeitspannen)
+  // Dauer-Operatoren (für Zeitspannen und Zahlen)
   const durationOperators = [
     { value: 'equals', label: t('filter.operators.isEqual') },
-    { value: 'greater_than', label: t('filter.operators.greaterThan') },
-    { value: 'less_than', label: t('filter.operators.lessThan') }
+    { value: 'greaterThan', label: t('filter.operators.greaterThan') },
+    { value: 'lessThan', label: t('filter.operators.lessThan') }
   ];
 
   // Status-Operatoren (für Enum-Werte)
@@ -79,11 +79,11 @@ const getOperatorsByColumnType = (columnId: string, t: (key: string) => string):
   ];
 
   // Je nach Spaltentyp entsprechende Operatoren zurückgeben
-  if (columnId === 'dueDate' || columnId === 'startTime') {
+  if (columnId === 'dueDate' || columnId === 'startTime' || columnId === 'checkInDate' || columnId === 'checkOutDate' || columnId === 'arrivalTime') {
     return dateOperators;
-  } else if (columnId === 'duration') {
+  } else if (columnId === 'duration' || columnId === 'amount') {
     return durationOperators;
-  } else if (columnId === 'status') {
+  } else if (columnId === 'status' || columnId === 'paymentStatus') {
     return statusOperators;
   } else if (columnId === 'responsible' || columnId === 'qualityControl' || columnId === 'responsibleAndQualityControl') {
     return statusOperators;
@@ -363,7 +363,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
     }
     
     // Für Datumsfelder ein Datumseingabefeld rendern
-    if (columnId === 'dueDate' || columnId === 'startTime') {
+    if (columnId === 'dueDate' || columnId === 'startTime' || columnId === 'checkInDate' || columnId === 'checkOutDate' || columnId === 'arrivalTime') {
       // Prüfe ob der Wert eine Variable ist
       const isVariable = value === '__TODAY__';
       const isCustomDate = !isVariable && value;

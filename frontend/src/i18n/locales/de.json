@@ -2426,6 +2426,23 @@
     "onlineCheckInCompleted": "Online Check-in abgeschlossen",
     "notFound": "Reservierung nicht gefunden",
     "checkInDate": "Check-in Datum",
+    "checkInOut": "Check-in/Check-out",
+    "columns": {
+      "guestName": "Gast",
+      "status": "Status",
+      "paymentStatus": "Zahlungsstatus",
+      "checkInDate": "Check-in",
+      "checkOutDate": "Check-out",
+      "roomNumber": "Zimmer",
+      "branch": "Niederlassung",
+      "guestEmail": "E-Mail",
+      "guestPhone": "Telefon",
+      "amount": "Betrag",
+      "arrivalTime": "Ankunftszeit",
+      "actions": "Aktionen",
+      "onlineCheckInCompleted": "Online Check-in",
+      "doorPin": "Tür-PIN"
+    },
     "createReservation": {
       "title": "Neue Reservierung",
       "button": "Neue Reservierung",

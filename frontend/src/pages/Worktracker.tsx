@@ -76,6 +76,11 @@ interface SortConfig {
     direction: 'asc' | 'desc';
 }
 
+interface ReservationSortConfig {
+    key: 'guestName' | 'status' | 'paymentStatus' | 'checkInDate' | 'checkOutDate' | 'roomNumber' | 'branch' | 'guestEmail' | 'guestPhone' | 'amount' | 'arrivalTime' | 'branch.name';
+    direction: 'asc' | 'desc';
+}
+
 // Standard-Spaltenreihenfolge (wird in der Komponente neu definiert)
 const defaultColumnOrder = ['title', 'responsibleAndQualityControl', 'status', 'dueDate', 'branch', 'actions'];
 
@@ -106,6 +111,7 @@ const defaultReservationCardSortDirections: Record<string, 'asc' | 'desc'> = {
   checkInDate: 'desc',  // Neueste zuerst (wie aktuell hardcoded)
   checkOutDate: 'desc',
   roomNumber: 'asc',
+  branch: 'asc',
   guestEmail: 'asc',
   guestPhone: 'asc',
   amount: 'desc',
@@ -169,6 +175,7 @@ const reservationTableToCardMapping: Record<string, string[]> = {
   'checkInDate': ['checkInDate'],
   'checkOutDate': ['checkOutDate'],
   'roomNumber': ['roomNumber'],
+  'branch': ['branch'],
   'guestEmail': ['guestEmail'],
   'guestPhone': ['guestPhone'],
   'amount': ['amount'],
@@ -184,6 +191,7 @@ const reservationCardToTableMapping: Record<string, string> = {
   'checkInDate': 'checkInDate',
   'checkOutDate': 'checkOutDate',
   'roomNumber': 'roomNumber',
+  'branch': 'branch',
   'guestEmail': 'guestEmail',
   'guestPhone': 'guestPhone',
   'amount': 'amount',
@@ -244,6 +252,7 @@ const Worktracker: React.FC = () => {
         { id: 'checkInDate', label: t('reservations.columns.checkInDate', 'Check-in'), shortLabel: t('reservations.columns.checkInDate', 'Check-in').substring(0, 5) },
         { id: 'checkOutDate', label: t('reservations.columns.checkOutDate', 'Check-out'), shortLabel: t('reservations.columns.checkOutDate', 'Check-out').substring(0, 5) },
         { id: 'roomNumber', label: t('reservations.columns.roomNumber', 'Zimmer'), shortLabel: t('reservations.columns.roomNumber', 'Zimmer').substring(0, 3) },
+        { id: 'branch', label: t('reservations.columns.branch', 'Niederlassung'), shortLabel: t('reservations.columns.branch', 'Niederlassung').substring(0, 5) },
         { id: 'guestEmail', label: t('reservations.columns.guestEmail', 'E-Mail'), shortLabel: t('reservations.columns.guestEmail', 'E-Mail').substring(0, 3) },
         { id: 'guestPhone', label: t('reservations.columns.guestPhone', 'Telefon'), shortLabel: t('reservations.columns.guestPhone', 'Telefon').substring(0, 3) },
         { id: 'amount', label: t('reservations.columns.amount', 'Betrag'), shortLabel: t('reservations.columns.amount', 'Betrag').substring(0, 3) },
@@ -306,6 +315,8 @@ const Worktracker: React.FC = () => {
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     // Tabellen-Header-Sortierung (nur für Tabellen-Ansicht)
     const [tableSortConfig, setTableSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
+    // Tabellen-Header-Sortierung für Reservations (nur für Tabellen-Ansicht)
+    const [reservationTableSortConfig, setReservationTableSortConfig] = useState<ReservationSortConfig>({ key: 'checkInDate', direction: 'desc' });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -327,7 +338,7 @@ const Worktracker: React.FC = () => {
     });
     
     // Tabellen-Einstellungen laden - Reservations
-    const defaultReservationColumnOrder = ['guestName', 'status', 'paymentStatus', 'checkInDate', 'checkOutDate', 'roomNumber', 'actions'];
+    const defaultReservationColumnOrder = ['guestName', 'status', 'paymentStatus', 'checkInDate', 'checkOutDate', 'roomNumber', 'branch', 'actions'];
     const {
         settings: reservationsSettings,
         isLoading: isLoadingReservationsSettings,
@@ -734,6 +745,16 @@ const Worktracker: React.FC = () => {
         // Nur für Tabellen-Ansicht (Header-Sortierung)
         if (viewMode === 'table') {
             setTableSortConfig(current => ({
+                key,
+                direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+            }));
+        }
+    };
+
+    const handleReservationSort = (key: ReservationSortConfig['key']) => {
+        // Nur für Tabellen-Ansicht (Header-Sortierung)
+        if (viewMode === 'table' && activeTab === 'reservations') {
+            setReservationTableSortConfig(current => ({
                 key,
                 direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
             }));
@@ -1260,23 +1281,115 @@ const Worktracker: React.FC = () => {
         });
 
         // Erweiterte Filterbedingungen anwenden
-        // DEBUG: Prüfe ob Filter vorhanden sind
         if (reservationFilterConditions.length > 0) {
-            console.log('🔍 DEBUG: reservationFilterConditions:', reservationFilterConditions);
-            console.log('🔍 DEBUG: reservationFilterLogicalOperators:', reservationFilterLogicalOperators);
+            // Column-Evaluatoren für Reservations (analog zu Tasks)
+            const columnEvaluators: any = {
+                'guestName': (reservation: Reservation, cond: FilterCondition) => {
+                    const value = (cond.value as string || '').toLowerCase();
+                    const guestName = (reservation.guestName || '').toLowerCase();
+                    if (cond.operator === 'equals') return reservation.guestName === cond.value;
+                    if (cond.operator === 'contains') return guestName.includes(value);
+                    if (cond.operator === 'startsWith') return guestName.startsWith(value);
+                    if (cond.operator === 'endsWith') return guestName.endsWith(value);
+                    return null;
+                },
+                'status': (reservation: Reservation, cond: FilterCondition) => {
+                    if (cond.operator === 'equals') return reservation.status === cond.value;
+                    if (cond.operator === 'notEquals') return reservation.status !== cond.value;
+                    return null;
+                },
+                'paymentStatus': (reservation: Reservation, cond: FilterCondition) => {
+                    if (cond.operator === 'equals') return reservation.paymentStatus === cond.value;
+                    if (cond.operator === 'notEquals') return reservation.paymentStatus !== cond.value;
+                    return null;
+                },
+                'checkInDate': (reservation: Reservation, cond: FilterCondition) => {
+                    return evaluateDateCondition(reservation.checkInDate, cond);
+                },
+                'checkOutDate': (reservation: Reservation, cond: FilterCondition) => {
+                    return evaluateDateCondition(reservation.checkOutDate, cond);
+                },
+                'arrivalTime': (reservation: Reservation, cond: FilterCondition) => {
+                    return evaluateDateCondition(reservation.arrivalTime, cond);
+                },
+                'amount': (reservation: Reservation, cond: FilterCondition) => {
+                    const amount = typeof reservation.amount === 'string' 
+                        ? parseFloat(reservation.amount) 
+                        : (reservation.amount || 0);
+                    const compareValue = parseFloat(String(cond.value));
+                    if (isNaN(compareValue)) return false;
+                    if (cond.operator === 'equals') return Math.abs(amount - compareValue) < 0.01;
+                    if (cond.operator === 'greaterThan') return amount > compareValue;
+                    if (cond.operator === 'lessThan') return amount < compareValue;
+                    return null;
+                },
+                'roomNumber': (reservation: Reservation, cond: FilterCondition) => {
+                    const value = (cond.value as string || '').toLowerCase();
+                    const roomNumber = (reservation.roomNumber || '').toLowerCase();
+                    if (cond.operator === 'equals') return reservation.roomNumber === cond.value;
+                    if (cond.operator === 'contains') return roomNumber.includes(value);
+                    if (cond.operator === 'startsWith') return roomNumber.startsWith(value);
+                    if (cond.operator === 'endsWith') return roomNumber.endsWith(value);
+                    return null;
+                },
+                'guestEmail': (reservation: Reservation, cond: FilterCondition) => {
+                    const value = (cond.value as string || '').toLowerCase();
+                    const guestEmail = (reservation.guestEmail || '').toLowerCase();
+                    if (cond.operator === 'equals') return reservation.guestEmail === cond.value;
+                    if (cond.operator === 'contains') return guestEmail.includes(value);
+                    if (cond.operator === 'startsWith') return guestEmail.startsWith(value);
+                    if (cond.operator === 'endsWith') return guestEmail.endsWith(value);
+                    return null;
+                },
+                'guestPhone': (reservation: Reservation, cond: FilterCondition) => {
+                    const value = (cond.value as string || '').toLowerCase();
+                    const guestPhone = (reservation.guestPhone || '').toLowerCase();
+                    if (cond.operator === 'equals') return reservation.guestPhone === cond.value;
+                    if (cond.operator === 'contains') return guestPhone.includes(value);
+                    if (cond.operator === 'startsWith') return guestPhone.startsWith(value);
+                    if (cond.operator === 'endsWith') return guestPhone.endsWith(value);
+                    return null;
+                },
+                'branch': (reservation: Reservation, cond: FilterCondition) => {
+                    const branchName = (reservation.branch?.name || '').toLowerCase();
+                    const value = (cond.value as string || '').toLowerCase();
+                    if (cond.operator === 'equals') return branchName === value;
+                    if (cond.operator === 'contains') return branchName.includes(value);
+                    return null;
+                },
+                'doorPin': (reservation: Reservation, cond: FilterCondition) => {
+                    const value = (cond.value as string || '').toLowerCase();
+                    const doorPin = (reservation.doorPin || '').toLowerCase();
+                    if (cond.operator === 'equals') return reservation.doorPin === cond.value;
+                    if (cond.operator === 'contains') return doorPin.includes(value);
+                    if (cond.operator === 'startsWith') return doorPin.startsWith(value);
+                    if (cond.operator === 'endsWith') return doorPin.endsWith(value);
+                    return null;
+                },
+                'onlineCheckInCompleted': (reservation: Reservation, cond: FilterCondition) => {
+                    const value = cond.value === 'true' || cond.value === true || cond.value === '1';
+                    if (cond.operator === 'equals') return reservation.onlineCheckInCompleted === value;
+                    if (cond.operator === 'notEquals') return reservation.onlineCheckInCompleted !== value;
+                    return null;
+                }
+            };
+
             const getFieldValue = (reservation: Reservation, columnId: string): any => {
                 switch (columnId) {
                     case 'guestName': return reservation.guestName || '';
                     case 'status': return reservation.status || '';
                     case 'paymentStatus': return reservation.paymentStatus || '';
                     case 'roomNumber': return reservation.roomNumber || '';
+                    case 'branch': return reservation.branch?.name || '';
                     case 'guestEmail': return reservation.guestEmail || '';
                     case 'guestPhone': return reservation.guestPhone || '';
                     case 'lobbyReservationId': return reservation.lobbyReservationId || '';
-                    case 'checkInDate': return reservation.checkInDate ? String(reservation.checkInDate) : '';
-                    case 'checkOutDate': return reservation.checkOutDate ? String(reservation.checkOutDate) : '';
-                    case 'amount': return reservation.amount != null ? String(reservation.amount) : '';
-                    case 'arrivalTime': return reservation.arrivalTime ? String(reservation.arrivalTime) : '';
+                    case 'checkInDate': return reservation.checkInDate;
+                    case 'checkOutDate': return reservation.checkOutDate;
+                    case 'amount': return reservation.amount;
+                    case 'arrivalTime': return reservation.arrivalTime;
+                    case 'doorPin': return reservation.doorPin || '';
+                    case 'onlineCheckInCompleted': return reservation.onlineCheckInCompleted;
                     default: {
                         const value = (reservation as any)[columnId];
                         if (value == null) return '';
@@ -1292,7 +1405,8 @@ const Worktracker: React.FC = () => {
                 filtered,
                 reservationFilterConditions,
                 reservationFilterLogicalOperators,
-                getFieldValue
+                getFieldValue,
+                columnEvaluators
             );
         }
         
@@ -1332,6 +1446,10 @@ const Worktracker: React.FC = () => {
                         case 'roomNumber':
                             valueA = (a.roomNumber || '').toLowerCase();
                             valueB = (b.roomNumber || '').toLowerCase();
+                            break;
+                        case 'branch':
+                            valueA = (a.branch?.name || '').toLowerCase();
+                            valueB = (b.branch?.name || '').toLowerCase();
                             break;
                         case 'guestEmail':
                             valueA = (a.guestEmail || '').toLowerCase();
@@ -1374,15 +1492,82 @@ const Worktracker: React.FC = () => {
                 return 0; // Alle Spalten identisch
             });
         } else {
-            // Tabellen-Mode: Fallback auf Check-in-Datum (neueste zuerst)
+            // Tabellen-Mode: Sortierung basierend auf reservationTableSortConfig
             sorted = [...filtered].sort((a, b) => {
+                if (reservationTableSortConfig.key) {
+                    let valueA: any, valueB: any;
+                    
+                    switch (reservationTableSortConfig.key) {
+                        case 'guestName':
+                            valueA = (a.guestName || '').toLowerCase();
+                            valueB = (b.guestName || '').toLowerCase();
+                            break;
+                        case 'status':
+                            valueA = (a.status || '').toLowerCase();
+                            valueB = (b.status || '').toLowerCase();
+                            break;
+                        case 'paymentStatus':
+                            valueA = (a.paymentStatus || '').toLowerCase();
+                            valueB = (b.paymentStatus || '').toLowerCase();
+                            break;
+                        case 'checkInDate':
+                            valueA = new Date(a.checkInDate).getTime();
+                            valueB = new Date(b.checkInDate).getTime();
+                            break;
+                        case 'checkOutDate':
+                            valueA = new Date(a.checkOutDate).getTime();
+                            valueB = new Date(b.checkOutDate).getTime();
+                            break;
+                        case 'roomNumber':
+                            valueA = (a.roomNumber || '').toLowerCase();
+                            valueB = (b.roomNumber || '').toLowerCase();
+                            break;
+                        case 'branch':
+                        case 'branch.name':
+                            valueA = (a.branch?.name || '').toLowerCase();
+                            valueB = (b.branch?.name || '').toLowerCase();
+                            break;
+                        case 'guestEmail':
+                            valueA = (a.guestEmail || '').toLowerCase();
+                            valueB = (b.guestEmail || '').toLowerCase();
+                            break;
+                        case 'guestPhone':
+                            valueA = (a.guestPhone || '').toLowerCase();
+                            valueB = (b.guestPhone || '').toLowerCase();
+                            break;
+                        case 'amount':
+                            valueA = typeof a.amount === 'string' ? parseFloat(a.amount) : (a.amount || 0);
+                            valueB = typeof b.amount === 'string' ? parseFloat(b.amount) : (b.amount || 0);
+                            break;
+                        case 'arrivalTime':
+                            valueA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0;
+                            valueB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0;
+                            break;
+                        default:
+                            valueA = '';
+                            valueB = '';
+                    }
+                    
+                    // Vergleich basierend auf Typ
+                    let comparison = 0;
+                    if (typeof valueA === 'number' && typeof valueB === 'number') {
+                        comparison = valueA - valueB;
+                    } else {
+                        comparison = String(valueA).localeCompare(String(valueB));
+                    }
+                    
+                    // Sortierrichtung anwenden
+                    return reservationTableSortConfig.direction === 'asc' ? comparison : -comparison;
+                }
+                
+                // Fallback: Check-in-Datum (neueste zuerst)
                 return new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime();
             });
         }
         
         console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
         return sorted;
-    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterConditions, reservationFilterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections]);
+    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterConditions, reservationFilterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
@@ -2501,30 +2686,41 @@ const Worktracker: React.FC = () => {
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead className="bg-gray-50 dark:bg-gray-700">
                                             <tr>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.guestName', 'Gast')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.status', 'Status')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.paymentStatus', 'Zahlungsstatus')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.checkInOut', 'Check-in/Check-out')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.room', 'Zimmer')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('common.actions', 'Aktionen')}
-                                                </th>
+                                                {visibleColumnIds.map((columnId) => {
+                                                    const column = availableReservationColumns.find(col => col.id === columnId);
+                                                    if (!column) return null;
+                                                    
+                                                    return (
+                                                        <th
+                                                            key={columnId}
+                                                            scope="col"
+                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            draggable={true}
+                                                            onDragStart={() => handleDragStart(columnId)}
+                                                            onDragOver={(e) => handleDragOver(e, columnId)}
+                                                            onDrop={(e) => handleDrop(e, columnId)}
+                                                            onDragEnd={handleDragEnd}
+                                                        >
+                                                            <div className="flex items-center">
+                                                                {window.innerWidth <= 640 ? column.shortLabel : column.label}
+                                                                {columnId !== 'actions' && (
+                                                                    <button 
+                                                                        onClick={() => handleReservationSort(columnId as ReservationSortConfig['key'])}
+                                                                        className="ml-1 focus:outline-none"
+                                                                    >
+                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </th>
+                                                    );
+                                                })}
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                             {reservationsLoading ? (
                                                 <tr>
-                                                    <td colSpan={6} className="px-3 sm:px-4 md:px-6 py-4 text-center">
+                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
                                                         <div className="flex justify-center">
                                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
                                                         </div>
@@ -2532,13 +2728,13 @@ const Worktracker: React.FC = () => {
                                                 </tr>
                                             ) : reservationsError ? (
                                                 <tr>
-                                                    <td colSpan={6} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
                                                         {reservationsError}
                                                     </td>
                                                 </tr>
                                             ) : filteredAndSortedReservations.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                                                         <div className="flex flex-col items-center justify-center gap-4">
                                                             <CalendarIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
                                                             <div className="text-sm">
@@ -2566,96 +2762,166 @@ const Worktracker: React.FC = () => {
                                                                 className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                                                                 onClick={() => navigate(`/reservations/${reservation.id}`)}
                                                             >
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4">
-                                                                    <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
-                                                                        {reservation.guestName}
-                                                                        {reservation.lobbyReservationId && (
-                                                                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                                ID: {reservation.lobbyReservationId}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getReservationStatusColor(reservation.status)}`}>
-                                                                        {t(`reservations.status.${reservation.status}`, reservation.status)}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(reservation.paymentStatus)}`}>
-                                                                        {t(`reservations.paymentStatus.${reservation.paymentStatus}`, reservation.paymentStatus)}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
-                                                                        {formatDate(reservation.checkInDate)} - {formatDate(reservation.checkOutDate)}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
-                                                                        {reservation.roomNumber || '-'}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <div className="flex space-x-2 action-buttons">
-                                                                        {hasPermission('reservations', 'write', 'table') && (
-                                                                            <>
-                                                                                {/* Einladung senden Button */}
-                                                                            <div className="relative group">
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                            setSelectedReservationForInvitation(reservation);
-                                                                                            setIsSendInvitationSidepaneOpen(true);
-                                                                                    }}
-                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                        title={t('reservations.sendInvitation', 'Einladung senden')}
-                                                                                    >
-                                                                                        <PaperAirplaneIcon className="h-4 w-4" />
-                                                                                    </button>
-                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                        {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                {visibleColumnIds.map(columnId => {
+                                                                    switch (columnId) {
+                                                                        case 'guestName':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
+                                                                                        {reservation.guestName}
+                                                                                        {reservation.lobbyReservationId && (
+                                                                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                                ID: {reservation.lobbyReservationId}
+                                                                                            </div>
+                                                                                        )}
                                                                                     </div>
-                                                                                </div>
-                                                                                
-                                                                                {/* Key-Button für PIN-Generierung */}
-                                                                                <div className="relative group">
-                                                                                    <button
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            setSelectedReservationForPasscode(reservation);
-                                                                                            setIsSendPasscodeSidepaneOpen(true);
-                                                                                        }}
-                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-                                                                                        title={t('reservations.sendPasscode.title', 'Passcode senden')}
-                                                                                    >
-                                                                                        <KeyIcon className="h-4 w-4" />
-                                                                                    </button>
-                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                        {t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                                                </td>
+                                                                            );
+                                                                        case 'status':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getReservationStatusColor(reservation.status)}`}>
+                                                                                        {t(`reservations.status.${reservation.status}`, reservation.status)}
+                                                                                    </span>
+                                                                                </td>
+                                                                            );
+                                                                        case 'paymentStatus':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(reservation.paymentStatus)}`}>
+                                                                                        {t(`reservations.paymentStatus.${reservation.paymentStatus}`, reservation.paymentStatus)}
+                                                                                    </span>
+                                                                                </td>
+                                                                            );
+                                                                        case 'checkInDate':
+                                                                        case 'checkOutDate':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {formatDate(columnId === 'checkInDate' ? reservation.checkInDate : reservation.checkOutDate)}
                                                                                     </div>
-                                                                                </div>
-                                                                                
-                                                                                {/* Details Button */}
-                                                                                <div className="relative group">
-                                                                                    <button
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            navigate(`/reservations/${reservation.id}`);
-                                                                                        }}
-                                                                                        className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                                                                                        title={t('common.viewDetails', 'Details anzeigen')}
-                                                                                >
-                                                                                    <InformationCircleIcon className="h-4 w-4" />
-                                                                                </button>
-                                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                    {t('common.viewDetails', 'Details anzeigen')}
-                                                                                </div>
-                                                                            </div>
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </td>
+                                                                                </td>
+                                                                            );
+                                                                        case 'roomNumber':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.roomNumber || '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'branch':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.branch?.name || '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'guestEmail':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.guestEmail || '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'guestPhone':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.guestPhone || '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'amount':
+                                                                            const amountValue = typeof reservation.amount === 'string' 
+                                                                                ? parseFloat(reservation.amount).toFixed(2)
+                                                                                : typeof reservation.amount === 'number'
+                                                                                ? reservation.amount.toFixed(2)
+                                                                                : '0.00';
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {amountValue} {reservation.currency || 'COP'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'arrivalTime':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.arrivalTime ? format(new Date(reservation.arrivalTime), 'dd.MM.yyyy HH:mm', { locale: de }) : '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'actions':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="flex space-x-2 action-buttons">
+                                                                                        {hasPermission('reservations', 'write', 'table') && (
+                                                                                            <>
+                                                                                                {/* Einladung senden Button */}
+                                                                                                <div className="relative group">
+                                                                                                    <button
+                                                                                                        onClick={(e) => {
+                                                                                                            e.stopPropagation();
+                                                                                                            setSelectedReservationForInvitation(reservation);
+                                                                                                            setIsSendInvitationSidepaneOpen(true);
+                                                                                                        }}
+                                                                                                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                                        title={t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                                    >
+                                                                                                        <PaperAirplaneIcon className="h-4 w-4" />
+                                                                                                    </button>
+                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                
+                                                                                                {/* Key-Button für PIN-Generierung */}
+                                                                                                <div className="relative group">
+                                                                                                    <button
+                                                                                                        onClick={(e) => {
+                                                                                                            e.stopPropagation();
+                                                                                                            setSelectedReservationForPasscode(reservation);
+                                                                                                            setIsSendPasscodeSidepaneOpen(true);
+                                                                                                        }}
+                                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                                                                                                        title={t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                                                                    >
+                                                                                                        <KeyIcon className="h-4 w-4" />
+                                                                                                    </button>
+                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                
+                                                                                                {/* Details Button */}
+                                                                                                <div className="relative group">
+                                                                                                    <button
+                                                                                                        onClick={(e) => {
+                                                                                                            e.stopPropagation();
+                                                                                                            navigate(`/reservations/${reservation.id}`);
+                                                                                                        }}
+                                                                                                        className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                                                        title={t('common.viewDetails', 'Details anzeigen')}
+                                                                                                    >
+                                                                                                        <InformationCircleIcon className="h-4 w-4" />
+                                                                                                    </button>
+                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('common.viewDetails', 'Details anzeigen')}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        default:
+                                                                            return null;
+                                                                    }
+                                                                })}
                                                             </tr>
                                                         );
                                                     })}
@@ -3688,30 +3954,41 @@ const Worktracker: React.FC = () => {
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead className="bg-gray-50 dark:bg-gray-700">
                                             <tr>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.guestName', 'Gast')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.status', 'Status')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.paymentStatus', 'Zahlungsstatus')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.checkInOut', 'Check-in/Check-out')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('reservations.room', 'Zimmer')}
-                                                </th>
-                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    {t('common.actions', 'Aktionen')}
-                                                </th>
+                                                {visibleColumnIds.map((columnId) => {
+                                                    const column = availableReservationColumns.find(col => col.id === columnId);
+                                                    if (!column) return null;
+                                                    
+                                                    return (
+                                                        <th
+                                                            key={columnId}
+                                                            scope="col"
+                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            draggable={true}
+                                                            onDragStart={() => handleDragStart(columnId)}
+                                                            onDragOver={(e) => handleDragOver(e, columnId)}
+                                                            onDrop={(e) => handleDrop(e, columnId)}
+                                                            onDragEnd={handleDragEnd}
+                                                        >
+                                                            <div className="flex items-center">
+                                                                {window.innerWidth <= 640 ? column.shortLabel : column.label}
+                                                                {columnId !== 'actions' && (
+                                                                    <button 
+                                                                        onClick={() => handleReservationSort(columnId as ReservationSortConfig['key'])}
+                                                                        className="ml-1 focus:outline-none"
+                                                                    >
+                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </th>
+                                                    );
+                                                })}
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                             {reservationsLoading ? (
                                                 <tr>
-                                                    <td colSpan={6} className="px-3 sm:px-4 md:px-6 py-4 text-center">
+                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
                                                         <div className="flex justify-center">
                                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
                                                         </div>
@@ -3719,13 +3996,13 @@ const Worktracker: React.FC = () => {
                                                 </tr>
                                             ) : reservationsError ? (
                                                 <tr>
-                                                    <td colSpan={6} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
                                                         {reservationsError}
                                                     </td>
                                                 </tr>
                                             ) : filteredAndSortedReservations.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                                                         <div className="flex flex-col items-center justify-center gap-4">
                                                             <CalendarIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
                                                             <div className="text-sm">
@@ -3753,96 +4030,166 @@ const Worktracker: React.FC = () => {
                                                                 className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                                                                 onClick={() => navigate(`/reservations/${reservation.id}`)}
                                                             >
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4">
-                                                                    <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
-                                                                        {reservation.guestName}
-                                                                        {reservation.lobbyReservationId && (
-                                                                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                                                ID: {reservation.lobbyReservationId}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getReservationStatusColor(reservation.status)}`}>
-                                                                        {t(`reservations.status.${reservation.status}`, reservation.status)}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(reservation.paymentStatus)}`}>
-                                                                        {t(`reservations.paymentStatus.${reservation.paymentStatus}`, reservation.paymentStatus)}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
-                                                                        {formatDate(reservation.checkInDate)} - {formatDate(reservation.checkOutDate)}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
-                                                                        {reservation.roomNumber || '-'}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                    <div className="flex space-x-2 action-buttons">
-                                                                        {hasPermission('reservations', 'write', 'table') && (
-                                                                            <>
-                                                                                {/* Einladung senden Button */}
-                                                                            <div className="relative group">
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                            setSelectedReservationForInvitation(reservation);
-                                                                                            setIsSendInvitationSidepaneOpen(true);
-                                                                                    }}
-                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                        title={t('reservations.sendInvitation', 'Einladung senden')}
-                                                                                    >
-                                                                                        <PaperAirplaneIcon className="h-4 w-4" />
-                                                                                    </button>
-                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                        {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                {visibleColumnIds.map(columnId => {
+                                                                    switch (columnId) {
+                                                                        case 'guestName':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
+                                                                                        {reservation.guestName}
+                                                                                        {reservation.lobbyReservationId && (
+                                                                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                                ID: {reservation.lobbyReservationId}
+                                                                                            </div>
+                                                                                        )}
                                                                                     </div>
-                                                                                </div>
-                                                                                
-                                                                                {/* Key-Button für PIN-Generierung */}
-                                                                                <div className="relative group">
-                                                                                    <button
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            setSelectedReservationForPasscode(reservation);
-                                                                                            setIsSendPasscodeSidepaneOpen(true);
-                                                                                        }}
-                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-                                                                                        title={t('reservations.sendPasscode.title', 'Passcode senden')}
-                                                                                    >
-                                                                                        <KeyIcon className="h-4 w-4" />
-                                                                                    </button>
-                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                        {t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                                                </td>
+                                                                            );
+                                                                        case 'status':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getReservationStatusColor(reservation.status)}`}>
+                                                                                        {t(`reservations.status.${reservation.status}`, reservation.status)}
+                                                                                    </span>
+                                                                                </td>
+                                                                            );
+                                                                        case 'paymentStatus':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(reservation.paymentStatus)}`}>
+                                                                                        {t(`reservations.paymentStatus.${reservation.paymentStatus}`, reservation.paymentStatus)}
+                                                                                    </span>
+                                                                                </td>
+                                                                            );
+                                                                        case 'checkInDate':
+                                                                        case 'checkOutDate':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {formatDate(columnId === 'checkInDate' ? reservation.checkInDate : reservation.checkOutDate)}
                                                                                     </div>
-                                                                                </div>
-                                                                                
-                                                                                {/* Details Button */}
-                                                                                <div className="relative group">
-                                                                                    <button
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            navigate(`/reservations/${reservation.id}`);
-                                                                                        }}
-                                                                                        className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                                                                                        title={t('common.viewDetails', 'Details anzeigen')}
-                                                                                >
-                                                                                    <InformationCircleIcon className="h-4 w-4" />
-                                                                                </button>
-                                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                    {t('common.viewDetails', 'Details anzeigen')}
-                                                                                </div>
-                                                                            </div>
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </td>
+                                                                                </td>
+                                                                            );
+                                                                        case 'roomNumber':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.roomNumber || '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'branch':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.branch?.name || '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'guestEmail':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.guestEmail || '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'guestPhone':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.guestPhone || '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'amount':
+                                                                            const amountValue = typeof reservation.amount === 'string' 
+                                                                                ? parseFloat(reservation.amount).toFixed(2)
+                                                                                : typeof reservation.amount === 'number'
+                                                                                ? reservation.amount.toFixed(2)
+                                                                                : '0.00';
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {amountValue} {reservation.currency || 'COP'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'arrivalTime':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                        {reservation.arrivalTime ? format(new Date(reservation.arrivalTime), 'dd.MM.yyyy HH:mm', { locale: de }) : '-'}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        case 'actions':
+                                                                            return (
+                                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="flex space-x-2 action-buttons">
+                                                                                        {hasPermission('reservations', 'write', 'table') && (
+                                                                                            <>
+                                                                                                {/* Einladung senden Button */}
+                                                                                                <div className="relative group">
+                                                                                                    <button
+                                                                                                        onClick={(e) => {
+                                                                                                            e.stopPropagation();
+                                                                                                            setSelectedReservationForInvitation(reservation);
+                                                                                                            setIsSendInvitationSidepaneOpen(true);
+                                                                                                        }}
+                                                                                                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                                        title={t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                                    >
+                                                                                                        <PaperAirplaneIcon className="h-4 w-4" />
+                                                                                                    </button>
+                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                
+                                                                                                {/* Key-Button für PIN-Generierung */}
+                                                                                                <div className="relative group">
+                                                                                                    <button
+                                                                                                        onClick={(e) => {
+                                                                                                            e.stopPropagation();
+                                                                                                            setSelectedReservationForPasscode(reservation);
+                                                                                                            setIsSendPasscodeSidepaneOpen(true);
+                                                                                                        }}
+                                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                                                                                                        title={t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                                                                    >
+                                                                                                        <KeyIcon className="h-4 w-4" />
+                                                                                                    </button>
+                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                
+                                                                                                {/* Details Button */}
+                                                                                                <div className="relative group">
+                                                                                                    <button
+                                                                                                        onClick={(e) => {
+                                                                                                            e.stopPropagation();
+                                                                                                            navigate(`/reservations/${reservation.id}`);
+                                                                                                        }}
+                                                                                                        className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                                                        title={t('common.viewDetails', 'Details anzeigen')}
+                                                                                                    >
+                                                                                                        <InformationCircleIcon className="h-4 w-4" />
+                                                                                                    </button>
+                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('common.viewDetails', 'Details anzeigen')}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        default:
+                                                                            return null;
+                                                                    }
+                                                                })}
                                                             </tr>
                                                         );
                                                     })}

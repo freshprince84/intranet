@@ -2605,6 +2605,23 @@
     "onlineCheckInCompleted": "Check-in en línea completado",
     "notFound": "Reservación no encontrada",
     "checkInDate": "Fecha de Check-in",
+    "checkInOut": "Check-in/Check-out",
+    "columns": {
+      "guestName": "Huésped",
+      "status": "Estado",
+      "paymentStatus": "Estado de Pago",
+      "checkInDate": "Check-in",
+      "checkOutDate": "Check-out",
+      "roomNumber": "Habitación",
+      "branch": "Sucursal",
+      "guestEmail": "Correo",
+      "guestPhone": "Teléfono",
+      "amount": "Monto",
+      "arrivalTime": "Hora de Llegada",
+      "actions": "Acciones",
+      "onlineCheckInCompleted": "Check-in en línea",
+      "doorPin": "PIN de la Puerta"
+    },
     "createReservation": {
       "title": "Nueva Reservación",
       "button": "Nueva Reservación",
