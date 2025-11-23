@@ -905,7 +905,12 @@ ${paymentLink}
         }
       }
 
+      // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
+      // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
       if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
+        console.log(`[ReservationNotification] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${doorPin ? `(${doorPin})` : ''} wird nur im Frontend angezeigt`);
+        // TODO: Wieder aktivieren, wenn gewünscht
+        /*
         try {
           const whatsappService = reservation.branchId
             ? new WhatsAppService(undefined, reservation.branchId)
@@ -962,6 +967,8 @@ ${paymentLink}
         } catch (error) {
           console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
           whatsappError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
+        }
+        */
           
           // Log fehlgeschlagene WhatsApp-Notification
           try {
@@ -1236,7 +1243,12 @@ ${doorPin || 'N/A'}
         }
       }
 
+      // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
+      // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
       if (notificationChannels.includes('whatsapp') && finalGuestPhone) {
+        console.log(`[ReservationNotification] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${doorPin ? `(${doorPin})` : ''} wird nur im Frontend angezeigt`);
+        // TODO: Wieder aktivieren, wenn gewünscht
+        /*
         try {
           const whatsappService = reservation.branchId
             ? new WhatsAppService(undefined, reservation.branchId)
@@ -1325,6 +1337,7 @@ ${doorPin || 'N/A'}
             console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
           }
         }
+        */
       } else {
         if (!notificationChannels.includes('whatsapp')) {
           console.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
@@ -1459,7 +1472,12 @@ ${doorPin || 'N/A'}
         );
       }
 
+      // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
+      // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
       if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
+        console.log(`[ReservationNotification] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${doorPin ? `(${doorPin})` : ''} wird nur im Frontend angezeigt`);
+        // TODO: Wieder aktivieren, wenn gewünscht
+        /*
         const whatsappService = reservation.branchId
           ? new WhatsAppService(undefined, reservation.branchId)
           : new WhatsAppService(reservation.organizationId);
@@ -1471,6 +1489,7 @@ ${doorPin || 'N/A'}
           doorPin || 'N/A',
           doorAppName || 'TTLock'
         );
+        */
       }
 
       console.log(`[ReservationNotification] Check-in-Bestätigung versendet für Reservierung ${reservationId}`);
