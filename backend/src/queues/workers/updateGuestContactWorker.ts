@@ -200,8 +200,10 @@ ${ttlockCode}
             // Fallback: Verwende aktuelle E-Mail (könnte bereits geändert sein)
           }
           // Erstelle LobbyPMS Check-in-Link mit Original-E-Mail
+          // WICHTIG: Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, nicht die interne ID
           const reservationForCheckInLink = {
             id: reservation.id,
+            lobbyReservationId: reservation.lobbyReservationId,
             guestEmail: originalGuestEmail
           };
           const checkInLink = generateLobbyPmsCheckInLink(reservationForCheckInLink);

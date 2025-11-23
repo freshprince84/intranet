@@ -238,8 +238,10 @@ ${ttlockCode}
                 // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
                 // (reservation.guestEmail), nicht mit der geänderten E-Mail aus updatedReservation
                 // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
+                // WICHTIG: Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, nicht die interne ID
                 const reservationForCheckInLink = {
                     id: reservation.id,
+                    lobbyReservationId: reservation.lobbyReservationId,
                     guestEmail: reservation.guestEmail || ''
                 };
                 const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservationForCheckInLink);

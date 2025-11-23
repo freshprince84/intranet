@@ -311,8 +311,10 @@ export class ReservationNotificationService {
         // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
         // (reservation.guestEmail), nicht mit der geänderten E-Mail aus options
         // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
+        // WICHTIG: Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, nicht die interne ID
         const reservationForCheckInLink = {
           id: reservation.id,
+          lobbyReservationId: reservation.lobbyReservationId,
           guestEmail: reservation.guestEmail || ''
         };
         
@@ -1102,6 +1104,7 @@ ${doorPin || 'N/A'}
               undefined, // Kein Template
               undefined // Keine Template-Parameter
             );
+            whatsappSuccess = true; // Erfolg annehmen, wenn keine Exception geworfen wurde
           } else {
             // Verwende Standard-Template
             const whatsappSuccessResult = await whatsappService.sendCheckInConfirmation(
@@ -1115,9 +1118,8 @@ ${doorPin || 'N/A'}
             whatsappSuccess = whatsappSuccessResult;
           }
           
-          if (whatsappSuccess || (options?.customMessage && doorPin)) {
+          if (whatsappSuccess) {
             console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
-            whatsappSuccess = true;
           } else {
             console.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
           }

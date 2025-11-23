@@ -10,13 +10,14 @@ exports.generateLobbyPmsCheckInLink = generateLobbyPmsCheckInLink;
 /**
  * Generiert einen LobbyPMS Online-Check-in-Link
  *
- * @param reservation - Reservierung mit id und guestEmail (erforderlich)
+ * @param reservation - Reservierung mit lobbyReservationId (oder id als Fallback) und guestEmail (erforderlich)
  * @param language - Sprache für den Link (Standard: 'GB' für Englisch)
  * @returns LobbyPMS Check-in-Link
  */
 function generateLobbyPmsCheckInLink(reservation, language = 'GB') {
-    // Verwende immer die interne Reservierungs-ID als codigo
-    const codigo = reservation.id.toString();
+    // WICHTIG: Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, nicht die interne ID
+    // Fallback auf id nur wenn lobbyReservationId nicht vorhanden (z.B. bei manuell erstellten Reservierungen)
+    const codigo = (reservation.lobbyReservationId || reservation.id.toString());
     // Email ist erforderlich
     const email = reservation.guestEmail;
     // Erstelle URL mit Parametern

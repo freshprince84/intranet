@@ -64,14 +64,16 @@ Por favor, realiza el pago:
   useEffect(() => {
     if (customMessage) {
       // Generiere LobbyPMS Check-in-Link (analog zu Backend generateLobbyPmsCheckInLink)
-      // Format: https://app.lobbypms.com/checkinonline/confirmar?codigo={id}&email={email}&lg={language}
+      // Format: https://app.lobbypms.com/checkinonline/confirmar?codigo={lobbyReservationId}&email={email}&lg={language}
       // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
       // (reservation.guestEmail), nicht mit der geänderten E-Mail (guestEmail)
       // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
+      // WICHTIG: Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, nicht die interne ID
       const email = reservation.guestEmail || '';
       let checkInLink = '[Check-in-Link wird generiert]';
       if (email) {
-        const codigo = reservation.id.toString();
+        // Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, Fallback auf id wenn nicht vorhanden
+        const codigo = reservation.lobbyReservationId || reservation.id.toString();
         const baseUrl = 'https://app.lobbypms.com/checkinonline/confirmar';
         const params = new URLSearchParams();
         params.append('codigo', codigo);

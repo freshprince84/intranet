@@ -1227,7 +1227,7 @@ const Worktracker: React.FC = () => {
         console.log('🔄 Filtere Reservations:', reservations.length, 'Reservations vorhanden');
         const validReservations = reservations.filter(reservation => reservation != null);
         
-        const filtered = validReservations.filter(reservation => {
+        let filtered = validReservations.filter(reservation => {
             // Status-Filter
             if (reservationFilterStatus !== 'all' && reservation.status !== reservationFilterStatus) {
                 return false;
@@ -1253,6 +1253,33 @@ const Worktracker: React.FC = () => {
             
             return true;
         });
+
+        // Erweiterte Filterbedingungen anwenden
+        if (reservationFilterConditions.length > 0) {
+            const getFieldValue = (reservation: Reservation, columnId: string): any => {
+                switch (columnId) {
+                    case 'guestName': return reservation.guestName || '';
+                    case 'status': return reservation.status || '';
+                    case 'paymentStatus': return reservation.paymentStatus || '';
+                    case 'roomNumber': return reservation.roomNumber || '';
+                    case 'guestEmail': return reservation.guestEmail || '';
+                    case 'guestPhone': return reservation.guestPhone || '';
+                    case 'lobbyReservationId': return reservation.lobbyReservationId || '';
+                    case 'checkInDate': return reservation.checkInDate;
+                    case 'checkOutDate': return reservation.checkOutDate;
+                    case 'amount': return reservation.amount;
+                    case 'arrivalTime': return reservation.arrivalTime;
+                    default: return (reservation as any)[columnId] ?? '';
+                }
+            };
+
+            filtered = applyFilters(
+                filtered,
+                reservationFilterConditions,
+                reservationFilterLogicalOperators,
+                getFieldValue
+            );
+        }
         
         // Sortierung basierend auf viewMode
         let sorted: typeof filtered;
@@ -1340,7 +1367,7 @@ const Worktracker: React.FC = () => {
         
         console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
         return sorted;
-    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections]);
+    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterConditions, reservationFilterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
@@ -2001,7 +2028,7 @@ const Worktracker: React.FC = () => {
                                         <CardGrid>
                                             {Array(3).fill(null).map((_, i) => (
                                                 <div key={`skeleton-${i}`} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm">
-                                                    <div className="animate-pulse space-y-4">
+                                                    <div className="space-y-4">
                                                         {/* LCP-Element: Titel-Skeleton */}
                                                         <div className="flex items-center gap-2 mb-2">
                                                             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
@@ -2261,8 +2288,10 @@ const Worktracker: React.FC = () => {
                                                 }
                                                 
                                                 // Mitte: Check-in Link (direkt unter Zahlungslink)
+                                                // WICHTIG: Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, nicht die interne ID
+                                                const codigo = reservation.lobbyReservationId || reservation.id.toString();
                                                 const checkInLink = reservation.guestEmail 
-                                                    ? `https://app.lobbypms.com/checkinonline/confirmar?codigo=${reservation.id}&email=${encodeURIComponent(reservation.guestEmail)}&lg=GB`
+                                                    ? `https://app.lobbypms.com/checkinonline/confirmar?codigo=${codigo}&email=${encodeURIComponent(reservation.guestEmail)}&lg=GB`
                                                     : null;
                                                 if (checkInLink) {
                                                     metadata.push({
@@ -3203,7 +3232,7 @@ const Worktracker: React.FC = () => {
                                         <CardGrid>
                                             {Array(3).fill(null).map((_, i) => (
                                                 <div key={`skeleton-${i}`} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm">
-                                                    <div className="animate-pulse space-y-4">
+                                                    <div className="space-y-4">
                                                         {/* LCP-Element: Titel-Skeleton */}
                                                         <div className="flex items-center gap-2 mb-2">
                                                             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
@@ -3463,8 +3492,10 @@ const Worktracker: React.FC = () => {
                                                 }
                                                 
                                                 // Mitte: Check-in Link (direkt unter Zahlungslink)
+                                                // WICHTIG: Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, nicht die interne ID
+                                                const codigo = reservation.lobbyReservationId || reservation.id.toString();
                                                 const checkInLink = reservation.guestEmail 
-                                                    ? `https://app.lobbypms.com/checkinonline/confirmar?codigo=${reservation.id}&email=${encodeURIComponent(reservation.guestEmail)}&lg=GB`
+                                                    ? `https://app.lobbypms.com/checkinonline/confirmar?codigo=${codigo}&email=${encodeURIComponent(reservation.guestEmail)}&lg=GB`
                                                     : null;
                                                 if (checkInLink) {
                                                     metadata.push({

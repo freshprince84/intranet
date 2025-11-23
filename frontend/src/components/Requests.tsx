@@ -994,7 +994,7 @@ const Requests: React.FC = () => {
         <CardGrid>
           {Array(3).fill(null).map((_, i) => (
             <div key={`skeleton-${i}`} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm">
-              <div className="animate-pulse space-y-4">
+              <div className="space-y-4">
                 {/* LCP-Element: Titel-Skeleton */}
                 <div className="flex items-center gap-2 mb-2">
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
