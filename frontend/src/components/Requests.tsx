@@ -705,6 +705,8 @@ const Requests: React.FC = () => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     applyFilterConditions(conditions, operators, sortDirections);
+    // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
+    setSortConfig({ key: 'dueDate', direction: 'asc' });
     
     // Wenn Filter-ID vorhanden (Standardfilter): Server-seitig laden
     // Sonst: Client-seitig filtern (komplexe Filter)
@@ -860,7 +862,24 @@ const Requests: React.FC = () => {
           }
         };
         
-        // 1. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
+        // 1. Priorität: Table-Header-Sortierung (temporäre Überschreibung, auch wenn Filter aktiv)
+        if (viewMode === 'table' && sortConfig.key) {
+          const valueA = getSortValue(a, sortConfig.key);
+          const valueB = getSortValue(b, sortConfig.key);
+          
+          let comparison = 0;
+          if (typeof valueA === 'number' && typeof valueB === 'number') {
+            comparison = valueA - valueB;
+          } else {
+            comparison = String(valueA).localeCompare(String(valueB));
+          }
+          
+          if (comparison !== 0) {
+            return sortConfig.direction === 'asc' ? comparison : -comparison;
+          }
+        }
+        
+        // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
         if (filterSortDirections.length > 0 && filterConditions.length > 0) {
           // Sortiere nach Priorität (1, 2, 3, ...)
           const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
@@ -887,8 +906,8 @@ const Requests: React.FC = () => {
           return 0;
         }
         
-        // 2. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv)
-        if (viewMode === 'cards') {
+        // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
+        if (viewMode === 'cards' && filterConditions.length === 0) {
           const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
           
           for (const columnId of sortableColumns) {
@@ -914,34 +933,39 @@ const Requests: React.FC = () => {
           return 0;
         }
         
-        // 3. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv)
-        let aValue: any = a[sortConfig.key as keyof Request];
-        let bValue: any = b[sortConfig.key as keyof Request];
+        // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
+        if (viewMode === 'table' && filterConditions.length === 0 && sortConfig.key) {
+          let aValue: any = a[sortConfig.key as keyof Request];
+          let bValue: any = b[sortConfig.key as keyof Request];
 
-        // Handle nested properties
-        if (sortConfig.key === 'requestedBy.firstName') {
-          aValue = a.requestedBy.firstName;
-          bValue = b.requestedBy.firstName;
-        } else if (sortConfig.key === 'responsible.firstName') {
-          aValue = a.responsible.firstName;
-          bValue = b.responsible.firstName;
-        } else if (sortConfig.key === 'branch.name') {
-          aValue = a.branch.name;
-          bValue = b.branch.name;
-        } else if (sortConfig.key === 'type') {
-          const typeOrder: Record<string, number> = {
-            'vacation': 0,
-            'improvement_suggestion': 1,
-            'sick_leave': 2,
-            'employment_certificate': 3,
-            'other': 4
-          };
-          aValue = typeOrder[(a as any).type || 'other'] ?? 999;
-          bValue = typeOrder[(b as any).type || 'other'] ?? 999;
+          // Handle nested properties
+          if (sortConfig.key === 'requestedBy.firstName') {
+            aValue = a.requestedBy.firstName;
+            bValue = b.requestedBy.firstName;
+          } else if (sortConfig.key === 'responsible.firstName') {
+            aValue = a.responsible.firstName;
+            bValue = b.responsible.firstName;
+          } else if (sortConfig.key === 'branch.name') {
+            aValue = a.branch.name;
+            bValue = b.branch.name;
+          } else if (sortConfig.key === 'type') {
+            const typeOrder: Record<string, number> = {
+              'vacation': 0,
+              'improvement_suggestion': 1,
+              'sick_leave': 2,
+              'employment_certificate': 3,
+              'other': 4
+            };
+            aValue = typeOrder[(a as any).type || 'other'] ?? 999;
+            bValue = typeOrder[(b as any).type || 'other'] ?? 999;
+          }
+
+          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
         }
-
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        
+        // 5. Fallback: Standardsortierung
         return 0;
       });
   }, [requests, allRequests, selectedFilterId, searchTerm, sortConfig, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
