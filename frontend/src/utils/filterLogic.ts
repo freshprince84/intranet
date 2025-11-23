@@ -46,20 +46,22 @@ export const evaluateCondition = (
     if (typeof fieldValueStr !== 'string') {
       return false;
     }
-    strField = fieldValueStr.toLowerCase();
-    if (strField === undefined || strField === null) {
+    const lowerField = fieldValueStr.toLowerCase();
+    if (lowerField === undefined || lowerField === null || typeof lowerField !== 'string') {
       return false;
     }
+    strField = lowerField;
     
     // Konvertiere value zu String, auch wenn es ein Objekt ist
     const valueStr = value == null ? '' : (typeof value === 'string' ? value : String(value));
     if (typeof valueStr !== 'string') {
       return false;
     }
-    strValue = valueStr.toLowerCase();
-    if (strValue === undefined || strValue === null) {
+    const lowerValue = valueStr.toLowerCase();
+    if (lowerValue === undefined || lowerValue === null || typeof lowerValue !== 'string') {
       return false;
     }
+    strValue = lowerValue;
   } catch (error) {
     // Falls toLowerCase() fehlschlägt, gebe false zurück
     return false;
@@ -81,7 +83,14 @@ export const evaluateCondition = (
       return strField.startsWith(strValue);
     case 'endsWith':
       // Zusätzliche Sicherheitsprüfung vor endsWith
-      if (strField == null || typeof strField !== 'string') {
+      if (strField == null || typeof strField !== 'string' || strValue == null || typeof strValue !== 'string') {
+        return false;
+      }
+      // Explizite Prüfung, dass strField ein String ist, bevor endsWith aufgerufen wird
+      if (typeof strField !== 'string' || strField === undefined || strField === null) {
+        return false;
+      }
+      if (typeof strValue !== 'string' || strValue === undefined || strValue === null) {
         return false;
       }
       return strField.endsWith(strValue);

@@ -114,6 +114,9 @@ const createTransporter = async (organizationId?: number, branchId?: number) => 
       user: smtpUser,
       pass: smtpPass,
     },
+    connectionTimeout: 10000, // 10 Sekunden
+    greetingTimeout: 10000, // 10 Sekunden
+    socketTimeout: 10000, // 10 Sekunden
   });
 };
 
