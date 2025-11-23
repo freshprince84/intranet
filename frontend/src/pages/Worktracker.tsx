@@ -1255,7 +1255,10 @@ const Worktracker: React.FC = () => {
         });
 
         // Erweiterte Filterbedingungen anwenden
+        // DEBUG: Prüfe ob Filter vorhanden sind
         if (reservationFilterConditions.length > 0) {
+            console.log('🔍 DEBUG: reservationFilterConditions:', reservationFilterConditions);
+            console.log('🔍 DEBUG: reservationFilterLogicalOperators:', reservationFilterLogicalOperators);
             const getFieldValue = (reservation: Reservation, columnId: string): any => {
                 switch (columnId) {
                     case 'guestName': return reservation.guestName || '';
@@ -1265,10 +1268,10 @@ const Worktracker: React.FC = () => {
                     case 'guestEmail': return reservation.guestEmail || '';
                     case 'guestPhone': return reservation.guestPhone || '';
                     case 'lobbyReservationId': return reservation.lobbyReservationId || '';
-                    case 'checkInDate': return reservation.checkInDate ?? '';
-                    case 'checkOutDate': return reservation.checkOutDate ?? '';
-                    case 'amount': return reservation.amount ?? '';
-                    case 'arrivalTime': return reservation.arrivalTime ?? '';
+                    case 'checkInDate': return reservation.checkInDate ? String(reservation.checkInDate) : '';
+                    case 'checkOutDate': return reservation.checkOutDate ? String(reservation.checkOutDate) : '';
+                    case 'amount': return reservation.amount != null ? String(reservation.amount) : '';
+                    case 'arrivalTime': return reservation.arrivalTime ? String(reservation.arrivalTime) : '';
                     default: return (reservation as any)[columnId] ?? '';
                 }
             };
