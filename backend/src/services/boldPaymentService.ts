@@ -442,8 +442,18 @@ export class BoldPaymentService {
       console.log(`[Bold Payment Webhook] Event: ${event}`, data);
 
       // Finde Reservierung basierend auf Metadata oder Reference
-      const reservationId = data.metadata?.reservation_id || 
-        (data.reference ? parseInt(data.reference.replace('RES-', '')) : null);
+      // Reference-Format: "RES-{id}-{timestamp}" → extrahiere nur die ID
+      let reservationId: number | null = null;
+      
+      if (data.metadata?.reservation_id) {
+        reservationId = parseInt(String(data.metadata.reservation_id), 10);
+      } else if (data.reference) {
+        // Reference-Format: "RES-123-1704067200000" → extrahiere "123"
+        const match = String(data.reference).match(/^RES-(\d+)-/);
+        if (match && match[1]) {
+          reservationId = parseInt(match[1], 10);
+        }
+      }
 
       if (!reservationId) {
         console.warn('[Bold Payment Webhook] Reservierungs-ID nicht gefunden im Webhook');
@@ -463,10 +473,17 @@ export class BoldPaymentService {
       switch (event) {
         case 'payment.paid':
         case 'payment.completed':
+          // Aktualisiere Payment Status
           await prisma.reservation.update({
             where: { id: reservation.id },
             data: { paymentStatus: 'paid' as any }
           });
+          
+          // Prüfe ob Gast bereits eingecheckt ist
+          const isAlreadyCheckedIn = reservation.status === 'checked_in';
+          
+          // Wenn bereits eingecheckt, aktualisiere Status nicht erneut
+          // Aber sende trotzdem TTLock-Code wenn noch nicht vorhanden
 
           // Nach Zahlung: Erstelle TTLock Code und sende WhatsApp-Nachricht
           try {
@@ -480,9 +497,27 @@ export class BoldPaymentService {
               console.warn(`[Bold Payment Webhook] Reservierung ${reservation.id} nicht gefunden nach Update`);
               break;
             }
+            
+            // Wenn noch nicht eingecheckt und Check-in-Datum erreicht/überschritten, setze Status auf checked_in
+            const shouldAutoCheckIn = !isAlreadyCheckedIn && 
+              updatedReservation.checkInDate && 
+              new Date(updatedReservation.checkInDate) <= new Date();
+            
+            if (shouldAutoCheckIn) {
+              await prisma.reservation.update({
+                where: { id: reservation.id },
+                data: { 
+                  status: 'checked_in' as any,
+                  onlineCheckInCompleted: true,
+                  onlineCheckInCompletedAt: new Date()
+                }
+              });
+              console.log(`[Bold Payment Webhook] ✅ Auto-Check-in durchgeführt für Reservierung ${reservation.id} (Zahlung erhalten)`);
+            }
 
-            // Erstelle TTLock Passcode (wenn konfiguriert und Telefonnummer vorhanden)
-            if (updatedReservation.guestPhone) {
+            // Erstelle TTLock Passcode (wenn konfiguriert und Kontaktinfo vorhanden)
+            // TTLock-Code sollte auch erstellt werden, wenn nur Email vorhanden ist
+            if (updatedReservation.guestPhone || updatedReservation.guestEmail) {
               let ttlockCode: string | null = null;
               
               try {
@@ -490,14 +525,15 @@ export class BoldPaymentService {
                   ? await TTLockService.createForBranch(updatedReservation.branchId)
                   : new TTLockService(updatedReservation.organizationId);
                 
-                // Lade Settings aus Branch oder Organisation
+                // Lade Settings aus Branch oder Organisation (WICHTIG: Entschlüsseln!)
                 let doorSystemSettings: any = null;
                 if (updatedReservation.branchId && updatedReservation.branch?.doorSystemSettings) {
                   const { decryptBranchApiSettings } = await import('../utils/encryption');
                   const branchSettings = decryptBranchApiSettings(updatedReservation.branch.doorSystemSettings as any);
                   doorSystemSettings = branchSettings?.doorSystem || branchSettings;
                 } else {
-                const settings = updatedReservation.organization.settings as any;
+                  const { decryptApiSettings } = await import('../utils/encryption');
+                  const settings = decryptApiSettings(updatedReservation.organization.settings as any);
                   doorSystemSettings = settings?.doorSystem;
                 }
 
@@ -528,9 +564,58 @@ export class BoldPaymentService {
                   });
 
                   console.log(`[Bold Payment Webhook] TTLock Code erstellt für Reservierung ${reservation.id}`);
+                  
+                  // Log erfolgreiche TTLock-Code-Erstellung
+                  try {
+                    await prisma.reservationNotificationLog.create({
+                      data: {
+                        reservationId: reservation.id,
+                        notificationType: 'pin',
+                        channel: updatedReservation.guestPhone && updatedReservation.guestEmail ? 'both' : (updatedReservation.guestPhone ? 'whatsapp' : 'email'),
+                        success: true,
+                        sentAt: new Date(),
+                        message: `TTLock Code erstellt: ${ttlockCode}`
+                      }
+                    });
+                  } catch (logError) {
+                    console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für TTLock-Code:', logError);
+                  }
+                } else {
+                  // Log: Keine Lock IDs konfiguriert
+                  try {
+                    await prisma.reservationNotificationLog.create({
+                      data: {
+                        reservationId: reservation.id,
+                        notificationType: 'pin',
+                        channel: updatedReservation.guestPhone && updatedReservation.guestEmail ? 'both' : (updatedReservation.guestPhone ? 'whatsapp' : 'email'),
+                        success: false,
+                        sentAt: new Date(),
+                        errorMessage: 'TTLock Code konnte nicht erstellt werden - keine Lock IDs konfiguriert'
+                      }
+                    });
+                  } catch (logError) {
+                    console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags (keine Lock IDs):', logError);
+                  }
                 }
               } catch (ttlockError) {
                 console.error('[Bold Payment Webhook] Fehler beim Erstellen des TTLock Passcodes:', ttlockError);
+                const errorMessage = ttlockError instanceof Error ? ttlockError.message : 'Unbekannter Fehler beim Erstellen des TTLock Passcodes';
+                
+                // Log fehlgeschlagene TTLock-Code-Erstellung
+                try {
+                  await prisma.reservationNotificationLog.create({
+                    data: {
+                      reservationId: reservation.id,
+                      notificationType: 'pin',
+                      channel: updatedReservation.guestPhone && updatedReservation.guestEmail ? 'both' : (updatedReservation.guestPhone ? 'whatsapp' : 'email'),
+                      success: false,
+                      sentAt: new Date(),
+                      errorMessage: `TTLock Code konnte nicht erstellt werden: ${errorMessage}`
+                    }
+                  });
+                } catch (logError) {
+                  console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für TTLock-Fehler:', logError);
+                }
                 // Weiter ohne TTLock Code
               }
 
@@ -575,8 +660,43 @@ ${ttlockCode}
                 });
 
                     console.log(`[Bold Payment Webhook] ✅ WhatsApp-Nachricht mit TTLock Code erfolgreich versendet für Reservierung ${reservation.id}`);
+                    
+                    // Log erfolgreiche WhatsApp-Notification
+                    try {
+                      await prisma.reservationNotificationLog.create({
+                        data: {
+                          reservationId: reservation.id,
+                          notificationType: 'pin',
+                          channel: 'whatsapp',
+                          success: true,
+                          sentAt: new Date(),
+                          sentTo: updatedReservation.guestPhone,
+                          message: message
+                        }
+                      });
+                    } catch (logError) {
+                      console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für WhatsApp:', logError);
+                    }
                   } else {
                     console.error(`[Bold Payment Webhook] ❌ WhatsApp-Nachricht konnte nicht versendet werden (sendCheckInConfirmation gab false zurück)`);
+                    
+                    // Log fehlgeschlagene WhatsApp-Notification
+                    try {
+                      await prisma.reservationNotificationLog.create({
+                        data: {
+                          reservationId: reservation.id,
+                          notificationType: 'pin',
+                          channel: 'whatsapp',
+                          success: false,
+                          sentAt: new Date(),
+                          sentTo: updatedReservation.guestPhone,
+                          message: message,
+                          errorMessage: 'WhatsApp-Nachricht konnte nicht versendet werden (sendCheckInConfirmation gab false zurück)'
+                        }
+                      });
+                    } catch (logError) {
+                      console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp:', logError);
+                    }
                   }
                 } else {
                   // Kein TTLock Code - sende einfache Bestätigung
