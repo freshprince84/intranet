@@ -1272,7 +1272,14 @@ const Worktracker: React.FC = () => {
                     case 'checkOutDate': return reservation.checkOutDate ? String(reservation.checkOutDate) : '';
                     case 'amount': return reservation.amount != null ? String(reservation.amount) : '';
                     case 'arrivalTime': return reservation.arrivalTime ? String(reservation.arrivalTime) : '';
-                    default: return (reservation as any)[columnId] ?? '';
+                    default: {
+                        const value = (reservation as any)[columnId];
+                        if (value == null) return '';
+                        if (typeof value === 'string') return value;
+                        if (typeof value === 'number') return String(value);
+                        if (typeof value === 'boolean') return String(value);
+                        return String(value);
+                    }
                 }
             };
 

@@ -8,6 +8,7 @@ import { API_URL } from './api.ts';
 const instance = axios.create({
   baseURL: API_URL, // Verwende die zentrale API_URL aus api.ts
   withCredentials: true, // Erlaubt das Senden von Cookies/Auth-Daten
+  timeout: 60000, // 60 Sekunden Timeout
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
