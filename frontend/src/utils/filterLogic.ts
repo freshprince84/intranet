@@ -231,6 +231,9 @@ export const applyFilters = <T>(
 /**
  * Helper function to evaluate date conditions with proper date comparison
  * Supports __TODAY__ as a dynamic date value
+ * 
+ * WICHTIG: Extrahiert nur den Datumsteil (Jahr, Monat, Tag) ohne Zeitzone,
+ * um Zeitzone-Konvertierungsprobleme zu vermeiden (verhindert Tag-Versatz)
  */
 export const evaluateDateCondition = (
   dateValue: Date | string | null | undefined,
@@ -245,6 +248,14 @@ export const evaluateDateCondition = (
     return false;
   }
 
+  // Extrahiere nur den Datumsteil (Jahr, Monat, Tag) mit UTC-Methoden
+  // Dies verhindert Zeitzone-Konvertierung, die zu einem Tag-Versatz führt
+  const dateYear = date.getUTCFullYear();
+  const dateMonth = date.getUTCMonth();
+  const dateDay = date.getUTCDate();
+  // Erstelle lokales Date-Objekt aus den UTC-Werten (ohne Zeitzone)
+  const normalizedDate = new Date(dateYear, dateMonth, dateDay);
+
   // Handle __TODAY__ dynamic date
   let conditionDate: Date;
   if (condition.value === '__TODAY__') {
@@ -253,25 +264,26 @@ export const evaluateDateCondition = (
     localToday.setHours(0, 0, 0, 0);
     conditionDate = localToday;
   } else {
-    conditionDate = new Date(condition.value as string);
-    if (isNaN(conditionDate.getTime())) {
+    const conditionDateRaw = new Date(condition.value as string);
+    if (isNaN(conditionDateRaw.getTime())) {
       return false;
     }
+    // Extrahiere nur den Datumsteil (Jahr, Monat, Tag) mit UTC-Methoden
+    // Dies verhindert Zeitzone-Konvertierung, die zu einem Tag-Versatz führt
+    const conditionYear = conditionDateRaw.getUTCFullYear();
+    const conditionMonth = conditionDateRaw.getUTCMonth();
+    const conditionDay = conditionDateRaw.getUTCDate();
+    // Erstelle lokales Date-Objekt aus den UTC-Werten (ohne Zeitzone)
+    conditionDate = new Date(conditionYear, conditionMonth, conditionDay);
   }
-
-  // Normalize both dates to midnight for accurate comparison
-  const normalizedDate = new Date(date);
-  normalizedDate.setHours(0, 0, 0, 0);
-  const normalizedConditionDate = new Date(conditionDate);
-  normalizedConditionDate.setHours(0, 0, 0, 0);
 
   switch (condition.operator) {
     case 'equals':
-      return normalizedDate.getTime() === normalizedConditionDate.getTime();
+      return normalizedDate.getTime() === conditionDate.getTime();
     case 'before':
-      return normalizedDate < normalizedConditionDate;
+      return normalizedDate < conditionDate;
     case 'after':
-      return normalizedDate > normalizedConditionDate;
+      return normalizedDate > conditionDate;
     default:
       return true;
   }
