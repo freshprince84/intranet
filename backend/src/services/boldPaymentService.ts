@@ -640,8 +640,7 @@ export class BoldPaymentService {
                     'TTLock'
                   );
                   
-                  if (whatsappSuccess) {
-                const message = `Hola ${updatedReservation.guestName},
+                  const message = `Hola ${updatedReservation.guestName},
 
 ¡Gracias por tu pago!
 
@@ -650,14 +649,15 @@ ${ttlockCode}
 
 ¡Te esperamos!`;
 
-                // Speichere versendete Nachricht
-                await prisma.reservation.update({
-                  where: { id: reservation.id },
-                  data: {
-                    sentMessage: message,
-                    sentMessageAt: new Date()
-                  }
-                });
+                  if (whatsappSuccess) {
+                    // Speichere versendete Nachricht
+                    await prisma.reservation.update({
+                      where: { id: reservation.id },
+                      data: {
+                        sentMessage: message,
+                        sentMessageAt: new Date()
+                      }
+                    });
 
                     console.log(`[Bold Payment Webhook] ✅ WhatsApp-Nachricht mit TTLock Code erfolgreich versendet für Reservierung ${reservation.id}`);
                     
