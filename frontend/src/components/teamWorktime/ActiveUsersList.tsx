@@ -154,6 +154,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   // Neue State-Variablen für erweiterte Filterbedingungen
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+  const [filterSortDirections, setFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
   
   // Filter State Management (Controlled Mode)
   const [activeFilterName, setActiveFilterName] = useState<string>(t('teamWorktime.filters.active'));
@@ -522,44 +523,52 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       );
     }
 
-    // Sortieren nach Konfiguration
-    if (viewMode === 'cards') {
-      // Multi-Sortierung für Cards-Mode
-      const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+    // Hilfsfunktion zum Extrahieren von Werten für Sortierung
+    const getSortValue = (group: WorktimeGroup, columnId: string): any => {
+      switch (columnId) {
+        case 'name':
+          return `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
+        case 'startTime':
+          return group.startTime.getTime();
+        case 'duration':
+          return group.totalDuration;
+        case 'pauseTime':
+          return group.endTime ? (group.endTime.getTime() - group.startTime.getTime()) - group.totalDuration : 0;
+        case 'branch':
+          return group.branch.name.toLowerCase();
+        default:
+          return '';
+      }
+    };
+    
+    // Sortieren nach Prioritäten
+    filtered.sort((a: any, b: any) => {
+      // 1. Priorität: Table-Header-Sortierung (temporäre Überschreibung, auch wenn Filter aktiv)
+      if (viewMode === 'table' && sortConfig.key) {
+        const valueA = getSortValue(a, sortConfig.key);
+        const valueB = getSortValue(b, sortConfig.key);
+        
+        let comparison = 0;
+        if (typeof valueA === 'number' && typeof valueB === 'number') {
+          comparison = valueA - valueB;
+        } else {
+          comparison = String(valueA).localeCompare(String(valueB));
+        }
+        
+        if (comparison !== 0) {
+          return sortConfig.direction === 'asc' ? comparison : -comparison;
+        }
+      }
       
-      filtered.sort((a: any, b: any) => {
-        for (const columnId of sortableColumns) {
-          const direction = cardSortDirections[columnId] || 'asc';
-          let valueA: any, valueB: any;
+      // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
+      if (filterSortDirections.length > 0 && filterConditions.length > 0) {
+        // Sortiere nach Priorität (1, 2, 3, ...)
+        const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
+        
+        for (const sortDir of sortedByPriority) {
+          const valueA = getSortValue(a, sortDir.column);
+          const valueB = getSortValue(b, sortDir.column);
           
-          switch (columnId) {
-            case 'name':
-              valueA = `${a.user.firstName} ${a.user.lastName}`.toLowerCase();
-              valueB = `${b.user.firstName} ${b.user.lastName}`.toLowerCase();
-              break;
-            case 'startTime':
-              valueA = a.startTime.getTime();
-              valueB = b.startTime.getTime();
-              break;
-            case 'duration':
-              valueA = a.totalDuration;
-              valueB = b.totalDuration;
-              break;
-            case 'pauseTime':
-              const pauseTimeA = a.endTime ? (a.endTime.getTime() - a.startTime.getTime()) - a.totalDuration : 0;
-              const pauseTimeB = b.endTime ? (b.endTime.getTime() - b.startTime.getTime()) - b.totalDuration : 0;
-              valueA = pauseTimeA;
-              valueB = pauseTimeB;
-              break;
-            case 'branch':
-              valueA = a.branch.name.toLowerCase();
-              valueB = b.branch.name.toLowerCase();
-              break;
-            default:
-              continue; // Überspringe unbekannte Spalten
-          }
-          
-          // Vergleich basierend auf Typ
           let comparison = 0;
           if (typeof valueA === 'number' && typeof valueB === 'number') {
             comparison = valueA - valueB;
@@ -567,54 +576,67 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
             comparison = String(valueA).localeCompare(String(valueB));
           }
           
-          // Sortierrichtung anwenden
-          if (direction === 'desc') {
+          if (sortDir.direction === 'desc') {
             comparison = -comparison;
           }
           
-          // Wenn unterschiedlich, gebe Vergleich zurück
           if (comparison !== 0) {
             return comparison;
           }
         }
-        return 0; // Alle Spalten identisch
-      });
-    } else {
-      // Tabellen-Mode: Einzel-Sortierung wie bisher
-    if (sortConfig.key) {
-      filtered.sort((a: any, b: any) => {
-        let valueA, valueB;
+        return 0;
+      }
+      
+      // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
+      if (viewMode === 'cards' && filterConditions.length === 0) {
+        const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
         
-        if (sortConfig.key === 'name') {
-          valueA = `${a.user.firstName} ${a.user.lastName}`;
-          valueB = `${b.user.firstName} ${b.user.lastName}`;
-        } else if (sortConfig.key === 'startTime') {
-          valueA = a.startTime.getTime();
-          valueB = b.startTime.getTime();
-        } else if (sortConfig.key === 'duration') {
-          valueA = a.totalDuration;
-          valueB = b.totalDuration;
-        } else if (sortConfig.key === 'branch') {
-          valueA = a.branch.name;
-          valueB = b.branch.name;
-        } else {
-          valueA = a[sortConfig.key];
-          valueB = b[sortConfig.key];
-        }
-        
-        if (valueA < valueB) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (valueA > valueB) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
+        for (const columnId of sortableColumns) {
+          const direction = cardSortDirections[columnId] || 'asc';
+          const valueA = getSortValue(a, columnId);
+          const valueB = getSortValue(b, columnId);
+          
+          let comparison = 0;
+          if (typeof valueA === 'number' && typeof valueB === 'number') {
+            comparison = valueA - valueB;
+          } else {
+            comparison = String(valueA).localeCompare(String(valueB));
+          }
+          
+          if (direction === 'desc') {
+            comparison = -comparison;
+          }
+          
+          if (comparison !== 0) {
+            return comparison;
+          }
         }
         return 0;
-      });
       }
-    }
+      
+      // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
+      if (viewMode === 'table' && filterConditions.length === 0 && sortConfig.key) {
+        const valueA = getSortValue(a, sortConfig.key);
+        const valueB = getSortValue(b, sortConfig.key);
+        
+        let comparison = 0;
+        if (typeof valueA === 'number' && typeof valueB === 'number') {
+          comparison = valueA - valueB;
+        } else {
+          comparison = String(valueA).localeCompare(String(valueB));
+        }
+        
+        if (comparison !== 0) {
+          return sortConfig.direction === 'asc' ? comparison : -comparison;
+        }
+      }
+      
+      // 5. Fallback: Standardsortierung
+      return 0;
+    });
     
     return filtered;
-  }, [allWorktimes, activeUsers, searchTerm, sortConfig, selectedDate, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+  }, [allWorktimes, activeUsers, searchTerm, sortConfig, selectedDate, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
 
   // Render-Methode für Spaltenheader
   const renderSortableHeader = (columnId: string, label: string) => {
@@ -844,7 +866,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         if (aktiveFilter) {
           setActiveFilterName(t('teamWorktime.filters.active'));
           setSelectedFilterId(aktiveFilter.id);
-          applyFilterConditions(aktiveFilter.conditions, aktiveFilter.operators);
+          applyFilterConditions(aktiveFilter.conditions, aktiveFilter.operators, aktiveFilter.sortDirections);
         }
       } catch (error) {
         console.error('Fehler beim Setzen des initialen Filters:', error);
@@ -872,7 +894,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
-    applyFilterConditions(conditions, operators);
+    applyFilterConditions(conditions, operators, undefined);
   };
 
   // Datum zu vorherigem Tag ändern
@@ -1056,6 +1078,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
           onReset={resetFilterConditions}
           savedConditions={filterConditions}
           savedOperators={filterLogicalOperators}
+          savedSortDirections={filterSortDirections}
+          onSortDirectionsChange={setFilterSortDirections}
           tableId={WORKCENTER_TABLE_ID}
         />
         </div>
@@ -1065,7 +1089,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
         <SavedFilterTags
         tableId={WORKCENTER_TABLE_ID}
-        onSelectFilter={applyFilterConditions}
+        onSelectFilter={(conditions, operators, sortDirections) => applyFilterConditions(conditions, operators, sortDirections)}
         onReset={resetFilterConditions}
         activeFilterName={activeFilterName}
         selectedFilterId={selectedFilterId}

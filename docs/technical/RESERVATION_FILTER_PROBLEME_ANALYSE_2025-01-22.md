@@ -336,3 +336,4 @@ Nach dem Speichern eines Filters sollten:
 **Datum:** 2025-01-22  
 **Status:** Analyse abgeschlossen - NUR PRÜFUNG, KEINE ÄNDERUNGEN
 
+

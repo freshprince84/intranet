@@ -253,7 +253,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     return () => {
       delete (window as any).refreshSavedFilters;
     };
-  }, []);
+  }, [refreshFilters]);
 
   // Dropdown schließen bei Klick außerhalb
   useEffect(() => {

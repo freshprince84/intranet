@@ -46,7 +46,16 @@ const ReservationDetails: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'dd.MM.yyyy', { locale: getLocale() });
+      // Extrahiere nur den Datumsteil (YYYY-MM-DD) und parse als lokales Datum
+      // Dies verhindert Zeitzone-Konvertierung, die zu einem Tag-Versatz führt
+      const date = new Date(dateString);
+      // Verwende UTC-Methoden, um nur den Datumsteil zu extrahieren (ohne Zeitzone)
+      const year = date.getUTCFullYear();
+      const month = date.getUTCMonth();
+      const day = date.getUTCDate();
+      // Erstelle lokales Datum aus den UTC-Werten
+      const localDate = new Date(year, month, day);
+      return format(localDate, 'dd.MM.yyyy', { locale: getLocale() });
     } catch {
       return dateString;
     }

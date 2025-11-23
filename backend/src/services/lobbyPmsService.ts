@@ -501,6 +501,31 @@ export class LobbyPmsService {
   }
 
   /**
+   * Parst ein Datum als lokales Datum (ohne Zeitzone)
+   * Verhindert UTC-Konvertierung bei Datumsstrings im Format YYYY-MM-DD
+   * 
+   * @param dateString - Datumsstring (z.B. "2025-01-20" oder "2025-01-20T00:00:00Z")
+   * @returns Date-Objekt als lokales Datum
+   */
+  private parseLocalDate(dateString: string): Date {
+    if (!dateString) {
+      throw new Error('Datum-String ist leer');
+    }
+    
+    // Wenn das Datum im Format YYYY-MM-DD ist (ohne Zeit), parse es als lokales Datum
+    // Dies verhindert UTC-Konvertierung, die zu einem Tag-Versatz führt
+    const dateOnlyMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})(?:T|$)/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      // new Date(year, monthIndex, day) erstellt ein lokales Datum (keine UTC-Konvertierung)
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+    
+    // Fallback: Normales Parsing für andere Formate
+    return new Date(dateString);
+  }
+
+  /**
    * Synchronisiert eine LobbyPMS-Reservierung in die lokale Datenbank
    * 
    * @param lobbyReservation - Reservierungsdaten von LobbyPMS
@@ -549,8 +574,18 @@ export class LobbyPmsService {
     const guestPhone = holder.phone || lobbyReservation.guest_phone || null;
     
     // Datum-Felder: API gibt start_date/end_date zurück
-    const checkInDate = lobbyReservation.start_date || lobbyReservation.check_in_date;
-    const checkOutDate = lobbyReservation.end_date || lobbyReservation.check_out_date;
+    // WICHTIG: Verwende parseLocalDate, um UTC-Konvertierung zu vermeiden
+    // Die API gibt Datum als "YYYY-MM-DD" zurück, was als UTC interpretiert wird
+    // und dann in der lokalen Zeitzone einen Tag zu früh angezeigt wird
+    const checkInDateString = lobbyReservation.start_date || lobbyReservation.check_in_date;
+    const checkOutDateString = lobbyReservation.end_date || lobbyReservation.check_out_date;
+    
+    if (!checkInDateString || !checkOutDateString) {
+      throw new Error('Check-in oder Check-out Datum fehlt in der LobbyPMS-Reservierung');
+    }
+    
+    const checkInDate = this.parseLocalDate(checkInDateString);
+    const checkOutDate = this.parseLocalDate(checkOutDateString);
     
     // Zimmer-Daten aus assigned_room-Objekt
     const roomNumber = lobbyReservation.assigned_room?.name || lobbyReservation.room_number || null;
@@ -595,8 +630,8 @@ export class LobbyPmsService {
       guestName: guestName,
       guestEmail: guestEmail,
       guestPhone: guestPhone,
-      checkInDate: new Date(checkInDate),
-      checkOutDate: new Date(checkOutDate),
+      checkInDate: checkInDate,
+      checkOutDate: checkOutDate,
       arrivalTime: lobbyReservation.arrival_time ? new Date(lobbyReservation.arrival_time) : null,
       roomNumber: roomNumber,
       roomDescription: roomDescription,

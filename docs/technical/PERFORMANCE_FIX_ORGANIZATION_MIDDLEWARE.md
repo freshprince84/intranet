@@ -107,3 +107,4 @@ organizationCache.invalidate(userId);
 **Erstellt:** 2025-01-22  
 **Status:** ✅ Deployed - Performance sollte drastisch besser sein
 
+

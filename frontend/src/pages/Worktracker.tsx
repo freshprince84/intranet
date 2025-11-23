@@ -396,6 +396,19 @@ const Worktracker: React.FC = () => {
         return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
     }, [cardMetadataOrder, hiddenCardMetadata]);
 
+    // Lokale Sortierrichtungen für Tasks Cards (nicht persistiert)
+    const [taskCardSortDirections, setTaskCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
+        return defaultCardSortDirections;
+    });
+
+    // Handler für Sortierrichtung-Änderung bei Tasks
+    const handleTaskCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
+        setTaskCardSortDirections(prev => ({
+            ...prev,
+            [columnId]: direction
+        }));
+    };
+
     // Lokale Sortierrichtungen für Reservations Cards (nicht persistiert)
     const [reservationCardSortDirections, setReservationCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
         return defaultReservationCardSortDirections;
@@ -918,6 +931,8 @@ const Worktracker: React.FC = () => {
             setActiveFilterName(name);
             setSelectedFilterId(id);
             applyFilterConditions(conditions, operators, sortDirections);
+            // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
+            setTableSortConfig({ key: 'dueDate', direction: 'asc' });
             
             // Wenn Filter-ID vorhanden (Standardfilter): Server-seitig laden
             // Sonst: Client-seitig filtern (komplexe Filter)
@@ -929,6 +944,8 @@ const Worktracker: React.FC = () => {
             setReservationActiveFilterName(name);
             setReservationSelectedFilterId(id);
             applyReservationFilterConditions(conditions, operators, sortDirections);
+            // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
+            setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
         }
     };
 
@@ -1157,7 +1174,24 @@ const Worktracker: React.FC = () => {
         };
         
         const sorted = filtered.sort((a, b) => {
-            // 1. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
+            // 1. Priorität: Table-Header-Sortierung (temporäre Überschreibung, auch wenn Filter aktiv)
+            if (viewMode === 'table' && tableSortConfig.key) {
+                const valueA = getSortValue(a, tableSortConfig.key);
+                const valueB = getSortValue(b, tableSortConfig.key);
+                
+                let comparison = 0;
+                if (typeof valueA === 'number' && typeof valueB === 'number') {
+                    comparison = valueA - valueB;
+                } else {
+                    comparison = String(valueA).localeCompare(String(valueB));
+                }
+                
+                if (comparison !== 0) {
+                    return tableSortConfig.direction === 'asc' ? comparison : -comparison;
+                }
+            }
+            
+            // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
             if (filterSortDirections.length > 0 && filterConditions.length > 0) {
                 // Sortiere nach Priorität (1, 2, 3, ...)
                 const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
@@ -1184,49 +1218,51 @@ const Worktracker: React.FC = () => {
                 return 0;
             }
             
-            // 2. Priorität: Tabellen-Header-Sortierung (nur für Tabellen-Ansicht, wenn kein Filter aktiv)
-            if (viewMode === 'table' && tableSortConfig.key) {
-                let valueA: any, valueB: any;
+            // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
+            if (viewMode === 'cards' && filterConditions.length === 0) {
+                const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
                 
-                switch (tableSortConfig.key) {
-                    case 'title':
-                        valueA = a.title;
-                        valueB = b.title;
-                        break;
-                    case 'status':
-                        valueA = getStatusPriority(a.status);
-                        valueB = getStatusPriority(b.status);
-                        break;
-                    case 'responsible.firstName':
-                        valueA = a.responsible ? `${a.responsible.firstName} ${a.responsible.lastName}` : (a.role ? `Rolle: ${a.role.name}` : '');
-                        valueB = b.responsible ? `${b.responsible.firstName} ${b.responsible.lastName}` : (b.role ? `Rolle: ${b.role.name}` : '');
-                        break;
-                    case 'qualityControl.firstName':
-                        valueA = a.qualityControl ? `${a.qualityControl.firstName} ${a.qualityControl.lastName}` : '';
-                        valueB = b.qualityControl ? `${b.qualityControl.firstName} ${b.qualityControl.lastName}` : '';
-                        break;
-                    case 'branch.name':
-                        valueA = a.branch.name;
-                        valueB = b.branch.name;
-                        break;
-                    case 'dueDate':
-                        valueA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                        valueB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                        break;
-                    default:
-                        valueA = a[tableSortConfig.key as keyof Task];
-                        valueB = b[tableSortConfig.key as keyof Task];
+                for (const columnId of sortableColumns) {
+                    const direction = taskCardSortDirections[columnId] || 'asc';
+                    const valueA = getSortValue(a, columnId);
+                    const valueB = getSortValue(b, columnId);
+                    
+                    let comparison = 0;
+                    if (typeof valueA === 'number' && typeof valueB === 'number') {
+                        comparison = valueA - valueB;
+                    } else {
+                        comparison = String(valueA).localeCompare(String(valueB));
+                    }
+                    
+                    if (direction === 'desc') {
+                        comparison = -comparison;
+                    }
+                    
+                    if (comparison !== 0) {
+                        return comparison;
+                    }
+                }
+                return 0;
+            }
+            
+            // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
+            if (viewMode === 'table' && filterConditions.length === 0 && tableSortConfig.key) {
+                const valueA = getSortValue(a, tableSortConfig.key);
+                const valueB = getSortValue(b, tableSortConfig.key);
+                
+                let comparison = 0;
+                if (typeof valueA === 'number' && typeof valueB === 'number') {
+                    comparison = valueA - valueB;
+                } else {
+                    comparison = String(valueA).localeCompare(String(valueB));
                 }
                 
-                if (typeof valueA === 'number' && typeof valueB === 'number') {
-                    return tableSortConfig.direction === 'asc' ? valueA - valueB : valueB - valueA;
-                } else {
-                    const comparison = String(valueA).localeCompare(String(valueB));
+                if (comparison !== 0) {
                     return tableSortConfig.direction === 'asc' ? comparison : -comparison;
                 }
             }
             
-            // 3. Fallback: Standardsortierung (wenn keine benutzerdefinierte Sortierung)
+            // 5. Fallback: Standardsortierung (wenn keine benutzerdefinierte Sortierung)
             const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
             const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
             
@@ -1246,7 +1282,7 @@ const Worktracker: React.FC = () => {
         
         console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         return sorted;
-    }, [tasks, allTasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterConditions, filterLogicalOperators, filterSortDirections, viewMode]);
+    }, [tasks, allTasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]);
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {
@@ -1410,68 +1446,65 @@ const Worktracker: React.FC = () => {
             );
         }
         
-        // Sortierung basierend auf viewMode
-        let sorted: typeof filtered;
-        if (viewMode === 'cards') {
-            // Multi-Sortierung für Cards-Mode basierend auf cardMetadataOrder und cardSortDirections
-            sorted = [...filtered];
-            const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+        // Hilfsfunktion zum Extrahieren von Werten für Sortierung
+        const getReservationSortValue = (reservation: Reservation, columnId: string): any => {
+            switch (columnId) {
+                case 'guestName':
+                    return (reservation.guestName || '').toLowerCase();
+                case 'status':
+                    return reservation.status.toLowerCase();
+                case 'paymentStatus':
+                    return reservation.paymentStatus.toLowerCase();
+                case 'checkInDate':
+                    return reservation.checkInDate ? new Date(reservation.checkInDate).getTime() : 0;
+                case 'checkOutDate':
+                    return reservation.checkOutDate ? new Date(reservation.checkOutDate).getTime() : 0;
+                case 'roomNumber':
+                    return (reservation.roomNumber || '').toLowerCase();
+                case 'branch':
+                case 'branch.name':
+                    return (reservation.branch?.name || '').toLowerCase();
+                case 'guestEmail':
+                    return (reservation.guestEmail || '').toLowerCase();
+                case 'guestPhone':
+                    return (reservation.guestPhone || '').toLowerCase();
+                case 'amount':
+                    return typeof reservation.amount === 'string' ? parseFloat(reservation.amount) : (reservation.amount || 0);
+                case 'arrivalTime':
+                    return reservation.arrivalTime ? new Date(reservation.arrivalTime).getTime() : 0;
+                default:
+                    return '';
+            }
+        };
+        
+        // Sortierung basierend auf Prioritäten
+        const sorted = filtered.sort((a, b) => {
+            // 1. Priorität: Table-Header-Sortierung (temporäre Überschreibung, auch wenn Filter aktiv)
+            if (viewMode === 'table' && reservationTableSortConfig.key) {
+                const valueA = getReservationSortValue(a, reservationTableSortConfig.key);
+                const valueB = getReservationSortValue(b, reservationTableSortConfig.key);
+                
+                let comparison = 0;
+                if (typeof valueA === 'number' && typeof valueB === 'number') {
+                    comparison = valueA - valueB;
+                } else {
+                    comparison = String(valueA).localeCompare(String(valueB));
+                }
+                
+                if (comparison !== 0) {
+                    return reservationTableSortConfig.direction === 'asc' ? comparison : -comparison;
+                }
+            }
             
-            sorted.sort((a, b) => {
-                for (const columnId of sortableColumns) {
-                    const direction = reservationCardSortDirections[columnId] || 'asc';
-                    let valueA: any, valueB: any;
+            // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
+            if (reservationFilterSortDirections.length > 0 && reservationFilterConditions.length > 0) {
+                // Sortiere nach Priorität (1, 2, 3, ...)
+                const sortedByPriority = [...reservationFilterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
+                
+                for (const sortDir of sortedByPriority) {
+                    const valueA = getReservationSortValue(a, sortDir.column);
+                    const valueB = getReservationSortValue(b, sortDir.column);
                     
-                    switch (columnId) {
-                        case 'guestName':
-                            valueA = (a.guestName || '').toLowerCase();
-                            valueB = (b.guestName || '').toLowerCase();
-                            break;
-                        case 'status':
-                            valueA = a.status.toLowerCase();
-                            valueB = b.status.toLowerCase();
-                            break;
-                        case 'paymentStatus':
-                            valueA = a.paymentStatus.toLowerCase();
-                            valueB = b.paymentStatus.toLowerCase();
-                            break;
-                        case 'checkInDate':
-                            valueA = new Date(a.checkInDate).getTime();
-                            valueB = new Date(b.checkInDate).getTime();
-                            break;
-                        case 'checkOutDate':
-                            valueA = new Date(a.checkOutDate).getTime();
-                            valueB = new Date(b.checkOutDate).getTime();
-                            break;
-                        case 'roomNumber':
-                            valueA = (a.roomNumber || '').toLowerCase();
-                            valueB = (b.roomNumber || '').toLowerCase();
-                            break;
-                        case 'branch':
-                            valueA = (a.branch?.name || '').toLowerCase();
-                            valueB = (b.branch?.name || '').toLowerCase();
-                            break;
-                        case 'guestEmail':
-                            valueA = (a.guestEmail || '').toLowerCase();
-                            valueB = (b.guestEmail || '').toLowerCase();
-                            break;
-                        case 'guestPhone':
-                            valueA = (a.guestPhone || '').toLowerCase();
-                            valueB = (b.guestPhone || '').toLowerCase();
-                            break;
-                        case 'amount':
-                            valueA = typeof a.amount === 'string' ? parseFloat(a.amount) : (a.amount || 0);
-                            valueB = typeof b.amount === 'string' ? parseFloat(b.amount) : (b.amount || 0);
-                            break;
-                        case 'arrivalTime':
-                            valueA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0;
-                            valueB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0;
-                            break;
-                        default:
-                            continue; // Überspringe unbekannte Spalten
-                    }
-                    
-                    // Vergleich basierend auf Typ
                     let comparison = 0;
                     if (typeof valueA === 'number' && typeof valueB === 'number') {
                         comparison = valueA - valueB;
@@ -1479,76 +1512,26 @@ const Worktracker: React.FC = () => {
                         comparison = String(valueA).localeCompare(String(valueB));
                     }
                     
-                    // Sortierrichtung anwenden
-                    if (direction === 'desc') {
+                    if (sortDir.direction === 'desc') {
                         comparison = -comparison;
                     }
                     
-                    // Wenn unterschiedlich, gebe Vergleich zurück
                     if (comparison !== 0) {
                         return comparison;
                     }
                 }
-                return 0; // Alle Spalten identisch
-            });
-        } else {
-            // Tabellen-Mode: Sortierung basierend auf reservationTableSortConfig
-            sorted = [...filtered].sort((a, b) => {
-                if (reservationTableSortConfig.key) {
-                    let valueA: any, valueB: any;
+                return 0;
+            }
+            
+            // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
+            if (viewMode === 'cards' && reservationFilterConditions.length === 0) {
+                const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+                
+                for (const columnId of sortableColumns) {
+                    const direction = reservationCardSortDirections[columnId] || 'asc';
+                    const valueA = getReservationSortValue(a, columnId);
+                    const valueB = getReservationSortValue(b, columnId);
                     
-                    switch (reservationTableSortConfig.key) {
-                        case 'guestName':
-                            valueA = (a.guestName || '').toLowerCase();
-                            valueB = (b.guestName || '').toLowerCase();
-                            break;
-                        case 'status':
-                            valueA = (a.status || '').toLowerCase();
-                            valueB = (b.status || '').toLowerCase();
-                            break;
-                        case 'paymentStatus':
-                            valueA = (a.paymentStatus || '').toLowerCase();
-                            valueB = (b.paymentStatus || '').toLowerCase();
-                            break;
-                        case 'checkInDate':
-                            valueA = new Date(a.checkInDate).getTime();
-                            valueB = new Date(b.checkInDate).getTime();
-                            break;
-                        case 'checkOutDate':
-                            valueA = new Date(a.checkOutDate).getTime();
-                            valueB = new Date(b.checkOutDate).getTime();
-                            break;
-                        case 'roomNumber':
-                            valueA = (a.roomNumber || '').toLowerCase();
-                            valueB = (b.roomNumber || '').toLowerCase();
-                            break;
-                        case 'branch':
-                        case 'branch.name':
-                            valueA = (a.branch?.name || '').toLowerCase();
-                            valueB = (b.branch?.name || '').toLowerCase();
-                            break;
-                        case 'guestEmail':
-                            valueA = (a.guestEmail || '').toLowerCase();
-                            valueB = (b.guestEmail || '').toLowerCase();
-                            break;
-                        case 'guestPhone':
-                            valueA = (a.guestPhone || '').toLowerCase();
-                            valueB = (b.guestPhone || '').toLowerCase();
-                            break;
-                        case 'amount':
-                            valueA = typeof a.amount === 'string' ? parseFloat(a.amount) : (a.amount || 0);
-                            valueB = typeof b.amount === 'string' ? parseFloat(b.amount) : (b.amount || 0);
-                            break;
-                        case 'arrivalTime':
-                            valueA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0;
-                            valueB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0;
-                            break;
-                        default:
-                            valueA = '';
-                            valueB = '';
-                    }
-                    
-                    // Vergleich basierend auf Typ
                     let comparison = 0;
                     if (typeof valueA === 'number' && typeof valueB === 'number') {
                         comparison = valueA - valueB;
@@ -1556,18 +1539,41 @@ const Worktracker: React.FC = () => {
                         comparison = String(valueA).localeCompare(String(valueB));
                     }
                     
-                    // Sortierrichtung anwenden
-                    return reservationTableSortConfig.direction === 'asc' ? comparison : -comparison;
+                    if (direction === 'desc') {
+                        comparison = -comparison;
+                    }
+                    
+                    if (comparison !== 0) {
+                        return comparison;
+                    }
+                }
+                return 0;
+            }
+            
+            // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
+            if (viewMode === 'table' && reservationFilterConditions.length === 0 && reservationTableSortConfig.key) {
+                const valueA = getReservationSortValue(a, reservationTableSortConfig.key);
+                const valueB = getReservationSortValue(b, reservationTableSortConfig.key);
+                
+                let comparison = 0;
+                if (typeof valueA === 'number' && typeof valueB === 'number') {
+                    comparison = valueA - valueB;
+                } else {
+                    comparison = String(valueA).localeCompare(String(valueB));
                 }
                 
-                // Fallback: Check-in-Datum (neueste zuerst)
-                return new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime();
-            });
-        }
+                if (comparison !== 0) {
+                    return reservationTableSortConfig.direction === 'asc' ? comparison : -comparison;
+                }
+            }
+            
+            // 5. Fallback: Check-in-Datum (neueste zuerst)
+            return new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime();
+        });
         
         console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
         return sorted;
-    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterConditions, reservationFilterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
+    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterConditions, reservationFilterLogicalOperators, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
@@ -1927,13 +1933,17 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                                            sortDirections={viewMode === 'cards' && activeTab === 'reservations' 
+                                            sortDirections={viewMode === 'cards' && activeTab === 'todos'
+                                                ? taskCardSortDirections
+                                                : viewMode === 'cards' && activeTab === 'reservations' 
                                                 ? reservationCardSortDirections 
                                                 : undefined}
-                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'reservations'
+                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'todos'
+                                                ? handleTaskCardSortDirectionChange
+                                                : viewMode === 'cards' && activeTab === 'reservations'
                                                 ? handleReservationCardSortDirectionChange
                                                 : undefined}
-                                            showSortDirection={viewMode === 'cards' && activeTab === 'reservations'}
+                                            showSortDirection={viewMode === 'cards' && (activeTab === 'todos' || activeTab === 'reservations')}
                                             onClose={() => {}}
                                         />
                                     </div>
@@ -2426,7 +2436,16 @@ const Worktracker: React.FC = () => {
                                             {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
                                                 const formatDate = (dateString: string) => {
                                                     try {
-                                                        return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
+                                                        // Extrahiere nur den Datumsteil (YYYY-MM-DD) und parse als lokales Datum
+                                                        // Dies verhindert Zeitzone-Konvertierung, die zu einem Tag-Versatz führt
+                                                        const date = new Date(dateString);
+                                                        // Verwende UTC-Methoden, um nur den Datumsteil zu extrahieren (ohne Zeitzone)
+                                                        const year = date.getUTCFullYear();
+                                                        const month = date.getUTCMonth();
+                                                        const day = date.getUTCDate();
+                                                        // Erstelle lokales Datum aus den UTC-Werten
+                                                        const localDate = new Date(year, month, day);
+                                                        return format(localDate, 'dd.MM.yyyy', { locale: de });
                                                     } catch {
                                                         return dateString;
                                                     }
@@ -3210,13 +3229,17 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                                            sortDirections={viewMode === 'cards' && activeTab === 'reservations' 
+                                            sortDirections={viewMode === 'cards' && activeTab === 'todos'
+                                                ? taskCardSortDirections
+                                                : viewMode === 'cards' && activeTab === 'reservations' 
                                                 ? reservationCardSortDirections 
                                                 : undefined}
-                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'reservations'
+                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'todos'
+                                                ? handleTaskCardSortDirectionChange
+                                                : viewMode === 'cards' && activeTab === 'reservations'
                                                 ? handleReservationCardSortDirectionChange
                                                 : undefined}
-                                            showSortDirection={viewMode === 'cards' && activeTab === 'reservations'}
+                                            showSortDirection={viewMode === 'cards' && (activeTab === 'todos' || activeTab === 'reservations')}
                                             onClose={() => {}}
                                         />
                                     </div>
@@ -3705,7 +3728,16 @@ const Worktracker: React.FC = () => {
                                             {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
                                                 const formatDate = (dateString: string) => {
                                                     try {
-                                                        return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
+                                                        // Extrahiere nur den Datumsteil (YYYY-MM-DD) und parse als lokales Datum
+                                                        // Dies verhindert Zeitzone-Konvertierung, die zu einem Tag-Versatz führt
+                                                        const date = new Date(dateString);
+                                                        // Verwende UTC-Methoden, um nur den Datumsteil zu extrahieren (ohne Zeitzone)
+                                                        const year = date.getUTCFullYear();
+                                                        const month = date.getUTCMonth();
+                                                        const day = date.getUTCDate();
+                                                        // Erstelle lokales Datum aus den UTC-Werten
+                                                        const localDate = new Date(year, month, day);
+                                                        return format(localDate, 'dd.MM.yyyy', { locale: de });
                                                     } catch {
                                                         return dateString;
                                                     }
