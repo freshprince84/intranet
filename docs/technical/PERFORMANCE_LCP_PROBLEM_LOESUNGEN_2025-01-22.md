@@ -314,6 +314,30 @@ if (loading && requests.length === 0) {
 ---
 
 **Erstellt:** 2025-01-22  
-**Status:** ✅ Analyse abgeschlossen  
-**Nächste Aktion:** Skeleton-Loading implementieren (basierend auf ReservationDetails.tsx Pattern)
+**Status:** ✅ Implementiert  
+**Umsetzung:** Skeleton-Loading für Requests.tsx und Worktracker.tsx implementiert
+
+---
+
+## ✅ IMPLEMENTIERUNG ABGESCHLOSSEN
+
+### Änderungen
+
+**1. Requests.tsx (Zeile 990-1015)**
+- ✅ Skeleton-Loading für LCP-Element implementiert
+- ✅ Rendert 3 Skeleton-Cards sofort, auch wenn `loading === true` und `requests.length === 0`
+- ✅ LCP-Element (Titel-Span) wird sofort sichtbar
+
+**2. Worktracker.tsx (Zeile 3182-3205)**
+- ✅ Skeleton-Loading für Tasks (Card-Ansicht) implementiert
+- ✅ Rendert 3 Skeleton-Cards sofort, auch wenn `loading === true` und `tasks.length === 0`
+- ✅ LCP-Element (Titel-Span) wird sofort sichtbar
+
+**Pattern verwendet:**
+- Basierend auf `ReservationDetails.tsx` (Zeile 94-103)
+- `animate-pulse` für Skeleton-Animation
+- Gleiche Struktur wie echte DataCards (für konsistentes LCP-Element)
+
+**Erwartete Verbesserung:**
+- LCP: 8.26s → ~0.1-0.3s (LCP-Element wird sofort sichtbar)
 
