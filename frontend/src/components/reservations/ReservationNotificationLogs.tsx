@@ -15,10 +15,12 @@ import {
 
 interface ReservationNotificationLogsProps {
   reservationId: number;
+  refreshKey?: number; // Optional: Wird erhöht, wenn Logs neu geladen werden sollen
 }
 
 const ReservationNotificationLogs: React.FC<ReservationNotificationLogsProps> = ({
-  reservationId
+  reservationId,
+  refreshKey
 }) => {
   const { t, i18n } = useTranslation();
   const [logs, setLogs] = useState<ReservationNotificationLog[]>([]);
@@ -101,7 +103,7 @@ const ReservationNotificationLogs: React.FC<ReservationNotificationLogsProps> = 
     };
 
     loadLogs();
-  }, [reservationId, t]);
+  }, [reservationId, t, refreshKey]);
 
   if (loading) {
     return (

@@ -59,7 +59,8 @@
     "processing": "Procesando...",
     "retry": "Reintentar",
     "sending": "Enviando...",
-    "update": "Actualizar"
+    "update": "Actualizar",
+    "viewDetails": "Ver detalles"
   },
   "header": {
     "profile": "Perfil",

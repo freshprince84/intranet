@@ -59,7 +59,8 @@
     "processing": "Wird verarbeitet...",
     "retry": "Wiederholen",
     "sending": "Sende...",
-    "update": "Aktualisieren"
+    "update": "Aktualisieren",
+    "viewDetails": "Details anzeigen"
   },
   "header": {
     "profile": "Profil",

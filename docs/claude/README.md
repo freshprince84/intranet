@@ -32,6 +32,22 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 
 ## Claude-spezifische Funktionen
 
+## 🚨 KRITISCH: Browser-Console und Logs IMMER selbst prüfen!
+
+**⚠️ ABSOLUTE REGEL - KEINE AUSNAHMEN:**
+- **BROWSER-CONSOLE IMMER SELBST PRÜFEN** - Nie den Benutzer bitten, die Console zu prüfen!
+- **LOGS IMMER SELBST PRÜFEN** - Alle Logs selbst in der Console anschauen!
+- **BROWSER SELBST VERWENDEN** - Wenn etwas getestet werden muss, den Browser selbst verwenden!
+- **PRODUKTIVSERVER VERWENDEN** - Immer auf dem Produktivserver testen, nicht lokal!
+- **NUR BEI BEDARF FRAGEN** - Nur fragen, wenn der Benutzer etwas im Browser machen muss (z.B. Login)
+
+**Was bedeutet das konkret:**
+- Bei jedem Problem: Browser öffnen → Console öffnen → Logs prüfen → Problem identifizieren
+- Nie sagen "Bitte prüfen Sie die Console" - IMMER selbst prüfen!
+- Nie sagen "Bitte testen Sie X" - IMMER selbst testen!
+- Produktivserver-URL: `https://65.109.228.106.nip.io`
+- Wenn Login erforderlich: Benutzer fragen, ob er sich einloggen soll oder ob ich Login-Daten bekomme
+
 ## 🚨 STRENGSTENS VERBOTEN: Vermutungen bei Analysen und Planungen
 
 **⚠️ ABSOLUTE REGEL FÜR CLAUDE - KEINE AUSNAHMEN:**

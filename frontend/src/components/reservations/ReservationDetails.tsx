@@ -35,6 +35,7 @@ const ReservationDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showCheckInForm, setShowCheckInForm] = useState(false);
   const [showGuestContactModal, setShowGuestContactModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Wird erhöht, um Notification-Logs neu zu laden
 
   const getLocale = () => {
     switch (i18n.language) {
@@ -81,6 +82,8 @@ const ReservationDetails: React.FC = () => {
       console.log('[ReservationDetails] Status:', reservationData?.status);
       console.log('[ReservationDetails] PaymentStatus:', reservationData?.paymentStatus);
       setReservation(reservationData);
+      // Erhöhe Refresh-Key, damit Notification-Logs neu geladen werden
+      setRefreshKey(prev => prev + 1);
     } catch (err: any) {
       console.error('Fehler beim Laden der Reservierung:', err);
       setError(err.response?.data?.message || t('reservations.loadError', 'Fehler beim Laden der Reservierung'));
@@ -366,7 +369,7 @@ const ReservationDetails: React.FC = () => {
 
       {/* Notification Logs - zeigt alle versendeten Mitteilungen */}
       <div className="mt-6">
-        <ReservationNotificationLogs reservationId={reservation.id} />
+        <ReservationNotificationLogs reservationId={reservation.id} refreshKey={refreshKey} />
       </div>
     </div>
   );
