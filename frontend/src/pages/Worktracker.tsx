@@ -3292,8 +3292,8 @@ const Worktracker: React.FC = () => {
                             />
 
                             {/* Tabelle oder Cards */}
-                            {viewMode === 'table' ? (
-                                /* Tabellen-Ansicht */
+                            {activeTab === 'todos' && viewMode === 'table' ? (
+                                /* Tabellen-Ansicht - Tasks */
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700" data-onboarding="task-list">
                                         <thead className="bg-gray-50 dark:bg-gray-700">
