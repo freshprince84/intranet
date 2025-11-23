@@ -290,8 +290,10 @@ class ReservationNotificationService {
                     // WICHTIG: Check-in-Link IMMER mit der ursprünglich importierten E-Mail generieren
                     // (reservation.guestEmail), nicht mit der geänderten E-Mail aus options
                     // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
+                    // WICHTIG: Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, nicht die interne ID
                     const reservationForCheckInLink = {
                         id: reservation.id,
+                        lobbyReservationId: reservation.lobbyReservationId,
                         guestEmail: reservation.guestEmail || ''
                     };
                     checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservationForCheckInLink) ||
@@ -941,15 +943,15 @@ ${doorPin || 'N/A'}
                             yield whatsappService.sendMessageWithFallback(finalGuestPhone, messageText, undefined, // Kein Template
                             undefined // Keine Template-Parameter
                             );
+                            whatsappSuccess = true; // Erfolg annehmen, wenn keine Exception geworfen wurde
                         }
                         else {
                             // Verwende Standard-Template
                             const whatsappSuccessResult = yield whatsappService.sendCheckInConfirmation(reservation.guestName, finalGuestPhone, reservation.roomNumber || 'N/A', reservation.roomDescription || 'N/A', doorPin || 'N/A', doorAppName || 'TTLock');
                             whatsappSuccess = whatsappSuccessResult;
                         }
-                        if (whatsappSuccess || ((options === null || options === void 0 ? void 0 : options.customMessage) && doorPin)) {
+                        if (whatsappSuccess) {
                             console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
-                            whatsappSuccess = true;
                         }
                         else {
                             console.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
