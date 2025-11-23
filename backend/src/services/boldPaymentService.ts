@@ -730,17 +730,86 @@ ${ttlockCode}
                     });
                     
                     console.log(`[Bold Payment Webhook] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservation.id}`);
+                    
+                    // Log erfolgreiche WhatsApp-Notification (ohne PIN)
+                    try {
+                      await prisma.reservationNotificationLog.create({
+                        data: {
+                          reservationId: reservation.id,
+                          notificationType: 'pin',
+                          channel: 'whatsapp',
+                          success: true,
+                          sentAt: new Date(),
+                          sentTo: updatedReservation.guestPhone,
+                          message: message
+                        }
+                      });
+                    } catch (logError) {
+                      console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für WhatsApp:', logError);
+                    }
                   } else {
                     console.error(`[Bold Payment Webhook] ❌ WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)`);
+                    
+                    // Log fehlgeschlagene WhatsApp-Notification
+                    try {
+                      await prisma.reservationNotificationLog.create({
+                        data: {
+                          reservationId: reservation.id,
+                          notificationType: 'pin',
+                          channel: 'whatsapp',
+                          success: false,
+                          sentAt: new Date(),
+                          sentTo: updatedReservation.guestPhone,
+                          message: message,
+                          errorMessage: 'WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)'
+                        }
+                      });
+                    } catch (logError) {
+                      console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp:', logError);
+                    }
                   }
                 }
               } catch (whatsappError) {
                 console.error('[Bold Payment Webhook] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+                const errorMessage = whatsappError instanceof Error ? whatsappError.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
                 if (whatsappError instanceof Error) {
                   console.error('[Bold Payment Webhook] Fehlermeldung:', whatsappError.message);
                   console.error('[Bold Payment Webhook] Stack:', whatsappError.stack);
                 }
+                
+                // Log fehlgeschlagene WhatsApp-Notification
+                try {
+                  await prisma.reservationNotificationLog.create({
+                    data: {
+                      reservationId: reservation.id,
+                      notificationType: 'pin',
+                      channel: 'whatsapp',
+                      success: false,
+                      sentAt: new Date(),
+                      sentTo: updatedReservation.guestPhone || null,
+                      errorMessage: errorMessage
+                    }
+                  });
+                } catch (logError) {
+                  console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für WhatsApp-Fehler:', logError);
+                }
                 // Fehler nicht weiterwerfen
+              }
+            } else {
+              // Keine Kontaktinfo vorhanden - Log erstellen
+              try {
+                await prisma.reservationNotificationLog.create({
+                  data: {
+                    reservationId: reservation.id,
+                    notificationType: 'pin',
+                    channel: 'whatsapp',
+                    success: false,
+                    sentAt: new Date(),
+                    errorMessage: 'Keine Kontaktinformation (Telefonnummer oder E-Mail) vorhanden - TTLock-Code konnte nicht versendet werden'
+                  }
+                });
+              } catch (logError) {
+                console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags (keine Kontaktinfo):', logError);
               }
             }
           } catch (error) {
