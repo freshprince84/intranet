@@ -26,6 +26,12 @@ export const evaluateCondition = (
 ): boolean => {
   const { operator, value } = condition;
   
+  // Sicherstellen, dass value definiert ist
+  if (value === undefined) {
+    console.error('evaluateCondition: value ist undefined', condition);
+    return false;
+  }
+  
   // Handle null/undefined values
   if (fieldValue == null && value == null) {
     return operator === 'equals';
@@ -82,18 +88,29 @@ export const evaluateCondition = (
     case 'startsWith':
       return strField.startsWith(strValue);
     case 'endsWith':
-      // Zusätzliche Sicherheitsprüfung vor endsWith
-      if (strField == null || typeof strField !== 'string' || strValue == null || typeof strValue !== 'string') {
+      // Explizite Prüfung, dass strField und strValue Strings sind, bevor endsWith aufgerufen wird
+      if (strField === undefined || strField === null) {
+        console.error('endsWith: strField ist undefined/null', { strField, strValue, fieldValue, value, condition });
         return false;
       }
-      // Explizite Prüfung, dass strField ein String ist, bevor endsWith aufgerufen wird
-      if (typeof strField !== 'string' || strField === undefined || strField === null) {
+      if (strValue === undefined || strValue === null) {
+        console.error('endsWith: strValue ist undefined/null', { strField, strValue, fieldValue, value, condition });
         return false;
       }
-      if (typeof strValue !== 'string' || strValue === undefined || strValue === null) {
+      if (typeof strField !== 'string') {
+        console.error('endsWith: strField ist kein String', { strField, typeof: typeof strField, strValue, fieldValue, value, condition });
         return false;
       }
-      return strField.endsWith(strValue);
+      if (typeof strValue !== 'string') {
+        console.error('endsWith: strValue ist kein String', { strField, strValue, typeof: typeof strValue, fieldValue, value, condition });
+        return false;
+      }
+      try {
+        return strField.endsWith(strValue);
+      } catch (error) {
+        console.error('endsWith: Fehler bei endsWith-Aufruf', error, { strField, strValue, fieldValue, value, condition });
+        return false;
+      }
     case 'before':
     case 'after': {
       // Date operations

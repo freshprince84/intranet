@@ -2589,6 +2589,7 @@
     "nationality": "Nacionalidad",
     "room": "Habitación",
     "roomNumber": "Número de Habitación",
+    "branch": "Sucursal",
     "roomNumberRequired": "El número de habitación es requerido",
     "roomNumberPlaceholder": "ej. 101",
     "roomDescription": "Descripción de la Habitación",
