@@ -55,6 +55,7 @@ async function checkBoldPaymentConfig() {
       console.log(`   API Key Vorschau: ${apiKeyStr.substring(0, 20)}...`);
     }
     console.log(`   Merchant ID: ${boldPaymentSettings.merchantId || 'nicht gesetzt'}`);
+    console.log(`   Environment: ${boldPaymentSettings.environment || 'nicht gesetzt (Standard: sandbox)'}`);
     console.log('');
 
     // Versuche Entschlüsselung
@@ -76,6 +77,7 @@ async function checkBoldPaymentConfig() {
         console.log(`   API Key Vorschau: ${decryptedKey.substring(0, 30)}...`);
       }
       console.log(`   Merchant ID: ${decryptedBoldPayment.merchantId || 'nicht gesetzt'}`);
+      console.log(`   Environment: ${decryptedBoldPayment.environment || 'nicht gesetzt (Standard: sandbox)'}`);
       console.log('');
 
       // Prüfe Vollständigkeit

@@ -269,14 +269,25 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Wähle einen gespeicherten Filter aus
   const handleSelectFilter = (filter: SavedFilter) => {
+    console.log('🔄 SavedFilterTags: handleSelectFilter called', {
+      filterName: filter.name,
+      filterId: filter.id,
+      conditionsCount: filter.conditions?.length || 0,
+      operatorsCount: filter.operators?.length || 0,
+      sortDirectionsCount: filter.sortDirections?.length || 0,
+      hasOnFilterChange: !!onFilterChange
+    });
+    
     // Sicherstellen, dass sortDirections ein Array ist (oder undefined)
     const validSortDirections = Array.isArray(filter.sortDirections) ? filter.sortDirections : undefined;
     
     if (onFilterChange) {
       // Controlled component
+      console.log('📋 SavedFilterTags: Calling onFilterChange (controlled)');
       onFilterChange(filter.name, filter.id, filter.conditions, filter.operators, validSortDirections);
     } else {
       // Backward compatibility - uncontrolled component
+      console.log('📋 SavedFilterTags: Calling onSelectFilter (uncontrolled)');
       onSelectFilter(filter.conditions, filter.operators, validSortDirections);
     }
   };
@@ -657,7 +668,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     } catch (err: any) {
       console.error('Fehler beim Umbenennen der Gruppe:', err);
       const errorMessage = err.response?.data?.message || 'Fehler beim Umbenennen der Gruppe';
-      toast.error(errorMessage);
+      showMessage(errorMessage, 'error');
     }
   };
 

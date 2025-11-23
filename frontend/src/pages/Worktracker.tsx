@@ -295,6 +295,7 @@ const Worktracker: React.FC = () => {
     const [isSendInvitationSidepaneOpen, setIsSendInvitationSidepaneOpen] = useState(false);
     const [selectedReservationForPasscode, setSelectedReservationForPasscode] = useState<Reservation | null>(null);
     const [isSendPasscodeSidepaneOpen, setIsSendPasscodeSidepaneOpen] = useState(false);
+    const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0); // Wird erhöht, um Notification-Logs neu zu laden
     
     // Reservations Filter States (analog zu Tasks)
     const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
@@ -544,6 +545,8 @@ const Worktracker: React.FC = () => {
             const reservationsData = response.data?.data || response.data || [];
             console.log('📋 Reservations geladen:', reservationsData.length, 'Reservations');
             setReservations(reservationsData);
+            // Erhöhe Refresh-Key, damit Notification-Logs neu geladen werden
+            setReservationsRefreshKey(prev => prev + 1);
         } catch (err: any) {
             console.error('Fehler beim Laden der Reservations:', err);
             const errorMessage = err.response?.data?.message || t('reservations.loadError', 'Fehler beim Laden der Reservations');
@@ -909,12 +912,20 @@ const Worktracker: React.FC = () => {
     
     // Reservations Filter Functions
     const applyReservationFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        console.log('🔄 applyReservationFilterConditions called:', {
+            conditionsCount: conditions.length,
+            operatorsCount: operators.length,
+            sortDirectionsCount: sortDirections?.length || 0,
+            conditions,
+            operators,
+            sortDirections
+        });
         setReservationFilterConditions(conditions);
         setReservationFilterLogicalOperators(operators);
-        if (sortDirections !== undefined) {
-            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-            setReservationFilterSortDirections(validSortDirections);
-        }
+        // WICHTIG: Sortierungen immer setzen, auch wenn undefined (zurücksetzen)
+        const validSortDirections = sortDirections !== undefined && Array.isArray(sortDirections) ? sortDirections : [];
+        setReservationFilterSortDirections(validSortDirections);
+        console.log('✅ applyReservationFilterConditions: States updated');
     };
     
     const resetReservationFilterConditions = () => {
@@ -927,6 +938,15 @@ const Worktracker: React.FC = () => {
     
     // Filter Change Handler (Controlled Mode)
     const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        console.log('🔄 handleFilterChange called:', {
+            activeTab,
+            name,
+            id,
+            conditionsCount: conditions.length,
+            operatorsCount: operators.length,
+            sortDirectionsCount: sortDirections?.length || 0
+        });
+        
         if (activeTab === 'todos') {
             setActiveFilterName(name);
             setSelectedFilterId(id);
@@ -941,11 +961,13 @@ const Worktracker: React.FC = () => {
             }
             // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedTasks angewendet
         } else {
+            console.log('📋 handleFilterChange: Setting reservation filter states');
             setReservationActiveFilterName(name);
             setReservationSelectedFilterId(id);
             applyReservationFilterConditions(conditions, operators, sortDirections);
             // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
             setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
+            console.log('✅ handleFilterChange: Reservation filter states set');
         }
     };
 
@@ -1286,7 +1308,14 @@ const Worktracker: React.FC = () => {
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {
-        console.log('🔄 Filtere Reservations:', reservations.length, 'Reservations vorhanden');
+        console.log('🔄 filteredAndSortedReservations: useMemo triggered', {
+            reservationsCount: reservations.length,
+            filterConditionsCount: reservationFilterConditions.length,
+            filterOperatorsCount: reservationFilterLogicalOperators.length,
+            sortDirectionsCount: reservationFilterSortDirections.length,
+            filterConditions: reservationFilterConditions,
+            filterOperators: reservationFilterLogicalOperators
+        });
         const validReservations = reservations.filter(reservation => reservation != null);
         
         let filtered = validReservations.filter(reservation => {
@@ -1437,6 +1466,7 @@ const Worktracker: React.FC = () => {
                 }
             };
 
+            const beforeFilterCount = filtered.length;
             filtered = applyFilters(
                 filtered,
                 reservationFilterConditions,
@@ -1444,6 +1474,11 @@ const Worktracker: React.FC = () => {
                 getFieldValue,
                 columnEvaluators
             );
+            console.log('🔍 applyFilters result:', {
+                beforeFilter: beforeFilterCount,
+                afterFilter: filtered.length,
+                conditionsApplied: reservationFilterConditions.length
+            });
         }
         
         // Hilfsfunktion zum Extrahieren von Werten für Sortierung
@@ -2642,12 +2677,11 @@ const Worktracker: React.FC = () => {
                                                                     setIsSendInvitationSidepaneOpen(true);
                                                                 }}
                                                                 className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                title={t('reservations.sendInvitation', 'Einladung senden')}
                                                             >
                                                                 <PaperAirplaneIcon className="h-4 w-4" />
                                                             </button>
                                                             <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                {t('reservations.sendInvitation.title', 'Einladung senden')}
                                                             </div>
                                                         </div>
                                                         
@@ -2660,7 +2694,6 @@ const Worktracker: React.FC = () => {
                                                                     setIsSendPasscodeSidepaneOpen(true);
                                                                 }}
                                                                 className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-                                                                title={t('reservations.sendPasscode.title', 'Passcode senden')}
                                                             >
                                                                 <KeyIcon className="h-4 w-4" />
                                                             </button>
@@ -2675,7 +2708,7 @@ const Worktracker: React.FC = () => {
                                                 const isExpanded = expandedReservationRows.has(reservation.id);
                                                 const expandableContent = (
                                                     <div className="mt-2 pt-3">
-                                                        <ReservationNotificationLogs reservationId={reservation.id} />
+                                                        <ReservationNotificationLogs reservationId={reservation.id} refreshKey={reservationsRefreshKey} />
                                                     </div>
                                                 );
                                                 
@@ -2889,12 +2922,11 @@ const Worktracker: React.FC = () => {
                                                                                                             setIsSendInvitationSidepaneOpen(true);
                                                                                                         }}
                                                                                                         className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                                        title={t('reservations.sendInvitation', 'Einladung senden')}
                                                                                                     >
                                                                                                         <PaperAirplaneIcon className="h-4 w-4" />
                                                                                                     </button>
                                                                                                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                                        {t('reservations.sendInvitation.title', 'Einladung senden')}
                                                                                                     </div>
                                                                                                 </div>
                                                                                                 
@@ -2907,7 +2939,6 @@ const Worktracker: React.FC = () => {
                                                                                                             setIsSendPasscodeSidepaneOpen(true);
                                                                                                         }}
                                                                                                         className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-                                                                                                        title={t('reservations.sendPasscode.title', 'Passcode senden')}
                                                                                                     >
                                                                                                         <KeyIcon className="h-4 w-4" />
                                                                                                     </button>
@@ -2924,7 +2955,6 @@ const Worktracker: React.FC = () => {
                                                                                                             navigate(`/reservations/${reservation.id}`);
                                                                                                         }}
                                                                                                         className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                                                                                                        title={t('common.viewDetails', 'Details anzeigen')}
                                                                                                     >
                                                                                                         <InformationCircleIcon className="h-4 w-4" />
                                                                                                     </button>
@@ -3923,12 +3953,11 @@ const Worktracker: React.FC = () => {
                                                                     setIsSendInvitationSidepaneOpen(true);
                                                                 }}
                                                                 className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                title={t('reservations.sendInvitation', 'Einladung senden')}
                                                             >
                                                                 <PaperAirplaneIcon className="h-4 w-4" />
                                                             </button>
                                                             <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                {t('reservations.sendInvitation.title', 'Einladung senden')}
                                                             </div>
                                                         </div>
                                                         
@@ -3941,7 +3970,6 @@ const Worktracker: React.FC = () => {
                                                                     setIsSendPasscodeSidepaneOpen(true);
                                                                 }}
                                                                 className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-                                                                title={t('reservations.sendPasscode.title', 'Passcode senden')}
                                                             >
                                                                 <KeyIcon className="h-4 w-4" />
                                                             </button>
@@ -3956,7 +3984,7 @@ const Worktracker: React.FC = () => {
                                                 const isExpanded = expandedReservationRows.has(reservation.id);
                                                 const expandableContent = (
                                                     <div className="mt-2 pt-3">
-                                                        <ReservationNotificationLogs reservationId={reservation.id} />
+                                                        <ReservationNotificationLogs reservationId={reservation.id} refreshKey={reservationsRefreshKey} />
                                                     </div>
                                                 );
                                                 
@@ -4170,12 +4198,11 @@ const Worktracker: React.FC = () => {
                                                                                                             setIsSendInvitationSidepaneOpen(true);
                                                                                                         }}
                                                                                                         className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                                        title={t('reservations.sendInvitation', 'Einladung senden')}
                                                                                                     >
                                                                                                         <PaperAirplaneIcon className="h-4 w-4" />
                                                                                                     </button>
                                                                                                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                                        {t('reservations.sendInvitation.title', 'Einladung senden')}
                                                                                                     </div>
                                                                                                 </div>
                                                                                                 
@@ -4188,7 +4215,6 @@ const Worktracker: React.FC = () => {
                                                                                                             setIsSendPasscodeSidepaneOpen(true);
                                                                                                         }}
                                                                                                         className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-                                                                                                        title={t('reservations.sendPasscode.title', 'Passcode senden')}
                                                                                                     >
                                                                                                         <KeyIcon className="h-4 w-4" />
                                                                                                     </button>
@@ -4205,7 +4231,6 @@ const Worktracker: React.FC = () => {
                                                                                                             navigate(`/reservations/${reservation.id}`);
                                                                                                         }}
                                                                                                         className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                                                                                                        title={t('common.viewDetails', 'Details anzeigen')}
                                                                                                     >
                                                                                                         <InformationCircleIcon className="h-4 w-4" />
                                                                                                     </button>
