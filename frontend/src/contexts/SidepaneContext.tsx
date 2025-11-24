@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { useSidebar } from './SidebarContext.tsx';
 
 interface SidepaneContextType {
@@ -15,7 +15,7 @@ export const SidepaneProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Ref um den vorherigen Sidebar-Zustand zu speichern (vor dem automatischen Collapsed)
   const previousSidebarStateRef = useRef<boolean | null>(null);
 
-  const openSidepane = () => {
+  const openSidepane = useCallback(() => {
     const width = window.innerWidth;
     // Bei kleineren Bildschirmen (< 1070px) und wenn Sidebar expanded ist: automatisch collapsed setzen
     if (width < 1070 && !isCollapsed) {
@@ -23,9 +23,9 @@ export const SidepaneProvider: React.FC<{ children: ReactNode }> = ({ children }
       setCollapsedTemporary(true); // Sidebar collapsed setzen
     }
     setIsSidepaneOpen(true);
-  };
+  }, [isCollapsed, setCollapsedTemporary]);
 
-  const closeSidepane = () => {
+  const closeSidepane = useCallback(() => {
     setIsSidepaneOpen(false);
     // Sidebar wieder auf vorherigen Zustand zurücksetzen (wenn automatisch collapsed wurde)
     if (previousSidebarStateRef.current !== null) {
@@ -35,7 +35,7 @@ export const SidepaneProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
       previousSidebarStateRef.current = null;
     }
-  };
+  }, [isCollapsed, setCollapsedTemporary]);
 
   // Bei > 1070px: Sidepane-Status am body-Element setzen für CSS-Steuerung
   useEffect(() => {
