@@ -46,6 +46,39 @@ export class WhatsAppMessageHandler {
         userName: user ? `${user.firstName} ${user.lastName}` : null
       });
 
+      // 2.5. Lade User mit Rollen (für Function Calling)
+      let userWithRoles = null;
+      let roleId: number | null = null;
+      
+      if (user) {
+        userWithRoles = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phoneNumber: true,
+            roles: {
+              select: {
+                roleId: true,
+                role: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              },
+              take: 1 // Erste Rolle für Berechtigungsprüfung
+            }
+          }
+        });
+        
+        if (userWithRoles?.roles && userWithRoles.roles.length > 0) {
+          roleId = userWithRoles.roles[0].roleId;
+        }
+      }
+
       // 3. Lade/Erstelle Conversation State
       const conversation = await this.getOrCreateConversation(normalizedPhone, branchId, user?.id);
 
@@ -101,11 +134,20 @@ export class WhatsAppMessageHandler {
 
       // 6. KI-Antwort generieren (falls kein Keyword und kein aktiver State)
       try {
+        // Erweitere Conversation Context mit Rollen für Function Calling
+        const conversationContext: any = {
+          userId: user?.id,
+          roleId: roleId,
+          userName: userWithRoles ? `${userWithRoles.firstName} ${userWithRoles.lastName}` : null,
+          conversationState: conversation.state,
+          groupId: groupId
+        };
+        
         const aiResponse = await WhatsAppAiService.generateResponse(
           messageText,
           branchId,
           normalizedPhone,
-          { userId: user?.id, conversationState: conversation.state, groupId: groupId }
+          conversationContext
         );
         return aiResponse.message;
       } catch (error) {

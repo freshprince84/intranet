@@ -2,6 +2,7 @@ import axios from 'axios';
 import { decryptApiSettings } from '../utils/encryption';
 import { LanguageDetectionService } from './languageDetectionService';
 import { prisma } from '../utils/prisma';
+import { WhatsAppFunctionHandlers } from './whatsappFunctionHandlers';
 
 export interface AIResponse {
   message: string;
@@ -111,30 +112,43 @@ export class WhatsAppAiService {
     // 3. Baue System Prompt
     const systemPrompt = this.buildSystemPrompt(aiConfig, language, conversationContext);
 
-    // 4. Rufe OpenAI API auf
+    // 4. Prüfe ob Function Calling aktiviert werden soll (nur für Mitarbeiter, nicht für Gäste)
+    const isEmployee = !!conversationContext?.userId;
+    const functionDefinitions = isEmployee ? this.getFunctionDefinitions() : [];
+
+    // 5. Rufe OpenAI API auf
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     if (!OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY nicht gesetzt');
     }
 
     try {
+      // Erster API Call (mit Function Definitions, falls aktiviert)
+      const requestPayload: any = {
+        model: aiConfig.model || 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: message
+          }
+        ],
+        temperature: aiConfig.temperature ?? 0.7,
+        max_tokens: aiConfig.maxTokens || 500
+      };
+
+      // Füge Function Definitions hinzu, falls aktiviert
+      if (functionDefinitions.length > 0) {
+        requestPayload.tools = functionDefinitions;
+        requestPayload.tool_choice = 'auto'; // KI entscheidet, ob Functions aufgerufen werden sollen
+      }
+
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
-        {
-          model: aiConfig.model || 'gpt-4o',
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            },
-            {
-              role: 'user',
-              content: message
-            }
-          ],
-          temperature: aiConfig.temperature ?? 0.7,
-          max_tokens: aiConfig.maxTokens || 500
-        },
+        requestPayload,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -144,12 +158,105 @@ export class WhatsAppAiService {
         }
       );
 
-      const aiMessage = response.data.choices[0].message.content;
+      const responseMessage = response.data.choices[0].message;
 
-      return {
-        message: aiMessage,
-        language
-      };
+      // Prüfe ob KI Function Calls machen möchte
+      if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+        console.log('[WhatsApp AI Service] Function Calls erkannt:', responseMessage.tool_calls.length);
+        
+        // Führe Funktionen aus
+        const toolResults = [];
+        
+        for (const toolCall of responseMessage.tool_calls) {
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments);
+          
+          console.log('[WhatsApp AI Service] Führe Function aus:', {
+            name: functionName,
+            args: functionArgs
+          });
+          
+          try {
+            // Führe Function aus
+            const result = await (WhatsAppFunctionHandlers as any)[functionName](
+              functionArgs,
+              conversationContext.userId,
+              conversationContext.roleId,
+              branchId
+            );
+            
+            toolResults.push({
+              tool_call_id: toolCall.id,
+              role: 'tool',
+              name: functionName,
+              content: JSON.stringify(result)
+            });
+            
+            console.log('[WhatsApp AI Service] Function Ergebnis:', {
+              name: functionName,
+              resultCount: Array.isArray(result) ? result.length : 1
+            });
+          } catch (error: any) {
+            console.error('[WhatsApp AI Service] Function Fehler:', {
+              name: functionName,
+              error: error.message
+            });
+            
+            toolResults.push({
+              tool_call_id: toolCall.id,
+              role: 'tool',
+              name: functionName,
+              content: JSON.stringify({ error: error.message })
+            });
+          }
+        }
+        
+        // Erneuter API Call mit Function Results
+        const finalResponse = await axios.post(
+          'https://api.openai.com/v1/chat/completions',
+          {
+            model: aiConfig.model || 'gpt-4o',
+            messages: [
+              {
+                role: 'system',
+                content: systemPrompt
+              },
+              {
+                role: 'user',
+                content: message
+              },
+              {
+                role: 'assistant',
+                content: null,
+                tool_calls: responseMessage.tool_calls
+              },
+              ...toolResults
+            ],
+            temperature: aiConfig.temperature ?? 0.7,
+            max_tokens: aiConfig.maxTokens || 500
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            timeout: 30000
+          }
+        );
+        
+        const finalMessage = finalResponse.data.choices[0].message.content;
+        
+        return {
+          message: finalMessage,
+          language
+        };
+      } else {
+        // Keine Function Calls, direkte Antwort
+        return {
+          message: responseMessage.content,
+          language
+        };
+      }
     } catch (error) {
       console.error('[WhatsApp AI Service] OpenAI API Fehler:', error);
       if (axios.isAxiosError(error)) {
@@ -158,6 +265,134 @@ export class WhatsAppAiService {
       }
       throw new Error('Fehler bei der KI-Antwort-Generierung');
     }
+  }
+
+  /**
+   * Gibt Function Definitions für OpenAI Function Calling zurück
+   */
+  private static getFunctionDefinitions(): any[] {
+    return [
+      {
+        type: 'function',
+        function: {
+          name: 'get_requests',
+          description: 'Holt Requests (Solicitudes) für einen User. Filtere nach Status, Datum, etc. Verwende "today" für heute, "this_week" für diese Woche.',
+          parameters: {
+            type: 'object',
+            properties: {
+              status: {
+                type: 'string',
+                enum: ['approval', 'approved', 'to_improve', 'denied'],
+                description: 'Status des Requests'
+              },
+              dueDate: {
+                type: 'string',
+                description: 'Fälligkeitsdatum im Format YYYY-MM-DD. Verwende "today" für heute, "this_week" für diese Woche.'
+              },
+              userId: {
+                type: 'number',
+                description: 'User ID (optional, verwendet aktuellen User wenn nicht angegeben)'
+              }
+            }
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'get_todos',
+          description: 'Holt Todos/Tasks für einen User. Filtere nach Status, Datum, etc.',
+          parameters: {
+            type: 'object',
+            properties: {
+              status: {
+                type: 'string',
+                enum: ['open', 'in_progress', 'improval', 'quality_control', 'done'],
+                description: 'Status des Todos'
+              },
+              dueDate: {
+                type: 'string',
+                description: 'Fälligkeitsdatum im Format YYYY-MM-DD. Verwende "today" für heute.'
+              },
+              userId: {
+                type: 'number',
+                description: 'User ID (optional, verwendet aktuellen User wenn nicht angegeben)'
+              }
+            }
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'get_worktime',
+          description: 'Holt Arbeitszeiten für einen User. Zeigt aktuelle Arbeitszeit, Arbeitszeiten für ein bestimmtes Datum, oder Arbeitszeiten für einen Zeitraum.',
+          parameters: {
+            type: 'object',
+            properties: {
+              date: {
+                type: 'string',
+                description: 'Datum im Format YYYY-MM-DD. Verwende "today" für heute. Wenn nicht angegeben, zeigt aktuelle Arbeitszeit.'
+              },
+              startDate: {
+                type: 'string',
+                description: 'Startdatum für Zeitraum (Format: YYYY-MM-DD)'
+              },
+              endDate: {
+                type: 'string',
+                description: 'Enddatum für Zeitraum (Format: YYYY-MM-DD)'
+              },
+              userId: {
+                type: 'number',
+                description: 'User ID (optional, verwendet aktuellen User wenn nicht angegeben)'
+              }
+            }
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'get_cerebro_articles',
+          description: 'Holt Cerebro-Artikel basierend auf Suchbegriffen oder Tags. Prüft automatisch Berechtigungen des Users.',
+          parameters: {
+            type: 'object',
+            properties: {
+              searchTerm: {
+                type: 'string',
+                description: 'Suchbegriff für Titel oder Inhalt'
+              },
+              tags: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Tags zum Filtern (z.B. ["notfall", "emergency"])'
+              },
+              limit: {
+                type: 'number',
+                description: 'Maximale Anzahl der Artikel (Standard: 10)',
+                default: 10
+              }
+            }
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'get_user_info',
+          description: 'Holt Informationen über einen User (Name, Email, Rollen). Wenn keine userId angegeben, verwendet aktuellen User.',
+          parameters: {
+            type: 'object',
+            properties: {
+              userId: {
+                type: 'number',
+                description: 'User ID (optional, verwendet aktuellen User wenn nicht angegeben)'
+              }
+            }
+          }
+        }
+      }
+    ];
   }
 
   /**
@@ -213,6 +448,20 @@ export class WhatsAppAiService {
     // Füge Conversation Context hinzu (falls vorhanden)
     if (conversationContext) {
       prompt += `\n\nKontext der Konversation: ${JSON.stringify(conversationContext, null, 2)}`;
+    }
+
+    // Füge Informationen zu verfügbaren Funktionen hinzu (nur für Mitarbeiter)
+    if (conversationContext?.userId) {
+      prompt += '\n\nVerfügbare Funktionen:\n';
+      prompt += '- get_requests: Hole Requests basierend auf Filtern (status, dueDate)\n';
+      prompt += '- get_todos: Hole Todos/Tasks basierend auf Filtern (status, dueDate)\n';
+      prompt += '- get_worktime: Hole Arbeitszeiten für einen User (date, startDate, endDate)\n';
+      prompt += '- get_cerebro_articles: Hole Cerebro-Artikel basierend auf Suchbegriffen oder Tags\n';
+      prompt += '- get_user_info: Hole User-Informationen (Name, Email, Rollen)\n';
+      prompt += '\nVerwende diese Funktionen, wenn der User nach spezifischen Daten fragt.';
+      prompt += '\nBeispiel: "solicitudes abiertas de hoy" → get_requests({ status: "approval", dueDate: "today" })';
+      prompt += '\nBeispiel: "wie lange habe ich heute gearbeitet" → get_worktime({ date: "today" })';
+      prompt += '\nBeispiel: "welche cerebro artikel gibt es zu notfällen" → get_cerebro_articles({ tags: ["notfall"] })';
     }
 
     return prompt;

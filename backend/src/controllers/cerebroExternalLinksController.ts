@@ -92,20 +92,37 @@ const extractMetadata = async (url: string) => {
  */
 export const createExternalLink = async (req: Request, res: Response) => {
     try {
-        const { url, title, carticleId } = req.body;
+        const { url, title, carticleId, carticleSlug } = req.body;
         const userId = parseInt(req.userId, 10);
         
         if (!url) {
             return res.status(400).json({ message: 'URL ist erforderlich' });
         }
         
-        if (!carticleId) {
-            return res.status(400).json({ message: 'Artikel-ID ist erforderlich' });
+        let articleId: number | null = null;
+        
+        // Unterstütze sowohl carticleId als auch carticleSlug
+        if (carticleId) {
+            articleId = parseInt(carticleId, 10);
+        } else if (carticleSlug) {
+            // Artikel nach Slug suchen
+            const article = await prisma.cerebroCarticle.findUnique({
+                where: { slug: carticleSlug },
+                select: { id: true }
+            });
+            
+            if (!article) {
+                return res.status(404).json({ message: 'Artikel nicht gefunden' });
+            }
+            
+            articleId = article.id;
+        } else {
+            return res.status(400).json({ message: 'Artikel-ID oder Artikel-Slug ist erforderlich' });
         }
         
         // Prüfen, ob der Artikel existiert
         const article = await prisma.$queryRaw`
-            SELECT * FROM "CerebroCarticle" WHERE id = ${parseInt(carticleId, 10)}
+            SELECT * FROM "CerebroCarticle" WHERE id = ${articleId}
         `;
         
         if (!article || (Array.isArray(article) && article.length === 0)) {
@@ -130,7 +147,7 @@ export const createExternalLink = async (req: Request, res: Response) => {
                 ${url}, 
                 ${title || metadata.title}, 
                 ${metadata.type}, 
-                ${parseInt(carticleId, 10)}, 
+                ${articleId}, 
                 ${userId}, 
                 NOW(), 
                 NOW()
@@ -155,7 +172,7 @@ export const createExternalLink = async (req: Request, res: Response) => {
             await prisma.$queryRaw`
                 UPDATE "CerebroCarticle"
                 SET content = ${updatedContent}, "updatedAt" = NOW()
-                WHERE id = ${parseInt(carticleId, 10)}
+                WHERE id = ${articleId}
             `;
         }
         
@@ -338,5 +355,130 @@ export const deleteLink = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Fehler beim Löschen des Links:', error);
         res.status(500).json({ message: 'Fehler beim Löschen des Links' });
+    }
+};
+
+/**
+ * Hilfsfunktion zum Extrahieren des Pfads aus einer GitHub-URL
+ */
+const extractPathFromGitHubUrl = (url: string): string | null => {
+    try {
+        // Unterstütze verschiedene GitHub-URL-Formate:
+        // - https://raw.githubusercontent.com/owner/repo/branch/path/to/file.md
+        // - https://github.com/owner/repo/blob/branch/path/to/file.md
+        // - https://github.com/owner/repo/tree/branch/path/to/file.md
+        
+        if (url.includes('raw.githubusercontent.com')) {
+            // Format: https://raw.githubusercontent.com/owner/repo/branch/path/to/file.md
+            const match = url.match(/raw\.githubusercontent\.com\/[^\/]+\/[^\/]+\/[^\/]+\/(.+)$/);
+            if (match && match[1]) {
+                return decodeURIComponent(match[1]);
+            }
+        } else if (url.includes('github.com')) {
+            // Format: https://github.com/owner/repo/blob/branch/path/to/file.md
+            // oder: https://github.com/owner/repo/tree/branch/path/to/file.md
+            const match = url.match(/github\.com\/[^\/]+\/[^\/]+\/(?:blob|tree)\/[^\/]+\/(.+)$/);
+            if (match && match[1]) {
+                return decodeURIComponent(match[1]);
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('[extractPathFromGitHubUrl] Fehler beim Extrahieren des Pfads:', error);
+        return null;
+    }
+};
+
+/**
+ * Admin-Funktion: Korrigiere alle GitHub-Links basierend auf githubPath der Artikel
+ */
+export const fixGitHubLinks = async (req: Request, res: Response) => {
+    try {
+        console.log('[fixGitHubLinks] Starte Korrektur der GitHub-Links...');
+        
+        // Alle GitHub-Links abrufen
+        const allLinks = await prisma.$queryRaw`
+            SELECT * FROM "CerebroExternalLink"
+            WHERE type = 'github_markdown'
+            ORDER BY id
+        ` as any[];
+        
+        console.log(`[fixGitHubLinks] Gefunden: ${allLinks.length} GitHub-Links`);
+        
+        // Alle Artikel mit githubPath abrufen
+        const articlesWithGithubPath = await prisma.$queryRaw`
+            SELECT id, slug, title, "githubPath" FROM "CerebroCarticle"
+            WHERE "githubPath" IS NOT NULL AND "githubPath" != ''
+            ORDER BY id
+        ` as any[];
+        
+        console.log(`[fixGitHubLinks] Gefunden: ${articlesWithGithubPath.length} Artikel mit githubPath`);
+        
+        let corrected = 0;
+        let notFound = 0;
+        const corrections: Array<{ linkId: number; oldArticleId: number; newArticleId: number; path: string }> = [];
+        
+        // Für jeden Link prüfen, ob er dem richtigen Artikel zugeordnet ist
+        for (const link of allLinks) {
+            const pathFromUrl = extractPathFromGitHubUrl(link.url);
+            
+            if (!pathFromUrl) {
+                console.log(`[fixGitHubLinks] Link ${link.id}: Konnte Pfad nicht aus URL extrahieren: ${link.url}`);
+                notFound++;
+                continue;
+            }
+            
+            // Suche Artikel mit passendem githubPath
+            const matchingArticle = articlesWithGithubPath.find((article: any) => {
+                const articlePath = article.githubPath?.trim();
+                if (!articlePath) return false;
+                
+                // Normalisiere Pfade (entferne führende/trailing Slashes, normalisiere Pfad-Trennzeichen)
+                const normalizedUrlPath = pathFromUrl.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+                const normalizedArticlePath = articlePath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+                
+                return normalizedUrlPath === normalizedArticlePath || 
+                       normalizedUrlPath.endsWith(normalizedArticlePath) ||
+                       normalizedArticlePath.endsWith(normalizedUrlPath);
+            });
+            
+            if (matchingArticle && matchingArticle.id !== link.carticleId) {
+                // Link ist falsch zugeordnet - korrigiere
+                console.log(`[fixGitHubLinks] Link ${link.id}: Korrigiere von Artikel ${link.carticleId} zu Artikel ${matchingArticle.id} (${matchingArticle.slug})`);
+                console.log(`  URL-Pfad: ${pathFromUrl}`);
+                console.log(`  Artikel githubPath: ${matchingArticle.githubPath}`);
+                
+                await prisma.$queryRaw`
+                    UPDATE "CerebroExternalLink"
+                    SET "carticleId" = ${matchingArticle.id}, "updatedAt" = NOW()
+                    WHERE id = ${link.id}
+                `;
+                
+                corrected++;
+                corrections.push({
+                    linkId: link.id,
+                    oldArticleId: link.carticleId,
+                    newArticleId: matchingArticle.id,
+                    path: pathFromUrl
+                });
+            } else if (!matchingArticle) {
+                console.log(`[fixGitHubLinks] Link ${link.id}: Kein passender Artikel gefunden für Pfad: ${pathFromUrl}`);
+                notFound++;
+            }
+        }
+        
+        console.log(`[fixGitHubLinks] Abgeschlossen: ${corrected} Links korrigiert, ${notFound} Links ohne passenden Artikel`);
+        
+        res.status(200).json({
+            message: 'GitHub-Links erfolgreich korrigiert',
+            totalLinks: allLinks.length,
+            corrected,
+            notFound,
+            corrections
+        });
+    } catch (error) {
+        console.error('[fixGitHubLinks] Fehler beim Korrigieren der GitHub-Links:', error);
+        res.status(500).json({ message: 'Fehler beim Korrigieren der GitHub-Links' });
     }
 }; 

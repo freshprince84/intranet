@@ -254,3 +254,4 @@
 - Caching kann weitere 20-30% sparen
 - GPT-3.5 Turbo wäre noch günstiger (~$2.63/Monat), aber weniger genau
 
+

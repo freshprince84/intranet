@@ -214,9 +214,9 @@ const CerebroLayout: React.FC = () => {
         <main className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto overflow-x-hidden'} ${
           isMobile 
             ? 'px-0 pt-2 pb-16' // Horizontales Padding auf 0, Bottom-Padding erhöht für den Footer
-            : `pl-4 pt-3 pb-4 pr-4`
+            : `px-0 pt-3 pb-4` // Padding auf 0 setzen, da Layout.tsx bereits px-5 hat
         }`}>
-          <div className={`${isMobile ? 'mobile-full-width' : 'max-w-7xl mx-auto'}`}>
+          <div className={`${isMobile ? 'mobile-full-width' : 'max-w-7xl mx-auto px-4'}`}>
             <Outlet context={{ filterConditions, filterLogicalOperators, sortConfig, searchTerm }} />
           </div>
         </main>

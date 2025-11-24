@@ -152,3 +152,4 @@
 4. **Group ID konfigurieren**
    - WhatsApp Group ID in `guestGroup.groupId` eintragen
 
+

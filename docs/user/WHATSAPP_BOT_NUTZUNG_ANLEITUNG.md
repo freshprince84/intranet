@@ -286,3 +286,4 @@ Falls etwas nicht funktioniert:
 4. Prüfe, ob OpenAI API Key gesetzt ist (`OPENAI_API_KEY`)
 
 
+
