@@ -1,0 +1,1724 @@
+{
+  "totalArticles": 9,
+  "articlesWithGithubPath": 0,
+  "articlesWithoutGithubPath": 9,
+  "rootArticles": [
+    {
+      "id": 23,
+      "title": "Articulo Alejandra Prueba",
+      "content": "\n\n[📄 arbeitszeugnis-4.pdf](/api/cerebro/media/14/file)",
+      "slug": "articulo-alejandra-prueba",
+      "parentId": null,
+      "createdById": 3,
+      "updatedById": 3,
+      "isPublished": false,
+      "createdAt": "2025-11-15T15:55:12.110Z",
+      "updatedAt": "2025-11-15T15:55:12.359Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": null,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 24,
+      "title": "Articulo Prueba Alejandra 2",
+      "content": "asdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasd\nfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfas\ndfasfasddfasdfasdfasdfasfasddfasdfasdfasdfa\nsfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfa\nsddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasdd\nfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdf\nasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfa\nsddfasdfasdfasdfasfasddfasdfasdfasdfasfas\nddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfas\nfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfas\ndfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfa\nsddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfas\ndfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfa\nsddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasd\ndfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfas\ndfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfas\n\nwww.bancolombia.com\n\n",
+      "slug": "articulo-prueba-alejandra-2",
+      "parentId": null,
+      "createdById": 3,
+      "updatedById": 3,
+      "isPublished": false,
+      "createdAt": "2025-11-15T15:56:06.105Z",
+      "updatedAt": "2025-11-15T15:56:58.015Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": null,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 4,
+      "title": "Emergencies",
+      "content": "https://docs.google.com/document/d/1A2RcozNsrab-pwT4OsJii_qgczXJbLKQ/edit?usp=sharing&ouid=110952298960966738800&rtpof=true&sd=true",
+      "slug": "emergencies",
+      "parentId": null,
+      "createdById": 8,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2024-02-22T02:10:57.000Z",
+      "updatedAt": "2025-11-06T21:10:09.167Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 25,
+      "title": "Guía Completa del Usuario - Planificador de Turnos",
+      "content": "# Guía Completa del Usuario - Planificador de Turnos\r\n\r\n## 📋 Índice\r\n\r\n1. [Introducción](#introducción)\r\n2. [Roles y Responsabilidades](#roles-y-responsabilidades)\r\n3. [Navegación](#navegación)\r\n4. [Configuración Inicial](#configuración-inicial)\r\n5. [Gestión de Plantillas de Turnos](#gestión-de-plantillas-de-turnos)\r\n6. [Gestión de Disponibilidades](#gestión-de-disponibilidades)\r\n7. [Creación de Turnos](#creación-de-turnos)\r\n8. [Gestión de Turnos](#gestión-de-turnos)\r\n9. [Intercambio de Turnos](#intercambio-de-turnos)\r\n10. [Filtros y Búsqueda](#filtros-y-búsqueda)\r\n11. [Resolución de Problemas](#resolución-de-problemas)\r\n12. [Preguntas Frecuentes](#preguntas-frecuentes)\r\n\r\n---\r\n\r\n## Introducción\r\n\r\nEl Planificador de Turnos es una herramienta completa para gestionar los horarios de trabajo de los empleados. Permite crear turnos, asignarlos a empleados, gestionar disponibilidades y facilitar el intercambio de turnos entre empleados.\r\n\r\n**Ubicación:** Centro de Trabajo → Tab \"Plan de Turno\"\r\n\r\n---\r\n\r\n## Roles y Responsabilidades\r\n\r\n### 👨‍💼 Administrador / Planificador de Turnos\r\n\r\n**Puede:**\r\n- Crear y gestionar plantillas de turnos\r\n- Generar planes de turnos automáticamente\r\n- Crear turnos manualmente\r\n- Asignar turnos a empleados\r\n- Gestionar disponibilidades (opcional, para otros usuarios)\r\n- Ver y gestionar todas las solicitudes de intercambio\r\n\r\n**Debe:**\r\n- Crear plantillas antes de generar turnos\r\n- Asignar turnos después de la generación automática\r\n- Revisar y aprobar/rechazar solicitudes de intercambio (si es necesario)\r\n\r\n---\r\n\r\n### 👤 Empleado (Usuario)\r\n\r\n**Puede:**\r\n- Definir sus propias disponibilidades\r\n- Confirmar turnos asignados\r\n- Crear solicitudes de intercambio de turnos\r\n- Responder a solicitudes de intercambio recibidas\r\n- Ver sus propios turnos en el calendario\r\n\r\n**Debe:**\r\n- Mantener sus disponibilidades actualizadas\r\n- Confirmar turnos asignados a tiempo\r\n- Responder a solicitudes de intercambio a tiempo\r\n- Cancelar turnos con suficiente antelación\r\n\r\n---\r\n\r\n## Navegación\r\n\r\n### Cómo acceder al Planificador de Turnos\r\n\r\n1. **Menú Principal** (lado izquierdo)\r\n   - Buscar y hacer clic en **\"Centro de Trabajo\"** (Team Worktime Control)\r\n\r\n2. **Tabs** (parte superior de la página)\r\n   - Hacer clic en el tab **\"Plan de Turno\"** (entre \"Tiempo de trabajo y actividades\" y \"Evaluaciones de tarea\")\r\n\r\n3. **Calendario de Turnos**\r\n   - Se mostrará el calendario con los turnos de la semana actual\r\n\r\n---\r\n\r\n## Configuración Inicial\r\n\r\n### ⚠️ IMPORTANTE: Antes de empezar\r\n\r\nPara que el Planificador de Turnos funcione correctamente, se deben cumplir los siguientes requisitos:\r\n\r\n1. **Sucursales** deben existir en el sistema\r\n2. **Roles** deben existir en el sistema\r\n3. **Usuarios/Empleados** deben existir en el sistema\r\n4. **Plantillas de Turnos** deben crearse (ver sección siguiente)\r\n5. **Disponibilidades** pueden crearse (opcional, pero recomendado)\r\n\r\n---\r\n\r\n## Gestión de Plantillas de Turnos\r\n\r\n### ¿Qué son las Plantillas de Turnos?\r\n\r\nLas plantillas definen qué tipos de turnos puede tener un rol en un día. Por ejemplo:\r\n- \"Turno Matutino\" (08:00-16:00)\r\n- \"Turno Vespertino\" (16:00-00:00)\r\n- \"Turno Nocturno\" (00:00-08:00)\r\n\r\n**⚠️ CRÍTICO:** Sin plantillas, la generación automática creará **0 turnos**.\r\n\r\n---\r\n\r\n### Crear una Plantilla de Turno (Administrador)\r\n\r\n**Ubicación:**\r\n- Tab \"Plan de Turno\" → Botón **\"Plantillas de Turnos\"** (icono de documento, parte superior derecha)\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Gestión de Plantillas**\r\n   - En el header superior derecho, hacer clic en el botón **\"Plantillas de Turnos\"** (icono de documento)\r\n   - Se abrirá un panel lateral (Desktop) o modal (Mobile)\r\n\r\n2. **Crear Nueva Plantilla**\r\n   - Hacer clic en el icono **\"+\"** (arriba a la derecha del panel/modal)\r\n   - Se abrirá el formulario\r\n\r\n3. **Completar Formulario**\r\n   - **Nombre:** Ingresar un nombre descriptivo (ej: \"Turno Matutino\", \"Turno Vespertino\")\r\n   - **Sucursal:** Seleccionar del menú desplegable (debe coincidir con la sucursal para la que se generarán turnos)\r\n   - **Rol:** Seleccionar del menú desplegable (debe coincidir con el rol para el que se generarán turnos)\r\n   - **Hora de Inicio:** Ingresar en formato HH:mm (ej: \"08:00\", \"16:00\")\r\n   - **Hora de Fin:** Ingresar en formato HH:mm (ej: \"16:00\", \"00:00\")\r\n   - **Duración:** Opcional (se calcula automáticamente)\r\n   - **Activo:** ✅ Dejar marcado (solo las plantillas activas se usan en la generación)\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"** (abajo del formulario)\r\n   - La plantilla aparecerá en la lista\r\n\r\n**Ejemplo:**\r\n- Nombre: \"Turno Matutino\"\r\n- Sucursal: \"Zúrich\"\r\n- Rol: \"Camarero\"\r\n- Hora de Inicio: \"08:00\"\r\n- Hora de Fin: \"16:00\"\r\n- Activo: ✅\r\n\r\n---\r\n\r\n### Editar una Plantilla (Administrador)\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Plantillas de Turnos\"\r\n2. En la lista, hacer clic en el botón **\"Editar\"** (icono de lápiz, a la derecha de la plantilla)\r\n3. Modificar los campos necesarios\r\n4. **Nota:** Sucursal y Rol no se pueden cambiar al editar (aparecen deshabilitados)\r\n5. Hacer clic en **\"Guardar\"**\r\n\r\n---\r\n\r\n### Eliminar una Plantilla (Administrador)\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Plantillas de Turnos\"\r\n2. En la lista, hacer clic en el botón **\"Eliminar\"** (icono de papelera, a la derecha de la plantilla)\r\n3. Confirmar en el diálogo: \"¿Realmente desea eliminar esta plantilla?\"\r\n4. Hacer clic en **\"OK\"**\r\n\r\n**⚠️ ADVERTENCIA:** Las plantillas eliminadas no se pueden recuperar.\r\n\r\n---\r\n\r\n### Desactivar una Plantilla (Administrador)\r\n\r\n1. Editar la plantilla\r\n2. Desmarcar la casilla **\"Activo\"**\r\n3. Guardar\r\n\r\n**Uso:** Para archivar plantillas temporalmente sin eliminarlas (ej: durante renovaciones).\r\n\r\n---\r\n\r\n## Gestión de Disponibilidades\r\n\r\n### ¿Qué son las Disponibilidades?\r\n\r\nLas disponibilidades definen cuándo un empleado está disponible para trabajar. Se utilizan en la generación automática para asignar turnos a los empleados correctos.\r\n\r\n**Tipos de Disponibilidad:**\r\n- **Disponible:** Disponibilidad estándar\r\n- **Preferida:** Disponibilidad preferida (mayor prioridad en la asignación)\r\n- **No Disponible:** No disponible para trabajar\r\n\r\n---\r\n\r\n### Crear una Disponibilidad (Empleado)\r\n\r\n**Ubicación:**\r\n- Tab \"Plan de Turno\" → Botón **\"Disponibilidades\"** (icono de casilla, parte superior derecha)\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Gestión de Disponibilidades**\r\n   - En el header superior derecho, hacer clic en el botón **\"Disponibilidades\"** (icono de casilla)\r\n   - Se abrirá un panel lateral (Desktop) o modal (Mobile)\r\n\r\n2. **Crear Nueva Disponibilidad**\r\n   - Hacer clic en el icono **\"+\"** (arriba a la derecha del panel/modal)\r\n   - Se abrirá el formulario\r\n\r\n3. **Completar Formulario**\r\n   - **Sucursal:** Opcional (seleccionar si solo aplica a una sucursal específica)\r\n   - **Rol:** Opcional (seleccionar si solo aplica a un rol específico)\r\n   - **Día de la Semana:** Seleccionar (Todos los días / Domingo / Lunes / ... / Sábado)\r\n   - **Hora de Inicio:** Opcional (ej: \"08:00\") - Si está vacío, todo el día disponible\r\n   - **Hora de Fin:** Opcional (ej: \"16:00\") - Si está vacío, todo el día disponible\r\n   - **Fecha de Inicio:** Opcional (inicio del período de validez)\r\n   - **Fecha de Fin:** Opcional (fin del período de validez)\r\n   - **Tipo:** Seleccionar (Disponible / Preferida / No Disponible)\r\n   - **Prioridad:** Número del 1 al 10 (mayor = más preferido, por defecto: 5)\r\n   - **Notas:** Opcional\r\n   - **Activo:** ✅ Dejar marcado\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - La disponibilidad aparecerá en la lista\r\n\r\n**Ejemplos:**\r\n\r\n**Ejemplo 1: Disponibilidad Estándar**\r\n- Día: Lunes\r\n- Hora de Inicio: \"08:00\"\r\n- Hora de Fin: \"16:00\"\r\n- Tipo: Disponible\r\n- Prioridad: 5\r\n\r\n**Ejemplo 2: Disponibilidad Preferida**\r\n- Día: Sábado\r\n- Hora de Inicio: \"10:00\"\r\n- Hora de Fin: \"14:00\"\r\n- Tipo: Preferida\r\n- Prioridad: 8\r\n\r\n**Ejemplo 3: No Disponible**\r\n- Día: Domingo\r\n- Tipo: No Disponible\r\n\r\n---\r\n\r\n### Editar una Disponibilidad (Empleado)\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Disponibilidades\"\r\n2. En la lista, hacer clic en el botón **\"Editar\"** (icono de lápiz)\r\n3. Modificar los campos necesarios\r\n4. Hacer clic en **\"Guardar\"**\r\n\r\n---\r\n\r\n### Eliminar una Disponibilidad (Empleado)\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Disponibilidades\"\r\n2. En la lista, hacer clic en el botón **\"Eliminar\"** (icono de papelera)\r\n3. Confirmar en el diálogo\r\n4. Hacer clic en **\"OK\"**\r\n\r\n---\r\n\r\n## Creación de Turnos\r\n\r\n### Generación Automática de Turnos (Administrador)\r\n\r\n**Ubicación:**\r\n- Tab \"Plan de Turno\" → Botón **\"Generar\"** (icono de refresco/generar, parte superior derecha)\r\n\r\n**⚠️ PREREQUISITOS:**\r\n- ✅ Plantillas de Turnos deben existir para la Sucursal + Roles seleccionados\r\n- ✅ Plantillas deben estar activas\r\n- ⚠️ Disponibilidades son opcionales (sin disponibilidades, los turnos se crean sin usuario asignado)\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Generador**\r\n   - En el header superior derecho, hacer clic en el botón **\"Generar\"** (icono de refresco/generar)\r\n   - Se abrirá un panel lateral (Desktop) o modal (Mobile)\r\n\r\n2. **Completar Formulario**\r\n   - **Fecha de Inicio:** Seleccionar fecha (ej: \"2025-01-20\")\r\n   - **Fecha de Fin:** Seleccionar fecha (ej: \"2025-01-26\")\r\n   - **Sucursal:** Seleccionar del menú desplegable\r\n   - **Roles:** Seleccionar una o más roles (casillas de verificación)\r\n     - **Nota:** Si no se seleccionan roles, se usarán todos los roles de la sucursal\r\n\r\n3. **Generar**\r\n   - Hacer clic en el botón **\"Generar\"** (abajo del formulario)\r\n   - El sistema procesará la generación\r\n\r\n4. **Revisar Resultados**\r\n   - Se mostrará una página de resultados con:\r\n     - Número de turnos generados\r\n     - Conflictos (si los hay):\r\n       - Turnos sin usuario asignado (no hay disponibilidades)\r\n       - Solapamientos de tiempo\r\n   - Revisar la lista de turnos generados\r\n\r\n5. **Cerrar**\r\n   - Hacer clic en el botón **\"Cerrar\"**\r\n   - Los turnos aparecerán en el calendario\r\n\r\n**Resultado:**\r\n- Los turnos se crean con estado \"Planificado\" (scheduled)\r\n- Si hay disponibilidades, el sistema intenta asignar usuarios automáticamente\r\n- Si no hay disponibilidades, los turnos se crean sin usuario asignado (userId = null)\r\n- El administrador debe asignar usuarios manualmente si es necesario\r\n\r\n---\r\n\r\n### Creación Manual de Turnos (Administrador)\r\n\r\n**Ubicación:**\r\n- **Opción A:** Botón **\"Añadir turno\"** (icono de \"+\" en círculo azul, parte superior izquierda)\r\n- **Opción B:** Hacer clic en una fecha en el calendario\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Formulario**\r\n   - **Opción A:** Hacer clic en el botón **\"Añadir turno\"** (parte superior izquierda)\r\n   - **Opción B:** Hacer clic en una fecha en el calendario (el formulario se abrirá con esa fecha prellenada)\r\n\r\n2. **Completar Formulario**\r\n   - **Sucursal:** Seleccionar del menú desplegable\r\n   - **Rol:** Seleccionar del menú desplegable\r\n   - **Plantilla de Turno:** Seleccionar del menú desplegable (define hora de inicio/fin)\r\n   - **Empleado:** Opcional (seleccionar o dejar vacío para asignar después)\r\n   - **Fecha:** Seleccionar (si se usó Opción B, ya está prellenada)\r\n   - **Notas:** Opcional\r\n\r\n3. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - El turno aparecerá en el calendario\r\n\r\n---\r\n\r\n### Asignar Turnos a Empleados (Administrador)\r\n\r\n**Ubicación:**\r\n- Calendario → Hacer clic en un turno\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno**\r\n   - En el calendario, hacer clic en un turno (aparece como bloque de evento)\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral (Desktop) o modal (Mobile) con los detalles del turno\r\n\r\n3. **Asignar Empleado**\r\n   - En el campo **\"Empleado\"** (menú desplegable), seleccionar un empleado\r\n   - El sistema verificará automáticamente:\r\n     - Solapamientos (el empleado ya tiene un turno a la misma hora)\r\n     - Disponibilidades (el empleado está disponible)\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - El turno se asignará y el empleado recibirá una notificación\r\n\r\n**Resultado:**\r\n- El turno se asigna (userId se establece, estado = \"Planificado\")\r\n- El empleado recibe una notificación\r\n- El turno aparece en el calendario con el nombre del empleado\r\n\r\n---\r\n\r\n## Gestión de Turnos\r\n\r\n### Confirmar un Turno (Empleado)\r\n\r\n**Cuándo:** Después de que un turno ha sido asignado\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno Propio**\r\n   - En el calendario, hacer clic en uno de tus turnos (turnos donde userId = tu usuario)\r\n   - Los turnos propios aparecen con un color diferente\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal con los detalles del turno\r\n\r\n3. **Cambiar Estado**\r\n   - En el campo **\"Estado\"** (menú desplegable), seleccionar **\"Confirmado\"**\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - El turno se confirmará y el administrador recibirá una notificación\r\n\r\n**Resultado:**\r\n- Estado = \"Confirmado\" (confirmed)\r\n- confirmedAt se establece\r\n- El administrador recibe una notificación\r\n\r\n---\r\n\r\n### Cancelar un Turno (Empleado o Administrador)\r\n\r\n**Cuándo:** Cuando un turno no se puede realizar (enfermedad, vacaciones, etc.)\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno**\r\n   - En el calendario, hacer clic en el turno\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal\r\n\r\n3. **Cambiar Estado**\r\n   - En el campo **\"Estado\"** (menú desplegable), seleccionar **\"Cancelado\"**\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - El turno se cancelará y el administrador recibirá una notificación\r\n\r\n**Resultado:**\r\n- Estado = \"Cancelado\" (cancelled)\r\n- El turno puede ser reasignado a otro empleado\r\n- El administrador recibe una notificación\r\n\r\n---\r\n\r\n### Eliminar un Turno (Administrador)\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno**\r\n   - En el calendario, hacer clic en el turno\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal\r\n\r\n3. **Eliminar**\r\n   - Hacer clic en el botón **\"Eliminar\"** (rojo, abajo del formulario)\r\n   - Aparecerá un diálogo de confirmación: \"¿Realmente desea eliminar este turno?\"\r\n\r\n4. **Confirmar**\r\n   - Hacer clic en **\"OK\"** en el diálogo\r\n   - El turno se eliminará permanentemente\r\n\r\n**⚠️ ADVERTENCIA:** Los turnos eliminados no se pueden recuperar.\r\n\r\n---\r\n\r\n### Editar un Turno (Administrador)\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno**\r\n   - En el calendario, hacer clic en el turno\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal\r\n\r\n3. **Modificar Campos**\r\n   - **Empleado:** Cambiar (menú desplegable)\r\n   - **Fecha:** Cambiar (campo de fecha)\r\n   - **Estado:** Cambiar (menú desplegable)\r\n   - **Notas:** Modificar (área de texto)\r\n   - **Nota:** Sucursal, Rol y Plantilla no se pueden cambiar (aparecen deshabilitados)\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - Los cambios se aplicarán\r\n\r\n---\r\n\r\n## Intercambio de Turnos\r\n\r\n### Crear una Solicitud de Intercambio (Empleado)\r\n\r\n**Cuándo:** Cuando un empleado quiere intercambiar su turno con otro empleado\r\n\r\n**Prerequisitos:**\r\n- El turno debe pertenecer al empleado (userId = empleado actual)\r\n- El turno no debe estar cancelado o ya intercambiado\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno Propio**\r\n   - En el calendario, hacer clic en uno de tus turnos\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal\r\n\r\n3. **Iniciar Intercambio**\r\n   - Hacer clic en el botón **\"Intercambiar turno\"** (en el formulario, junto a \"Guardar\")\r\n   - Se abrirá un nuevo panel/modal: `SwapRequestModal`\r\n\r\n4. **Completar Formulario**\r\n   - **Turno Propio:** Solo lectura (muestra tu turno actual)\r\n   - **Turno Objetivo:** Seleccionar del menú desplegable\r\n     - **Filtros automáticos:** Solo muestra turnos que:\r\n       - Tienen el mismo Rol\r\n       - Tienen la misma Sucursal\r\n       - Tienen un usuario asignado\r\n       - No están cancelados o ya intercambiados\r\n   - **Mensaje:** Opcional (área de texto para agregar un mensaje)\r\n\r\n5. **Crear Solicitud**\r\n   - Hacer clic en el botón **\"Crear solicitud de intercambio\"** (abajo del formulario)\r\n   - La solicitud se creará\r\n\r\n**Resultado:**\r\n- Se crea una solicitud de intercambio (estado = \"Pendiente\" / pending)\r\n- El usuario objetivo recibe una notificación\r\n\r\n---\r\n\r\n### Responder a una Solicitud de Intercambio (Empleado)\r\n\r\n**Cuándo:** Después de recibir una solicitud de intercambio\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Gestión de Solicitudes**\r\n   - Tab \"Plan de Turno\" → Botón **\"Solicitudes de Intercambio\"** (icono de flecha, parte superior derecha)\r\n   - Se abrirá un panel lateral o modal con dos tabs:\r\n     - **\"Enviadas\":** Tus solicitudes (las que has creado)\r\n     - **\"Recibidas\":** Solicitudes recibidas (de otros empleados)\r\n\r\n2. **Ver Solicitudes Recibidas**\r\n   - Hacer clic en el tab **\"Recibidas\"**\r\n   - Se mostrará una lista de solicitudes recibidas\r\n\r\n3. **Seleccionar Solicitud**\r\n   - Hacer clic en una solicitud de la lista\r\n   - Se mostrarán los detalles:\r\n     - Turno original (tu turno)\r\n     - Turno objetivo (turno del solicitante)\r\n     - Mensaje (si hay uno)\r\n     - Estado (Pendiente)\r\n\r\n4. **Responder**\r\n   - Hacer clic en el botón **\"Aceptar\"** (verde, a la derecha de la solicitud)\r\n     - **O**\r\n   - Hacer clic en el botón **\"Rechazar\"** (rojo, a la derecha de la solicitud)\r\n\r\n**Resultado:**\r\n\r\n**Si se Acepta:**\r\n- Ambos turnos se intercambian (userId se intercambia)\r\n- Estado = \"Intercambiado\" (swapped)\r\n- Ambos usuarios reciben una notificación\r\n\r\n**Si se Rechaza:**\r\n- Estado = \"Rechazado\" (rejected)\r\n- El solicitante recibe una notificación\r\n\r\n---\r\n\r\n### Ver Solicitudes de Intercambio (Administrador)\r\n\r\n**Pasos:**\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Solicitudes de Intercambio\"\r\n2. Se abrirá un panel lateral o modal con dos tabs:\r\n   - **\"Enviadas\":** Todas las solicitudes enviadas\r\n   - **\"Recibidas\":** Todas las solicitudes recibidas\r\n3. **Filtrar por Estado:** Menú desplegable arriba (todas / pendiente / aprobada / rechazada)\r\n4. **Ver Detalles:**\r\n   - Solicitante (quien creó la solicitud)\r\n   - Usuario objetivo (quien debe responder)\r\n   - Turno original (detalles)\r\n   - Turno objetivo (detalles)\r\n   - Estado (pendiente / aprobada / rechazada)\r\n   - Mensaje (si hay uno)\r\n\r\n**Propósito:** El administrador tiene una visión general de todas las solicitudes de intercambio.\r\n\r\n---\r\n\r\n## Filtros y Búsqueda\r\n\r\n### Filtrar Turnos (Todos los Usuarios)\r\n\r\n**Ubicación:**\r\n- Tab \"Plan de Turno\" → Botón **\"Filtro\"** (icono de embudo, parte superior derecha)\r\n- **Badge:**** Muestra el número de filtros activos (si > 0, círculo azul arriba a la derecha del botón)\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Panel de Filtros**\r\n   - En el header superior derecho, hacer clic en el botón **\"Filtro\"** (icono de embudo)\r\n   - Se mostrará un panel de filtros debajo del header (caja blanca con borde)\r\n\r\n2. **Seleccionar Filtros**\r\n   - **Sucursal:** Lista de casillas de verificación (selección múltiple, desplazable)\r\n   - **Rol:** Lista de casillas de verificación (selección múltiple, desplazable)\r\n   - **Estado:** Lista de casillas de verificación (selección múltiple, desplazable)\r\n     - Planificado (scheduled)\r\n     - Confirmado (confirmed)\r\n     - Cancelado (cancelled)\r\n     - Intercambiado (swapped)\r\n   - **Empleado:** Lista de casillas de verificación (selección múltiple, desplazable)\r\n\r\n3. **Aplicar Filtros**\r\n   - Marcar las casillas deseadas (múltiples por categoría)\r\n   - Hacer clic en el botón **\"Aplicar\"** (azul, abajo a la derecha del panel)\r\n     - **O** hacer clic en el botón **\"Restablecer\"** (gris, abajo a la izquierda) para limpiar todos los filtros\r\n   - El panel se cerrará y el calendario mostrará solo los turnos filtrados\r\n\r\n**Resultado:**\r\n- El calendario muestra solo los turnos que coinciden con los filtros seleccionados\r\n- El botón de filtro muestra un badge con el número de filtros activos\r\n\r\n---\r\n\r\n### Navegar entre Semanas (Todos los Usuarios)\r\n\r\n**Ubicación:**\r\n- Header central del planificador de turnos\r\n\r\n**Controles:**\r\n- **\"Anterior\"** (←): Botón de flecha izquierda (izquierda de la visualización de semana)\r\n- **\"Siguiente\"** (→): Botón de flecha derecha (derecha de la visualización de semana)\r\n- **\"Hoy\"** (📅): Botón de calendario (derecha de la visualización de semana)\r\n- **Visualización de Semana:** Texto en el centro (ej: \"17.11.2025 - 23.11.2025\")\r\n\r\n**Pasos:**\r\n\r\n1. **Semana Anterior**\r\n   - Hacer clic en el botón **\"Anterior\"** (←)\r\n   - El calendario cargará los turnos de la semana anterior\r\n\r\n2. **Semana Siguiente**\r\n   - Hacer clic en el botón **\"Siguiente\"** (→)\r\n   - El calendario cargará los turnos de la semana siguiente\r\n\r\n3. **Semana Actual**\r\n   - Hacer clic en el botón **\"Hoy\"** (📅)\r\n   - El calendario cargará los turnos de la semana actual\r\n\r\n---\r\n\r\n### Cambiar Vista (Todos los Usuarios)\r\n\r\n**Ubicación:**\r\n- Header superior derecho, después de los otros botones\r\n\r\n**Controles:**\r\n- **\"Semana\"** (📅): Botón de calendario (vista semanal)\r\n- **\"Mes\"** (📊): Botón de cuadrícula (vista mensual)\r\n\r\n**Pasos:**\r\n\r\n1. **Vista Semanal**\r\n   - Hacer clic en el botón **\"Semana\"** (📅)\r\n   - El calendario cambiará a vista semanal (timeGridWeek)\r\n\r\n2. **Vista Mensual**\r\n   - Hacer clic en el botón **\"Mes\"** (📊)\r\n   - El calendario cambiará a vista mensual (dayGridMonth)\r\n\r\n---\r\n\r\n## Resolución de Problemas\r\n\r\n### Problema: La generación automática crea 0 turnos\r\n\r\n**Causa:** No hay plantillas de turnos para la Sucursal + Roles seleccionados.\r\n\r\n**Solución:**\r\n1. Verificar que existen plantillas:\r\n   - Tab \"Plan de Turno\" → Botón \"Plantillas de Turnos\"\r\n   - Revisar la lista: ¿Hay plantillas para la Sucursal y Roles seleccionados?\r\n2. Si no hay plantillas:\r\n   - Crear plantillas (ver sección \"Gestión de Plantillas de Turnos\")\r\n   - Asegurarse de que las plantillas estén activas\r\n3. Verificar que la Sucursal y Roles en las plantillas coincidan con la generación\r\n\r\n**Checklist:**\r\n- [ ] Plantillas existen para la Sucursal seleccionada\r\n- [ ] Plantillas existen para los Roles seleccionados\r\n- [ ] Plantillas están activas (isActive = true)\r\n- [ ] Plantillas tienen hora de inicio y fin\r\n\r\n---\r\n\r\n### Problema: Los turnos se crean sin empleado asignado\r\n\r\n**Causa:** No hay disponibilidades que coincidan con los turnos.\r\n\r\n**Solución:**\r\n1. **Opción A: Crear Disponibilidades**\r\n   - Los empleados deben crear sus disponibilidades\r\n   - Tab \"Plan de Turno\" → Botón \"Disponibilidades\"\r\n   - Crear disponibilidades que coincidan con los turnos\r\n\r\n2. **Opción B: Asignar Manualmente**\r\n   - El administrador puede asignar empleados manualmente\r\n   - Hacer clic en el turno → Seleccionar empleado → Guardar\r\n\r\n---\r\n\r\n### Problema: No puedo crear una solicitud de intercambio\r\n\r\n**Causas posibles:**\r\n1. El turno no es tuyo (userId ≠ tu usuario)\r\n2. El turno está cancelado o ya intercambiado\r\n3. No hay turnos objetivo disponibles (mismo rol/sucursal, con usuario, no cancelado/intercambiado)\r\n\r\n**Solución:**\r\n1. Verificar que el turno es tuyo\r\n2. Verificar que el turno no está cancelado o intercambiado\r\n3. Verificar que existen turnos objetivo disponibles\r\n\r\n---\r\n\r\n### Problema: No veo el botón \"Plantillas de Turnos\"\r\n\r\n**Causa:** El botón no está visible o la página no se ha recargado.\r\n\r\n**Solución:**\r\n1. Recargar la página (F5 o Ctrl+R)\r\n2. Verificar que estás en el tab \"Plan de Turno\"\r\n3. Buscar el botón en el header superior derecho (icono de documento)\r\n4. Si aún no aparece, contactar al administrador del sistema\r\n\r\n---\r\n\r\n### Problema: Error al guardar una plantilla\r\n\r\n**Causas posibles:**\r\n1. Nombre duplicado (dentro de la misma Sucursal + Rol)\r\n2. Hora de inicio >= hora de fin (excepto para turnos nocturnos)\r\n3. Campos requeridos vacíos\r\n\r\n**Solución:**\r\n1. Cambiar el nombre de la plantilla\r\n2. Verificar que la hora de inicio < hora de fin (o usar formato correcto para turnos nocturnos)\r\n3. Completar todos los campos requeridos (Nombre, Sucursal, Rol, Hora de Inicio, Hora de Fin)\r\n\r\n---\r\n\r\n## Preguntas Frecuentes\r\n\r\n### ¿Puedo tener múltiples plantillas para la misma Sucursal + Rol?\r\n\r\n**Sí.** Puedes tener múltiples plantillas para la misma combinación. Por ejemplo:\r\n- \"Turno Matutino\" (08:00-16:00)\r\n- \"Turno Vespertino\" (16:00-00:00)\r\n- \"Turno Nocturno\" (00:00-08:00)\r\n\r\nDurante la generación, se crearán turnos para **todas las plantillas activas**.\r\n\r\n---\r\n\r\n### ¿Qué pasa si no creo disponibilidades?\r\n\r\n**Sin disponibilidades:**\r\n- ✅ Los turnos se crean (basados en plantillas)\r\n- ❌ Los turnos **no tienen usuario asignado** (userId = null)\r\n- ⚠️ El administrador debe asignar usuarios manualmente\r\n\r\n**Con disponibilidades:**\r\n- ✅ Los turnos se crean\r\n- ✅ El sistema intenta asignar usuarios automáticamente\r\n- ✅ Los usuarios con mayor prioridad son preferidos\r\n\r\n---\r\n\r\n### ¿Puedo cambiar la Sucursal o Rol de una plantilla después de crearla?\r\n\r\n**No.** Sucursal y Rol no se pueden cambiar al editar una plantilla (aparecen deshabilitados). Si necesitas cambiar estos campos, debes crear una nueva plantilla.\r\n\r\n---\r\n\r\n### ¿Qué significa \"Prioridad\" en las disponibilidades?\r\n\r\nLa prioridad (1-10) determina qué empleados son preferidos durante la asignación automática:\r\n- **Mayor prioridad = más preferido**\r\n- Se combina con el tipo de disponibilidad (Disponible / Preferida)\r\n- Los empleados con disponibilidad \"Preferida\" reciben un bonus de +5 a la prioridad\r\n\r\n---\r\n\r\n### ¿Puedo intercambiar un turno que ya está confirmado?\r\n\r\n**Sí.** Puedes crear una solicitud de intercambio para un turno confirmado, siempre que:\r\n- El turno es tuyo\r\n- El turno no está cancelado o ya intercambiado\r\n- Existe un turno objetivo disponible\r\n\r\n---\r\n\r\n### ¿Qué pasa si rechazo una solicitud de intercambio?\r\n\r\n**Si rechazas:**\r\n- La solicitud se marca como \"Rechazada\"\r\n- El solicitante recibe una notificación\r\n- Los turnos **no se intercambian**\r\n\r\n---\r\n\r\n### ¿Puedo ver todos los turnos de todos los empleados?\r\n\r\n**Depende de tus permisos:**\r\n- **Administradores:** Pueden ver todos los turnos\r\n- **Empleados:** Solo pueden ver sus propios turnos y turnos no asignados\r\n\r\n---\r\n\r\n### ¿Cómo sé si un turno está asignado a mí?\r\n\r\n**En el calendario:**\r\n- Los turnos asignados a ti aparecen con un color diferente\r\n- Al hacer clic, verás tu nombre en el formulario de edición\r\n- En la vista de lista, puedes filtrar por \"Empleado\" = tu nombre\r\n\r\n---\r\n\r\n## Flujos de Trabajo Típicos\r\n\r\n### Flujo 1: Creación Semanal de Plan de Turnos\r\n\r\n**Para Administradores:**\r\n\r\n1. **Preparación (Una vez)**\r\n   - Crear plantillas de turnos para todas las Sucursales + Roles necesarios\r\n   - Verificar que los empleados tienen disponibilidades actualizadas\r\n\r\n2. **Generación Semanal**\r\n   - Tab \"Plan de Turno\" → Botón \"Generar\"\r\n   - Seleccionar rango de fechas (ej: próxima semana)\r\n   - Seleccionar Sucursal y Roles\r\n   - Hacer clic en \"Generar\"\r\n   - Revisar resultados y conflictos\r\n\r\n3. **Asignación**\r\n   - Revisar turnos sin usuario asignado\r\n   - Hacer clic en cada turno → Asignar empleado → Guardar\r\n   - O dejar que el sistema asigne automáticamente (si hay disponibilidades)\r\n\r\n4. **Seguimiento**\r\n   - Esperar confirmaciones de empleados\r\n   - Reasignar turnos cancelados si es necesario\r\n\r\n**Para Empleados:**\r\n\r\n1. **Recibir Notificación**\r\n   - Notificación: \"Se te ha asignado un turno\"\r\n   - Hacer clic en el icono de notificaciones\r\n\r\n2. **Confirmar Turno**\r\n   - Tab \"Plan de Turno\" → Hacer clic en tu turno\r\n   - Cambiar estado a \"Confirmado\" → Guardar\r\n\r\n---\r\n\r\n### Flujo 2: Intercambio de Turnos\r\n\r\n**Empleado A (Solicitante):**\r\n\r\n1. Tab \"Plan de Turno\" → Hacer clic en tu turno\r\n2. Botón \"Intercambiar turno\" → Seleccionar turno objetivo → Crear solicitud\r\n\r\n**Empleado B (Receptor):**\r\n\r\n1. Recibir notificación: \"Solicitud de intercambio recibida\"\r\n2. Tab \"Plan de Turno\" → Botón \"Solicitudes de Intercambio\" → Tab \"Recibidas\"\r\n3. Revisar solicitud → Aceptar o Rechazar\r\n\r\n**Resultado:**\r\n- Si se acepta: Turnos intercambiados, ambos reciben notificación\r\n- Si se rechaza: Solicitud rechazada, solicitante recibe notificación\r\n\r\n---\r\n\r\n### Flujo 3: Cancelación de Turno\r\n\r\n**Empleado:**\r\n\r\n1. Tab \"Plan de Turno\" → Hacer clic en tu turno\r\n2. Cambiar estado a \"Cancelado\" → Guardar\r\n3. Administrador recibe notificación\r\n\r\n**Administrador:**\r\n\r\n1. Recibir notificación: \"Turno cancelado\"\r\n2. Tab \"Plan de Turno\" → Ver turno cancelado\r\n3. Opciones:\r\n   - Crear nuevo turno\r\n   - Asignar otro empleado al turno existente\r\n\r\n---\r\n\r\n## Notificaciones\r\n\r\n### ¿Cuándo se envían notificaciones?\r\n\r\n1. **Turno Asignado**\r\n   - **A:** Empleado (quien recibe el turno)\r\n   - **Cuándo:** Después de la asignación (userId se establece)\r\n   - **Dónde:** Icono de notificaciones (arriba a la derecha en la navegación)\r\n\r\n2. **Turno Confirmado**\r\n   - **A:** Administrador (quien creó el turno)\r\n   - **Cuándo:** Después de la confirmación (estado = \"Confirmado\")\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n3. **Turno Cancelado**\r\n   - **A:** Administrador (quien creó el turno)\r\n   - **Cuándo:** Después de la cancelación (estado = \"Cancelado\")\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n4. **Solicitud de Intercambio Creada**\r\n   - **A:** Usuario objetivo (quien tiene el turno objetivo)\r\n   - **Cuándo:** Después de crear la solicitud\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n5. **Solicitud de Intercambio Aceptada**\r\n   - **A:** Ambos usuarios (solicitante y objetivo)\r\n   - **Cuándo:** Después de aceptar (estado = \"Aprobada\")\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n6. **Solicitud de Intercambio Rechazada**\r\n   - **A:** Solicitante (quien creó la solicitud)\r\n   - **Cuándo:** Después de rechazar (estado = \"Rechazada\")\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n---\r\n\r\n## Estados de Turnos\r\n\r\n### Estados en el Calendario (codificados por color)\r\n\r\n1. **Planificado** (scheduled) - Color: Amarillo/Naranja\r\n   - Turno creado pero no confirmado\r\n   - Puede estar sin usuario asignado (userId = null)\r\n   - O con usuario asignado pero no confirmado\r\n\r\n2. **Confirmado** (confirmed) - Color: Verde\r\n   - Empleado ha confirmado el turno\r\n   - confirmedAt se establece\r\n\r\n3. **Cancelado** (cancelled) - Color: Rojo\r\n   - Turno cancelado\r\n   - Puede ser reasignado\r\n\r\n4. **Intercambiado** (swapped) - Color: Azul\r\n   - Turno intercambiado con otro\r\n   - userId se intercambió\r\n\r\n---\r\n\r\n### Estados de Solicitudes de Intercambio\r\n\r\n1. **Pendiente** (pending) - Badge: Amarillo\r\n   - Solicitud creada, esperando respuesta\r\n\r\n2. **Aprobada** (approved) - Badge: Verde\r\n   - Solicitud aceptada\r\n   - Turnos intercambiados\r\n\r\n3. **Rechazada** (rejected) - Badge: Rojo\r\n   - Solicitud rechazada\r\n\r\n4. **Cancelada** (cancelled) - Badge: Gris\r\n   - Solicitud cancelada\r\n\r\n---\r\n\r\n## Consejos y Mejores Prácticas\r\n\r\n### Para Administradores:\r\n\r\n- **Plantillas:** Crear plantillas para todas las combinaciones Sucursal + Rol que necesitas\r\n- **Generación Automática:** Revisa los conflictos después de la generación\r\n- **Asignación:** Asigna usuarios manualmente si no hay disponibilidades\r\n- **Seguimiento:** Revisa regularmente los turnos no confirmados\r\n\r\n### Para Empleados:\r\n\r\n- **Disponibilidades:** Mantén tus disponibilidades actualizadas\r\n- **Confirmación:** Confirma turnos asignados a tiempo\r\n- **Intercambios:** Responde a solicitudes de intercambio a tiempo\r\n- **Cancelaciones:** Cancela turnos con suficiente antelación\r\n\r\n---\r\n\r\n## Resumen Rápido\r\n\r\n### ¿Quién hace qué?\r\n\r\n- **Administrador:** Plantillas, Generación, Asignación, Gestión\r\n- **Empleado:** Disponibilidades, Confirmación, Solicitudes de Intercambio\r\n\r\n### ¿Cuándo?\r\n\r\n- **Plantillas:** Una vez / Cuando sea necesario\r\n- **Disponibilidades:** Regularmente (cuando cambien)\r\n- **Generación:** Regularmente (semanal, mensual)\r\n- **Asignación:** Después de la generación\r\n- **Confirmación:** Después de la asignación\r\n- **Intercambio:** Cuando sea necesario\r\n\r\n### ¿Dónde en el Frontend?\r\n\r\n- **Página:** `/team-worktime-control`\r\n- **Tab:** \"Plan de Turno\"\r\n- **Header:** Arriba (Izquierda: Botón Añadir, Centro: Navegación de Semana, Derecha: Filtros/Disponibilidades/Plantillas/Intercambio/Generar/Actualizar/Botones de Vista)\r\n- **Calendario:** Área principal (muestra turnos como eventos)\r\n- **Paneles/Modales:** Se abren al hacer clic en botones (Desktop: Panel lateral derecha, Mobile: Modal centrado)\r\n\r\n---\r\n\r\n## Soporte\r\n\r\nSi tienes problemas o preguntas:\r\n\r\n1. Revisar esta guía\r\n2. Revisar la sección \"Resolución de Problemas\"\r\n3. Contactar al administrador del sistema\r\n4. Revisar los logs del sistema (si tienes acceso)\r\n\r\n---\r\n\r\n**Última actualización:** 2025-01-XX  \r\n**Versión:** 1.0\r\n\r\n",
+      "slug": "guia-completa-del-usuario-planificador-de-turnos",
+      "parentId": null,
+      "createdById": 1,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2025-11-19T22:18:06.174Z",
+      "updatedAt": "2025-11-19T22:18:06.174Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": null,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 6,
+      "title": "KeePass",
+      "content": "https://drive.google.com/drive/folders/1BeMsQ72kamwUXGsGWz9ek75cw_1czHUkhttps://drive.google.com/file/d/1-Jc2jGWKEFHROO9BwWVacLYiJKwSVkan/view?usp=sharing",
+      "slug": "keepass",
+      "parentId": null,
+      "createdById": 27,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2025-02-08T01:00:00.000Z",
+      "updatedAt": "2025-11-06T21:10:09.173Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 2,
+      "title": "Online Check-in",
+      "content": "https://drive.google.com/file/d/1hrugpOMJ88QyrbVUVEs7nXlTpAkwlNyO/view\n..",
+      "slug": "online-check-in",
+      "parentId": null,
+      "createdById": 8,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2024-02-22T02:10:52.000Z",
+      "updatedAt": "2025-11-06T21:10:09.156Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 3,
+      "title": "Online Check-out",
+      "content": "https://drive.google.com/file/d/10JRWn-NiDVi-FhjwzK6bdqWrHcj4FYkZ/view",
+      "slug": "online-check-out",
+      "parentId": null,
+      "createdById": 8,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2024-02-22T02:10:57.000Z",
+      "updatedAt": "2025-11-06T21:10:09.160Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 5,
+      "title": "Recepcion: First day",
+      "content": "https://drive.google.com/drive/folders/1cJZrz7wYrSaBGlS5UlZ0ztXdqdQYHYnh\n**04/11/2024  https://docs.google.com/document/d/1iGubiuE70hYvrLJmuI9FaU7j6jWdwM3k/edit?usp=sharing&ouid=110952298960966738800&rtpof=true&sd=true\n",
+      "slug": "recepcion-first-day",
+      "parentId": null,
+      "createdById": 8,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2024-02-22T02:10:57.000Z",
+      "updatedAt": "2025-11-06T21:10:09.169Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 7,
+      "title": "Servicio de Desayunos",
+      "content": "https://docs.google.com/document/d/12FTHf5caf_kjfYecHa7hTWYo_VcC45lF/edit?usp=sharing&ouid=110952298960966738800&rtpof=true&sd=true",
+      "slug": "servicio-de-desayunos",
+      "parentId": null,
+      "createdById": 27,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2025-02-08T01:00:00.000Z",
+      "updatedAt": "2025-11-06T21:10:09.177Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    }
+  ],
+  "markdownFolder": null,
+  "articlesInMarkdownFolder": [],
+  "standaloneArticles": [
+    {
+      "id": 23,
+      "title": "Articulo Alejandra Prueba",
+      "content": "\n\n[📄 arbeitszeugnis-4.pdf](/api/cerebro/media/14/file)",
+      "slug": "articulo-alejandra-prueba",
+      "parentId": null,
+      "createdById": 3,
+      "updatedById": 3,
+      "isPublished": false,
+      "createdAt": "2025-11-15T15:55:12.110Z",
+      "updatedAt": "2025-11-15T15:55:12.359Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": null,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 24,
+      "title": "Articulo Prueba Alejandra 2",
+      "content": "asdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasd\nfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfas\ndfasfasddfasdfasdfasdfasfasddfasdfasdfasdfa\nsfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfa\nsddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasdd\nfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdf\nasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfa\nsddfasdfasdfasdfasfasddfasdfasdfasdfasfas\nddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfas\nfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfas\ndfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfa\nsddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfas\ndfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfa\nsddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasd\ndfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfas\ndfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfasddfasdfasdfasdfasfas\n\nwww.bancolombia.com\n\n",
+      "slug": "articulo-prueba-alejandra-2",
+      "parentId": null,
+      "createdById": 3,
+      "updatedById": 3,
+      "isPublished": false,
+      "createdAt": "2025-11-15T15:56:06.105Z",
+      "updatedAt": "2025-11-15T15:56:58.015Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": null,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 4,
+      "title": "Emergencies",
+      "content": "https://docs.google.com/document/d/1A2RcozNsrab-pwT4OsJii_qgczXJbLKQ/edit?usp=sharing&ouid=110952298960966738800&rtpof=true&sd=true",
+      "slug": "emergencies",
+      "parentId": null,
+      "createdById": 8,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2024-02-22T02:10:57.000Z",
+      "updatedAt": "2025-11-06T21:10:09.167Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 25,
+      "title": "Guía Completa del Usuario - Planificador de Turnos",
+      "content": "# Guía Completa del Usuario - Planificador de Turnos\r\n\r\n## 📋 Índice\r\n\r\n1. [Introducción](#introducción)\r\n2. [Roles y Responsabilidades](#roles-y-responsabilidades)\r\n3. [Navegación](#navegación)\r\n4. [Configuración Inicial](#configuración-inicial)\r\n5. [Gestión de Plantillas de Turnos](#gestión-de-plantillas-de-turnos)\r\n6. [Gestión de Disponibilidades](#gestión-de-disponibilidades)\r\n7. [Creación de Turnos](#creación-de-turnos)\r\n8. [Gestión de Turnos](#gestión-de-turnos)\r\n9. [Intercambio de Turnos](#intercambio-de-turnos)\r\n10. [Filtros y Búsqueda](#filtros-y-búsqueda)\r\n11. [Resolución de Problemas](#resolución-de-problemas)\r\n12. [Preguntas Frecuentes](#preguntas-frecuentes)\r\n\r\n---\r\n\r\n## Introducción\r\n\r\nEl Planificador de Turnos es una herramienta completa para gestionar los horarios de trabajo de los empleados. Permite crear turnos, asignarlos a empleados, gestionar disponibilidades y facilitar el intercambio de turnos entre empleados.\r\n\r\n**Ubicación:** Centro de Trabajo → Tab \"Plan de Turno\"\r\n\r\n---\r\n\r\n## Roles y Responsabilidades\r\n\r\n### 👨‍💼 Administrador / Planificador de Turnos\r\n\r\n**Puede:**\r\n- Crear y gestionar plantillas de turnos\r\n- Generar planes de turnos automáticamente\r\n- Crear turnos manualmente\r\n- Asignar turnos a empleados\r\n- Gestionar disponibilidades (opcional, para otros usuarios)\r\n- Ver y gestionar todas las solicitudes de intercambio\r\n\r\n**Debe:**\r\n- Crear plantillas antes de generar turnos\r\n- Asignar turnos después de la generación automática\r\n- Revisar y aprobar/rechazar solicitudes de intercambio (si es necesario)\r\n\r\n---\r\n\r\n### 👤 Empleado (Usuario)\r\n\r\n**Puede:**\r\n- Definir sus propias disponibilidades\r\n- Confirmar turnos asignados\r\n- Crear solicitudes de intercambio de turnos\r\n- Responder a solicitudes de intercambio recibidas\r\n- Ver sus propios turnos en el calendario\r\n\r\n**Debe:**\r\n- Mantener sus disponibilidades actualizadas\r\n- Confirmar turnos asignados a tiempo\r\n- Responder a solicitudes de intercambio a tiempo\r\n- Cancelar turnos con suficiente antelación\r\n\r\n---\r\n\r\n## Navegación\r\n\r\n### Cómo acceder al Planificador de Turnos\r\n\r\n1. **Menú Principal** (lado izquierdo)\r\n   - Buscar y hacer clic en **\"Centro de Trabajo\"** (Team Worktime Control)\r\n\r\n2. **Tabs** (parte superior de la página)\r\n   - Hacer clic en el tab **\"Plan de Turno\"** (entre \"Tiempo de trabajo y actividades\" y \"Evaluaciones de tarea\")\r\n\r\n3. **Calendario de Turnos**\r\n   - Se mostrará el calendario con los turnos de la semana actual\r\n\r\n---\r\n\r\n## Configuración Inicial\r\n\r\n### ⚠️ IMPORTANTE: Antes de empezar\r\n\r\nPara que el Planificador de Turnos funcione correctamente, se deben cumplir los siguientes requisitos:\r\n\r\n1. **Sucursales** deben existir en el sistema\r\n2. **Roles** deben existir en el sistema\r\n3. **Usuarios/Empleados** deben existir en el sistema\r\n4. **Plantillas de Turnos** deben crearse (ver sección siguiente)\r\n5. **Disponibilidades** pueden crearse (opcional, pero recomendado)\r\n\r\n---\r\n\r\n## Gestión de Plantillas de Turnos\r\n\r\n### ¿Qué son las Plantillas de Turnos?\r\n\r\nLas plantillas definen qué tipos de turnos puede tener un rol en un día. Por ejemplo:\r\n- \"Turno Matutino\" (08:00-16:00)\r\n- \"Turno Vespertino\" (16:00-00:00)\r\n- \"Turno Nocturno\" (00:00-08:00)\r\n\r\n**⚠️ CRÍTICO:** Sin plantillas, la generación automática creará **0 turnos**.\r\n\r\n---\r\n\r\n### Crear una Plantilla de Turno (Administrador)\r\n\r\n**Ubicación:**\r\n- Tab \"Plan de Turno\" → Botón **\"Plantillas de Turnos\"** (icono de documento, parte superior derecha)\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Gestión de Plantillas**\r\n   - En el header superior derecho, hacer clic en el botón **\"Plantillas de Turnos\"** (icono de documento)\r\n   - Se abrirá un panel lateral (Desktop) o modal (Mobile)\r\n\r\n2. **Crear Nueva Plantilla**\r\n   - Hacer clic en el icono **\"+\"** (arriba a la derecha del panel/modal)\r\n   - Se abrirá el formulario\r\n\r\n3. **Completar Formulario**\r\n   - **Nombre:** Ingresar un nombre descriptivo (ej: \"Turno Matutino\", \"Turno Vespertino\")\r\n   - **Sucursal:** Seleccionar del menú desplegable (debe coincidir con la sucursal para la que se generarán turnos)\r\n   - **Rol:** Seleccionar del menú desplegable (debe coincidir con el rol para el que se generarán turnos)\r\n   - **Hora de Inicio:** Ingresar en formato HH:mm (ej: \"08:00\", \"16:00\")\r\n   - **Hora de Fin:** Ingresar en formato HH:mm (ej: \"16:00\", \"00:00\")\r\n   - **Duración:** Opcional (se calcula automáticamente)\r\n   - **Activo:** ✅ Dejar marcado (solo las plantillas activas se usan en la generación)\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"** (abajo del formulario)\r\n   - La plantilla aparecerá en la lista\r\n\r\n**Ejemplo:**\r\n- Nombre: \"Turno Matutino\"\r\n- Sucursal: \"Zúrich\"\r\n- Rol: \"Camarero\"\r\n- Hora de Inicio: \"08:00\"\r\n- Hora de Fin: \"16:00\"\r\n- Activo: ✅\r\n\r\n---\r\n\r\n### Editar una Plantilla (Administrador)\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Plantillas de Turnos\"\r\n2. En la lista, hacer clic en el botón **\"Editar\"** (icono de lápiz, a la derecha de la plantilla)\r\n3. Modificar los campos necesarios\r\n4. **Nota:** Sucursal y Rol no se pueden cambiar al editar (aparecen deshabilitados)\r\n5. Hacer clic en **\"Guardar\"**\r\n\r\n---\r\n\r\n### Eliminar una Plantilla (Administrador)\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Plantillas de Turnos\"\r\n2. En la lista, hacer clic en el botón **\"Eliminar\"** (icono de papelera, a la derecha de la plantilla)\r\n3. Confirmar en el diálogo: \"¿Realmente desea eliminar esta plantilla?\"\r\n4. Hacer clic en **\"OK\"**\r\n\r\n**⚠️ ADVERTENCIA:** Las plantillas eliminadas no se pueden recuperar.\r\n\r\n---\r\n\r\n### Desactivar una Plantilla (Administrador)\r\n\r\n1. Editar la plantilla\r\n2. Desmarcar la casilla **\"Activo\"**\r\n3. Guardar\r\n\r\n**Uso:** Para archivar plantillas temporalmente sin eliminarlas (ej: durante renovaciones).\r\n\r\n---\r\n\r\n## Gestión de Disponibilidades\r\n\r\n### ¿Qué son las Disponibilidades?\r\n\r\nLas disponibilidades definen cuándo un empleado está disponible para trabajar. Se utilizan en la generación automática para asignar turnos a los empleados correctos.\r\n\r\n**Tipos de Disponibilidad:**\r\n- **Disponible:** Disponibilidad estándar\r\n- **Preferida:** Disponibilidad preferida (mayor prioridad en la asignación)\r\n- **No Disponible:** No disponible para trabajar\r\n\r\n---\r\n\r\n### Crear una Disponibilidad (Empleado)\r\n\r\n**Ubicación:**\r\n- Tab \"Plan de Turno\" → Botón **\"Disponibilidades\"** (icono de casilla, parte superior derecha)\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Gestión de Disponibilidades**\r\n   - En el header superior derecho, hacer clic en el botón **\"Disponibilidades\"** (icono de casilla)\r\n   - Se abrirá un panel lateral (Desktop) o modal (Mobile)\r\n\r\n2. **Crear Nueva Disponibilidad**\r\n   - Hacer clic en el icono **\"+\"** (arriba a la derecha del panel/modal)\r\n   - Se abrirá el formulario\r\n\r\n3. **Completar Formulario**\r\n   - **Sucursal:** Opcional (seleccionar si solo aplica a una sucursal específica)\r\n   - **Rol:** Opcional (seleccionar si solo aplica a un rol específico)\r\n   - **Día de la Semana:** Seleccionar (Todos los días / Domingo / Lunes / ... / Sábado)\r\n   - **Hora de Inicio:** Opcional (ej: \"08:00\") - Si está vacío, todo el día disponible\r\n   - **Hora de Fin:** Opcional (ej: \"16:00\") - Si está vacío, todo el día disponible\r\n   - **Fecha de Inicio:** Opcional (inicio del período de validez)\r\n   - **Fecha de Fin:** Opcional (fin del período de validez)\r\n   - **Tipo:** Seleccionar (Disponible / Preferida / No Disponible)\r\n   - **Prioridad:** Número del 1 al 10 (mayor = más preferido, por defecto: 5)\r\n   - **Notas:** Opcional\r\n   - **Activo:** ✅ Dejar marcado\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - La disponibilidad aparecerá en la lista\r\n\r\n**Ejemplos:**\r\n\r\n**Ejemplo 1: Disponibilidad Estándar**\r\n- Día: Lunes\r\n- Hora de Inicio: \"08:00\"\r\n- Hora de Fin: \"16:00\"\r\n- Tipo: Disponible\r\n- Prioridad: 5\r\n\r\n**Ejemplo 2: Disponibilidad Preferida**\r\n- Día: Sábado\r\n- Hora de Inicio: \"10:00\"\r\n- Hora de Fin: \"14:00\"\r\n- Tipo: Preferida\r\n- Prioridad: 8\r\n\r\n**Ejemplo 3: No Disponible**\r\n- Día: Domingo\r\n- Tipo: No Disponible\r\n\r\n---\r\n\r\n### Editar una Disponibilidad (Empleado)\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Disponibilidades\"\r\n2. En la lista, hacer clic en el botón **\"Editar\"** (icono de lápiz)\r\n3. Modificar los campos necesarios\r\n4. Hacer clic en **\"Guardar\"**\r\n\r\n---\r\n\r\n### Eliminar una Disponibilidad (Empleado)\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Disponibilidades\"\r\n2. En la lista, hacer clic en el botón **\"Eliminar\"** (icono de papelera)\r\n3. Confirmar en el diálogo\r\n4. Hacer clic en **\"OK\"**\r\n\r\n---\r\n\r\n## Creación de Turnos\r\n\r\n### Generación Automática de Turnos (Administrador)\r\n\r\n**Ubicación:**\r\n- Tab \"Plan de Turno\" → Botón **\"Generar\"** (icono de refresco/generar, parte superior derecha)\r\n\r\n**⚠️ PREREQUISITOS:**\r\n- ✅ Plantillas de Turnos deben existir para la Sucursal + Roles seleccionados\r\n- ✅ Plantillas deben estar activas\r\n- ⚠️ Disponibilidades son opcionales (sin disponibilidades, los turnos se crean sin usuario asignado)\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Generador**\r\n   - En el header superior derecho, hacer clic en el botón **\"Generar\"** (icono de refresco/generar)\r\n   - Se abrirá un panel lateral (Desktop) o modal (Mobile)\r\n\r\n2. **Completar Formulario**\r\n   - **Fecha de Inicio:** Seleccionar fecha (ej: \"2025-01-20\")\r\n   - **Fecha de Fin:** Seleccionar fecha (ej: \"2025-01-26\")\r\n   - **Sucursal:** Seleccionar del menú desplegable\r\n   - **Roles:** Seleccionar una o más roles (casillas de verificación)\r\n     - **Nota:** Si no se seleccionan roles, se usarán todos los roles de la sucursal\r\n\r\n3. **Generar**\r\n   - Hacer clic en el botón **\"Generar\"** (abajo del formulario)\r\n   - El sistema procesará la generación\r\n\r\n4. **Revisar Resultados**\r\n   - Se mostrará una página de resultados con:\r\n     - Número de turnos generados\r\n     - Conflictos (si los hay):\r\n       - Turnos sin usuario asignado (no hay disponibilidades)\r\n       - Solapamientos de tiempo\r\n   - Revisar la lista de turnos generados\r\n\r\n5. **Cerrar**\r\n   - Hacer clic en el botón **\"Cerrar\"**\r\n   - Los turnos aparecerán en el calendario\r\n\r\n**Resultado:**\r\n- Los turnos se crean con estado \"Planificado\" (scheduled)\r\n- Si hay disponibilidades, el sistema intenta asignar usuarios automáticamente\r\n- Si no hay disponibilidades, los turnos se crean sin usuario asignado (userId = null)\r\n- El administrador debe asignar usuarios manualmente si es necesario\r\n\r\n---\r\n\r\n### Creación Manual de Turnos (Administrador)\r\n\r\n**Ubicación:**\r\n- **Opción A:** Botón **\"Añadir turno\"** (icono de \"+\" en círculo azul, parte superior izquierda)\r\n- **Opción B:** Hacer clic en una fecha en el calendario\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Formulario**\r\n   - **Opción A:** Hacer clic en el botón **\"Añadir turno\"** (parte superior izquierda)\r\n   - **Opción B:** Hacer clic en una fecha en el calendario (el formulario se abrirá con esa fecha prellenada)\r\n\r\n2. **Completar Formulario**\r\n   - **Sucursal:** Seleccionar del menú desplegable\r\n   - **Rol:** Seleccionar del menú desplegable\r\n   - **Plantilla de Turno:** Seleccionar del menú desplegable (define hora de inicio/fin)\r\n   - **Empleado:** Opcional (seleccionar o dejar vacío para asignar después)\r\n   - **Fecha:** Seleccionar (si se usó Opción B, ya está prellenada)\r\n   - **Notas:** Opcional\r\n\r\n3. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - El turno aparecerá en el calendario\r\n\r\n---\r\n\r\n### Asignar Turnos a Empleados (Administrador)\r\n\r\n**Ubicación:**\r\n- Calendario → Hacer clic en un turno\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno**\r\n   - En el calendario, hacer clic en un turno (aparece como bloque de evento)\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral (Desktop) o modal (Mobile) con los detalles del turno\r\n\r\n3. **Asignar Empleado**\r\n   - En el campo **\"Empleado\"** (menú desplegable), seleccionar un empleado\r\n   - El sistema verificará automáticamente:\r\n     - Solapamientos (el empleado ya tiene un turno a la misma hora)\r\n     - Disponibilidades (el empleado está disponible)\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - El turno se asignará y el empleado recibirá una notificación\r\n\r\n**Resultado:**\r\n- El turno se asigna (userId se establece, estado = \"Planificado\")\r\n- El empleado recibe una notificación\r\n- El turno aparece en el calendario con el nombre del empleado\r\n\r\n---\r\n\r\n## Gestión de Turnos\r\n\r\n### Confirmar un Turno (Empleado)\r\n\r\n**Cuándo:** Después de que un turno ha sido asignado\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno Propio**\r\n   - En el calendario, hacer clic en uno de tus turnos (turnos donde userId = tu usuario)\r\n   - Los turnos propios aparecen con un color diferente\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal con los detalles del turno\r\n\r\n3. **Cambiar Estado**\r\n   - En el campo **\"Estado\"** (menú desplegable), seleccionar **\"Confirmado\"**\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - El turno se confirmará y el administrador recibirá una notificación\r\n\r\n**Resultado:**\r\n- Estado = \"Confirmado\" (confirmed)\r\n- confirmedAt se establece\r\n- El administrador recibe una notificación\r\n\r\n---\r\n\r\n### Cancelar un Turno (Empleado o Administrador)\r\n\r\n**Cuándo:** Cuando un turno no se puede realizar (enfermedad, vacaciones, etc.)\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno**\r\n   - En el calendario, hacer clic en el turno\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal\r\n\r\n3. **Cambiar Estado**\r\n   - En el campo **\"Estado\"** (menú desplegable), seleccionar **\"Cancelado\"**\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - El turno se cancelará y el administrador recibirá una notificación\r\n\r\n**Resultado:**\r\n- Estado = \"Cancelado\" (cancelled)\r\n- El turno puede ser reasignado a otro empleado\r\n- El administrador recibe una notificación\r\n\r\n---\r\n\r\n### Eliminar un Turno (Administrador)\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno**\r\n   - En el calendario, hacer clic en el turno\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal\r\n\r\n3. **Eliminar**\r\n   - Hacer clic en el botón **\"Eliminar\"** (rojo, abajo del formulario)\r\n   - Aparecerá un diálogo de confirmación: \"¿Realmente desea eliminar este turno?\"\r\n\r\n4. **Confirmar**\r\n   - Hacer clic en **\"OK\"** en el diálogo\r\n   - El turno se eliminará permanentemente\r\n\r\n**⚠️ ADVERTENCIA:** Los turnos eliminados no se pueden recuperar.\r\n\r\n---\r\n\r\n### Editar un Turno (Administrador)\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno**\r\n   - En el calendario, hacer clic en el turno\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal\r\n\r\n3. **Modificar Campos**\r\n   - **Empleado:** Cambiar (menú desplegable)\r\n   - **Fecha:** Cambiar (campo de fecha)\r\n   - **Estado:** Cambiar (menú desplegable)\r\n   - **Notas:** Modificar (área de texto)\r\n   - **Nota:** Sucursal, Rol y Plantilla no se pueden cambiar (aparecen deshabilitados)\r\n\r\n4. **Guardar**\r\n   - Hacer clic en el botón **\"Guardar\"**\r\n   - Los cambios se aplicarán\r\n\r\n---\r\n\r\n## Intercambio de Turnos\r\n\r\n### Crear una Solicitud de Intercambio (Empleado)\r\n\r\n**Cuándo:** Cuando un empleado quiere intercambiar su turno con otro empleado\r\n\r\n**Prerequisitos:**\r\n- El turno debe pertenecer al empleado (userId = empleado actual)\r\n- El turno no debe estar cancelado o ya intercambiado\r\n\r\n**Pasos:**\r\n\r\n1. **Seleccionar Turno Propio**\r\n   - En el calendario, hacer clic en uno de tus turnos\r\n\r\n2. **Abrir Formulario de Edición**\r\n   - Se abrirá un panel lateral o modal\r\n\r\n3. **Iniciar Intercambio**\r\n   - Hacer clic en el botón **\"Intercambiar turno\"** (en el formulario, junto a \"Guardar\")\r\n   - Se abrirá un nuevo panel/modal: `SwapRequestModal`\r\n\r\n4. **Completar Formulario**\r\n   - **Turno Propio:** Solo lectura (muestra tu turno actual)\r\n   - **Turno Objetivo:** Seleccionar del menú desplegable\r\n     - **Filtros automáticos:** Solo muestra turnos que:\r\n       - Tienen el mismo Rol\r\n       - Tienen la misma Sucursal\r\n       - Tienen un usuario asignado\r\n       - No están cancelados o ya intercambiados\r\n   - **Mensaje:** Opcional (área de texto para agregar un mensaje)\r\n\r\n5. **Crear Solicitud**\r\n   - Hacer clic en el botón **\"Crear solicitud de intercambio\"** (abajo del formulario)\r\n   - La solicitud se creará\r\n\r\n**Resultado:**\r\n- Se crea una solicitud de intercambio (estado = \"Pendiente\" / pending)\r\n- El usuario objetivo recibe una notificación\r\n\r\n---\r\n\r\n### Responder a una Solicitud de Intercambio (Empleado)\r\n\r\n**Cuándo:** Después de recibir una solicitud de intercambio\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Gestión de Solicitudes**\r\n   - Tab \"Plan de Turno\" → Botón **\"Solicitudes de Intercambio\"** (icono de flecha, parte superior derecha)\r\n   - Se abrirá un panel lateral o modal con dos tabs:\r\n     - **\"Enviadas\":** Tus solicitudes (las que has creado)\r\n     - **\"Recibidas\":** Solicitudes recibidas (de otros empleados)\r\n\r\n2. **Ver Solicitudes Recibidas**\r\n   - Hacer clic en el tab **\"Recibidas\"**\r\n   - Se mostrará una lista de solicitudes recibidas\r\n\r\n3. **Seleccionar Solicitud**\r\n   - Hacer clic en una solicitud de la lista\r\n   - Se mostrarán los detalles:\r\n     - Turno original (tu turno)\r\n     - Turno objetivo (turno del solicitante)\r\n     - Mensaje (si hay uno)\r\n     - Estado (Pendiente)\r\n\r\n4. **Responder**\r\n   - Hacer clic en el botón **\"Aceptar\"** (verde, a la derecha de la solicitud)\r\n     - **O**\r\n   - Hacer clic en el botón **\"Rechazar\"** (rojo, a la derecha de la solicitud)\r\n\r\n**Resultado:**\r\n\r\n**Si se Acepta:**\r\n- Ambos turnos se intercambian (userId se intercambia)\r\n- Estado = \"Intercambiado\" (swapped)\r\n- Ambos usuarios reciben una notificación\r\n\r\n**Si se Rechaza:**\r\n- Estado = \"Rechazado\" (rejected)\r\n- El solicitante recibe una notificación\r\n\r\n---\r\n\r\n### Ver Solicitudes de Intercambio (Administrador)\r\n\r\n**Pasos:**\r\n\r\n1. Tab \"Plan de Turno\" → Botón \"Solicitudes de Intercambio\"\r\n2. Se abrirá un panel lateral o modal con dos tabs:\r\n   - **\"Enviadas\":** Todas las solicitudes enviadas\r\n   - **\"Recibidas\":** Todas las solicitudes recibidas\r\n3. **Filtrar por Estado:** Menú desplegable arriba (todas / pendiente / aprobada / rechazada)\r\n4. **Ver Detalles:**\r\n   - Solicitante (quien creó la solicitud)\r\n   - Usuario objetivo (quien debe responder)\r\n   - Turno original (detalles)\r\n   - Turno objetivo (detalles)\r\n   - Estado (pendiente / aprobada / rechazada)\r\n   - Mensaje (si hay uno)\r\n\r\n**Propósito:** El administrador tiene una visión general de todas las solicitudes de intercambio.\r\n\r\n---\r\n\r\n## Filtros y Búsqueda\r\n\r\n### Filtrar Turnos (Todos los Usuarios)\r\n\r\n**Ubicación:**\r\n- Tab \"Plan de Turno\" → Botón **\"Filtro\"** (icono de embudo, parte superior derecha)\r\n- **Badge:**** Muestra el número de filtros activos (si > 0, círculo azul arriba a la derecha del botón)\r\n\r\n**Pasos:**\r\n\r\n1. **Abrir Panel de Filtros**\r\n   - En el header superior derecho, hacer clic en el botón **\"Filtro\"** (icono de embudo)\r\n   - Se mostrará un panel de filtros debajo del header (caja blanca con borde)\r\n\r\n2. **Seleccionar Filtros**\r\n   - **Sucursal:** Lista de casillas de verificación (selección múltiple, desplazable)\r\n   - **Rol:** Lista de casillas de verificación (selección múltiple, desplazable)\r\n   - **Estado:** Lista de casillas de verificación (selección múltiple, desplazable)\r\n     - Planificado (scheduled)\r\n     - Confirmado (confirmed)\r\n     - Cancelado (cancelled)\r\n     - Intercambiado (swapped)\r\n   - **Empleado:** Lista de casillas de verificación (selección múltiple, desplazable)\r\n\r\n3. **Aplicar Filtros**\r\n   - Marcar las casillas deseadas (múltiples por categoría)\r\n   - Hacer clic en el botón **\"Aplicar\"** (azul, abajo a la derecha del panel)\r\n     - **O** hacer clic en el botón **\"Restablecer\"** (gris, abajo a la izquierda) para limpiar todos los filtros\r\n   - El panel se cerrará y el calendario mostrará solo los turnos filtrados\r\n\r\n**Resultado:**\r\n- El calendario muestra solo los turnos que coinciden con los filtros seleccionados\r\n- El botón de filtro muestra un badge con el número de filtros activos\r\n\r\n---\r\n\r\n### Navegar entre Semanas (Todos los Usuarios)\r\n\r\n**Ubicación:**\r\n- Header central del planificador de turnos\r\n\r\n**Controles:**\r\n- **\"Anterior\"** (←): Botón de flecha izquierda (izquierda de la visualización de semana)\r\n- **\"Siguiente\"** (→): Botón de flecha derecha (derecha de la visualización de semana)\r\n- **\"Hoy\"** (📅): Botón de calendario (derecha de la visualización de semana)\r\n- **Visualización de Semana:** Texto en el centro (ej: \"17.11.2025 - 23.11.2025\")\r\n\r\n**Pasos:**\r\n\r\n1. **Semana Anterior**\r\n   - Hacer clic en el botón **\"Anterior\"** (←)\r\n   - El calendario cargará los turnos de la semana anterior\r\n\r\n2. **Semana Siguiente**\r\n   - Hacer clic en el botón **\"Siguiente\"** (→)\r\n   - El calendario cargará los turnos de la semana siguiente\r\n\r\n3. **Semana Actual**\r\n   - Hacer clic en el botón **\"Hoy\"** (📅)\r\n   - El calendario cargará los turnos de la semana actual\r\n\r\n---\r\n\r\n### Cambiar Vista (Todos los Usuarios)\r\n\r\n**Ubicación:**\r\n- Header superior derecho, después de los otros botones\r\n\r\n**Controles:**\r\n- **\"Semana\"** (📅): Botón de calendario (vista semanal)\r\n- **\"Mes\"** (📊): Botón de cuadrícula (vista mensual)\r\n\r\n**Pasos:**\r\n\r\n1. **Vista Semanal**\r\n   - Hacer clic en el botón **\"Semana\"** (📅)\r\n   - El calendario cambiará a vista semanal (timeGridWeek)\r\n\r\n2. **Vista Mensual**\r\n   - Hacer clic en el botón **\"Mes\"** (📊)\r\n   - El calendario cambiará a vista mensual (dayGridMonth)\r\n\r\n---\r\n\r\n## Resolución de Problemas\r\n\r\n### Problema: La generación automática crea 0 turnos\r\n\r\n**Causa:** No hay plantillas de turnos para la Sucursal + Roles seleccionados.\r\n\r\n**Solución:**\r\n1. Verificar que existen plantillas:\r\n   - Tab \"Plan de Turno\" → Botón \"Plantillas de Turnos\"\r\n   - Revisar la lista: ¿Hay plantillas para la Sucursal y Roles seleccionados?\r\n2. Si no hay plantillas:\r\n   - Crear plantillas (ver sección \"Gestión de Plantillas de Turnos\")\r\n   - Asegurarse de que las plantillas estén activas\r\n3. Verificar que la Sucursal y Roles en las plantillas coincidan con la generación\r\n\r\n**Checklist:**\r\n- [ ] Plantillas existen para la Sucursal seleccionada\r\n- [ ] Plantillas existen para los Roles seleccionados\r\n- [ ] Plantillas están activas (isActive = true)\r\n- [ ] Plantillas tienen hora de inicio y fin\r\n\r\n---\r\n\r\n### Problema: Los turnos se crean sin empleado asignado\r\n\r\n**Causa:** No hay disponibilidades que coincidan con los turnos.\r\n\r\n**Solución:**\r\n1. **Opción A: Crear Disponibilidades**\r\n   - Los empleados deben crear sus disponibilidades\r\n   - Tab \"Plan de Turno\" → Botón \"Disponibilidades\"\r\n   - Crear disponibilidades que coincidan con los turnos\r\n\r\n2. **Opción B: Asignar Manualmente**\r\n   - El administrador puede asignar empleados manualmente\r\n   - Hacer clic en el turno → Seleccionar empleado → Guardar\r\n\r\n---\r\n\r\n### Problema: No puedo crear una solicitud de intercambio\r\n\r\n**Causas posibles:**\r\n1. El turno no es tuyo (userId ≠ tu usuario)\r\n2. El turno está cancelado o ya intercambiado\r\n3. No hay turnos objetivo disponibles (mismo rol/sucursal, con usuario, no cancelado/intercambiado)\r\n\r\n**Solución:**\r\n1. Verificar que el turno es tuyo\r\n2. Verificar que el turno no está cancelado o intercambiado\r\n3. Verificar que existen turnos objetivo disponibles\r\n\r\n---\r\n\r\n### Problema: No veo el botón \"Plantillas de Turnos\"\r\n\r\n**Causa:** El botón no está visible o la página no se ha recargado.\r\n\r\n**Solución:**\r\n1. Recargar la página (F5 o Ctrl+R)\r\n2. Verificar que estás en el tab \"Plan de Turno\"\r\n3. Buscar el botón en el header superior derecho (icono de documento)\r\n4. Si aún no aparece, contactar al administrador del sistema\r\n\r\n---\r\n\r\n### Problema: Error al guardar una plantilla\r\n\r\n**Causas posibles:**\r\n1. Nombre duplicado (dentro de la misma Sucursal + Rol)\r\n2. Hora de inicio >= hora de fin (excepto para turnos nocturnos)\r\n3. Campos requeridos vacíos\r\n\r\n**Solución:**\r\n1. Cambiar el nombre de la plantilla\r\n2. Verificar que la hora de inicio < hora de fin (o usar formato correcto para turnos nocturnos)\r\n3. Completar todos los campos requeridos (Nombre, Sucursal, Rol, Hora de Inicio, Hora de Fin)\r\n\r\n---\r\n\r\n## Preguntas Frecuentes\r\n\r\n### ¿Puedo tener múltiples plantillas para la misma Sucursal + Rol?\r\n\r\n**Sí.** Puedes tener múltiples plantillas para la misma combinación. Por ejemplo:\r\n- \"Turno Matutino\" (08:00-16:00)\r\n- \"Turno Vespertino\" (16:00-00:00)\r\n- \"Turno Nocturno\" (00:00-08:00)\r\n\r\nDurante la generación, se crearán turnos para **todas las plantillas activas**.\r\n\r\n---\r\n\r\n### ¿Qué pasa si no creo disponibilidades?\r\n\r\n**Sin disponibilidades:**\r\n- ✅ Los turnos se crean (basados en plantillas)\r\n- ❌ Los turnos **no tienen usuario asignado** (userId = null)\r\n- ⚠️ El administrador debe asignar usuarios manualmente\r\n\r\n**Con disponibilidades:**\r\n- ✅ Los turnos se crean\r\n- ✅ El sistema intenta asignar usuarios automáticamente\r\n- ✅ Los usuarios con mayor prioridad son preferidos\r\n\r\n---\r\n\r\n### ¿Puedo cambiar la Sucursal o Rol de una plantilla después de crearla?\r\n\r\n**No.** Sucursal y Rol no se pueden cambiar al editar una plantilla (aparecen deshabilitados). Si necesitas cambiar estos campos, debes crear una nueva plantilla.\r\n\r\n---\r\n\r\n### ¿Qué significa \"Prioridad\" en las disponibilidades?\r\n\r\nLa prioridad (1-10) determina qué empleados son preferidos durante la asignación automática:\r\n- **Mayor prioridad = más preferido**\r\n- Se combina con el tipo de disponibilidad (Disponible / Preferida)\r\n- Los empleados con disponibilidad \"Preferida\" reciben un bonus de +5 a la prioridad\r\n\r\n---\r\n\r\n### ¿Puedo intercambiar un turno que ya está confirmado?\r\n\r\n**Sí.** Puedes crear una solicitud de intercambio para un turno confirmado, siempre que:\r\n- El turno es tuyo\r\n- El turno no está cancelado o ya intercambiado\r\n- Existe un turno objetivo disponible\r\n\r\n---\r\n\r\n### ¿Qué pasa si rechazo una solicitud de intercambio?\r\n\r\n**Si rechazas:**\r\n- La solicitud se marca como \"Rechazada\"\r\n- El solicitante recibe una notificación\r\n- Los turnos **no se intercambian**\r\n\r\n---\r\n\r\n### ¿Puedo ver todos los turnos de todos los empleados?\r\n\r\n**Depende de tus permisos:**\r\n- **Administradores:** Pueden ver todos los turnos\r\n- **Empleados:** Solo pueden ver sus propios turnos y turnos no asignados\r\n\r\n---\r\n\r\n### ¿Cómo sé si un turno está asignado a mí?\r\n\r\n**En el calendario:**\r\n- Los turnos asignados a ti aparecen con un color diferente\r\n- Al hacer clic, verás tu nombre en el formulario de edición\r\n- En la vista de lista, puedes filtrar por \"Empleado\" = tu nombre\r\n\r\n---\r\n\r\n## Flujos de Trabajo Típicos\r\n\r\n### Flujo 1: Creación Semanal de Plan de Turnos\r\n\r\n**Para Administradores:**\r\n\r\n1. **Preparación (Una vez)**\r\n   - Crear plantillas de turnos para todas las Sucursales + Roles necesarios\r\n   - Verificar que los empleados tienen disponibilidades actualizadas\r\n\r\n2. **Generación Semanal**\r\n   - Tab \"Plan de Turno\" → Botón \"Generar\"\r\n   - Seleccionar rango de fechas (ej: próxima semana)\r\n   - Seleccionar Sucursal y Roles\r\n   - Hacer clic en \"Generar\"\r\n   - Revisar resultados y conflictos\r\n\r\n3. **Asignación**\r\n   - Revisar turnos sin usuario asignado\r\n   - Hacer clic en cada turno → Asignar empleado → Guardar\r\n   - O dejar que el sistema asigne automáticamente (si hay disponibilidades)\r\n\r\n4. **Seguimiento**\r\n   - Esperar confirmaciones de empleados\r\n   - Reasignar turnos cancelados si es necesario\r\n\r\n**Para Empleados:**\r\n\r\n1. **Recibir Notificación**\r\n   - Notificación: \"Se te ha asignado un turno\"\r\n   - Hacer clic en el icono de notificaciones\r\n\r\n2. **Confirmar Turno**\r\n   - Tab \"Plan de Turno\" → Hacer clic en tu turno\r\n   - Cambiar estado a \"Confirmado\" → Guardar\r\n\r\n---\r\n\r\n### Flujo 2: Intercambio de Turnos\r\n\r\n**Empleado A (Solicitante):**\r\n\r\n1. Tab \"Plan de Turno\" → Hacer clic en tu turno\r\n2. Botón \"Intercambiar turno\" → Seleccionar turno objetivo → Crear solicitud\r\n\r\n**Empleado B (Receptor):**\r\n\r\n1. Recibir notificación: \"Solicitud de intercambio recibida\"\r\n2. Tab \"Plan de Turno\" → Botón \"Solicitudes de Intercambio\" → Tab \"Recibidas\"\r\n3. Revisar solicitud → Aceptar o Rechazar\r\n\r\n**Resultado:**\r\n- Si se acepta: Turnos intercambiados, ambos reciben notificación\r\n- Si se rechaza: Solicitud rechazada, solicitante recibe notificación\r\n\r\n---\r\n\r\n### Flujo 3: Cancelación de Turno\r\n\r\n**Empleado:**\r\n\r\n1. Tab \"Plan de Turno\" → Hacer clic en tu turno\r\n2. Cambiar estado a \"Cancelado\" → Guardar\r\n3. Administrador recibe notificación\r\n\r\n**Administrador:**\r\n\r\n1. Recibir notificación: \"Turno cancelado\"\r\n2. Tab \"Plan de Turno\" → Ver turno cancelado\r\n3. Opciones:\r\n   - Crear nuevo turno\r\n   - Asignar otro empleado al turno existente\r\n\r\n---\r\n\r\n## Notificaciones\r\n\r\n### ¿Cuándo se envían notificaciones?\r\n\r\n1. **Turno Asignado**\r\n   - **A:** Empleado (quien recibe el turno)\r\n   - **Cuándo:** Después de la asignación (userId se establece)\r\n   - **Dónde:** Icono de notificaciones (arriba a la derecha en la navegación)\r\n\r\n2. **Turno Confirmado**\r\n   - **A:** Administrador (quien creó el turno)\r\n   - **Cuándo:** Después de la confirmación (estado = \"Confirmado\")\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n3. **Turno Cancelado**\r\n   - **A:** Administrador (quien creó el turno)\r\n   - **Cuándo:** Después de la cancelación (estado = \"Cancelado\")\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n4. **Solicitud de Intercambio Creada**\r\n   - **A:** Usuario objetivo (quien tiene el turno objetivo)\r\n   - **Cuándo:** Después de crear la solicitud\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n5. **Solicitud de Intercambio Aceptada**\r\n   - **A:** Ambos usuarios (solicitante y objetivo)\r\n   - **Cuándo:** Después de aceptar (estado = \"Aprobada\")\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n6. **Solicitud de Intercambio Rechazada**\r\n   - **A:** Solicitante (quien creó la solicitud)\r\n   - **Cuándo:** Después de rechazar (estado = \"Rechazada\")\r\n   - **Dónde:** Icono de notificaciones\r\n\r\n---\r\n\r\n## Estados de Turnos\r\n\r\n### Estados en el Calendario (codificados por color)\r\n\r\n1. **Planificado** (scheduled) - Color: Amarillo/Naranja\r\n   - Turno creado pero no confirmado\r\n   - Puede estar sin usuario asignado (userId = null)\r\n   - O con usuario asignado pero no confirmado\r\n\r\n2. **Confirmado** (confirmed) - Color: Verde\r\n   - Empleado ha confirmado el turno\r\n   - confirmedAt se establece\r\n\r\n3. **Cancelado** (cancelled) - Color: Rojo\r\n   - Turno cancelado\r\n   - Puede ser reasignado\r\n\r\n4. **Intercambiado** (swapped) - Color: Azul\r\n   - Turno intercambiado con otro\r\n   - userId se intercambió\r\n\r\n---\r\n\r\n### Estados de Solicitudes de Intercambio\r\n\r\n1. **Pendiente** (pending) - Badge: Amarillo\r\n   - Solicitud creada, esperando respuesta\r\n\r\n2. **Aprobada** (approved) - Badge: Verde\r\n   - Solicitud aceptada\r\n   - Turnos intercambiados\r\n\r\n3. **Rechazada** (rejected) - Badge: Rojo\r\n   - Solicitud rechazada\r\n\r\n4. **Cancelada** (cancelled) - Badge: Gris\r\n   - Solicitud cancelada\r\n\r\n---\r\n\r\n## Consejos y Mejores Prácticas\r\n\r\n### Para Administradores:\r\n\r\n- **Plantillas:** Crear plantillas para todas las combinaciones Sucursal + Rol que necesitas\r\n- **Generación Automática:** Revisa los conflictos después de la generación\r\n- **Asignación:** Asigna usuarios manualmente si no hay disponibilidades\r\n- **Seguimiento:** Revisa regularmente los turnos no confirmados\r\n\r\n### Para Empleados:\r\n\r\n- **Disponibilidades:** Mantén tus disponibilidades actualizadas\r\n- **Confirmación:** Confirma turnos asignados a tiempo\r\n- **Intercambios:** Responde a solicitudes de intercambio a tiempo\r\n- **Cancelaciones:** Cancela turnos con suficiente antelación\r\n\r\n---\r\n\r\n## Resumen Rápido\r\n\r\n### ¿Quién hace qué?\r\n\r\n- **Administrador:** Plantillas, Generación, Asignación, Gestión\r\n- **Empleado:** Disponibilidades, Confirmación, Solicitudes de Intercambio\r\n\r\n### ¿Cuándo?\r\n\r\n- **Plantillas:** Una vez / Cuando sea necesario\r\n- **Disponibilidades:** Regularmente (cuando cambien)\r\n- **Generación:** Regularmente (semanal, mensual)\r\n- **Asignación:** Después de la generación\r\n- **Confirmación:** Después de la asignación\r\n- **Intercambio:** Cuando sea necesario\r\n\r\n### ¿Dónde en el Frontend?\r\n\r\n- **Página:** `/team-worktime-control`\r\n- **Tab:** \"Plan de Turno\"\r\n- **Header:** Arriba (Izquierda: Botón Añadir, Centro: Navegación de Semana, Derecha: Filtros/Disponibilidades/Plantillas/Intercambio/Generar/Actualizar/Botones de Vista)\r\n- **Calendario:** Área principal (muestra turnos como eventos)\r\n- **Paneles/Modales:** Se abren al hacer clic en botones (Desktop: Panel lateral derecha, Mobile: Modal centrado)\r\n\r\n---\r\n\r\n## Soporte\r\n\r\nSi tienes problemas o preguntas:\r\n\r\n1. Revisar esta guía\r\n2. Revisar la sección \"Resolución de Problemas\"\r\n3. Contactar al administrador del sistema\r\n4. Revisar los logs del sistema (si tienes acceso)\r\n\r\n---\r\n\r\n**Última actualización:** 2025-01-XX  \r\n**Versión:** 1.0\r\n\r\n",
+      "slug": "guia-completa-del-usuario-planificador-de-turnos",
+      "parentId": null,
+      "createdById": 1,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2025-11-19T22:18:06.174Z",
+      "updatedAt": "2025-11-19T22:18:06.174Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": null,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 6,
+      "title": "KeePass",
+      "content": "https://drive.google.com/drive/folders/1BeMsQ72kamwUXGsGWz9ek75cw_1czHUkhttps://drive.google.com/file/d/1-Jc2jGWKEFHROO9BwWVacLYiJKwSVkan/view?usp=sharing",
+      "slug": "keepass",
+      "parentId": null,
+      "createdById": 27,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2025-02-08T01:00:00.000Z",
+      "updatedAt": "2025-11-06T21:10:09.173Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 2,
+      "title": "Online Check-in",
+      "content": "https://drive.google.com/file/d/1hrugpOMJ88QyrbVUVEs7nXlTpAkwlNyO/view\n..",
+      "slug": "online-check-in",
+      "parentId": null,
+      "createdById": 8,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2024-02-22T02:10:52.000Z",
+      "updatedAt": "2025-11-06T21:10:09.156Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 3,
+      "title": "Online Check-out",
+      "content": "https://drive.google.com/file/d/10JRWn-NiDVi-FhjwzK6bdqWrHcj4FYkZ/view",
+      "slug": "online-check-out",
+      "parentId": null,
+      "createdById": 8,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2024-02-22T02:10:57.000Z",
+      "updatedAt": "2025-11-06T21:10:09.160Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 5,
+      "title": "Recepcion: First day",
+      "content": "https://drive.google.com/drive/folders/1cJZrz7wYrSaBGlS5UlZ0ztXdqdQYHYnh\n**04/11/2024  https://docs.google.com/document/d/1iGubiuE70hYvrLJmuI9FaU7j6jWdwM3k/edit?usp=sharing&ouid=110952298960966738800&rtpof=true&sd=true\n",
+      "slug": "recepcion-first-day",
+      "parentId": null,
+      "createdById": 8,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2024-02-22T02:10:57.000Z",
+      "updatedAt": "2025-11-06T21:10:09.169Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    },
+    {
+      "id": 7,
+      "title": "Servicio de Desayunos",
+      "content": "https://docs.google.com/document/d/12FTHf5caf_kjfYecHa7hTWYo_VcC45lF/edit?usp=sharing&ouid=110952298960966738800&rtpof=true&sd=true",
+      "slug": "servicio-de-desayunos",
+      "parentId": null,
+      "createdById": 27,
+      "updatedById": null,
+      "isPublished": true,
+      "createdAt": "2025-02-08T01:00:00.000Z",
+      "updatedAt": "2025-11-06T21:10:09.177Z",
+      "position": 999,
+      "githubPath": null,
+      "organizationId": 1,
+      "parent": null,
+      "children": []
+    }
+  ],
+  "articlesWithMissingFiles": [],
+  "articlesWithLocalFilesButNotInServer": [
+    {
+      "file": "docs\\analysis\\ACTIVE_WORKTIME_TIMEZONE_ISSUE.md",
+      "title": "ACTIVE WORKTIME TIMEZONE ISSUE"
+    },
+    {
+      "file": "docs\\analysis\\API_CONFIGURATION_TAB_ANALYSIS.md",
+      "title": "API CONFIGURATION TAB ANALYSIS"
+    },
+    {
+      "file": "docs\\analysis\\API_CONFIGURATION_TAB_COMPLETE_ANALYSIS.md",
+      "title": "API CONFIGURATION TAB COMPLETE ANALYSIS"
+    },
+    {
+      "file": "docs\\analysis\\BEITRITTSANFRAGEN_ANALYSE.md",
+      "title": "BEITRITTSANFRAGEN ANALYSE"
+    },
+    {
+      "file": "docs\\analysis\\BEITRITTSANFRAGEN_ANALYSE_AKTUALISIERT.md",
+      "title": "BEITRITTSANFRAGEN ANALYSE AKTUALISIERT"
+    },
+    {
+      "file": "docs\\analysis\\BERECHTIGUNGEN_ORGANISATION_ANALYSE.md",
+      "title": "BERECHTIGUNGEN ORGANISATION ANALYSE"
+    },
+    {
+      "file": "docs\\analysis\\BERECHTIGUNGEN_ORGANISATION_VERIFIKATION.md",
+      "title": "BERECHTIGUNGEN ORGANISATION VERIFIKATION"
+    },
+    {
+      "file": "docs\\analysis\\BUTTON_ANALYSE_ERGEBNISSE.md",
+      "title": "BUTTON ANALYSE ERGEBNISSE"
+    },
+    {
+      "file": "docs\\analysis\\CEREBRO_ANALYSE.md",
+      "title": "CEREBRO ANALYSE"
+    },
+    {
+      "file": "docs\\analysis\\CEREBRO_KORRIGIERTE_ANALYSE.md",
+      "title": "CEREBRO KORRIGIERTE ANALYSE"
+    },
+    {
+      "file": "docs\\analysis\\CONTROLLED_VS_UNCONTROLLED_MODE_ERKLAERUNG.md",
+      "title": "CONTROLLED VS UNCONTROLLED MODE ERKLAERUNG"
+    },
+    {
+      "file": "docs\\analysis\\FEHLENDE_UEBERSETZUNGEN.md",
+      "title": "FEHLENDE UEBERSETZUNGEN"
+    },
+    {
+      "file": "docs\\analysis\\FILTER_SORTIERUNG_ANALYSE.md",
+      "title": "FILTER SORTIERUNG ANALYSE"
+    },
+    {
+      "file": "docs\\analysis\\FILTER_TAGS_FARB_MARKIERUNG_ANALYSE.md",
+      "title": "FILTER TAGS FARB MARKIERUNG ANALYSE"
+    },
+    {
+      "file": "docs\\analysis\\ORGANISATION_DATENISOLATION_ANALYSE.md",
+      "title": "ORGANISATION DATENISOLATION ANALYSE"
+    },
+    {
+      "file": "docs\\analysis\\ORGANISATION_FUNKTIONALITAET_ANALYSE.md",
+      "title": "ORGANISATION FUNKTIONALITAET ANALYSE"
+    },
+    {
+      "file": "docs\\analysis\\ORGANISATION_FUNKTIONALITAET_ANALYSE_FINAL.md",
+      "title": "ORGANISATION FUNKTIONALITAET ANALYSE FINAL"
+    },
+    {
+      "file": "docs\\analysis\\ROLLE_USERROLE_DELETE_PROBLEM_ANALYSE.md",
+      "title": "ROLLE USERROLE DELETE PROBLEM ANALYSE"
+    },
+    {
+      "file": "docs\\analysis\\WHATSAPP_TEMPLATE_MESSAGES_ANALYSE.md",
+      "title": "WHATSAPP TEMPLATE MESSAGES ANALYSE"
+    },
+    {
+      "file": "docs\\claude\\cheatsheets\\worktracker.md",
+      "title": "worktracker"
+    },
+    {
+      "file": "docs\\claude\\claude_database_access.md",
+      "title": "claude database access"
+    },
+    {
+      "file": "docs\\claude\\claude_usage_guidelines.md",
+      "title": "claude usage guidelines"
+    },
+    {
+      "file": "docs\\claude\\debug_history\\timezone_issue_log.md",
+      "title": "timezone issue log"
+    },
+    {
+      "file": "docs\\claude\\delta\\v1.2.0_worktracker_timezone_fix.md",
+      "title": "v1.2.0 worktracker timezone fix"
+    },
+    {
+      "file": "docs\\claude\\docs\\container-structures.md",
+      "title": "container structures"
+    },
+    {
+      "file": "docs\\claude\\docs\\WorktimeTracker.md",
+      "title": "WorktimeTracker"
+    },
+    {
+      "file": "docs\\claude\\log_housekeeping.md",
+      "title": "log housekeeping"
+    },
+    {
+      "file": "docs\\claude\\memory_anchors.md",
+      "title": "memory anchors"
+    },
+    {
+      "file": "docs\\claude\\patterns\\api_error_handling.md",
+      "title": "api error handling"
+    },
+    {
+      "file": "docs\\claude\\patterns\\worktime_tracking.md",
+      "title": "worktime tracking"
+    },
+    {
+      "file": "docs\\claude\\qa\\timezone_handling.md",
+      "title": "timezone handling"
+    },
+    {
+      "file": "docs\\claude\\README.md",
+      "title": "README"
+    },
+    {
+      "file": "docs\\core\\backlog.md",
+      "title": "backlog"
+    },
+    {
+      "file": "docs\\core\\CHANGELOG.md",
+      "title": "CHANGELOG"
+    },
+    {
+      "file": "docs\\core\\CODING_STANDARDS.md",
+      "title": "CODING STANDARDS"
+    },
+    {
+      "file": "docs\\core\\DESIGN_STANDARDS.md",
+      "title": "DESIGN STANDARDS"
+    },
+    {
+      "file": "docs\\core\\DOKUMENTATIONSSTANDARDS.md",
+      "title": "DOKUMENTATIONSSTANDARDS"
+    },
+    {
+      "file": "docs\\core\\ENTWICKLUNGSUMGEBUNG.md",
+      "title": "ENTWICKLUNGSUMGEBUNG"
+    },
+    {
+      "file": "docs\\core\\IMPLEMENTATION_CHECKLIST.md",
+      "title": "IMPLEMENTATION CHECKLIST"
+    },
+    {
+      "file": "docs\\core\\README.md",
+      "title": "README"
+    },
+    {
+      "file": "docs\\core\\VIBES.md",
+      "title": "VIBES"
+    },
+    {
+      "file": "docs\\DOKUMENTATION_AUFRÄUMPLAN_VOLLSTÄNDIG.md",
+      "title": "DOKUMENTATION AUFRÄUMPLAN VOLLSTÄNDIG"
+    },
+    {
+      "file": "docs\\implementation_guides\\CARD_VIEW_IMPLEMENTATION_GUIDE.md",
+      "title": "CARD VIEW IMPLEMENTATION GUIDE"
+    },
+    {
+      "file": "docs\\implementation_guides\\MARKDOWN_PREVIEW_USAGE.md",
+      "title": "MARKDOWN PREVIEW USAGE"
+    },
+    {
+      "file": "docs\\implementation_plans\\APP_INDEX_REFACTORING_PLAN.md",
+      "title": "APP INDEX REFACTORING PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\ATTACHMENT_PREVIEW_FIX_PLAN.md",
+      "title": "ATTACHMENT PREVIEW FIX PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\ATTACHMENT_PREVIEW_PDF_FIX.md",
+      "title": "ATTACHMENT PREVIEW PDF FIX"
+    },
+    {
+      "file": "docs\\implementation_plans\\AUSWERTUNG_ANALYTICS_MODUL.md",
+      "title": "AUSWERTUNG ANALYTICS MODUL"
+    },
+    {
+      "file": "docs\\implementation_plans\\BEITRITTSANFRAGEN_DEBUG_PLAN.md",
+      "title": "BEITRITTSANFRAGEN DEBUG PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\BEITRITTSANFRAGEN_EINLADUNGEN_PLAN.md",
+      "title": "BEITRITTSANFRAGEN EINLADUNGEN PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\BERECHTIGUNGEN_ORGANISATION_BEREINIGUNGSPLAN.md",
+      "title": "BERECHTIGUNGEN ORGANISATION BEREINIGUNGSPLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\BERECHTIGUNGSSYSTEM_REFACTORING_PLAN.md",
+      "title": "BERECHTIGUNGSSYSTEM REFACTORING PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\BRANCH_SYSTEM_ANALYSE_UND_PLAN.md",
+      "title": "BRANCH SYSTEM ANALYSE UND PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\BRANCH_USER_ZUWEISUNG_ERKLAERUNG.md",
+      "title": "BRANCH USER ZUWEISUNG ERKLAERUNG"
+    },
+    {
+      "file": "docs\\implementation_plans\\BUTTON_ANALYSIS_AND_STANDARDIZATION.md",
+      "title": "BUTTON ANALYSIS AND STANDARDIZATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\CARD_DESIGN_VORSCHLAEGE.md",
+      "title": "CARD DESIGN VORSCHLAEGE"
+    },
+    {
+      "file": "docs\\implementation_plans\\CEREBRO_HIGH_PRIORITY_FEATURES_PLAN.md",
+      "title": "CEREBRO HIGH PRIORITY FEATURES PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\CEREBRO_UNIFIED_EDITOR_PLAN.md",
+      "title": "CEREBRO UNIFIED EDITOR PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\CEREBRO_UNIFIED_EDITOR_REUSE_PLAN.md",
+      "title": "CEREBRO UNIFIED EDITOR REUSE PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\CLIENT_EDIT_DELETE_IMPLEMENTATION.md",
+      "title": "CLIENT EDIT DELETE IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\CODE_OPTIMIZATION_PLAN.md",
+      "title": "CODE OPTIMIZATION PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\CONSULTATION_INVOICE_IMPLEMENTATION.md",
+      "title": "CONSULTATION INVOICE IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\CONSULTATION_MODULE_IMPLEMENTATION.md",
+      "title": "CONSULTATION MODULE IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\CONSULTATION_MODULE_IMPLEMENTATION_PART2.md",
+      "title": "CONSULTATION MODULE IMPLEMENTATION PART2"
+    },
+    {
+      "file": "docs\\implementation_plans\\CONSULTATION_MODULE_IMPLEMENTATION_PART3.md",
+      "title": "CONSULTATION MODULE IMPLEMENTATION PART3"
+    },
+    {
+      "file": "docs\\implementation_plans\\COUNTRY_FELD_KORREKTUR.md",
+      "title": "COUNTRY FELD KORREKTUR"
+    },
+    {
+      "file": "docs\\implementation_plans\\DASHBOARD_BERECHTIGUNGEN_PLAN.md",
+      "title": "DASHBOARD BERECHTIGUNGEN PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\DUPLIKAT_BEREINIGUNG_PLAN.md",
+      "title": "DUPLIKAT BEREINIGUNG PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\edit_request_sidepane.md",
+      "title": "edit request sidepane"
+    },
+    {
+      "file": "docs\\implementation_plans\\EMAIL_RESERVATION_PARSING_IMPLEMENTATION.md",
+      "title": "EMAIL RESERVATION PARSING IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\EXPIRED_REQUESTS_TODOS_MARKING.md",
+      "title": "EXPIRED REQUESTS TODOS MARKING"
+    },
+    {
+      "file": "docs\\implementation_plans\\FILTER_CLEANUP_PLAN.md",
+      "title": "FILTER CLEANUP PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\FILTER_FUNCTIONALITY_ANALYSIS.md",
+      "title": "FILTER FUNCTIONALITY ANALYSIS"
+    },
+    {
+      "file": "docs\\implementation_plans\\FILTER_FUNCTIONALITY_STANDARDIZATION.md",
+      "title": "FILTER FUNCTIONALITY STANDARDIZATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\FILTER_GROUPING_DRAG_DROP.md",
+      "title": "FILTER GROUPING DRAG DROP"
+    },
+    {
+      "file": "docs\\implementation_plans\\FILTER_SORTIERUNG_PRO_FILTER.md",
+      "title": "FILTER SORTIERUNG PRO FILTER"
+    },
+    {
+      "file": "docs\\implementation_plans\\FILTER_STANDARDFILTER_ROLES_USERS_PLAN.md",
+      "title": "FILTER STANDARDFILTER ROLES USERS PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\FILTER_STANDARDISIERUNG_PLAN.md",
+      "title": "FILTER STANDARDISIERUNG PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\ID_DOKUMENT_FELDER_ANALYSE.md",
+      "title": "ID DOKUMENT FELDER ANALYSE"
+    },
+    {
+      "file": "docs\\implementation_plans\\ID_DOKUMENT_FELDER_KORREKTUR.md",
+      "title": "ID DOKUMENT FELDER KORREKTUR"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_API_IMPORT_PRO_BRANCH_PLAN.md",
+      "title": "LOBBYPMS API IMPORT PRO BRANCH PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_API_RESEARCH.md",
+      "title": "LOBBYPMS API RESEARCH"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_BRANCH_MIGRATION_DETAILLIERT.md",
+      "title": "LOBBYPMS BRANCH MIGRATION DETAILLIERT"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_BRANCH_SERVICES_ANALYSE.md",
+      "title": "LOBBYPMS BRANCH SERVICES ANALYSE"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_EMAIL_SERVICE_BRANCH_SUPPORT.md",
+      "title": "LOBBYPMS EMAIL SERVICE BRANCH SUPPORT"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_FRONTEND_POSITIONEN.md",
+      "title": "LOBBYPMS FRONTEND POSITIONEN"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_INTEGRATION.md",
+      "title": "LOBBYPMS INTEGRATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_MANUAL_SYNC_PLAN.md",
+      "title": "LOBBYPMS MANUAL SYNC PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_MOCK_DATEN.md",
+      "title": "LOBBYPMS MOCK DATEN"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_SETUP_ANLEITUNG.md",
+      "title": "LOBBYPMS SETUP ANLEITUNG"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_USE_CASES_UND_PROZESSE.md",
+      "title": "LOBBYPMS USE CASES UND PROZESSE"
+    },
+    {
+      "file": "docs\\implementation_plans\\LOBBYPMS_WO_IM_SYSTEM_SEHEN.md",
+      "title": "LOBBYPMS WO IM SYSTEM SEHEN"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_AKTUELLER_STAND.md",
+      "title": "MITARBEITERLEBENSZYKLUS AKTUELLER STAND"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_DETAILLIERT.md",
+      "title": "MITARBEITERLEBENSZYKLUS DETAILLIERT"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_FORTSCHRITT.md",
+      "title": "MITARBEITERLEBENSZYKLUS FORTSCHRITT"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_IMPLEMENTATION.md",
+      "title": "MITARBEITERLEBENSZYKLUS IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_IMPLEMENTATION_DETAILS.md",
+      "title": "MITARBEITERLEBENSZYKLUS IMPLEMENTATION DETAILS"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_OFFBOARDING_PLAN.md",
+      "title": "MITARBEITERLEBENSZYKLUS OFFBOARDING PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_PROZESS.md",
+      "title": "MITARBEITERLEBENSZYKLUS PROZESS"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_PRÜFUNG.md",
+      "title": "MITARBEITERLEBENSZYKLUS PRÜFUNG"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_STATUS_REPORT.md",
+      "title": "MITARBEITERLEBENSZYKLUS STATUS REPORT"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_TODO_DOKUMENTATION.md",
+      "title": "MITARBEITERLEBENSZYKLUS TODO DOKUMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md",
+      "title": "MITARBEITERLEBENSZYKLUS ZUSAMMENFASSUNG"
+    },
+    {
+      "file": "docs\\implementation_plans\\mobile_worktime_screen_redesign_detailed.md",
+      "title": "mobile worktime screen redesign detailed"
+    },
+    {
+      "file": "docs\\implementation_plans\\MODAL_UMSTELLUNG_LISTE.md",
+      "title": "MODAL UMSTELLUNG LISTE"
+    },
+    {
+      "file": "docs\\implementation_plans\\modern_design.md",
+      "title": "modern design"
+    },
+    {
+      "file": "docs\\implementation_plans\\MONTHLY_CONSULTATION_REPORT_IMPLEMENTATION.md",
+      "title": "MONTHLY CONSULTATION REPORT IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\MULTI_SMTP_PER_ORGANISATION.md",
+      "title": "MULTI SMTP PER ORGANISATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\MULTI_TENANT_SAAS_IMPLEMENTATION.md",
+      "title": "MULTI TENANT SAAS IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\OFFBOARDING_IMPLEMENTATION_SUMMARY.md",
+      "title": "OFFBOARDING IMPLEMENTATION SUMMARY"
+    },
+    {
+      "file": "docs\\implementation_plans\\ONBOARDING_SYSTEM_IMPLEMENTATION.md",
+      "title": "ONBOARDING SYSTEM IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\ONBOARDING_TOUR_ORGANISATION_FIX.md",
+      "title": "ONBOARDING TOUR ORGANISATION FIX"
+    },
+    {
+      "file": "docs\\implementation_plans\\ONBOARDING_TOUR_VOLLSTAENDIGER_PLAN.md",
+      "title": "ONBOARDING TOUR VOLLSTAENDIGER PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\ORGANISATION_DATENISOLATION_PLAN.md",
+      "title": "ORGANISATION DATENISOLATION PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\ORGANISATION_FILTERUNG_PRUEFUNG_PLAN.md",
+      "title": "ORGANISATION FILTERUNG PRUEFUNG PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\ORGANISATION_FILTERUNG_TASK_REQUEST_FIX.md",
+      "title": "ORGANISATION FILTERUNG TASK REQUEST FIX"
+    },
+    {
+      "file": "docs\\implementation_plans\\ORGANISATION_ID_MIGRATION_PLAN.md",
+      "title": "ORGANISATION ID MIGRATION PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\ORGANISATION_ID_MIGRATION_PLAN_ERWEITERT.md",
+      "title": "ORGANISATION ID MIGRATION PLAN ERWEITERT"
+    },
+    {
+      "file": "docs\\implementation_plans\\ORGANISATION_ROLE_BRANCH_BEST_PRACTICES.md",
+      "title": "ORGANISATION ROLE BRANCH BEST PRACTICES"
+    },
+    {
+      "file": "docs\\implementation_plans\\ORGANISATION_TAB_KORREKTUR.md",
+      "title": "ORGANISATION TAB KORREKTUR"
+    },
+    {
+      "file": "docs\\implementation_plans\\PASSWORT_RESET_IMPLEMENTATION.md",
+      "title": "PASSWORT RESET IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\PERFORMANCE_ATTACHMENTS_OPTIMIZATION.md",
+      "title": "PERFORMANCE ATTACHMENTS OPTIMIZATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\PERFORMANCE_OPTIMIZATION.md",
+      "title": "PERFORMANCE OPTIMIZATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\PERFORMANCE_OPTIMIZATION_LOADING_SCREEN.md",
+      "title": "PERFORMANCE OPTIMIZATION LOADING SCREEN"
+    },
+    {
+      "file": "docs\\implementation_plans\\PRODUCTION_MIGRATION_TASKSTATUSHISTORY.md",
+      "title": "PRODUCTION MIGRATION TASKSTATUSHISTORY"
+    },
+    {
+      "file": "docs\\implementation_plans\\PROFILE_REORGANISATION_PLAN.md",
+      "title": "PROFILE REORGANISATION PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\QUEUE_SYSTEM_IMPLEMENTATION.md",
+      "title": "QUEUE SYSTEM IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\QUINZENA_BACKEND_INTEGRATION.md",
+      "title": "QUINZENA BACKEND INTEGRATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\RESERVATIONS_IN_TODOS_INTEGRATION.md",
+      "title": "RESERVATIONS IN TODOS INTEGRATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\RESERVATION_AUTOMATION_IMPLEMENTATION.md",
+      "title": "RESERVATION AUTOMATION IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\RESERVATION_LAND_SPRACHE_IMPLEMENTATION.md",
+      "title": "RESERVATION LAND SPRACHE IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\RESERVATION_MANUAL_CREATION_PROCESS.md",
+      "title": "RESERVATION MANUAL CREATION PROCESS"
+    },
+    {
+      "file": "docs\\implementation_plans\\ROLEMANAGEMENT_MODERNIZATION_IMPLEMENTATION.md",
+      "title": "ROLEMANAGEMENT MODERNIZATION IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\ROLE_BRANCH_VERKNUEPFUNG_ANALYSE.md",
+      "title": "ROLE BRANCH VERKNUEPFUNG ANALYSE"
+    },
+    {
+      "file": "docs\\implementation_plans\\ROLLENSYSTEM_UMSTELLUNG_PLAN.md",
+      "title": "ROLLENSYSTEM UMSTELLUNG PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_ANALYSE_UND_PLAN.md",
+      "title": "SCHICHTPLANER ANALYSE UND PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_ANALYSE_VERFUEGBARKEITEN_ADMIN.md",
+      "title": "SCHICHTPLANER ANALYSE VERFUEGBARKEITEN ADMIN"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_DOUBLE_LOAD_FIX.md",
+      "title": "SCHICHTPLANER DOUBLE LOAD FIX"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_GUIA_USUARIO_ES.md",
+      "title": "SCHICHTPLANER GUIA USUARIO ES"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_PHASE_2_DOKUMENTATION.md",
+      "title": "SCHICHTPLANER PHASE 2 DOKUMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_PHASE_3_DOKUMENTATION.md",
+      "title": "SCHICHTPLANER PHASE 3 DOKUMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_PHASE_4_DOKUMENTATION.md",
+      "title": "SCHICHTPLANER PHASE 4 DOKUMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_PHASE_5_DOKUMENTATION.md",
+      "title": "SCHICHTPLANER PHASE 5 DOKUMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_PHASE_6_DOKUMENTATION.md",
+      "title": "SCHICHTPLANER PHASE 6 DOKUMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_STATUS_UND_PLAN.md",
+      "title": "SCHICHTPLANER STATUS UND PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_TEMPLATES_ERSTELLEN.md",
+      "title": "SCHICHTPLANER TEMPLATES ERSTELLEN"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_VERBESSERUNGEN_IMPLEMENTATIONSPLAN.md",
+      "title": "SCHICHTPLANER VERBESSERUNGEN IMPLEMENTATIONSPLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_VORAUSSETZUNGEN.md",
+      "title": "SCHICHTPLANER VORAUSSETZUNGEN"
+    },
+    {
+      "file": "docs\\implementation_plans\\SCHICHTPLANER_WORKFLOW.md",
+      "title": "SCHICHTPLANER WORKFLOW"
+    },
+    {
+      "file": "docs\\implementation_plans\\SPRACHUNTERSTUETZUNG_IMPLEMENTATION.md",
+      "title": "SPRACHUNTERSTUETZUNG IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\SUCURSALES_ZUWEISUNG_PLAN.md",
+      "title": "SUCURSALES ZUWEISUNG PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\SYSTEM_CLEANUP_IMPLEMENTATION.md",
+      "title": "SYSTEM CLEANUP IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\task_cerebro_linking.md",
+      "title": "task cerebro linking"
+    },
+    {
+      "file": "docs\\implementation_plans\\TASK_REQUEST_ORGANISATION_FILTER_FIX.md",
+      "title": "TASK REQUEST ORGANISATION FILTER FIX"
+    },
+    {
+      "file": "docs\\implementation_plans\\TASK_REQUEST_ORGANISATION_FILTER_FIX_ERWEITERT.md",
+      "title": "TASK REQUEST ORGANISATION FILTER FIX ERWEITERT"
+    },
+    {
+      "file": "docs\\implementation_plans\\TEST_ZUSAMMENFASSUNG.md",
+      "title": "TEST ZUSAMMENFASSUNG"
+    },
+    {
+      "file": "docs\\implementation_plans\\todo_attachments.md",
+      "title": "todo attachments"
+    },
+    {
+      "file": "docs\\implementation_plans\\TOKEN_EXPIRATION_AUTO_REDIRECT.md",
+      "title": "TOKEN EXPIRATION AUTO REDIRECT"
+    },
+    {
+      "file": "docs\\implementation_plans\\TOOLTIP_STANDARDISIERUNG_PLAN.md",
+      "title": "TOOLTIP STANDARDISIERUNG PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\TOOLTIP_WORKTRACKER_DETAILLIERTER_PLAN.md",
+      "title": "TOOLTIP WORKTRACKER DETAILLIERTER PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\TTLOCK_INTEGRATION_DOKUMENTATION.md",
+      "title": "TTLOCK INTEGRATION DOKUMENTATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\TTLOCK_WORKING_SOLUTION.md",
+      "title": "TTLOCK WORKING SOLUTION"
+    },
+    {
+      "file": "docs\\implementation_plans\\USERMANAGEMENT_UMBENENNUNG_ORGANISATION_PLAN.md",
+      "title": "USERMANAGEMENT UMBENENNUNG ORGANISATION PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\USER_ONBOARDING_FELDER_ANALYSE_UND_PLAN.md",
+      "title": "USER ONBOARDING FELDER ANALYSE UND PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\USER_ONBOARDING_PROCESS_REFINEMENT.md",
+      "title": "USER ONBOARDING PROCESS REFINEMENT"
+    },
+    {
+      "file": "docs\\implementation_plans\\WHATSAPP_BOT_ERWEITERUNG_ANALYSE_UND_PLAN.md",
+      "title": "WHATSAPP BOT ERWEITERUNG ANALYSE UND PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\WHATSAPP_BOT_TOURS_SERVICES_EVENTS.md",
+      "title": "WHATSAPP BOT TOURS SERVICES EVENTS"
+    },
+    {
+      "file": "docs\\implementation_plans\\WHATSAPP_BRANCH_INTEGRATION.md",
+      "title": "WHATSAPP BRANCH INTEGRATION"
+    },
+    {
+      "file": "docs\\implementation_plans\\WHATSAPP_LOBBYPMS_RESERVATION_PROCESS.md",
+      "title": "WHATSAPP LOBBYPMS RESERVATION PROCESS"
+    },
+    {
+      "file": "docs\\implementation_plans\\WORKTIMESTATS_QUINZENA_FIX.md",
+      "title": "WORKTIMESTATS QUINZENA FIX"
+    },
+    {
+      "file": "docs\\implementation_plans\\worktracker_mobile_app_anpassungen.md",
+      "title": "worktracker mobile app anpassungen"
+    },
+    {
+      "file": "docs\\implementation_plans\\WORKTRACKER_MOBILE_SEARCH_SYNC_FIX_PLAN.md",
+      "title": "WORKTRACKER MOBILE SEARCH SYNC FIX PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\WORKTRACKER_RESERVATIONS_FIXES_PLAN.md",
+      "title": "WORKTRACKER RESERVATIONS FIXES PLAN"
+    },
+    {
+      "file": "docs\\implementation_plans\\worktracker_table_columns.md",
+      "title": "worktracker table columns"
+    },
+    {
+      "file": "docs\\implementation_plans\\worktracker_table_drag_drop.md",
+      "title": "worktracker table drag drop"
+    },
+    {
+      "file": "docs\\implementation_plans\\worktracker_table_filter.md",
+      "title": "worktracker table filter"
+    },
+    {
+      "file": "docs\\implementation_plans\\worktracker_table_responsive.md",
+      "title": "worktracker table responsive"
+    },
+    {
+      "file": "docs\\implementation_plans\\worktracker_table_sorting.md",
+      "title": "worktracker table sorting"
+    },
+    {
+      "file": "docs\\implementation_reports\\BUTTON_STANDARDIZATION_PROGRESS.md",
+      "title": "BUTTON STANDARDIZATION PROGRESS"
+    },
+    {
+      "file": "docs\\implementation_reports\\CARD_DESIGN_IMPLEMENTATION.md",
+      "title": "CARD DESIGN IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\implementation_reports\\CARD_VIEW_DOCUMENTATION_SUMMARY.md",
+      "title": "CARD VIEW DOCUMENTATION SUMMARY"
+    },
+    {
+      "file": "docs\\implementation_reports\\CARD_VIEW_VERIFICATION_REPORT.md",
+      "title": "CARD VIEW VERIFICATION REPORT"
+    },
+    {
+      "file": "docs\\implementation_reports\\CONSULTATION_IMPLEMENTATION_KORREKTUR.md",
+      "title": "CONSULTATION IMPLEMENTATION KORREKTUR"
+    },
+    {
+      "file": "docs\\implementation_reports\\edit_task_modal_sidepane_implemented.md",
+      "title": "edit task modal sidepane implemented"
+    },
+    {
+      "file": "docs\\implementation_reports\\filter_implementation.md",
+      "title": "filter implementation"
+    },
+    {
+      "file": "docs\\implementation_reports\\FILTER_REFACTORING.md",
+      "title": "FILTER REFACTORING"
+    },
+    {
+      "file": "docs\\implementation_reports\\MITARBEITERLEBENSZYKLUS_FORTSCHRITT.md",
+      "title": "MITARBEITERLEBENSZYKLUS FORTSCHRITT"
+    },
+    {
+      "file": "docs\\implementation_reports\\MITARBEITERLEBENSZYKLUS_TEST_REPORT.md",
+      "title": "MITARBEITERLEBENSZYKLUS TEST REPORT"
+    },
+    {
+      "file": "docs\\implementation_reports\\MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md",
+      "title": "MITARBEITERLEBENSZYKLUS ZUSAMMENFASSUNG"
+    },
+    {
+      "file": "docs\\implementation_reports\\mobile_worktime_screen_redesign_detailed_implemented.md",
+      "title": "mobile worktime screen redesign detailed implemented"
+    },
+    {
+      "file": "docs\\implementation_reports\\PDF_GENERIERUNG_TEST.md",
+      "title": "PDF GENERIERUNG TEST"
+    },
+    {
+      "file": "docs\\implementation_reports\\PERFORMANCE_OPTIMIZATION_LOADING_SCREEN.md",
+      "title": "PERFORMANCE OPTIMIZATION LOADING SCREEN"
+    },
+    {
+      "file": "docs\\implementation_reports\\PERFORMANCE_OPTIMIZATION_MOBILE_APP.md",
+      "title": "PERFORMANCE OPTIMIZATION MOBILE APP"
+    },
+    {
+      "file": "docs\\implementation_reports\\PERFORMANCE_OPTIMIZATION_PROGRESS.md",
+      "title": "PERFORMANCE OPTIMIZATION PROGRESS"
+    },
+    {
+      "file": "docs\\implementation_reports\\task_cerebro_linking_implemented.md",
+      "title": "task cerebro linking implemented"
+    },
+    {
+      "file": "docs\\implementation_reports\\TOOLTIP_STANDARDISIERUNG_REPORT.md",
+      "title": "TOOLTIP STANDARDISIERUNG REPORT"
+    },
+    {
+      "file": "docs\\implementation_reports\\TRANSLATION_PROGRESS.md",
+      "title": "TRANSLATION PROGRESS"
+    },
+    {
+      "file": "docs\\implementation_reports\\worktracker_mobile_app_anpassungen_implemented.md",
+      "title": "worktracker mobile app anpassungen implemented"
+    },
+    {
+      "file": "docs\\implementation_reports\\WORKTRACKER_MOBILE_SEARCH_SYNC_FIX_REPORT.md",
+      "title": "WORKTRACKER MOBILE SEARCH SYNC FIX REPORT"
+    },
+    {
+      "file": "docs\\implementation_reports\\WORKTRACKER_RESERVATIONS_FIXES_REPORT.md",
+      "title": "WORKTRACKER RESERVATIONS FIXES REPORT"
+    },
+    {
+      "file": "docs\\modules\\MODUL_ABRECHNUNG.md",
+      "title": "MODUL ABRECHNUNG"
+    },
+    {
+      "file": "docs\\modules\\MODUL_CEREBRO.md",
+      "title": "MODUL CEREBRO"
+    },
+    {
+      "file": "docs\\modules\\MODUL_CONSULTATIONS.md",
+      "title": "MODUL CONSULTATIONS"
+    },
+    {
+      "file": "docs\\modules\\MODUL_DOKUMENT_ERKENNUNG.md",
+      "title": "MODUL DOKUMENT ERKENNUNG"
+    },
+    {
+      "file": "docs\\modules\\MODUL_FILTERSYSTEM.md",
+      "title": "MODUL FILTERSYSTEM"
+    },
+    {
+      "file": "docs\\modules\\MODUL_FILTERSYSTEM_STANDARDS.md",
+      "title": "MODUL FILTERSYSTEM STANDARDS"
+    },
+    {
+      "file": "docs\\modules\\MODUL_TEAMKONTROLLE.md",
+      "title": "MODUL TEAMKONTROLLE"
+    },
+    {
+      "file": "docs\\modules\\MODUL_WORKTRACKER.md",
+      "title": "MODUL WORKTRACKER"
+    },
+    {
+      "file": "docs\\modules\\MODUL_ZEITERFASSUNG.md",
+      "title": "MODUL ZEITERFASSUNG"
+    },
+    {
+      "file": "docs\\modules\\NOTIFICATION_SYSTEM.md",
+      "title": "NOTIFICATION SYSTEM"
+    },
+    {
+      "file": "docs\\modules\\OCR_DOKUMENTATION.md",
+      "title": "OCR DOKUMENTATION"
+    },
+    {
+      "file": "docs\\modules\\ROLE_SWITCH.md",
+      "title": "ROLE SWITCH"
+    },
+    {
+      "file": "docs\\modules\\WHATSAPP_24H_FENSTER_NACH_TEMPLATE.md",
+      "title": "WHATSAPP 24H FENSTER NACH TEMPLATE"
+    },
+    {
+      "file": "docs\\modules\\WHATSAPP_TEMPLATES_ALLE_FUER_BEWILLIGUNG.md",
+      "title": "WHATSAPP TEMPLATES ALLE FUER BEWILLIGUNG"
+    },
+    {
+      "file": "docs\\modules\\WHATSAPP_TEMPLATES_KOPIERFERTIG.md",
+      "title": "WHATSAPP TEMPLATES KOPIERFERTIG"
+    },
+    {
+      "file": "docs\\modules\\WHATSAPP_TEMPLATES_VOLLSTÄNDIGE_LISTE.md",
+      "title": "WHATSAPP TEMPLATES VOLLSTÄNDIGE LISTE"
+    },
+    {
+      "file": "docs\\modules\\WHATSAPP_TEMPLATES_ZU_ERSTELLEN.md",
+      "title": "WHATSAPP TEMPLATES ZU ERSTELLEN"
+    },
+    {
+      "file": "docs\\modules\\WHATSAPP_TEMPLATE_BEWILLIGUNG_NÄCHSTE_SCHRITTE.md",
+      "title": "WHATSAPP TEMPLATE BEWILLIGUNG NÄCHSTE SCHRITTE"
+    },
+    {
+      "file": "docs\\modules\\WHATSAPP_TEMPLATE_ERSTELLUNG_ANLEITUNG.md",
+      "title": "WHATSAPP TEMPLATE ERSTELLUNG ANLEITUNG"
+    },
+    {
+      "file": "docs\\modules\\WHATSAPP_TEMPLATE_ERSTELLUNG_QUICK_START.md",
+      "title": "WHATSAPP TEMPLATE ERSTELLUNG QUICK START"
+    },
+    {
+      "file": "docs\\modules\\WHATSAPP_TEMPLATE_FUNKTIONSWEISE_DETAILLIERT.md",
+      "title": "WHATSAPP TEMPLATE FUNKTIONSWEISE DETAILLIERT"
+    },
+    {
+      "file": "docs\\modules\\WORKFLOW_AUTOMATISIERUNG.md",
+      "title": "WORKFLOW AUTOMATISIERUNG"
+    },
+    {
+      "file": "docs\\technical\\API_DIFFERENZEN.md",
+      "title": "API DIFFERENZEN"
+    },
+    {
+      "file": "docs\\technical\\API_REFERENZ.md",
+      "title": "API REFERENZ"
+    },
+    {
+      "file": "docs\\technical\\ARCHITEKTUR.md",
+      "title": "ARCHITEKTUR"
+    },
+    {
+      "file": "docs\\technical\\ATTACHMENT_URL_FIX.md",
+      "title": "ATTACHMENT URL FIX"
+    },
+    {
+      "file": "docs\\technical\\AUTOMATISCHE_MONATSABRECHNUNGEN.md",
+      "title": "AUTOMATISCHE MONATSABRECHNUNGEN"
+    },
+    {
+      "file": "docs\\technical\\BEHEBUNGSPLAN_EMAIL_TIMEOUT_2025-01-22.md",
+      "title": "BEHEBUNGSPLAN EMAIL TIMEOUT 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\BERECHTIGUNGSSYSTEM.md",
+      "title": "BERECHTIGUNGSSYSTEM"
+    },
+    {
+      "file": "docs\\technical\\BOLD_PAYMENT_KRITISCHES_PROBLEM_2025-01-22.md",
+      "title": "BOLD PAYMENT KRITISCHES PROBLEM 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\BOLD_PAYMENT_LINK_FEHLER_WIEDERKEHREND_2025-01-22.md",
+      "title": "BOLD PAYMENT LINK FEHLER WIEDERKEHREND 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\CEREBRO_IMPORT_ANLEITUNG.md",
+      "title": "CEREBRO IMPORT ANLEITUNG"
+    },
+    {
+      "file": "docs\\technical\\CEREBRO_PROBLEM_ANALYSE.md",
+      "title": "CEREBRO PROBLEM ANALYSE"
+    },
+    {
+      "file": "docs\\technical\\DATENBANKSCHEMA.md",
+      "title": "DATENBANKSCHEMA"
+    },
+    {
+      "file": "docs\\technical\\DATEN_EXPORT_IMPORT.md",
+      "title": "DATEN EXPORT IMPORT"
+    },
+    {
+      "file": "docs\\technical\\DEPLOYMENT.md",
+      "title": "DEPLOYMENT"
+    },
+    {
+      "file": "docs\\technical\\DEPLOYMENT_CHECKLIST.md",
+      "title": "DEPLOYMENT CHECKLIST"
+    },
+    {
+      "file": "docs\\technical\\DEPLOYMENT_ERFOLGREICH.md",
+      "title": "DEPLOYMENT ERFOLGREICH"
+    },
+    {
+      "file": "docs\\technical\\DEPLOYMENT_MIT_DATEN_PLAN.md",
+      "title": "DEPLOYMENT MIT DATEN PLAN"
+    },
+    {
+      "file": "docs\\technical\\DEPLOYMENT_PERFORMANCE_FIX.md",
+      "title": "DEPLOYMENT PERFORMANCE FIX"
+    },
+    {
+      "file": "docs\\technical\\EMAIL_CONNECTION_TIMEOUT_FAKTEN_2025-01-22.md",
+      "title": "EMAIL CONNECTION TIMEOUT FAKTEN 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\EMAIL_FIX_ANGEWENDET_2025-01-22.md",
+      "title": "EMAIL FIX ANGEWENDET 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\EMAIL_PROBLEM_ANALYSE_2025-01-22.md",
+      "title": "EMAIL PROBLEM ANALYSE 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\EMAIL_READING_SETUP.md",
+      "title": "EMAIL READING SETUP"
+    },
+    {
+      "file": "docs\\technical\\EMAIL_SETUP.md",
+      "title": "EMAIL SETUP"
+    },
+    {
+      "file": "docs\\technical\\EMAIL_TIMEOUT_FAKTEN_2025-01-22.md",
+      "title": "EMAIL TIMEOUT FAKTEN 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\ENVIAR_BUTTON_FAKTEN_2025-01-22.md",
+      "title": "ENVIAR BUTTON FAKTEN 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\EXPANDABLE_DESCRIPTION_IMPLEMENTATION.md",
+      "title": "EXPANDABLE DESCRIPTION IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\technical\\FEHLERBEHEBUNG.md",
+      "title": "FEHLERBEHEBUNG"
+    },
+    {
+      "file": "docs\\technical\\FILTER_FUNKTIONALITAET_BEWERTUNG.md",
+      "title": "FILTER FUNKTIONALITAET BEWERTUNG"
+    },
+    {
+      "file": "docs\\technical\\FILTER_SORTIERUNG_VOLLSTAENDIGE_ANALYSE_2025-01-22.md",
+      "title": "FILTER SORTIERUNG VOLLSTAENDIGE ANALYSE 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\FIX_ANLEITUNG.md",
+      "title": "FIX ANLEITUNG"
+    },
+    {
+      "file": "docs\\technical\\FRONTEND_TECHNOLOGIEN.md",
+      "title": "FRONTEND TECHNOLOGIEN"
+    },
+    {
+      "file": "docs\\technical\\GETUSERLANGUAGE_OPTIMIERUNG.md",
+      "title": "GETUSERLANGUAGE OPTIMIERUNG"
+    },
+    {
+      "file": "docs\\technical\\GIT_MERGE_KONFLIKT_BEHEBEN.md",
+      "title": "GIT MERGE KONFLIKT BEHEBEN"
+    },
+    {
+      "file": "docs\\technical\\HETZNER_SERVER_SETUP.md",
+      "title": "HETZNER SERVER SETUP"
+    },
+    {
+      "file": "docs\\technical\\HMR_REQUEST_PROBLEM_ANALYSE_UND_LÖSUNG.md",
+      "title": "HMR REQUEST PROBLEM ANALYSE UND LÖSUNG"
+    },
+    {
+      "file": "docs\\technical\\IMAGE_PREVIEW_IMPLEMENTATION.md",
+      "title": "IMAGE PREVIEW IMPLEMENTATION"
+    },
+    {
+      "file": "docs\\technical\\MIGRATION_FIX_ANLEITUNG.md",
+      "title": "MIGRATION FIX ANLEITUNG"
+    },
+    {
+      "file": "docs\\technical\\MOBILE_APP.md",
+      "title": "MOBILE APP"
+    },
+    {
+      "file": "docs\\technical\\OPENAI_API_KEY_SETZEN.md",
+      "title": "OPENAI API KEY SETZEN"
+    },
+    {
+      "file": "docs\\technical\\PAYMENT_LINK_FAKTEN_2025-01-22.md",
+      "title": "PAYMENT LINK FAKTEN 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PAYROLL_COMPONENT_FIX_PLAN.md",
+      "title": "PAYROLL COMPONENT FIX PLAN"
+    },
+    {
+      "file": "docs\\technical\\PAYROLL_COMPONENT_IMPROVEMENTS_PLAN.md",
+      "title": "PAYROLL COMPONENT IMPROVEMENTS PLAN"
+    },
+    {
+      "file": "docs\\technical\\PAYROLL_COMPONENT_RESTORATION_PLAN.md",
+      "title": "PAYROLL COMPONENT RESTORATION PLAN"
+    },
+    {
+      "file": "docs\\technical\\PAYROLL_COMPONENT_VERGLEICH.md",
+      "title": "PAYROLL COMPONENT VERGLEICH"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_3-5_DETAILLIERT_2025-01-22.md",
+      "title": "PERFORMANCE ANALYSE 3 5 DETAILLIERT 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_5_TAGE.md",
+      "title": "PERFORMANCE ANALYSE 5 TAGE"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_ABGESCHLOSSEN.md",
+      "title": "PERFORMANCE ANALYSE ABGESCHLOSSEN"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_AKTUELL.md",
+      "title": "PERFORMANCE ANALYSE AKTUELL"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_AKTUELLE_URACHE.md",
+      "title": "PERFORMANCE ANALYSE AKTUELLE URACHE"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_AKTUELL_2.md",
+      "title": "PERFORMANCE ANALYSE AKTUELL 2"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_AKTUELL_DETAILLIERT.md",
+      "title": "PERFORMANCE ANALYSE AKTUELL DETAILLIERT"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_ERGEBNIS.md",
+      "title": "PERFORMANCE ANALYSE ERGEBNIS"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_GETACTIVEWORKTIME.md",
+      "title": "PERFORMANCE ANALYSE GETACTIVEWORKTIME"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_GRUENDLICH.md",
+      "title": "PERFORMANCE ANALYSE GRUENDLICH"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_INITIALES_LADEN_2025-01-22.md",
+      "title": "PERFORMANCE ANALYSE INITIALES LADEN 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_LADEN_PRO_SEITE_2025-01-22.md",
+      "title": "PERFORMANCE ANALYSE LADEN PRO SEITE 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_LADEN_PRO_SEITE_KORRIGIERT_2025-01-22.md",
+      "title": "PERFORMANCE ANALYSE LADEN PRO SEITE KORRIGIERT 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_LCP_8_26S_2025-01-22.md",
+      "title": "PERFORMANCE ANALYSE LCP 8 26S 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_LCP_8_26S_DETAILLIERT_2025-01-22.md",
+      "title": "PERFORMANCE ANALYSE LCP 8 26S DETAILLIERT 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_NACH_OPTIMIERUNG.md",
+      "title": "PERFORMANCE ANALYSE NACH OPTIMIERUNG"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_VOLLSTAENDIG.md",
+      "title": "PERFORMANCE ANALYSE VOLLSTAENDIG"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_VOLLSTAENDIG_2025-01-22.md",
+      "title": "PERFORMANCE ANALYSE VOLLSTAENDIG 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_VOLLSTAENDIG_FAKTEN_2025-01-22.md",
+      "title": "PERFORMANCE ANALYSE VOLLSTAENDIG FAKTEN 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSE_ZUSAMMENFASSUNG.md",
+      "title": "PERFORMANCE ANALYSE ZUSAMMENFASSUNG"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_ANALYSIS_DETAILED.md",
+      "title": "PERFORMANCE ANALYSIS DETAILED"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_FAKTEN_CODE_ANALYSE_2025-01-22.md",
+      "title": "PERFORMANCE FAKTEN CODE ANALYSE 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_FAKTEN_FINAL_2025-01-22.md",
+      "title": "PERFORMANCE FAKTEN FINAL 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_FIX_ERFOLGREICH.md",
+      "title": "PERFORMANCE FIX ERFOLGREICH"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_FIX_HEADER_SIDEBAR_RELOAD_2025-01-22.md",
+      "title": "PERFORMANCE FIX HEADER SIDEBAR RELOAD 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_FIX_ORGANIZATION_MIDDLEWARE.md",
+      "title": "PERFORMANCE FIX ORGANIZATION MIDDLEWARE"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_FIX_ZUSAMMENFASSUNG.md",
+      "title": "PERFORMANCE FIX ZUSAMMENFASSUNG"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_LCP_PROBLEM_LOESUNGEN_2025-01-22.md",
+      "title": "PERFORMANCE LCP PROBLEM LOESUNGEN 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_MESSUNGEN_SERVER_LOGS_2025-01-22.md",
+      "title": "PERFORMANCE MESSUNGEN SERVER LOGS 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_MESSUNG_ERGEBNIS.md",
+      "title": "PERFORMANCE MESSUNG ERGEBNIS"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_MESSUNG_NACH_DEPLOYMENT.md",
+      "title": "PERFORMANCE MESSUNG NACH DEPLOYMENT"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_OPTIMIERUNGEN_IMPLEMENTIERT.md",
+      "title": "PERFORMANCE OPTIMIERUNGEN IMPLEMENTIERT"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_PROBLEM_AKTUELL.md",
+      "title": "PERFORMANCE PROBLEM AKTUELL"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_PROBLEM_ANALYSE.md",
+      "title": "PERFORMANCE PROBLEM ANALYSE"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_PROBLEM_KRITISCH_ANALYSE_2025.md",
+      "title": "PERFORMANCE PROBLEM KRITISCH ANALYSE 2025"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_PROBLEM_URACHE_ANALYSE.md",
+      "title": "PERFORMANCE PROBLEM URACHE ANALYSE"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_SKELETON_LOADING_FAKTEN_2025-01-22.md",
+      "title": "PERFORMANCE SKELETON LOADING FAKTEN 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_SKELETON_LOADING_LOESUNG_2025-01-22.md",
+      "title": "PERFORMANCE SKELETON LOADING LOESUNG 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PERFORMANCE_SKELETON_LOADING_PROBLEM_ANALYSE_2025-01-22.md",
+      "title": "PERFORMANCE SKELETON LOADING PROBLEM ANALYSE 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\PRISMA_FEHLER_UND_RESPONSE_ZEITEN_ANALYSE.md",
+      "title": "PRISMA FEHLER UND RESPONSE ZEITEN ANALYSE"
+    },
+    {
+      "file": "docs\\technical\\PRISMA_INSTANZEN_REFACTORING_PLAN.md",
+      "title": "PRISMA INSTANZEN REFACTORING PLAN"
+    },
+    {
+      "file": "docs\\technical\\QUEUE_ANALYSE_ALLE_STELLEN.md",
+      "title": "QUEUE ANALYSE ALLE STELLEN"
+    },
+    {
+      "file": "docs\\technical\\QUEUE_MIGRATION_SAFETY_CHECK.md",
+      "title": "QUEUE MIGRATION SAFETY CHECK"
+    },
+    {
+      "file": "docs\\technical\\QUEUE_PERFORMANCE_VERBESSERUNGEN.md",
+      "title": "QUEUE PERFORMANCE VERBESSERUNGEN"
+    },
+    {
+      "file": "docs\\technical\\QUEUE_SYSTEM.md",
+      "title": "QUEUE SYSTEM"
+    },
+    {
+      "file": "docs\\technical\\QUEUE_SYSTEM_DEPLOYMENT.md",
+      "title": "QUEUE SYSTEM DEPLOYMENT"
+    },
+    {
+      "file": "docs\\technical\\QUEUE_SYSTEM_HETZNER_SETUP.md",
+      "title": "QUEUE SYSTEM HETZNER SETUP"
+    },
+    {
+      "file": "docs\\technical\\QUEUE_SYSTEM_IPV4_FIX.md",
+      "title": "QUEUE SYSTEM IPV4 FIX"
+    },
+    {
+      "file": "docs\\technical\\QUEUE_SYSTEM_README.md",
+      "title": "QUEUE SYSTEM README"
+    },
+    {
+      "file": "docs\\technical\\QUEUE_SYSTEM_SETUP_LOCAL.md",
+      "title": "QUEUE SYSTEM SETUP LOCAL"
+    },
+    {
+      "file": "docs\\technical\\QUICK_REFERENCE_API_KEYS.md",
+      "title": "QUICK REFERENCE API KEYS"
+    },
+    {
+      "file": "docs\\technical\\RESERVATION_ENVIAR_BUTTON_PROBLEM_ANALYSE_2025-01-22.md",
+      "title": "RESERVATION ENVIAR BUTTON PROBLEM ANALYSE 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\RESERVATION_FILTER_ANALYSE_2025-01-22.md",
+      "title": "RESERVATION FILTER ANALYSE 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\RESERVATION_FILTER_PROBLEME_ANALYSE_2025-01-22.md",
+      "title": "RESERVATION FILTER PROBLEME ANALYSE 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\RESERVATION_FILTER_WEchsel_PROBLEM_ANALYSE_2025-01-22.md",
+      "title": "RESERVATION FILTER WEchsel PROBLEM ANALYSE 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\RESERVATION_NOTIFICATION_LOG_PROBLEM.md",
+      "title": "RESERVATION NOTIFICATION LOG PROBLEM"
+    },
+    {
+      "file": "docs\\technical\\RESERVATION_WHATSAPP_NACHRICHT_PROBLEM_ANALYSE.md",
+      "title": "RESERVATION WHATSAPP NACHRICHT PROBLEM ANALYSE"
+    },
+    {
+      "file": "docs\\technical\\SCRIPTS_README.md",
+      "title": "SCRIPTS README"
+    },
+    {
+      "file": "docs\\technical\\SERVER_DB_UPDATE_ANLEITUNG.md",
+      "title": "SERVER DB UPDATE ANLEITUNG"
+    },
+    {
+      "file": "docs\\technical\\SERVER_FIX_ORGANIZATIONID.md",
+      "title": "SERVER FIX ORGANIZATIONID"
+    },
+    {
+      "file": "docs\\technical\\SERVER_FRONTEND_FIX.md",
+      "title": "SERVER FRONTEND FIX"
+    },
+    {
+      "file": "docs\\technical\\SERVER_LANGSAM_ANALYSE.md",
+      "title": "SERVER LANGSAM ANALYSE"
+    },
+    {
+      "file": "docs\\technical\\SERVER_LOG_PRUEFUNG_2025-01-22.md",
+      "title": "SERVER LOG PRUEFUNG 2025 01 22"
+    },
+    {
+      "file": "docs\\technical\\SERVER_PERFORMANCE_FIX_PLAN.md",
+      "title": "SERVER PERFORMANCE FIX PLAN"
+    },
+    {
+      "file": "docs\\technical\\SERVER_UPDATE.md",
+      "title": "SERVER UPDATE"
+    },
+    {
+      "file": "docs\\technical\\TIMEZONE_HANDLING.md",
+      "title": "TIMEZONE HANDLING"
+    },
+    {
+      "file": "docs\\technical\\TROUBLESHOOTING_WHATSAPP_HETZNER.md",
+      "title": "TROUBLESHOOTING WHATSAPP HETZNER"
+    },
+    {
+      "file": "docs\\technical\\WHATSAPP_AI_KONFIGURATION.md",
+      "title": "WHATSAPP AI KONFIGURATION"
+    },
+    {
+      "file": "docs\\technical\\WHATSAPP_BUSINESS_API_ANLEITUNG.md",
+      "title": "WHATSAPP BUSINESS API ANLEITUNG"
+    },
+    {
+      "file": "docs\\technical\\WHATSAPP_BUSINESS_API_GENAU.md",
+      "title": "WHATSAPP BUSINESS API GENAU"
+    },
+    {
+      "file": "docs\\technical\\WHATSAPP_BUSINESS_API_QUICK_START.md",
+      "title": "WHATSAPP BUSINESS API QUICK START"
+    },
+    {
+      "file": "docs\\technical\\WHATSAPP_TOKEN_PROBLEM_ANALYSE.md",
+      "title": "WHATSAPP TOKEN PROBLEM ANALYSE"
+    },
+    {
+      "file": "docs\\technical\\WHATSAPP_TOKEN_SCHRITT_FUER_SCHRITT.md",
+      "title": "WHATSAPP TOKEN SCHRITT FUER SCHRITT"
+    },
+    {
+      "file": "docs\\technical\\WHATSAPP_TOKEN_SETUP.md",
+      "title": "WHATSAPP TOKEN SETUP"
+    },
+    {
+      "file": "docs\\technical\\WHATSAPP_WEBHOOK_SERVER_SETUP.md",
+      "title": "WHATSAPP WEBHOOK SERVER SETUP"
+    },
+    {
+      "file": "docs\\technical\\WHATSAPP_WEBHOOK_SETUP.md",
+      "title": "WHATSAPP WEBHOOK SETUP"
+    },
+    {
+      "file": "docs\\technical\\WO_HER_API_KEYS_BEKOMMEN.md",
+      "title": "WO HER API KEYS BEKOMMEN"
+    },
+    {
+      "file": "docs\\user\\ADMINISTRATORHANDBUCH.md",
+      "title": "ADMINISTRATORHANDBUCH"
+    },
+    {
+      "file": "docs\\user\\BENUTZERANLEITUNG_LEBENSZYKLUS.md",
+      "title": "BENUTZERANLEITUNG LEBENSZYKLUS"
+    },
+    {
+      "file": "docs\\user\\BENUTZERHANDBUCH.md",
+      "title": "BENUTZERHANDBUCH"
+    },
+    {
+      "file": "docs\\user\\FRONTEND_ANLEITUNG.md",
+      "title": "FRONTEND ANLEITUNG"
+    },
+    {
+      "file": "docs\\user\\FRONTEND_KONFIGURATION_SCHRITT_FUER_SCHRITT.md",
+      "title": "FRONTEND KONFIGURATION SCHRITT FUER SCHRITT"
+    },
+    {
+      "file": "docs\\user\\MITARBEITERLEBENSZYKLUS_NUTZUNGSANLEITUNG.md",
+      "title": "MITARBEITERLEBENSZYKLUS NUTZUNGSANLEITUNG"
+    },
+    {
+      "file": "docs\\user\\MOBILE_APP_DOWNLOAD.md",
+      "title": "MOBILE APP DOWNLOAD"
+    },
+    {
+      "file": "README.md",
+      "title": "README"
+    }
+  ]
+}
