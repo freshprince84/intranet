@@ -289,8 +289,8 @@ const Sidebar: React.FC = () => {
 
     // Für Desktop-Geräte bleibt die Seitenleiste, aber mit Trennstrichen
     return (
-        <aside className={`hidden md:block border-gray-200 dark:border-gray-700 ${position === 'left' ? 'border-r' : 'border-l'} relative transition-all duration-300`}>
-            <nav className={`${isCollapsed ? 'w-12' : 'w-56'} transition-all duration-300 h-full flex flex-col`}>
+        <aside className={`hidden md:block border-gray-200 dark:border-gray-700 ${position === 'left' ? 'border-r' : 'border-l'} relative transition-all duration-[350ms]`}>
+            <nav className={`${isCollapsed ? 'w-12' : 'w-56'} transition-all duration-[350ms] h-full flex flex-col`}>
                 <div className={`${isCollapsed ? 'px-2' : 'px-3 pr-2'} py-4 flex-1 flex flex-col`}>
                     <div className="flex justify-end mb-8">
                         <div className="relative group">

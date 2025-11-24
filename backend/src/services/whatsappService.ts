@@ -208,12 +208,13 @@ export class WhatsAppService {
   /**
    * Sendet eine WhatsApp-Nachricht
    * 
-   * @param to - Telefonnummer des Empfängers (mit Ländercode, z.B. +573001234567)
+   * @param to - Telefonnummer des Empfängers (mit Ländercode, z.B. +573001234567) oder Group ID (z.B. 120363123456789012@g.us)
    * @param message - Nachrichtentext
    * @param template - Optional: Template-Name (für WhatsApp Business API)
+   * @param groupId - Optional: Group ID für Gruppen-Nachrichten (falls to bereits Group ID ist, wird dieser Parameter ignoriert)
    * @returns true wenn erfolgreich
    */
-  async sendMessage(to: string, message: string, template?: string): Promise<boolean> {
+  async sendMessage(to: string, message: string, template?: string, groupId?: string): Promise<boolean> {
     try {
       console.log(`[WhatsApp Service] sendMessage aufgerufen für: ${to}`);
       await this.loadSettings();
@@ -230,15 +231,30 @@ export class WhatsAppService {
 
       console.log(`[WhatsApp Service] Sende Nachricht via ${this.provider}...`);
 
-      // Normalisiere Telefonnummer (entferne Leerzeichen, füge + hinzu falls fehlt)
-      const normalizedPhone = this.normalizePhoneNumber(to);
-
-      if (this.provider === 'twilio') {
-        return await this.sendViaTwilio(normalizedPhone, message);
-      } else if (this.provider === 'whatsapp-business-api') {
-        return await this.sendViaWhatsAppBusiness(normalizedPhone, message, template);
+      // Prüfe ob es eine Gruppen-Nachricht ist
+      const isGroupMessage = groupId || (to.includes('@g.us'));
+      const targetGroupId = groupId || (isGroupMessage ? to : null);
+      
+      if (isGroupMessage && targetGroupId) {
+        // Gruppen-Nachricht
+        console.log(`[WhatsApp Service] Sende Gruppen-Nachricht an: ${targetGroupId}`);
+        if (this.provider === 'whatsapp-business-api') {
+          return await this.sendViaWhatsAppBusiness(targetGroupId, message, template, undefined, undefined, true);
+        } else {
+          throw new Error('Gruppen-Nachrichten werden nur mit WhatsApp Business API unterstützt');
+        }
       } else {
-        throw new Error(`Unbekannter Provider: ${this.provider}`);
+        // Einzel-Chat
+        // Normalisiere Telefonnummer (entferne Leerzeichen, füge + hinzu falls fehlt)
+        const normalizedPhone = this.normalizePhoneNumber(to);
+
+        if (this.provider === 'twilio') {
+          return await this.sendViaTwilio(normalizedPhone, message);
+        } else if (this.provider === 'whatsapp-business-api') {
+          return await this.sendViaWhatsAppBusiness(normalizedPhone, message, template);
+        } else {
+          throw new Error(`Unbekannter Provider: ${this.provider}`);
+        }
       }
     } catch (error) {
       console.error('[WhatsApp] Fehler beim Versenden:', error);
@@ -288,13 +304,15 @@ export class WhatsAppService {
    * Sendet Nachricht über WhatsApp Business API
    * @param templateParams - Optional: Template-Parameter (für Template Messages)
    * @param templateLanguage - Optional: Template-Sprache (Standard: 'en' oder aus Environment)
+   * @param isGroup - Optional: true wenn es eine Gruppen-Nachricht ist
    */
   private async sendViaWhatsAppBusiness(
     to: string, 
     message: string, 
     template?: string,
     templateParams?: Array<{ type: 'text'; text: string }>,
-    templateLanguage?: string
+    templateLanguage?: string,
+    isGroup?: boolean
   ): Promise<boolean> {
     if (!this.axiosInstance) {
       throw new Error('WhatsApp Business Service nicht initialisiert');

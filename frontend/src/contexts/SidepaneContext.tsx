@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { useSidebar } from './SidebarContext.tsx';
 
 interface SidepaneContextType {
   isSidepaneOpen: boolean;
@@ -10,9 +11,31 @@ const SidepaneContext = createContext<SidepaneContextType | undefined>(undefined
 
 export const SidepaneProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isSidepaneOpen, setIsSidepaneOpen] = useState(false);
+  const { isCollapsed, setCollapsedTemporary } = useSidebar();
+  // Ref um den vorherigen Sidebar-Zustand zu speichern (vor dem automatischen Collapsed)
+  const previousSidebarStateRef = useRef<boolean | null>(null);
 
-  const openSidepane = () => setIsSidepaneOpen(true);
-  const closeSidepane = () => setIsSidepaneOpen(false);
+  const openSidepane = () => {
+    const width = window.innerWidth;
+    // Bei kleineren Bildschirmen (< 1070px) und wenn Sidebar expanded ist: automatisch collapsed setzen
+    if (width < 1070 && !isCollapsed) {
+      previousSidebarStateRef.current = isCollapsed; // false speichern
+      setCollapsedTemporary(true); // Sidebar collapsed setzen
+    }
+    setIsSidepaneOpen(true);
+  };
+
+  const closeSidepane = () => {
+    setIsSidepaneOpen(false);
+    // Sidebar wieder auf vorherigen Zustand zurücksetzen (wenn automatisch collapsed wurde)
+    if (previousSidebarStateRef.current !== null) {
+      // Nur zurücksetzen wenn noch collapsed ist (Benutzer hat es nicht manuell geändert)
+      if (isCollapsed) {
+        setCollapsedTemporary(previousSidebarStateRef.current); // Wieder expanded
+      }
+      previousSidebarStateRef.current = null;
+    }
+  };
 
   // Bei > 1070px: Sidepane-Status am body-Element setzen für CSS-Steuerung
   useEffect(() => {
