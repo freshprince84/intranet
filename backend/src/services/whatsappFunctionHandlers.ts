@@ -14,11 +14,16 @@ export class WhatsAppFunctionHandlers {
   static async get_requests(
     args: any,
     userId: number,
-    roleId: number,
+    roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Prüfe Berechtigung
+      // 1. Prüfe ob roleId vorhanden ist
+      if (!roleId) {
+        throw new Error('Keine Rolle gefunden. Bitte wende dich an einen Administrator.');
+      }
+      
+      // 2. Prüfe Berechtigung
       const hasPermission = await checkUserPermission(
         userId,
         roleId,
@@ -114,11 +119,16 @@ export class WhatsAppFunctionHandlers {
   static async get_todos(
     args: any,
     userId: number,
-    roleId: number,
+    roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Prüfe Berechtigung
+      // 1. Prüfe ob roleId vorhanden ist
+      if (!roleId) {
+        throw new Error('Keine Rolle gefunden. Bitte wende dich an einen Administrator.');
+      }
+      
+      // 2. Prüfe Berechtigung
       const hasPermission = await checkUserPermission(
         userId,
         roleId,
@@ -212,11 +222,16 @@ export class WhatsAppFunctionHandlers {
   static async get_worktime(
     args: any,
     userId: number,
-    roleId: number,
+    roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Prüfe Berechtigung
+      // 1. Prüfe ob roleId vorhanden ist
+      if (!roleId) {
+        throw new Error('Keine Rolle gefunden. Bitte wende dich an einen Administrator.');
+      }
+      
+      // 2. Prüfe Berechtigung
       const hasPermission = await checkUserPermission(
         userId,
         roleId,
@@ -330,11 +345,16 @@ export class WhatsAppFunctionHandlers {
   static async get_cerebro_articles(
     args: any,
     userId: number,
-    roleId: number,
+    roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Prüfe Berechtigung
+      // 1. Prüfe ob roleId vorhanden ist
+      if (!roleId) {
+        throw new Error('Keine Rolle gefunden. Bitte wende dich an einen Administrator.');
+      }
+      
+      // 2. Prüfe Berechtigung
       const hasPermission = await checkUserPermission(
         userId,
         roleId,
@@ -436,7 +456,7 @@ export class WhatsAppFunctionHandlers {
   static async get_user_info(
     args: any,
     userId: number,
-    roleId: number,
+    roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {

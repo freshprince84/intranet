@@ -51,31 +51,69 @@ export class WhatsAppMessageHandler {
       let roleId: number | null = null;
       
       if (user) {
-        userWithRoles = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phoneNumber: true,
-            roles: {
-              select: {
-                roleId: true,
-                role: {
-                  select: {
-                    id: true,
-                    name: true
+        try {
+          userWithRoles = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+              roles: {
+                select: {
+                  roleId: true,
+                  role: {
+                    select: {
+                      id: true,
+                      name: true
+                    }
                   }
                 }
-              },
-              take: 1 // Erste Rolle für Berechtigungsprüfung
+                // WICHTIG: take: 1 entfernt, da es innerhalb von select nicht immer funktioniert
+                // Wir nehmen einfach die erste Rolle aus dem Array
+              }
+            }
+          });
+          
+          console.log('[WhatsApp Message Handler] User mit Rollen geladen:', {
+            userId: userWithRoles?.id,
+            rolesCount: userWithRoles?.roles?.length || 0,
+            roles: userWithRoles?.roles?.map(r => ({ roleId: r.roleId, name: r.role.name })) || []
+          });
+          
+          if (userWithRoles?.roles && userWithRoles.roles.length > 0) {
+            roleId = userWithRoles.roles[0].roleId;
+            console.log('[WhatsApp Message Handler] roleId gesetzt:', roleId);
+          } else {
+            console.error('[WhatsApp Message Handler] ⚠️ WARNUNG: User hat KEINE Rollen!', {
+              userId: user.id,
+              userName: `${user.firstName} ${user.lastName}`
+            });
+            // Fallback: Versuche alle Rollen zu laden (ohne select-Beschränkung)
+            const userWithAllRoles = await prisma.user.findUnique({
+              where: { id: user.id },
+              include: {
+                roles: {
+                  include: {
+                    role: {
+                      select: {
+                        id: true,
+                        name: true
+                      }
+                    }
+                  }
+                }
+              }
+            });
+            
+            if (userWithAllRoles?.roles && userWithAllRoles.roles.length > 0) {
+              roleId = userWithAllRoles.roles[0].roleId;
+              console.log('[WhatsApp Message Handler] Fallback: roleId aus include-Query:', roleId);
             }
           }
-        });
-        
-        if (userWithRoles?.roles && userWithRoles.roles.length > 0) {
-          roleId = userWithRoles.roles[0].roleId;
+        } catch (error) {
+          console.error('[WhatsApp Message Handler] Fehler beim Laden der Rollen:', error);
         }
       }
 

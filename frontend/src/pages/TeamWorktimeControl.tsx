@@ -100,9 +100,7 @@ const TeamWorktimeControl: React.FC = () => {
       
       await axiosInstance.post(API_ENDPOINTS.TEAM_WORKTIME.STOP_USER, {
         userId,
-        // KORREKT: new Date() erstellt bereits ein UTC-Date-Objekt, das korrekt in der DB gespeichert wird
-        // Keine manuelle UTC-Korrektur erforderlich (siehe Backend: stopWorktime Zeile 175)
-        endTime: new Date()
+        endTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
       });
       
       // Aktualisiere die Liste der aktiven Benutzer
