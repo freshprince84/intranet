@@ -52,16 +52,6 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   
-  // Refs für Sidepane-Funktionen, um Endlosschleifen zu vermeiden
-  const openSidepaneRef = React.useRef(openSidepane);
-  const closeSidepaneRef = React.useRef(closeSidepane);
-  
-  // Aktualisiere Refs wenn sich Funktionen ändern
-  React.useEffect(() => {
-    openSidepaneRef.current = openSidepane;
-    closeSidepaneRef.current = closeSidepane;
-  }, [openSidepane, closeSidepane]);
-  
   // Responsive Erkennung
   useEffect(() => {
     const handleResize = () => {
@@ -77,21 +67,18 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
     };
   }, []);
 
-  // Sidepane-Status verwalten - mit setTimeout um React Error #185 zu vermeiden
+  // Sidepane-Status verwalten - wie in EditRequestModal/EditTaskModal
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isOpen && !isMobile) {
-        openSidepaneRef.current();
-      } else {
-        closeSidepaneRef.current();
-      }
-    }, 0);
+    if (isOpen) {
+      openSidepane();
+    } else {
+      closeSidepane();
+    }
     
     return () => {
-      clearTimeout(timeoutId);
-      closeSidepaneRef.current();
+      closeSidepane();
     };
-  }, [isOpen, isMobile]);
+  }, [isOpen, openSidepane, closeSidepane]);
 
   // Initialisiere die bearbeitbaren Einträge, wenn sich die Props ändern
   useEffect(() => {
