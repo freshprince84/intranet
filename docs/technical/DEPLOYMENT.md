@@ -685,6 +685,104 @@ Für automatisiertes Deployment können Sie die CI/CD-Pipeline erweitern:
           ssh user@your-server.com "cd /path/to/intranet/backend && pm2 restart intranet-backend"
 ```
 
+## Automatisches Deployment mit MCP ⭐ EMPFOHLEN
+
+### Übersicht
+
+Das automatische Deployment über MCP (Model Context Protocol) ist die einfachste und schnellste Lösung für automatische Deployments. Der AI-Assistent kann automatisch Deployments auslösen, nachdem Änderungen committed und gepusht wurden.
+
+### Vorteile
+
+- ✅ **Vollautomatisch**: AI-Assistent kann Deployment automatisch auslösen
+- ✅ **Einfachste Lösung**: Keine GitHub Secrets, keine GitHub Actions Konfiguration
+- ✅ **Direkt aus Cursor**: Alles in einer Umgebung
+- ✅ **Schnell**: Direkte SSH-Verbindung, keine CI/CD-Pipeline-Wartezeit
+- ✅ **Bestehende Infrastruktur**: Nutzt vorhandenen SSH-Key und Deployment-Skript
+
+### Setup
+
+#### 1. MCP Server installieren
+
+Der MCP Deployment Server ist bereits im Projekt enthalten unter `mcp-servers/deployment/`.
+
+```bash
+cd mcp-servers/deployment
+npm install
+npm run build
+```
+
+#### 2. Konfiguration
+
+Die Konfiguration erfolgt in `mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "intranet-deployment": {
+      "command": "node",
+      "args": ["mcp-servers/deployment/dist/index.js"],
+      "env": {
+        "DEPLOY_SERVER_HOST": "65.109.228.106",
+        "DEPLOY_SERVER_USER": "root",
+        "DEPLOY_SSH_KEY_PATH": "~/.ssh/intranet_rsa",
+        "DEPLOY_SERVER_PATH": "/var/www/intranet",
+        "DEPLOY_SCRIPT_PATH": "/var/www/intranet/deploy_to_server.sh"
+      }
+    }
+  }
+}
+```
+
+#### 3. Voraussetzungen
+
+- SSH-Key muss unter `~/.ssh/intranet_rsa` vorhanden sein
+- Deployment-Skript `deploy_to_server.sh` muss auf dem Server vorhanden sein
+- SSH-Zugriff zum Server muss funktionieren
+
+### Verwendung
+
+#### Automatisch durch AI-Assistent
+
+Nach dem Commit und Push kann der AI-Assistent automatisch das Deployment auslösen:
+
+```
+Ich habe die Änderungen committed und gepusht. Bitte führe das Deployment aus.
+```
+
+#### Manuell
+
+Das Tool kann auch manuell über den AI-Assistenten aufgerufen werden:
+
+```
+Bitte führe ein Deployment auf den Produktivserver aus.
+```
+
+### Verfügbare Tools
+
+1. **deploy_to_production**
+   - Führt vollständiges Deployment auf dem Server aus
+   - Führt `deploy_to_server.sh` auf dem Server aus
+   - Beinhaltet: Git Pull, Migrationen, Builds, etc.
+   - ⚠️ **WICHTIG**: Server-Neustart muss manuell durchgeführt werden
+
+2. **check_server_connection**
+   - Prüft die SSH-Verbindung zum Server
+   - Nützlich zum Testen der Verbindung
+
+### Wichtige Hinweise
+
+- ⚠️ **Server-Neustart**: Nach dem Deployment muss der Server manuell neu gestartet werden:
+  - `pm2 restart intranet-backend`
+  - `sudo systemctl restart nginx`
+- ⚠️ **Deployment-Dauer**: Das Deployment kann mehrere Minuten dauern (Builds, Migrationen, etc.)
+- ⚠️ **Timeout**: Das Deployment hat ein Timeout von 10 Minuten
+
+### Weitere Informationen
+
+Siehe auch:
+- [AUTOMATISCHES_DEPLOYMENT_PLAN.md](AUTOMATISCHES_DEPLOYMENT_PLAN.md) - Detaillierter Plan und alle Optionen
+- [mcp-servers/deployment/README.md](../../mcp-servers/deployment/README.md) - MCP Server Dokumentation
+
 ## Backup-Strategie
 
 ### Datenbank-Backups

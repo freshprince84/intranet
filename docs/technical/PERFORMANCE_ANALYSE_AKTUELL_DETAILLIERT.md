@@ -344,3 +344,4 @@ export const getActiveWorktime = async (req: Request, res: Response) => {
 **Nächster Schritt**: Lösungsvorschläge mit User besprechen, dann implementieren
 
 
+

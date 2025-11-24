@@ -43,6 +43,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [DATENBANKSCHEMA.md](docs/technical/DATENBANKSCHEMA.md) - Datenbankschema und -struktur
 - [BERECHTIGUNGSSYSTEM.md](docs/technical/BERECHTIGUNGSSYSTEM.md) - Rollen und Berechtigungskonzept
 - [DEPLOYMENT.md](docs/technical/DEPLOYMENT.md) - Server-Setup und Deployment-Prozess
+- [AUTOMATISCHES_DEPLOYMENT_PLAN.md](docs/technical/AUTOMATISCHES_DEPLOYMENT_PLAN.md) - Automatisches Deployment - Implementierungsplan und Optionen
 - [SERVER_UPDATE.md](docs/technical/SERVER_UPDATE.md) - Richtlinien für Server-Updates
 - [FEHLERBEHEBUNG.md](docs/technical/FEHLERBEHEBUNG.md) - Häufige Fehler und deren Lösungen
 - [ATTACHMENT_URL_FIX.md](docs/technical/ATTACHMENT_URL_FIX.md) - Attachment URL-Generierung und Fixes
