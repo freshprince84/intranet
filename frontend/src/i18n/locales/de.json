@@ -1052,7 +1052,32 @@
     "noLinks": "Keine Links vorhanden",
     "article": "Artikel",
     "addFile": "Datei hinzufügen",
-    "structureLoadError": "Fehler beim Laden der Artikelstruktur. Bitte versuchen Sie es später erneut."
+    "structureLoadError": "Fehler beim Laden der Artikelstruktur. Bitte versuchen Sie es später erneut.",
+    "header": {
+      "title": "Cerebro",
+      "searchPlaceholder": "Artikel suchen...",
+      "createArticle": "Neuer Artikel",
+      "filter": "Filter",
+      "sort": "Sortieren"
+    },
+    "filters": {
+      "all": "Alle Artikel",
+      "title": "Titel",
+      "createdAt": "Erstellt am",
+      "updatedAt": "Aktualisiert am",
+      "createdBy": "Erstellt von",
+      "category": "Kategorie",
+      "hasGithubPath": "Hat GitHub-Pfad",
+      "isPublished": "Veröffentlicht"
+    },
+    "sort": {
+      "titleAsc": "Titel (A-Z)",
+      "titleDesc": "Titel (Z-A)",
+      "createdAtDesc": "Neueste zuerst",
+      "createdAtAsc": "Älteste zuerst",
+      "updatedAtDesc": "Zuletzt aktualisiert",
+      "updatedAtAsc": "Älteste Aktualisierung"
+    }
   },
   "organization": {
     "title": "Organisation",

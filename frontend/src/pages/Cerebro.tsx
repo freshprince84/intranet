@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Routes, Route, Link, useNavigate, Outlet, useParams, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, Outlet, useParams, useLocation } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { cerebroApi, CerebroArticle } from '../api/cerebroApi.ts';
 import ArticleList from '../components/cerebro/ArticleList.tsx';
@@ -11,24 +11,59 @@ import AddMedia from '../components/cerebro/AddMedia.tsx';
 import AddExternalLink from '../components/cerebro/AddExternalLink.tsx';
 import GitHubLinkManagerWrapper from '../components/cerebro/GitHubLinkManagerWrapper.tsx';
 import GitHubMarkdownViewer from '../components/cerebro/GitHubMarkdownViewer.tsx';
+import CerebroHeader from '../components/cerebro/CerebroHeader.tsx';
+import FilterPane from '../components/FilterPane.tsx';
+import SavedFilterTags from '../components/SavedFilterTags.tsx';
+import { FilterCondition } from '../components/FilterRow.tsx';
+import { applyFilters, GetFieldValue, ColumnEvaluator } from '../utils/filterLogic.ts';
 import ReactMarkdown from 'react-markdown';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
-// Icon-Komponenten für Plus und Search hinzufügen nach dem Import-Bereich
-const PlusIcon = () => <span className="mr-1">+</span>;
-const SearchIcon = () => <span className="mr-1">🔍</span>;
 
 // GitHub Repository-Informationen
 const GITHUB_OWNER = 'freshprince84';
 const GITHUB_REPO = 'intranet';
 const GITHUB_BRANCH = 'main';
 
+// Spalten-Definitionen für Cerebro-Artikel
+const CEREBRO_TABLE_ID = 'CEREBRO_ARTICLES';
+
 // Layout-Komponente, die die ArticleStructure enthält
 const CerebroLayout: React.FC = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { hasPermission } = usePermissions();
+  
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
   const [isTabletOrLarger, setIsTabletOrLarger] = useState<boolean>(window.innerWidth >= 768);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(window.innerWidth >= 768);
+  
+  // Filter und Sortierung State
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
+  const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+  const [isFilterPaneOpen, setIsFilterPaneOpen] = useState<boolean>(false);
+  const [activeFilterName, setActiveFilterName] = useState<string>('');
+  const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ 
+    key: 'title', 
+    direction: 'asc' 
+  });
+  
+  // Berechtigungen
+  const canCreateArticle = hasPermission('cerebro', 'both', 'button') || hasPermission('cerebro', 'both', 'page');
+  
+  // Spalten-Definitionen
+  const cerebroColumns = useMemo(() => [
+    { id: 'title', label: t('cerebro.filters.title', 'Titel') },
+    { id: 'createdAt', label: t('cerebro.filters.createdAt', 'Erstellt am') },
+    { id: 'updatedAt', label: t('cerebro.filters.updatedAt', 'Aktualisiert am') },
+    { id: 'createdBy', label: t('cerebro.filters.createdBy', 'Erstellt von') },
+    { id: 'parentId', label: t('cerebro.filters.category', 'Kategorie') },
+    { id: 'githubPath', label: t('cerebro.filters.hasGithubPath', 'Hat GitHub-Pfad') },
+    { id: 'isPublished', label: t('cerebro.filters.isPublished', 'Veröffentlicht') }
+  ], [t]);
   
   useEffect(() => {
     const handleResize = () => {
@@ -59,33 +94,129 @@ const CerebroLayout: React.FC = () => {
     return () => window.removeEventListener('cerebro-sidebar-toggle' as any, handleSidebarToggle as any);
   }, []);
   
+  // Suche-Handler
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      navigate(`/cerebro/search?q=${encodeURIComponent(searchTerm)}`);
+    } else {
+      navigate('/cerebro/all');
+    }
+  };
+  
+  // Filter-Handler
+  const applyFilterConditions = (
+    conditions: FilterCondition[], 
+    operators: ('AND' | 'OR')[],
+    sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>
+  ) => {
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
+    if (sortDirections && sortDirections.length > 0) {
+      const firstSort = sortDirections[0];
+      setSortConfig({ key: firstSort.column, direction: firstSort.direction });
+    }
+  };
+  
+  const resetFilterConditions = () => {
+    setFilterConditions([]);
+    setFilterLogicalOperators([]);
+    setSortConfig({ key: 'title', direction: 'asc' });
+    setActiveFilterName('');
+    setSelectedFilterId(null);
+  };
+  
+  const handleFilterChange = (
+    name: string, 
+    id: number | null, 
+    conditions: FilterCondition[], 
+    operators: ('AND' | 'OR')[],
+    sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>
+  ) => {
+    setActiveFilterName(name);
+    setSelectedFilterId(id);
+    applyFilterConditions(conditions, operators, sortDirections);
+  };
+  
+  // Sortier-Handler
+  const handleSortClick = () => {
+    // Wird in CerebroHeader gehandhabt
+  };
+  
+  const handleSortChange = (key: string, direction: 'asc' | 'desc') => {
+    setSortConfig({ key, direction });
+  };
+  
   return (
-    <div className={`flex min-h-screen w-full ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
-      {/* Sidebar mit fester Breite auf Desktop, auf Mobile schiebt sie den Inhalt */}
-      <div 
-        className={`
-          ${sidebarOpen ? 'w-60' : ''}
-          ${isMobile && !sidebarOpen ? 'w-0' : ''} 
-          transition-all duration-300 ease-in-out shrink-0
-        `}
-      >
-        <ArticleStructure mdFiles={[]} />
+    <div className={`flex flex-col min-h-screen w-full ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
+      {/* Header-Bereich */}
+      <CerebroHeader
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onSearchSubmit={handleSearch}
+        canCreateArticle={canCreateArticle}
+        onCreateArticle={() => navigate('/cerebro/create')}
+        onFilterClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
+        onSortClick={handleSortClick}
+        onSortChange={handleSortChange}
+        activeFilterCount={filterConditions.length}
+        sortConfig={sortConfig}
+      />
+      
+      {/* FilterPane (ausklappbar) */}
+      {isFilterPaneOpen && (
+        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <FilterPane
+            columns={cerebroColumns}
+            onApply={applyFilterConditions}
+            onReset={resetFilterConditions}
+            savedConditions={filterConditions}
+            savedOperators={filterLogicalOperators}
+            tableId={CEREBRO_TABLE_ID}
+          />
+        </div>
+      )}
+      
+      {/* SavedFilterTags */}
+      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <SavedFilterTags
+          tableId={CEREBRO_TABLE_ID}
+          onSelectFilter={applyFilterConditions}
+          onReset={resetFilterConditions}
+          activeFilterName={activeFilterName}
+          selectedFilterId={selectedFilterId}
+          onFilterChange={handleFilterChange}
+          defaultFilterName={t('cerebro.filters.all', 'Alle Artikel')}
+        />
       </div>
       
-      {/* Der Hauptinhalt nimmt den restlichen Platz ein */}
-      <main className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto'} ${
-        isMobile 
-          ? 'px-0 pt-2 pb-16' // Horizontales Padding auf 0, Bottom-Padding erhöht für den Footer
-          : `pl-4 pt-3 pb-4 ${
-              isTabletOrLarger && sidebarOpen 
-                ? 'pr-10 md:pr-16 lg:pr-20' 
-                : 'pr-4'
-            }`
-      }`}>
-        <div className={isMobile ? 'mobile-full-width' : ''}>
-          <Outlet />
+      {/* Haupt-Layout: Sidebar + Content */}
+      <div className={`flex flex-1 overflow-hidden ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
+        {/* Sidebar mit fester Breite auf Desktop, auf Mobile schiebt sie den Inhalt */}
+        <div 
+          className={`
+            ${sidebarOpen ? 'w-60' : ''}
+            ${isMobile && !sidebarOpen ? 'w-0' : ''} 
+            transition-all duration-300 ease-in-out shrink-0
+          `}
+        >
+          <ArticleStructure mdFiles={[]} />
         </div>
-      </main>
+        
+        {/* Der Hauptinhalt nimmt den restlichen Platz ein */}
+        <main className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto'} ${
+          isMobile 
+            ? 'px-0 pt-2 pb-16' // Horizontales Padding auf 0, Bottom-Padding erhöht für den Footer
+            : `pl-4 pt-3 pb-4 ${
+                isTabletOrLarger && sidebarOpen 
+                  ? 'pr-10 md:pr-16 lg:pr-20' 
+                  : 'pr-4'
+              }`
+        }`}>
+          <div className={isMobile ? 'mobile-full-width' : ''}>
+            <Outlet context={{ filterConditions, filterLogicalOperators, sortConfig, searchTerm }} />
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
