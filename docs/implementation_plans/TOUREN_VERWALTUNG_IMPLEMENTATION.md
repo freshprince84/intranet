@@ -122,7 +122,7 @@ model Tour {
   title             String
   description       String?
   type              TourType          @default(own) // 'own' oder 'external'
-  status            TourStatus        @default(active) // 'active', 'inactive', 'archived'
+  isActive          Boolean          @default(true) // Soft Delete: statt löschen auf false setzen
   
   // Tour-Details
   duration          Int?              // Dauer in Stunden
@@ -132,31 +132,35 @@ model Tour {
   currency          String?           @default("COP")
   location          String?           // Ort/Startpunkt
   meetingPoint      String?           // Treffpunkt
-  includes          String?           // Was ist inkludiert (JSON oder Text)
-  excludes          String?           // Was ist nicht inkludiert
-  requirements      String?           // Anforderungen (z.B. Fitness-Level)
+  includes          String?           // Plain Text: Was ist inkludiert
+  excludes          String?           // Plain Text: Was ist nicht inkludiert
+  requirements      String?           // Plain Text: Anforderungen (z.B. Fitness-Level)
+  
+  // Kommission (pro Tour)
+  totalCommission   Decimal?          @db.Decimal(10, 2) // Gesamtkommission für Organisation/Branch (fixe Zahl)
+  totalCommissionPercent Decimal?    @db.Decimal(5, 2) // Gesamtkommission in % (alternativ zu fixer Zahl)
+  sellerCommissionPercent Decimal?   @db.Decimal(5, 2) // Anteil der Gesamtkommission für Verkäufer/Mitarbeiter in %
+  sellerCommissionFixed Decimal?    @db.Decimal(10, 2) // Anteil der Gesamtkommission für Verkäufer/Mitarbeiter (fixe Zahl, alternativ zu %)
   
   // Externe Tour-Informationen
-  externalProviderId String?          // ID des externen Anbieters
-  externalProviderName String?        // Name des externen Anbieters
-  externalProviderPhone String?       // WhatsApp-Nummer des Anbieters
-  externalProviderEmail String?       // E-Mail des Anbieters
+  externalProviderId Int?             // Verknüpfung zu TourProvider
+  externalProvider   TourProvider?    @relation(fields: [externalProviderId], references: [id])
   externalBookingUrl String?          // URL für externe Buchung
   
   // Bilder/Medien
-  imageUrl          String?           // Hauptbild
-  galleryUrls       Json?             // Array von Bild-URLs
+  imageUrl          String?           // Hauptbild (URL zu /api/tours/:id/image)
+  galleryUrls       Json?             // Array von Bild-URLs: ["/api/tours/:id/gallery/1", "/api/tours/:id/gallery/2"]
   
   // Verfügbarkeit
   availableFrom     DateTime?         // Verfügbar ab
   availableTo       DateTime?         // Verfügbar bis
-  recurringSchedule Json?             // Wiederkehrende Termine (z.B. täglich, wöchentlich)
+  recurringSchedule Json?             // Format: { "type": "daily"|"weekly"|"monthly", "times": ["09:00", "14:00"], "daysOfWeek": [1,3,5] } (1=Montag)
   
   // Organisation & Branch
   organizationId    Int
   organization      Organization      @relation(fields: [organizationId], references: [id])
   branchId          Int?
-  branch            Branch?            @relation(fields: [branchId], references: [id])
+  branch            Branch?           @relation(fields: [branchId], references: [id])
   
   // Metadaten
   createdAt         DateTime          @default(now())
@@ -171,21 +175,62 @@ model Tour {
   @@index([organizationId])
   @@index([branchId])
   @@index([type])
-  @@index([status])
+  @@index([isActive])
   @@index([title]) // Für Suche
 }
 ```
 
-#### 2.1.2 TourBooking Model
+**WICHTIGE FELDER:**
+- `isActive`: Boolean (statt Status-Enum) - Soft Delete wie bei Users (`active` Feld)
+- `totalCommission`: Gesamtkommission für Organisation/Branch (fixe Zahl ODER Prozent)
+- `totalCommissionPercent`: Gesamtkommission in % (alternativ zu fixer Zahl)
+- `sellerCommissionPercent`: Anteil für Verkäufer in % (alternativ zu fixer Zahl)
+- `sellerCommissionFixed`: Anteil für Verkäufer als fixe Zahl (alternativ zu %)
+- `includes/excludes/requirements`: Plain Text (String), nicht JSON
+- `galleryUrls`: JSON-Array von Strings mit URLs zu API-Endpunkten
+- `recurringSchedule`: JSON mit spezifiziertem Format
+- `externalProviderId`: Verknüpfung zu separatem TourProvider-Model
+
+#### 2.1.2 TourProvider Model (Separate Verwaltung externer Anbieter)
+
+```prisma
+model TourProvider {
+  id                Int              @id @default(autoincrement())
+  name              String           // Name des Anbieters
+  phone             String?          // WhatsApp-Nummer
+  email             String?          // E-Mail
+  contactPerson     String?          // Ansprechpartner
+  notes             String?          // Notizen
+  
+  // Organisation & Branch
+  organizationId    Int
+  organization      Organization      @relation(fields: [organizationId], references: [id])
+  branchId          Int?
+  branch            Branch?           @relation(fields: [branchId], references: [id])
+  
+  // Metadaten
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Relations
+  tours             Tour[]
+  
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([name])
+}
+```
+
+#### 2.1.3 TourBooking Model
 
 ```prisma
 model TourBooking {
   id                Int              @id @default(autoincrement())
   tourId            Int
-  tour              Tour              @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tour              Tour              @relation(fields: [tourId], references: [id], onDelete: Restrict) // Restrict: Verhindert Löschung wenn Buchungen existieren
   
   // Buchungsdetails
-  bookingDate       DateTime          // Wann wurde gebucht
+  bookingDate       DateTime          @default(now()) // Wann wurde gebucht
   tourDate          DateTime          // Wann findet die Tour statt
   numberOfParticipants Int           // Anzahl Teilnehmer
   totalPrice        Decimal           @db.Decimal(10, 2) // Gesamtpreis (Tourpreis * Teilnehmer)
@@ -197,26 +242,30 @@ model TourBooking {
   customerPhone     String?
   customerNotes     String?           // Spezielle Anforderungen des Kunden
   
-  // Zahlungsstatus
-  paymentStatus     PaymentStatus     @default(pending)
-  amountPaid        Decimal?          @db.Decimal(10, 2) // Bereits bezahlter Betrag
-  amountPending     Decimal?          @db.Decimal(10, 2) // Noch ausstehender Betrag
-  paymentLink       String?           // Zahlungslink (Bold Payment)
+  // Zahlungsstatus (analog zu Reservation)
+  paymentStatus     PaymentStatus     @default(pending) // 'pending', 'paid', 'partially_paid', 'refunded'
+  amountPaid        Decimal?          @db.Decimal(10, 2) // Bereits bezahlter Betrag (wird automatisch via Bold Payment Webhook aktualisiert)
+  amountPending     Decimal?          @db.Decimal(10, 2) // Berechnet: totalPrice - amountPaid
+  paymentLink       String?           // Zahlungslink (Bold Payment) - wird bei Buchungserstellung generiert
   
-  // Mitarbeiter-Kommission
+  // Mitarbeiter-Kommission (wird bei Buchungserstellung berechnet)
   bookedById        Int?              // User, der die Tour gebucht hat
   bookedBy          User?             @relation("TourBooker", fields: [bookedById], references: [id])
-  commissionAmount  Decimal?          @db.Decimal(10, 2) // Kommissionsbetrag
-  commissionPercent Decimal?          @db.Decimal(5, 2) // Kommissionsprozentsatz
+  commissionAmount  Decimal?          @db.Decimal(10, 2) // Berechneter Kommissionsbetrag für diesen Verkäufer
+  commissionCalculatedAt DateTime?    // Wann wurde Kommission berechnet
   
   // Status
   status            TourBookingStatus @default(confirmed) // 'confirmed', 'cancelled', 'completed', 'no_show'
+  cancelledBy      String?            // 'customer' oder 'provider' - wer hat storniert
+  cancelledAt      DateTime?          // Wann wurde storniert
+  cancelledReason  String?            // Grund für Stornierung
   
   // Externe Tour-Buchung
   isExternal        Boolean           @default(false)
   externalBookingId String?           // ID bei externem Anbieter
   externalStatus    String?           // Status bei externem Anbieter
-  externalMessage   String?           // Letzte Nachricht vom Anbieter
+  externalMessage   String?          // Letzte Nachricht vom Anbieter (kann Alternative enthalten)
+  alternativeTours  Json?             // Array von alternativen Tour-IDs: [1, 2, 3]
   
   // Organisation & Branch
   organizationId    Int
@@ -239,31 +288,41 @@ model TourBooking {
   @@index([bookingDate])
   @@index([tourDate])
   @@index([status])
+  @@index([paymentStatus])
 }
 ```
 
-#### 2.1.3 TourReservation Model (Verknüpfung Tour <-> Reservation)
+**WICHTIGE FELDER:**
+- `onDelete: Restrict`: Verhindert Löschung der Tour wenn Buchungen existieren (analog zu Users)
+- `amountPaid`: Wird automatisch via Bold Payment Webhook aktualisiert (analog zu Reservations)
+- `amountPending`: Berechnet automatisch: `totalPrice - amountPaid`
+- `paymentLink`: Wird bei Buchungserstellung generiert via `BoldPaymentService.createPaymentLink()`
+- `commissionAmount`: Wird bei Buchungserstellung automatisch berechnet
+- `cancelledBy`: 'customer' oder 'provider' - für Notifications
+- `alternativeTours`: JSON-Array von Tour-IDs für alternative Vorschläge
+
+#### 2.1.4 TourReservation Model (Verknüpfung Tour <-> Reservation)
 
 ```prisma
 model TourReservation {
   id                Int              @id @default(autoincrement())
   tourId            Int
-  tour              Tour              @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tour              Tour              @relation(fields: [tourId], references: [id], onDelete: Restrict)
   bookingId         Int
   booking           TourBooking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   reservationId     Int
-  reservation       Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  reservation       Reservation      @relation(fields: [reservationId], references: [id], onDelete: Restrict)
   
-  // Preisaufschlüsselung
-  tourPrice         Decimal          @db.Decimal(10, 2) // Anteil Tourpreis
-  accommodationPrice Decimal         @db.Decimal(10, 2) // Anteil Bettenpreis
+  // Preisaufschlüsselung (manuell eingegeben bei Verknüpfung)
+  tourPrice         Decimal          @db.Decimal(10, 2) // Anteil Tourpreis (manuell eingegeben)
+  accommodationPrice Decimal         @db.Decimal(10, 2) // Anteil Bettenpreis (manuell eingegeben)
   currency          String           @default("COP")
   
-  // Zahlungsstatus
-  tourPricePaid     Decimal?         @db.Decimal(10, 2) // Bereits bezahlter Tourpreis
-  tourPricePending  Decimal?         @db.Decimal(10, 2) // Ausstehender Tourpreis
-  accommodationPaid Decimal?         @db.Decimal(10, 2) // Bereits bezahlter Bettenpreis
-  accommodationPending Decimal?      @db.Decimal(10, 2) // Ausstehender Bettenpreis
+  // Zahlungsstatus (analog zu Reservation.paymentStatus)
+  tourPricePaid     Decimal?         @db.Decimal(10, 2) // Bereits bezahlter Tourpreis (wird manuell aktualisiert)
+  tourPricePending  Decimal?         @db.Decimal(10, 2) // Berechnet: tourPrice - tourPricePaid
+  accommodationPaid Decimal?         @db.Decimal(10, 2) // Bereits bezahlter Bettenpreis (wird manuell aktualisiert)
+  accommodationPending Decimal?      @db.Decimal(10, 2) // Berechnet: accommodationPrice - accommodationPaid
   
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -275,7 +334,13 @@ model TourReservation {
 }
 ```
 
-#### 2.1.4 TourWhatsAppMessage Model (Kommunikation mit externen Anbietern)
+**WICHTIGE FELDER:**
+- `onDelete: Restrict`: Verhindert Löschung wenn Verknüpfung existiert
+- `tourPrice` / `accommodationPrice`: Werden manuell eingegeben bei Verknüpfung
+- `tourPricePaid` / `accommodationPaid`: Werden manuell aktualisiert (nicht automatisch via Webhook)
+- `tourPricePending` / `accommodationPending`: Werden automatisch berechnet
+
+#### 2.1.5 TourWhatsAppMessage Model (Kommunikation mit externen Anbietern)
 
 ```prisma
 model TourWhatsAppMessage {
@@ -289,14 +354,15 @@ model TourWhatsAppMessage {
   phoneNumber       String           // Telefonnummer (Anbieter oder Kunde)
   sentAt            DateTime         @default(now())
   
-  // Status
+  // Status (von WhatsApp Webhook)
   status            MessageStatus    @default(sent) // 'sent', 'delivered', 'read', 'failed'
   errorMessage      String?          // Fehlermeldung bei Fehlern
   
-  // Verarbeitung
+  // Verarbeitung (für eingehende Nachrichten)
   processed         Boolean          @default(false) // Wurde die Nachricht verarbeitet?
   processedAt       DateTime?
-  action            String?          // Aktion (z.B. 'booking_confirmed', 'booking_cancelled', 'payment_link_sent')
+  action            String?          // Aktion: 'booking_confirmed', 'booking_cancelled', 'alternative_suggested', 'payment_link_sent'
+  extractedData     Json?            // Extrahierte Daten: { "alternativeTourIds": [1,2], "confirmed": true, "cancelled": false }
   
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -305,8 +371,13 @@ model TourWhatsAppMessage {
   @@index([phoneNumber])
   @@index([sentAt])
   @@index([status])
+  @@index([processed])
 }
 ```
+
+**WICHTIGE FELDER:**
+- `extractedData`: JSON mit extrahierten Daten aus Anbieter-Antwort (z.B. alternative Tour-IDs)
+- `action`: Spezifische Aktion die aus der Nachricht erkannt wurde
 
 ### 2.2 Enums
 
@@ -314,12 +385,6 @@ model TourWhatsAppMessage {
 enum TourType {
   own        // Eigene Tour
   external   // Externe Tour
-}
-
-enum TourStatus {
-  active
-  inactive
-  archived
 }
 
 enum TourBookingStatus {
@@ -341,6 +406,8 @@ enum MessageStatus {
   failed
 }
 ```
+
+**HINWEIS:** Kein `TourStatus` Enum - stattdessen `isActive` Boolean (Soft Delete wie bei Users)
 
 ### 2.3 Erweiterungen bestehender Models
 
@@ -364,6 +431,19 @@ model User {
   // NEU: Verknüpfung mit Touren
   toursCreated      Tour[]            @relation("TourCreator")
   toursBooked       TourBooking[]     @relation("TourBooker")
+}
+```
+
+#### 2.3.3 Organization Model erweitern
+
+```prisma
+model Organization {
+  // ... bestehende Felder ...
+  
+  // NEU: Verknüpfung mit Touren
+  tours             Tour[]
+  tourBookings      TourBooking[]
+  tourProviders     TourProvider[]
 }
 ```
 
@@ -422,10 +502,48 @@ model User {
 
 **Funktionen:**
 - `sendBookingRequestToProvider(bookingId: number)` - Sendet Buchungsanfrage an externen Anbieter
-- `processProviderResponse(messageId: number, response: string)` - Verarbeitet Antwort des Anbieters
-- `sendConfirmationToCustomer(bookingId: number)` - Sendet Bestätigung an Kunden
+  - Liest `booking` und `tour`
+  - Sendet WhatsApp-Nachricht an `tour.externalProvider.phone`
+  - Nachricht: "Neue Buchungsanfrage für [Tour-Titel]\nKunde: [customerName]\nDatum: [tourDate]\nTeilnehmer: [numberOfParticipants]\nKontakt: [customerPhone]"
+  - Speichert in `TourWhatsAppMessage` mit `direction: 'outgoing'`
+  - Kein Template nötig (24h-Fenster, Session Message)
+  
+- `processProviderResponse(messageId: number, messageText: string)` - Verarbeitet Antwort des Anbieters
+  - Liest `TourWhatsAppMessage` mit `id = messageId`
+  - KI-basierte Erkennung (OpenAI Function Calling) oder Keyword-Matching:
+    - Keywords für Bestätigung: "confirmado", "si", "ok", "disponible", "acepto"
+    - Keywords für Absage: "no", "cancelado", "no disponible", "ocupado"
+    - Keywords für Alternative: "alternativa", "otro", "sugerencia"
+  - Extrahiert alternative Tour-IDs aus Nachricht (falls vorhanden)
+  - Setzt `action` und `extractedData` in `TourWhatsAppMessage`
+  - Aktualisiert `booking.status` und `booking.externalStatus`
+  - Ruft entsprechende Funktion auf (Bestätigung/Absage/Alternative)
+  
+- `sendConfirmationToCustomer(bookingId: number, paymentLink: string)` - Sendet Bestätigung an Kunden
+  - Liest `booking`
+  - Sendet WhatsApp-Nachricht an `booking.customerPhone`
+  - Nachricht: "Ihre Tour-Buchung wurde bestätigt!\nTour: [Tour-Titel]\nDatum: [tourDate]\nZahlungslink: [paymentLink]"
+  - Speichert in `TourWhatsAppMessage`
+  - Kein Template nötig (24h-Fenster)
+  
 - `sendPaymentLinkToCustomer(bookingId: number, paymentLink: string)` - Sendet Zahlungslink an Kunden
-- `sendCancellationToCustomer(bookingId: number, reason: string)` - Sendet Stornierung an Kunden
+  - Liest `booking`
+  - Sendet WhatsApp-Nachricht an `booking.customerPhone`
+  - Nachricht: "Bitte zahlen Sie für Ihre Tour-Buchung:\n[paymentLink]"
+  - Speichert in `TourWhatsAppMessage`
+  
+- `sendCancellationToCustomer(bookingId: number, reason: string, cancelledBy: 'customer' | 'provider')` - Sendet Stornierung an Kunden
+  - Liest `booking`
+  - Sendet WhatsApp-Nachricht an `booking.customerPhone`
+  - Nachricht: "Ihre Tour-Buchung wurde storniert.\nGrund: [reason]"
+  - Speichert in `TourWhatsAppMessage`
+  
+- `sendAlternativeToCustomer(bookingId: number, alternativeTourIds: number[])` - Sendet alternative Vorschläge an Kunden
+  - Liest `booking` und alternative Touren
+  - Sendet WhatsApp-Nachricht an `booking.customerPhone`
+  - Nachricht: "Für Ihr gewünschtes Datum ist die Tour leider nicht verfügbar. Alternative Vorschläge:\n[Tour 1]\n[Tour 2]"
+  - Speichert in `TourWhatsAppMessage`
+  - Aktualisiert `booking.alternativeTours` mit Tour-IDs
 
 ### 3.5 Routes: `tourRoutes.ts`
 
@@ -444,15 +562,28 @@ app.use('/api/tour-reservations', tourReservationRoutes);
 **Datei:** `backend/src/services/whatsappMessageHandler.ts`
 
 **Erweiterungen:**
-- Keyword-Erkennung für Tour-Buchungen (z.B. "tour booking", "book tour")
-- Funktion: `handleTourBookingRequest(phoneNumber, messageText, branchId)`
-- Funktion: `handleTourProviderResponse(phoneNumber, messageText, branchId)`
+- Erkennung von Tour-Buchungsanfragen vom Anbieter:
+  - Prüft ob `phoneNumber` einer `TourProvider.phone` entspricht
+  - Prüft ob Nachricht zu einer offenen Buchungsanfrage gehört (via `TourWhatsAppMessage` mit `processed = false`)
+  - Ruft `TourWhatsAppService.processProviderResponse()` auf
+  
+- Erkennung von Tour-Buchungen vom Kunden:
+  - Keyword-Erkennung: "tour", "touren", "book tour", "reservar tour"
+  - Ruft `handleTourBookingRequest(phoneNumber, messageText, branchId)` auf
+  - Zeigt verfügbare Touren an (via `get_tours` Function)
 
 **Datei:** `backend/src/services/whatsappFunctionHandlers.ts`
 
 **Neue Funktion:**
 - `get_tours(args, userId, roleId, branchId)` - Holt verfügbare Touren
+  - Filtert nach `isActive = true` und `availableFrom <= heute <= availableTo`
+  - Gibt Liste zurück: `[{ id, title, price, duration, location }]`
+  
 - `book_tour(args, userId, roleId, branchId)` - Bucht eine Tour
+  - Parameter: `tourId`, `tourDate`, `numberOfParticipants`, `customerName`, `customerPhone`
+  - Erstellt `TourBooking`
+  - Bei externer Tour: Ruft `TourWhatsAppService.sendBookingRequestToProvider()` auf
+  - Gibt Bestätigung zurück
 
 ### 3.7 Kommissions-Berechnung
 
@@ -460,8 +591,20 @@ app.use('/api/tour-reservations', tourReservationRoutes);
 
 **Funktionen:**
 - `calculateCommission(bookingId: number)` - Berechnet Kommission für eine Buchung
+  - Liest `tour.totalCommission` oder `tour.totalCommissionPercent`
+  - Liest `tour.sellerCommissionPercent` oder `tour.sellerCommissionFixed`
+  - Berechnet: `sellerCommission = (totalCommission * sellerCommissionPercent / 100)` ODER `sellerCommission = sellerCommissionFixed`
+  - Speichert in `booking.commissionAmount`
+  - Wird automatisch aufgerufen bei Buchungserstellung
 - `getUserCommissions(userId: number, startDate: Date, endDate: Date)` - Holt Kommissionen eines Mitarbeiters
+  - Filtert nach `bookedById = userId` und `bookingDate` zwischen startDate und endDate
+  - Summiert `commissionAmount` aller Buchungen
 - `getUserCommissionStats(userId: number, period: string)` - Statistiken für Mitarbeiter
+  - Anzahl gebuchter Touren
+  - Gesamtkommissionen
+  - Durchschnittliche Kommission pro Tour
+  - Kommissionen nach Tour-Typ gruppiert
+  - Welche Tour wurde von wem wie oft verkauft
 
 ---
 
