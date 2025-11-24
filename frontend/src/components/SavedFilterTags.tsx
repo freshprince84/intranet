@@ -613,17 +613,21 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     });
     
     if (hasMeasurements) {
-      setMeasuredTagWidths(widths);
-      // Nach erfolgreicher Messung: Messmodus beenden und neu berechnen
-      if (isMeasuring) {
-        setIsMeasuring(false);
-        // Trigger Neuberechnung durch setTimeout (nach State-Update)
-        setTimeout(() => {
-          if (containerRef.current) {
-            calculateVisibleTags();
-          }
-        }, 0);
-      }
+      // State-Updates verzögern um React Error #185 zu vermeiden
+      const shouldEndMeasuring = isMeasuring;
+      setTimeout(() => {
+        setMeasuredTagWidths(widths);
+        // Nach erfolgreicher Messung: Messmodus beenden und neu berechnen
+        if (shouldEndMeasuring) {
+          setIsMeasuring(false);
+          // Trigger Neuberechnung durch setTimeout (nach State-Update)
+          setTimeout(() => {
+            if (containerRef.current) {
+              calculateVisibleTags();
+            }
+          }, 0);
+        }
+      }, 0);
     }
   }, [sortedFilters, visibleTagCount, isMeasuring, calculateVisibleTags]);
 
