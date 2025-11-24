@@ -147,48 +147,54 @@ const CerebroLayout: React.FC = () => {
   };
   
   return (
-    <div className={`flex flex-col min-h-screen w-full ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
-      {/* Header-Bereich - Sticky oben */}
-      <div className="sticky top-0 z-30">
-        <CerebroHeader
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        onSearchSubmit={handleSearch}
-        canCreateArticle={canCreateArticle}
-        onCreateArticle={() => navigate('/cerebro/create')}
-        onFilterClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
-        onSortClick={handleSortClick}
-        onSortChange={handleSortChange}
-        activeFilterCount={filterConditions.length}
-        sortConfig={sortConfig}
-        />
+    <div className={`flex flex-col min-h-screen w-full overflow-x-hidden ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
+      {/* Header-Bereich mit max-width-Container */}
+      <div className="w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto">
+          <CerebroHeader
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onSearchSubmit={handleSearch}
+            canCreateArticle={canCreateArticle}
+            onCreateArticle={() => navigate('/cerebro/create')}
+            onFilterClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
+            onSortClick={handleSortClick}
+            onSortChange={handleSortChange}
+            activeFilterCount={filterConditions.length}
+            sortConfig={sortConfig}
+          />
+        </div>
       </div>
       
-      {/* FilterPane (ausklappbar) */}
+      {/* FilterPane (ausklappbar) mit max-width-Container */}
       {isFilterPaneOpen && (
-        <div className="sticky top-[73px] z-20 px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <FilterPane
-            columns={cerebroColumns}
-            onApply={applyFilterConditions}
-            onReset={resetFilterConditions}
-            savedConditions={filterConditions}
-            savedOperators={filterLogicalOperators}
-            tableId={CEREBRO_TABLE_ID}
-          />
+        <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="max-w-7xl mx-auto px-4 py-2">
+            <FilterPane
+              columns={cerebroColumns}
+              onApply={applyFilterConditions}
+              onReset={resetFilterConditions}
+              savedConditions={filterConditions}
+              savedOperators={filterLogicalOperators}
+              tableId={CEREBRO_TABLE_ID}
+            />
+          </div>
         </div>
       )}
       
-      {/* SavedFilterTags */}
-      <div className={`px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${isFilterPaneOpen ? 'sticky top-[145px] z-20' : 'sticky top-[73px] z-20'}`}>
-        <SavedFilterTags
-          tableId={CEREBRO_TABLE_ID}
-          onSelectFilter={applyFilterConditions}
-          onReset={resetFilterConditions}
-          activeFilterName={activeFilterName}
-          selectedFilterId={selectedFilterId}
-          onFilterChange={handleFilterChange}
-          defaultFilterName={t('cerebro.filters.all', 'Alle Artikel')}
-        />
+      {/* SavedFilterTags mit max-width-Container */}
+      <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="max-w-7xl mx-auto px-4 py-2">
+          <SavedFilterTags
+            tableId={CEREBRO_TABLE_ID}
+            onSelectFilter={applyFilterConditions}
+            onReset={resetFilterConditions}
+            activeFilterName={activeFilterName}
+            selectedFilterId={selectedFilterId}
+            onFilterChange={handleFilterChange}
+            defaultFilterName={t('cerebro.filters.all', 'Alle Artikel')}
+          />
+        </div>
       </div>
       
       {/* Haupt-Layout: Sidebar + Content */}
@@ -205,16 +211,12 @@ const CerebroLayout: React.FC = () => {
         </div>
         
         {/* Der Hauptinhalt nimmt den restlichen Platz ein */}
-        <main className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto'} ${
+        <main className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto overflow-x-hidden'} ${
           isMobile 
             ? 'px-0 pt-2 pb-16' // Horizontales Padding auf 0, Bottom-Padding erhöht für den Footer
-            : `pl-4 pt-3 pb-4 ${
-                isTabletOrLarger && sidebarOpen 
-                  ? 'pr-10 md:pr-16 lg:pr-20' 
-                  : 'pr-4'
-              }`
+            : `pl-4 pt-3 pb-4 pr-4`
         }`}>
-          <div className={isMobile ? 'mobile-full-width' : ''}>
+          <div className={`${isMobile ? 'mobile-full-width' : 'max-w-7xl mx-auto'}`}>
             <Outlet context={{ filterConditions, filterLogicalOperators, sortConfig, searchTerm }} />
           </div>
         </main>
