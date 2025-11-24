@@ -723,23 +723,33 @@ model Branch {
 
 ## ✅ Checkliste
 
-### Use Case 1: Gast-Code-Versand
-- [ ] Gast-Identifikation Service erstellen (Telefonnummer + Abfragen)
-- [ ] Conversation State Management für mehrstufige Identifikation
-- [ ] Status-Prüfung & Link-Generierung (Payment & Check-in)
-- [ ] Code-Versand Service erstellen
-- [ ] Keyword-Erkennung erweitern
-- [ ] Conversation Flow für Identifikation implementieren
-- [ ] KI-Prompt erweitern
+### Use Case 1: Gast-Code-Versand ✅ FERTIG
+- [x] Gast-Identifikation Service erstellen (Telefonnummer + Abfragen)
+- [x] Conversation State Management für mehrstufige Identifikation
+- [x] Status-Prüfung & Link-Generierung (Payment & Check-in)
+- [x] Code-Versand Service erstellen
+- [x] Keyword-Erkennung erweitern
+- [x] Conversation Flow für Identifikation implementieren
+- [x] KI-Prompt erweitern
 - [ ] Testen: Gast sendet "code" → Bot identifiziert → Bot sendet Code + Links (falls nötig)
 - [ ] Testen: Gast ohne Telefonnummer → Bot fragt nach Name, Land, Geburtsdatum → Bot identifiziert → Bot sendet Code + Links
 
-### Use Case 2: WhatsApp-Gruppe für Gäste
-- [ ] Gruppen-Erkennung im Webhook
-- [ ] Gruppen-Konfiguration in Branch Settings
-- [ ] Message Handler für Gruppen erweitern
-- [ ] KI-Prompt für Gäste konfigurieren
+### Use Case 2: WhatsApp-Gruppe für Gäste ✅ FERTIG
+- [x] Gruppen-Erkennung im Webhook
+- [x] Gruppen-Konfiguration in Branch Settings
+- [x] Message Handler für Gruppen erweitern
+- [x] KI-Prompt für Gäste konfigurieren
 - [ ] Testen: Bot antwortet in Gäste-Gruppe
+
+### Use Case 3: Mitarbeiter-Integration (Function Calling) ⏳ PLAN BEREIT
+- [ ] Function Definitions erstellen (get_requests, get_todos, get_worktime, get_cerebro_articles, get_user_info)
+- [ ] Function Handlers implementieren (mit Berechtigungsprüfung)
+- [ ] OpenAI API erweitern (tools Parameter, tool_calls verarbeiten)
+- [ ] User Context erweitern (Rollen für Berechtigungen)
+- [ ] Hybrid-Ansatz implementieren (Keywords + Function Calling)
+- [ ] System Prompt erweitern
+- [ ] Testing (einfache + komplexe Anfragen, Berechtigungen, Fehlerbehandlung)
+- [ ] Monitoring & Kosten-Tracking
 
 ### Use Case 3: Mitarbeiter-Integration (erweitert)
 - [ ] Arbeitszeiten-Keyword implementieren
