@@ -259,3 +259,4 @@ Die KI kann aktuell **NICHT** auf folgende Informationen zugreifen:
 - Context-Generierung für KI
 - Optional: Zusätzliche Keywords
 
+

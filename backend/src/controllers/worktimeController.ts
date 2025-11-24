@@ -505,7 +505,8 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
     const periodEndUtc = new Date(`${periodEndStr}T23:59:59.999Z`);
     
     // Aktuelle Zeit für aktive Zeitmessungen (UTC)
-    const nowUtc = new Date();
+    // Date.now() gibt UTC-Millisekunden zurück, new Date() erstellt UTC-Date-Objekt
+    const nowUtc = new Date(Date.now());
         
     // Direkte Suche nach den Einträgen mit universellen UTC-Grenzen
     // WICHTIG: Auch aktive Zeitmessungen (endTime: null) holen, die im Zeitraum starten
@@ -603,8 +604,8 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
         
         // KORREKT: Wie im WorktimeTracker - direkte UTC-Differenz berechnen
         // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
-        // effectiveEndTime ist einfach nowUtc (aktuelle UTC-Zeit)
-        effectiveEndTime = nowUtc;
+        // effectiveEndTime ist die aktuelle UTC-Zeit
+        effectiveEndTime = new Date(Date.now());
         
         // Für Logging: Berechne Differenz und konvertiere zu lokaler Zeit (falls timezone vorhanden)
         if (entry.timezone) {
@@ -631,8 +632,9 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
       
       if (entry.endTime === null) {
         // Aktive Zeitmessung: DIREKTE DIFFERENZ wie im Modal
-        // KORREKT: entry.startTime ist bereits ein UTC-Date-Objekt, verwende es direkt
-        // Date.now() gibt UTC-Millisekunden zurück (seit 1.1.1970 UTC)
+        // KORREKT: entry.startTime ist in UTC gespeichert, Date.now() gibt UTC-Millisekunden zurück
+        // Beide Werte sind UTC, daher ist die Differenz korrekt
+        // Das Problem war NICHT die Berechnung, sondern möglicherweise die Verteilung auf Tage
         const diffMs = Date.now() - entry.startTime.getTime();
         hoursWorked = diffMs / (1000 * 60 * 60);
         
