@@ -77,15 +77,18 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
     };
   }, []);
 
-  // Sidepane-Status verwalten
+  // Sidepane-Status verwalten - mit setTimeout um React Error #185 zu vermeiden
   useEffect(() => {
-    if (isOpen && !isMobile) {
-      openSidepaneRef.current();
-    } else {
-      closeSidepaneRef.current();
-    }
+    const timeoutId = setTimeout(() => {
+      if (isOpen && !isMobile) {
+        openSidepaneRef.current();
+      } else {
+        closeSidepaneRef.current();
+      }
+    }, 0);
     
     return () => {
+      clearTimeout(timeoutId);
       closeSidepaneRef.current();
     };
   }, [isOpen, isMobile]);
