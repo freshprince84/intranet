@@ -71,14 +71,12 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
   useEffect(() => {
     if (isOpen && !isMobile) {
       openSidepane();
-    } else if (!isOpen) {
+    } else {
       closeSidepane();
     }
     
     return () => {
-      if (!isOpen) {
-        closeSidepane();
-      }
+      closeSidepane();
     };
   }, [isOpen, isMobile, openSidepane, closeSidepane]);
 
