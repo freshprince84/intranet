@@ -10,6 +10,26 @@ import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { stopWorkers } from './queues';
 import { prisma } from './utils/prisma';
 
+// ENCRYPTION_KEY-Prüfung beim Start
+const encryptionKey = process.env.ENCRYPTION_KEY;
+if (!encryptionKey) {
+  console.error('\n❌ KRITISCHER FEHLER: ENCRYPTION_KEY ist nicht gesetzt!');
+  console.error('   Der Passwort-Manager benötigt einen Verschlüsselungsschlüssel.');
+  console.error('   Bitte setzen Sie ENCRYPTION_KEY in der .env Datei.');
+  console.error('   Generierung: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
+  process.exit(1);
+}
+
+if (encryptionKey.length !== 64) {
+  console.error('\n❌ KRITISCHER FEHLER: ENCRYPTION_KEY hat falsche Länge!');
+  console.error(`   Erwartet: 64 hex characters (32 bytes)`);
+  console.error(`   Aktuell: ${encryptionKey.length} characters`);
+  console.error('   Generierung: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
+  process.exit(1);
+}
+
+console.log('✅ ENCRYPTION_KEY validiert');
+
 // HTTP-Server mit WebSocket-Support erstellen
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);

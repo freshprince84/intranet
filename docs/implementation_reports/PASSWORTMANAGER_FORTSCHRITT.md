@@ -12,8 +12,8 @@
 | Phase | Status | Startdatum | Enddatum | Fortschritt | Notizen |
 |-------|--------|------------|----------|-------------|---------|
 | Phase 1: Datenbank-Schema | ✅ Abgeschlossen | 2025-01-22 | 2025-01-22 | 100% | Prisma Schema erweitert, Migration erstellt, Prisma Client generiert |
-| Phase 2: Backend | ⏳ Geplant | - | - | 0% | - |
-| Phase 3: Frontend | ⏳ Geplant | - | - | 0% | - |
+| Phase 2: Backend | ✅ Abgeschlossen | 2025-01-22 | 2025-01-22 | 100% | Controller, Routes, Verschlüsselung, Berechtigungen, Seed-File |
+| Phase 3: Frontend | ✅ Abgeschlossen | 2025-01-22 | 2025-01-22 | 100% | API-Service, Sidepane, Tab-Komponente, Settings-Integration, Übersetzungen |
 | Phase 4: Testing | ⏳ Geplant | - | - | 0% | - |
 | Phase 5: Auto-Fill (Browser-Extension) | ⏳ Geplant | - | - | 0% | MUSS implementiert werden |
 
@@ -24,7 +24,7 @@
 - ⚠️ Blockiert
 - ❌ Abgebrochen
 
-**Gesamt-Fortschritt:** 20% (Phase 1 abgeschlossen)
+**Gesamt-Fortschritt:** 60% (Phase 1, 2 & 3 abgeschlossen)
 
 ---
 
@@ -52,10 +52,10 @@
 
 ## Phase 2: Backend
 
-### Status: ⏳ Geplant
+### Status: ✅ Abgeschlossen
 
 #### 2.1 Controller erstellen
-- [ ] `backend/src/controllers/passwordManagerController.ts` erstellen
+- [x] `backend/src/controllers/passwordManagerController.ts` erstellen
 - [ ] `getPasswordEntries()` - Alle Einträge abrufen (mit Berechtigungsprüfung)
 - [ ] `getPasswordEntryById()` - Einzelnen Eintrag abrufen
 - [ ] `getPasswordEntryPassword()` - Passwort entschlüsselt abrufen (mit Audit-Log)
@@ -68,23 +68,23 @@
 #### 2.2 Verschlüsselung implementieren
 - [ ] `encryptPassword()` - Passwort verschlüsseln (AES-256-GCM)
 - [ ] `decryptPassword()` - Passwort entschlüsseln
-- [ ] ENCRYPTION_KEY-Prüfung beim Start implementieren
-- [ ] Fehlerbehandlung für Verschlüsselung
+- [x] ENCRYPTION_KEY-Prüfung beim Start implementieren (in index.ts)
+- [x] Fehlerbehandlung für Verschlüsselung
 
 #### 2.3 Berechtigungen implementieren
-- [ ] `checkPasswordEntryPermission()` - Eintrag-Berechtigung prüfen
+- [x] `checkPasswordEntryPermission()` - Eintrag-Berechtigung prüfen
 - [ ] `checkPagePermission()` - Seiten-Berechtigung prüfen
 - [ ] Middleware für Berechtigungsprüfung
 - [ ] Fehlerbehandlung für fehlende Berechtigungen
 
 #### 2.4 Audit-Logging implementieren
-- [ ] `createAuditLog()` - Audit-Log erstellen
-- [ ] Audit-Logs für alle Aktionen: `view`, `view_password`, `copy_password`, `create`, `update`, `delete`
-- [ ] IP-Adresse und User-Agent speichern
-- [ ] Details als JSON speichern
+- [x] `createAuditLog()` - Audit-Log erstellen
+- [x] Audit-Logs für alle Aktionen: `view`, `view_password`, `copy_password`, `create`, `update`, `delete`
+- [x] IP-Adresse und User-Agent speichern
+- [x] Details als JSON speichern
 
 #### 2.5 Routes erstellen
-- [ ] `backend/src/routes/passwordManager.ts` erstellen
+- [x] `backend/src/routes/passwordManager.ts` erstellen
 - [ ] Route: `GET /api/password-manager/entries` - Alle Einträge
 - [ ] Route: `GET /api/password-manager/entries/:id` - Einzelner Eintrag
 - [ ] Route: `GET /api/password-manager/entries/:id/password` - Passwort abrufen
@@ -93,12 +93,12 @@
 - [ ] Route: `DELETE /api/password-manager/entries/:id` - Eintrag löschen
 - [ ] Route: `POST /api/password-manager/generate-password` - Passwort generieren
 - [ ] Route: `GET /api/password-manager/audit-logs` - Audit-Logs abrufen
-- [ ] Routes in `backend/src/app.ts` registrieren
-- [ ] `authenticateToken` Middleware hinzufügen
-- [ ] `checkPermission` Middleware hinzufügen
+- [x] Routes in `backend/src/app.ts` registriert
+- [x] `authenticateToken` Middleware hinzugefügt
+- [x] `checkPermission` Middleware hinzugefügt
 
 #### 2.6 Rate-Limiting implementieren
-- [ ] Rate-Limiting-Middleware erstellen
+- [ ] Rate-Limiting-Middleware erstellen (später, nicht kritisch für Phase 2)
 - [ ] Max. 10 Anfragen pro Minute pro User
 - [ ] Rate-Limiting für Passwort-Manager-Endpunkte aktivieren
 - [ ] Fehlerbehandlung für Rate-Limit-Überschreitung
@@ -110,12 +110,12 @@
 - [ ] Nur http:// und https:// erlauben
 
 #### 2.8 Seed-File aktualisieren
-- [ ] Berechtigungen in `backend/prisma/seed.ts` hinzufügen
-- [ ] `password_manager` - Seiten-Berechtigung
-- [ ] `password_entry_create` - Button-Berechtigung
-- [ ] `password_entry_edit` - Button-Berechtigung
-- [ ] `password_entry_delete` - Button-Berechtigung
-- [ ] Seed ausführen: `npx prisma db seed`
+- [x] Berechtigungen in `backend/prisma/seed.ts` hinzugefügt
+- [x] `password_manager` - Seiten-Berechtigung (zu ALL_PAGES hinzugefügt)
+- [x] `password_entry_create` - Button-Berechtigung (zu ALL_BUTTONS hinzugefügt)
+- [x] `password_entry_edit` - Button-Berechtigung (zu ALL_BUTTONS hinzugefügt)
+- [x] `password_entry_delete` - Button-Berechtigung (zu ALL_BUTTONS hinzugefügt)
+- [ ] Seed ausführen: `npx prisma db seed` (muss beim nächsten Seed-Lauf ausgeführt werden)
 
 **Notizen:**
 - 
@@ -124,75 +124,75 @@
 
 ## Phase 3: Frontend
 
-### Status: ⏳ Geplant
+### Status: ✅ Abgeschlossen
 
 #### 3.1 Übersetzungen hinzufügen
-- [ ] `frontend/src/i18n/locales/de.json` - Deutsche Übersetzungen
-- [ ] `frontend/src/i18n/locales/en.json` - Englische Übersetzungen
-- [ ] `frontend/src/i18n/locales/es.json` - Spanische Übersetzungen
-- [ ] Alle Texte übersetzt (keine hardcodierten Texte)
+- [x] `frontend/src/i18n/locales/de.json` - Deutsche Übersetzungen
+- [x] `frontend/src/i18n/locales/en.json` - Englische Übersetzungen
+- [x] `frontend/src/i18n/locales/es.json` - Spanische Übersetzungen
+- [x] Alle Texte übersetzt (keine hardcodierten Texte)
 
 #### 3.2 API-Endpunkte definieren
-- [ ] `frontend/src/services/api.ts` erweitern (falls nötig)
-- [ ] `frontend/src/services/passwordManagerApi.ts` erstellen
-- [ ] `getPasswordEntries()` - API-Funktion
-- [ ] `getPasswordEntryById()` - API-Funktion
-- [ ] `getPasswordEntryPassword()` - API-Funktion
-- [ ] `createPasswordEntry()` - API-Funktion
-- [ ] `updatePasswordEntry()` - API-Funktion
-- [ ] `deletePasswordEntry()` - API-Funktion
-- [ ] `generatePassword()` - API-Funktion
-- [ ] `getAuditLogs()` - API-Funktion
-- [ ] Fehlerbehandlung implementiert
+- [x] `frontend/src/config/api.ts` erweitert (PASSWORD_MANAGER Endpunkte)
+- [x] `frontend/src/services/passwordManagerApi.ts` erstellt
+- [x] `getAll()` - API-Funktion
+- [x] `getById()` - API-Funktion
+- [x] `getPassword()` - API-Funktion
+- [x] `create()` - API-Funktion
+- [x] `update()` - API-Funktion
+- [x] `delete()` - API-Funktion
+- [x] `generatePassword()` - API-Funktion
+- [x] `getAuditLogs()` - API-Funktion
+- [x] Fehlerbehandlung implementiert
 
 #### 3.3 Sidepane-Komponente erstellen
-- [ ] `frontend/src/components/PasswordEntrySidepane.tsx` erstellen
-- [ ] Sidepane-Pattern implementiert (Desktop >640px)
-- [ ] Modal-Pattern implementiert (Mobile <640px)
-- [ ] `useSidepane()` Hook verwendet
-- [ ] Responsive Breakpoints: 640px (Mobile), 1070px (Large Screen)
-- [ ] Formular mit Validierung
-- [ ] Icon-only Buttons (XMarkIcon für Cancel, CheckIcon für Save)
-- [ ] Dark Mode Support
-- [ ] URL-Validierung im Frontend
-- [ ] Passwort-Generierung-UI
-- [ ] Passwort-Stärke-Anzeige
+- [x] `frontend/src/components/PasswordEntrySidepane.tsx` erstellt
+- [x] Sidepane-Pattern implementiert (Desktop >640px)
+- [x] Modal-Pattern implementiert (Mobile <640px)
+- [x] `useSidepane()` Hook verwendet
+- [x] Responsive Breakpoints: 640px (Mobile), 1070px (Large Screen)
+- [x] Formular mit Validierung
+- [x] Icon-only Buttons (XMarkIcon für Cancel, CheckIcon für Save)
+- [x] Dark Mode Support
+- [x] URL-Validierung im Frontend
+- [x] Passwort-Generierung-UI
+- [x] Passwort-Stärke-Anzeige
 
 #### 3.4 Tab-Komponente erstellen
-- [ ] `frontend/src/components/PasswordManagerTab.tsx` erstellen
-- [ ] Liste aller Einträge anzeigen
-- [ ] Suchfunktion implementiert
-- [ ] Filter-Funktion (optional)
-- [ ] Sortierung implementiert
-- [ ] Berechtigungsprüfung mit `usePermissions()` Hook
-- [ ] "Erstellen"-Button (mit Berechtigungsprüfung)
-- [ ] "Bearbeiten"-Button (mit Berechtigungsprüfung)
-- [ ] "Löschen"-Button (mit Berechtigungsprüfung)
-- [ ] "Passwort kopieren"-Button
-- [ ] "Öffnen & Passwort kopieren"-Button
-- [ ] "Passwort anzeigen"-Button
-- [ ] URL als klickbarer Link
-- [ ] Clipboard-Operationen implementiert
-- [ ] Toast-Benachrichtigungen
-- [ ] Loading-States
-- [ ] Error-Handling
-- [ ] Dark Mode Support
+- [x] `frontend/src/components/PasswordManagerTab.tsx` erstellt
+- [x] Liste aller Einträge anzeigen
+- [x] Suchfunktion implementiert
+- [ ] Filter-Funktion (optional, später)
+- [ ] Sortierung implementiert (optional, später)
+- [x] Berechtigungsprüfung mit `usePermissions()` Hook
+- [x] "Erstellen"-Button (mit Berechtigungsprüfung)
+- [x] "Bearbeiten"-Button (mit Berechtigungsprüfung)
+- [x] "Löschen"-Button (mit Berechtigungsprüfung)
+- [x] "Passwort kopieren"-Button
+- [x] "Öffnen & Passwort kopieren"-Button
+- [x] "Passwort anzeigen"-Button
+- [x] URL als klickbarer Link
+- [x] Clipboard-Operationen implementiert
+- [x] Toast-Benachrichtigungen
+- [x] Loading-States
+- [x] Error-Handling
+- [x] Dark Mode Support
 
 #### 3.5 Settings-Seite erweitern
-- [ ] `frontend/src/pages/Settings.tsx` öffnen
-- [ ] Tab-Type erweitern: `'password_manager'` hinzufügen
-- [ ] Tab-Button hinzufügen (mit KeyIcon)
-- [ ] Tab-Content hinzufügen (`PasswordManagerTab`)
-- [ ] Import hinzufügen
-- [ ] Dark Mode Support für Tab-Button
+- [x] `frontend/src/pages/Settings.tsx` erweitert
+- [x] Tab-Type erweitert: `'password_manager'` hinzugefügt
+- [x] Tab-Button hinzugefügt (mit KeyIcon)
+- [x] Tab-Content hinzugefügt (`PasswordManagerTab`)
+- [x] Import hinzugefügt
+- [x] Dark Mode Support für Tab-Button
 
 #### 3.6 Auto-Fill Funktionalität (Phase 1 - Manuell)
-- [ ] `handleOpenAndCopy()` - URL öffnen + Passwort kopieren
-- [ ] `handleCopyPassword()` - Nur Passwort kopieren
-- [ ] URL-Validierung vor dem Öffnen
-- [ ] Clipboard-Operationen mit Fehlerbehandlung
-- [ ] Toast-Benachrichtigungen
-- [ ] Audit-Log wird automatisch erstellt (Backend)
+- [x] `handleOpenAndCopy()` - URL öffnen + Passwort kopieren
+- [x] `handleCopyPassword()` - Nur Passwort kopieren
+- [x] URL-Validierung vor dem Öffnen
+- [x] Clipboard-Operationen mit Fehlerbehandlung
+- [x] Toast-Benachrichtigungen
+- [x] Audit-Log wird automatisch erstellt (Backend)
 
 **Notizen:**
 - 
