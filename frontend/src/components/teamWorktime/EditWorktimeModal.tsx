@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
+import { Dialog } from '@headlessui/react';
 import { XMarkIcon, TrashIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { format, parse } from 'date-fns';
 
 // Hilfsfunktion für lokale Datumsberechnungen
 import { createLocalDate } from '../../utils/dateUtils.ts';
+import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 
 interface WorktimeEntry {
   id: number;
@@ -45,10 +45,43 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
   selectedDate
 }) => {
   const { t } = useTranslation();
+  const { openSidepane, closeSidepane } = useSidepane();
   const [editedEntries, setEditedEntries] = useState<EditableEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   
+  // Responsive Erkennung
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+      setIsLargeScreen(window.innerWidth > 1070);
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Sidepane-Status verwalten
+  useEffect(() => {
+    if (isOpen && !isMobile) {
+      openSidepane();
+    } else if (!isOpen) {
+      closeSidepane();
+    }
+    
+    return () => {
+      if (!isOpen) {
+        closeSidepane();
+      }
+    };
+  }, [isOpen, isMobile, openSidepane, closeSidepane]);
+
   // Initialisiere die bearbeitbaren Einträge, wenn sich die Props ändern
   useEffect(() => {
     if (entries && entries.length > 0) {
@@ -189,166 +222,190 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
     }
   };
   
-  // Formatierungshilfe für bessere Lesbarkeit der Zeiten
-  const formatTimeForDisplay = (timeString: string) => {
-    const [hours, minutes] = timeString.split(':');
-    return `${hours}:${minutes}`;
-  };
-  
-  return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-10" onClose={onClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
+  // Render-Funktion für den Formularinhalt
+  const renderForm = () => (
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {t('teamWorktime.modal.editWorktimes.description', { 
+            userName, 
+            date: selectedDate.split('-').reverse().join('.') 
+          })}
+        </p>
+      </div>
+
+      {error && (
+        <div className="p-2 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded">
+          {error}
+        </div>
+      )}
+
+      <div>
+        <div className="overflow-hidden border dark:border-gray-700 rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.number')}</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.startTime')}</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.endTime')}</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.actions')}</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {editedEntries.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    {t('teamWorktime.modal.editWorktimes.noEntries')}
+                  </td>
+                </tr>
+              ) : (
+                editedEntries.map((entry, index) => (
+                  <tr key={entry.id} className={entry.isDeleted ? 'bg-red-50 dark:bg-red-900' : ''}>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {index + 1}
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <input
+                        type="time"
+                        step="1"
+                        className={`w-full rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
+                        value={entry.startTimeTime.substring(0, 5)}
+                        onChange={(e) => handleStartTimeChange(index, e.target.value + ':00')}
+                        disabled={entry.isDeleted}
+                      />
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <input
+                        type="time"
+                        step="1"
+                        className={`w-full rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
+                        value={entry.endTimeTime ? entry.endTimeTime.substring(0, 5) : ''}
+                        onChange={(e) => {
+                          const value = e.target.value ? e.target.value + ':00' : null;
+                          handleEndTimeChange(index, value);
+                        }}
+                        disabled={entry.isDeleted}
+                      />
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleDelete(index)}
+                        className={`p-1 rounded ${entry.isDeleted ? 'text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300' : 'text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300'}`}
+                        title={entry.isDeleted ? t('teamWorktime.modal.editWorktimes.restore') : t('teamWorktime.modal.editWorktimes.markForDelete')}
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700">
+        <button
+          type="button"
+          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={onClose}
+          disabled={loading}
+          title={t('common.cancel')}
         >
-          <div className="fixed inset-0 bg-black bg-opacity-25" />
-        </Transition.Child>
+          <XMarkIcon className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={handleSave}
+          disabled={loading || Boolean(error)}
+          title={loading ? t('common.saving') : t('common.save')}
+        >
+          {loading ? (
+            <ArrowPathIcon className="h-5 w-5 animate-spin" />
+          ) : (
+            <CheckIcon className="h-5 w-5" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
 
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
-                <div className="flex justify-between items-start">
-                  <Dialog.Title
-                    as="h3"
-                    className="text-lg font-medium leading-6 text-gray-900 dark:text-white"
-                  >
-                    {t('teamWorktime.modal.editWorktimes.title')}
-                  </Dialog.Title>
-                  <button
-                    type="button"
-                    className="bg-white dark:bg-gray-800 rounded-md text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onClick={onClose}
-                  >
-                    <span className="sr-only">{t('common.close')}</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                  </button>
-                </div>
+  // Für Mobile (unter 640px) - klassisches Modal
+  if (isMobile) {
+    return (
+      <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <Dialog.Title className="text-lg font-semibold dark:text-white">
+                {t('teamWorktime.modal.editWorktimes.title')}
+              </Dialog.Title>
+              <button
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
 
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('teamWorktime.modal.editWorktimes.description', { 
-                      userName, 
-                      date: selectedDate.split('-').reverse().join('.') 
-                    })}
-                  </p>
-                </div>
-
-                {error && (
-                  <div className="mt-2 p-2 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded">
-                    {error}
-                  </div>
-                )}
-
-                <div className="mt-4">
-                  <div className="overflow-hidden border dark:border-gray-700 rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.number')}</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.startTime')}</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.endTime')}</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.actions')}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {editedEntries.length === 0 ? (
-                          <tr>
-                            <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                              {t('teamWorktime.modal.editWorktimes.noEntries')}
-                            </td>
-                          </tr>
-                        ) : (
-                          editedEntries.map((entry, index) => (
-                            <tr key={entry.id} className={entry.isDeleted ? 'bg-red-50 dark:bg-red-900' : ''}>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                {index + 1}
-                              </td>
-                              <td className="px-4 py-2 whitespace-nowrap">
-                                <input
-                                  type="time"
-                                  step="1"
-                                  className={`rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
-                                  value={entry.startTimeTime.substring(0, 5)}
-                                  onChange={(e) => handleStartTimeChange(index, e.target.value + ':00')}
-                                  disabled={entry.isDeleted}
-                                />
-                              </td>
-                              <td className="px-4 py-2 whitespace-nowrap">
-                                <input
-                                  type="time"
-                                  step="1"
-                                  className={`rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
-                                  value={entry.endTimeTime ? entry.endTimeTime.substring(0, 5) : ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value ? e.target.value + ':00' : null;
-                                    handleEndTimeChange(index, value);
-                                  }}
-                                  disabled={entry.isDeleted}
-                                />
-                              </td>
-                              <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleDelete(index)}
-                                  className={`p-1 rounded ${entry.isDeleted ? 'text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300' : 'text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300'}`}
-                                  title={entry.isDeleted ? t('teamWorktime.modal.editWorktimes.restore') : t('teamWorktime.modal.editWorktimes.markForDelete')}
-                                >
-                                  <TrashIcon className="h-5 w-5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={onClose}
-                    disabled={loading}
-                    title={t('common.cancel')}
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleSave}
-                    disabled={loading || Boolean(error)}
-                    title={loading ? t('common.saving') : t('common.save')}
-                  >
-                    {loading ? (
-                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <CheckIcon className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
+            <div className="p-4">
+              {renderForm()}
+            </div>
+          </Dialog.Panel>
         </div>
       </Dialog>
-    </Transition>
+    );
+  }
+
+  // Für Desktop (ab 640px) - Sidepane
+  // WICHTIG: Sidepane muss IMMER gerendert bleiben für Transition
+  return (
+    <>
+      {/* Backdrop - nur wenn offen und <= 1070px */}
+      {isOpen && !isLargeScreen && (
+        <div 
+          className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" 
+          aria-hidden="true" 
+          onClick={onClose}
+          style={{
+            opacity: isOpen ? 1 : 0,
+            transition: 'opacity 300ms ease-out'
+          }}
+        />
+      )}
+      
+      {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
+      <div 
+        className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{
+          transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          pointerEvents: isOpen ? 'auto' : 'none'
+        }}
+        aria-hidden={!isOpen}
+        role="dialog"
+        aria-modal={isOpen}
+      >
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+          <h2 className="text-lg font-semibold dark:text-white">
+            {t('teamWorktime.modal.editWorktimes.title')}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto flex-1 min-h-0">
+          {renderForm()}
+        </div>
+      </div>
+    </>
   );
 };
 
