@@ -97,13 +97,14 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
     try {
       setIsStarting(true);
       
-      // KORREKT: new Date() erstellt bereits ein UTC-Date-Objekt, das korrekt in der DB gespeichert wird
-      // Keine manuelle UTC-Korrektur erforderlich (siehe Backend: startConsultation Zeile 43)
+      // Zeitzone-korrigierte aktuelle Zeit (gleiche Logik wie bei stopConsultation)
+      const correctedStartTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+      
       const consultation = await consultationApi.startConsultation({
         branchId: selectedBranch,
         clientId,
         notes: notes || '',
-        startTime: new Date().toISOString()
+        startTime: correctedStartTime.toISOString()
       });
 
       setActiveConsultation(consultation);
@@ -140,10 +141,10 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
 
   const stopConsultation = async () => {
     try {
-      // KORREKT: new Date() erstellt bereits ein UTC-Date-Objekt, das korrekt in der DB gespeichert wird
-      // Keine manuelle UTC-Korrektur erforderlich (siehe Backend: stopConsultation Zeile 91)
+      const correctedEndTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+      
       const stoppedConsultation = await consultationApi.stopConsultation({
-        endTime: new Date().toISOString(),
+        endTime: correctedEndTime.toISOString(),
         notes: notes || undefined
       });
       setActiveConsultation(null);
@@ -205,23 +206,41 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
     try {
       setIsStarting(true);
       
-      // KORREKT: datetime-local Input wird als lokale Zeit interpretiert
-      // new Date() konvertiert automatisch korrekt in UTC für die DB
-      // Keine manuelle UTC-Korrektur erforderlich (siehe Backend: startConsultation/stopConsultation)
-      const manualStart = new Date(manualStartTime);
-      const manualEnd = new Date(manualEndTime);
+      /* KRITISCHE TIMEZONE-BEHANDLUNG:
+       * Problem: Inkonsistenz zwischen normaler und manueller Beratung!
+       * 
+       * NORMAL WORKING (✅):
+       * const correctedTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+       * 
+       * MANUAL BROKEN (❌):
+       * convertDatetimeLocalToApi() führt zu 5h Versatz
+       * 
+       * LÖSUNG: Gleiche getTimezoneOffset-Logik für beide verwenden!
+       * 
+       * datetime-local Input: "2024-01-15T14:01"
+       * → new Date("2024-01-15T14:01") erstellt lokales Date-Objekt
+       * → getTimezoneOffset() korrigiert zur gleichen Zeit wie bei normaler Beratung
+       * → KONSISTENTE Zeitbehandlung!
+       */
       
-      // Starte die Beratung mit der Startzeit
+      // ✅ KORRIGIERT: Verwende gleiche Logik wie bei normalem Start/Stop
+      const manualStart = new Date(manualStartTime);
+      const correctedStartTime = new Date(manualStart.getTime() - manualStart.getTimezoneOffset() * 60000);
+      
+      const manualEnd = new Date(manualEndTime);
+      const correctedEndTime = new Date(manualEnd.getTime() - manualEnd.getTimezoneOffset() * 60000);
+      
+      // Starte die Beratung mit der korrigierten Startzeit
       const consultation = await consultationApi.startConsultation({
         branchId: selectedBranch,
         clientId: selectedClient.id,
         notes: notes || '',
-        startTime: manualStart.toISOString()
+        startTime: correctedStartTime.toISOString()  // ✅ Konsistent mit normaler Beratung
       });
       
-      // Beende sie sofort mit der Endzeit
+      // Beende sie sofort mit der korrigierten Endzeit
       const stoppedConsultation = await consultationApi.stopConsultation({
-        endTime: manualEnd.toISOString(),
+        endTime: correctedEndTime.toISOString(),      // ✅ Konsistent mit normaler Beratung
         notes: notes || ''
       });
       
