@@ -67,15 +67,20 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
     };
   }, []);
 
-  // Sidepane-Status verwalten - wie in EditRequestModal/EditTaskModal
+  // Sidepane-Status verwalten - verzögert um React Error #185 zu vermeiden
   useEffect(() => {
-    if (isOpen) {
-      openSidepane();
-    } else {
+    if (!isOpen) {
       closeSidepane();
+      return;
     }
     
+    // Verzögere openSidepane um sicherzustellen, dass Rendering abgeschlossen ist
+    const timeoutId = setTimeout(() => {
+      openSidepane();
+    }, 0);
+    
     return () => {
+      clearTimeout(timeoutId);
       closeSidepane();
     };
   }, [isOpen, openSidepane, closeSidepane]);
