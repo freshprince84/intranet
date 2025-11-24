@@ -1204,18 +1204,15 @@ export const checkAndStopExceededWorktimes = async () => {
       if (totalWorkTimeHours >= worktime.user.normalWorkingHours) {
         console.log(`Schwellenwert erreicht oder überschritten. Stoppe Zeiterfassung automatisch.`);
         
-        // Zeiterfassung beenden - speichere die LOKALE Zeit, nicht UTC
-        // WICHTIG: Wir verwenden hier ein neues Date-Objekt, um sicherzustellen, dass
-        // die Zeit korrekt gespeichert wird, ohne Zeitzonenumrechnung
-        // Erstelle ein frisches Date-Objekt, genau wie in stopWorktime
+        // Zeiterfassung beenden - speichere die aktuelle Zeit direkt
+        // KORREKT: new Date() gibt bereits die korrekte Zeit zurück, die als lokale Zeit gespeichert wird
+        // Siehe stopWorktime Zeile 175 für die korrekte Referenz-Implementierung
         const endTimeNow = new Date();
-        // Manuelle Korrektur für UTC-Speicherung - kompensiert den Zeitzonenversatz
-        const utcCorrectedTime = new Date(endTimeNow.getTime() - endTimeNow.getTimezoneOffset() * 60000);
         
         const stoppedWorktime = await prisma.workTime.update({
           where: { id: worktime.id },
           data: { 
-            endTime: utcCorrectedTime,
+            endTime: endTimeNow,
             // Wenn bisher keine Zeitzone gespeichert ist, aktualisiere sie (wie in stopWorktime)
             ...(worktime.timezone ? {} : { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })
           }

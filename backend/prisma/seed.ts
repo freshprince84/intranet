@@ -26,7 +26,8 @@ const ALL_PAGES = [
   'organization_management', // = organisation (Hauptseite)
   'cerebro',
   'settings',
-  'profile'
+  'profile',
+  'tour_management' // NEU: Touren-Verwaltung
 ];
 
 // ALLE TABELLEN IM SYSTEM
@@ -46,7 +47,9 @@ const ALL_TABLES = [
   'settings',          // auf settings
   'monthly_reports',    // auf consultations/reports
   'organization_join_requests', // auf organization_management
-  'organization_users'  // auf organization_management
+  'organization_users',  // auf organization_management
+  'tours',             // NEU: auf tour_management
+  'tour_bookings'      // NEU: auf tour_management
 ];
 
 // ALLE BUTTONS IM SYSTEM
@@ -110,7 +113,19 @@ const ALL_BUTTONS = [
   // Payroll Buttons
   'payroll_generate',
   'payroll_export',
-  'payroll_edit'
+  'payroll_edit',
+  
+  // Tour Management Buttons
+  'tour_create',
+  'tour_edit',
+  'tour_delete',
+  'tour_view',
+  'tour_booking_create',
+  'tour_booking_edit',
+  'tour_booking_cancel',
+  'tour_provider_create',
+  'tour_provider_edit',
+  'tour_provider_delete'
 ];
 
 async function main() {
@@ -330,6 +345,7 @@ async function main() {
     userPermissionMap['page_cerebro'] = 'both';
     userPermissionMap['page_settings'] = 'both';
     userPermissionMap['page_profile'] = 'both';
+    userPermissionMap['page_tour_management'] = 'read'; // NEU: User können Touren-Verwaltung sehen
     userPermissionMap['page_organization_management'] = 'read'; // Sichtbar für User OHNE Organisation
     // NICHT: team_worktime_control (bleibt 'none')
     
@@ -340,6 +356,8 @@ async function main() {
     userPermissionMap['table_notifications'] = 'both';  // allgemein
     userPermissionMap['table_monthly_reports'] = 'both'; // consultations
     userPermissionMap['table_reservations'] = 'both';    // worktracker (in To Do's Box)
+    userPermissionMap['table_tours'] = 'read';           // NEU: User können Touren sehen
+    userPermissionMap['table_tour_bookings'] = 'read';  // NEU: User können Buchungen sehen
     // NICHT: tasks, users, roles, team_worktime, worktime, branches (bleiben 'none')
     // users & roles bleiben 'none', damit Tabs sichtbar aber inaktiv sind (PRO-Markierung)
     
@@ -357,6 +375,8 @@ async function main() {
     userPermissionMap['button_settings_profile'] = 'both';
     userPermissionMap['button_worktime_start'] = 'both';
     userPermissionMap['button_worktime_stop'] = 'both';
+    userPermissionMap['button_tour_view'] = 'both';           // NEU: User können Touren ansehen
+    userPermissionMap['button_tour_booking_create'] = 'both'; // NEU: User können Touren buchen
     // NICHT: todo_*, task_*, user_*, role_*, database_*, settings_system, payroll_*, worktime_edit/delete
 
     await ensureAllPermissionsForRole(userRole.id, userPermissionMap);
@@ -378,9 +398,14 @@ async function main() {
     hamburgerPermissionMap['page_settings'] = 'both';
     hamburgerPermissionMap['page_profile'] = 'both';
     hamburgerPermissionMap['page_cerebro'] = 'both';
+    hamburgerPermissionMap['page_tour_management'] = 'read'; // NEU: Hamburger können Touren-Verwaltung sehen
     hamburgerPermissionMap['button_cerebro'] = 'both';
     hamburgerPermissionMap['button_settings_profile'] = 'both';
     hamburgerPermissionMap['table_notifications'] = 'both';
+    hamburgerPermissionMap['table_tours'] = 'read';          // NEU: Hamburger können Touren sehen
+    hamburgerPermissionMap['table_tour_bookings'] = 'read';   // NEU: Hamburger können Buchungen sehen
+    hamburgerPermissionMap['button_tour_view'] = 'both';     // NEU: Hamburger können Touren ansehen
+    hamburgerPermissionMap['button_tour_booking_create'] = 'both'; // NEU: Hamburger können Touren buchen
 
     await ensureAllPermissionsForRole(hamburgerRole.id, hamburgerPermissionMap);
 

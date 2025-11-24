@@ -457,18 +457,54 @@ model Organization {
 
 **Endpunkte:**
 - `GET /api/tours` - Alle Touren (mit Filtern)
+  - Filter: `type`, `isActive`, `branchId`, `organizationId`
+  - Suche: `search` (nach Titel)
+  - Pagination: `page`, `limit`
+  - Sortierung: `sortBy`, `sortOrder`
 - `GET /api/tours/:id` - Einzelne Tour
+  - Include: `bookings`, `reservations`, `createdBy`, `externalProvider`
 - `POST /api/tours` - Neue Tour erstellen
+  - Body: Alle Tour-Felder
+  - Validierung: `title` required, `organizationId` required
+  - Setzt `createdById` auf aktuellen User
+  - Erstellt Notification: Tour gebucht (an alle in org)
 - `PUT /api/tours/:id` - Tour aktualisieren
-- `DELETE /api/tours/:id` - Tour löschen
+  - Body: Zu aktualisierende Felder
+  - Validierung: Tour muss existieren
+- `PUT /api/tours/:id/toggle-active` - Tour aktiv/inaktiv setzen (Soft Delete)
+  - Body: `{ isActive: boolean }`
+  - Statt DELETE-Endpunkt (analog zu Users)
 - `GET /api/tours/:id/bookings` - Buchungen einer Tour
+  - Filter: `status`, `paymentStatus`, `bookedById`
 - `GET /api/tours/export` - Export für Website/Soziale Medien (JSON)
+  - Parameter: `fields` (komma-separiert, z.B. "id,title,price,imageUrl")
+  - Parameter: `isActive` (default: true)
+  - Parameter: `type`, `branchId`
+  - Response: Nur angegebene Felder (Kommissionen z.B. nicht immer)
 
 **Berechtigungen:**
 - `checkPermission('tour_management', 'read', 'page')` - Seiten-Berechtigung
 - `checkPermission('tour_create', 'write', 'button')` - Erstellen
 - `checkPermission('tour_edit', 'write', 'button')` - Bearbeiten
-- `checkPermission('tour_delete', 'write', 'button')` - Löschen
+- `checkPermission('tour_delete', 'write', 'button')` - Löschen (Soft Delete)
+
+**Bild-Upload:**
+- `POST /api/tours/:id/image` - Hauptbild hochladen
+  - Multer-Upload (analog zu `cerebroMediaController.ts`)
+  - Speichert in `uploads/tours/`
+  - Dateiname: `tour-${tourId}-${timestamp}.${ext}`
+  - Erlaubte Formate: JPEG, PNG, GIF, WEBP
+  - Maximale Größe: 10MB
+  - Aktualisiert `tour.imageUrl` mit `/api/tours/:id/image`
+- `POST /api/tours/:id/gallery` - Gallery-Bild hochladen
+  - Multer-Upload
+  - Speichert in `uploads/tours/gallery/`
+  - Dateiname: `tour-${tourId}-gallery-${timestamp}.${ext}`
+  - Fügt URL zu `tour.galleryUrls` JSON-Array hinzu
+- `GET /api/tours/:id/image` - Hauptbild abrufen
+  - Streamt Datei aus `uploads/tours/`
+- `GET /api/tours/:id/gallery/:index` - Gallery-Bild abrufen
+  - Streamt Datei aus `uploads/tours/gallery/`
 
 ### 3.2 Controller: `tourBookingController.ts`
 
@@ -476,14 +512,74 @@ model Organization {
 
 **Endpunkte:**
 - `GET /api/tour-bookings` - Alle Buchungen (mit Filtern)
+  - Filter: `tourId`, `status`, `paymentStatus`, `bookedById`, `branchId`, `organizationId`
+  - Suche: `search` (nach customerName, customerEmail, customerPhone)
+  - Datum-Filter: `bookingDateFrom`, `bookingDateTo`, `tourDateFrom`, `tourDateTo`
+  - Pagination: `page`, `limit`
 - `GET /api/tour-bookings/:id` - Einzelne Buchung
+  - Include: `tour`, `bookedBy`, `reservations`, `whatsappMessages`
 - `POST /api/tour-bookings` - Neue Buchung erstellen
+  - Body: `tourId`, `tourDate`, `numberOfParticipants`, `customerName`, `customerEmail`, `customerPhone`, `customerNotes`, `bookedById`
+  - Validierung:
+    - `tourId` muss existieren und `isActive = true`
+    - `tourDate` muss in Zukunft sein
+    - `numberOfParticipants` muss zwischen `tour.minParticipants` und `tour.maxParticipants` sein
+    - `totalPrice` wird berechnet: `tour.price * numberOfParticipants`
+  - Automatisch:
+    - Berechnet `totalPrice`
+    - Ruft `CommissionService.calculateCommission()` auf
+    - Setzt `bookedById` auf aktuellen User (falls nicht angegeben)
+    - Generiert Payment Link via `BoldPaymentService.createPaymentLink()` (analog zu Reservations)
+    - Bei externer Tour: Ruft `TourWhatsAppService.sendBookingRequestToProvider()` auf
+  - Erstellt Notifications:
+    - Tour gebucht (an alle in org)
+    - Tour angefragt (an definierte Rolle in branch in org) - nur bei externer Tour
 - `PUT /api/tour-bookings/:id` - Buchung aktualisieren
+  - Body: Zu aktualisierende Felder
+  - Validierung: Gleiche wie bei Create
+  - Bei Änderung von `totalPrice`: Neuberechnung der Kommission
 - `DELETE /api/tour-bookings/:id` - Buchung löschen
+  - Hard Delete (nur wenn keine Reservations verknüpft sind)
 - `POST /api/tour-bookings/:id/cancel` - Buchung stornieren
+  - Body: `{ reason: string, cancelledBy: 'customer' | 'provider' }`
+  - Setzt `status = 'cancelled'`, `cancelledBy`, `cancelledAt`, `cancelledReason`
+  - Ruft `TourWhatsAppService.sendCancellationToCustomer()` auf
+  - Erstellt Notification: Tour gecancelt von kunde/anbieter
 - `POST /api/tour-bookings/:id/complete` - Buchung als abgeschlossen markieren
+  - Setzt `status = 'completed'`
 - `GET /api/tour-bookings/user/:userId` - Buchungen eines Mitarbeiters (für Statistiken)
+  - Filter: `startDate`, `endDate`, `status`
+  - Gibt Liste aller Buchungen zurück
 - `GET /api/tour-bookings/user/:userId/commissions` - Kommissionen eines Mitarbeiters
+  - Parameter: `startDate`, `endDate`
+  - Response:
+    ```json
+    {
+      "totalCommissions": 1500.00,
+      "totalBookings": 10,
+      "averageCommission": 150.00,
+      "byTourType": {
+        "own": 800.00,
+        "external": 700.00
+      },
+      "bookings": [
+        {
+          "id": 1,
+          "tourTitle": "Tour 1",
+          "commissionAmount": 150.00,
+          "bookingDate": "2025-01-15"
+        }
+      ],
+      "tourSales": [
+        {
+          "tourId": 1,
+          "tourTitle": "Tour 1",
+          "salesCount": 5,
+          "totalCommission": 750.00
+        }
+      ]
+    }
+    ```
 
 ### 3.3 Controller: `tourReservationController.ts`
 
@@ -491,10 +587,21 @@ model Organization {
 
 **Endpunkte:**
 - `POST /api/tour-reservations` - Tour mit Reservation verknüpfen
+  - Body: `{ tourId, bookingId, reservationId, tourPrice, accommodationPrice, currency }`
+  - Validierung:
+    - `tourPrice + accommodationPrice` muss `<= reservation.amount` sein
+    - Alle IDs müssen existieren
+  - Erstellt `TourReservation`
+  - Berechnet automatisch: `tourPricePending = tourPrice`, `accommodationPending = accommodationPrice`
 - `PUT /api/tour-reservations/:id` - Verknüpfung aktualisieren
+  - Body: `{ tourPrice, accommodationPrice, tourPricePaid, accommodationPaid }`
+  - Berechnet automatisch: `tourPricePending = tourPrice - tourPricePaid`, `accommodationPending = accommodationPrice - accommodationPaid`
 - `DELETE /api/tour-reservations/:id` - Verknüpfung löschen
+  - Hard Delete (Cascade)
 - `GET /api/tour-reservations/reservation/:reservationId` - Verknüpfungen einer Reservation
+  - Include: `tour`, `booking`
 - `GET /api/tour-reservations/booking/:bookingId` - Verknüpfungen einer Buchung
+  - Include: `tour`, `reservation`
 
 ### 3.4 Service: `tourWhatsAppService.ts`
 
@@ -545,16 +652,48 @@ model Organization {
   - Speichert in `TourWhatsAppMessage`
   - Aktualisiert `booking.alternativeTours` mit Tour-IDs
 
-### 3.5 Routes: `tourRoutes.ts`
+### 3.5 Controller: `tourProviderController.ts`
+
+**Datei:** `backend/src/controllers/tourProviderController.ts`
+
+**Endpunkte:**
+- `GET /api/tour-providers` - Alle Anbieter (mit Filtern)
+- `GET /api/tour-providers/:id` - Einzelner Anbieter
+- `POST /api/tour-providers` - Neuen Anbieter erstellen
+- `PUT /api/tour-providers/:id` - Anbieter aktualisieren
+- `DELETE /api/tour-providers/:id` - Anbieter löschen (nur wenn keine Touren verknüpft sind)
+
+**Berechtigungen:**
+- `checkPermission('tour_management', 'read', 'page')` - Seiten-Berechtigung
+- `checkPermission('tour_provider_create', 'write', 'button')` - Erstellen
+- `checkPermission('tour_provider_edit', 'write', 'button')` - Bearbeiten
+- `checkPermission('tour_provider_delete', 'write', 'button')` - Löschen
+
+### 3.6 Routes: `tourRoutes.ts`
 
 **Datei:** `backend/src/routes/tourRoutes.ts`
 
 **Registrierung in `backend/src/index.ts`:**
 ```typescript
 import tourRoutes from './routes/tourRoutes';
+import tourBookingRoutes from './routes/tourBookingRoutes';
+import tourReservationRoutes from './routes/tourReservationRoutes';
+import tourProviderRoutes from './routes/tourProviderRoutes';
+
 app.use('/api/tours', tourRoutes);
 app.use('/api/tour-bookings', tourBookingRoutes);
 app.use('/api/tour-reservations', tourReservationRoutes);
+app.use('/api/tour-providers', tourProviderRoutes);
+```
+
+**Bild-Upload-Routes:**
+```typescript
+// In tourRoutes.ts
+import { upload } from '../controllers/tourImageController';
+router.post('/:id/image', authenticate, checkPermission('tour_edit', 'write', 'button'), upload.single('image'), tourImageController.uploadImage);
+router.get('/:id/image', tourImageController.getImage);
+router.post('/:id/gallery', authenticate, checkPermission('tour_edit', 'write', 'button'), upload.single('image'), tourImageController.uploadGalleryImage);
+router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 ```
 
 ### 3.6 WhatsApp-Integration erweitern
@@ -647,22 +786,29 @@ app.use('/api/tour-reservations', tourReservationRoutes);
 **Datei:** `frontend/src/components/ToursManagementTab.tsx`
 
 **Funktionalität:**
-1. Liste aller Touren anzeigen (Card-View oder Table-View)
+1. Liste aller Touren anzeigen (Card-View UND Table-View, wählbar wie bei Requests/Tasks)
 2. Neue Tour erstellen (Modal)
 3. Tour bearbeiten (Modal)
-4. Tour löschen (mit Bestätigung)
+4. Tour aktiv/inaktiv setzen (Soft Delete, statt löschen)
 5. Tour-Details anzeigen
 6. Buchungen einer Tour anzeigen
-7. Filter/Suche (nach Titel, Typ, Status, Branch)
+7. Filter/Suche (Standard-Filtersystem wie bei Requests)
+   - Filter-Spalten: `title`, `type`, `isActive`, `branch`, `price`, `location`, `createdBy`
+   - Operatoren: `equals`, `contains`, `startsWith`, `endsWith` (Text), `equals`, `notEquals` (Status), `greater_than`, `less_than` (Zahlen)
+   - Standardfilter: "Aktive", "Inaktive", "Alle"
 8. Export-Funktion (für Website/Soziale Medien)
+   - Dialog zur Feldauswahl (Checkboxen für jedes Feld)
+   - Kommissionen-Felder standardmäßig ausgeblendet
 
 **Komponenten-Struktur:**
 - Haupt-Container mit Liste
-- Card für jede Tour
+- Card für jede Tour (wenn Card-View)
+- Table für jede Tour (wenn Table-View)
 - Modal für Create/Edit (`TourModal.tsx`)
 - Modal für Tour-Details (`TourDetailsModal.tsx`)
 - Modal für Buchungen (`TourBookingsModal.tsx`)
-- Filter-Komponente
+- Filter-Komponente (`FilterPane` - Standard-Komponente)
+- Bild-Upload-Komponente (analog zu CerebroMedia)
 
 **Berechtigungen:**
 - `usePermissions()` Hook verwenden
@@ -701,13 +847,19 @@ app.use('/api/tour-reservations', tourReservationRoutes);
 **Datei:** `frontend/src/components/WorktimeStats.tsx`
 
 **Erweiterungen:**
-1. Neuer Tab "Kommissionen" hinzufügen
+1. Neuer Tab "Kommissionen" hinzufügen (neben "Wochenübersicht", "Quinzena", etc.)
 2. Kommissionen-Statistiken anzeigen:
-   - Gesamtkommissionen (Zeitraum)
-   - Anzahl gebuchter Touren
-   - Durchschnittliche Kommission pro Tour
-   - Kommissionen pro Tour-Typ
+   - Gesamtkommissionen (Zeitraum) - Summe aller `commissionAmount`
+   - Anzahl gebuchter Touren - Anzahl Buchungen mit `bookedById = userId`
+   - Durchschnittliche Kommission pro Tour - `totalCommissions / totalBookings`
+   - Kommissionen pro Tour-Typ - Gruppiert nach `tour.type`
+   - Welche Tour wurde von wem wie oft verkauft:
+     - Tabelle: Tour-Titel | Anzahl Verkäufe | Gesamtkommission
+     - Sortierbar nach Anzahl oder Kommission
 3. Liste aller Buchungen mit Kommissionen
+   - Spalten: Tour-Titel, Buchungsdatum, Tour-Datum, Anzahl Teilnehmer, Gesamtpreis, Kommission, Status
+   - Filter: Zeitraum, Tour-Typ, Status
+   - Sortierbar
 
 ### 4.6 API-Client
 
@@ -745,14 +897,155 @@ export const API_ENDPOINTS = {
 **Datei:** `frontend/src/types/tour.ts`
 
 **Neue Datei mit allen Tour-bezogenen Typen:**
-- `Tour`
-- `TourBooking`
-- `TourReservation`
-- `TourWhatsAppMessage`
-- `TourType`
-- `TourStatus`
-- `TourBookingStatus`
-- etc.
+```typescript
+export enum TourType {
+  OWN = 'own',
+  EXTERNAL = 'external'
+}
+
+export enum TourBookingStatus {
+  CONFIRMED = 'confirmed',
+  CANCELLED = 'cancelled',
+  COMPLETED = 'completed',
+  NO_SHOW = 'no_show'
+}
+
+export enum MessageDirection {
+  OUTGOING = 'outgoing',
+  INCOMING = 'incoming'
+}
+
+export enum MessageStatus {
+  SENT = 'sent',
+  DELIVERED = 'delivered',
+  READ = 'read',
+  FAILED = 'failed'
+}
+
+export interface Tour {
+  id: number;
+  title: string;
+  description?: string | null;
+  type: TourType;
+  isActive: boolean;
+  duration?: number | null;
+  maxParticipants?: number | null;
+  minParticipants?: number | null;
+  price?: number | string | null;
+  currency?: string | null;
+  location?: string | null;
+  meetingPoint?: string | null;
+  includes?: string | null;
+  excludes?: string | null;
+  requirements?: string | null;
+  totalCommission?: number | string | null;
+  totalCommissionPercent?: number | string | null;
+  sellerCommissionPercent?: number | string | null;
+  sellerCommissionFixed?: number | string | null;
+  externalProviderId?: number | null;
+  externalProvider?: TourProvider | null;
+  externalBookingUrl?: string | null;
+  imageUrl?: string | null;
+  galleryUrls?: string[] | null;
+  availableFrom?: string | null;
+  availableTo?: string | null;
+  recurringSchedule?: any | null;
+  organizationId: number;
+  branchId?: number | null;
+  branch?: { id: number; name: string } | null;
+  createdById?: number | null;
+  createdBy?: { id: number; firstName: string; lastName: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TourProvider {
+  id: number;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  contactPerson?: string | null;
+  notes?: string | null;
+  organizationId: number;
+  branchId?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TourBooking {
+  id: number;
+  tourId: number;
+  tour?: Tour | null;
+  bookingDate: string;
+  tourDate: string;
+  numberOfParticipants: number;
+  totalPrice: number | string;
+  currency: string;
+  customerName: string;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  customerNotes?: string | null;
+  paymentStatus: PaymentStatus;
+  amountPaid?: number | string | null;
+  amountPending?: number | string | null;
+  paymentLink?: string | null;
+  bookedById?: number | null;
+  bookedBy?: { id: number; firstName: string; lastName: string } | null;
+  commissionAmount?: number | string | null;
+  commissionCalculatedAt?: string | null;
+  status: TourBookingStatus;
+  cancelledBy?: string | null;
+  cancelledAt?: string | null;
+  cancelledReason?: string | null;
+  isExternal: boolean;
+  externalBookingId?: string | null;
+  externalStatus?: string | null;
+  externalMessage?: string | null;
+  alternativeTours?: number[] | null;
+  organizationId: number;
+  branchId?: number | null;
+  branch?: { id: number; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TourReservation {
+  id: number;
+  tourId: number;
+  tour?: Tour | null;
+  bookingId: number;
+  booking?: TourBooking | null;
+  reservationId: number;
+  reservation?: Reservation | null;
+  tourPrice: number | string;
+  accommodationPrice: number | string;
+  currency: string;
+  tourPricePaid?: number | string | null;
+  tourPricePending?: number | string | null;
+  accommodationPaid?: number | string | null;
+  accommodationPending?: number | string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TourWhatsAppMessage {
+  id: number;
+  bookingId: number;
+  booking?: TourBooking | null;
+  direction: MessageDirection;
+  message: string;
+  phoneNumber: string;
+  sentAt: string;
+  status: MessageStatus;
+  errorMessage?: string | null;
+  processed: boolean;
+  processedAt?: string | null;
+  action?: string | null;
+  extractedData?: any | null;
+  createdAt: string;
+  updatedAt: string;
+}
+```
 
 ---
 
@@ -944,19 +1237,56 @@ const hamburgerPermissionMap: Record<string, AccessLevel> = {
 - System sendet WhatsApp-Nachricht an Kunde
 - Nachricht enthält: Bestätigung/Absage/Alternative + Zahlungslink (falls bestätigt)
 
-### 7.2 WhatsApp-Nachrichten-Templates
+### 7.2 WhatsApp-Nachrichten-Format (KEINE Templates nötig)
 
-**Templates für externe Anbieter:**
-- Buchungsanfrage
-- Bestätigung
-- Absage
-- Alternative
+**WICHTIG:** Da Kunde zuerst schreibt (24h-Fenster), werden Session Messages verwendet - KEINE Templates nötig!
 
-**Templates für Kunden:**
-- Buchungsbestätigung
-- Zahlungslink
-- Stornierung
-- Alternative Vorschläge
+**Nachrichten-Format für externe Anbieter:**
+- Buchungsanfrage: Plain Text
+  ```
+  Nueva solicitud de reserva para [Tour-Titel]
+  
+  Cliente: [customerName]
+  Fecha deseada: [tourDate]
+  Participantes: [numberOfParticipants]
+  Contacto: [customerPhone]
+  Email: [customerEmail]
+  
+  Por favor confirme disponibilidad.
+  ```
+
+**Nachrichten-Format für Kunden:**
+- Bestätigung: Plain Text
+  ```
+  ¡Su reserva de tour ha sido confirmada!
+  
+  Tour: [Tour-Titel]
+  Fecha: [tourDate]
+  Participantes: [numberOfParticipants]
+  
+  Por favor realice el pago:
+  [paymentLink]
+  ```
+
+- Absage: Plain Text
+  ```
+  Lamentamos informarle que su reserva de tour ha sido cancelada.
+  
+  Tour: [Tour-Titel]
+  Fecha: [tourDate]
+  Motivo: [reason]
+  ```
+
+- Alternative: Plain Text
+  ```
+  Para la fecha solicitada, el tour no está disponible.
+  
+  Tours alternativos sugeridos:
+  1. [Tour 1 - Titel] - [Preis]
+  2. [Tour 2 - Titel] - [Preis]
+  
+  ¿Desea reservar alguna de estas alternativas?
+  ```
 
 ---
 
@@ -992,9 +1322,13 @@ const hamburgerPermissionMap: Record<string, AccessLevel> = {
 **Endpoint:** `GET /api/tours/export`
 
 **Parameter:**
-- `status`: Nur aktive Touren
-- `type`: Nur eigene oder externe Touren
-- `branchId`: Nur Touren eines Branches
+- `fields`: Komma-separierte Liste der Felder (z.B. "id,title,price,imageUrl")
+  - Verfügbare Felder: `id`, `title`, `description`, `type`, `price`, `currency`, `duration`, `maxParticipants`, `minParticipants`, `location`, `meetingPoint`, `includes`, `excludes`, `requirements`, `imageUrl`, `galleryUrls`, `availableFrom`, `availableTo`
+  - Standard: Alle Felder außer Kommissions-Felder
+- `isActive`: Boolean (default: true) - Nur aktive Touren
+- `type`: `own` oder `external` - Filter nach Typ
+- `branchId`: Number - Nur Touren eines Branches
+- `organizationId`: Number - Nur Touren einer Organisation
 
 **Response:**
 ```json
@@ -1004,17 +1338,27 @@ const hamburgerPermissionMap: Record<string, AccessLevel> = {
       "id": 1,
       "title": "Tour-Titel",
       "description": "Beschreibung",
+      "type": "own",
       "price": 100.00,
       "currency": "COP",
       "duration": 4,
+      "maxParticipants": 20,
+      "minParticipants": 2,
       "location": "Ort",
-      "imageUrl": "https://...",
-      "availableFrom": "2025-01-01",
-      "availableTo": "2025-12-31"
+      "meetingPoint": "Treffpunkt",
+      "includes": "Was ist inkludiert",
+      "excludes": "Was ist nicht inkludiert",
+      "requirements": "Anforderungen",
+      "imageUrl": "/api/tours/1/image",
+      "galleryUrls": ["/api/tours/1/gallery/0", "/api/tours/1/gallery/1"],
+      "availableFrom": "2025-01-01T00:00:00Z",
+      "availableTo": "2025-12-31T23:59:59Z"
     }
   ]
 }
 ```
+
+**HINWEIS:** Kommissions-Felder werden NICHT exportiert (außer explizit angefordert)
 
 ### 9.2 Verwendung
 
@@ -1087,9 +1431,40 @@ const hamburgerPermissionMap: Record<string, AccessLevel> = {
 - `t()` Funktion verwenden
 
 ### 11.3 Notifications
-- Bei wichtigen Aktionen Notifications erstellen
-- Backend-Übersetzungen in `translations.ts` hinzufügen
-- Frontend-Übersetzungen in i18n-Locales hinzufügen
+
+**Konkrete Notification-Events:**
+
+1. **Tour gebucht** (`tour_booking_created`)
+   - Empfänger: Alle User in Organisation (`organizationId`)
+   - Trigger: `POST /api/tour-bookings` (Buchung erstellt)
+   - Text: "Tour '[Tour-Titel]' wurde von [bookedBy] für [customerName] gebucht"
+
+2. **Tour angefragt** (`tour_booking_requested`)
+   - Empfänger: Definierte Rolle in Branch in Organisation (konfigurierbar, z.B. "Tour Manager")
+   - Trigger: `POST /api/tour-bookings` mit `isExternal = true` (externe Tour-Buchung)
+   - Text: "Neue Tour-Anfrage für '[Tour-Titel]' von [customerName]"
+
+3. **Tour bezahlt** (`tour_booking_paid`)
+   - Empfänger: `bookedBy` User (Verkäufer)
+   - Trigger: Bold Payment Webhook (Zahlung erhalten)
+   - Text: "Tour-Buchung für '[Tour-Titel]' wurde bezahlt. Ihre Kommission: [commissionAmount]"
+
+4. **Tour gecancelt von Kunde** (`tour_booking_cancelled_by_customer`)
+   - Empfänger: Alle User in Organisation
+   - Trigger: `POST /api/tour-bookings/:id/cancel` mit `cancelledBy = 'customer'`
+   - Text: "Tour-Buchung für '[Tour-Titel]' wurde vom Kunden storniert"
+
+5. **Tour gecancelt von Anbieter** (`tour_booking_cancelled_by_provider`)
+   - Empfänger: Alle User in Organisation
+   - Trigger: `POST /api/tour-bookings/:id/cancel` mit `cancelledBy = 'provider'`
+   - Text: "Tour-Buchung für '[Tour-Titel]' wurde vom Anbieter storniert"
+
+**Backend-Übersetzungen:**
+- `getTourNotificationText()` in `backend/src/utils/translations.ts`
+- Übersetzungen für de, en, es
+
+**Frontend-Übersetzungen:**
+- Notification-Texte in `frontend/src/i18n/locales/de.json`, `en.json`, `es.json`
 
 ### 11.4 WhatsApp-Integration
 - Branch-basierte WhatsApp-Integration beachten
@@ -1097,27 +1472,99 @@ const hamburgerPermissionMap: Record<string, AccessLevel> = {
 - Fehlerbehandlung implementieren
 
 ### 11.5 Preisaufschlüsselung
-- Tourpreis und Bettenpreis getrennt tracken
-- Zahlungsstatus für beide Preise separat
-- In Reservation-Details anzeigen
+
+**Flow:**
+1. Mitarbeiter verknüpft Tour-Buchung mit Reservation (manuell)
+2. Mitarbeiter gibt ein:
+   - `tourPrice`: Anteil Tourpreis (manuell)
+   - `accommodationPrice`: Anteil Bettenpreis (manuell)
+3. System validiert: `tourPrice + accommodationPrice <= reservation.amount`
+4. System berechnet automatisch:
+   - `tourPricePending = tourPrice` (initial)
+   - `accommodationPending = accommodationPrice` (initial)
+5. Bei Zahlungseingang (manuell aktualisiert):
+   - Mitarbeiter aktualisiert `tourPricePaid` und/oder `accommodationPaid`
+   - System berechnet neu: `tourPricePending = tourPrice - tourPricePaid`
+   - System berechnet neu: `accommodationPending = accommodationPrice - accommodationPaid`
+
+**Anzeige:**
+- In Reservation-Details: Preisaufschlüsselung anzeigen
+- In Tour-Buchung-Details: Verknüpfte Reservations mit Preisaufschlüsselung anzeigen
+
+### 11.6 Zahlungsstatus-Tracking (analog zu Reservations)
+
+**Automatisch (via Bold Payment Webhook):**
+- `amountPaid` wird automatisch aktualisiert wenn Zahlung eingeht
+- `amountPending` wird automatisch berechnet: `totalPrice - amountPaid`
+- `paymentStatus` wird automatisch aktualisiert:
+  - `paid`: Wenn `amountPaid >= totalPrice`
+  - `partially_paid`: Wenn `amountPaid > 0 && amountPaid < totalPrice`
+  - `pending`: Wenn `amountPaid = 0`
+
+**Manuell:**
+- Mitarbeiter kann `amountPaid` manuell anpassen (z.B. bei Barzahlung)
+- System berechnet `amountPending` automatisch neu
+
+### 11.7 Soft Delete (analog zu Users)
+
+**Statt Hard Delete:**
+- `DELETE /api/tours/:id` wird NICHT implementiert
+- Stattdessen: `PUT /api/tours/:id/toggle-active` mit `{ isActive: false }`
+- Touren mit `isActive = false` werden standardmäßig ausgeblendet
+- Filter "Inaktive" zeigt Touren mit `isActive = false`
+- Verhindert Löschung: `onDelete: Restrict` bei `TourBooking.tourId`
+- Grund: Kommissionen und Verkaufsstatistiken bleiben erhalten
+
+### 11.8 Validierungen
+
+**Tour-Erstellung:**
+- `title`: Required, min 3 Zeichen, max 200 Zeichen
+- `organizationId`: Required
+- `price`: Wenn gesetzt, muss >= 0 sein
+- `maxParticipants`: Wenn gesetzt, muss >= `minParticipants` sein
+- `minParticipants`: Wenn gesetzt, muss >= 1 sein
+- `availableFrom`: Wenn gesetzt, muss <= `availableTo` sein
+- `externalProviderId`: Wenn `type = 'external'`, muss gesetzt sein
+
+**Buchung-Erstellung:**
+- `tourId`: Required, Tour muss existieren und `isActive = true`
+- `tourDate`: Required, muss in Zukunft sein (>= heute)
+- `numberOfParticipants`: Required, muss >= 1 sein
+- `numberOfParticipants`: Muss zwischen `tour.minParticipants` und `tour.maxParticipants` sein
+- `customerName`: Required, min 2 Zeichen
+- `customerPhone` oder `customerEmail`: Mindestens eines muss gesetzt sein
+- `totalPrice`: Wird automatisch berechnet: `tour.price * numberOfParticipants`
+
+**Verknüpfung Tour-Reservation:**
+- `tourPrice + accommodationPrice`: Muss <= `reservation.amount` sein
+- `tourPrice`: Muss >= 0 sein
+- `accommodationPrice`: Muss >= 0 sein
+- Alle IDs müssen existieren
 
 ---
 
 ## 12. TESTING-CHECKLISTE
 
-- [ ] Touren erstellen/bearbeiten/löschen
+- [ ] Touren erstellen/bearbeiten/aktiv-inaktiv setzen
+- [ ] Tour-Provider erstellen/bearbeiten/löschen
+- [ ] Bilder hochladen (Hauptbild + Gallery)
 - [ ] Buchungen erstellen/bearbeiten/stornieren
+- [ ] Kommissions-Berechnung korrekt (fixe Zahl und Prozent)
+- [ ] Payment Link wird generiert (analog Reservations)
+- [ ] Zahlungsstatus wird automatisch aktualisiert (via Webhook)
 - [ ] Tour mit Reservation verknüpfen
-- [ ] Preisaufschlüsselung korrekt
-- [ ] Zahlungsstatus korrekt
-- [ ] Kommissions-Berechnung korrekt
-- [ ] WhatsApp-Nachrichten werden gesendet
-- [ ] WhatsApp-Antworten werden verarbeitet
-- [ ] Export-API funktioniert
+- [ ] Preisaufschlüsselung korrekt (manuell eingegeben, automatisch berechnet)
+- [ ] WhatsApp-Nachrichten werden gesendet (an Anbieter und Kunde)
+- [ ] WhatsApp-Antworten werden verarbeitet (Bestätigung/Absage/Alternative)
+- [ ] Export-API funktioniert (mit Feldauswahl)
+- [ ] Filter funktionieren (Standard-Filtersystem)
+- [ ] Card-View und Table-View funktionieren
 - [ ] Berechtigungen funktionieren (Frontend + Backend)
 - [ ] Übersetzungen funktionieren (de, en, es)
-- [ ] Notifications werden erstellt
-- [ ] Mitarbeiter-Statistiken zeigen Kommissionen
+- [ ] Notifications werden erstellt (alle 5 Events)
+- [ ] Mitarbeiter-Statistiken zeigen Kommissionen (alle Metriken)
+- [ ] Soft Delete funktioniert (isActive statt löschen)
+- [ ] Validierungen funktionieren (alle Regeln)
 
 ---
 
