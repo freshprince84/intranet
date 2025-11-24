@@ -77,25 +77,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signIn = async (credentials: { username: string; password: string }) => {
     try {
       setLoading(true);
+      console.log('[AuthContext] Starting login for:', credentials.username);
+      
       // Die login-Methode erwartet ein LoginCredentials-Objekt
       const response = await authApi.login({
         username: credentials.username,
         password: credentials.password
       });
       
+      console.log('[AuthContext] Login response received:', {
+        hasToken: !!response?.token,
+        hasUser: !!response?.user,
+        hasRefreshToken: !!response?.refreshToken
+      });
+      
       // Backend gibt direkt token, refreshToken und user zurück
       const { token, refreshToken, user } = response;
 
+      if (!token) {
+        console.error('[AuthContext] No token in response!');
+        throw new Error('Kein Token in der Antwort erhalten');
+      }
+
+      if (!user) {
+        console.error('[AuthContext] No user in response!');
+        throw new Error('Keine Benutzerdaten in der Antwort erhalten');
+      }
+
       // Daten im AsyncStorage speichern
       await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
+      console.log('[AuthContext] Token saved to storage');
+      
       if (refreshToken) {
         await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+        console.log('[AuthContext] RefreshToken saved to storage');
       }
+      
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      console.log('[AuthContext] User saved to storage');
 
       setUser(user);
-    } catch (error) {
-      console.error('Login-Fehler:', error);
+      console.log('[AuthContext] User state updated, isAuthenticated should be:', !!user);
+    } catch (error: any) {
+      console.error('[AuthContext] Login-Fehler:', error);
+      console.error('[AuthContext] Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
       throw error;
     } finally {
       setLoading(false);

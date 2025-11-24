@@ -25,7 +25,8 @@ export class WhatsAppMessageHandler {
     phoneNumber: string,
     messageText: string,
     branchId: number,
-    mediaUrl?: string
+    mediaUrl?: string,
+    groupId?: string
   ): Promise<string> {
     try {
       // 1. Normalisiere Telefonnummer
@@ -124,10 +125,29 @@ export class WhatsAppMessageHandler {
     try {
       console.log('[WhatsApp Message Handler] Suche User:', { phoneNumber, branchId });
       
-      // Versuche exakte Übereinstimmung
+      // Normalisiere Telefonnummer für Suche (verschiedene Formate)
+      const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
+      const phoneWithoutPlus = normalizedPhone.startsWith('+') ? normalizedPhone.substring(1) : normalizedPhone;
+      const phoneWithPlus = normalizedPhone.startsWith('+') ? normalizedPhone : `+${normalizedPhone}`;
+      
+      // Alle möglichen Formate für Suche
+      const searchFormats = [
+        normalizedPhone,
+        phoneWithoutPlus,
+        phoneWithPlus,
+        phoneNumber, // Original (falls nicht normalisiert)
+        phoneNumber.replace(/[\s-]/g, ''), // Ohne Leerzeichen/Bindestriche
+      ];
+      
+      // Entferne Duplikate
+      const uniqueFormats = [...new Set(searchFormats)];
+      
+      console.log('[WhatsApp Message Handler] Suche mit Formaten:', uniqueFormats);
+      
+      // Versuche exakte Übereinstimmung mit allen Formaten
       let user = await prisma.user.findFirst({
         where: {
-          phoneNumber: phoneNumber,
+          OR: uniqueFormats.map(format => ({ phoneNumber: format })),
           branches: {
             some: {
               branchId: branchId
@@ -148,43 +168,11 @@ export class WhatsAppMessageHandler {
         return user;
       }
 
-      // Fallback: Suche auch ohne + (falls WhatsApp ohne + sendet)
-      if (phoneNumber.startsWith('+')) {
-        const phoneWithoutPlus = phoneNumber.substring(1);
-        console.log('[WhatsApp Message Handler] Versuche Suche ohne +:', phoneWithoutPlus);
-        user = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { phoneNumber: phoneNumber },
-              { phoneNumber: phoneWithoutPlus },
-              { phoneNumber: `+${phoneWithoutPlus}` }
-            ],
-            branches: {
-              some: {
-                branchId: branchId
-              }
-            }
-          },
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phoneNumber: true
-          }
-        });
-
-        if (user) {
-          console.log('[WhatsApp Message Handler] User gefunden (mit Fallback):', user.id);
-          return user;
-        }
-      }
-
       // Fallback: Suche ohne Branch-Filter (falls User in anderem Branch ist)
       console.log('[WhatsApp Message Handler] Exakte Suche fehlgeschlagen, versuche ohne Branch-Filter...');
       const userWithBranches = await prisma.user.findFirst({
         where: {
-          phoneNumber: phoneNumber
+          OR: uniqueFormats.map(format => ({ phoneNumber: format }))
         },
         select: {
           id: true,

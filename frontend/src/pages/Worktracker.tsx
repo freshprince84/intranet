@@ -295,7 +295,6 @@ const Worktracker: React.FC = () => {
     const [isSendInvitationSidepaneOpen, setIsSendInvitationSidepaneOpen] = useState(false);
     const [selectedReservationForPasscode, setSelectedReservationForPasscode] = useState<Reservation | null>(null);
     const [isSendPasscodeSidepaneOpen, setIsSendPasscodeSidepaneOpen] = useState(false);
-    const [reservationsRefreshKey, setReservationsRefreshKey] = useState(0); // Wird erhöht, um Notification-Logs neu zu laden
     
     // Reservations Filter States (analog zu Tasks)
     const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
@@ -545,8 +544,6 @@ const Worktracker: React.FC = () => {
             const reservationsData = response.data?.data || response.data || [];
             console.log('📋 Reservations geladen:', reservationsData.length, 'Reservations');
             setReservations(reservationsData);
-            // Erhöhe Refresh-Key, damit Notification-Logs neu geladen werden
-            setReservationsRefreshKey(prev => prev + 1);
         } catch (err: any) {
             console.error('Fehler beim Laden der Reservations:', err);
             const errorMessage = err.response?.data?.message || t('reservations.loadError', 'Fehler beim Laden der Reservations');
@@ -912,20 +909,12 @@ const Worktracker: React.FC = () => {
     
     // Reservations Filter Functions
     const applyReservationFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
-        console.log('🔄 applyReservationFilterConditions called:', {
-            conditionsCount: conditions.length,
-            operatorsCount: operators.length,
-            sortDirectionsCount: sortDirections?.length || 0,
-            conditions,
-            operators,
-            sortDirections
-        });
         setReservationFilterConditions(conditions);
         setReservationFilterLogicalOperators(operators);
-        // WICHTIG: Sortierungen immer setzen, auch wenn undefined (zurücksetzen)
-        const validSortDirections = sortDirections !== undefined && Array.isArray(sortDirections) ? sortDirections : [];
-        setReservationFilterSortDirections(validSortDirections);
-        console.log('✅ applyReservationFilterConditions: States updated');
+        if (sortDirections !== undefined) {
+            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+            setReservationFilterSortDirections(validSortDirections);
+        }
     };
     
     const resetReservationFilterConditions = () => {
@@ -938,15 +927,6 @@ const Worktracker: React.FC = () => {
     
     // Filter Change Handler (Controlled Mode)
     const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
-        console.log('🔄 handleFilterChange called:', {
-            activeTab,
-            name,
-            id,
-            conditionsCount: conditions.length,
-            operatorsCount: operators.length,
-            sortDirectionsCount: sortDirections?.length || 0
-        });
-        
         if (activeTab === 'todos') {
             setActiveFilterName(name);
             setSelectedFilterId(id);
@@ -961,13 +941,11 @@ const Worktracker: React.FC = () => {
             }
             // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedTasks angewendet
         } else {
-            console.log('📋 handleFilterChange: Setting reservation filter states');
             setReservationActiveFilterName(name);
             setReservationSelectedFilterId(id);
             applyReservationFilterConditions(conditions, operators, sortDirections);
             // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
             setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
-            console.log('✅ handleFilterChange: Reservation filter states set');
         }
     };
 
@@ -1308,14 +1286,7 @@ const Worktracker: React.FC = () => {
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {
-        console.log('🔄 filteredAndSortedReservations: useMemo triggered', {
-            reservationsCount: reservations.length,
-            filterConditionsCount: reservationFilterConditions.length,
-            filterOperatorsCount: reservationFilterLogicalOperators.length,
-            sortDirectionsCount: reservationFilterSortDirections.length,
-            filterConditions: reservationFilterConditions,
-            filterOperators: reservationFilterLogicalOperators
-        });
+        console.log('🔄 Filtere Reservations:', reservations.length, 'Reservations vorhanden');
         const validReservations = reservations.filter(reservation => reservation != null);
         
         let filtered = validReservations.filter(reservation => {
@@ -1466,7 +1437,6 @@ const Worktracker: React.FC = () => {
                 }
             };
 
-            const beforeFilterCount = filtered.length;
             filtered = applyFilters(
                 filtered,
                 reservationFilterConditions,
@@ -1474,11 +1444,6 @@ const Worktracker: React.FC = () => {
                 getFieldValue,
                 columnEvaluators
             );
-            console.log('🔍 applyFilters result:', {
-                beforeFilter: beforeFilterCount,
-                afterFilter: filtered.length,
-                conditionsApplied: reservationFilterConditions.length
-            });
         }
         
         // Hilfsfunktion zum Extrahieren von Werten für Sortierung
@@ -1776,34 +1741,12 @@ const Worktracker: React.FC = () => {
                                     )}
                                 </div>
                                 
-                                {/* Mitte: Tab-Navigation */}
+                                {/* Mitte: Titel */}
                                 <div className="flex items-center">
-                                    <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto overflow-y-hidden">
-                                        <button
-                                            onClick={() => setActiveTab('todos')}
-                                            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
-                                                activeTab === 'todos'
-                                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                                            }`}
-                                        >
-                                            <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                            {t('tasks.title', "To Do's")}
-                                        </button>
-                                        {hasPermission('reservations', 'read', 'table') && (
-                                            <button
-                                                onClick={() => setActiveTab('reservations')}
-                                                className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
-                                                    activeTab === 'reservations'
-                                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                                                }`}
-                                            >
-                                                <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                {t('reservations.title', 'Reservations')}
-                                            </button>
-                                        )}
-                                    </nav>
+                                    <CheckCircleIcon className="h-4 w-4 sm:h-6 sm:w-6 mr-1 sm:mr-2 dark:text-white" />
+                                    <h2 className="text-base sm:text-xl font-semibold dark:text-white">
+                                        {activeTab === 'todos' ? t('tasks.title') : t('reservations.title', 'Reservations')}
+                                    </h2>
                                 </div>
                                 
                                 {/* Rechte Seite: Suchfeld, Sync-Button (nur Reservations), Filter-Button, Status-Filter, Spalten-Konfiguration */}
@@ -2005,6 +1948,34 @@ const Worktracker: React.FC = () => {
                                         />
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Tab-Navigation */}
+                            <div className="border-b border-gray-200 dark:border-gray-700 mb-6 px-3 sm:px-4 md:px-6">
+                                <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto overflow-y-hidden">
+                                    <button
+                                        onClick={() => setActiveTab('todos')}
+                                        className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
+                                            activeTab === 'todos'
+                                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                        }`}
+                                    >
+                                        {t('tasks.title', "To Do's")}
+                                    </button>
+                                    {hasPermission('reservations', 'read', 'table') && (
+                                        <button
+                                            onClick={() => setActiveTab('reservations')}
+                                            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
+                                                activeTab === 'reservations'
+                                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                            }`}
+                                        >
+                                            {t('reservations.title', 'Reservations')}
+                                        </button>
+                                    )}
+                                </nav>
                             </div>
 
                             {/* Filter-Pane */}
@@ -2674,8 +2645,8 @@ const Worktracker: React.FC = () => {
                                                             >
                                                                 <PaperAirplaneIcon className="h-4 w-4" />
                                                             </button>
-                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                {t('reservations.sendInvitation.title', 'Einladung senden')}
+                                                            <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('reservations.sendInvitation.title')}
                                                             </div>
                                                         </div>
                                                         
@@ -2691,8 +2662,8 @@ const Worktracker: React.FC = () => {
                                                             >
                                                                 <KeyIcon className="h-4 w-4" />
                                                             </button>
-                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                {t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                            <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('reservations.sendPasscode.title')}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2702,7 +2673,7 @@ const Worktracker: React.FC = () => {
                                                 const isExpanded = expandedReservationRows.has(reservation.id);
                                                 const expandableContent = (
                                                     <div className="mt-2 pt-3">
-                                                        <ReservationNotificationLogs reservationId={reservation.id} refreshKey={reservationsRefreshKey} />
+                                                        <ReservationNotificationLogs reservationId={reservation.id} />
                                                     </div>
                                                 );
                                                 
@@ -2919,8 +2890,8 @@ const Worktracker: React.FC = () => {
                                                                                                     >
                                                                                                         <PaperAirplaneIcon className="h-4 w-4" />
                                                                                                     </button>
-                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('reservations.sendInvitation.title', 'Einladung senden')}
+                                                                                                    <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('reservations.sendInvitation.title')}
                                                                                                     </div>
                                                                                                 </div>
                                                                                                 
@@ -2936,8 +2907,8 @@ const Worktracker: React.FC = () => {
                                                                                                     >
                                                                                                         <KeyIcon className="h-4 w-4" />
                                                                                                     </button>
-                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                                                                    <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('reservations.sendPasscode.title')}
                                                                                                     </div>
                                                                                                 </div>
                                                                                                 
@@ -2952,8 +2923,8 @@ const Worktracker: React.FC = () => {
                                                                                                     >
                                                                                                         <InformationCircleIcon className="h-4 w-4" />
                                                                                                     </button>
-                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('common.viewDetails', 'Details anzeigen')}
+                                                                                                    <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('common.viewDetails')}
                                                                                                     </div>
                                                                                                 </div>
                                                                                             </>
@@ -3039,34 +3010,12 @@ const Worktracker: React.FC = () => {
                                     )}
                                 </div>
                                 
-                                {/* Mitte: Tab-Navigation */}
+                                {/* Mitte: Titel */}
                                 <div className="flex items-center">
-                                    <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto overflow-y-hidden">
-                                        <button
-                                            onClick={() => setActiveTab('todos')}
-                                            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
-                                                activeTab === 'todos'
-                                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                                            }`}
-                                        >
-                                            <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                            {t('tasks.title', "To Do's")}
-                                        </button>
-                                        {hasPermission('reservations', 'read', 'table') && (
-                                            <button
-                                                onClick={() => setActiveTab('reservations')}
-                                                className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
-                                                    activeTab === 'reservations'
-                                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                                                }`}
-                                            >
-                                                <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                {t('reservations.title', 'Reservations')}
-                                            </button>
-                                        )}
-                                    </nav>
+                                    <CheckCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
+                                    <h2 className="text-xl font-semibold dark:text-white">
+                                        {activeTab === 'todos' ? t('tasks.title') : t('reservations.title', 'Reservations')}
+                                    </h2>
                                 </div>
                                 
                                 {/* Rechte Seite: Suchfeld, Sync-Button (nur Reservations), Filter-Button, Status-Filter, Spalten-Konfiguration */}
@@ -3290,6 +3239,34 @@ const Worktracker: React.FC = () => {
                                         />
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Tab-Navigation */}
+                            <div className="border-b border-gray-200 dark:border-gray-700 mb-6 px-3 sm:px-4 md:px-6">
+                                <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto overflow-y-hidden">
+                                    <button
+                                        onClick={() => setActiveTab('todos')}
+                                        className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
+                                            activeTab === 'todos'
+                                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                        }`}
+                                    >
+                                        {t('tasks.title', "To Do's")}
+                                    </button>
+                                    {hasPermission('reservations', 'read', 'table') && (
+                                        <button
+                                            onClick={() => setActiveTab('reservations')}
+                                            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
+                                                activeTab === 'reservations'
+                                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                            }`}
+                                        >
+                                            {t('reservations.title', 'Reservations')}
+                                        </button>
+                                    )}
+                                </nav>
                             </div>
 
                             {/* Filter-Pane */}
@@ -3944,8 +3921,8 @@ const Worktracker: React.FC = () => {
                                                             >
                                                                 <PaperAirplaneIcon className="h-4 w-4" />
                                                             </button>
-                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                {t('reservations.sendInvitation.title', 'Einladung senden')}
+                                                            <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('reservations.sendInvitation.title')}
                                                             </div>
                                                         </div>
                                                         
@@ -3961,8 +3938,8 @@ const Worktracker: React.FC = () => {
                                                             >
                                                                 <KeyIcon className="h-4 w-4" />
                                                             </button>
-                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                {t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                            <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('reservations.sendPasscode.title')}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -3972,7 +3949,7 @@ const Worktracker: React.FC = () => {
                                                 const isExpanded = expandedReservationRows.has(reservation.id);
                                                 const expandableContent = (
                                                     <div className="mt-2 pt-3">
-                                                        <ReservationNotificationLogs reservationId={reservation.id} refreshKey={reservationsRefreshKey} />
+                                                        <ReservationNotificationLogs reservationId={reservation.id} />
                                                     </div>
                                                 );
                                                 
@@ -4189,8 +4166,8 @@ const Worktracker: React.FC = () => {
                                                                                                     >
                                                                                                         <PaperAirplaneIcon className="h-4 w-4" />
                                                                                                     </button>
-                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('reservations.sendInvitation.title', 'Einladung senden')}
+                                                                                                    <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('reservations.sendInvitation.title')}
                                                                                                     </div>
                                                                                                 </div>
                                                                                                 
@@ -4206,8 +4183,8 @@ const Worktracker: React.FC = () => {
                                                                                                     >
                                                                                                         <KeyIcon className="h-4 w-4" />
                                                                                                     </button>
-                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('reservations.sendPasscode.title', 'Passcode senden')}
+                                                                                                    <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('reservations.sendPasscode.title')}
                                                                                                     </div>
                                                                                                 </div>
                                                                                                 
@@ -4222,8 +4199,8 @@ const Worktracker: React.FC = () => {
                                                                                                     >
                                                                                                         <InformationCircleIcon className="h-4 w-4" />
                                                                                                     </button>
-                                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('common.viewDetails', 'Details anzeigen')}
+                                                                                                    <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                        {t('common.viewDetails')}
                                                                                                     </div>
                                                                                                 </div>
                                                                                             </>

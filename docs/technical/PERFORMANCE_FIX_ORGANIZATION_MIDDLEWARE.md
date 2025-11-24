@@ -108,3 +108,4 @@ organizationCache.invalidate(userId);
 **Status:** ✅ Deployed - Performance sollte drastisch besser sein
 
 
+
