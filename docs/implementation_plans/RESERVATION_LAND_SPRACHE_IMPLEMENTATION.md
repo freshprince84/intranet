@@ -508,7 +508,7 @@ async sendMessageWithFallback(
 // Lade Branch-spezifische Template-Namen (falls vorhanden)
 const branchTemplateNames = whatsappSettings?.templateNames;
 if (branchTemplateNames) {
-  this.templateNames = branchTemplateNames; // z.B. { es: 'reservation_checkin_invitation', en: 'reservation_checkin_invitation_en' }
+  this.templateNames = branchTemplateNames; // z.B. { es: 'reservation_checkin_invitation', en: 'reservation_checkin_invitation_' }
 }
 
 // In getTemplateNameForLanguage():
@@ -621,7 +621,7 @@ if (this.templateNames && this.templateNames[languageCode]) {
    - Aktuell: `getTemplateNameForLanguage()` fügt für Englisch einen Unterstrich hinzu
    - **PROBLEM**: Wenn Templates mit gleichem Namen in verschiedenen Sprachen existieren, ist Unterstrich nicht nötig
    - **LÖSUNG**: `getTemplateNameForLanguage()` sollte nur Template-Name zurückgeben, Sprache wird über `language` Parameter gesteuert
-   - **ODER**: Templates mit unterschiedlichen Namen erstellen (z.B. `reservation_checkin_invitation_es` und `reservation_checkin_invitation_en`)
+   - **ODER**: Templates mit unterschiedlichen Namen erstellen (z.B. `reservation_checkin_invitation` für Spanisch und `reservation_checkin_invitation_` für Englisch)
 
 3. **Branch-spezifische Templates**:
    - Aktuell: Alle Branches verwenden gleiche Template-Namen

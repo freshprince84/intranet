@@ -661,7 +661,11 @@ export class BoldPaymentService {
                     roomNumber,
                     roomDescription,
                     ttlockCode,
-                    'TTLock'
+                    'TTLock',
+                    {
+                      guestNationality: updatedReservation.guestNationality,
+                      guestPhone: updatedReservation.guestPhone
+                    }
                   );
                   
                   const message = `Hola ${updatedReservation.guestName},

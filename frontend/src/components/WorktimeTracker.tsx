@@ -225,10 +225,9 @@ const WorktimeTracker: React.FC = () => {
                 API_ENDPOINTS.WORKTIME.START,
                 {
                     branchId: selectedBranch,
-                    // Die aktuelle Zeit mit Berücksichtigung der Zeitzonenverschiebung senden
-                    // Da die Datenbank in UTC speichert, müssen wir die lokale Zeit so senden,
-                    // dass sie nach der automatischen UTC-Umwandlung korrekt ist
-                    startTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
+                    // KORREKT: new Date() erstellt bereits ein UTC-Date-Objekt, das korrekt in der DB gespeichert wird
+                    // Keine manuelle UTC-Korrektur erforderlich (siehe Backend: startWorktime Zeile 52)
+                    startTime: new Date()
                 },
                 {
                     headers: {
@@ -283,8 +282,9 @@ const WorktimeTracker: React.FC = () => {
             const response = await axiosInstance.post(
                 API_ENDPOINTS.WORKTIME.STOP,
                 {
-                    // Die aktuelle Zeit mit Berücksichtigung der Zeitzonenverschiebung senden
-                    endTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
+                    // KORREKT: new Date() erstellt bereits ein UTC-Date-Objekt, das korrekt in der DB gespeichert wird
+                    // Keine manuelle UTC-Korrektur erforderlich (siehe Backend: stopWorktime Zeile 175)
+                    endTime: new Date()
                 },
                 {
                     headers: {
@@ -352,8 +352,9 @@ const WorktimeTracker: React.FC = () => {
             const response = await axiosInstance.post(
                 API_ENDPOINTS.WORKTIME.STOP,
                 {
-                    // Die aktuelle Zeit mit Berücksichtigung der Zeitzonenverschiebung senden
-                    endTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000),
+                    // KORREKT: new Date() erstellt bereits ein UTC-Date-Objekt, das korrekt in der DB gespeichert wird
+                    // Keine manuelle UTC-Korrektur erforderlich (siehe Backend: stopWorktime Zeile 175)
+                    endTime: new Date(),
                     force: true
                 },
                 {

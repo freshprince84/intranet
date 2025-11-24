@@ -212,6 +212,10 @@ export class WhatsAppAiService {
         }
         
         // Erneuter API Call mit Function Results
+        // WICHTIG: Sprachanweisung explizit wiederholen, damit KI die richtige Sprache verwendet
+        const languageInstruction = this.getLanguageInstruction(language);
+        const systemPromptWithLanguage = languageInstruction + '\n\n' + systemPrompt;
+        
         const finalResponse = await axios.post(
           'https://api.openai.com/v1/chat/completions',
           {
@@ -219,7 +223,7 @@ export class WhatsAppAiService {
             messages: [
               {
                 role: 'system',
-                content: systemPrompt
+                content: systemPromptWithLanguage
               },
               {
                 role: 'user',
@@ -230,7 +234,11 @@ export class WhatsAppAiService {
                 content: null,
                 tool_calls: responseMessage.tool_calls
               },
-              ...toolResults
+              ...toolResults,
+              {
+                role: 'user',
+                content: `WICHTIG: Antworte auf ${language === 'de' ? 'Deutsch' : language === 'es' ? 'Spanisch' : language === 'en' ? 'Englisch' : 'der erkannten Sprache'}. Die Function Results sind in JSON-Format, aber deine Antwort muss in der korrekten Sprache sein.`
+              }
             ],
             temperature: aiConfig.temperature ?? 0.7,
             max_tokens: aiConfig.maxTokens || 500
@@ -396,14 +404,9 @@ export class WhatsAppAiService {
   }
 
   /**
-   * Baut System Prompt aus Konfiguration
+   * Gibt Sprachanweisung für eine bestimmte Sprache zurück
    */
-  private static buildSystemPrompt(
-    aiConfig: AIConfig,
-    language: string,
-    conversationContext?: any
-  ): string {
-    // WICHTIG: Sprachanweisung GANZ AN DEN ANFANG setzen für maximale Priorität
+  private static getLanguageInstruction(language: string): string {
     const languageInstructions: Record<string, string> = {
       es: 'WICHTIG: Antworte IMMER auf Spanisch. Die Antwort muss vollständig auf Spanisch sein, unabhängig von der Sprache des System Prompts.',
       de: 'WICHTIG: Antworte IMMER auf Deutsch. Die Antwort muss vollständig auf Deutsch sein, unabhängig von der Sprache des System Prompts.',
@@ -420,7 +423,19 @@ export class WhatsAppAiService {
       ar: 'مهم: أجب دائماً بالعربية. يجب أن تكون الإجابة بالكامل بالعربية، بغض النظر عن لغة مطالبة النظام.'
     };
     
-    const languageInstruction = languageInstructions[language] || languageInstructions.es;
+    return languageInstructions[language] || languageInstructions.es;
+  }
+
+  /**
+   * Baut System Prompt aus Konfiguration
+   */
+  private static buildSystemPrompt(
+    aiConfig: AIConfig,
+    language: string,
+    conversationContext?: any
+  ): string {
+    // WICHTIG: Sprachanweisung GANZ AN DEN ANFANG setzen für maximale Priorität
+    const languageInstruction = this.getLanguageInstruction(language);
     
     // Beginne mit Sprachanweisung
     let prompt = languageInstruction + '\n\n';

@@ -1629,12 +1629,12 @@ div[class*="sidepane-panel-container"][class*="translate-x-0"] {
 
 /* Sidepane Position: Berücksichtigt grünen Schatten bei laufender Zeiterfassung */
 /* Der grüne Schatten hat einen blur von 15px + spread von 5px = max. 20px Ausdehnung */
-/* Header ist 4rem (64px), daher beginnt Sidepane bei 4rem + Schatten-Buffer */
-/* Um sicherzugehen, dass der Schatten vollständig unter der Sidepane liegt, verwenden wir top: 4.25rem (68px) */
+/* Header ist 4rem (64px), Schatten dehnt sich 20px nach unten aus */
+/* Sidepane muss bei 64px + 20px = 84px (5.25rem) beginnen, damit Schatten vollständig darunter liegt */
 .sidepane-panel-container[class*="top-16"],
 .sidepane-panel-container.fixed.top-16,
 div.fixed.top-16.bottom-0.right-0.sidepane-panel-container {
-  top: 4.25rem !important; /* 68px - Header (64px) + 4px Buffer für Schatten */
+  top: 5.25rem !important; /* 84px - Header (64px) + Schatten-Ausdehnung (20px) */
 }
 
 @keyframes slideInFromRight {

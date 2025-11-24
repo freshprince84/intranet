@@ -563,14 +563,23 @@ export class WhatsAppService {
    * Gibt den Template-Namen basierend auf der Sprache zurück
    * 
    * WhatsApp erlaubt Templates mit gleichem Namen in verschiedenen Sprachen.
-   * Da das englische Template einen Unterstrich am Ende hat, müssen wir den Namen anpassen.
+   * Einige Templates haben einen Unterstrich am Ende für Englisch (z.B. reservation_checkin_invitation_),
+   * andere haben den gleichen Namen für beide Sprachen (z.B. reservation_checkin_completed).
    * 
    * @param baseTemplateName - Basis-Template-Name (z.B. 'reservation_checkin_invitation')
    * @param languageCode - Sprache-Code ('en' oder 'es')
-   * @returns Template-Name mit sprachspezifischem Suffix
+   * @returns Template-Name mit sprachspezifischem Suffix (wenn nötig)
    */
   private getTemplateNameForLanguage(baseTemplateName: string, languageCode: string): string {
-    // Englische Templates haben einen Unterstrich am Ende
+    // Templates mit gleichem Namen für beide Sprachen (kein Unterstrich)
+    const sameNameTemplates = ['reservation_checkin_completed'];
+    
+    if (sameNameTemplates.includes(baseTemplateName)) {
+      // Gleicher Name für beide Sprachen
+      return baseTemplateName;
+    }
+    
+    // Englische Templates haben einen Unterstrich am Ende (für alte Templates)
     if (languageCode === 'en') {
       return `${baseTemplateName}_`;
     }
@@ -713,6 +722,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
    * @param roomDescription - Zimmerbeschreibung
    * @param doorPin - PIN für Türsystem
    * @param doorAppName - App-Name (z.B. "TTLock")
+   * @param reservation - Optional: Reservation für Sprache-Erkennung
    * @returns true wenn erfolgreich
    */
   async sendCheckInConfirmation(
@@ -721,11 +731,36 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
     roomNumber: string,
     roomDescription: string,
     doorPin: string,
-    doorAppName: string
+    doorAppName: string,
+    reservation?: { guestNationality?: string | null; guestPhone?: string | null }
   ): Promise<boolean> {
-    const message = `Hola ${guestName},
+    // Erkenne Sprache für Template
+    let languageCode: string;
+    if (reservation) {
+      const { CountryLanguageService } = require('./countryLanguageService');
+      languageCode = CountryLanguageService.getLanguageForReservation(reservation);
+    } else {
+      languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+    }
 
-¡Tu check-in se ha completado exitosamente!
+    // Baue Variablen für Template auf
+    // {{1}} = Name mit Begrüßung
+    const greeting = languageCode === 'en' ? `Hello ${guestName},` : `Hola ${guestName},`;
+    
+    // {{2}} = Kompletter Text mit Zimmerinfo und PIN
+    let contentText: string;
+    if (languageCode === 'en') {
+      contentText = `Your check-in has been completed successfully!
+
+Your room information:
+- Room: ${roomNumber}
+- Description: ${roomDescription}
+
+Access:
+- Door PIN: ${doorPin}
+- App: ${doorAppName}`;
+    } else {
+      contentText = `¡Tu check-in se ha completado exitosamente!
 
 Información de tu habitación:
 - Habitación: ${roomNumber}
@@ -733,18 +768,22 @@ Información de tu habitación:
 
 Acceso:
 - PIN de la puerta: ${doorPin}
-- App: ${doorAppName}
+- App: ${doorAppName}`;
+    }
 
-¡Te deseamos una estancia agradable!`;
+    // Session Message (Fallback)
+    const message = languageCode === 'en' 
+      ? `${greeting}\n\n${contentText}\n\nWe wish you a pleasant stay!`
+      : `${greeting}\n\n${contentText}\n\n¡Te deseamos una estancia agradable!`;
 
-    // Template-Name aus Environment oder Settings (Standard: reservation_checkin_confirmation)
-    const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_CONFIRMATION || 'reservation_checkin_confirmation';
+    // Template-Name aus Environment oder Settings (Standard: reservation_checkin_completed)
+    const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_CONFIRMATION || 'reservation_checkin_completed';
     
-    // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}}, etc. im Template sein)
-    // Format: Name, Room Number, Room Description, Door PIN, App Name
-    const templateParams = [guestName, roomNumber, roomDescription, doorPin, doorAppName];
+    // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}} im Template sein)
+    // Format: Name mit Begrüßung, Kompletter Text mit Zimmerinfo und PIN
+    const templateParams = [greeting, contentText];
 
-    return await this.sendMessageWithFallback(guestPhone, message, templateName, templateParams);
+    return await this.sendMessageWithFallback(guestPhone, message, templateName, templateParams, reservation);
   }
 
   /**

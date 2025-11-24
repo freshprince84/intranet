@@ -631,12 +631,23 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
       let hoursWorked: number;
       
       if (entry.endTime === null) {
-        // Aktive Zeitmessung: DIREKTE DIFFERENZ wie im Modal
-        // KORREKT: entry.startTime ist in UTC gespeichert, Date.now() gibt UTC-Millisekunden zurück
-        // Beide Werte sind UTC, daher ist die Differenz korrekt
-        // Das Problem war NICHT die Berechnung, sondern möglicherweise die Verteilung auf Tage
-        const diffMs = Date.now() - entry.startTime.getTime();
-        hoursWorked = diffMs / (1000 * 60 * 60);
+        // Aktive Zeitmessung: Berechnung wie im Modal
+        // WICHTIG: entry.startTime aus Prisma ist UTC, aber wir müssen die Differenz
+        // in lokaler Zeit berechnen, wenn timezone vorhanden ist (wie im Modal)
+        if (entry.timezone) {
+          // Konvertiere UTC startTime zu lokaler Zeit (wie im Modal mit String ohne 'Z')
+          const startTimeLocal = toZonedTime(entry.startTime, entry.timezone);
+          const nowLocal = toZonedTime(new Date(Date.now()), entry.timezone);
+          // Berechne Differenz in lokaler Zeit (wie im Modal)
+          const diffMs = nowLocal.getTime() - startTimeLocal.getTime();
+          hoursWorked = diffMs / (1000 * 60 * 60);
+        } else {
+          // Fallback: UTC-Differenz wenn keine Zeitzone gespeichert
+          const startTimeUtcMs = entry.startTime.getTime();
+          const nowUtcMs = Date.now();
+          const diffMs = nowUtcMs - startTimeUtcMs;
+          hoursWorked = diffMs / (1000 * 60 * 60);
+        }
         
         // Für Verteilung: Verwende entry.startTime und effectiveEndTime (nicht begrenzt)
         actualStartTime = entry.startTime;
@@ -1177,10 +1188,10 @@ export const checkAndStopExceededWorktimes = async () => {
       }
 
       // Füge die aktuelle laufende Sitzung hinzu
-      // Konvertiere now nach UTC für konsistenten Vergleich mit worktime.startTime (aus DB)
-      // getTimezoneOffset() gibt negative Werte für östliche Zeitzonen zurück, daher subtrahieren
-      const nowUTC = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-      const currentSessionMs = nowUTC.getTime() - worktime.startTime.getTime();
+      // KORREKT: Beide Werte (now.getTime() und worktime.startTime.getTime()) sind bereits UTC-Millisekunden
+      // Die Differenz ist direkt korrekt, keine Zeitzonenumrechnung erforderlich
+      // Siehe auch: getWorktimeStats() Zeile 639-641 für korrekte Referenz-Implementierung
+      const currentSessionMs = now.getTime() - worktime.startTime.getTime();
       const currentSessionHours = currentSessionMs / (1000 * 60 * 60);
       
       // Formatiere lokale Zeit für bessere Lesbarkeit
@@ -1201,18 +1212,15 @@ export const checkAndStopExceededWorktimes = async () => {
       if (totalWorkTimeHours >= worktime.user.normalWorkingHours) {
         console.log(`Schwellenwert erreicht oder überschritten. Stoppe Zeiterfassung automatisch.`);
         
-        // Zeiterfassung beenden - speichere die LOKALE Zeit, nicht UTC
-        // WICHTIG: Wir verwenden hier ein neues Date-Objekt, um sicherzustellen, dass
-        // die Zeit korrekt gespeichert wird, ohne Zeitzonenumrechnung
-        // Erstelle ein frisches Date-Objekt, genau wie in stopWorktime
+        // Zeiterfassung beenden - speichere die aktuelle Zeit direkt
+        // KORREKT: new Date() erstellt bereits ein UTC-Date-Objekt, das korrekt in der DB gespeichert wird
+        // Keine manuelle UTC-Korrektur erforderlich (wie in stopWorktime Zeile 175)
         const endTimeNow = new Date();
-        // Manuelle Korrektur für UTC-Speicherung - kompensiert den Zeitzonenversatz
-        const utcCorrectedTime = new Date(endTimeNow.getTime() - endTimeNow.getTimezoneOffset() * 60000);
         
         const stoppedWorktime = await prisma.workTime.update({
           where: { id: worktime.id },
           data: { 
-            endTime: utcCorrectedTime,
+            endTime: endTimeNow,
             // Wenn bisher keine Zeitzone gespeichert ist, aktualisiere sie (wie in stopWorktime)
             ...(worktime.timezone ? {} : { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })
           }

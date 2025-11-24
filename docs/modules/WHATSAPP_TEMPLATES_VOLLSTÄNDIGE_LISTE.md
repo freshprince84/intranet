@@ -213,7 +213,7 @@ Falls du später englische Templates erstellen möchtest, kannst du separate Tem
 
 ### Beispiel: Englische Check-in-Einladung
 
-**Name**: `reservation_checkin_invitation_en` (oder gleicher Name mit englischer Sprache)  
+**Name**: `reservation_checkin_invitation_` (mit Unterstrich am Ende für Englisch)  
 **Category**: `UTILITY`  
 **Language**: `English (en)`  
 **Status**: ⏳ Optional
@@ -237,7 +237,7 @@ We look forward to seeing you tomorrow!
 
 **Hinweis:**
 - Du kannst Templates mit dem **gleichen Namen** in **verschiedenen Sprachen** erstellen
-- Oder du verwendest **verschiedene Namen** (z.B. `reservation_checkin_invitation_en` für Englisch, `reservation_checkin_invitation_es` für Spanisch)
+- Oder du verwendest **verschiedene Namen** (z.B. `reservation_checkin_invitation_` für Englisch, `reservation_checkin_invitation` für Spanisch)
 - Im Code kannst du dann die Sprache über `WHATSAPP_TEMPLATE_LANGUAGE` steuern oder verschiedene Template-Namen verwenden
 
 ---
