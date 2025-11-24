@@ -78,7 +78,8 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
     return () => {
       closeSidepane();
     };
-  }, [isOpen, isMobile, openSidepane, closeSidepane]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, isMobile]);
 
   // Initialisiere die bearbeitbaren Einträge, wenn sich die Props ändern
   useEffect(() => {
