@@ -258,18 +258,6 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
       window.removeEventListener('cerebro-article-created', handleArticleCreated);
     };
   }, [fetchArticlesStructure]);
-  
-  // Struktur auch bei Route-Änderungen aktualisieren (wenn Slug sich ändert)
-  useEffect(() => {
-    if (slug) {
-      // Kurze Verzögerung, damit der Server Zeit hat, den neuen Artikel zu speichern
-      const timeoutId = setTimeout(() => {
-        fetchArticlesStructure();
-      }, 500);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [slug, fetchArticlesStructure]);
 
   // Handling für die Suche
   const handleSearch = (e: React.FormEvent) => {
