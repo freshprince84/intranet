@@ -925,7 +925,11 @@ ${paymentLink}
             reservation.roomNumber || 'N/A',
             reservation.roomDescription || 'N/A',
             doorPin || 'N/A',
-            doorAppName || 'TTLock'
+            doorAppName || 'TTLock',
+            {
+              guestNationality: reservation.guestNationality,
+              guestPhone: reservation.guestPhone
+            }
           );
           whatsappSuccess = whatsappSuccessResult;
           

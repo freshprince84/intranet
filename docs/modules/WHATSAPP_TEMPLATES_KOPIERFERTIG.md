@@ -200,7 +200,7 @@ Alle Templates sind auch auf Englisch verfügbar. Verwende die englischen Versio
 
 ## Template 1 EN: Check-in-Einladung (English)
 
-**Name**: `reservation_checkin_invitation_en`  
+**Name**: `reservation_checkin_invitation_`  
 **Category**: `UTILITY`  
 **Language**: `English (en)` ⚠️ **WICHTIG: Englisch!**
 
@@ -367,7 +367,7 @@ Once you have completed both, please write us briefly. Thank you!
 
 ### Templates 1-6 EN (NEU ERSTELLEN):
 - [ ] Create Template
-- [ ] Name mit `_en` Suffix (z.B. `reservation_checkin_invitation_en`)
+- [ ] Name mit Unterstrich am Ende (z.B. `reservation_checkin_invitation_`)
 - [ ] Category (`UTILITY`)
 - [ ] Language (`English (en)`) ⚠️ **WICHTIG: Englisch!**
 - [ ] Body-Text einfügen (englische Version)

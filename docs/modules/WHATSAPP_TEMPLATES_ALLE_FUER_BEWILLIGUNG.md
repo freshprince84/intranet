@@ -6,7 +6,7 @@
 ## Wichtige Hinweise
 
 - **Spanische Templates**: Template-Sprache `Spanish (es)`, Template-Name ohne Suffix (z.B. `reservation_checkin_invitation`)
-- **Englische Templates**: Template-Sprache `English (en)`, Template-Name mit `_en` Suffix (z.B. `reservation_checkin_invitation_en`)
+- **Englische Templates**: Template-Sprache `English (en)`, Template-Name mit Unterstrich am Ende (z.B. `reservation_checkin_invitation_`)
 - **Category**: `UTILITY` (für Service-Nachrichten)
 - **Variablen**: Keine Leerzeichen in `{{1}}`, `{{2}}`, etc.
 - **Maximale Zeichen**: 1024 Zeichen im Body
@@ -309,9 +309,9 @@ Una vez completados ambos, por favor escríbenos brevemente. ¡Gracias!
 Alle Templates sind auch auf Englisch verfügbar. Die englischen Versionen haben den Suffix `_en` im Namen.
 
 ### Template-Namen (Englisch):
-- `reservation_checkin_invitation_en`
-- `reservation_checkin_confirmation_en`
-- `reservation_confirmation_en`
+- `reservation_checkin_invitation_`
+- `reservation_checkin_confirmation_`
+- `reservation_confirmation_`
 - `reservation_checkin_reminder_en`
 - `reservation_payment_reminder_en`
 - `reservation_general_reminder_en`
