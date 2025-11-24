@@ -1569,7 +1569,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       )}
 
       {/* Modal zum Bearbeiten der Zeiterfassungen */}
-      {showEditModal && selectedUser && (
+      {selectedUser && (
         <EditWorktimeModal
           isOpen={showEditModal}
           onClose={handleCloseEditModal}
