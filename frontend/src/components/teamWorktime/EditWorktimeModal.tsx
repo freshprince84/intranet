@@ -52,6 +52,16 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   
+  // Refs für Sidepane-Funktionen, um Endlosschleifen zu vermeiden
+  const openSidepaneRef = React.useRef(openSidepane);
+  const closeSidepaneRef = React.useRef(closeSidepane);
+  
+  // Aktualisiere Refs wenn sich Funktionen ändern
+  React.useEffect(() => {
+    openSidepaneRef.current = openSidepane;
+    closeSidepaneRef.current = closeSidepane;
+  }, [openSidepane, closeSidepane]);
+  
   // Responsive Erkennung
   useEffect(() => {
     const handleResize = () => {
@@ -70,15 +80,14 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
   // Sidepane-Status verwalten
   useEffect(() => {
     if (isOpen && !isMobile) {
-      openSidepane();
+      openSidepaneRef.current();
     } else {
-      closeSidepane();
+      closeSidepaneRef.current();
     }
     
     return () => {
-      closeSidepane();
+      closeSidepaneRef.current();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, isMobile]);
 
   // Initialisiere die bearbeitbaren Einträge, wenn sich die Props ändern
