@@ -8,8 +8,8 @@ datasource db {
 }
 
 model User {
-  id                       Int                         @id @default(autoincrement())
-  username                 String                      @unique
+  id                       Int                           @id @default(autoincrement())
+  username                 String                        @unique
   password                 String
   firstName                String?
   lastName                 String?
@@ -17,24 +17,24 @@ model User {
   bankDetails              String?
   contract                 String?
   salary                   Float?
-  createdAt                DateTime                    @default(now())
-  updatedAt                DateTime                    @updatedAt
-  email                    String                      @unique
-  country                  String                      @default("CO")
+  createdAt                DateTime                      @default(now())
+  updatedAt                DateTime                      @updatedAt
+  email                    String                        @unique
+  country                  String                        @default("CO")
   hourlyRate               Decimal?
-  language                 String                      @default("es")
-  normalWorkingHours       Float                       @default(7.6)
-  payrollCountry           String                      @default("CH")
-  approvedOvertimeHours    Float                       @default(0)
+  language                 String                        @default("es")
+  normalWorkingHours       Float                         @default(7.6)
+  payrollCountry           String                        @default("CH")
+  approvedOvertimeHours    Float                         @default(0)
   contractType             String?
   monthlySalary            Float?
   employeeNumber           String?
   identificationNumber     String?
   taxIdentificationNumber  String?
   gender                   String? // "male", "female", "other"
-  active                   Boolean                     @default(true)
-  carticlesCreated         CerebroCarticle[]           @relation("CarticleCreator")
-  carticlesUpdated         CerebroCarticle[]           @relation("CarticleUpdater")
+  active                   Boolean                       @default(true)
+  carticlesCreated         CerebroCarticle[]             @relation("CarticleCreator")
+  carticlesUpdated         CerebroCarticle[]             @relation("CarticleUpdater")
   externalLinks            CerebroExternalLink[]
   cerebroMedia             CerebroMedia[]
   consultationInvoices     ConsultationInvoice[]
@@ -43,42 +43,47 @@ model User {
   invoiceSettings          InvoiceSettings?
   monthlyReports           MonthlyConsultationReport[]
   notifications            Notification[]
-  invitationsAccepted      OrganizationInvitation[]    @relation("InvitationAcceptor")
-  invitationsSent          OrganizationInvitation[]    @relation("Inviter")
-  joinRequestsProcessed    OrganizationJoinRequest[]   @relation("JoinProcessor")
-  joinRequestsSent         OrganizationJoinRequest[]   @relation("JoinRequester")
-  requestsRequester        Request[]                   @relation("requester")
-  requestsResponsible      Request[]                   @relation("responsible")
+  invitationsAccepted      OrganizationInvitation[]      @relation("InvitationAcceptor")
+  invitationsSent          OrganizationInvitation[]      @relation("Inviter")
+  joinRequestsProcessed    OrganizationJoinRequest[]     @relation("JoinProcessor")
+  joinRequestsSent         OrganizationJoinRequest[]     @relation("JoinRequester")
+  requestsRequester        Request[]                     @relation("requester")
+  requestsResponsible      Request[]                     @relation("responsible")
   savedFilters             SavedFilter[]
   filterGroups             FilterGroup[]
   settings                 Settings?
-  tasksQualityControl      Task[]                      @relation("quality_control")
-  tasksResponsible         Task[]                      @relation("responsible")
+  tasksQualityControl      Task[]                        @relation("quality_control")
+  tasksResponsible         Task[]                        @relation("responsible")
   userNotificationSettings UserNotificationSettings?
   roles                    UserRole[]
   tableSettings            UserTableSettings[]
   branches                 UsersBranches[]
   workTimes                WorkTime[]
-  taskStatusChanges        TaskStatusHistory[]         @relation("task_status_changes")
+  taskStatusChanges        TaskStatusHistory[]           @relation("task_status_changes")
   employeeLifecycle        EmployeeLifecycle?
-  lifecycleEventsTriggered LifecycleEvent[]            @relation("LifecycleEventTriggerer")
-  certificatesGenerated    EmploymentCertificate[]     @relation("CertificateGenerator")
-  contractsGenerated       EmploymentContract[]        @relation("ContractGenerator")
+  lifecycleEventsTriggered LifecycleEvent[]              @relation("LifecycleEventTriggerer")
+  certificatesGenerated    EmploymentCertificate[]       @relation("CertificateGenerator")
+  contractsGenerated       EmploymentContract[]          @relation("ContractGenerator")
   passwordResetTokens      PasswordResetToken[]
-  onboardingCompleted      Boolean                     @default(false)
+  onboardingCompleted      Boolean                       @default(false)
   onboardingProgress       Json? // Speichert den Fortschritt: { currentStep: number, completedSteps: number[] }
   onboardingStartedAt      DateTime?
   onboardingCompletedAt    DateTime?
   onboardingEvents         OnboardingEvent[]
-  profileComplete          Boolean                     @default(false) // Profilvollständigkeit nach Registrierung (username, email, country, language)
+  profileComplete          Boolean                       @default(false) // Profilvollständigkeit nach Registrierung (username, email, country, language)
   phoneNumber              String? // WhatsApp-Telefonnummer (mit Ländercode, z.B. +573001234567)
   whatsappConversations    WhatsAppConversation[]
   shifts                   Shift[]
   availabilities           UserAvailability[]
-  createdShifts            Shift[]                     @relation("ShiftCreator")
-  confirmedShifts          Shift[]                     @relation("ShiftConfirmer")
-  swapRequestsSent         ShiftSwapRequest[]          @relation("SwapRequester")
-  swapRequestsReceived     ShiftSwapRequest[]          @relation("SwapRequestee")
+  createdShifts            Shift[]                       @relation("ShiftCreator")
+  confirmedShifts          Shift[]                       @relation("ShiftConfirmer")
+  swapRequestsSent         ShiftSwapRequest[]            @relation("SwapRequester")
+  swapRequestsReceived     ShiftSwapRequest[]            @relation("SwapRequestee")
+  toursCreated             Tour[]                        @relation("TourCreator")
+  toursBooked              TourBooking[]                 @relation("TourBooker")
+  passwordEntriesCreated   PasswordEntry[]               @relation("PasswordEntryCreator")
+  passwordEntryPermissions PasswordEntryUserPermission[]
+  passwordEntryAuditLogs   PasswordEntryAuditLog[]       @relation("PasswordEntryAuditLogUser")
 }
 
 model Organization {
@@ -109,6 +114,10 @@ model Organization {
   carticles            CerebroCarticle[]
   employeeLifecycles   EmployeeLifecycle[]
   reservations         Reservation[]
+  tours                Tour[]                      @relation("Tours")
+  tourBookings         TourBooking[]               @relation("TourBookings")
+  tourProviders        TourProvider[]              @relation("TourProviders")
+  passwordEntries      PasswordEntry[]
 }
 
 model OrganizationJoinRequest {
@@ -148,20 +157,21 @@ model OrganizationInvitation {
 }
 
 model Role {
-  id             Int                      @id @default(autoincrement())
-  name           String
-  description    String?
-  organizationId Int?
-  allBranches    Boolean                  @default(false) // Wenn true, gilt für alle Branches der Organisation
-  invitations    OrganizationInvitation[]
-  permissions    Permission[]
-  organization   Organization?            @relation(fields: [organizationId], references: [id])
-  tasks          Task[]
-  users          UserRole[]
-  branches       RoleBranch[] // Spezifische Branch-Zuweisungen (nur wenn allBranches = false)
-  shiftTemplates ShiftTemplate[]
-  shifts         Shift[]
-  availabilities UserAvailability[]
+  id                       Int                           @id @default(autoincrement())
+  name                     String
+  description              String?
+  organizationId           Int?
+  allBranches              Boolean                       @default(false) // Wenn true, gilt für alle Branches der Organisation
+  invitations              OrganizationInvitation[]
+  permissions              Permission[]
+  organization             Organization?                 @relation(fields: [organizationId], references: [id])
+  tasks                    Task[]
+  users                    UserRole[]
+  branches                 RoleBranch[] // Spezifische Branch-Zuweisungen (nur wenn allBranches = false)
+  shiftTemplates           ShiftTemplate[]
+  shifts                   Shift[]
+  availabilities           UserAvailability[]
+  passwordEntryPermissions PasswordEntryRolePermission[]
 
   @@unique([name, organizationId])
 }
@@ -214,6 +224,9 @@ model Branch {
   shifts                Shift[]
   availabilities        UserAvailability[]
   reservations          Reservation[] // NEU: Relation zu Reservierungen
+  tours                 Tour[]                       @relation("TourBranches")
+  tourBookings          TourBooking[]                @relation("TourBookingBranches")
+  tourProviders         TourProvider[]               @relation("TourProviderBranches")
 }
 
 model UsersBranches {
@@ -1122,17 +1135,18 @@ model Reservation {
   guestBirthDate           DateTime? // Geburtsdatum (für SIRE)
   organizationId           Int
   organization             Organization                 @relation(fields: [organizationId], references: [id])
-  branchId                 Int?                         // NEU: Optional für Branch-Zuordnung
-  branch                   Branch?                       @relation(fields: [branchId], references: [id])
+  branchId                 Int? // NEU: Optional für Branch-Zuordnung
+  branch                   Branch?                      @relation(fields: [branchId], references: [id])
   taskId                   Int? // Verknüpfter Task
   task                     Task?                        @relation
   createdAt                DateTime                     @default(now())
   updatedAt                DateTime                     @updatedAt
   syncHistory              ReservationSyncHistory[]
   notificationLogs         ReservationNotificationLog[] @relation("NotificationLogs")
+  tourReservations         TourReservation[]
 
   @@index([organizationId])
-  @@index([branchId])                                    // NEU: Index für Branch-Queries
+  @@index([branchId]) // NEU: Index für Branch-Queries
   @@index([checkInDate])
   @@index([status])
   @@index([lobbyReservationId])
@@ -1228,6 +1242,30 @@ enum SwapStatus {
   approved // Genehmigt
   rejected // Abgelehnt
   cancelled // Abgebrochen
+}
+
+enum TourType {
+  own
+  external
+}
+
+enum TourBookingStatus {
+  confirmed
+  cancelled
+  completed
+  no_show
+}
+
+enum MessageDirection {
+  outgoing
+  incoming
+}
+
+enum MessageStatus {
+  sent
+  delivered
+  read
+  failed
 }
 
 // Schicht-Template: Definiert welche Schichten eine Rolle pro Tag haben kann
@@ -1349,4 +1387,294 @@ model ShiftSwapRequest {
   @@index([requestedBy])
   @@index([requestedFrom])
   @@index([status])
+}
+
+model TourProvider {
+  id            Int     @id @default(autoincrement())
+  name          String
+  phone         String?
+  email         String?
+  contactPerson String?
+  notes         String?
+
+  // Organisation & Branch
+  organizationId Int
+  organization   Organization @relation("TourProviders", fields: [organizationId], references: [id])
+  branchId       Int?
+  branch         Branch?      @relation("TourProviderBranches", fields: [branchId], references: [id])
+
+  // Metadaten
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tours Tour[]
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([name])
+}
+
+model Tour {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  type        TourType @default(own)
+  isActive    Boolean  @default(true)
+
+  // Tour-Details
+  duration        Int?
+  maxParticipants Int?
+  minParticipants Int?
+  price           Decimal? @db.Decimal(10, 2)
+  currency        String?  @default("COP")
+  location        String?
+  meetingPoint    String?
+  includes        String?
+  excludes        String?
+  requirements    String?
+
+  // Kommission (pro Tour)
+  totalCommission         Decimal? @db.Decimal(10, 2)
+  totalCommissionPercent  Decimal? @db.Decimal(5, 2)
+  sellerCommissionPercent Decimal? @db.Decimal(5, 2)
+  sellerCommissionFixed   Decimal? @db.Decimal(10, 2)
+
+  // Externe Tour-Informationen
+  externalProviderId Int?
+  externalProvider   TourProvider? @relation(fields: [externalProviderId], references: [id])
+  externalBookingUrl String?
+
+  // Bilder/Medien
+  imageUrl    String?
+  galleryUrls Json?
+
+  // Verfügbarkeit
+  availableFrom     DateTime?
+  availableTo       DateTime?
+  recurringSchedule Json?
+
+  // Organisation & Branch
+  organizationId Int
+  organization   Organization @relation("Tours", fields: [organizationId], references: [id])
+  branchId       Int?
+  branch         Branch?      @relation("TourBranches", fields: [branchId], references: [id])
+
+  // Metadaten
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById Int?
+  createdBy   User?    @relation("TourCreator", fields: [createdById], references: [id])
+
+  // Relations
+  bookings     TourBooking[]
+  reservations TourReservation[]
+
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([isActive])
+  @@index([title])
+}
+
+model TourBooking {
+  id     Int  @id @default(autoincrement())
+  tourId Int
+  tour   Tour @relation(fields: [tourId], references: [id], onDelete: Restrict)
+
+  // Buchungsdetails
+  bookingDate          DateTime @default(now())
+  tourDate             DateTime
+  numberOfParticipants Int
+  totalPrice           Decimal  @db.Decimal(10, 2)
+  currency             String   @default("COP")
+
+  // Kundeninformationen
+  customerName  String
+  customerEmail String?
+  customerPhone String?
+  customerNotes String?
+
+  // Zahlungsstatus (analog zu Reservation)
+  paymentStatus PaymentStatus @default(pending)
+  amountPaid    Decimal?      @db.Decimal(10, 2)
+  amountPending Decimal?      @db.Decimal(10, 2)
+  paymentLink   String?
+
+  // Mitarbeiter-Kommission
+  bookedById             Int?
+  bookedBy               User?     @relation("TourBooker", fields: [bookedById], references: [id])
+  commissionAmount       Decimal?  @db.Decimal(10, 2)
+  commissionCalculatedAt DateTime?
+
+  // Status
+  status          TourBookingStatus @default(confirmed)
+  cancelledBy     String?
+  cancelledAt     DateTime?
+  cancelledReason String?
+
+  // Externe Tour-Buchung
+  isExternal        Boolean @default(false)
+  externalBookingId String?
+  externalStatus    String?
+  externalMessage   String?
+  alternativeTours  Json?
+
+  // Organisation & Branch
+  organizationId Int
+  organization   Organization @relation("TourBookings", fields: [organizationId], references: [id])
+  branchId       Int?
+  branch         Branch?      @relation("TourBookingBranches", fields: [branchId], references: [id])
+
+  // Metadaten
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  reservations     TourReservation[]
+  whatsappMessages TourWhatsAppMessage[]
+
+  @@index([tourId])
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([bookedById])
+  @@index([bookingDate])
+  @@index([tourDate])
+  @@index([paymentStatus])
+}
+
+model TourReservation {
+  id            Int         @id @default(autoincrement())
+  tourId        Int
+  tour          Tour        @relation(fields: [tourId], references: [id], onDelete: Restrict)
+  bookingId     Int
+  booking       TourBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reservationId Int
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+
+  // Preisaufschlüsselung
+  tourPrice          Decimal @db.Decimal(10, 2)
+  accommodationPrice Decimal @db.Decimal(10, 2)
+  currency           String  @default("COP")
+
+  // Zahlungsstatus
+  tourPricePaid        Decimal? @db.Decimal(10, 2)
+  tourPricePending     Decimal? @db.Decimal(10, 2)
+  accommodationPaid    Decimal? @db.Decimal(10, 2)
+  accommodationPending Decimal? @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([reservationId, bookingId])
+  @@index([tourId])
+  @@index([bookingId])
+  @@index([reservationId])
+}
+
+model TourWhatsAppMessage {
+  id        Int         @id @default(autoincrement())
+  bookingId Int
+  booking   TourBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  // Nachrichtendetails
+  direction   MessageDirection @default(outgoing)
+  message     String
+  phoneNumber String
+  sentAt      DateTime         @default(now())
+
+  // Status
+  status       MessageStatus @default(sent)
+  errorMessage String?
+
+  // Verarbeitung
+  processed     Boolean   @default(false)
+  processedAt   DateTime?
+  action        String?
+  extractedData Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([phoneNumber])
+  @@index([sentAt])
+  @@index([processed])
+}
+
+// ============================================
+// PASSWORD MANAGER MODELS
+// ============================================
+
+model PasswordEntry {
+  id              Int                           @id @default(autoincrement())
+  title           String
+  url             String?
+  username        String?
+  password        String // Verschlüsselt (AES-256-GCM)
+  notes           String?                       @db.Text
+  organizationId  Int?
+  createdById     Int
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
+  organization    Organization?                 @relation(fields: [organizationId], references: [id])
+  createdBy       User                          @relation("PasswordEntryCreator", fields: [createdById], references: [id])
+  rolePermissions PasswordEntryRolePermission[]
+  userPermissions PasswordEntryUserPermission[]
+  auditLogs       PasswordEntryAuditLog[]
+
+  @@index([organizationId])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model PasswordEntryRolePermission {
+  id        Int           @id @default(autoincrement())
+  entryId   Int
+  roleId    Int
+  canView   Boolean       @default(false)
+  canEdit   Boolean       @default(false)
+  canDelete Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  entry     PasswordEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  role      Role          @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, roleId])
+  @@index([entryId])
+  @@index([roleId])
+}
+
+model PasswordEntryUserPermission {
+  id        Int           @id @default(autoincrement())
+  entryId   Int
+  userId    Int
+  canView   Boolean       @default(false)
+  canEdit   Boolean       @default(false)
+  canDelete Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  entry     PasswordEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, userId])
+  @@index([entryId])
+  @@index([userId])
+}
+
+model PasswordEntryAuditLog {
+  id        Int           @id @default(autoincrement())
+  entryId   Int
+  userId    Int
+  action    String // 'view', 'view_password', 'copy_password', 'create', 'update', 'delete'
+  details   Json? // Zusätzliche Details (z.B. geänderte Felder)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime      @default(now())
+  entry     PasswordEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user      User          @relation("PasswordEntryAuditLogUser", fields: [userId], references: [id])
+
+  @@index([entryId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
 }
