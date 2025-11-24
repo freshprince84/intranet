@@ -95,6 +95,32 @@ export const API_ENDPOINTS = {
             ANALYTICS: '/users/onboarding/analytics'
         }
     },
+    // Tours
+    TOURS: {
+        BASE: '/tours',
+        BY_ID: (id: number) => `/tours/${id}`,
+        BOOKINGS: (id: number) => `/tours/${id}/bookings`,
+        EXPORT: '/tours/export',
+        TOGGLE_ACTIVE: (id: number) => `/tours/${id}/toggle-active`
+    },
+    TOUR_BOOKINGS: {
+        BASE: '/tour-bookings',
+        BY_ID: (id: number) => `/tour-bookings/${id}`,
+        USER: (userId: number) => `/tour-bookings/user/${userId}`,
+        COMMISSIONS: (userId: number) => `/tour-bookings/user/${userId}/commissions`,
+        CANCEL: (id: number) => `/tour-bookings/${id}/cancel`,
+        COMPLETE: (id: number) => `/tour-bookings/${id}/complete`
+    },
+    TOUR_RESERVATIONS: {
+        BASE: '/tour-reservations',
+        BY_ID: (id: number) => `/tour-reservations/${id}`,
+        BY_RESERVATION: (reservationId: number) => `/tour-reservations/reservation/${reservationId}`,
+        BY_BOOKING: (bookingId: number) => `/tour-reservations/booking/${bookingId}`
+    },
+    TOUR_PROVIDERS: {
+        BASE: '/tour-providers',
+        BY_ID: (id: number) => `/tour-providers/${id}`
+    },
     // Team Worktime Control
     TEAM_WORKTIME: {
         ACTIVE: '/team-worktime/active',
@@ -302,6 +328,14 @@ export const API_ENDPOINTS = {
     BOLD_PAYMENT: {
         WEBHOOK: '/bold-payment/webhook',
         PAYMENT_STATUS: (paymentId: string) => `/bold-payment/payments/${paymentId}`
+    },
+    // Passwort-Manager
+    PASSWORD_MANAGER: {
+        BASE: '/password-manager',
+        BY_ID: (id: number) => `/password-manager/${id}`,
+        PASSWORD: (id: number) => `/password-manager/${id}/password`,
+        AUDIT_LOGS: (id: number) => `/password-manager/${id}/audit-logs`,
+        GENERATE_PASSWORD: '/password-manager/generate-password'
     }
 };
 

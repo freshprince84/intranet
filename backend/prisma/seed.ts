@@ -27,7 +27,8 @@ const ALL_PAGES = [
   'cerebro',
   'settings',
   'profile',
-  'tour_management' // NEU: Touren-Verwaltung
+  'tour_management', // NEU: Touren-Verwaltung
+  'password_manager' // NEU: Passwort-Manager
 ];
 
 // ALLE TABELLEN IM SYSTEM
@@ -125,7 +126,12 @@ const ALL_BUTTONS = [
   'tour_booking_cancel',
   'tour_provider_create',
   'tour_provider_edit',
-  'tour_provider_delete'
+  'tour_provider_delete',
+  
+  // Password Manager Buttons
+  'password_entry_create',
+  'password_entry_edit',
+  'password_entry_delete'
 ];
 
 async function main() {

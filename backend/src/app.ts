@@ -38,6 +38,11 @@ import whatsappRoutes from './routes/whatsapp';
 import reservationRoutes from './routes/reservations';
 import emailReservationRoutes from './routes/emailReservations';
 import shiftRoutes from './routes/shifts';
+import passwordManagerRoutes from './routes/passwordManager';
+import tourRoutes from './routes/tours';
+import tourBookingRoutes from './routes/tourBookings';
+import tourReservationRoutes from './routes/tourReservations';
+import tourProviderRoutes from './routes/tourProviders';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
@@ -240,6 +245,7 @@ app.use('/api/branches', branchRoutes);
 app.use('/api/worktime', worktimeRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/password-manager', passwordManagerRoutes);
 app.use('/api/table-settings', tableSettingsRoutes);
 app.use('/api/cerebro', cerebroRoutes);
 app.use('/api/team-worktime', teamWorktimeRoutes);
@@ -279,6 +285,12 @@ console.log('[App] /api/reservations Route registriert');
 // Email-Reservation-Integration
 app.use('/api/email-reservations', emailReservationRoutes);
 console.log('[App] /api/email-reservations Route registriert');
+// Tour-Management
+app.use('/api/tours', tourRoutes);
+app.use('/api/tour-bookings', tourBookingRoutes);
+app.use('/api/tour-reservations', tourReservationRoutes);
+app.use('/api/tour-providers', tourProviderRoutes);
+console.log('[App] Tour-Management Routes registriert');
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

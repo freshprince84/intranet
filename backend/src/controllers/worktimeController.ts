@@ -1127,29 +1127,24 @@ export const checkAndStopExceededWorktimes = async () => {
       // Aktuelle Zeit
       const now = new Date();
       
-      // Erstelle das Datum für den Anfang und das Ende des aktuellen Tages (entsprechend getWorktimeStats)
+      // KORREKT: Tagesgrenzen als lokale Zeit berechnen (ohne UTC-Konvertierung)
+      // Die Datenbank speichert Zeiten als lokale Zeit, daher müssen die Tagesgrenzen auch als lokale Zeit sein
+      // Siehe DATENBANKSCHEMA.md: "startTime DateTime // Enthält die lokale Systemzeit des Benutzers ohne UTC-Konvertierung"
       const year = now.getFullYear();
       const month = now.getMonth(); // Monate sind 0-basiert in JavaScript
       const day = now.getDate();
       
-      // Erstelle lokales Datum für den Anfang des Tages
-      const localStartOfDay = new Date(year, month, day, 0, 0, 0);
-      const localEndOfDay = new Date(year, month, day, 23, 59, 59, 999);
-      
-      // Zeitzonenversatz berechnen
-      const startOffsetMinutes = localStartOfDay.getTimezoneOffset();
-      const endOffsetMinutes = localEndOfDay.getTimezoneOffset();
-      
-      // Kompensierte Zeiten erstellen für korrekte UTC-Darstellung
-      const todayStart = new Date(localStartOfDay.getTime() - startOffsetMinutes * 60000);
-      const todayEnd = new Date(localEndOfDay.getTime() - endOffsetMinutes * 60000);
+      // Erstelle lokales Datum für den Anfang und das Ende des Tages
+      // WICHTIG: Diese werden als lokale Zeit interpretiert, nicht als UTC
+      const todayStart = new Date(year, month, day, 0, 0, 0, 0);
+      const todayEnd = new Date(year, month, day, 23, 59, 59, 999);
       
       // Protokolliere lokale und UTC-Zeit für Vergleichszwecke
       console.log(`Prüfung auf überschrittene Arbeitszeit für Datum: ${format(now, 'yyyy-MM-dd')}`);
       console.log(`Aktuelle Zeit (UTC): ${now.toISOString()}`);
       console.log(`Aktuelle Zeit (lokal): ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`);
-      console.log(`Tagesbeginn (kompensiert): ${todayStart.toISOString()}`);
-      console.log(`Tagesende (kompensiert): ${todayEnd.toISOString()}`);
+      console.log(`Tagesbeginn (lokal): ${todayStart.toISOString()}`);
+      console.log(`Tagesende (lokal): ${todayEnd.toISOString()}`);
 
       // Hole alle beendeten Zeiterfassungen für heute
       const todaysWorktimes = await prisma.workTime.findMany({
@@ -1183,13 +1178,17 @@ export const checkAndStopExceededWorktimes = async () => {
       // KORREKT: Beide Werte (now.getTime() und worktime.startTime.getTime()) sind bereits UTC-Millisekunden
       // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
       // Siehe getWorktimeStats Zeile 639-641 für die korrekte Referenz-Implementierung
-      const currentSessionMs = now.getTime() - worktime.startTime.getTime();
+      // WICHTIG: worktime.startTime wurde als lokale Zeit gespeichert, aber getTime() gibt UTC-Millisekunden zurück
+      // Da die Datenbank die Zeit als lokale Zeit speichert, müssen wir sicherstellen, dass beide Werte korrekt interpretiert werden
+      const startTimeUtcMs = worktime.startTime.getTime(); // UTC-Millisekunden
+      const nowUtcMs = now.getTime(); // UTC-Millisekunden
+      const currentSessionMs = nowUtcMs - startTimeUtcMs;
       const currentSessionHours = currentSessionMs / (1000 * 60 * 60);
       
       // Formatiere lokale Zeit für bessere Lesbarkeit
       const localNowString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
       
-      console.log(`Aktuelle laufende Sitzung: ${worktime.startTime.toISOString()} - jetzt (${localNowString}) = ${currentSessionHours.toFixed(2)}h`);
+      console.log(`Aktuelle laufende Sitzung: ${worktime.startTime.toISOString()} (${startTimeUtcMs}) - jetzt (${localNowString}, ${nowUtcMs}) = ${currentSessionHours.toFixed(2)}h`);
       
       totalWorkTimeMs += currentSessionMs;
 
