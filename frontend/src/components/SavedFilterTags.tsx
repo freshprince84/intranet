@@ -486,26 +486,77 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     
     // Reduzierte, realistischere UI-Element-Breiten
     const DROPDOWN_BUTTON_WIDTH = 60; // Reduziert von 70
-    const GAPS_AND_MARGINS = 8; // Reduziert von 14 (gap-1.5 = 6px, gap-2 = 8px)
-    const BUFFER = 4; // Noch weiter reduziert von 6 (minimaler Puffer)
+    const GAP_BETWEEN_TAGS = 6; // gap-1.5 = 6px
+    const BUFFER = 4; // Minimaler Puffer
     
-    const availableWidth = currentWidth - GAPS_AND_MARGINS - BUFFER;
+    const availableWidth = currentWidth - BUFFER;
     
-    // Berechne maximal mögliche Tags ohne Dropdown
-    const maxPossibleTags = Math.max(1, Math.floor(availableWidth / averageTagWidth));
+    // Verwende gemessene Breiten wenn verfügbar, sonst Durchschnitt
+    let totalWidth = 0;
+    let measuredCount = 0;
+    
+    // Berechne Gesamtbreite der Tags mit gemessenen Breiten
+    sortedFilters.forEach((filter) => {
+      const measuredWidth = measuredTagWidths.get(filter.id);
+      if (measuredWidth) {
+        totalWidth += measuredWidth + GAP_BETWEEN_TAGS;
+        measuredCount++;
+      }
+    });
+    
+    // Wenn wir gemessene Breiten für alle Tags haben, verwende diese
+    if (measuredCount === sortedFilters.length && totalWidth > 0) {
+      const totalWidthWithoutLastGap = totalWidth - GAP_BETWEEN_TAGS;
+      
+      // Prüfe ob alle Tags ohne Dropdown passen
+      if (totalWidthWithoutLastGap <= availableWidth) {
+        setVisibleTagCount(sortedFilters.length);
+        return;
+      }
+      
+      // Prüfe ob alle Tags mit Dropdown passen
+      const availableWithDropdown = availableWidth - DROPDOWN_BUTTON_WIDTH - GAP_BETWEEN_TAGS;
+      if (totalWidthWithoutLastGap <= availableWithDropdown) {
+        setVisibleTagCount(sortedFilters.length);
+        return;
+      }
+      
+      // Berechne wie viele Tags mit Dropdown passen
+      let cumulativeWidth = 0;
+      let visibleCount = 0;
+      for (const filter of sortedFilters) {
+        const width = measuredTagWidths.get(filter.id) || averageTagWidth;
+        if (cumulativeWidth + width + GAP_BETWEEN_TAGS <= availableWithDropdown) {
+          cumulativeWidth += width + GAP_BETWEEN_TAGS;
+          visibleCount++;
+        } else {
+          break;
+        }
+      }
+      setVisibleTagCount(Math.max(1, visibleCount));
+      return;
+    }
+    
+    // Fallback: Verwende Durchschnittsbreite
+    const maxPossibleTags = Math.max(1, Math.floor(availableWidth / (averageTagWidth + GAP_BETWEEN_TAGS)));
     
     if (maxPossibleTags >= sortedFilters.length) {
       // Alle Tags passen rein - zeige alle
       setVisibleTagCount(sortedFilters.length);
     } else {
-      // Reserviere Platz für Dropdown nur wenn nötig
-      const availableWithDropdown = availableWidth - DROPDOWN_BUTTON_WIDTH;
-      const tagsWithDropdown = Math.max(1, Math.floor(availableWithDropdown / averageTagWidth));
+      // Prüfe ob alle Tags mit Dropdown passen würden
+      const availableWithDropdown = availableWidth - DROPDOWN_BUTTON_WIDTH - GAP_BETWEEN_TAGS;
+      const maxTagsWithDropdown = Math.max(1, Math.floor(availableWithDropdown / (averageTagWidth + GAP_BETWEEN_TAGS)));
       
-      // Zeige berechnete Anzahl (OHNE -1, damit alle Tags angezeigt werden wenn möglich)
-      setVisibleTagCount(Math.min(tagsWithDropdown, sortedFilters.length));
+      if (maxTagsWithDropdown >= sortedFilters.length) {
+        // Alle Tags passen mit Dropdown - zeige alle
+        setVisibleTagCount(sortedFilters.length);
+      } else {
+        // Zeige berechnete Anzahl
+        setVisibleTagCount(Math.max(1, maxTagsWithDropdown));
+      }
     }
-  }, [sortedFilters, averageTagWidth, containerWidth, isMeasuring]);
+  }, [sortedFilters, averageTagWidth, containerWidth, isMeasuring, measuredTagWidths]);
 
   // Debounced ResizeObserver für bessere Performance
   const handleResize = useCallback(() => {
