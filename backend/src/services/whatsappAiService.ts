@@ -65,7 +65,31 @@ export class WhatsAppAiService {
     }
     
     const whatsappSettings = settings; // Branch-Settings sind direkt WhatsApp Settings
-    const aiConfig: AIConfig = whatsappSettings?.ai;
+    
+    // 2. Prüfe ob es eine Gruppen-Nachricht ist
+    const groupId = conversationContext?.groupId;
+    const isGroupMessage = !!groupId;
+    
+    // 3. Wähle entsprechende KI-Konfiguration
+    let aiConfig: AIConfig;
+    
+    if (isGroupMessage && whatsappSettings?.guestGroup?.ai) {
+      // Gruppen-Nachricht: Verwende guestGroup.ai Konfiguration
+      const guestGroupId = whatsappSettings.guestGroup.groupId;
+      
+      // Prüfe ob groupId mit konfigurierter Group ID übereinstimmt
+      if (guestGroupId && guestGroupId === groupId) {
+        aiConfig = whatsappSettings.guestGroup.ai;
+        console.log('[WhatsApp AI Service] Verwende Gäste-Gruppen-KI-Konfiguration');
+      } else {
+        // Fallback: Verwende normale AI-Konfiguration
+        aiConfig = whatsappSettings?.ai;
+        console.log('[WhatsApp AI Service] Group ID stimmt nicht überein, verwende normale KI-Konfiguration');
+      }
+    } else {
+      // Einzel-Chat: Verwende normale AI-Konfiguration
+      aiConfig = whatsappSettings?.ai;
+    }
 
     if (!aiConfig?.enabled) {
       throw new Error('KI ist für diesen Branch nicht aktiviert');

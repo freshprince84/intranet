@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 interface SidebarContextType {
     isCollapsed: boolean;
     toggleCollapsed: () => void;
+    setCollapsedTemporary: (collapsed: boolean) => void;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
@@ -133,8 +134,17 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveSidebarState(newState);
     };
 
+    // Funktion zum temporären Setzen des Collapsed-Status (ohne Benutzerpräferenz zu ändern)
+    // Wird z.B. verwendet, wenn Sidepane öffnet und Sidebar automatisch collapsed werden soll
+    const setCollapsedTemporary = useCallback((collapsed: boolean) => {
+        setIsCollapsed(collapsed);
+        isCollapsedRef.current = collapsed;
+        // WICHTIG: userPreferenceRef und isManualToggleRef NICHT ändern,
+        // damit die automatische Anpassung weiterhin funktioniert
+    }, []);
+
     return (
-        <SidebarContext.Provider value={{ isCollapsed, toggleCollapsed }}>
+        <SidebarContext.Provider value={{ isCollapsed, toggleCollapsed, setCollapsedTemporary }}>
             {children}
         </SidebarContext.Provider>
     );

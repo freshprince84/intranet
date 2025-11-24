@@ -105,7 +105,7 @@ export class WhatsAppMessageHandler {
           messageText,
           branchId,
           normalizedPhone,
-          { userId: user?.id, conversationState: conversation.state }
+          { userId: user?.id, conversationState: conversation.state, groupId: groupId }
         );
         return aiResponse.message;
       } catch (error) {

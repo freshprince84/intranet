@@ -1,0 +1,107 @@
+[
+  {
+    "endpoint": "https://api.lobbypms.com/reservations/18113730/payment",
+    "method": "PUT",
+    "body": {
+      "payment_status": "paid",
+      "paid_out": 1
+    },
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    }
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/reservations/18113730/payment",
+    "method": "PUT",
+    "body": {
+      "payment_status": "paid",
+      "paid_out": 1,
+      "payment_method": "card"
+    },
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    }
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/reservations/18113730",
+    "method": "PUT",
+    "body": {
+      "payment_status": "paid",
+      "paid_out": 1
+    },
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    }
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/reservations/18113730",
+    "method": "PATCH",
+    "body": {
+      "payment_status": "paid",
+      "paid_out": 1
+    },
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    }
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v1/reservations/18113730/payment",
+    "method": "PUT",
+    "body": {
+      "payment_status": "paid",
+      "paid_out": 1
+    },
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    }
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v1/reservations/18113730",
+    "method": "PUT",
+    "body": {
+      "payment_status": "paid",
+      "paid_out": 1
+    },
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    }
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/bookings/18113730/payment",
+    "method": "PUT",
+    "body": {
+      "payment_status": "paid",
+      "paid_out": 1
+    },
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    }
+  },
+  {
+    "endpoint": "https://api.lobbypms.com/api/v1/bookings/18113730/payment",
+    "method": "PUT",
+    "body": {
+      "payment_status": "paid",
+      "paid_out": 1
+    },
+    "success": false,
+    "status": 404,
+    "data": {
+      "error": "Resource Not Found."
+    }
+  }
+]

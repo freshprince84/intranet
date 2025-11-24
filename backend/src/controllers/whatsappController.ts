@@ -103,11 +103,18 @@ export const handleWebhook = async (req: Request, res: Response) => {
         const messageText = message.text?.body || '';
         const mediaUrl = message.image?.id || message.document?.id;
         const phoneNumberId = value.metadata?.phone_number_id;
+        
+        // Gruppen-Erkennung: Prüfe ob Nachricht aus Gruppe kommt
+        const context = message.context;
+        const groupId = context?.group_id || null;
+        const isGroupMessage = !!groupId;
 
         console.log('[WhatsApp Webhook] Eingehende Nachricht:', {
           from: fromNumber,
           text: messageText,
-          phoneNumberId: phoneNumberId
+          phoneNumberId: phoneNumberId,
+          isGroupMessage: isGroupMessage,
+          groupId: groupId
         });
 
         // 1. Identifiziere Branch via Phone Number ID
@@ -148,7 +155,8 @@ export const handleWebhook = async (req: Request, res: Response) => {
             fromNumber,
             messageText,
             branchId,
-            mediaUrl
+            mediaUrl,
+            groupId || undefined
           );
 
           console.log('[WhatsApp Webhook] Antwort generiert:', response.substring(0, 100) + '...');
@@ -158,8 +166,14 @@ export const handleWebhook = async (req: Request, res: Response) => {
           console.log('[WhatsApp Webhook] Erstelle WhatsApp Service für Branch', branchId);
           const whatsappService = await WhatsAppService.getServiceForBranch(branchId);
           
-          console.log('[WhatsApp Webhook] Sende Antwort an', fromNumber);
-          await whatsappService.sendMessage(fromNumber, response);
+          console.log('[WhatsApp Webhook] Sende Antwort an', fromNumber, isGroupMessage ? `(Gruppe: ${groupId})` : '');
+          
+          // Für Gruppen: Sende mit group_id, für Einzel-Chats: normale Nachricht
+          if (isGroupMessage && groupId) {
+            await whatsappService.sendMessage(fromNumber, response, undefined, groupId);
+          } else {
+            await whatsappService.sendMessage(fromNumber, response);
+          }
 
           console.log('[WhatsApp Webhook] ✅ Antwort erfolgreich gesendet');
 
