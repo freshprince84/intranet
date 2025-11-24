@@ -8,27 +8,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiResponse, LoginCredentials, AuthResponse, Task, Request, User, Branch, Role, Document, PaginatedResponse, FilterOptions, Notification, NotificationType, WorkTime, WorkTimeStatistics, TaskStatus, MobileWorkTime } from '../types';
 import axiosInstance from '../config/axios';
 import axios from 'axios';
-import { API_BASE_URL } from '../config/api';
+import { API_URL } from '../config/api';
 import { AxiosError } from 'axios';
 
-// Axios-Instance mit base URL
-const apiInstance = axios.create({
-  baseURL: API_BASE_URL,
-});
-
-// Request-Interceptor zum Hinzufügen des Authorization-Headers
-apiInstance.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem('@IntranetApp:token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// apiInstance wird nicht mehr verwendet - alle Services verwenden axiosInstance aus config/axios.ts
+// Diese Instanz wird nur für BaseApiService verwendet, aber BaseApiService verwendet jetzt axiosInstance
 
 // BaseApiService: Methoden bleiben generisch ohne Typen bei this.api.*
 class BaseApiService<T> {
@@ -37,7 +21,7 @@ class BaseApiService<T> {
 
   constructor(endpoint: string) {
     this.endpoint = endpoint;
-    this.api = axiosInstance; // Stelle sicher, dass die korrekte Instanz verwendet wird
+    this.api = axiosInstance; // Verwende axiosInstance aus config/axios.ts (hat bereits /api in baseURL)
   }
 
   async getAll(filters?: FilterOptions): Promise<T[]> {
@@ -104,21 +88,37 @@ class BaseApiService<T> {
 class AuthService {
   // Login
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await axiosInstance.post<AuthResponse>(
-      '/auth/login',
-      credentials
-    );
+    try {
+      console.log('[AuthService] Login attempt to:', axiosInstance.defaults.baseURL + '/auth/login');
+      const response = await axiosInstance.post<AuthResponse>(
+        '/auth/login',
+        credentials
+      );
+      console.log('[AuthService] Login response:', response.status, response.data ? 'has data' : 'no data');
     
-    // Speichere Token und Refresh-Token - Backend gibt direkt token und user ohne data-Wrapper zurück
-    if (response.data && response.data.token) {
-      await AsyncStorage.setItem('@IntranetApp:token', response.data.token);
+      // Speichere Token und Refresh-Token - Backend gibt direkt token und user ohne data-Wrapper zurück
+      if (response.data && response.data.token) {
+        await AsyncStorage.setItem('@IntranetApp:token', response.data.token);
+        console.log('[AuthService] Token saved');
+      }
+      
+      if (response.data && response.data.refreshToken) {
+        await AsyncStorage.setItem('@IntranetApp:refreshToken', response.data.refreshToken);
+        console.log('[AuthService] RefreshToken saved');
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('[AuthService] Login error:', error);
+      console.error('[AuthService] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
+      throw error;
     }
-    
-    if (response.data && response.data.refreshToken) {
-      await AsyncStorage.setItem('@IntranetApp:refreshToken', response.data.refreshToken);
-    }
-    
-    return response.data;
   }
 
   // Logout

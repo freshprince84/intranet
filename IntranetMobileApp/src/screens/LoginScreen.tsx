@@ -30,12 +30,19 @@ const LoginScreen = () => {
     try {
       await signIn({ username, password });
       // Bei erfolgreicher Anmeldung wird die Navigation automatisch umgestellt
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || 'Unbekannter Fehler';
+      const errorDetails = error?.response?.status ? `Status: ${error.response.status}` : '';
+      console.error('Login failed:', error);
+      console.error('Error details:', {
+        message: errorMessage,
+        status: error?.response?.status,
+        data: error?.response?.data
+      });
       Alert.alert(
         'Anmeldefehler',
-        'Die Anmeldung ist fehlgeschlagen. Bitte überprüfe deine Zugangsdaten.'
+        `Die Anmeldung ist fehlgeschlagen.\n\n${errorMessage}\n${errorDetails ? errorDetails : ''}\n\nBitte überprüfe deine Zugangsdaten.`
       );
-      console.error('Login failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +100,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FFFFFF',
   },
   surface: {
     padding: 20,

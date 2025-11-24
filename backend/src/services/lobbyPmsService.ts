@@ -572,6 +572,8 @@ export class LobbyPmsService {
       : (lobbyReservation.guest_name || 'Unbekannt');
     const guestEmail = holder.email || lobbyReservation.guest_email || null;
     const guestPhone = holder.phone || lobbyReservation.guest_phone || null;
+    // Land aus holder.pais extrahieren (für Sprache-basierte WhatsApp-Nachrichten)
+    const guestNationality = holder.pais || null;
     
     // Datum-Felder: API gibt start_date/end_date zurück
     // WICHTIG: Verwende parseLocalDate, um UTC-Konvertierung zu vermeiden
@@ -639,6 +641,7 @@ export class LobbyPmsService {
       paymentStatus: paymentStatus,
       amount: amount,
       currency: currency,
+      guestNationality: guestNationality, // Land für Sprache-basierte WhatsApp-Nachrichten
       organizationId: this.organizationId!,
       branchId: branchId,
     };

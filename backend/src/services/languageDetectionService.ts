@@ -12,25 +12,26 @@ export class LanguageDetectionService {
    */
   static detectLanguageFromPhoneNumber(phoneNumber: string): string {
     // Mapping: Ländercode -> Sprache
+    // Regel: Alle spanischsprachigen Länder → 'es', alle anderen → 'en'
     const countryCodeMap: Record<string, string> = {
       '57': 'es', // Kolumbien
-      '49': 'de', // Deutschland
-      '41': 'de', // Schweiz (Standard)
+      '49': 'en', // Deutschland → Englisch
+      '41': 'es', // Schweiz → Spanisch (da hauptsächlich spanischsprachige Gäste)
       '1': 'en',  // USA/Kanada
       '34': 'es', // Spanien
-      '33': 'fr', // Frankreich
-      '39': 'it', // Italien
+      '33': 'en', // Frankreich → Englisch
+      '39': 'en', // Italien → Englisch
       '44': 'en', // UK
       '52': 'es', // Mexiko
       '54': 'es', // Argentinien
-      '55': 'pt', // Brasilien
-      '86': 'zh', // China
-      '81': 'ja', // Japan
-      '82': 'ko', // Südkorea
-      '91': 'hi', // Indien
-      '7': 'ru',  // Russland
-      '90': 'tr', // Türkei
-      '20': 'ar', // Ägypten
+      '55': 'en', // Brasilien → Englisch
+      '86': 'en', // China → Englisch
+      '81': 'en', // Japan → Englisch
+      '82': 'en', // Südkorea → Englisch
+      '91': 'en', // Indien → Englisch
+      '7': 'en',  // Russland → Englisch
+      '90': 'en', // Türkei → Englisch
+      '20': 'en', // Ägypten → Englisch
       '27': 'en', // Südafrika
       '61': 'en', // Australien
       '64': 'en', // Neuseeland

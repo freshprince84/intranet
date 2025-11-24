@@ -27,7 +27,7 @@ const theme = {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider style={{ backgroundColor: '#FFFFFF' }}>
       <PaperProvider theme={theme}>
         <AuthProvider>
           <FilterProvider>

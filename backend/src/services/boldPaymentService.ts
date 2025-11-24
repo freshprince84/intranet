@@ -740,7 +740,11 @@ ${ttlockCode}
                     updatedReservation.guestPhone,
                     message,
                     templateName,
-                    templateParams
+                    templateParams,
+                    {
+                      guestNationality: updatedReservation.guestNationality,
+                      guestPhone: updatedReservation.guestPhone
+                    }
                   );
 
                   if (whatsappSuccess) {
