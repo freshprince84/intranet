@@ -67,6 +67,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [WHATSAPP_WEBHOOK_SERVER_SETUP.md](docs/technical/WHATSAPP_WEBHOOK_SERVER_SETUP.md) - WhatsApp-Webhook-Server-Setup
 - [WHATSAPP_TOKEN_SETUP.md](docs/technical/WHATSAPP_TOKEN_SETUP.md) - WhatsApp-Token-Setup
 - [TROUBLESHOOTING_WHATSAPP_HETZNER.md](docs/technical/TROUBLESHOOTING_WHATSAPP_HETZNER.md) - WhatsApp-Troubleshooting auf Hetzner
+- [WHATSAPP_AI_KONFIGURATION.md](docs/technical/WHATSAPP_AI_KONFIGURATION.md) - WhatsApp KI-Konfiguration
 - [WO_HER_API_KEYS_BEKOMMEN.md](docs/technical/WO_HER_API_KEYS_BEKOMMEN.md) - API-Keys-Beschaffung
 - [NOTIFICATION_SYSTEM.md](docs/modules/NOTIFICATION_SYSTEM.md) - Benachrichtigungssystem und Trigger
 - [QUEUE_SYSTEM.md](docs/technical/QUEUE_SYSTEM.md) - Queue-System Übersicht (BullMQ mit Redis)
@@ -90,6 +91,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [MODUL_CONSULTATIONS.md](docs/modules/MODUL_CONSULTATIONS.md) - Beratungsstunden-Verwaltung mit Client-Tracking
 - [WHATSAPP_TEMPLATE_ERSTELLUNG_ANLEITUNG.md](docs/modules/WHATSAPP_TEMPLATE_ERSTELLUNG_ANLEITUNG.md) - WhatsApp-Template-Erstellung (detailliert)
 - [WHATSAPP_TEMPLATE_ERSTELLUNG_QUICK_START.md](docs/modules/WHATSAPP_TEMPLATE_ERSTELLUNG_QUICK_START.md) - WhatsApp-Template-Erstellung (Quick Start)
+- [WHATSAPP_BOT_NUTZUNG_ANLEITUNG.md](docs/user/WHATSAPP_BOT_NUTZUNG_ANLEITUNG.md) - WhatsApp Bot Nutzungsanleitung
 
 ### Implementierungspläne
 - [CONSULTATION_MODULE_IMPLEMENTATION.md](docs/implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION.md) - Schritt-für-Schritt Plan für Consultation-Modul

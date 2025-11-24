@@ -631,13 +631,9 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
       
       if (entry.endTime === null) {
         // Aktive Zeitmessung: DIREKTE DIFFERENZ wie im Modal
-        // Entferne 'Z' vom startTime-String und berechne Differenz
-        const startTimeISO = entry.startTime.toISOString();
-        const startISOString = startTimeISO.endsWith('Z') 
-          ? startTimeISO.substring(0, startTimeISO.length - 1)
-          : startTimeISO;
-        const startTimeDate = new Date(startISOString);
-        const diffMs = nowUtc.getTime() - startTimeDate.getTime();
+        // KORREKT: entry.startTime ist bereits ein UTC-Date-Objekt, verwende es direkt
+        // Date.now() gibt UTC-Millisekunden zurück (seit 1.1.1970 UTC)
+        const diffMs = Date.now() - entry.startTime.getTime();
         hoursWorked = diffMs / (1000 * 60 * 60);
         
         // Für Verteilung: Verwende entry.startTime und effectiveEndTime (nicht begrenzt)

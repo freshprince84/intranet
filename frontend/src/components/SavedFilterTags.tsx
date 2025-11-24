@@ -988,12 +988,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               )}
             </span>
             {!filter.isPlaceholder && !isStandardFilter(filter.name) && (
-              <button
-                onClick={(e) => handleDeleteFilter(e, filter.id)}
+                <button
+                  onClick={(e) => handleDeleteFilter(e, filter.id)}
                 className="ml-1 sm:ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
-              >
-                <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-              </button>
+                >
+                  <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                </button>
             )}
             <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
               {filter.isPlaceholder ? t('common.loading') : translateFilterName(filter.name)}
@@ -1035,16 +1035,16 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                   >
                     <span className="truncate flex-1">{translateFilterName(filter.name)}</span>
                     {!isStandardFilter(filter.name) && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteFilter(e, filter.id);
-                          setIsDropdownOpen(false);
-                        }}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFilter(e, filter.id);
+                            setIsDropdownOpen(false);
+                          }}
                         className="ml-2 flex-shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
                     )}
                   </div>
                 ))}
