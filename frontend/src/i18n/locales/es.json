@@ -1180,7 +1180,32 @@
     "article": "Artículo",
     "addFile": "Agregar Archivo",
     "structureLoadError": "Error al cargar la estructura del artículo. Por favor intente más tarde.",
-    "title": "Cerebro"
+    "title": "Cerebro",
+    "header": {
+      "title": "Cerebro",
+      "searchPlaceholder": "Buscar artículos...",
+      "createArticle": "Nuevo Artículo",
+      "filter": "Filtro",
+      "sort": "Ordenar"
+    },
+    "filters": {
+      "all": "Todos los Artículos",
+      "title": "Título",
+      "createdAt": "Creado el",
+      "updatedAt": "Actualizado el",
+      "createdBy": "Creado por",
+      "category": "Categoría",
+      "hasGithubPath": "Tiene Ruta de GitHub",
+      "isPublished": "Publicado"
+    },
+    "sort": {
+      "titleAsc": "Título (A-Z)",
+      "titleDesc": "Título (Z-A)",
+      "createdAtDesc": "Más recientes primero",
+      "createdAtAsc": "Más antiguos primero",
+      "updatedAtDesc": "Última actualización",
+      "updatedAtAsc": "Actualización más antigua"
+    }
   },
   "notifications": {
     "title": "Notificaciones",

@@ -1,25 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams, Outlet, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cerebroApi, CerebroArticleStructure } from '../../api/cerebroApi.ts';
-import { usePermissions } from '../../hooks/usePermissions.ts';
 import { 
   Bars3Icon, 
   XMarkIcon, 
   PlusIcon as HPlusIcon, 
-  MinusIcon, 
-  MagnifyingGlassIcon 
+  MinusIcon
 } from '@heroicons/react/24/outline';
-
-// Icon-Komponenten
-const PlusIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-  </svg>
-);
-const SearchIcon = () => (
-  <MagnifyingGlassIcon className="h-5 w-5 text-gray-500" />
-);
 
 interface ArticleTreeProps {
   articles: CerebroArticleStructure[];
@@ -125,26 +113,9 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 720);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(window.innerWidth >= 720);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [canCreateArticle, setCanCreateArticle] = useState<boolean>(false);
   
   const { slug } = useParams<{ slug: string }>();
-  const { hasPermission } = usePermissions();
   const { t } = useTranslation();
-  
-  // Berechtigungsprüfung für den Neuer Artikel-Button
-  useEffect(() => {
-    // Prüfe nur die vorhandenen Berechtigungen aus dem Bild
-    const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
-    const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
-    
-    console.log('Berechtigungsprüfung:');
-    console.log('cerebro.both.button:', hasCerebroButtonPermission);
-    console.log('cerebro.both.page:', hasCerebroPagePermission);
-    
-    // Setze canCreateArticle auf true, wenn mindestens eine der Berechtigungen vorhanden ist
-    setCanCreateArticle(hasCerebroButtonPermission || hasCerebroPagePermission);
-  }, [hasPermission]);
   
   useEffect(() => {
     const handleResize = () => {
@@ -259,17 +230,6 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
     };
   }, [fetchArticlesStructure]);
 
-  // Handling für die Suche
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/cerebro/search?q=${encodeURIComponent(searchTerm)}`);
-      if (isMobile) {
-        setSidebarOpen(false);
-      }
-    }
-  };
-  
   // Auf/Zuklappen von Kategorien
   const handleToggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -319,48 +279,6 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
         `}
       >
         <div className={`p-2 ${isMobile ? 'pt-4' : 'pt-6'} flex-grow flex flex-col overflow-hidden`}>
-          {/* X-Button zum Schließen ENTFERNT */}
-          
-          {/* Suchformular mit Button daneben */}
-          <div className="mb-3 flex items-center space-x-2">
-            {/* Neuer Artikel Button links vom Suchfeld */}
-            {canCreateArticle && (
-              <div className="relative group">
-                <button
-                  className="p-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900"
-                  onClick={() => navigate('/cerebro/create')}
-                  aria-label={t('cerebro.actions.createArticle')}
-                >
-                  <HPlusIcon className="h-5 w-5" />
-                </button>
-                {/* Tooltip */}
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                  {t('cerebro.actions.createArticle')}
-                </div>
-              </div>
-            )}
-            
-            <form onSubmit={handleSearch} className="flex-1">
-              <div className="flex">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={t('common.searchPlaceholder', { defaultValue: 'Suchen...' })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  data-onboarding="cerebro-search"
-                />
-                <button
-                  type="submit"
-                  className="p-2 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                  aria-label="Suchen"
-                >
-                  <SearchIcon />
-                </button>
-              </div>
-            </form>
-          </div>
-          
           {/* Artikelbaum mit Ladeanimation oder Fehlermeldung */}
           <div className="overflow-y-auto flex-grow">
             {/* Ladeanimation */}

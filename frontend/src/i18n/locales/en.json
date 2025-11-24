@@ -1382,7 +1382,32 @@
     "article": "Article",
     "addFile": "Add File",
     "structureLoadError": "Error loading article structure. Please try again later.",
-    "title": "Cerebro"
+    "title": "Cerebro",
+    "header": {
+      "title": "Cerebro",
+      "searchPlaceholder": "Search articles...",
+      "createArticle": "New Article",
+      "filter": "Filter",
+      "sort": "Sort"
+    },
+    "filters": {
+      "all": "All Articles",
+      "title": "Title",
+      "createdAt": "Created at",
+      "updatedAt": "Updated at",
+      "createdBy": "Created by",
+      "category": "Category",
+      "hasGithubPath": "Has GitHub Path",
+      "isPublished": "Published"
+    },
+    "sort": {
+      "titleAsc": "Title (A-Z)",
+      "titleDesc": "Title (Z-A)",
+      "createdAtDesc": "Newest first",
+      "createdAtAsc": "Oldest first",
+      "updatedAtDesc": "Last updated",
+      "updatedAtAsc": "Oldest update"
+    }
   },
   "sidebar": {
     "expand": "Expand",
