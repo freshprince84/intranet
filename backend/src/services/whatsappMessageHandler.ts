@@ -1,6 +1,7 @@
 import { WhatsAppAiService } from './whatsappAiService';
 import { LanguageDetectionService } from './languageDetectionService';
 import { WhatsAppService } from './whatsappService';
+import { WhatsAppGuestService } from './whatsappGuestService';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
@@ -82,8 +83,18 @@ export class WhatsAppMessageHandler {
         return await this.startTaskCreation(normalizedPhone, branchId, conversation);
       }
 
+      // Keyword: "code" / "código" / "pin" / "password" - Gast-Code-Versand
+      const codeKeywords = ['code', 'código', 'codigo', 'pin', 'password', 'verloren', 'lost', 'perdido', 'acceso'];
+      if (codeKeywords.includes(normalizedText) && conversation.state === 'idle') {
+        return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation);
+      }
+
       // 5. Prüfe Conversation State (für mehrstufige Interaktionen)
       if (conversation.state !== 'idle') {
+        // Prüfe ob es Gast-Identifikation ist
+        if (conversation.state.startsWith('guest_identification')) {
+          return await this.continueGuestIdentification(normalizedPhone, messageText, conversation, branchId);
+        }
         return await this.continueConversation(normalizedPhone, branchId, messageText, mediaUrl, conversation, user);
       }
 
@@ -975,10 +986,335 @@ export class WhatsAppMessageHandler {
         es: 'Estado desconocido. Por favor, intenta de nuevo.',
         de: 'Unbekannter Status. Bitte versuche es erneut.',
         en: 'Unknown state. Please try again.'
+      },
+      guest_not_found: {
+        es: 'No se encontró ninguna reservación. Por favor, verifica tus datos o contacta con el personal.',
+        de: 'Keine Reservierung gefunden. Bitte überprüfe deine Daten oder kontaktiere das Personal.',
+        en: 'No reservation found. Please verify your data or contact staff.'
+      },
+      guest_multiple_found: {
+        es: 'Se encontraron varias reservaciones. Por favor, proporciona más información.',
+        de: 'Mehrere Reservierungen gefunden. Bitte gib weitere Informationen an.',
+        en: 'Multiple reservations found. Please provide more information.'
       }
     };
 
     return responses[key]?.[language] || responses[key]?.es || 'Error';
+  }
+
+  /**
+   * Verarbeitet Gast-Code-Anfrage
+   */
+  private static async handleGuestCodeRequest(
+    phoneNumber: string,
+    branchId: number,
+    conversation: any
+  ): Promise<string> {
+    try {
+      // Versuche zuerst via Telefonnummer zu identifizieren
+      const reservation = await WhatsAppGuestService.identifyGuestByPhone(phoneNumber, branchId);
+      
+      if (reservation) {
+        // Gast gefunden via Telefonnummer - sende Code + Links
+        const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+        return await WhatsAppGuestService.buildStatusMessage(reservation, language);
+      }
+
+      // Keine Telefonnummer vorhanden - starte mehrstufige Identifikation
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          state: 'guest_identification_name',
+          context: {
+            step: 'name',
+            collectedData: {}
+          }
+        }
+      });
+
+      const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+      const translations: Record<string, string> = {
+        es: 'No encontré tu reservación con tu número de teléfono. Por favor, proporciona los siguientes datos:\n\n¿Cuál es tu nombre?',
+        de: 'Ich habe deine Reservierung mit deiner Telefonnummer nicht gefunden. Bitte gib die folgenden Daten an:\n\nWie lautet dein Vorname?',
+        en: 'I could not find your reservation with your phone number. Please provide the following information:\n\nWhat is your first name?'
+      };
+
+      return translations[language] || translations.es;
+    } catch (error) {
+      console.error('[WhatsApp Message Handler] Fehler bei Gast-Code-Anfrage:', error);
+      return await this.getLanguageResponse(branchId, phoneNumber, 'error');
+    }
+  }
+
+  /**
+   * Setzt Gast-Identifikation fort
+   */
+  private static async continueGuestIdentification(
+    phoneNumber: string,
+    messageText: string,
+    conversation: any,
+    branchId: number
+  ): Promise<string> {
+    try {
+      const context = conversation.context || {};
+      const step = context.step || conversation.state;
+      const collectedData = context.collectedData || {};
+      const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+
+      // Schritt 1: Vorname
+      if (step === 'guest_identification_name' || step === 'name') {
+        const firstName = messageText.trim();
+        if (!firstName || firstName.length < 2) {
+          const translations: Record<string, string> = {
+            es: 'Por favor, proporciona un nombre válido.',
+            de: 'Bitte gib einen gültigen Namen an.',
+            en: 'Please provide a valid name.'
+          };
+          return translations[language] || translations.es;
+        }
+
+        await prisma.whatsAppConversation.update({
+          where: { id: conversation.id },
+          data: {
+            state: 'guest_identification_lastname',
+            context: {
+              step: 'lastname',
+              collectedData: {
+                ...collectedData,
+                firstName: firstName
+              }
+            }
+          }
+        });
+
+        const translations: Record<string, string> = {
+          es: `Gracias, ${firstName}. ¿Cuál es tu apellido?`,
+          de: `Danke, ${firstName}. Wie lautet dein Nachname?`,
+          en: `Thank you, ${firstName}. What is your last name?`
+        };
+        return translations[language] || translations.es;
+      }
+
+      // Schritt 2: Nachname
+      if (step === 'guest_identification_lastname' || step === 'lastname') {
+        const lastName = messageText.trim();
+        if (!lastName || lastName.length < 2) {
+          const translations: Record<string, string> = {
+            es: 'Por favor, proporciona un apellido válido.',
+            de: 'Bitte gib einen gültigen Nachnamen an.',
+            en: 'Please provide a valid last name.'
+          };
+          return translations[language] || translations.es;
+        }
+
+        await prisma.whatsAppConversation.update({
+          where: { id: conversation.id },
+          data: {
+            state: 'guest_identification_nationality',
+            context: {
+              step: 'nationality',
+              collectedData: {
+                ...collectedData,
+                lastName: lastName
+              }
+            }
+          }
+        });
+
+        const translations: Record<string, string> = {
+          es: `Gracias. ¿De qué país eres?`,
+          de: `Danke. Aus welchem Land kommst du?`,
+          en: `Thank you. What country are you from?`
+        };
+        return translations[language] || translations.es;
+      }
+
+      // Schritt 3: Land
+      if (step === 'guest_identification_nationality' || step === 'nationality') {
+        const nationality = messageText.trim();
+        if (!nationality || nationality.length < 2) {
+          const translations: Record<string, string> = {
+            es: 'Por favor, proporciona un país válido.',
+            de: 'Bitte gib ein gültiges Land an.',
+            en: 'Please provide a valid country.'
+          };
+          return translations[language] || translations.es;
+        }
+
+        // Suche Reservationen mit den bisherigen Daten
+        const reservations = await WhatsAppGuestService.findReservationsByDetails(
+          collectedData.firstName,
+          collectedData.lastName,
+          nationality,
+          null, // Geburtsdatum optional
+          branchId
+        );
+
+        if (reservations.length === 0) {
+          // Keine Reservation gefunden
+          await prisma.whatsAppConversation.update({
+            where: { id: conversation.id },
+            data: {
+              state: 'idle',
+              context: null
+            }
+          });
+          return await this.getLanguageResponse(branchId, phoneNumber, 'guest_not_found');
+        }
+
+        if (reservations.length === 1) {
+          // Genau eine Reservation gefunden - sende Code + Links
+          await prisma.whatsAppConversation.update({
+            where: { id: conversation.id },
+            data: {
+              state: 'idle',
+              context: null
+            }
+          });
+          return await WhatsAppGuestService.buildStatusMessage(reservations[0], language);
+        }
+
+        // Mehrere Reservationen gefunden - frage nach Geburtsdatum
+        await prisma.whatsAppConversation.update({
+          where: { id: conversation.id },
+          data: {
+            state: 'guest_identification_birthdate',
+            context: {
+              step: 'birthdate',
+              collectedData: {
+                ...collectedData,
+                nationality: nationality
+              },
+              candidateReservations: reservations.map((r: any) => ({
+                id: r.id,
+                checkInDate: r.checkInDate,
+                checkOutDate: r.checkOutDate
+              }))
+            }
+          }
+        });
+
+        const translations: Record<string, string> = {
+          es: `Se encontraron varias reservaciones. Por favor, proporciona tu fecha de nacimiento (DD.MM.YYYY) o escribe "saltar" para ver todas.`,
+          de: `Mehrere Reservierungen gefunden. Bitte gib dein Geburtsdatum an (TT.MM.JJJJ) oder schreibe "überspringen" um alle zu sehen.`,
+          en: `Multiple reservations found. Please provide your birth date (DD.MM.YYYY) or type "skip" to see all.`
+        };
+        return translations[language] || translations.es;
+      }
+
+      // Schritt 4: Geburtsdatum (optional)
+      if (step === 'guest_identification_birthdate' || step === 'birthdate') {
+        let birthDate: Date | null = null;
+        const messageLower = messageText.toLowerCase().trim();
+        
+        // Prüfe ob "skip" / "überspringen" / "saltar"
+        if (messageLower === 'skip' || messageLower === 'überspringen' || messageLower === 'saltar') {
+          // Zeige Liste aller Reservationen
+          const candidateReservations = context.candidateReservations || [];
+          let message = 'Se encontraron las siguientes reservaciones:\n\n';
+          candidateReservations.forEach((res: any, index: number) => {
+            const checkIn = new Date(res.checkInDate).toLocaleDateString('es-ES');
+            const checkOut = new Date(res.checkOutDate).toLocaleDateString('es-ES');
+            message += `${index + 1}. Check-in: ${checkIn}, Check-out: ${checkOut}\n`;
+          });
+          message += '\nPor favor, contacta con el personal para más información.';
+          
+          await prisma.whatsAppConversation.update({
+            where: { id: conversation.id },
+            data: {
+              state: 'idle',
+              context: null
+            }
+          });
+          return message;
+        }
+
+        // Versuche Geburtsdatum zu parsen
+        try {
+          // Format: DD.MM.YYYY oder DD/MM/YYYY oder DD-MM-YYYY
+          const dateMatch = messageText.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/);
+          if (dateMatch) {
+            const day = parseInt(dateMatch[1], 10);
+            const month = parseInt(dateMatch[2], 10) - 1; // Monate sind 0-indexiert
+            const year = parseInt(dateMatch[3], 10);
+            birthDate = new Date(year, month, day);
+          }
+        } catch (error) {
+          // Ignoriere Parsing-Fehler
+        }
+
+        // Suche mit Geburtsdatum
+        const reservations = await WhatsAppGuestService.findReservationsByDetails(
+          collectedData.firstName,
+          collectedData.lastName,
+          collectedData.nationality,
+          birthDate,
+          branchId
+        );
+
+        if (reservations.length === 0) {
+          await prisma.whatsAppConversation.update({
+            where: { id: conversation.id },
+            data: {
+              state: 'idle',
+              context: null
+            }
+          });
+          return await this.getLanguageResponse(branchId, phoneNumber, 'guest_not_found');
+        }
+
+        if (reservations.length === 1) {
+          // Genau eine Reservation gefunden
+          await prisma.whatsAppConversation.update({
+            where: { id: conversation.id },
+            data: {
+              state: 'idle',
+              context: null
+            }
+          });
+          return await WhatsAppGuestService.buildStatusMessage(reservations[0], language);
+        }
+
+        // Immer noch mehrere - zeige Liste
+        let message = 'Se encontraron varias reservaciones:\n\n';
+        reservations.forEach((res: any, index: number) => {
+          const checkIn = new Date(res.checkInDate).toLocaleDateString('es-ES');
+          const checkOut = new Date(res.checkOutDate).toLocaleDateString('es-ES');
+          message += `${index + 1}. Check-in: ${checkIn}, Check-out: ${checkOut}\n`;
+        });
+        message += '\nPor favor, contacta con el personal para más información.';
+        
+        await prisma.whatsAppConversation.update({
+          where: { id: conversation.id },
+          data: {
+            state: 'idle',
+            context: null
+          }
+        });
+        return message;
+      }
+
+      // Unbekannter Schritt - reset
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          state: 'idle',
+          context: null
+        }
+      });
+
+      return await this.getLanguageResponse(branchId, phoneNumber, 'unknown_state');
+    } catch (error) {
+      console.error('[WhatsApp Message Handler] Fehler bei Gast-Identifikation:', error);
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          state: 'idle',
+          context: null
+        }
+      });
+      return await this.getLanguageResponse(branchId, phoneNumber, 'error');
+    }
   }
 }
 

@@ -428,7 +428,8 @@ export class WhatsAppService {
     to: string,
     message: string,
     templateName?: string,
-    templateParams?: string[]
+    templateParams?: string[],
+    reservation?: { guestNationality?: string | null; guestPhone?: string | null } // NEU: Für Sprache-Erkennung
   ): Promise<boolean> {
     try {
       // Versuche zuerst Session Message (24h-Fenster)
@@ -489,9 +490,16 @@ export class WhatsAppService {
 
         console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
 
-        // Template-Sprache aus Environment-Variable oder Standard (Standard: Spanisch, da Templates auf Spanisch sind)
-        const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
-        console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
+        // Template-Sprache: Reservation > Environment-Variable > Fallback
+        let languageCode: string;
+        if (reservation) {
+          const { CountryLanguageService } = require('./countryLanguageService');
+          languageCode = CountryLanguageService.getLanguageForReservation(reservation);
+          console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (basierend auf Reservation)`);
+        } else {
+          languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+          console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (aus Environment-Variable)`);
+        }
         
         // Passe Template-Namen basierend auf Sprache an
         // Englische Templates haben einen Unterstrich am Ende: reservation_checkin_invitation_
@@ -562,13 +570,15 @@ export class WhatsAppService {
    * @param templateName - Template-Name (Basis, wird basierend auf Sprache angepasst)
    * @param templateParams - Template-Parameter (Array von Strings)
    * @param message - Nachrichtentext (wird ignoriert, da Template verwendet wird)
+   * @param reservation - Optional: Reservation mit guestNationality und/oder guestPhone für Sprache-Erkennung
    * @returns true wenn erfolgreich
    */
   async sendTemplateMessageDirectly(
     to: string,
     templateName: string,
     templateParams: string[],
-    message?: string // Wird ignoriert, nur für Kompatibilität
+    message?: string, // Wird ignoriert, nur für Kompatibilität
+    reservation?: { guestNationality?: string | null; guestPhone?: string | null } // NEU: Für Sprache-Erkennung
   ): Promise<boolean> {
     try {
       console.log(`[WhatsApp Service] Sende DIREKT Template Message an ${to} (kein Session Message Fallback)`);
@@ -589,9 +599,16 @@ export class WhatsAppService {
 
       console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
 
-      // Template-Sprache
-      const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
-      console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
+      // Template-Sprache: Reservation > Environment-Variable > Fallback
+      let languageCode: string;
+      if (reservation) {
+        const { CountryLanguageService } = require('./countryLanguageService');
+        languageCode = CountryLanguageService.getLanguageForReservation(reservation);
+        console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (basierend auf Reservation)`);
+      } else {
+        languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+        console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (aus Environment-Variable)`);
+      }
       
       // Passe Template-Namen basierend auf Sprache an
       const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
@@ -638,18 +655,25 @@ export class WhatsAppService {
   ): Promise<boolean> {
     const message = `Hola ${guestName},
 
-¡Nos complace darte la bienvenida a La Familia Hostel!
+¡Nos complace darte la bienvenida a La Familia Hostel! 🎊
 
-Como llegarás después de las 22:00, puedes realizar el check-in en línea ahora:
+En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.
+
+Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:
+
+Check-In:
 
 ${checkInLink}
 
 Por favor, realiza el pago por adelantado:
+
 ${paymentLink}
 
-Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago. ¡Gracias!
+Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.
 
-¡Te esperamos mañana!`;
+¡Gracias!
+
+¡Esperamos verte pronto!`;
 
     // Template-Name aus Environment oder Settings (Standard: reservation_checkin_invitation)
     // Hinweis: Der tatsächliche Template-Name wird in sendMessageWithFallback basierend auf Sprache angepasst

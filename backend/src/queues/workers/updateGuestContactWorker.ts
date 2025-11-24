@@ -216,7 +216,11 @@ ${ttlockCode}
             guestPhone,
             sentMessage,
             templateName,
-            templateParams
+            templateParams,
+            {
+              guestNationality: reservation.guestNationality,
+              guestPhone: reservation.guestPhone
+            }
           );
 
           sentMessageAt = new Date();

@@ -122,7 +122,19 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      theme={{
+        dark: false,
+        colors: {
+          primary: '#3B82F6',
+          background: '#FFFFFF',
+          card: '#FFFFFF',
+          text: '#111827',
+          border: '#E5E7EB',
+          notification: '#EF4444',
+        },
+      }}
+    >
       {isAuthenticated ? (
         <AppStack.Navigator screenOptions={{ headerShown: false }}>
           <AppStack.Screen name="Main" component={TabNavigator} />
