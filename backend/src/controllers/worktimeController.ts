@@ -1180,10 +1180,10 @@ export const checkAndStopExceededWorktimes = async () => {
       }
 
       // Füge die aktuelle laufende Sitzung hinzu
-      // Konvertiere now nach UTC für konsistenten Vergleich mit worktime.startTime (aus DB)
-      // getTimezoneOffset() gibt negative Werte für östliche Zeitzonen zurück, daher subtrahieren
-      const nowUTC = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-      const currentSessionMs = nowUTC.getTime() - worktime.startTime.getTime();
+      // KORREKT: Beide Werte (now.getTime() und worktime.startTime.getTime()) sind bereits UTC-Millisekunden
+      // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
+      // Siehe getWorktimeStats Zeile 639-641 für die korrekte Referenz-Implementierung
+      const currentSessionMs = now.getTime() - worktime.startTime.getTime();
       const currentSessionHours = currentSessionMs / (1000 * 60 * 60);
       
       // Formatiere lokale Zeit für bessere Lesbarkeit

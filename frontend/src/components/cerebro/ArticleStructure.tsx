@@ -229,7 +229,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
       window.removeEventListener('cerebro-article-created', handleArticleCreated);
     };
   }, [fetchArticlesStructure]);
-
+  
   // Auf/Zuklappen von Kategorien
   const handleToggleExpand = (id: string) => {
     setExpandedIds(prev => {

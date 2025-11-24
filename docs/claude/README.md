@@ -174,4 +174,7 @@ Für die strukturierte Umsetzung neuer Module existieren detaillierte Schritt-f�
   - [SCHICHTPLANER_PHASE_5_DOKUMENTATION.md](../implementation_plans/SCHICHTPLANER_PHASE_5_DOKUMENTATION.md) - Phase 5: Availability Management
   - [SCHICHTPLANER_PHASE_6_DOKUMENTATION.md](../implementation_plans/SCHICHTPLANER_PHASE_6_DOKUMENTATION.md) - Phase 6: Filter-Funktionalität
 
+- **Touren-Verwaltung** - Verwaltung von eigenen und externen Events & Touren
+  - [TOUREN_VERWALTUNG_IMPLEMENTATION.md](../implementation_plans/TOUREN_VERWALTUNG_IMPLEMENTATION.md) - **⭐ NEU**: Vollständiger Implementierungsplan für Touren-Verwaltung (Buchungen, Kommissionen, WhatsApp-Integration)
+
 Details zu allen Plänen siehe `/docs/implementation_plans/` 
