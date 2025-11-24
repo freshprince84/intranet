@@ -148,9 +148,9 @@ const CerebroLayout: React.FC = () => {
   
   return (
     <div className={`flex flex-col min-h-screen w-full overflow-x-hidden ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
-      {/* Header-Bereich mit max-width-Container */}
-      <div className="w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto">
+      {/* Header-Bereich mit max-width-Container - negatives Margin um Layout.tsx Padding auszugleichen */}
+      <div className={`w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 ${isMobile ? '' : '-mx-5'}`}>
+        <div className={`max-w-7xl mx-auto ${isMobile ? '' : 'px-5'}`}>
           <CerebroHeader
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
@@ -168,8 +168,8 @@ const CerebroLayout: React.FC = () => {
       
       {/* FilterPane (ausklappbar) mit max-width-Container */}
       {isFilterPaneOpen && (
-        <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <div className="max-w-7xl mx-auto px-4 py-2">
+        <div className={`w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${isMobile ? '' : '-mx-5'}`}>
+          <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
             <FilterPane
               columns={cerebroColumns}
               onApply={applyFilterConditions}
@@ -183,8 +183,8 @@ const CerebroLayout: React.FC = () => {
       )}
       
       {/* SavedFilterTags mit max-width-Container */}
-      <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 py-2">
+      <div className={`w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${isMobile ? '' : '-mx-5'}`}>
+        <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
           <SavedFilterTags
             tableId={CEREBRO_TABLE_ID}
             onSelectFilter={applyFilterConditions}
@@ -214,9 +214,9 @@ const CerebroLayout: React.FC = () => {
         <main className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto overflow-x-hidden'} ${
           isMobile 
             ? 'px-0 pt-2 pb-16' // Horizontales Padding auf 0, Bottom-Padding erhöht für den Footer
-            : `px-0 pt-3 pb-4` // Padding auf 0 setzen, da Layout.tsx bereits px-5 hat
+            : `-mx-5 pt-3 pb-4` // Negatives Margin um Layout.tsx Padding auszugleichen
         }`}>
-          <div className={`${isMobile ? 'mobile-full-width' : 'max-w-7xl mx-auto px-4'}`}>
+          <div className={`${isMobile ? 'mobile-full-width' : 'max-w-7xl mx-auto px-5'}`}>
             <Outlet context={{ filterConditions, filterLogicalOperators, sortConfig, searchTerm }} />
           </div>
         </main>
