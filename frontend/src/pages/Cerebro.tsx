@@ -147,79 +147,82 @@ const CerebroLayout: React.FC = () => {
   };
   
   return (
-    <div className={`flex flex-col min-h-screen w-full overflow-x-hidden ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
-      {/* Header-Bereich mit max-width-Container - negatives Margin um Layout.tsx Padding auszugleichen */}
-      <div className={`w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 ${isMobile ? '' : '-mx-5'}`}>
-        <div className={`max-w-7xl mx-auto ${isMobile ? '' : 'px-5'}`}>
-          <CerebroHeader
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onSearchSubmit={handleSearch}
-            canCreateArticle={canCreateArticle}
-            onCreateArticle={() => navigate('/cerebro/create')}
-            onFilterClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
-            onSortClick={handleSortClick}
-            onSortChange={handleSortChange}
-            activeFilterCount={filterConditions.length}
-            sortConfig={sortConfig}
-          />
-        </div>
-      </div>
-      
-      {/* FilterPane (ausklappbar) mit max-width-Container */}
-      {isFilterPaneOpen && (
-        <div className={`w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${isMobile ? '' : '-mx-5'}`}>
-          <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
-            <FilterPane
-              columns={cerebroColumns}
-              onApply={applyFilterConditions}
-              onReset={resetFilterConditions}
-              savedConditions={filterConditions}
-              savedOperators={filterLogicalOperators}
-              tableId={CEREBRO_TABLE_ID}
+    <div className="min-h-screen dark:bg-gray-900">
+      {/* Standard-Container-Pattern wie Worktracker/Consultations */}
+      <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
+        {/* Header-Bereich - EXAKT GLEICHE Padding-Werte wie aktuell */}
+        <div className="w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className={`max-w-7xl mx-auto ${isMobile ? '' : 'px-5'}`}>
+            <CerebroHeader
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              onSearchSubmit={handleSearch}
+              canCreateArticle={canCreateArticle}
+              onCreateArticle={() => navigate('/cerebro/create')}
+              onFilterClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
+              onSortClick={handleSortClick}
+              onSortChange={handleSortChange}
+              activeFilterCount={filterConditions.length}
+              sortConfig={sortConfig}
             />
           </div>
         </div>
-      )}
-      
-      {/* SavedFilterTags mit max-width-Container */}
-      <div className={`w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${isMobile ? '' : '-mx-5'}`}>
-        <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
-          <SavedFilterTags
-            tableId={CEREBRO_TABLE_ID}
-            onSelectFilter={applyFilterConditions}
-            onReset={resetFilterConditions}
-            activeFilterName={activeFilterName}
-            selectedFilterId={selectedFilterId}
-            onFilterChange={handleFilterChange}
-            defaultFilterName={t('cerebro.filters.all', 'Alle Artikel')}
-          />
-        </div>
-      </div>
-      
-      {/* Haupt-Layout: Sidebar + Content */}
-      <div className={`flex flex-1 overflow-hidden ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
-        {/* Sidebar mit fester Breite auf Desktop, auf Mobile schiebt sie den Inhalt */}
-        <div 
-          className={`
-            ${sidebarOpen ? 'w-60' : ''}
-            ${isMobile && !sidebarOpen ? 'w-0' : ''} 
-            transition-all duration-300 ease-in-out shrink-0
-          `}
-        >
-          <ArticleStructure mdFiles={[]} />
+        
+        {/* FilterPane (ausklappbar) - EXAKT GLEICHE Padding-Werte wie aktuell */}
+        {isFilterPaneOpen && (
+          <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
+              <FilterPane
+                columns={cerebroColumns}
+                onApply={applyFilterConditions}
+                onReset={resetFilterConditions}
+                savedConditions={filterConditions}
+                savedOperators={filterLogicalOperators}
+                tableId={CEREBRO_TABLE_ID}
+              />
+            </div>
+          </div>
+        )}
+        
+        {/* SavedFilterTags - EXAKT GLEICHE Padding-Werte wie aktuell */}
+        <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
+            <SavedFilterTags
+              tableId={CEREBRO_TABLE_ID}
+              onSelectFilter={applyFilterConditions}
+              onReset={resetFilterConditions}
+              activeFilterName={activeFilterName}
+              selectedFilterId={selectedFilterId}
+              onFilterChange={handleFilterChange}
+              defaultFilterName={t('cerebro.filters.all', 'Alle Artikel')}
+            />
+          </div>
         </div>
         
-        {/* Der Hauptinhalt nimmt den restlichen Platz ein */}
-        <main className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto overflow-x-hidden'} ${
-          isMobile 
-            ? 'px-0 pt-2 pb-16' // Horizontales Padding auf 0, Bottom-Padding erhöht für den Footer
-            : `-mx-5 pt-3 pb-4` // Negatives Margin um Layout.tsx Padding auszugleichen
-        }`}>
-          <div className={`${isMobile ? 'mobile-full-width' : 'max-w-7xl mx-auto px-5'}`}>
-            <Outlet context={{ filterConditions, filterLogicalOperators, sortConfig, searchTerm }} />
+        {/* Sidebar + Main Flex-Layout - EXAKT GLEICHE Struktur wie aktuell */}
+        <div className={`flex flex-1 overflow-hidden ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
+          {/* Sidebar - EXAKT GLEICHE Breite und Position wie aktuell */}
+          <div 
+            className={`
+              ${sidebarOpen ? 'w-60' : ''}
+              ${isMobile && !sidebarOpen ? 'w-0' : ''} 
+              transition-all duration-300 ease-in-out shrink-0
+            `}
+          >
+            <ArticleStructure mdFiles={[]} />
           </div>
-        </main>
+          
+          {/* Main-Content - EXAKT GLEICHE Padding-Werte wie aktuell, aber <div> statt <main> */}
+          <div className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto overflow-x-hidden'} ${
+            isMobile 
+              ? 'px-0 pt-2 pb-16' // Horizontales Padding auf 0, Bottom-Padding erhöht für den Footer
+              : `pt-3 pb-4` // Padding wie aktuell, negatives Margin entfernt
+          }`}>
+            <div className={`${isMobile ? 'mobile-full-width' : 'max-w-7xl mx-auto px-5'}`}>
+              <Outlet context={{ filterConditions, filterLogicalOperators, sortConfig, searchTerm }} />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
