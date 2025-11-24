@@ -148,8 +148,9 @@ const CerebroLayout: React.FC = () => {
   
   return (
     <div className={`flex flex-col min-h-screen w-full ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
-      {/* Header-Bereich */}
-      <CerebroHeader
+      {/* Header-Bereich - Sticky oben */}
+      <div className="sticky top-0 z-30">
+        <CerebroHeader
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onSearchSubmit={handleSearch}
@@ -160,11 +161,12 @@ const CerebroLayout: React.FC = () => {
         onSortChange={handleSortChange}
         activeFilterCount={filterConditions.length}
         sortConfig={sortConfig}
-      />
+        />
+      </div>
       
       {/* FilterPane (ausklappbar) */}
       {isFilterPaneOpen && (
-        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="sticky top-[73px] z-20 px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <FilterPane
             columns={cerebroColumns}
             onApply={applyFilterConditions}
@@ -177,7 +179,7 @@ const CerebroLayout: React.FC = () => {
       )}
       
       {/* SavedFilterTags */}
-      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className={`px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${isFilterPaneOpen ? 'sticky top-[145px] z-20' : 'sticky top-[73px] z-20'}`}>
         <SavedFilterTags
           tableId={CEREBRO_TABLE_ID}
           onSelectFilter={applyFilterConditions}
