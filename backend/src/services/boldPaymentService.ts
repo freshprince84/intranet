@@ -174,9 +174,11 @@ export class BoldPaymentService {
         if (!this.merchantId) {
           throw new Error('Bold Payment Merchant ID (Llave de identidad) fehlt');
         }
-        config.headers.set('Authorization', `x-api-key ${this.merchantId}`);
-
+        config.headers.Authorization = `x-api-key ${this.merchantId}`;
+        
+        // Debug: Prüfe ob Header korrekt gesetzt wurde
         console.log(`[Bold Payment] ${config.method?.toUpperCase()} ${config.url}`);
+        console.log(`[Bold Payment] Authorization Header: ${config.headers.Authorization}`);
         return config;
       },
       (error) => {

@@ -4,8 +4,8 @@
 
 **Datum:** 2025-01-22  
 **Ziel:** Touren-Verwaltungssystem im Intranet implementieren:
-- Touren-Verwaltung als neuer Tab im Worktracker (neben "To Do's" und "Reservations")
-- TourProvider-Verwaltung als neuer Tab "Proveedores" in der Organisation-Seite (zwischen "Sucursales" und "Organización")
+- Touren-Verwaltung als neuer Tab im Worktracker (neben "To Do's" und "Reservations") - ✅ BEREITS IMPLEMENTIERT
+- TourProvider-Verwaltung als neuer Tab "Proveedores" in der Organisation-Seite (zwischen "Sucursales" und "Organización") - ❌ FEHLT NOCH
 
 ---
 
@@ -17,8 +17,9 @@
 - Datei: `frontend/src/pages/Worktracker.tsx`
 - Aktuelle Tabs: `'todos' | 'reservations' | 'tours'`
 - Tab-State: `useState<'todos' | 'reservations' | 'tours'>('todos')`
-- Tab-Navigation: Tours-Tab bereits implementiert
+- Tab-Navigation: Tours-Tab bereits implementiert (Zeile 3691)
 - Tab-Content: Tours-Verwaltung bereits integriert
+- **Status:** ✅ **VOLLSTÄNDIG IMPLEMENTIERT**
 
 **Organisation-Seite:**
 - Datei: `frontend/src/pages/Organisation.tsx`
@@ -26,6 +27,7 @@
 - Tab-State: `useState<'users' | 'roles' | 'branches' | 'organization'>('users')`
 - Tab-Navigation: Zeilen 104-184 in Organisation.tsx
 - Tab-Content: Zeilen 196-252 in Organisation.tsx
+- **Status:** ❌ TourProvider-Tab "Proveedores" fehlt noch (zwischen "branches" und "organization")
 
 **Bestehende ähnliche Module:**
 - **Requests:** `backend/src/controllers/requestController.ts`, `frontend/src/components/Requests.tsx`
@@ -762,6 +764,8 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 
 **Datei:** `frontend/src/pages/Organisation.tsx`
 
+**Status:** ❌ **FEHLT NOCH - MUSS IMPLEMENTIERT WERDEN**
+
 **Änderungen:**
 1. Import erweitern: `import { UserGroupIcon, UserIcon, ShieldCheckIcon, MapPinIcon, TruckIcon } from '@heroicons/react/24/outline';`
 2. Import hinzufügen: `import TourProvidersTab from '../components/tours/TourProvidersTab.tsx';`
@@ -825,6 +829,8 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 
 **Datei:** `frontend/src/components/tours/TourProvidersTab.tsx`
 
+**Status:** ❌ **EXISTIERT NICHT - MUSS ERSTELLT WERDEN**
+
 **Funktionalität:**
 1. Liste aller TourProvider anzeigen (Table-View)
 2. Neue TourProvider erstellen (Modal)
@@ -841,6 +847,8 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 ### 4.3 Neue Komponente: `CreateTourProviderModal.tsx`
 
 **Datei:** `frontend/src/components/tours/CreateTourProviderModal.tsx`
+
+**Status:** ❌ **EXISTIERT NICHT - MUSS ERSTELLT WERDEN**
 
 **Felder:**
 - Name (required)
@@ -859,6 +867,8 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 
 **Datei:** `frontend/src/components/tours/EditTourProviderModal.tsx`
 
+**Status:** ❌ **EXISTIERT NICHT - MUSS ERSTELLT WERDEN**
+
 **Gleiche Felder wie CreateTourProviderModal, aber mit vorausgefüllten Werten**
 
 ### 4.5 Integration in Tour-Modals
@@ -873,7 +883,7 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 
 **Datei:** `frontend/src/pages/Worktracker.tsx`
 
-**Status:** ✅ Bereits implementiert - Tours-Tab existiert bereits im Worktracker
+**Status:** ✅ **BEREITS VOLLSTÄNDIG IMPLEMENTIERT**
 
 **Funktionalität (bereits vorhanden):**
 1. Liste aller Touren anzeigen (Card-View UND Table-View, wählbar)
@@ -886,7 +896,7 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 
 **Hinweis:** Diese Funktionalität ist bereits vollständig im Worktracker integriert. Keine weiteren Änderungen nötig.
 
-### 4.7 Neue Komponente: `TourBookingsTab.tsx`
+### 4.3 Neue Komponente: `TourBookingsTab.tsx`
 
 **Datei:** `frontend/src/components/TourBookingsTab.tsx`
 
@@ -901,7 +911,7 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 8. Zahlungsstatus anzeigen
 9. Filter/Suche (nach Tour, Kunde, Mitarbeiter, Datum, Status)
 
-### 4.8 Neue Komponente: `TourReservationLink.tsx`
+### 4.4 Neue Komponente: `TourReservationLink.tsx`
 
 **Datei:** `frontend/src/components/TourReservationLink.tsx`
 
@@ -911,7 +921,7 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 3. Verknüpfung bearbeiten
 4. Verknüpfung lösen
 
-### 4.9 Erweiterung: `WorktimeStats.tsx`
+### 4.5 Erweiterung: `WorktimeStats.tsx`
 
 **Datei:** `frontend/src/components/WorktimeStats.tsx`
 
@@ -1199,13 +1209,8 @@ const hamburgerPermissionMap: Record<string, AccessLevel> = {
 **Hinzufügen:**
 ```json
 {
-  "organisation": {
-    "tabs": {
-      "providers": "Proveedores"
-    },
-    "proFeature": {
-      "providers": "Tour-Provider-Verwaltung ist eine PRO-Funktion"
-    }
+  "settings": {
+    "tours": "Touren-Verwaltung"
   },
   "tours": {
     "title": "Touren-Verwaltung",
@@ -1445,52 +1450,98 @@ const hamburgerPermissionMap: Record<string, AccessLevel> = {
 ## 10. IMPLEMENTIERUNGS-SCHRITTE
 
 ### Phase 1: Datenbank & Backend-Grundlagen
-1. Prisma Schema erweitern (Tour, TourBooking, TourReservation, TourWhatsAppMessage Models)
-2. Migration erstellen: `npx prisma migrate dev --name add_tour_management`
-3. Seed-File aktualisieren (Berechtigungen)
-4. Controller erstellen (`tourController.ts`)
-5. Routes erstellen (`tourRoutes.ts`)
-6. API-Endpunkte testen
+**Status:** ⚠️ **TEILWEISE IMPLEMENTIERT**
+
+✅ **Bereits implementiert:**
+- Prisma Schema erweitert (Tour, TourBooking, TourReservation, TourProvider, TourWhatsAppMessage)
+- Migration ausgeführt
+- Alle Controller existieren (tourController, tourBookingController, tourReservationController, tourProviderController)
+- Alle Routes registriert (`/api/tours`, `/api/tour-bookings`, `/api/tour-reservations`, `/api/tour-providers`)
+- Services existieren (tourNotificationService, tourWhatsAppService, commissionService)
+
+❌ **Noch fehlend:**
+1. Seed-File aktualisieren: `tour_providers` zu ALL_TABLES hinzufügen
+2. Seed-File aktualisieren: `tour_provider_create`, `tour_provider_edit`, `tour_provider_delete` zu ALL_BUTTONS hinzufügen
+3. Rezeption-Rolle: Berechtigung `table_tours` prüfen/setzen (DB-Fix auf Prod-Server)
 
 ### Phase 2: Frontend-Grundlagen
-1. **Worktracker:** Tours-Tab bereits implementiert (keine Änderung nötig)
-2. **Organisation:** TourProvider-Tab "Proveedores" hinzufügen (zwischen "Sucursales" und "Organización")
-3. `TourProvidersTab.tsx` Komponente erstellen
-4. `CreateTourProviderModal.tsx` Komponente erstellen
-5. `EditTourProviderModal.tsx` Komponente erstellen
-6. API-Client erweitern (falls nötig)
-7. TypeScript-Typen prüfen (bereits vorhanden)
-8. Übersetzungen hinzufügen (de, en, es)
+**Status:** ⚠️ **TEILWEISE IMPLEMENTIERT**
+
+✅ **Bereits implementiert:**
+- Tours-Tab im Worktracker (vollständig) - Zeile 3691 in Worktracker.tsx
+- Alle Tour-Komponenten (CreateTourModal, EditTourModal, TourDetailsModal, etc.)
+- API-Client (TOURS, TOUR_BOOKINGS, TOUR_RESERVATIONS, TOUR_PROVIDERS)
+- TypeScript-Typen (tour.ts)
+
+❌ **Noch fehlend:**
+1. **Organisation:** TourProvider-Tab "Proveedores" hinzufügen (zwischen "Sucursales" und "Organización")
+2. `TourProvidersTab.tsx` Komponente erstellen
+3. `CreateTourProviderModal.tsx` Komponente erstellen
+4. `EditTourProviderModal.tsx` Komponente erstellen
+5. "Neuer Provider"-Button in Tour-Modals hinzufügen
+6. Übersetzungen hinzufügen (organisation.tabs.providers, organisation.proFeature.providers)
 
 ### Phase 3: Buchungen
-1. `TourBookingsTab.tsx` Komponente erstellen
-2. `TourBookingModal.tsx` Komponente erstellen
-3. Controller erweitern (`tourBookingController.ts`)
-4. Buchungen-Liste anzeigen
-5. Buchungen erstellen/bearbeiten
+**Status:** ⚠️ **TEILWEISE IMPLEMENTIERT**
+
+✅ **Bereits implementiert:**
+- `TourBookingsTab.tsx` existiert (Zeile 45 in FEHLENDE_TEILE.md)
+- Controller `tourBookingController.ts` existiert
+- Buchungen-Liste wird angezeigt
+
+❌ **Noch fehlend:**
+1. `CreateTourBookingModal.tsx` Komponente erstellen
+2. `EditTourBookingModal.tsx` Komponente erstellen
+3. Stornieren-Button in TourBookingsTab.tsx
+4. Abschließen-Button in TourBookingsTab.tsx
 
 ### Phase 4: Reservation-Verknüpfung
-1. `TourReservationLink.tsx` Komponente erstellen
-2. Controller erstellen (`tourReservationController.ts`)
-3. Preisaufschlüsselung implementieren
-4. Zahlungsstatus-Tracking
+**Status:** ✅ **VOLLSTÄNDIG IMPLEMENTIERT**
+
+✅ **Bereits implementiert:**
+- `TourReservationLinkModal.tsx` existiert (Zeile 44 in FEHLENDE_TEILE.md)
+- Controller `tourReservationController.ts` existiert
+- Preisaufschlüsselung implementiert (tourPrice, accommodationPrice)
+- Zahlungsstatus-Tracking implementiert
 
 ### Phase 5: WhatsApp-Automatisierung
-1. `tourWhatsAppService.ts` Service erstellen
-2. WhatsApp-Integration erweitern
-3. Templates erstellen
-4. Flow testen
+**Status:** ⚠️ **TEILWEISE IMPLEMENTIERT**
+
+✅ **Bereits implementiert:**
+- `tourWhatsAppService.ts` existiert
+- `sendBookingRequestToProvider()` implementiert
+- `processProviderResponse()` implementiert
+
+❌ **Noch fehlend:**
+1. `get_tours` Function in `whatsappFunctionHandlers.ts`
+2. `book_tour` Function in `whatsappFunctionHandlers.ts`
+3. Tour-Keyword-Erkennung in `whatsappMessageHandler.ts`
+4. WhatsApp-Templates spezifizieren
 
 ### Phase 6: Kommissions-Tracking
-1. `commissionService.ts` Service erstellen
-2. Kommissions-Berechnung implementieren
-3. WorktimeStats erweitern (Kommissionen-Tab)
-4. Statistiken anzeigen
+**Status:** ⚠️ **TEILWEISE IMPLEMENTIERT**
+
+✅ **Bereits implementiert:**
+- `commissionService.ts` existiert
+- Kommissions-Berechnung implementiert (`calculateCommission()`)
+- `getUserCommissions()` implementiert
+- `getUserCommissionStats()` implementiert
+
+❌ **Noch fehlend:**
+1. WorktimeStats erweitern (Kommissionen-Tab)
+2. Statistiken anzeigen im Frontend
 
 ### Phase 7: Export & Integration
-1. Export-API implementieren
-2. Dokumentation für Website-Integration
-3. Testing
+**Status:** ⚠️ **TEILWEISE IMPLEMENTIERT**
+
+✅ **Bereits implementiert:**
+- Export-API implementiert (`exportTours` in tourController.ts)
+- JSON-Export funktioniert
+- `TourExportDialog.tsx` existiert
+
+❌ **Noch fehlend:**
+1. CSV-Export implementieren
+2. Format-Parameter hinzufügen
 
 ---
 
