@@ -3703,7 +3703,8 @@ const Worktracker: React.FC = () => {
                                                         { id: 'description', label: t('tasks.columns.description') }
                                                     ]
                                                     : availableColumns)
-                                                : (viewMode === 'cards'
+                                                : activeTab === 'reservations'
+                                                ? (viewMode === 'cards'
                                                     ? [
                                                         { id: 'guestName', label: t('reservations.columns.guestName', 'Gast') },
                                                         { id: 'status', label: t('reservations.columns.status', 'Status') },
@@ -3716,7 +3717,21 @@ const Worktracker: React.FC = () => {
                                                         { id: 'amount', label: t('reservations.columns.amount', 'Betrag') },
                                                         { id: 'arrivalTime', label: t('reservations.columns.arrivalTime', 'Ankunftszeit') }
                                                     ]
-                                                    : availableReservationColumns)}
+                                                    : availableReservationColumns)
+                                                : activeTab === 'tours'
+                                                ? (viewMode === 'cards'
+                                                    ? [
+                                                        { id: 'title', label: t('tours.columns.title', 'Titel') },
+                                                        { id: 'type', label: t('tours.columns.type', 'Typ') },
+                                                        { id: 'price', label: t('tours.columns.price', 'Preis') },
+                                                        { id: 'location', label: t('tours.columns.location', 'Ort') },
+                                                        { id: 'duration', label: t('tours.columns.duration', 'Dauer') },
+                                                        { id: 'branch', label: t('tours.columns.branch', 'Niederlassung') },
+                                                        { id: 'createdBy', label: t('tours.columns.createdBy', 'Erstellt von') },
+                                                        { id: 'isActive', label: t('tours.columns.status', 'Status') }
+                                                    ]
+                                                    : availableTourColumns)
+                                                : []}
                                             visibleColumns={viewMode === 'cards'
                                                 ? Array.from(visibleCardMetadata)
                                                 : visibleColumnIds}
@@ -3753,12 +3768,15 @@ const Worktracker: React.FC = () => {
                                                                 toggleColumnVisibility(tableColumn);
                                                             }
                                                         }
-                                                    } else {
+                                                    } else if (activeTab === 'reservations') {
                                                         // Reservations: 1:1 Mapping
                                                         const tableColumn = reservationCardToTableMapping[columnId];
                                                         if (tableColumn) {
                                                             toggleColumnVisibility(tableColumn);
                                                         }
+                                                    } else if (activeTab === 'tours') {
+                                                        // Tours: 1:1 Mapping
+                                                        toggleColumnVisibility(columnId);
                                                     }
                                                 } else {
                                                     toggleColumnVisibility(columnId);
@@ -3788,7 +3806,7 @@ const Worktracker: React.FC = () => {
                                                                 newTableOrder.push(col.id);
                                                             }
                                                         });
-                                                    } else {
+                                                    } else if (activeTab === 'reservations') {
                                                         // Reservations: 1:1 Mapping
                                                         newCardOrder.forEach(cardMeta => {
                                                             const tableCol = reservationCardToTableMapping[cardMeta];
@@ -3799,6 +3817,20 @@ const Worktracker: React.FC = () => {
                                                         });
                                                         
                                                         availableReservationColumns.forEach(col => {
+                                                            if (!newTableOrder.includes(col.id) && col.id !== 'actions') {
+                                                                newTableOrder.push(col.id);
+                                                            }
+                                                        });
+                                                    } else if (activeTab === 'tours') {
+                                                        // Tours: 1:1 Mapping
+                                                        newCardOrder.forEach(cardMeta => {
+                                                            if (!usedTableColumns.has(cardMeta)) {
+                                                                usedTableColumns.add(cardMeta);
+                                                                newTableOrder.push(cardMeta);
+                                                            }
+                                                        });
+                                                        
+                                                        availableTourColumns.forEach(col => {
                                                             if (!newTableOrder.includes(col.id) && col.id !== 'actions') {
                                                                 newTableOrder.push(col.id);
                                                             }
@@ -3814,13 +3846,17 @@ const Worktracker: React.FC = () => {
                                                 ? taskCardSortDirections
                                                 : viewMode === 'cards' && activeTab === 'reservations' 
                                                 ? reservationCardSortDirections 
+                                                : viewMode === 'cards' && activeTab === 'tours'
+                                                ? tourCardSortDirections
                                                 : undefined}
                                             onSortDirectionChange={viewMode === 'cards' && activeTab === 'todos'
                                                 ? handleTaskCardSortDirectionChange
                                                 : viewMode === 'cards' && activeTab === 'reservations'
                                                 ? handleReservationCardSortDirectionChange
+                                                : viewMode === 'cards' && activeTab === 'tours'
+                                                ? handleTourCardSortDirectionChange
                                                 : undefined}
-                                            showSortDirection={viewMode === 'cards' && (activeTab === 'todos' || activeTab === 'reservations')}
+                                            showSortDirection={viewMode === 'cards' && (activeTab === 'todos' || activeTab === 'reservations' || activeTab === 'tours')}
                                             onClose={() => {}}
                                         />
                                     </div>
