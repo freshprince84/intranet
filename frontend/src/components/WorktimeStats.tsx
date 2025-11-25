@@ -31,6 +31,8 @@ interface WorktimeStats {
     }[];
 }
 
+type TabType = 'worktime' | 'commissions';
+
 const WorktimeStats: React.FC = () => {
     const { t, i18n } = useTranslation();
     const { activeLanguage } = useLanguage();
@@ -40,6 +42,9 @@ const WorktimeStats: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [maxHours, setMaxHours] = useState<number>(8); // Standard 8 Stunden
+    const [activeTab, setActiveTab] = useState<TabType>('worktime');
+    const [commissionStats, setCommissionStats] = useState<any>(null);
+    const [commissionLoading, setCommissionLoading] = useState(false);
     
     // Prüfe ob Organisation oder User aus Kolumbien kommt
     const isColombia = useMemo(() => {
@@ -394,9 +399,38 @@ const WorktimeStats: React.FC = () => {
         }
     }, [loading, stats]);
 
-    if (loading) return <div className="p-4">{t('common.loading')}</div>;
-    if (error) return <div className="p-4 text-red-600">{error}</div>;
-    if (!stats) return null;
+    // Lade Kommissions-Daten
+    const fetchCommissionStats = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            setCommissionLoading(true);
+            const startDate = new Date(new Date().getFullYear(), 0, 1);
+            const endDate = new Date();
+            const response = await axiosInstance.get(API_ENDPOINTS.TOUR_BOOKINGS.COMMISSIONS(user.id), {
+                params: {
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString()
+                }
+            });
+            if (response.data.success) {
+                setCommissionStats(response.data.data);
+            }
+        } catch (err: any) {
+            console.error('Fehler beim Laden der Kommissions-Daten:', err);
+        } finally {
+            setCommissionLoading(false);
+        }
+    }, [user?.id]);
+
+    useEffect(() => {
+        if (activeTab === 'commissions' && user?.id) {
+            fetchCommissionStats();
+        }
+    }, [activeTab, user?.id, fetchCommissionStats]);
+
+    if (loading && activeTab === 'worktime') return <div className="p-4">{t('common.loading')}</div>;
+    if (error && activeTab === 'worktime') return <div className="p-4 text-red-600">{error}</div>;
+    if (!stats && activeTab === 'worktime') return null;
 
     const periodDays = useQuinzena ? getQuinzenaDays(selectedQuinzenaDate) : getWeekDays(selectedWeekDate);
     
@@ -413,6 +447,30 @@ const WorktimeStats: React.FC = () => {
                 <div className="flex items-center pl-2 sm:pl-0 flex-shrink min-w-0">
                     <ChartBarIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 dark:text-white flex-shrink-0" />
                     <h2 className="text-base sm:text-lg md:text-xl font-semibold dark:text-white truncate">{t('worktime.stats.title')}</h2>
+                </div>
+                
+                {/* Tab-Navigation */}
+                <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+                    <button
+                        onClick={() => setActiveTab('worktime')}
+                        className={`py-2 px-3 border-b-2 font-medium text-sm ${
+                            activeTab === 'worktime'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                    >
+                        {t('worktime.stats.tabs.worktime', 'Arbeitszeit')}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('commissions')}
+                        className={`py-2 px-3 border-b-2 font-medium text-sm ${
+                            activeTab === 'commissions'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                    >
+                        {t('worktime.stats.tabs.commissions', 'Kommissionen')}
+                    </button>
                 </div>
                 <div className="flex items-center space-x-2 sm:space-x-4">
                     {/* Toggle-Button-Switch für Woche/Quinzena - nur anzeigen wenn Kolumbien */}
@@ -507,6 +565,9 @@ const WorktimeStats: React.FC = () => {
                 </div>
             </div>
 
+            {/* Tab-Content */}
+            {activeTab === 'worktime' && (
+                <>
             <div className="flex flex-row gap-2 mb-8 overflow-x-auto">
                 <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg flex-1 min-w-0">
                     <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">{t('worktime.stats.totalHours')}</h3>
@@ -678,6 +739,102 @@ const WorktimeStats: React.FC = () => {
                     onClose={closeWorkTimeModal}
                     selectedDate={selectedDateForModal}
                 />
+            )}
+                </>
+            )}
+            
+            {activeTab === 'commissions' && (
+                <div className="space-y-6">
+                    {commissionLoading ? (
+                        <div className="p-4 text-center">{t('common.loading')}</div>
+                    ) : commissionStats ? (
+                        <>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
+                                    <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                                        {t('worktime.stats.commissions.total', 'Gesamtkommissionen')}
+                                    </h3>
+                                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                        {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'COP' }).format(commissionStats.totalCommissions || 0)}
+                                    </p>
+                                </div>
+                                <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg">
+                                    <h3 className="text-sm font-medium text-green-900 dark:text-green-100 mb-2">
+                                        {t('worktime.stats.commissions.totalBookings', 'Anzahl Buchungen')}
+                                    </h3>
+                                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                        {commissionStats.totalBookings || 0}
+                                    </p>
+                                </div>
+                                <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg">
+                                    <h3 className="text-sm font-medium text-purple-900 dark:text-purple-100 mb-2">
+                                        {t('worktime.stats.commissions.average', 'Durchschnitt')}
+                                    </h3>
+                                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                        {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'COP' }).format(commissionStats.averageCommission || 0)}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                                    <h3 className="text-lg font-semibold mb-3 dark:text-white">
+                                        {t('worktime.stats.commissions.byTourType', 'Nach Tour-Typ')}
+                                    </h3>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">
+                                                {t('tours.typeOwn', 'Eigene Touren')}
+                                            </span>
+                                            <span className="font-semibold dark:text-white">
+                                                {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'COP' }).format(commissionStats.byTourType?.own || 0)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600 dark:text-gray-400">
+                                                {t('tours.typeExternal', 'Externe Touren')}
+                                            </span>
+                                            <span className="font-semibold dark:text-white">
+                                                {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'COP' }).format(commissionStats.byTourType?.external || 0)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                                    <h3 className="text-lg font-semibold mb-3 dark:text-white">
+                                        {t('worktime.stats.commissions.tourSales', 'Tour-Verkäufe')}
+                                    </h3>
+                                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                                        {commissionStats.tourSales?.length > 0 ? (
+                                            commissionStats.tourSales.map((sale: any) => (
+                                                <div key={sale.tourId} className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600 last:border-0">
+                                                    <div>
+                                                        <p className="font-medium dark:text-white">{sale.tourTitle}</p>
+                                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                            {sale.salesCount} {t('worktime.stats.commissions.sales', 'Verkäufe')}
+                                                        </p>
+                                                    </div>
+                                                    <span className="font-semibold dark:text-white">
+                                                        {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'COP' }).format(sale.totalCommission || 0)}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                                                {t('worktime.stats.commissions.noSales', 'Keine Verkäufe')}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                            {t('worktime.stats.commissions.noData', 'Keine Kommissions-Daten verfügbar')}
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );

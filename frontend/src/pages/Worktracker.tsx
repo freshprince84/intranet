@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon, LinkIcon, CurrencyDollarIcon, ClockIcon, KeyIcon, PaperAirplaneIcon, MapIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon, LinkIcon, CurrencyDollarIcon, ClockIcon, KeyIcon, PaperAirplaneIcon, MapIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import CreateReservationModal from '../components/reservations/CreateReservationModal.tsx';
@@ -13,6 +13,7 @@ import CreateTourModal from '../components/tours/CreateTourModal.tsx';
 import EditTourModal from '../components/tours/EditTourModal.tsx';
 import TourDetailsModal from '../components/tours/TourDetailsModal.tsx';
 import TourBookingsModal from '../components/tours/TourBookingsModal.tsx';
+import TourExportDialog from '../components/tours/TourExportDialog.tsx';
 import SendInvitationSidepane from '../components/reservations/SendInvitationSidepane.tsx';
 import SendPasscodeSidepane from '../components/reservations/SendPasscodeSidepane.tsx';
 import ReservationNotificationLogs from '../components/reservations/ReservationNotificationLogs.tsx';
@@ -399,6 +400,7 @@ const Worktracker: React.FC = () => {
     const [isEditTourModalOpen, setIsEditTourModalOpen] = useState(false);
     const [isTourDetailsModalOpen, setIsTourDetailsModalOpen] = useState(false);
     const [isTourBookingsModalOpen, setIsTourBookingsModalOpen] = useState(false);
+    const [isTourExportDialogOpen, setIsTourExportDialogOpen] = useState(false);
     const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
     const [selectedTourId, setSelectedTourId] = useState<number | null>(null);
     const [isCreateReservationModalOpen, setIsCreateReservationModalOpen] = useState(false);
@@ -4976,6 +4978,13 @@ const Worktracker: React.FC = () => {
                     tourId={selectedTourId}
                 />
             )}
+            
+            {/* Tour Export Dialog */}
+            <TourExportDialog
+                isOpen={isTourExportDialogOpen}
+                onClose={() => setIsTourExportDialogOpen(false)}
+                tourCount={filteredAndSortedTours.length}
+            />
         </div>
     );
 };
