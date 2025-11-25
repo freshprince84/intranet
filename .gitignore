@@ -42,4 +42,4 @@ prisma/.env
 /uploads
 
 # Android
-IntranetMobileApp/android/app/release.keystore  
+IntranetMobileApp/android/app/release.keystore  .env.backup.*
