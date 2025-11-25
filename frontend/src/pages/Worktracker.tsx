@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CircularProgress } from '@mui/material';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
@@ -360,6 +361,12 @@ const Worktracker: React.FC = () => {
     const [allTasks, setAllTasks] = useState<Task[]>([]); // Alle Tasks (für Hintergrund-Laden und Filter-Wechsel)
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    
+    // Pagination State für Tasks Infinite Scroll
+    const [tasksPage, setTasksPage] = useState(1); // Aktuelle Seite für Tasks
+    const [tasksHasMore, setTasksHasMore] = useState(true); // Gibt es weitere Tasks?
+    const [tasksLoadingMore, setTasksLoadingMore] = useState(false); // Lädt weitere Tasks?
+    const TASKS_PER_PAGE = 20; // Tasks pro Seite
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
     
@@ -605,14 +612,25 @@ const Worktracker: React.FC = () => {
     const hasLoadedRef = useRef(false);
 
     // Funktion zum Neu Laden der Tasks
-    const loadTasks = async (filterId?: number, filterConditions?: any[], background = false) => {
+    const loadTasks = async (
+        filterId?: number, 
+        filterConditions?: any[], 
+        background = false,
+        page: number = 1, // Neue Parameter für Pagination
+        append: boolean = false // Neue Parameter: Sollen Tasks angehängt werden?
+    ) => {
         try {
-            if (!background) {
+            if (!background && !append) {
                 setLoading(true);
+            }
+            if (append) {
+                setTasksLoadingMore(true);
             }
             
             // Baue Query-Parameter
-            const params: any = {};
+            const params: any = {
+                limit: TASKS_PER_PAGE, // Immer Limit für initiales Laden
+            };
             if (filterId) {
                 params.filterId = filterId;
             } else if (filterConditions && filterConditions.length > 0) {
@@ -653,22 +671,48 @@ const Worktracker: React.FC = () => {
                 // Hintergrund-Laden: Speichere in allTasks
                 console.log('📋 Alle Tasks im Hintergrund geladen:', tasksWithAttachments.length, 'Tasks');
                 setAllTasks(tasksWithAttachments);
+            } else if (append) {
+                // Infinite Scroll: Füge Tasks zu bestehenden hinzu
+                setTasks(prevTasks => [...prevTasks, ...tasksWithAttachments]);
+                // Prüfe ob es weitere Tasks gibt
+                setTasksHasMore(tasksWithAttachments.length === TASKS_PER_PAGE);
+                setTasksPage(page);
+                console.log('📋 Weitere Tasks geladen:', tasksWithAttachments.length, 'Tasks (Seite', page, ')');
             } else {
-                // Vordergrund-Laden: Zeige sofort an
+                // Initiales Laden: Ersetze Tasks
                 console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks');
                 setTasks(tasksWithAttachments);
+                setTasksHasMore(tasksWithAttachments.length === TASKS_PER_PAGE);
+                setTasksPage(1);
             }
             setError(null);
         } catch (error) {
             console.error('Fehler beim Laden der Tasks:', error);
-            if (!background) {
+            if (!background && !append) {
                 setError(t('worktime.messages.tasksLoadError'));
             }
         } finally {
-            if (!background) {
+            if (!background && !append) {
                 setLoading(false);
             }
+            if (append) {
+                setTasksLoadingMore(false);
+            }
         }
+    };
+    
+    // Funktion zum Laden weiterer Tasks (Infinite Scroll)
+    const loadMoreTasks = async () => {
+        if (tasksLoadingMore || !tasksHasMore) return;
+        
+        const nextPage = tasksPage + 1;
+        await loadTasks(
+            selectedFilterId || undefined,
+            filterConditions.length > 0 ? filterConditions : undefined,
+            false,
+            nextPage,
+            true // append = true
+        );
     };
 
     const handleGeneratePinAndSend = async (reservationId: number) => {
@@ -713,6 +757,24 @@ const Worktracker: React.FC = () => {
             loadReservations();
         }
     }, [activeTab]);
+    
+    // Infinite Scroll Handler für Tasks
+    useEffect(() => {
+        const handleScroll = () => {
+            // Prüfe ob User nahe am Ende der Seite ist
+            if (
+                window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000 &&
+                !tasksLoadingMore &&
+                tasksHasMore &&
+                activeTab === 'todos'
+            ) {
+                loadMoreTasks();
+            }
+        };
+        
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [tasksLoadingMore, tasksHasMore, activeTab, selectedFilterId, filterConditions]);
     
     // Funktion zum Laden der Tours
     const loadTours = async (filterId?: number, filterConditions?: any[], background = false) => {
@@ -1207,10 +1269,14 @@ const Worktracker: React.FC = () => {
             // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
             setTableSortConfig({ key: 'dueDate', direction: 'asc' });
             
+            // Pagination zurücksetzen bei Filter-Wechsel
+            setTasksPage(1);
+            setTasksHasMore(true);
+            
             // Wenn Filter-ID vorhanden (Standardfilter): Server-seitig laden
             // Sonst: Client-seitig filtern (komplexe Filter)
             if (id) {
-                await loadTasks(id);
+                await loadTasks(id, undefined, false, 1, false); // Reset auf Seite 1, nicht append
             }
             // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedTasks angewendet
         } else if (activeTab === 'reservations') {
@@ -2959,8 +3025,18 @@ const Worktracker: React.FC = () => {
                                 </div>
                             ) : null}
                             
-                            {/* "Mehr anzeigen" Button - Mobil - Tasks */}
-                            {activeTab === 'todos' && filteredAndSortedTasks.length > displayLimit && (
+                            {/* Loading Indicator für Infinite Scroll - Mobil - Tasks */}
+                            {activeTab === 'todos' && tasksLoadingMore && (
+                                <div className="mt-4 flex justify-center items-center py-4">
+                                    <CircularProgress size={24} />
+                                    <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                                        {t('common.loadingMore', 'Lädt weitere Tasks...')}
+                                    </span>
+                                </div>
+                            )}
+                            
+                            {/* "Mehr anzeigen" Button - Mobil - Tasks (Fallback für Mobile) */}
+                            {activeTab === 'todos' && !tasksLoadingMore && filteredAndSortedTasks.length > displayLimit && (
                                 <div className="mt-4 flex justify-center">
                                     <button
                                         className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
@@ -4306,8 +4382,18 @@ const Worktracker: React.FC = () => {
                                 </div>
                             ) : null}
                             
-                            {/* "Mehr anzeigen" Button - Desktop - Tasks */}
-                            {activeTab === 'todos' && filteredAndSortedTasks.length > displayLimit && (
+                            {/* Loading Indicator für Infinite Scroll - Desktop - Tasks */}
+                            {activeTab === 'todos' && tasksLoadingMore && (
+                                <div className="mt-4 flex justify-center items-center py-4">
+                                    <CircularProgress size={24} />
+                                    <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                                        {t('common.loadingMore', 'Lädt weitere Tasks...')}
+                                    </span>
+                                </div>
+                            )}
+                            
+                            {/* "Mehr anzeigen" Button - Desktop - Tasks (Fallback) */}
+                            {activeTab === 'todos' && !tasksLoadingMore && filteredAndSortedTasks.length > displayLimit && (
                                 <div className="mt-4 flex justify-center">
                                     <button
                                         className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
