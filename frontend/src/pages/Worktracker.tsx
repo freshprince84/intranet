@@ -343,13 +343,6 @@ const Worktracker: React.FC = () => {
         { id: 'doorPin', label: t('reservations.columns.doorPin', 'Tür-PIN'), shortLabel: t('reservations.columns.doorPin', 'Tür-PIN').substring(0, 3) },
     ], [t]);
     
-    // Tours Filter-Spalten (zusätzliche Spalten nur für Filter)
-    const tourFilterOnlyColumns = useMemo(() => [
-        { id: 'description', label: t('tours.columns.description', 'Beschreibung'), shortLabel: t('tours.columns.description', 'Beschreibung').substring(0, 3) },
-        { id: 'maxParticipants', label: t('tours.columns.maxParticipants', 'Max. Teilnehmer'), shortLabel: t('tours.columns.maxParticipants', 'Max. Teilnehmer').substring(0, 3) },
-        { id: 'minParticipants', label: t('tours.columns.minParticipants', 'Min. Teilnehmer'), shortLabel: t('tours.columns.minParticipants', 'Min. Teilnehmer').substring(0, 3) },
-    ], [t]);
-    
     // Status-Übersetzungen (verwende zentrale Utils mit Übersetzungsunterstützung)
     // WICHTIG: Funktionalität bleibt identisch - nur Code-Duplikation entfernt!
     const getStatusLabel = (status: Task['status']): string => {
