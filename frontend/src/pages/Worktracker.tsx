@@ -628,8 +628,10 @@ const Worktracker: React.FC = () => {
             }
             
             // Baue Query-Parameter
+            const offset = (page - 1) * TASKS_PER_PAGE; // Offset für Pagination berechnen
             const params: any = {
                 limit: TASKS_PER_PAGE, // Immer Limit für initiales Laden
+                offset: offset, // Offset für Pagination
             };
             if (filterId) {
                 params.filterId = filterId;
@@ -2712,7 +2714,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         ) : (
                                             <>
-                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => {
+                                            {filteredAndSortedTasks.map(task => {
                                             const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                             const expiryColors = getExpiryColorClasses(expiryStatus);
                                             
@@ -2893,7 +2895,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => {
+                                            {filteredAndSortedTasks.map(task => {
                                                 const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                                 
                                                 // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
@@ -3032,18 +3034,6 @@ const Worktracker: React.FC = () => {
                                     <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                                         {t('common.loadingMore', 'Lädt weitere Tasks...')}
                                     </span>
-                                </div>
-                            )}
-                            
-                            {/* "Mehr anzeigen" Button - Mobil - Tasks (Fallback für Mobile) */}
-                            {activeTab === 'todos' && !tasksLoadingMore && filteredAndSortedTasks.length > displayLimit && (
-                                <div className="mt-4 flex justify-center">
-                                    <button
-                                        className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
-                                        onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-                                    >
-                                        {t('common.showMore')} ({filteredAndSortedTasks.length - displayLimit} {t('common.remaining')})
-                                    </button>
                                 </div>
                             )}
                             
@@ -4069,7 +4059,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         ) : (
                                             <>
-                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => {
+                                            {filteredAndSortedTasks.map(task => {
                                             const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                             const expiryColors = getExpiryColorClasses(expiryStatus);
                                             
@@ -4250,7 +4240,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => {
+                                            {filteredAndSortedTasks.map(task => {
                                                 const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                                 
                                                 // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
@@ -4389,18 +4379,6 @@ const Worktracker: React.FC = () => {
                                     <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
                                         {t('common.loadingMore', 'Lädt weitere Tasks...')}
                                     </span>
-                                </div>
-                            )}
-                            
-                            {/* "Mehr anzeigen" Button - Desktop - Tasks (Fallback) */}
-                            {activeTab === 'todos' && !tasksLoadingMore && filteredAndSortedTasks.length > displayLimit && (
-                                <div className="mt-4 flex justify-center">
-                                    <button
-                                        className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
-                                        onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-                                    >
-                                        {t('common.showMore')} ({filteredAndSortedTasks.length - displayLimit} {t('common.remaining')})
-                                    </button>
                                 </div>
                             )}
                             

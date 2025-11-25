@@ -384,8 +384,10 @@ const Requests: React.FC = () => {
       }
       
       // Baue Query-Parameter
+      const offset = (page - 1) * REQUESTS_PER_PAGE; // Offset für Pagination berechnen
       const params: any = {
         limit: REQUESTS_PER_PAGE, // Immer Limit für initiales Laden
+        offset: offset, // Offset für Pagination
       };
       if (filterId) {
         params.filterId = filterId;
@@ -1437,7 +1439,7 @@ const Requests: React.FC = () => {
                 </tr>
               ) : (
                 <>
-                  {filteredAndSortedRequests.slice(0, displayLimit).map(request => {
+                  {filteredAndSortedRequests.map(request => {
                     const expiryStatus = getExpiryStatus(request.dueDate, 'request');
                     const expiryColors = getExpiryColorClasses(expiryStatus);
                     
@@ -1911,7 +1913,6 @@ const Requests: React.FC = () => {
           </div>
         )}
         
-        {/* "Mehr anzeigen" Button */}
         {/* Loading Indicator für Infinite Scroll - Requests */}
         {requestsLoadingMore && (
           <div className="mt-4 flex justify-center items-center py-4">
@@ -1919,23 +1920,6 @@ const Requests: React.FC = () => {
             <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
               {t('common.loadingMoreRequests', 'Lädt weitere Requests...')}
             </span>
-          </div>
-        )}
-        
-        {/* "Mehr anzeigen" Button - Requests (Fallback) */}
-        {!requestsLoadingMore && filteredAndSortedRequests.length > displayLimit && (
-          <div className="mt-4 flex justify-center">
-            <div className="relative group">
-              <button
-                className="p-2 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
-                onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-              >
-                <ChevronDownIcon className="h-5 w-5" />
-              </button>
-              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                {`${t('common.showMore')} (${filteredAndSortedRequests.length - displayLimit} ${t('common.remaining')})`}
-              </div>
-            </div>
           </div>
         )}
     </>

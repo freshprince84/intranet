@@ -1313,6 +1313,7 @@
       "users": "Users",
       "roles": "Roles",
       "branches": "Branches",
+      "providers": "Providers",
       "organization": "Organization"
     },
     "noPermission": "Only administrators have access to this page.",
@@ -1322,7 +1323,8 @@
     "proFeature": {
       "users": "User management is a PRO feature. Please upgrade your subscription to use this feature.",
       "roles": "Role management is a PRO feature. Please upgrade your subscription to use this feature.",
-      "branches": "Branch management is a PRO feature. Please upgrade your subscription to use this feature."
+      "branches": "Branch management is a PRO feature. Please upgrade your subscription to use this feature.",
+      "providers": "Tour provider management is a PRO feature. Please upgrade your subscription to use this feature."
     },
     "createUser": {
       "title": "Create New User",
@@ -2882,6 +2884,29 @@
       "active": "Active",
       "inactive": "Inactive",
       "all": "All"
+    },
+    "providers": {
+      "title": "Tour Providers",
+      "create": "New Tour Provider",
+      "edit": "Edit Tour Provider",
+      "delete": "Delete Tour Provider",
+      "deleteConfirm": "Do you really want to delete this provider?",
+      "created": "Tour provider successfully created",
+      "updated": "Tour provider successfully updated",
+      "deleted": "Tour provider successfully deleted",
+      "name": "Name",
+      "contactPerson": "Contact Person",
+      "phone": "Phone",
+      "email": "Email",
+      "branch": "Branch",
+      "notes": "Notes",
+      "search": "Search providers...",
+      "noResults": "No providers found",
+      "empty": "No tour providers available",
+      "loadError": "Error loading providers",
+      "validation": {
+        "nameRequired": "Name is required"
+      }
     }
   },
   "tourBookings": {

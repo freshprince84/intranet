@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { UserGroupIcon, UserIcon, ShieldCheckIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, UserIcon, ShieldCheckIcon, MapPinIcon, TruckIcon } from '@heroicons/react/24/outline';
 import UserManagementTab from '../components/UserManagementTab.tsx';
 import RoleManagementTab from '../components/RoleManagementTab.tsx';
 import BranchManagementTab from '../components/BranchManagementTab.tsx';
+import TourProvidersTab from '../components/tours/TourProvidersTab.tsx';
 import useMessage from '../hooks/useMessage.ts';
 import OrganizationSettings from '../components/organization/OrganizationSettings.tsx';
 import JoinRequestsList from '../components/organization/JoinRequestsList.tsx';
@@ -28,16 +29,17 @@ const Organisation: React.FC = () => {
   const canViewUsers = hasPermission('users', 'read', 'table');
   const canViewRoles = hasPermission('roles', 'read', 'table');
   const canViewBranches = hasPermission('branches', 'read', 'table');
+  const canViewProviders = hasPermission('tour_providers', 'read', 'table');
   const canViewOrg = canViewOrganization();
 
-  const [activeTabState, setActiveTabState] = useState<'users' | 'roles' | 'branches' | 'organization'>('users');
+  const [activeTabState, setActiveTabState] = useState<'users' | 'roles' | 'branches' | 'providers' | 'organization'>('users');
   const isInitialized = useRef(false);
 
   // Tab beim ersten Laden basierend auf Berechtigungen setzen (nur wenn Berechtigungen geladen sind)
-  // Reihenfolge: users -> roles -> branches -> organization
+  // Reihenfolge: users -> roles -> branches -> providers -> organization
   useEffect(() => {
     if (!permissionsLoading && !isInitialized.current) {
-      let defaultTab: 'users' | 'roles' | 'branches' | 'organization' = 'organization'; // Fallback
+      let defaultTab: 'users' | 'roles' | 'branches' | 'providers' | 'organization' = 'organization'; // Fallback
       
       if (canViewUsers) {
         defaultTab = 'users';
@@ -45,6 +47,8 @@ const Organisation: React.FC = () => {
         defaultTab = 'roles';
       } else if (canViewBranches) {
         defaultTab = 'branches';
+      } else if (canViewProviders) {
+        defaultTab = 'providers';
       } else if (canViewOrg) {
         defaultTab = 'organization';
       }
@@ -52,10 +56,10 @@ const Organisation: React.FC = () => {
       setActiveTabState(defaultTab);
       isInitialized.current = true;
     }
-  }, [permissionsLoading, canViewUsers, canViewRoles, canViewBranches, canViewOrg]);
+  }, [permissionsLoading, canViewUsers, canViewRoles, canViewBranches, canViewProviders, canViewOrg]);
 
   // Tab-Wechsel Handler - Fehler beim Wechsel zurücksetzen
-  const handleTabChange = (tab: 'users' | 'roles' | 'branches' | 'organization') => {
+  const handleTabChange = (tab: 'users' | 'roles' | 'branches' | 'providers' | 'organization') => {
     // Prüfe Berechtigung für den Tab
     if (tab === 'users' && !canViewUsers) {
       return; // Tab nicht aktivierbar
@@ -64,6 +68,9 @@ const Organisation: React.FC = () => {
       return; // Tab nicht aktivierbar
     }
     if (tab === 'branches' && !canViewBranches) {
+      return; // Tab nicht aktivierbar
+    }
+    if (tab === 'providers' && !canViewProviders) {
       return; // Tab nicht aktivierbar
     }
     if (tab === 'organization' && !canViewOrg) {
@@ -166,6 +173,27 @@ const Organisation: React.FC = () => {
                 )}
               </button>
 
+              {/* Providers Tab - immer sichtbar, aber mit Pro-Badge wenn nicht berechtigt */}
+              <button
+                className={`${
+                  activeTabState === 'providers' && canViewProviders
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : !canViewProviders
+                    ? 'border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
+                onClick={() => canViewProviders && handleTabChange('providers')}
+                disabled={!canViewProviders}
+              >
+                <TruckIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                {t('organisation.tabs.providers', { defaultValue: 'Proveedores' })}
+                {!canViewProviders && (
+                  <span className="ml-1 sm:ml-2 px-1 sm:px-2 py-0.5 text-[0.625rem] sm:text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
+                    PRO
+                  </span>
+                )}
+              </button>
+
               {/* Organization Tab - sichtbar wenn berechtigt */}
               {canViewOrg && (
                 <button
@@ -235,6 +263,21 @@ const Organisation: React.FC = () => {
                     </span>
                     <p className="text-gray-700 dark:text-gray-300 mt-4">
                       {t('organisation.proFeature.branches', { defaultValue: 'Niederlassungs-Verwaltung ist eine PRO-Funktion' })}
+                    </p>
+                  </div>
+                </div>
+              )
+            ) : activeTabState === 'providers' ? (
+              canViewProviders ? (
+                <TourProvidersTab onError={handleError} />
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+                    <span className="inline-block px-3 py-1 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded mb-4">
+                      PRO
+                    </span>
+                    <p className="text-gray-700 dark:text-gray-300 mt-4">
+                      {t('organisation.proFeature.providers', { defaultValue: 'Tour-Provider-Verwaltung ist eine PRO-Funktion' })}
                     </p>
                   </div>
                 </div>
