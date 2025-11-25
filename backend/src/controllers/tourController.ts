@@ -936,7 +936,22 @@ export const exportTours = async (req: Request, res: Response) => {
         imageUrl: requestedFields.includes('imageUrl'),
         galleryUrls: requestedFields.includes('galleryUrls'),
         availableFrom: requestedFields.includes('availableFrom'),
-        availableTo: requestedFields.includes('availableTo')
+        availableTo: requestedFields.includes('availableTo'),
+        externalBookingUrl: requestedFields.includes('externalBookingUrl'),
+        branch: requestedFields.includes('branch') ? {
+          select: branchSelect
+        } : false,
+        externalProvider: requestedFields.includes('externalProvider') ? {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true
+          }
+        } : false
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
     });
 

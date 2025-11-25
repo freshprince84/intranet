@@ -785,7 +785,21 @@
       "hourShort": "h",
       "belowTarget": "≤ {target}h",
       "aboveTarget": "> {target}h",
-      "exportFilename": "Work_Time_Statistics_Week{week}.xlsx"
+      "exportFilename": "Work_Time_Statistics_Week{week}.xlsx",
+      "tabs": {
+        "worktime": "Worktime",
+        "commissions": "Commissions"
+      },
+      "commissions": {
+        "total": "Total Commissions",
+        "totalBookings": "Number of Bookings",
+        "average": "Average",
+        "byTourType": "By Tour Type",
+        "tourSales": "Tour Sales",
+        "sales": "Sales",
+        "noSales": "No Sales",
+        "noData": "No commission data available"
+      }
     },
     "days": {
       "monday": "Mo",
@@ -2819,6 +2833,14 @@
     "gallery": "Gallery",
     "imageUploadError": "Tour created, but error uploading image",
     "galleryUploadError": "Tour created, but error uploading gallery images",
+    "export": "Export",
+    "export.title": "Export Tours",
+    "export.format": "Export Format",
+    "export.selectFields": "Select Fields",
+    "export.noFieldsSelected": "Please select at least one field",
+    "export.noData": "No data to export",
+    "export.success": "Export successful",
+    "export.error": "Error exporting",
     "columns": {
       "title": "Title",
       "type": "Type",

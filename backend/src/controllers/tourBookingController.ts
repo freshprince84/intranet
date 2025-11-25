@@ -444,9 +444,12 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
       console.log(`[createTourBooking] TODO: WhatsApp-Nachricht an Anbieter senden: ${tour.externalProvider.phone}`);
     }
 
-    // TODO: Notifications erstellen
-    // - Tour gebucht (an alle in org)
-    // - Tour angefragt (an definierte Rolle in branch in org) - nur bei externer Tour
+    // Notifications erstellen
+    const { TourNotificationService } = await import('../services/tourNotificationService');
+    await TourNotificationService.notifyTourBooked(booking.id, tourId, organizationId, userId);
+    if (tour.type === 'external') {
+      await TourNotificationService.notifyTourRequested(booking.id, tourId, organizationId, branchId, userId);
+    }
 
     // Lade vollständige Buchung
     const fullBooking = await prisma.tourBooking.findUnique({
@@ -716,8 +719,45 @@ export const cancelTourBooking = async (req: AuthenticatedRequest, res: Response
       }
     });
 
+    // Notifications senden
+    const { TourNotificationService } = await import('../services/tourNotificationService');
+    const bookingForNotification = await prisma.tourBooking.findUnique({
+      where: { id: bookingId },
+      include: {
+        tour: {
+          select: {
+            id: true,
+            title: true,
+            organizationId: true
+          }
+        },
+        bookedBy: {
+          select: {
+            id: true
+          }
+        }
+      }
+    });
+
+    if (bookingForNotification) {
+      if (cancelledBy === 'customer') {
+        await TourNotificationService.notifyTourCancelledByCustomer(
+          bookingId,
+          bookingForNotification.tour.id,
+          bookingForNotification.tour.organizationId,
+          bookingForNotification.bookedById
+        );
+      } else if (cancelledBy === 'provider') {
+        await TourNotificationService.notifyTourCancelledByProvider(
+          bookingId,
+          bookingForNotification.tour.id,
+          bookingForNotification.tour.organizationId,
+          bookingForNotification.bookedById
+        );
+      }
+    }
+
     // TODO: TourWhatsAppService.sendCancellationToCustomer()
-    // TODO: Notification erstellen (Tour gecancelt von kunde/anbieter)
 
     res.json({
       success: true,

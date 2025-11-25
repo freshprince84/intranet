@@ -800,7 +800,21 @@
       "hourShort": "h",
       "belowTarget": "≤ {target}h",
       "aboveTarget": "> {target}h",
-      "exportFilename": "Estadísticas_tiempo_trabajo_Sem{week}.xlsx"
+      "exportFilename": "Estadísticas_tiempo_trabajo_Sem{week}.xlsx",
+      "tabs": {
+        "worktime": "Tiempo de Trabajo",
+        "commissions": "Comisiones"
+      },
+      "commissions": {
+        "total": "Comisiones Totales",
+        "totalBookings": "Número de Reservas",
+        "average": "Promedio",
+        "byTourType": "Por Tipo de Tour",
+        "tourSales": "Ventas de Tours",
+        "sales": "Ventas",
+        "noSales": "Sin Ventas",
+        "noData": "No hay datos de comisiones disponibles"
+      }
     },
     "days": {
       "monday": "Lu",
@@ -2818,6 +2832,14 @@
     "gallery": "Galería",
     "imageUploadError": "Tour creado, pero error al subir imagen",
     "galleryUploadError": "Tour creado, pero error al subir imágenes de galería",
+    "export": "Exportar",
+    "export.title": "Exportar Tours",
+    "export.format": "Formato de Exportación",
+    "export.selectFields": "Seleccionar Campos",
+    "export.noFieldsSelected": "Por favor seleccione al menos un campo",
+    "export.noData": "No hay datos para exportar",
+    "export.success": "Exportación exitosa",
+    "export.error": "Error al exportar",
     "columns": {
       "title": "Título",
       "type": "Tipo",
