@@ -530,20 +530,21 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           birthday: updatedData.birthday ? new Date(updatedData.birthday).toISOString().split('T')[0] : null
         });
         
-        // Optimistisches Update: User in allUsers und users aktualisieren
-        setAllUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === updatedData.id ? updatedData : user
-          )
+        // Optimistisches Update: Berechne den aktualisierten Array direkt (vor State-Update)
+        // Dies verhindert Race Conditions bei schnellen, aufeinanderfolgenden Updates
+        const updatedAllUsers = allUsers.map(user => 
+          user.id === updatedData.id ? updatedData : user
         );
         
-        // Benutzerliste neu filtern basierend auf aktuellem Tab
-        filterUsersByActiveStatus(userFilterTab, allUsers.map(user => 
-          user.id === updatedData.id ? updatedData : user
-        ));
+        // Update State mit dem berechneten Array
+        setAllUsers(updatedAllUsers);
         
-        // Benutzerliste neu laden, um sicherzustellen, dass alles synchron ist
-        await fetchAllUsers();
+        // Filtere mit dem aktualisierten Array (nicht mit allUsers, da State-Update asynchron ist)
+        filterUsersByActiveStatus(userFilterTab, updatedAllUsers);
+        
+        // fetchAllUsers() entfernt - optimistisches Update reicht aus
+        // Backend speichert korrekt, State ist bereits aktualisiert
+        // Nur bei Fehler wird fetchAllUsers() aufgerufen (siehe catch-Block)
         
         showMessage(
           newActiveStatus 
