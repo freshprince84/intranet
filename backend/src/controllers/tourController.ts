@@ -179,9 +179,13 @@ export const getAllTours = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('[getAllTours] Fehler:', error);
+    if (error instanceof Error) {
+      console.error('[getAllTours] Fehlermeldung:', error.message);
+      console.error('[getAllTours] Stack:', error.stack);
+    }
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden der Touren'
+      message: error instanceof Error ? error.message : 'Fehler beim Laden der Touren'
     });
   }
 };
