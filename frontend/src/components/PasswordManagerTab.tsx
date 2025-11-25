@@ -449,7 +449,7 @@ const PasswordManagerTab: React.FC = () => {
       ) : filteredAndSortedEntries.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 text-center">
           <p className="text-gray-600 dark:text-gray-400">
-            {searchTerm ? t('passwordManager.noEntries') : t('passwordManager.noEntries')}
+            {filterConditions.length > 0 ? t('passwordManager.noEntriesFiltered', 'Keine Einträge gefunden') : t('passwordManager.noEntries')}
           </p>
         </div>
       ) : (
