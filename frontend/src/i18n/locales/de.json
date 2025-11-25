@@ -446,6 +446,7 @@
       "users": "Benutzer",
       "roles": "Rollen",
       "branches": "Niederlassungen",
+      "providers": "Proveedores",
       "organization": "Organisation"
     },
     "noPermission": "Nur Administratoren haben Zugriff auf diese Seite.",
@@ -455,7 +456,8 @@
     "proFeature": {
       "users": "Die Benutzerverwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen.",
       "roles": "Die Rollenverwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen.",
-      "branches": "Die Niederlassungs-Verwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen."
+      "branches": "Die Niederlassungs-Verwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen.",
+      "providers": "Die Tour-Provider-Verwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen."
     },
     "createUser": {
       "title": "Neuen Benutzer erstellen",
@@ -2945,6 +2947,29 @@
       "active": "Aktive",
       "inactive": "Inaktive",
       "all": "Alle"
+    },
+    "providers": {
+      "title": "Tour-Provider",
+      "create": "Neuer Tour-Provider",
+      "edit": "Tour-Provider bearbeiten",
+      "delete": "Tour-Provider löschen",
+      "deleteConfirm": "Möchten Sie diesen Provider wirklich löschen?",
+      "created": "Tour-Provider erfolgreich erstellt",
+      "updated": "Tour-Provider erfolgreich aktualisiert",
+      "deleted": "Tour-Provider erfolgreich gelöscht",
+      "name": "Name",
+      "contactPerson": "Ansprechpartner",
+      "phone": "Telefon",
+      "email": "E-Mail",
+      "branch": "Niederlassung",
+      "notes": "Notizen",
+      "search": "Provider suchen...",
+      "noResults": "Keine Provider gefunden",
+      "empty": "Keine Tour-Provider vorhanden",
+      "loadError": "Fehler beim Laden der Provider",
+      "validation": {
+        "nameRequired": "Name ist erforderlich"
+      }
     }
   },
   "tourBookings": {

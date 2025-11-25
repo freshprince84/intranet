@@ -1423,6 +1423,7 @@
       "users": "Usuarios",
       "roles": "Roles",
       "branches": "Sucursales",
+      "providers": "Proveedores",
       "organization": "Organización"
     },
     "noPermission": "Solo los administradores tienen acceso a esta página.",
@@ -1432,7 +1433,8 @@
     "proFeature": {
       "users": "La gestión de usuarios es una función PRO. Por favor, actualice su suscripción para utilizar esta función.",
       "roles": "La gestión de roles es una función PRO. Por favor, actualice su suscripción para utilizar esta función.",
-      "branches": "La gestión de sucursales es una función PRO. Por favor, actualice su suscripción para utilizar esta función."
+      "branches": "La gestión de sucursales es una función PRO. Por favor, actualice su suscripción para utilizar esta función.",
+      "providers": "La gestión de proveedores de tours es una función PRO. Por favor, actualice su suscripción para utilizar esta función."
     },
     "createUser": {
       "title": "Crear nuevo usuario",
@@ -2879,6 +2881,29 @@
       "active": "Activo",
       "inactive": "Inactivo",
       "all": "Todos"
+    },
+    "providers": {
+      "title": "Proveedores de Tours",
+      "create": "Nuevo Proveedor de Tours",
+      "edit": "Editar Proveedor de Tours",
+      "delete": "Eliminar Proveedor de Tours",
+      "deleteConfirm": "¿Realmente desea eliminar este proveedor?",
+      "created": "Proveedor de tours creado exitosamente",
+      "updated": "Proveedor de tours actualizado exitosamente",
+      "deleted": "Proveedor de tours eliminado exitosamente",
+      "name": "Nombre",
+      "contactPerson": "Persona de Contacto",
+      "phone": "Teléfono",
+      "email": "Correo Electrónico",
+      "branch": "Sucursal",
+      "notes": "Notas",
+      "search": "Buscar proveedores...",
+      "noResults": "No se encontraron proveedores",
+      "empty": "No hay proveedores de tours disponibles",
+      "loadError": "Error al cargar los proveedores",
+      "validation": {
+        "nameRequired": "El nombre es obligatorio"
+      }
     }
   },
   "tourBookings": {

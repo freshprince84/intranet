@@ -50,7 +50,8 @@ const ALL_TABLES = [
   'organization_join_requests', // auf organization_management
   'organization_users',  // auf organization_management
   'tours',             // NEU: auf tour_management
-  'tour_bookings'      // NEU: auf tour_management
+  'tour_bookings',     // NEU: auf tour_management
+  'tour_providers'     // NEU: auf organization_management
 ];
 
 // ALLE BUTTONS IM SYSTEM

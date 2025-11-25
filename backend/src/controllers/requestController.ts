@@ -71,6 +71,9 @@ export const getAllRequests = async (req: Request, res: Response) => {
         const limit = req.query.limit 
             ? parseInt(req.query.limit as string, 10) 
             : undefined; // Kein Limit wenn nicht angegeben - alle Requests werden zurückgegeben
+        const offset = req.query.offset 
+            ? parseInt(req.query.offset as string, 10) 
+            : undefined; // Offset für Pagination
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         
         // Filter-Bedingungen konvertieren (falls vorhanden)
@@ -151,6 +154,7 @@ export const getAllRequests = async (req: Request, res: Response) => {
         const requests = await prisma.request.findMany({
             where: whereClause,
             ...(limit ? { take: limit } : {}), // Nur Limit wenn angegeben
+            ...(offset !== undefined ? { skip: offset } : {}), // Offset für Pagination
             include: {
                 requester: {
                     select: userSelect
