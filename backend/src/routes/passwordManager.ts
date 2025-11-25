@@ -45,7 +45,7 @@ router.get(
 // Neuen Eintrag erstellen
 router.post(
     '/',
-    checkPermission('password_entry_create', 'write', 'button'),
+    checkPermission('password_entry_create', 'write', 'page'),
     passwordManagerController.createPasswordEntry
 );
 

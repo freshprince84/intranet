@@ -365,3 +365,4 @@ export const deleteTourProvider = async (req: AuthenticatedRequest, res: Respons
   }
 };
 
+

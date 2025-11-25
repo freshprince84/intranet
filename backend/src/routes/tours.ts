@@ -30,3 +30,4 @@ router.get('/:id/bookings', getTourBookings);
 
 export default router;
 
+

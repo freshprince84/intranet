@@ -4,7 +4,7 @@ import { encryptSecret, decryptSecret } from '../utils/encryption';
 
 // Erweitere Request-Typ
 interface PasswordManagerRequest extends Request {
-    userId: string;
+    userId?: string;
     roleId?: string;
     organizationId?: number;
     userRole?: any;
@@ -99,6 +99,9 @@ const createAuditLog = async (
  */
 export const getAllPasswordEntries = async (req: PasswordManagerRequest, res: Response) => {
     try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
         const userId = parseInt(req.userId, 10);
         const roleId = req.roleId ? parseInt(req.roleId, 10) : undefined;
         const organizationId = req.organizationId;
@@ -196,6 +199,9 @@ export const getAllPasswordEntries = async (req: PasswordManagerRequest, res: Re
  */
 export const getPasswordEntry = async (req: PasswordManagerRequest, res: Response) => {
     try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
         const userId = parseInt(req.userId, 10);
         const roleId = req.roleId ? parseInt(req.roleId, 10) : undefined;
         const entryId = parseInt(req.params.id, 10);
@@ -278,6 +284,9 @@ export const getPasswordEntry = async (req: PasswordManagerRequest, res: Respons
  */
 export const getPasswordEntryPassword = async (req: PasswordManagerRequest, res: Response) => {
     try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
         const userId = parseInt(req.userId, 10);
         const roleId = req.roleId ? parseInt(req.roleId, 10) : undefined;
         const entryId = parseInt(req.params.id, 10);
@@ -333,6 +342,9 @@ export const getPasswordEntryPassword = async (req: PasswordManagerRequest, res:
  */
 export const createPasswordEntry = async (req: PasswordManagerRequest, res: Response) => {
     try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
         const userId = parseInt(req.userId, 10);
         const organizationId = req.organizationId;
         const { title, url, username, password, notes, rolePermissions, userPermissions } = req.body;
@@ -414,6 +426,9 @@ export const createPasswordEntry = async (req: PasswordManagerRequest, res: Resp
  */
 export const updatePasswordEntry = async (req: PasswordManagerRequest, res: Response) => {
     try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
         const userId = parseInt(req.userId, 10);
         const roleId = req.roleId ? parseInt(req.roleId, 10) : undefined;
         const entryId = parseInt(req.params.id, 10);
@@ -498,6 +513,9 @@ export const updatePasswordEntry = async (req: PasswordManagerRequest, res: Resp
  */
 export const deletePasswordEntry = async (req: PasswordManagerRequest, res: Response) => {
     try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
         const userId = parseInt(req.userId, 10);
         const roleId = req.roleId ? parseInt(req.roleId, 10) : undefined;
         const entryId = parseInt(req.params.id, 10);
@@ -578,6 +596,9 @@ export const generatePassword = async (req: Request, res: Response) => {
  */
 export const getPasswordEntryAuditLogs = async (req: PasswordManagerRequest, res: Response) => {
     try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
         const userId = parseInt(req.userId, 10);
         const roleId = req.roleId ? parseInt(req.roleId, 10) : undefined;
         const entryId = parseInt(req.params.id, 10);
