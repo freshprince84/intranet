@@ -245,7 +245,7 @@ const EditTourProviderModal = ({ isOpen, onClose, provider, onProviderUpdated }:
                                 disabled={loading || loadingData}
                             >
                                 {loading
-                                    ? t('common.updating', { defaultValue: 'Aktualisiere..." })
+                                    ? t('common.updating', { defaultValue: 'Aktualisiere...' })
                                     : t('common.update', { defaultValue: 'Aktualisieren' })}
                             </button>
                         </div>

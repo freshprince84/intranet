@@ -290,7 +290,7 @@ export class ReservationNotificationService {
               await this.logNotification(
                 reservationId,
                 'invitation',
-                guestPhone ? 'whatsapp' : (guestEmail ? 'email' : 'both'),
+                (guestPhone && guestEmail) ? 'both' : (guestPhone ? 'whatsapp' : (guestEmail ? 'email' : 'both')),
                 false,
                 {
                   sentTo: guestPhone || guestEmail || undefined,

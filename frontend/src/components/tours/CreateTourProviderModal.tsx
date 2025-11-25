@@ -234,7 +234,7 @@ const CreateTourProviderModal = ({ isOpen, onClose, onProviderCreated }: CreateT
                                 disabled={loading || loadingData}
                             >
                                 {loading
-                                    ? t('common.creating', { defaultValue: 'Erstelle..." })
+                                    ? t('common.creating', { defaultValue: 'Erstelle...' })
                                     : t('common.create', { defaultValue: 'Erstellen' })}
                             </button>
                         </div>
