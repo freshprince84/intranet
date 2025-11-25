@@ -100,6 +100,8 @@ function convertSingleCondition(condition, entityType) {
             }
             return {};
         case 'dueDate':
+        case 'tourDate':
+        case 'bookingDate':
             return convertDateCondition(value, operator);
         case 'responsible':
             return convertUserRoleCondition(value, operator, entityType, 'responsible');
@@ -111,6 +113,16 @@ function convertSingleCondition(condition, entityType) {
         case 'requestedBy':
             if (entityType === 'request') {
                 return convertUserRoleCondition(value, operator, entityType, 'requestedBy');
+            }
+            return {};
+        case 'createdBy':
+            if (entityType === 'tour') {
+                return convertUserRoleCondition(value, operator, entityType, 'createdBy');
+            }
+            return {};
+        case 'bookedBy':
+            if (entityType === 'tour_booking') {
+                return convertUserRoleCondition(value, operator, entityType, 'bookedBy');
             }
             return {};
         case 'branch':
@@ -186,6 +198,16 @@ function convertUserRoleCondition(value, operator, entityType, field) {
             return operator === 'notEquals'
                 ? { requesterId: { not: userId } }
                 : { requesterId: userId };
+        }
+        else if (field === 'createdBy' && entityType === 'tour') {
+            return operator === 'notEquals'
+                ? { createdById: { not: userId } }
+                : { createdById: userId };
+        }
+        else if (field === 'bookedBy' && entityType === 'tour_booking') {
+            return operator === 'notEquals'
+                ? { bookedById: { not: userId } }
+                : { bookedById: userId };
         }
     }
     // Handle role-{id} format

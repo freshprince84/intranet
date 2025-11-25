@@ -353,8 +353,11 @@ ${paymentLink}
                         console.log(`[ReservationNotification] Template Name (Basis): ${baseTemplateName}`);
                         console.log(`[ReservationNotification] Template Params: ${JSON.stringify(templateParams)}`);
                         // Sende direkt als Template Message (ohne Session Message zu versuchen)
-                        const templateResult = yield whatsappService.sendTemplateMessageDirectly(guestPhone, baseTemplateName, templateParams, sentMessage // Wird ignoriert, nur für Kompatibilität
-                        );
+                        const templateResult = yield whatsappService.sendTemplateMessageDirectly(guestPhone, baseTemplateName, templateParams, sentMessage, // Wird ignoriert, nur für Kompatibilität
+                        {
+                            guestNationality: reservation.guestNationality,
+                            guestPhone: reservation.guestPhone
+                        });
                         if (!templateResult) {
                             throw new Error('Template Message konnte nicht versendet werden');
                         }
@@ -793,7 +796,11 @@ ${paymentLink}
                         reservation.roomNumber || 'N/A',
                         reservation.roomDescription || 'N/A',
                         doorPin || 'N/A',
-                        doorAppName || 'TTLock'
+                        doorAppName || 'TTLock',
+                        {
+                          guestNationality: reservation.guestNationality,
+                          guestPhone: reservation.guestPhone
+                        }
                       );
                       whatsappSuccess = whatsappSuccessResult;
                       
@@ -1060,7 +1067,11 @@ ${doorPin || 'N/A'}
                           finalGuestPhone,
                           messageText,
                           undefined, // Kein Template
-                          undefined // Keine Template-Parameter
+                          undefined, // Keine Template-Parameter
+                          {
+                            guestNationality: reservation.guestNationality,
+                            guestPhone: reservation.guestPhone
+                          }
                         );
                         whatsappSuccess = true; // Erfolg annehmen, wenn keine Exception geworfen wurde
                       } else {
@@ -1281,8 +1292,87 @@ ${doorPin || 'N/A'}
      */
     static sendCheckInInvitationEmail(reservation, checkInLink, paymentLink) {
         return __awaiter(this, void 0, void 0, function* () {
-            const subject = 'Willkommen bei La Familia Hostel - Online Check-in';
-            const html = `
+            // Bestimme Sprache basierend auf Gast-Nationalität (Standard: Spanisch)
+            const isEnglish = reservation.guestNationality &&
+                ['US', 'GB', 'UK', 'CA', 'AU', 'NZ', 'IE', 'ZA'].includes(reservation.guestNationality.toUpperCase());
+            let subject;
+            let html;
+            let text;
+            if (isEnglish) {
+                // Englische Version
+                subject = 'Welcome to La Familia Hostel - Online Check-in';
+                html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 10px 5px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Hello ${reservation.guestName},</h1>
+          <p>We are pleased to welcome you to La Familia Hostel! 🎊</p>
+          <p>In case that you arrive after 18:00 or before 09:00, our recepcion 🛎️ will be closed.</p>
+          <p>We would then kindly ask you to complete check-in & payment online in advance:</p>
+          <p><strong>Check-In:</strong></p>
+          <p><a href="${checkInLink}" class="button">Online Check-in</a></p>
+          <p><strong>Please make the payment in advance:</strong></p>
+          <p><a href="${paymentLink}" class="button">Make Payment</a></p>
+          <p>Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.</p>
+          <p>Thank you!</p>
+          <p>We look forward to seeing you soon!</p>
+        </div>
+      </body>
+      </html>
+    `;
+                text = `
+Hello ${reservation.guestName},
+
+We are pleased to welcome you to La Familia Hostel! 🎊
+
+In case that you arrive after 18:00 or before 09:00, our recepcion 🛎️ will be closed.
+
+We would then kindly ask you to complete check-in & payment online in advance:
+
+Check-In:
+
+${checkInLink}
+
+Please make the payment in advance:
+
+${paymentLink}
+
+Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.
+
+Thank you!
+
+We look forward to seeing you soon!
+    `;
+            }
+            else {
+                // Spanische Version
+                subject = 'Willkommen bei La Familia Hostel - Online Check-in';
+                html = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -1312,29 +1402,44 @@ ${doorPin || 'N/A'}
       <body>
         <div class="container">
           <h1>Hola ${reservation.guestName},</h1>
-          <p>¡Nos complace darte la bienvenida a La Familia Hostel!</p>
-          <p>Como llegarás después de las 22:00, puedes realizar el check-in en línea ahora:</p>
+          <p>¡Nos complace darte la bienvenida a La Familia Hostel! 🎊</p>
+          <p>En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.</p>
+          <p>Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:</p>
+          <p><strong>Check-In:</strong></p>
           <p><a href="${checkInLink}" class="button">Online Check-in</a></p>
-          <p>Por favor, realiza el pago por adelantado:</p>
+          <p><strong>Por favor, realiza el pago por adelantado:</strong></p>
           <p><a href="${paymentLink}" class="button">Zahlung durchführen</a></p>
-          <p>¡Te esperamos mañana!</p>
+          <p>Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.</p>
+          <p>¡Gracias!</p>
+          <p>¡Esperamos verte pronto!</p>
         </div>
       </body>
       </html>
     `;
-            const text = `
+                text = `
 Hola ${reservation.guestName},
 
-¡Nos complace darte la bienvenida a La Familia Hostel!
+¡Nos complace darte la bienvenida a La Familia Hostel! 🎊
 
-Como llegarás después de las 22:00, puedes realizar el check-in en línea ahora:
+En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.
+
+Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:
+
+Check-In:
+
 ${checkInLink}
 
 Por favor, realiza el pago por adelantado:
+
 ${paymentLink}
 
-¡Te esperamos mañana!
+Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.
+
+¡Gracias!
+
+¡Esperamos verte pronto!
     `;
+            }
             yield (0, emailService_1.sendEmail)(reservation.guestEmail, subject, html, text, reservation.organizationId, reservation.branchId || undefined);
         });
     }

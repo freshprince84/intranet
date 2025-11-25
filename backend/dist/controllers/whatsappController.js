@@ -106,10 +106,16 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 const messageText = ((_g = message.text) === null || _g === void 0 ? void 0 : _g.body) || '';
                 const mediaUrl = ((_h = message.image) === null || _h === void 0 ? void 0 : _h.id) || ((_j = message.document) === null || _j === void 0 ? void 0 : _j.id);
                 const phoneNumberId = (_k = value.metadata) === null || _k === void 0 ? void 0 : _k.phone_number_id;
+                // Gruppen-Erkennung: Prüfe ob Nachricht aus Gruppe kommt
+                const context = message.context;
+                const groupId = (context === null || context === void 0 ? void 0 : context.group_id) || null;
+                const isGroupMessage = !!groupId;
                 console.log('[WhatsApp Webhook] Eingehende Nachricht:', {
                     from: fromNumber,
                     text: messageText,
-                    phoneNumberId: phoneNumberId
+                    phoneNumberId: phoneNumberId,
+                    isGroupMessage: isGroupMessage,
+                    groupId: groupId
                 });
                 // 1. Identifiziere Branch via Phone Number ID
                 const branchId = yield identifyBranchFromPhoneNumberId(phoneNumberId);
@@ -139,14 +145,20 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 // 3. Verarbeite Nachricht via Message Handler (neue Funktionalität)
                 try {
                     console.log('[WhatsApp Webhook] Rufe Message Handler auf...');
-                    const response = yield whatsappMessageHandler_1.WhatsAppMessageHandler.handleIncomingMessage(fromNumber, messageText, branchId, mediaUrl);
+                    const response = yield whatsappMessageHandler_1.WhatsAppMessageHandler.handleIncomingMessage(fromNumber, messageText, branchId, mediaUrl, groupId || undefined);
                     console.log('[WhatsApp Webhook] Antwort generiert:', response.substring(0, 100) + '...');
                     console.log('[WhatsApp Webhook] Vollständige Antwort:', response);
                     // 4. Sende Antwort
                     console.log('[WhatsApp Webhook] Erstelle WhatsApp Service für Branch', branchId);
                     const whatsappService = yield whatsappService_1.WhatsAppService.getServiceForBranch(branchId);
-                    console.log('[WhatsApp Webhook] Sende Antwort an', fromNumber);
-                    yield whatsappService.sendMessage(fromNumber, response);
+                    console.log('[WhatsApp Webhook] Sende Antwort an', fromNumber, isGroupMessage ? `(Gruppe: ${groupId})` : '');
+                    // Für Gruppen: Sende mit group_id, für Einzel-Chats: normale Nachricht
+                    if (isGroupMessage && groupId) {
+                        yield whatsappService.sendMessage(fromNumber, response, undefined, groupId);
+                    }
+                    else {
+                        yield whatsappService.sendMessage(fromNumber, response);
+                    }
                     console.log('[WhatsApp Webhook] ✅ Antwort erfolgreich gesendet');
                     return res.status(200).json({ success: true, message: 'Nachricht verarbeitet und Antwort gesendet' });
                 }

@@ -142,7 +142,9 @@ export const createTourProvider = async (req: AuthenticatedRequest, res: Respons
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
       parseInt(req.userId),
+      parseInt(req.roleId),
       'tour_provider_create',
+      'write',
       'button'
     );
     if (!hasPermission) {

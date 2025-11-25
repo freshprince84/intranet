@@ -16,6 +16,7 @@ exports.WhatsAppMessageHandler = void 0;
 const whatsappAiService_1 = require("./whatsappAiService");
 const languageDetectionService_1 = require("./languageDetectionService");
 const whatsappService_1 = require("./whatsappService");
+const whatsappGuestService_1 = require("./whatsappGuestService");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
@@ -34,8 +35,9 @@ class WhatsAppMessageHandler {
     /**
      * Verarbeitet eingehende WhatsApp-Nachricht
      */
-    static handleIncomingMessage(phoneNumber, messageText, branchId, mediaUrl) {
+    static handleIncomingMessage(phoneNumber, messageText, branchId, mediaUrl, groupId) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
             try {
                 // 1. Normalisiere Telefonnummer
                 const normalizedPhone = languageDetectionService_1.LanguageDetectionService.normalizePhoneNumber(phoneNumber);
@@ -52,6 +54,74 @@ class WhatsAppMessageHandler {
                     userId: user === null || user === void 0 ? void 0 : user.id,
                     userName: user ? `${user.firstName} ${user.lastName}` : null
                 });
+                // 2.5. Lade User mit Rollen (für Function Calling)
+                let userWithRoles = null;
+                let roleId = null;
+                if (user) {
+                    try {
+                        userWithRoles = yield prisma_1.prisma.user.findUnique({
+                            where: { id: user.id },
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                                phoneNumber: true,
+                                roles: {
+                                    select: {
+                                        roleId: true,
+                                        role: {
+                                            select: {
+                                                id: true,
+                                                name: true
+                                            }
+                                        }
+                                    }
+                                    // WICHTIG: take: 1 entfernt, da es innerhalb von select nicht immer funktioniert
+                                    // Wir nehmen einfach die erste Rolle aus dem Array
+                                }
+                            }
+                        });
+                        console.log('[WhatsApp Message Handler] User mit Rollen geladen:', {
+                            userId: userWithRoles === null || userWithRoles === void 0 ? void 0 : userWithRoles.id,
+                            rolesCount: ((_a = userWithRoles === null || userWithRoles === void 0 ? void 0 : userWithRoles.roles) === null || _a === void 0 ? void 0 : _a.length) || 0,
+                            roles: ((_b = userWithRoles === null || userWithRoles === void 0 ? void 0 : userWithRoles.roles) === null || _b === void 0 ? void 0 : _b.map(r => ({ roleId: r.roleId, name: r.role.name }))) || []
+                        });
+                        if ((userWithRoles === null || userWithRoles === void 0 ? void 0 : userWithRoles.roles) && userWithRoles.roles.length > 0) {
+                            roleId = userWithRoles.roles[0].roleId;
+                            console.log('[WhatsApp Message Handler] roleId gesetzt:', roleId);
+                        }
+                        else {
+                            console.error('[WhatsApp Message Handler] ⚠️ WARNUNG: User hat KEINE Rollen!', {
+                                userId: user.id,
+                                userName: `${user.firstName} ${user.lastName}`
+                            });
+                            // Fallback: Versuche alle Rollen zu laden (ohne select-Beschränkung)
+                            const userWithAllRoles = yield prisma_1.prisma.user.findUnique({
+                                where: { id: user.id },
+                                include: {
+                                    roles: {
+                                        include: {
+                                            role: {
+                                                select: {
+                                                    id: true,
+                                                    name: true
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                            if ((userWithAllRoles === null || userWithAllRoles === void 0 ? void 0 : userWithAllRoles.roles) && userWithAllRoles.roles.length > 0) {
+                                roleId = userWithAllRoles.roles[0].roleId;
+                                console.log('[WhatsApp Message Handler] Fallback: roleId aus include-Query:', roleId);
+                            }
+                        }
+                    }
+                    catch (error) {
+                        console.error('[WhatsApp Message Handler] Fehler beim Laden der Rollen:', error);
+                    }
+                }
                 // 3. Lade/Erstelle Conversation State
                 const conversation = yield this.getOrCreateConversation(normalizedPhone, branchId, user === null || user === void 0 ? void 0 : user.id);
                 // 4. Prüfe Keywords
@@ -84,13 +154,30 @@ class WhatsAppMessageHandler {
                     }
                     return yield this.startTaskCreation(normalizedPhone, branchId, conversation);
                 }
+                // Keyword: "code" / "código" / "pin" / "password" - Gast-Code-Versand
+                const codeKeywords = ['code', 'código', 'codigo', 'pin', 'password', 'verloren', 'lost', 'perdido', 'acceso'];
+                if (codeKeywords.includes(normalizedText) && conversation.state === 'idle') {
+                    return yield this.handleGuestCodeRequest(normalizedPhone, branchId, conversation);
+                }
                 // 5. Prüfe Conversation State (für mehrstufige Interaktionen)
                 if (conversation.state !== 'idle') {
+                    // Prüfe ob es Gast-Identifikation ist
+                    if (conversation.state.startsWith('guest_identification')) {
+                        return yield this.continueGuestIdentification(normalizedPhone, messageText, conversation, branchId);
+                    }
                     return yield this.continueConversation(normalizedPhone, branchId, messageText, mediaUrl, conversation, user);
                 }
                 // 6. KI-Antwort generieren (falls kein Keyword und kein aktiver State)
                 try {
-                    const aiResponse = yield whatsappAiService_1.WhatsAppAiService.generateResponse(messageText, branchId, normalizedPhone, { userId: user === null || user === void 0 ? void 0 : user.id, conversationState: conversation.state });
+                    // Erweitere Conversation Context mit Rollen für Function Calling
+                    const conversationContext = {
+                        userId: user === null || user === void 0 ? void 0 : user.id,
+                        roleId: roleId,
+                        userName: userWithRoles ? `${userWithRoles.firstName} ${userWithRoles.lastName}` : null,
+                        conversationState: conversation.state,
+                        groupId: groupId
+                    };
+                    const aiResponse = yield whatsappAiService_1.WhatsAppAiService.generateResponse(messageText, branchId, normalizedPhone, conversationContext);
                     return aiResponse.message;
                 }
                 catch (error) {
@@ -111,10 +198,25 @@ class WhatsAppMessageHandler {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 console.log('[WhatsApp Message Handler] Suche User:', { phoneNumber, branchId });
-                // Versuche exakte Übereinstimmung
+                // Normalisiere Telefonnummer für Suche (verschiedene Formate)
+                const normalizedPhone = languageDetectionService_1.LanguageDetectionService.normalizePhoneNumber(phoneNumber);
+                const phoneWithoutPlus = normalizedPhone.startsWith('+') ? normalizedPhone.substring(1) : normalizedPhone;
+                const phoneWithPlus = normalizedPhone.startsWith('+') ? normalizedPhone : `+${normalizedPhone}`;
+                // Alle möglichen Formate für Suche
+                const searchFormats = [
+                    normalizedPhone,
+                    phoneWithoutPlus,
+                    phoneWithPlus,
+                    phoneNumber, // Original (falls nicht normalisiert)
+                    phoneNumber.replace(/[\s-]/g, ''), // Ohne Leerzeichen/Bindestriche
+                ];
+                // Entferne Duplikate
+                const uniqueFormats = [...new Set(searchFormats)];
+                console.log('[WhatsApp Message Handler] Suche mit Formaten:', uniqueFormats);
+                // Versuche exakte Übereinstimmung mit allen Formaten
                 let user = yield prisma_1.prisma.user.findFirst({
                     where: {
-                        phoneNumber: phoneNumber,
+                        OR: uniqueFormats.map(format => ({ phoneNumber: format })),
                         branches: {
                             some: {
                                 branchId: branchId
@@ -133,41 +235,11 @@ class WhatsAppMessageHandler {
                     console.log('[WhatsApp Message Handler] User gefunden (exakt):', user.id);
                     return user;
                 }
-                // Fallback: Suche auch ohne + (falls WhatsApp ohne + sendet)
-                if (phoneNumber.startsWith('+')) {
-                    const phoneWithoutPlus = phoneNumber.substring(1);
-                    console.log('[WhatsApp Message Handler] Versuche Suche ohne +:', phoneWithoutPlus);
-                    user = yield prisma_1.prisma.user.findFirst({
-                        where: {
-                            OR: [
-                                { phoneNumber: phoneNumber },
-                                { phoneNumber: phoneWithoutPlus },
-                                { phoneNumber: `+${phoneWithoutPlus}` }
-                            ],
-                            branches: {
-                                some: {
-                                    branchId: branchId
-                                }
-                            }
-                        },
-                        select: {
-                            id: true,
-                            firstName: true,
-                            lastName: true,
-                            email: true,
-                            phoneNumber: true
-                        }
-                    });
-                    if (user) {
-                        console.log('[WhatsApp Message Handler] User gefunden (mit Fallback):', user.id);
-                        return user;
-                    }
-                }
                 // Fallback: Suche ohne Branch-Filter (falls User in anderem Branch ist)
                 console.log('[WhatsApp Message Handler] Exakte Suche fehlgeschlagen, versuche ohne Branch-Filter...');
                 const userWithBranches = yield prisma_1.prisma.user.findFirst({
                     where: {
-                        phoneNumber: phoneNumber
+                        OR: uniqueFormats.map(format => ({ phoneNumber: format }))
                     },
                     select: {
                         id: true,
@@ -889,9 +961,283 @@ class WhatsAppMessageHandler {
                     es: 'Estado desconocido. Por favor, intenta de nuevo.',
                     de: 'Unbekannter Status. Bitte versuche es erneut.',
                     en: 'Unknown state. Please try again.'
+                },
+                guest_not_found: {
+                    es: 'No se encontró ninguna reservación. Por favor, verifica tus datos o contacta con el personal.',
+                    de: 'Keine Reservierung gefunden. Bitte überprüfe deine Daten oder kontaktiere das Personal.',
+                    en: 'No reservation found. Please verify your data or contact staff.'
+                },
+                guest_multiple_found: {
+                    es: 'Se encontraron varias reservaciones. Por favor, proporciona más información.',
+                    de: 'Mehrere Reservierungen gefunden. Bitte gib weitere Informationen an.',
+                    en: 'Multiple reservations found. Please provide more information.'
                 }
             };
             return ((_a = responses[key]) === null || _a === void 0 ? void 0 : _a[language]) || ((_b = responses[key]) === null || _b === void 0 ? void 0 : _b.es) || 'Error';
+        });
+    }
+    /**
+     * Verarbeitet Gast-Code-Anfrage
+     */
+    static handleGuestCodeRequest(phoneNumber, branchId, conversation) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Versuche zuerst via Telefonnummer zu identifizieren
+                const reservation = yield whatsappGuestService_1.WhatsAppGuestService.identifyGuestByPhone(phoneNumber, branchId);
+                if (reservation) {
+                    // Gast gefunden via Telefonnummer - sende Code + Links
+                    const language = languageDetectionService_1.LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+                    return yield whatsappGuestService_1.WhatsAppGuestService.buildStatusMessage(reservation, language);
+                }
+                // Keine Telefonnummer vorhanden - starte mehrstufige Identifikation
+                yield prisma_1.prisma.whatsAppConversation.update({
+                    where: { id: conversation.id },
+                    data: {
+                        state: 'guest_identification_name',
+                        context: {
+                            step: 'name',
+                            collectedData: {}
+                        }
+                    }
+                });
+                const language = languageDetectionService_1.LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+                const translations = {
+                    es: 'No encontré tu reservación con tu número de teléfono. Por favor, proporciona los siguientes datos:\n\n¿Cuál es tu nombre?',
+                    de: 'Ich habe deine Reservierung mit deiner Telefonnummer nicht gefunden. Bitte gib die folgenden Daten an:\n\nWie lautet dein Vorname?',
+                    en: 'I could not find your reservation with your phone number. Please provide the following information:\n\nWhat is your first name?'
+                };
+                return translations[language] || translations.es;
+            }
+            catch (error) {
+                console.error('[WhatsApp Message Handler] Fehler bei Gast-Code-Anfrage:', error);
+                return yield this.getLanguageResponse(branchId, phoneNumber, 'error');
+            }
+        });
+    }
+    /**
+     * Setzt Gast-Identifikation fort
+     */
+    static continueGuestIdentification(phoneNumber, messageText, conversation, branchId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const context = conversation.context || {};
+                const step = context.step || conversation.state;
+                const collectedData = context.collectedData || {};
+                const language = languageDetectionService_1.LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+                // Schritt 1: Vorname
+                if (step === 'guest_identification_name' || step === 'name') {
+                    const firstName = messageText.trim();
+                    if (!firstName || firstName.length < 2) {
+                        const translations = {
+                            es: 'Por favor, proporciona un nombre válido.',
+                            de: 'Bitte gib einen gültigen Namen an.',
+                            en: 'Please provide a valid name.'
+                        };
+                        return translations[language] || translations.es;
+                    }
+                    yield prisma_1.prisma.whatsAppConversation.update({
+                        where: { id: conversation.id },
+                        data: {
+                            state: 'guest_identification_lastname',
+                            context: {
+                                step: 'lastname',
+                                collectedData: Object.assign(Object.assign({}, collectedData), { firstName: firstName })
+                            }
+                        }
+                    });
+                    const translations = {
+                        es: `Gracias, ${firstName}. ¿Cuál es tu apellido?`,
+                        de: `Danke, ${firstName}. Wie lautet dein Nachname?`,
+                        en: `Thank you, ${firstName}. What is your last name?`
+                    };
+                    return translations[language] || translations.es;
+                }
+                // Schritt 2: Nachname
+                if (step === 'guest_identification_lastname' || step === 'lastname') {
+                    const lastName = messageText.trim();
+                    if (!lastName || lastName.length < 2) {
+                        const translations = {
+                            es: 'Por favor, proporciona un apellido válido.',
+                            de: 'Bitte gib einen gültigen Nachnamen an.',
+                            en: 'Please provide a valid last name.'
+                        };
+                        return translations[language] || translations.es;
+                    }
+                    yield prisma_1.prisma.whatsAppConversation.update({
+                        where: { id: conversation.id },
+                        data: {
+                            state: 'guest_identification_nationality',
+                            context: {
+                                step: 'nationality',
+                                collectedData: Object.assign(Object.assign({}, collectedData), { lastName: lastName })
+                            }
+                        }
+                    });
+                    const translations = {
+                        es: `Gracias. ¿De qué país eres?`,
+                        de: `Danke. Aus welchem Land kommst du?`,
+                        en: `Thank you. What country are you from?`
+                    };
+                    return translations[language] || translations.es;
+                }
+                // Schritt 3: Land
+                if (step === 'guest_identification_nationality' || step === 'nationality') {
+                    const nationality = messageText.trim();
+                    if (!nationality || nationality.length < 2) {
+                        const translations = {
+                            es: 'Por favor, proporciona un país válido.',
+                            de: 'Bitte gib ein gültiges Land an.',
+                            en: 'Please provide a valid country.'
+                        };
+                        return translations[language] || translations.es;
+                    }
+                    // Suche Reservationen mit den bisherigen Daten
+                    const reservations = yield whatsappGuestService_1.WhatsAppGuestService.findReservationsByDetails(collectedData.firstName, collectedData.lastName, nationality, null, // Geburtsdatum optional
+                    branchId);
+                    if (reservations.length === 0) {
+                        // Keine Reservation gefunden
+                        yield prisma_1.prisma.whatsAppConversation.update({
+                            where: { id: conversation.id },
+                            data: {
+                                state: 'idle',
+                                context: null
+                            }
+                        });
+                        return yield this.getLanguageResponse(branchId, phoneNumber, 'guest_not_found');
+                    }
+                    if (reservations.length === 1) {
+                        // Genau eine Reservation gefunden - sende Code + Links
+                        yield prisma_1.prisma.whatsAppConversation.update({
+                            where: { id: conversation.id },
+                            data: {
+                                state: 'idle',
+                                context: null
+                            }
+                        });
+                        return yield whatsappGuestService_1.WhatsAppGuestService.buildStatusMessage(reservations[0], language);
+                    }
+                    // Mehrere Reservationen gefunden - frage nach Geburtsdatum
+                    yield prisma_1.prisma.whatsAppConversation.update({
+                        where: { id: conversation.id },
+                        data: {
+                            state: 'guest_identification_birthdate',
+                            context: {
+                                step: 'birthdate',
+                                collectedData: Object.assign(Object.assign({}, collectedData), { nationality: nationality }),
+                                candidateReservations: reservations.map((r) => ({
+                                    id: r.id,
+                                    checkInDate: r.checkInDate,
+                                    checkOutDate: r.checkOutDate
+                                }))
+                            }
+                        }
+                    });
+                    const translations = {
+                        es: `Se encontraron varias reservaciones. Por favor, proporciona tu fecha de nacimiento (DD.MM.YYYY) o escribe "saltar" para ver todas.`,
+                        de: `Mehrere Reservierungen gefunden. Bitte gib dein Geburtsdatum an (TT.MM.JJJJ) oder schreibe "überspringen" um alle zu sehen.`,
+                        en: `Multiple reservations found. Please provide your birth date (DD.MM.YYYY) or type "skip" to see all.`
+                    };
+                    return translations[language] || translations.es;
+                }
+                // Schritt 4: Geburtsdatum (optional)
+                if (step === 'guest_identification_birthdate' || step === 'birthdate') {
+                    let birthDate = null;
+                    const messageLower = messageText.toLowerCase().trim();
+                    // Prüfe ob "skip" / "überspringen" / "saltar"
+                    if (messageLower === 'skip' || messageLower === 'überspringen' || messageLower === 'saltar') {
+                        // Zeige Liste aller Reservationen
+                        const candidateReservations = context.candidateReservations || [];
+                        let message = 'Se encontraron las siguientes reservaciones:\n\n';
+                        candidateReservations.forEach((res, index) => {
+                            const checkIn = new Date(res.checkInDate).toLocaleDateString('es-ES');
+                            const checkOut = new Date(res.checkOutDate).toLocaleDateString('es-ES');
+                            message += `${index + 1}. Check-in: ${checkIn}, Check-out: ${checkOut}\n`;
+                        });
+                        message += '\nPor favor, contacta con el personal para más información.';
+                        yield prisma_1.prisma.whatsAppConversation.update({
+                            where: { id: conversation.id },
+                            data: {
+                                state: 'idle',
+                                context: null
+                            }
+                        });
+                        return message;
+                    }
+                    // Versuche Geburtsdatum zu parsen
+                    try {
+                        // Format: DD.MM.YYYY oder DD/MM/YYYY oder DD-MM-YYYY
+                        const dateMatch = messageText.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/);
+                        if (dateMatch) {
+                            const day = parseInt(dateMatch[1], 10);
+                            const month = parseInt(dateMatch[2], 10) - 1; // Monate sind 0-indexiert
+                            const year = parseInt(dateMatch[3], 10);
+                            birthDate = new Date(year, month, day);
+                        }
+                    }
+                    catch (error) {
+                        // Ignoriere Parsing-Fehler
+                    }
+                    // Suche mit Geburtsdatum
+                    const reservations = yield whatsappGuestService_1.WhatsAppGuestService.findReservationsByDetails(collectedData.firstName, collectedData.lastName, collectedData.nationality, birthDate, branchId);
+                    if (reservations.length === 0) {
+                        yield prisma_1.prisma.whatsAppConversation.update({
+                            where: { id: conversation.id },
+                            data: {
+                                state: 'idle',
+                                context: null
+                            }
+                        });
+                        return yield this.getLanguageResponse(branchId, phoneNumber, 'guest_not_found');
+                    }
+                    if (reservations.length === 1) {
+                        // Genau eine Reservation gefunden
+                        yield prisma_1.prisma.whatsAppConversation.update({
+                            where: { id: conversation.id },
+                            data: {
+                                state: 'idle',
+                                context: null
+                            }
+                        });
+                        return yield whatsappGuestService_1.WhatsAppGuestService.buildStatusMessage(reservations[0], language);
+                    }
+                    // Immer noch mehrere - zeige Liste
+                    let message = 'Se encontraron varias reservaciones:\n\n';
+                    reservations.forEach((res, index) => {
+                        const checkIn = new Date(res.checkInDate).toLocaleDateString('es-ES');
+                        const checkOut = new Date(res.checkOutDate).toLocaleDateString('es-ES');
+                        message += `${index + 1}. Check-in: ${checkIn}, Check-out: ${checkOut}\n`;
+                    });
+                    message += '\nPor favor, contacta con el personal para más información.';
+                    yield prisma_1.prisma.whatsAppConversation.update({
+                        where: { id: conversation.id },
+                        data: {
+                            state: 'idle',
+                            context: null
+                        }
+                    });
+                    return message;
+                }
+                // Unbekannter Schritt - reset
+                yield prisma_1.prisma.whatsAppConversation.update({
+                    where: { id: conversation.id },
+                    data: {
+                        state: 'idle',
+                        context: null
+                    }
+                });
+                return yield this.getLanguageResponse(branchId, phoneNumber, 'unknown_state');
+            }
+            catch (error) {
+                console.error('[WhatsApp Message Handler] Fehler bei Gast-Identifikation:', error);
+                yield prisma_1.prisma.whatsAppConversation.update({
+                    where: { id: conversation.id },
+                    data: {
+                        state: 'idle',
+                        context: null
+                    }
+                });
+                return yield this.getLanguageResponse(branchId, phoneNumber, 'error');
+            }
         });
     }
 }

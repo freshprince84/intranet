@@ -24,7 +24,7 @@ interface AuthenticatedRequest extends Request {
  * @param entityType - Typ der Entität ('page', 'table' oder 'cerebro')
  * @returns Express Middleware
  */
-export const checkPermission = (entity: string, requiredAccess: 'read' | 'write', entityType: 'page' | 'table' | 'cerebro' = 'page') => {
+export const checkPermission = (entity: string, requiredAccess: 'read' | 'write', entityType: 'page' | 'table' | 'cerebro' | 'button' = 'page') => {
     return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
             const userId = parseInt(req.userId, 10);
@@ -63,7 +63,7 @@ export const checkUserPermission = async (
     roleId: number, 
     currentEntity: string, 
     requiredAccess: 'read' | 'write',
-    entityType: 'page' | 'table' | 'cerebro' = 'page'
+    entityType: 'page' | 'table' | 'cerebro' | 'button' = 'page'
 ): Promise<boolean> => {
     try {
         // Hole die Berechtigungen für die aktuelle Rolle des Benutzers

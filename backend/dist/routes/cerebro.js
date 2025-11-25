@@ -108,5 +108,6 @@ router.get('/links/:id', cerebroExternalLinksController.getLinkById);
 router.post('/links', auth_1.authenticateToken, (0, permissionMiddleware_1.checkPermission)('cerebro_links', 'write', 'cerebro'), cerebroExternalLinksController.createExternalLink);
 router.put('/links/:id', auth_1.authenticateToken, (0, permissionMiddleware_1.checkPermission)('cerebro_links', 'write', 'cerebro'), cerebroExternalLinksController.updateLink);
 router.delete('/links/:id', auth_1.authenticateToken, (0, permissionMiddleware_1.checkPermission)('cerebro_links', 'write', 'cerebro'), cerebroExternalLinksController.deleteLink);
+router.post('/links/fix-github', auth_1.authenticateToken, (0, permissionMiddleware_1.checkPermission)('cerebro_links', 'write', 'cerebro'), cerebroExternalLinksController.fixGitHubLinks);
 exports.default = router;
 //# sourceMappingURL=cerebro.js.map
