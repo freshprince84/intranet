@@ -2780,7 +2780,8 @@
     "sortByCreated": "By Created Date",
     "sortByUpdated": "By Updated Date",
     "sortAsc": "Sort Ascending",
-    "sortDesc": "Sort Descending"
+    "sortDesc": "Sort Descending",
+    "allEntries": "All Entries"
   },
   "tours": {
     "title": "Tour Management",

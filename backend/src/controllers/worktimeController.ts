@@ -500,15 +500,23 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
       daysInPeriod = 7;
     }
         
-    // UTC-Zeitgrenzen für Datenbankabfrage
-    const periodStartUtc = new Date(`${periodStartStr}T00:00:00.000Z`);
-    const periodEndUtc = new Date(`${periodEndStr}T23:59:59.999Z`);
+    // KORREKT: Tagesgrenzen als lokale Zeit berechnen (ohne UTC-Konvertierung)
+    // Die Datenbank speichert Zeiten als lokale Zeit, daher müssen die Tagesgrenzen auch als lokale Zeit sein
+    // Siehe DATENBANKSCHEMA.md: "startTime DateTime // Enthält die lokale Systemzeit des Benutzers ohne UTC-Konvertierung"
+    // Parse periodStartStr und periodEndStr (Format: YYYY-MM-DD)
+    const [startYear, startMonth, startDay] = periodStartStr.split('-').map(Number);
+    const [endYear, endMonth, endDay] = periodEndStr.split('-').map(Number);
+    
+    // Erstelle lokale Datum-Objekte für den Anfang und das Ende des Zeitraums
+    // WICHTIG: Diese werden als lokale Zeit interpretiert, nicht als UTC
+    const periodStart = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+    const periodEnd = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
     
     // Aktuelle Zeit für aktive Zeitmessungen (UTC)
     // Date.now() gibt UTC-Millisekunden zurück, new Date() erstellt UTC-Date-Objekt
     const nowUtc = new Date(Date.now());
         
-    // Direkte Suche nach den Einträgen mit universellen UTC-Grenzen
+    // Direkte Suche nach den Einträgen mit lokalen Zeitgrenzen
     // WICHTIG: Auch aktive Zeitmessungen (endTime: null) holen, die im Zeitraum starten
     // ODER die vor dem Zeitraum starten aber noch aktiv sind (können in den Zeitraum hineinreichen)
     const entries = await prisma.workTime.findMany({
@@ -518,14 +526,14 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
           // Einträge, die im Zeitraum starten (abgeschlossen oder aktiv)
           {
         startTime: {
-          gte: periodStartUtc,
-          lte: periodEndUtc
+          gte: periodStart,
+          lte: periodEnd
             }
           },
           // Aktive Einträge, die vor dem Zeitraum starten aber noch aktiv sind
           {
             startTime: {
-              lt: periodStartUtc
+              lt: periodStart
         },
             endTime: null
         }
@@ -646,8 +654,8 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
         actualEndTime = effectiveEndTime;
       } else {
         // Abgeschlossene Zeitmessung: Verwende Periodenbegrenzung
-        actualStartTime = entry.startTime < periodStartUtc ? periodStartUtc : entry.startTime;
-        actualEndTime = effectiveEndTime > periodEndUtc ? periodEndUtc : effectiveEndTime;
+        actualStartTime = entry.startTime < periodStart ? periodStart : entry.startTime;
+        actualEndTime = effectiveEndTime > periodEnd ? periodEnd : effectiveEndTime;
         
         // Nur berechnen, wenn tatsächlich Zeit im Zeitraum liegt
         if (actualStartTime < actualEndTime) {
