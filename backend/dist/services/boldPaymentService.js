@@ -593,7 +593,11 @@ class BoldPaymentService {
                                       roomNumber,
                                       roomDescription,
                                       ttlockCode,
-                                      'TTLock'
+                                      'TTLock',
+                                      {
+                                        guestNationality: updatedReservation.guestNationality,
+                                        guestPhone: updatedReservation.guestPhone
+                                      }
                                     );
                                     
                                     const message = `Hola ${updatedReservation.guestName},
@@ -672,7 +676,11 @@ class BoldPaymentService {
                                       updatedReservation.guestPhone,
                                       message,
                                       templateName,
-                                      templateParams
+                                      templateParams,
+                                      {
+                                        guestNationality: updatedReservation.guestNationality,
+                                        guestPhone: updatedReservation.guestPhone
+                                      }
                                     );
                   
                                     if (whatsappSuccess) {

@@ -50,6 +50,11 @@ const whatsapp_1 = __importDefault(require("./routes/whatsapp"));
 const reservations_1 = __importDefault(require("./routes/reservations"));
 const emailReservations_1 = __importDefault(require("./routes/emailReservations"));
 const shifts_1 = __importDefault(require("./routes/shifts"));
+const passwordManager_1 = __importDefault(require("./routes/passwordManager"));
+const tours_1 = __importDefault(require("./routes/tours"));
+const tourBookings_1 = __importDefault(require("./routes/tourBookings"));
+const tourReservations_1 = __importDefault(require("./routes/tourReservations"));
+const tourProviders_1 = __importDefault(require("./routes/tourProviders"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
 const reservationScheduler_1 = require("./services/reservationScheduler");
@@ -226,6 +231,7 @@ app.use('/api/branches', branches_1.default);
 app.use('/api/worktime', worktime_1.default);
 app.use('/api/settings', settings_1.default);
 app.use('/api/notifications', notifications_1.default);
+app.use('/api/password-manager', passwordManager_1.default);
 app.use('/api/table-settings', tableSettings_1.default);
 app.use('/api/cerebro', cerebro_1.default);
 app.use('/api/team-worktime', teamWorktimeRoutes_1.default);
@@ -265,6 +271,12 @@ console.log('[App] /api/reservations Route registriert');
 // Email-Reservation-Integration
 app.use('/api/email-reservations', emailReservations_1.default);
 console.log('[App] /api/email-reservations Route registriert');
+// Tour-Management
+app.use('/api/tours', tours_1.default);
+app.use('/api/tour-bookings', tourBookings_1.default);
+app.use('/api/tour-reservations', tourReservations_1.default);
+app.use('/api/tour-providers', tourProviders_1.default);
+console.log('[App] Tour-Management Routes registriert');
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

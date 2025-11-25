@@ -246,7 +246,10 @@ ${ttlockCode}
                 };
                 const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservationForCheckInLink);
                 const templateParams = [updatedReservation.guestName, checkInLink, paymentLink];
-                yield whatsappService.sendMessageWithFallback(updatedReservation.guestPhone, sentMessage, templateName, templateParams);
+                yield whatsappService.sendMessageWithFallback(updatedReservation.guestPhone, sentMessage, templateName, templateParams, {
+                    guestNationality: updatedReservation.guestNationality,
+                    guestPhone: updatedReservation.guestPhone
+                });
                 sentMessageAt = new Date();
                 // Speichere versendete Nachricht in Reservierung
                 yield prisma_1.prisma.reservation.update({

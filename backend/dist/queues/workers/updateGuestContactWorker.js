@@ -210,7 +210,10 @@ ${ttlockCode}
                 const templateParams = [guestName, checkInLink, paymentLink];
                 console.log(`[UpdateGuestContact Worker] Template Name (Basis): ${templateName}`);
                 console.log(`[UpdateGuestContact Worker] Template Params: ${JSON.stringify(templateParams)}`);
-                yield whatsappService.sendMessageWithFallback(guestPhone, sentMessage, templateName, templateParams);
+                yield whatsappService.sendMessageWithFallback(guestPhone, sentMessage, templateName, templateParams, {
+                    guestNationality: reservation.guestNationality,
+                    guestPhone: reservation.guestPhone
+                });
                 sentMessageAt = new Date();
                 console.log(`[UpdateGuestContact Worker] ✅ WhatsApp-Nachricht erfolgreich versendet`);
             }

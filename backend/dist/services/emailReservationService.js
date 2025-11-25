@@ -95,6 +95,10 @@ class EmailReservationService {
                 if (parsedEmail.guestPhone) {
                     reservationData.guestPhone = parsedEmail.guestPhone.trim();
                 }
+                // Setze Nationalität (für Sprache-basierte WhatsApp-Nachrichten)
+                if (parsedEmail.nationality) {
+                    reservationData.guestNationality = parsedEmail.nationality.trim();
+                }
                 // Erstelle Reservation
                 let reservation = yield prisma_1.prisma.reservation.create({
                     data: reservationData,

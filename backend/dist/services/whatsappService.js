@@ -203,12 +203,13 @@ class WhatsAppService {
     /**
      * Sendet eine WhatsApp-Nachricht
      *
-     * @param to - Telefonnummer des Empfängers (mit Ländercode, z.B. +573001234567)
+     * @param to - Telefonnummer des Empfängers (mit Ländercode, z.B. +573001234567) oder Group ID (z.B. 120363123456789012@g.us)
      * @param message - Nachrichtentext
      * @param template - Optional: Template-Name (für WhatsApp Business API)
+     * @param groupId - Optional: Group ID für Gruppen-Nachrichten (falls to bereits Group ID ist, wird dieser Parameter ignoriert)
      * @returns true wenn erfolgreich
      */
-    sendMessage(to, message, template) {
+    sendMessage(to, message, template, groupId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 console.log(`[WhatsApp Service] sendMessage aufgerufen für: ${to}`);
@@ -222,16 +223,32 @@ class WhatsAppService {
                     throw new Error('WhatsApp API Key nicht gesetzt');
                 }
                 console.log(`[WhatsApp Service] Sende Nachricht via ${this.provider}...`);
-                // Normalisiere Telefonnummer (entferne Leerzeichen, füge + hinzu falls fehlt)
-                const normalizedPhone = this.normalizePhoneNumber(to);
-                if (this.provider === 'twilio') {
-                    return yield this.sendViaTwilio(normalizedPhone, message);
-                }
-                else if (this.provider === 'whatsapp-business-api') {
-                    return yield this.sendViaWhatsAppBusiness(normalizedPhone, message, template);
+                // Prüfe ob es eine Gruppen-Nachricht ist
+                const isGroupMessage = groupId || (to.includes('@g.us'));
+                const targetGroupId = groupId || (isGroupMessage ? to : null);
+                if (isGroupMessage && targetGroupId) {
+                    // Gruppen-Nachricht
+                    console.log(`[WhatsApp Service] Sende Gruppen-Nachricht an: ${targetGroupId}`);
+                    if (this.provider === 'whatsapp-business-api') {
+                        return yield this.sendViaWhatsAppBusiness(targetGroupId, message, template, undefined, undefined, true);
+                    }
+                    else {
+                        throw new Error('Gruppen-Nachrichten werden nur mit WhatsApp Business API unterstützt');
+                    }
                 }
                 else {
-                    throw new Error(`Unbekannter Provider: ${this.provider}`);
+                    // Einzel-Chat
+                    // Normalisiere Telefonnummer (entferne Leerzeichen, füge + hinzu falls fehlt)
+                    const normalizedPhone = this.normalizePhoneNumber(to);
+                    if (this.provider === 'twilio') {
+                        return yield this.sendViaTwilio(normalizedPhone, message);
+                    }
+                    else if (this.provider === 'whatsapp-business-api') {
+                        return yield this.sendViaWhatsAppBusiness(normalizedPhone, message, template);
+                    }
+                    else {
+                        throw new Error(`Unbekannter Provider: ${this.provider}`);
+                    }
                 }
             }
             catch (error) {
@@ -278,8 +295,9 @@ class WhatsAppService {
      * Sendet Nachricht über WhatsApp Business API
      * @param templateParams - Optional: Template-Parameter (für Template Messages)
      * @param templateLanguage - Optional: Template-Sprache (Standard: 'en' oder aus Environment)
+     * @param isGroup - Optional: true wenn es eine Gruppen-Nachricht ist
      */
-    sendViaWhatsAppBusiness(to, message, template, templateParams, templateLanguage) {
+    sendViaWhatsAppBusiness(to, message, template, templateParams, templateLanguage, isGroup) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
             if (!this.axiosInstance) {
@@ -400,7 +418,8 @@ class WhatsAppService {
      * @param templateParams - Template-Parameter (Array von Text-Parametern)
      * @returns true wenn erfolgreich
      */
-    sendMessageWithFallback(to, message, templateName, templateParams) {
+    sendMessageWithFallback(to, message, templateName, templateParams, reservation // NEU: Für Sprache-Erkennung
+    ) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Versuche zuerst Session Message (24h-Fenster)
@@ -456,9 +475,17 @@ class WhatsAppService {
                         text: text
                     }))) || [];
                     console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
-                    // Template-Sprache aus Environment-Variable oder Standard (Standard: Spanisch, da Templates auf Spanisch sind)
-                    const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
-                    console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
+                    // Template-Sprache: Reservation > Environment-Variable > Fallback
+                    let languageCode;
+                    if (reservation) {
+                        const { CountryLanguageService } = require('./countryLanguageService');
+                        languageCode = CountryLanguageService.getLanguageForReservation(reservation);
+                        console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (basierend auf Reservation)`);
+                    }
+                    else {
+                        languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+                        console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (aus Environment-Variable)`);
+                    }
                     // Passe Template-Namen basierend auf Sprache an
                     // Englische Templates haben einen Unterstrich am Ende: reservation_checkin_invitation_
                     // Spanische Templates haben keinen Unterstrich: reservation_checkin_invitation
@@ -501,14 +528,21 @@ class WhatsAppService {
      * Gibt den Template-Namen basierend auf der Sprache zurück
      *
      * WhatsApp erlaubt Templates mit gleichem Namen in verschiedenen Sprachen.
-     * Da das englische Template einen Unterstrich am Ende hat, müssen wir den Namen anpassen.
+     * Einige Templates haben einen Unterstrich am Ende für Englisch (z.B. reservation_checkin_invitation_),
+     * andere haben den gleichen Namen für beide Sprachen (z.B. reservation_checkin_completed).
      *
      * @param baseTemplateName - Basis-Template-Name (z.B. 'reservation_checkin_invitation')
      * @param languageCode - Sprache-Code ('en' oder 'es')
-     * @returns Template-Name mit sprachspezifischem Suffix
+     * @returns Template-Name mit sprachspezifischem Suffix (wenn nötig)
      */
     getTemplateNameForLanguage(baseTemplateName, languageCode) {
-        // Englische Templates haben einen Unterstrich am Ende
+        // Templates mit gleichem Namen für beide Sprachen (kein Unterstrich)
+        const sameNameTemplates = ['reservation_checkin_completed'];
+        if (sameNameTemplates.includes(baseTemplateName)) {
+            // Gleicher Name für beide Sprachen
+            return baseTemplateName;
+        }
+        // Englische Templates haben einen Unterstrich am Ende (für alte Templates)
         if (languageCode === 'en') {
             return `${baseTemplateName}_`;
         }
@@ -525,9 +559,11 @@ class WhatsAppService {
      * @param templateName - Template-Name (Basis, wird basierend auf Sprache angepasst)
      * @param templateParams - Template-Parameter (Array von Strings)
      * @param message - Nachrichtentext (wird ignoriert, da Template verwendet wird)
+     * @param reservation - Optional: Reservation mit guestNationality und/oder guestPhone für Sprache-Erkennung
      * @returns true wenn erfolgreich
      */
-    sendTemplateMessageDirectly(to, templateName, templateParams, message // Wird ignoriert, nur für Kompatibilität
+    sendTemplateMessageDirectly(to, templateName, templateParams, message, // Wird ignoriert, nur für Kompatibilität
+    reservation // NEU: Für Sprache-Erkennung
     ) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -544,9 +580,17 @@ class WhatsAppService {
                     text: String(text)
                 }));
                 console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
-                // Template-Sprache
-                const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
-                console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
+                // Template-Sprache: Reservation > Environment-Variable > Fallback
+                let languageCode;
+                if (reservation) {
+                    const { CountryLanguageService } = require('./countryLanguageService');
+                    languageCode = CountryLanguageService.getLanguageForReservation(reservation);
+                    console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (basierend auf Reservation)`);
+                }
+                else {
+                    languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+                    console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (aus Environment-Variable)`);
+                }
                 // Passe Template-Namen basierend auf Sprache an
                 const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
                 console.log(`[WhatsApp Service] Template-Name (angepasst für Sprache ${languageCode}): ${adjustedTemplateName}`);
@@ -583,18 +627,25 @@ class WhatsAppService {
         return __awaiter(this, void 0, void 0, function* () {
             const message = `Hola ${guestName},
 
-¡Nos complace darte la bienvenida a La Familia Hostel!
+¡Nos complace darte la bienvenida a La Familia Hostel! 🎊
 
-Como llegarás después de las 22:00, puedes realizar el check-in en línea ahora:
+En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.
+
+Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:
+
+Check-In:
 
 ${checkInLink}
 
 Por favor, realiza el pago por adelantado:
+
 ${paymentLink}
 
-Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago. ¡Gracias!
+Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.
 
-¡Te esperamos mañana!`;
+¡Gracias!
+
+¡Esperamos verte pronto!`;
             // Template-Name aus Environment oder Settings (Standard: reservation_checkin_invitation)
             // Hinweis: Der tatsächliche Template-Name wird in sendMessageWithFallback basierend auf Sprache angepasst
             const baseTemplateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_INVITATION || 'reservation_checkin_invitation';
@@ -613,13 +664,38 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
      * @param roomDescription - Zimmerbeschreibung
      * @param doorPin - PIN für Türsystem
      * @param doorAppName - App-Name (z.B. "TTLock")
+     * @param reservation - Optional: Reservation für Sprache-Erkennung
      * @returns true wenn erfolgreich
      */
-    sendCheckInConfirmation(guestName, guestPhone, roomNumber, roomDescription, doorPin, doorAppName) {
+    sendCheckInConfirmation(guestName, guestPhone, roomNumber, roomDescription, doorPin, doorAppName, reservation) {
         return __awaiter(this, void 0, void 0, function* () {
-            const message = `Hola ${guestName},
+            // Erkenne Sprache für Template
+            let languageCode;
+            if (reservation) {
+                const { CountryLanguageService } = require('./countryLanguageService');
+                languageCode = CountryLanguageService.getLanguageForReservation(reservation);
+            }
+            else {
+                languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+            }
+            // Baue Variablen für Template auf
+            // {{1}} = Name mit Begrüßung
+            const greeting = languageCode === 'en' ? `Hello ${guestName},` : `Hola ${guestName},`;
+            // {{2}} = Kompletter Text mit Zimmerinfo und PIN
+            let contentText;
+            if (languageCode === 'en') {
+                contentText = `Your check-in has been completed successfully!
 
-¡Tu check-in se ha completado exitosamente!
+Your room information:
+- Room: ${roomNumber}
+- Description: ${roomDescription}
+
+Access:
+- Door PIN: ${doorPin}
+- App: ${doorAppName}`;
+            }
+            else {
+                contentText = `¡Tu check-in se ha completado exitosamente!
 
 Información de tu habitación:
 - Habitación: ${roomNumber}
@@ -627,15 +703,18 @@ Información de tu habitación:
 
 Acceso:
 - PIN de la puerta: ${doorPin}
-- App: ${doorAppName}
-
-¡Te deseamos una estancia agradable!`;
-            // Template-Name aus Environment oder Settings (Standard: reservation_checkin_confirmation)
-            const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_CONFIRMATION || 'reservation_checkin_confirmation';
-            // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}}, etc. im Template sein)
-            // Format: Name, Room Number, Room Description, Door PIN, App Name
-            const templateParams = [guestName, roomNumber, roomDescription, doorPin, doorAppName];
-            return yield this.sendMessageWithFallback(guestPhone, message, templateName, templateParams);
+- App: ${doorAppName}`;
+            }
+            // Session Message (Fallback)
+            const message = languageCode === 'en'
+                ? `${greeting}\n\n${contentText}\n\nWe wish you a pleasant stay!`
+                : `${greeting}\n\n${contentText}\n\n¡Te deseamos una estancia agradable!`;
+            // Template-Name aus Environment oder Settings (Standard: reservation_checkin_completed)
+            const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_CONFIRMATION || 'reservation_checkin_completed';
+            // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}} im Template sein)
+            // Format: Name mit Begrüßung, Kompletter Text mit Zimmerinfo und PIN
+            const templateParams = [greeting, contentText];
+            return yield this.sendMessageWithFallback(guestPhone, message, templateName, templateParams, reservation);
         });
     }
     /**
