@@ -5,6 +5,7 @@ import { XMarkIcon, CheckIcon, UserIcon, UserGroupIcon } from '@heroicons/react/
 import { passwordManagerApi, PasswordEntryPermission, UpdatePermissionsData } from '../services/passwordManagerApi.ts';
 import { toast } from 'react-toastify';
 import axiosInstance from '../config/axios.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 
 interface PasswordEntryPermissionsModalProps {
   isOpen: boolean;
@@ -53,8 +54,8 @@ const PasswordEntryPermissionsModal: React.FC<PasswordEntryPermissionsModalProps
       setIsLoading(true);
       const [permissions, rolesResponse, usersResponse] = await Promise.all([
         passwordManagerApi.getPermissions(entryId),
-        axiosInstance.get('/roles'),
-        axiosInstance.get('/users')
+        axiosInstance.get(API_ENDPOINTS.ROLES.BASE),
+        axiosInstance.get(API_ENDPOINTS.USERS.BASE)
       ]);
 
       setRolePermissions(permissions.rolePermissions);

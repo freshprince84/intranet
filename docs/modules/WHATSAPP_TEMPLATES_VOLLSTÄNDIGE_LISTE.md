@@ -54,41 +54,75 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
 
 ---
 
-## Template 2: Check-in-Bestätigung
+## Template 2: Check-in-Bestätigung (TTLock-Code) ✅ (WIRD VERWENDET)
 
-**Name**: `reservation_checkin_confirmation`  
+**Name**: `reservation_checkin_completed`  
 **Category**: `UTILITY`  
 **Language**: `Spanish (es)` ⚠️ **WICHTIG: Template-Text ist auf Spanisch, daher muss Language "Spanish (es)" sein!**  
-**Status**: ⏳ Muss erstellt werden
+**Status**: ✅ Existiert (muss genehmigt sein)  
+**Hinweis**: ⚠️ **WICHTIG: Gleicher Name für ES und EN!** (kein `_` am Ende für Englisch)
 
-### Template-Body:
+### Template-Body (Spanisch):
 
 ```
-Hola {{1}},
+Bienvenido,
 
-¡Tu check-in se ha completado exitosamente!
+{{1}}
 
-Información de tu habitación:
-- Habitación: {{2}}
-- Descripción: {{3}}
-
-Acceso:
-- PIN de la puerta: {{4}}
-- App: {{5}}
+{{2}}
 
 ¡Te deseamos una estancia agradable!
 ```
 
 ### Variablen:
-- `{{1}}` = Gast-Name (z.B. "Patrick")
-- `{{2}}` = Zimmernummer (z.B. "101")
-- `{{3}}` = Zimmerbeschreibung (z.B. "Zimmer mit Balkon")
-- `{{4}}` = Tür-PIN (z.B. "1234")
-- `{{5}}` = App-Name (z.B. "TTLock")
+- `{{1}}` = Begrüßung mit Gast-Name (z.B. "Hola Juan,")
+- `{{2}}` = Kompletter Text mit Check-in-Bestätigung, Zimmerinfo und PIN (z.B. "¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: 101 - Descripción: Zimmer mit Balkon Acceso: - PIN de la puerta: 1234 - App: TTLock")
+
+### Beispiel (Spanisch):
+```
+Bienvenido,
+
+Hola Juan,
+
+¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: 101 - Descripción: Zimmer mit Balkon Acceso: - PIN de la puerta: 1234 - App: TTLock
+
+¡Te deseamos una estancia agradable!
+```
+
+### Template-Body (Englisch):
+
+**Name**: `reservation_checkin_completed` (gleicher Name wie Spanisch!)  
+**Language**: `English (en)` ⚠️ **WICHTIG: Template-Text ist auf Englisch, daher muss Language "English (en)" sein!**
+
+```
+Welcome,
+
+{{1}}
+
+{{2}}
+
+We wish you a pleasant stay!
+```
+
+### Variablen (Englisch):
+- `{{1}}` = Begrüßung mit Gast-Name (z.B. "Hello [Gast-Name],")
+- `{{2}}` = Kompletter Text mit Check-in-Bestätigung, Zimmerinfo und PIN (z.B. "Your check-in has been completed successfully! Your room information: - Room: [Zimmernummer] - Description: [Zimmerbeschreibung] Access: - Door PIN: [PIN]")
+
+### Beispiel (Englisch):
+```
+Welcome,
+
+Hello [Gast-Name],
+
+Your check-in has been completed successfully! Your room information: - Room: [Zimmernummer] - Description: [Zimmerbeschreibung] Access: - Door PIN: [PIN]
+
+We wish you a pleasant stay!
+```
 
 ### Verwendung im Code:
 - **Datei**: `backend/src/services/whatsappService.ts`
-- **Methode**: `sendCheckInConfirmation()` - Zeile 596
+- **Methode**: `sendCheckInConfirmation()` - Zeile 780
+- **Template-Name**: `reservation_checkin_completed` (gleicher Name für ES und EN!)
 
 ---
 
@@ -250,11 +284,12 @@ We look forward to seeing you tomorrow!
    - Wird verwendet bei: Reservierungserstellung, Kontaktaktualisierung, Check-in-Einladung
    - **MUSS genehmigt sein!**
 
-### ⏳ EMPFOHLEN (wird im Code verwendet):
+### ✅ ERFORDERLICH (wird im Code verwendet):
 
-2. **`reservation_checkin_confirmation`** ⏳
-   - Wird verwendet bei: Check-in-Bestätigung
-   - **Sollte erstellt werden**
+2. **`reservation_checkin_completed`** ✅
+   - Wird verwendet bei: Check-in-Bestätigung mit TTLock-Code
+   - **MUSS genehmigt sein!**
+   - ⚠️ **WICHTIG: Gleicher Name für ES und EN!** (kein `_` am Ende)
 
 ### ⏳ OPTIONAL (noch nicht im Code implementiert):
 
@@ -270,8 +305,9 @@ We look forward to seeing you tomorrow!
 ### Sofort erforderlich:
 1. ✅ **`reservation_checkin_invitation`** - MUSS genehmigt sein (wird aktuell verwendet)
 
-### Nächste Schritte:
-2. ⏳ **`reservation_checkin_confirmation`** - Sollte erstellt werden (wird im Code verwendet)
+### Sofort erforderlich:
+2. ✅ **`reservation_checkin_completed`** - MUSS genehmigt sein (wird aktuell verwendet)
+   - ⚠️ **WICHTIG: Gleicher Name für ES und EN!** (kein `_` am Ende)
 
 ### Später:
 3. Templates 3-6 können später erstellt werden, wenn benötigt
@@ -288,14 +324,16 @@ We look forward to seeing you tomorrow!
 - [ ] Prüfe Language: Muss "Spanish (es)" sein (weil Text auf Spanisch ist)
 - [ ] Prüfe Phone Number ID: Muss mit `852832151250618` übereinstimmen
 
-### Template 2: Check-in-Bestätigung
-- [ ] Create Template
-- [ ] Name: `reservation_checkin_confirmation` (exakt!)
-- [ ] Category: `UTILITY`
-- [ ] Language: `Spanish (es)` ⚠️ **WICHTIG: Template-Text ist auf Spanisch!**
-- [ ] Body-Text einfügen (siehe oben)
-- [ ] Variablen: `{{1}}`, `{{2}}`, `{{3}}`, `{{4}}`, `{{5}}`
-- [ ] Save → Submit for Review
+### Template 2: Check-in-Bestätigung (TTLock-Code)
+- [ ] Gehe zu: https://business.facebook.com
+- [ ] WhatsApp Business Account → Message Templates
+- [ ] Prüfe ob Template `reservation_checkin_completed` existiert (ES)
+- [ ] Prüfe ob Template `reservation_checkin_completed` existiert (EN) - **gleicher Name!**
+- [ ] Prüfe Status: Muss "APPROVED" sein (beide Sprachen)
+- [ ] Prüfe Language ES: Muss "Spanish (es)" sein
+- [ ] Prüfe Language EN: Muss "English (en)" sein
+- [ ] Prüfe Variablen: `{{1}}`, `{{2}}` (beide Sprachen)
+- [ ] Prüfe Phone Number ID: Muss mit `852832151250618` übereinstimmen
 
 ---
 

@@ -574,13 +574,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     const widths = new Map<number, number>();
     let hasMeasurements = false;
     
-    // Beim ersten Messen: Alle Tags messen (wenn isMeasuring true)
-    // Später: Nur die sichtbaren + ein paar mehr messen
-    const tagsToMeasure = isMeasuring 
-      ? sortedFilters.length 
-      : Math.min(visibleTagCount + 5, sortedFilters.length);
-    
-    sortedFilters.slice(0, tagsToMeasure).forEach((filter) => {
+    // WICHTIG: Immer alle Tags messen, da alle gerendert werden (auch wenn versteckt)
+    sortedFilters.forEach((filter) => {
       const tagElement = tagRefs.current.get(filter.id);
       if (tagElement) {
         const width = tagElement.offsetWidth;
@@ -608,7 +603,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         }
       }, 0);
     }
-  }, [sortedFilters, visibleTagCount, isMeasuring, calculateVisibleTags]);
+  }, [sortedFilters, isMeasuring, calculateVisibleTags]);
 
   // Initial calculation nach Filter-Änderungen (nur wenn nicht im Messmodus)
   useLayoutEffect(() => {
@@ -934,8 +929,14 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           );
         })}
         
-        {/* Einzelne Filter-Tags */}
-        {displayFilters.slice(0, currentVisibleCount).map(filter => (
+        {/* Einzelne Filter-Tags - Alle rendern für scrollWidth-Berechnung */}
+        {displayFilters.map((filter, index) => {
+          // Prüfe ob Tag sichtbar sein soll (nur wenn nicht im Messmodus und nicht alle Tags passen)
+          const isVisible = showOptimisticFilters 
+            ? true 
+            : (isMeasuring || visibleTagCount >= sortedFilters.length || index < visibleTagCount);
+          
+          return (
           <div
             key={filter.id}
             ref={(el) => {
@@ -952,6 +953,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             onDragEnd={handleDragEnd}
             onClick={() => !filter.isPlaceholder && handleSelectFilter(filter)}
             className={`relative group flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${
+              !isVisible ? 'invisible' : '' // Verstecke nicht-sichtbare Tags, aber sie nehmen Platz ein für scrollWidth
+            } ${
               filter.isPlaceholder
                 ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 animate-pulse cursor-default'
                 : draggedFilterId === filter.id
@@ -982,7 +985,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               {filter.isPlaceholder ? t('common.loading') : translateFilterName(filter.name)}
             </div>
           </div>
-        ))}
+          );
+        })}
         
         {/* Dropdown nur bei echten Filtern und tatsächlichem Platzmangel */}
         {!showOptimisticFilters && sortedFilters.length > visibleTagCount && (

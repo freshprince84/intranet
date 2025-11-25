@@ -101,7 +101,10 @@ export const API_ENDPOINTS = {
         BY_ID: (id: number) => `/tours/${id}`,
         BOOKINGS: (id: number) => `/tours/${id}/bookings`,
         EXPORT: '/tours/export',
-        TOGGLE_ACTIVE: (id: number) => `/tours/${id}/toggle-active`
+        TOGGLE_ACTIVE: (id: number) => `/tours/${id}/toggle-active`,
+        UPLOAD_IMAGE: (id: number) => `/tours/${id}/image`,
+        UPLOAD_GALLERY: (id: number) => `/tours/${id}/gallery`,
+        DELETE_GALLERY_IMAGE: (id: number, imageIndex: number) => `/tours/${id}/gallery/${imageIndex}`
     },
     TOUR_BOOKINGS: {
         BASE: '/tour-bookings',
@@ -334,6 +337,7 @@ export const API_ENDPOINTS = {
         BASE: '/password-manager',
         BY_ID: (id: number) => `/password-manager/${id}`,
         PASSWORD: (id: number) => `/password-manager/${id}/password`,
+        COPY_PASSWORD: (id: number) => `/password-manager/${id}/copy-password`,
         AUDIT_LOGS: (id: number) => `/password-manager/${id}/audit-logs`,
         PERMISSIONS: (id: number) => `/password-manager/${id}/permissions`,
         GENERATE_PASSWORD: '/password-manager/generate-password'
