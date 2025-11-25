@@ -137,3 +137,4 @@ const todayEnd = localEndOfDay;
 Die Zeitzone des Benutzers ist im `worktime.timezone` Feld gespeichert. Wir müssen die Tagesgrenzen in der Zeitzone des Benutzers berechnen.
 
 
+
