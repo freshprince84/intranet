@@ -259,20 +259,16 @@ export class BoldPaymentService {
       
       // Für COP: Auf ganze Zahlen runden (keine Dezimalstellen)
       // Für andere Währungen (USD, EUR): Auf 2 Dezimalstellen runden
-      let surcharge: number;
-      let roundedBaseAmount: number;
-      let roundedTotalAmount: number;
+      let totalAmount: number;
       
       if (currency === 'COP') {
-        // COP: Alle Beträge auf ganze Zahlen runden
-        roundedBaseAmount = Math.round(baseAmount);
-        surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT);
-        roundedTotalAmount = roundedBaseAmount + surcharge;
+        // COP: Aufschlag auf ganze Zahl runden, dann zum Basisbetrag addieren
+        const surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT);
+        totalAmount = Math.round(baseAmount) + surcharge;
       } else {
         // USD, EUR, etc.: Auf 2 Dezimalstellen runden
-        roundedBaseAmount = Math.round(baseAmount * 100) / 100;
-        surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT * 100) / 100;
-        roundedTotalAmount = Math.round((roundedBaseAmount + surcharge) * 100) / 100;
+        const surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT * 100) / 100;
+        totalAmount = Math.round((baseAmount + surcharge) * 100) / 100;
       }
 
       // Beschreibung mit Aufschlagsausweis
@@ -280,19 +276,15 @@ export class BoldPaymentService {
       const finalDescription = surchargeDescription.substring(0, 100);
 
       // Payload gemäß API Link de pagos Dokumentation
+      // WICHTIG: Verwende die gleiche Struktur wie vorher (taxes: []) um Kompatibilität zu gewährleisten
+      // Der Aufschlag ist bereits im total_amount enthalten
       const payload: any = {
         amount_type: 'CLOSE', // Geschlossener Betrag (vom Merchant festgelegt)
         amount: {
           currency: currency,
-          total_amount: roundedTotalAmount, // Gesamtbetrag mit 5% Aufschlag (gerundet)
-          subtotal: roundedBaseAmount, // Basispreis ohne Aufschlag (gerundet)
-          taxes: [
-            {
-              name: 'Kartenzahlungsaufschlag',
-              amount: surcharge, // Aufschlag (gerundet)
-              rate: 5.0 // 5%
-            }
-          ],
+          total_amount: totalAmount, // Gesamtbetrag mit 5% Aufschlag (gerundet)
+          subtotal: totalAmount, // Gleich wie total_amount (wie vorher)
+          taxes: [], // Leeres Array wie vorher - API akzeptiert diese Struktur
           tip_amount: 0
         },
         reference: reference,
