@@ -256,8 +256,24 @@ export class BoldPaymentService {
       // 5% Aufschlag für Kartenzahlung hinzufügen
       const CARD_PAYMENT_SURCHARGE_PERCENT = 0.05; // 5%
       const baseAmount = amount;
-      const surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT * 100) / 100; // Auf 2 Dezimalstellen runden
-      const totalAmount = baseAmount + surcharge;
+      
+      // Für COP: Auf ganze Zahlen runden (keine Dezimalstellen)
+      // Für andere Währungen (USD, EUR): Auf 2 Dezimalstellen runden
+      let surcharge: number;
+      let roundedBaseAmount: number;
+      let roundedTotalAmount: number;
+      
+      if (currency === 'COP') {
+        // COP: Alle Beträge auf ganze Zahlen runden
+        roundedBaseAmount = Math.round(baseAmount);
+        surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT);
+        roundedTotalAmount = roundedBaseAmount + surcharge;
+      } else {
+        // USD, EUR, etc.: Auf 2 Dezimalstellen runden
+        roundedBaseAmount = Math.round(baseAmount * 100) / 100;
+        surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT * 100) / 100;
+        roundedTotalAmount = Math.round((roundedBaseAmount + surcharge) * 100) / 100;
+      }
 
       // Beschreibung mit Aufschlagsausweis
       const surchargeDescription = `${paymentDescription} (inkl. 5% Kartenzahlungsaufschlag)`;
@@ -268,12 +284,12 @@ export class BoldPaymentService {
         amount_type: 'CLOSE', // Geschlossener Betrag (vom Merchant festgelegt)
         amount: {
           currency: currency,
-          total_amount: totalAmount, // Gesamtbetrag mit 5% Aufschlag
-          subtotal: baseAmount, // Basispreis ohne Aufschlag
+          total_amount: roundedTotalAmount, // Gesamtbetrag mit 5% Aufschlag (gerundet)
+          subtotal: roundedBaseAmount, // Basispreis ohne Aufschlag (gerundet)
           taxes: [
             {
               name: 'Kartenzahlungsaufschlag',
-              amount: surcharge,
+              amount: surcharge, // Aufschlag (gerundet)
               rate: 5.0 // 5%
             }
           ],
