@@ -3,9 +3,8 @@ import { prisma } from '../utils/prisma';
 import { encryptSecret, decryptSecret } from '../utils/encryption';
 
 // Erweitere Request-Typ
+// userId und roleId sind bereits im globalen Express Request Interface definiert
 interface PasswordManagerRequest extends Request {
-    userId?: string;
-    roleId?: string;
     organizationId?: number;
     userRole?: any;
 }
