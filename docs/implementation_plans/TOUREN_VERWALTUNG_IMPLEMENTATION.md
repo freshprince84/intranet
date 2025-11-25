@@ -3,7 +3,9 @@
 ## Status: VORBEREITUNG - NICHTS UMSETZEN
 
 **Datum:** 2025-01-22  
-**Ziel:** Touren-Verwaltungssystem im Intranet implementieren als neuer Tab in den Einstellungen (analog zum Passwortmanager)
+**Ziel:** Touren-Verwaltungssystem im Intranet implementieren:
+- Touren-Verwaltung als neuer Tab im Worktracker (neben "To Do's" und "Reservations")
+- TourProvider-Verwaltung als neuer Tab "Proveedores" in der Organisation-Seite (zwischen "Sucursales" und "Organización")
 
 ---
 
@@ -11,12 +13,19 @@
 
 ### 1.1 Bestehende Infrastruktur
 
-**Settings-Seite:**
-- Datei: `frontend/src/pages/Settings.tsx`
-- Aktuelle Tabs: `'personal' | 'notifications' | 'system'`
-- Tab-State: `useState<'personal' | 'notifications' | 'system'>('personal')` (Zeile 39)
-- Tab-Navigation: Zeilen 246-282 in Settings.tsx
-- Tab-Content: Zeilen 285-551 in Settings.tsx
+**Worktracker-Seite:**
+- Datei: `frontend/src/pages/Worktracker.tsx`
+- Aktuelle Tabs: `'todos' | 'reservations' | 'tours'`
+- Tab-State: `useState<'todos' | 'reservations' | 'tours'>('todos')`
+- Tab-Navigation: Tours-Tab bereits implementiert
+- Tab-Content: Tours-Verwaltung bereits integriert
+
+**Organisation-Seite:**
+- Datei: `frontend/src/pages/Organisation.tsx`
+- Aktuelle Tabs: `'users' | 'roles' | 'branches' | 'organization'`
+- Tab-State: `useState<'users' | 'roles' | 'branches' | 'organization'>('users')`
+- Tab-Navigation: Zeilen 104-184 in Organisation.tsx
+- Tab-Content: Zeilen 196-252 in Organisation.tsx
 
 **Bestehende ähnliche Module:**
 - **Requests:** `backend/src/controllers/requestController.ts`, `frontend/src/components/Requests.tsx`
@@ -749,75 +758,135 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 
 ## 4. FRONTEND-IMPLEMENTIERUNG
 
-### 4.1 Settings-Seite erweitern
+### 4.1 Organisation-Seite erweitern (TourProvider-Verwaltung)
 
-**Datei:** `frontend/src/pages/Settings.tsx`
+**Datei:** `frontend/src/pages/Organisation.tsx`
 
 **Änderungen:**
-1. Tab-Type erweitern: `'personal' | 'notifications' | 'system' | 'tours'`
-2. Tab-State erweitern: `useState<'personal' | 'notifications' | 'system' | 'tours'>('personal')`
-3. Neuer Tab-Button hinzufügen (Zeilen 246-282)
-4. Neuer Tab-Content hinzufügen (nach Zeile 551)
+1. Import erweitern: `import { UserGroupIcon, UserIcon, ShieldCheckIcon, MapPinIcon, TruckIcon } from '@heroicons/react/24/outline';`
+2. Import hinzufügen: `import TourProvidersTab from '../components/tours/TourProvidersTab.tsx';`
+3. Berechtigung hinzufügen: `const canViewProviders = hasPermission('tour_providers', 'read', 'table');`
+4. Tab-Type erweitern: `'users' | 'roles' | 'branches' | 'providers' | 'organization'`
+5. Tab-State erweitern: `useState<'users' | 'roles' | 'branches' | 'providers' | 'organization'>('users')`
+6. Neuer Tab-Button "Proveedores" hinzufügen (zwischen "branches" und "organization")
+7. Neuer Tab-Content hinzufügen
+8. Tab-Wechsel Handler erweitern: `handleTabChange(tab: 'users' | 'roles' | 'branches' | 'providers' | 'organization')`
 
-**Tab-Button:**
+**Tab-Button (zwischen Branches und Organization):**
 ```tsx
+{/* Providers Tab - immer sichtbar, aber mit Pro-Badge wenn nicht berechtigt */}
 <button
   className={`${
-    activeTab === 'tours'
-      ? 'border-blue-500 text-blue-600'
-      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
-  onClick={() => handleTabChange('tours')}
+    activeTabState === 'providers' && canViewProviders
+      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+      : !canViewProviders
+      ? 'border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
+      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+  } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
+  onClick={() => canViewProviders && handleTabChange('providers')}
+  disabled={!canViewProviders}
 >
-  <MapIcon className="h-4 w-4 mr-2" />
-  {t('settings.tours')}
+  <TruckIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+  {t('organisation.tabs.providers', { defaultValue: 'Proveedores' })}
+  {!canViewProviders && (
+    <span className="ml-1 sm:ml-2 px-1 sm:px-2 py-0.5 text-[0.625rem] sm:text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
+      PRO
+    </span>
+  )}
 </button>
 ```
 
 **Tab-Content:**
 ```tsx
-{activeTab === 'tours' && (
-  <ToursManagementTab />
-)}
+) : activeTabState === 'providers' ? (
+  canViewProviders ? (
+    <TourProvidersTab onError={handleError} />
+  ) : (
+    <div className="p-8 text-center">
+      <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+        <span className="inline-block px-3 py-1 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded mb-4">
+          PRO
+        </span>
+        <p className="text-gray-700 dark:text-gray-300 mt-4">
+          {t('organisation.proFeature.providers', { defaultValue: 'Tour-Provider-Verwaltung ist eine PRO-Funktion' })}
+        </p>
+      </div>
+    </div>
+  )
 ```
 
-### 4.2 Neue Komponente: `ToursManagementTab.tsx`
+**Berechtigungen:**
+- `canViewProviders = hasPermission('tour_providers', 'read', 'table')`
+- Prüfen: `hasPermission('tour_provider_create', 'write', 'button')` - Erstellen
+- Prüfen: `hasPermission('tour_provider_edit', 'write', 'button')` - Bearbeiten
+- Prüfen: `hasPermission('tour_provider_delete', 'write', 'button')` - Löschen
 
-**Datei:** `frontend/src/components/ToursManagementTab.tsx`
+### 4.2 Neue Komponente: `TourProvidersTab.tsx`
+
+**Datei:** `frontend/src/components/tours/TourProvidersTab.tsx`
 
 **Funktionalität:**
-1. Liste aller Touren anzeigen (Card-View UND Table-View, wählbar wie bei Requests/Tasks)
-2. Neue Tour erstellen (Modal)
-3. Tour bearbeiten (Modal)
-4. Tour aktiv/inaktiv setzen (Soft Delete, statt löschen)
-5. Tour-Details anzeigen
-6. Buchungen einer Tour anzeigen
-7. Filter/Suche (Standard-Filtersystem wie bei Requests)
-   - Filter-Spalten: `title`, `type`, `isActive`, `branch`, `price`, `location`, `createdBy`
-   - Operatoren: `equals`, `contains`, `startsWith`, `endsWith` (Text), `equals`, `notEquals` (Status), `greater_than`, `less_than` (Zahlen)
-   - Standardfilter: "Aktive", "Inaktive", "Alle"
-8. Export-Funktion (für Website/Soziale Medien)
-   - Dialog zur Feldauswahl (Checkboxen für jedes Feld)
-   - Kommissionen-Felder standardmäßig ausgeblendet
-
-**Komponenten-Struktur:**
-- Haupt-Container mit Liste
-- Card für jede Tour (wenn Card-View)
-- Table für jede Tour (wenn Table-View)
-- Modal für Create/Edit (`TourModal.tsx`)
-- Modal für Tour-Details (`TourDetailsModal.tsx`)
-- Modal für Buchungen (`TourBookingsModal.tsx`)
-- Filter-Komponente (`FilterPane` - Standard-Komponente)
-- Bild-Upload-Komponente (analog zu CerebroMedia)
+1. Liste aller TourProvider anzeigen (Table-View)
+2. Neue TourProvider erstellen (Modal)
+3. TourProvider bearbeiten (Modal)
+4. TourProvider löschen (mit Bestätigung, nur wenn keine Touren verknüpft)
+5. Filter/Suche (nach Name, Phone, Email, Branch)
+6. Spalten: Name, Phone, Email, Contact Person, Branch, Actions
 
 **Berechtigungen:**
-- `usePermissions()` Hook verwenden
-- Prüfen: `hasPermission('tour_management', 'read', 'page')`
-- Prüfen: `hasPermission('tour_create', 'write', 'button')`
-- Prüfen: `hasPermission('tour_edit', 'write', 'button')`
-- Prüfen: `hasPermission('tour_delete', 'write', 'button')`
+- `hasPermission('tour_provider_create', 'write', 'button')` - Erstellen
+- `hasPermission('tour_provider_edit', 'write', 'button')` - Bearbeiten
+- `hasPermission('tour_provider_delete', 'write', 'button')` - Löschen
 
-### 4.3 Neue Komponente: `TourBookingsTab.tsx`
+### 4.3 Neue Komponente: `CreateTourProviderModal.tsx`
+
+**Datei:** `frontend/src/components/tours/CreateTourProviderModal.tsx`
+
+**Felder:**
+- Name (required)
+- Phone (optional)
+- Email (optional)
+- Contact Person (optional)
+- Notes (optional)
+- Branch (optional, Dropdown)
+
+**Validierung:**
+- Name: Required, min 2 Zeichen
+- Email: Wenn gesetzt, muss gültige E-Mail sein
+- Phone: Wenn gesetzt, muss gültige Telefonnummer sein
+
+### 4.4 Neue Komponente: `EditTourProviderModal.tsx`
+
+**Datei:** `frontend/src/components/tours/EditTourProviderModal.tsx`
+
+**Gleiche Felder wie CreateTourProviderModal, aber mit vorausgefüllten Werten**
+
+### 4.5 Integration in Tour-Modals
+
+**In `CreateTourModal.tsx` und `EditTourModal.tsx`:**
+- Button "Neuer Provider" neben Provider-Dropdown (wenn `type === 'external'`)
+- Button öffnet `CreateTourProviderModal`
+- Nach Erstellung: Provider wird automatisch ausgewählt
+- Provider-Liste wird neu geladen
+
+### 4.6 Tours-Verwaltung im Worktracker
+
+**Datei:** `frontend/src/pages/Worktracker.tsx`
+
+**Status:** ✅ Bereits implementiert - Tours-Tab existiert bereits im Worktracker
+
+**Funktionalität (bereits vorhanden):**
+1. Liste aller Touren anzeigen (Card-View UND Table-View, wählbar)
+2. Neue Tour erstellen (Modal: `CreateTourModal.tsx`)
+3. Tour bearbeiten (Modal: `EditTourModal.tsx`)
+4. Tour-Details anzeigen (Modal: `TourDetailsModal.tsx`)
+5. Buchungen einer Tour anzeigen (Modal: `TourBookingsModal.tsx`)
+6. Filter/Suche (Standard-Filtersystem)
+7. Export-Funktion (Dialog: `TourExportDialog.tsx`)
+
+**Hinweis:** Diese Funktionalität ist bereits vollständig im Worktracker integriert. Keine weiteren Änderungen nötig.
+
+### 4.7 Neue Komponente: `TourBookingsTab.tsx`
 
 **Datei:** `frontend/src/components/TourBookingsTab.tsx`
 
@@ -832,7 +901,7 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 8. Zahlungsstatus anzeigen
 9. Filter/Suche (nach Tour, Kunde, Mitarbeiter, Datum, Status)
 
-### 4.4 Neue Komponente: `TourReservationLink.tsx`
+### 4.8 Neue Komponente: `TourReservationLink.tsx`
 
 **Datei:** `frontend/src/components/TourReservationLink.tsx`
 
@@ -842,7 +911,7 @@ router.get('/:id/gallery/:index', tourImageController.getGalleryImage);
 3. Verknüpfung bearbeiten
 4. Verknüpfung lösen
 
-### 4.5 Erweiterung: `WorktimeStats.tsx`
+### 4.9 Erweiterung: `WorktimeStats.tsx`
 
 **Datei:** `frontend/src/components/WorktimeStats.tsx`
 
@@ -1130,8 +1199,13 @@ const hamburgerPermissionMap: Record<string, AccessLevel> = {
 **Hinzufügen:**
 ```json
 {
-  "settings": {
-    "tours": "Touren-Verwaltung"
+  "organisation": {
+    "tabs": {
+      "providers": "Proveedores"
+    },
+    "proFeature": {
+      "providers": "Tour-Provider-Verwaltung ist eine PRO-Funktion"
+    }
   },
   "tours": {
     "title": "Touren-Verwaltung",
@@ -1379,12 +1453,14 @@ const hamburgerPermissionMap: Record<string, AccessLevel> = {
 6. API-Endpunkte testen
 
 ### Phase 2: Frontend-Grundlagen
-1. Settings-Seite erweitern (Tab hinzufügen)
-2. `ToursManagementTab.tsx` Komponente erstellen
-3. `TourModal.tsx` Komponente erstellen (Create/Edit)
-4. API-Client erweitern
-5. TypeScript-Typen erstellen
-6. Übersetzungen hinzufügen (de, en, es)
+1. **Worktracker:** Tours-Tab bereits implementiert (keine Änderung nötig)
+2. **Organisation:** TourProvider-Tab "Proveedores" hinzufügen (zwischen "Sucursales" und "Organización")
+3. `TourProvidersTab.tsx` Komponente erstellen
+4. `CreateTourProviderModal.tsx` Komponente erstellen
+5. `EditTourProviderModal.tsx` Komponente erstellen
+6. API-Client erweitern (falls nötig)
+7. TypeScript-Typen prüfen (bereits vorhanden)
+8. Übersetzungen hinzufügen (de, en, es)
 
 ### Phase 3: Buchungen
 1. `TourBookingsTab.tsx` Komponente erstellen

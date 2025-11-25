@@ -128,6 +128,11 @@
 #### 2.1.1 `TourProvidersTab.tsx`
 **Datei:** `frontend/src/components/tours/TourProvidersTab.tsx`
 
+**Integration in Organisation-Seite:**
+- Tab-Type in `Organisation.tsx` erweitern: `'users' | 'roles' | 'branches' | 'providers' | 'organization'`
+- Tab-Button zwischen "branches" und "organization" hinzufügen
+- Berechtigung: `canViewProviders = hasPermission('tour_providers', 'read', 'table')`
+
 **Funktionalität:**
 1. Liste aller TourProvider anzeigen (Table-View)
 2. Neue TourProvider erstellen (Modal)
@@ -171,11 +176,13 @@
 - Provider-Liste wird neu geladen
 
 **Platzierung:**
-- Option 1: Eigener Tab in Worktracker (neben "Touren", "Buchungen")
-- Option 2: Unterabschnitt in Tours-Tab (Sub-Tab)
-- Option 3: Modal von Tour-Modals aus öffnen (empfohlen)
+- **Organisation-Seite:** Neuer Tab "Proveedores" zwischen "Sucursales" (branches) und "Organización" (organization)
+- **Tour-Modals:** Button "Neuer Provider" neben Provider-Dropdown (wenn `type === 'external'`)
 
-**Empfehlung:** Option 3 - Button in Tour-Modals, zusätzlich eigener Tab für Verwaltung
+**Implementierung:**
+- Tab in `frontend/src/pages/Organisation.tsx` hinzufügen
+- Komponente `TourProvidersTab.tsx` erstellen (analog zu `BranchManagementTab.tsx`)
+- Button in `CreateTourModal.tsx` und `EditTourModal.tsx` für schnelles Erstellen
 
 ---
 
@@ -409,21 +416,21 @@ export const book_tour = async (args: any, userId: number, roleId: number, branc
 
 ### 3.1 TourProvider-Verwaltung
 
-**Option A: Eigener Tab in Worktracker (empfohlen)**
-- Neuer Tab "Provider" neben "Touren", "Buchungen"
+**Organisation-Seite:**
+- Neuer Tab "Proveedores" zwischen "Sucursales" (branches) und "Organización" (organization)
 - Vollständige CRUD-Verwaltung
 - Filter/Suche
+- Analog zu `BranchManagementTab.tsx` strukturiert
 
-**Option B: Modal von Tour-Modals aus**
-- Button "Neuer Provider" in CreateTourModal/EditTourModal
-- Nur Erstellen möglich
-- Keine Verwaltung
+**Tour-Modals:**
+- Button "Neuer Provider" in CreateTourModal/EditTourModal (wenn `type === 'external'`)
+- Öffnet `CreateTourProviderModal`
+- Nach Erstellung: Provider wird automatisch ausgewählt
 
-**Option C: Beides**
-- Tab für Verwaltung
-- Button in Modals für schnelles Erstellen
-
-**Empfehlung:** Option C
+**Implementierung:**
+- Tab in `Organisation.tsx` hinzufügen
+- `TourProvidersTab.tsx` erstellen
+- Button in Tour-Modals hinzufügen
 
 ### 3.2 Tour-Buchungen
 
@@ -460,7 +467,7 @@ export const book_tour = async (args: any, userId: number, roleId: number, branc
 1. `CreateTourProviderModal.tsx` erstellen
 2. `EditTourProviderModal.tsx` erstellen
 3. `TourProvidersTab.tsx` erstellen
-4. Tab in Worktracker hinzufügen
+4. Tab "Proveedores" in Organisation-Seite hinzufügen (zwischen "Sucursales" und "Organización")
 5. "Neuer Provider"-Button in Tour-Modals hinzufügen
 
 ### Schritt 2: Bild-Upload GET-Routes

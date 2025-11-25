@@ -293,6 +293,7 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
             ${isMobile ? 'rounded-none' : 'rounded-l-lg'}
             flex flex-col
             max-h-[calc(100vh-4rem)]
+            ${isMobile ? '' : 'sidepane-panel-container'}
           `}
           style={{
             animation: isMobile ? 'none' : 'slideIn 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)'

@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 /**
- * Test-Script: Prüft verschiedene Endpoint-Varianten mit booking_id
- * 
- * Testet sowohl /reservations/ als auch /bookings/ Endpoints
+ * Test-Script: Prüft Endpoints mit einer echten Reservierung aus der DB
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -15,8 +13,8 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
 
-async function testEndpointsWithBookingId(branchId: number) {
-  console.log('\n🔍 LobbyPMS Endpoint-Test mit booking_id');
+async function testWithDbReservation(branchId: number) {
+  console.log('\n🔍 LobbyPMS Endpoint-Test mit DB-Reservierung');
   console.log('='.repeat(60));
 
   try {
@@ -81,65 +79,91 @@ async function testEndpointsWithBookingId(branchId: number) {
       }
     });
 
-    // Schritt 1: Hole eine aktuelle Reservierung
-    console.log('📥 Schritt 1: Hole aktuelle Reservierung...\n');
+    // Schritt 1: Hole Reservierung aus DB
+    console.log('📥 Schritt 1: Hole Reservierung aus lokaler DB...\n');
     
-    let bookingId: string | null = null;
-    try {
-      const bookingsResponse = await axiosInstance.get('/api/v1/bookings', {
-        params: { per_page: 1, page: 1 },
-        validateStatus: (status) => status < 500
-      });
+    const dbReservation = await prisma.reservation.findFirst({
+      where: { 
+        branchId: branchId,
+        lobbyReservationId: { not: null }
+      },
+      select: {
+        id: true,
+        lobbyReservationId: true,
+        guestName: true,
+        paymentStatus: true,
+        status: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
-      if (bookingsResponse.data?.data && Array.isArray(bookingsResponse.data.data) && bookingsResponse.data.data.length > 0) {
-        const booking = bookingsResponse.data.data[0];
-        bookingId = String(booking.booking_id || booking.id);
-        console.log(`✅ Reservierung gefunden:`);
-        console.log(`   Booking ID: ${bookingId}`);
-        console.log(`   Gast: ${booking.holder?.name || booking.guest_name || 'N/A'}\n`);
+    if (!dbReservation || !dbReservation.lobbyReservationId) {
+      console.log('⚠️  Keine Reservierung mit lobbyReservationId gefunden in DB\n');
+      return;
+    }
+
+    console.log(`✅ Reservierung aus DB:`);
+    console.log(`   Lokale ID: ${dbReservation.id}`);
+    console.log(`   LobbyPMS ID: ${dbReservation.lobbyReservationId}`);
+    console.log(`   Gast: ${dbReservation.guestName}`);
+    console.log(`   Status: ${dbReservation.status}`);
+    console.log(`   Payment Status: ${dbReservation.paymentStatus}\n`);
+
+    const lobbyId = dbReservation.lobbyReservationId;
+
+    // Schritt 2: Teste Status-Update-Endpoint (wie im Code verwendet)
+    console.log('📤 Schritt 2: Teste Status-Update-Endpoint (wie im Code)...\n');
+    console.log(`   PUT /reservations/${lobbyId}/status`);
+    console.log(`   Body: { status: 'confirmed' }`);
+    
+    try {
+      const response = await axiosInstance.put(
+        `/reservations/${lobbyId}/status`,
+        { status: 'confirmed' },
+        { validateStatus: (status) => status < 500 }
+      );
+
+      if (response.status >= 200 && response.status < 300) {
+        console.log(`   ✅ ERFOLG (Status ${response.status})`);
+        console.log(`   Response:`, JSON.stringify(response.data, null, 2));
       } else {
-        console.log('⚠️  Keine Reservierungen gefunden\n');
-        return;
+        console.log(`   ⚠️  Status ${response.status}`);
+        console.log(`   Response:`, JSON.stringify(response.data, null, 2));
       }
     } catch (error) {
-      console.error('❌ Fehler beim Abrufen der Reservierungen:', error);
-      return;
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<any>;
+        console.log(`   ❌ Status ${axiosError.response?.status || 'N/A'}`);
+        console.log(`   Error:`, axiosError.response?.data?.error || axiosError.message);
+        if (axiosError.response?.data) {
+          console.log(`   Response:`, JSON.stringify(axiosError.response.data, null, 2));
+        }
+      }
     }
 
-    if (!bookingId) {
-      console.error('❌ Keine Booking-ID gefunden');
-      return;
-    }
+    console.log('');
 
-    // Schritt 2: Teste verschiedene Endpoint-Varianten
-    console.log('📤 Schritt 2: Teste verschiedene Endpoint-Varianten...\n');
+    // Schritt 3: Teste Payment-Endpoints
+    console.log('📤 Schritt 3: Teste Payment-Update-Endpoints...\n');
     
-    const testCases = [
-      // Status-Update mit /reservations/
-      { path: `/reservations/${bookingId}/status`, method: 'PUT', body: { status: 'confirmed' }, desc: 'PUT /reservations/{id}/status' },
-      // Status-Update mit /bookings/
-      { path: `/bookings/${bookingId}/status`, method: 'PUT', body: { status: 'confirmed' }, desc: 'PUT /bookings/{id}/status' },
-      // Payment-Update mit /reservations/
-      { path: `/reservations/${bookingId}/payment`, method: 'PUT', body: { paid_out: 1 }, desc: 'PUT /reservations/{id}/payment' },
-      // Payment-Update mit /bookings/
-      { path: `/bookings/${bookingId}/payment`, method: 'PUT', body: { paid_out: 1 }, desc: 'PUT /bookings/{id}/payment' },
-      // Payment-Update mit /api/v1/bookings/
-      { path: `/api/v1/bookings/${bookingId}/payment`, method: 'PUT', body: { paid_out: 1 }, desc: 'PUT /api/v1/bookings/{id}/payment' },
-      // Allgemeiner Update mit /reservations/
-      { path: `/reservations/${bookingId}`, method: 'PATCH', body: { paid_out: 1 }, desc: 'PATCH /reservations/{id}' },
-      // Allgemeiner Update mit /bookings/
-      { path: `/bookings/${bookingId}`, method: 'PATCH', body: { paid_out: 1 }, desc: 'PATCH /bookings/{id}' },
+    const paymentTests = [
+      { path: `/reservations/${lobbyId}/payment`, method: 'PUT', body: { paid_out: 1 }, desc: 'PUT /reservations/{id}/payment' },
+      { path: `/bookings/${lobbyId}/payment`, method: 'PUT', body: { paid_out: 1 }, desc: 'PUT /bookings/{id}/payment' },
+      { path: `/reservations/${lobbyId}`, method: 'PATCH', body: { paid_out: 1 }, desc: 'PATCH /reservations/{id}' },
+      { path: `/bookings/${lobbyId}`, method: 'PATCH', body: { paid_out: 1 }, desc: 'PATCH /bookings/{id}' },
     ];
 
-    for (const testCase of testCases) {
+    for (const test of paymentTests) {
       try {
-        console.log(`📤 Teste: ${testCase.desc}`);
-        console.log(`   ${testCase.method} ${testCase.path}`);
+        console.log(`📤 Teste: ${test.desc}`);
+        console.log(`   ${test.method} ${test.path}`);
         
         const response = await axiosInstance.request({
-          method: testCase.method as any,
-          url: testCase.path,
-          data: testCase.body,
+          method: test.method as any,
+          url: test.path,
+          data: test.body,
           validateStatus: (status) => status < 500
         });
 
@@ -161,8 +185,6 @@ async function testEndpointsWithBookingId(branchId: number) {
             console.log(`   ❌ Status ${axiosError.response?.status || 'N/A'}`);
             console.log(`   Error:`, axiosError.response?.data?.error || axiosError.message);
           }
-        } else {
-          console.log(`   ❌ UNBEKANNTER FEHLER:`, error);
         }
       }
       console.log('');
@@ -183,7 +205,7 @@ if (isNaN(branchId)) {
   process.exit(1);
 }
 
-testEndpointsWithBookingId(branchId)
+testWithDbReservation(branchId)
   .then(() => {
     console.log('✅ Test erfolgreich abgeschlossen');
     process.exit(0);
