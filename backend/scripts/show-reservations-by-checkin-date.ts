@@ -85,7 +85,7 @@ async function showReservationsByCheckInDate() {
     console.log(`Gefundene Branches mit LobbyPMS: ${branches.length}`);
     console.log('');
 
-    const allReservations: ReservationPreview[] = [];
+    const allReservationPreviews: ReservationPreview[] = [];
     let totalFromLobby = 0;
     let totalAlreadyImported = 0;
     let totalToImport = 0;
@@ -229,7 +229,7 @@ async function showReservationsByCheckInDate() {
             localReservationId: existingReservations.find(r => r.lobbyReservationId === bookingId)?.id
           };
 
-          allReservations.push(preview);
+          allReservationPreviews.push(preview);
           totalFromLobby++;
           if (preview.alreadyImported) {
             totalAlreadyImported++;
@@ -254,8 +254,8 @@ async function showReservationsByCheckInDate() {
     console.log('');
 
     // Zeige Details - zuerst die noch zu importierenden
-    const toImport = allReservations.filter(r => !r.alreadyImported);
-    const alreadyImported = allReservations.filter(r => r.alreadyImported);
+    const toImport = allReservationPreviews.filter(r => !r.alreadyImported);
+    const alreadyImported = allReservationPreviews.filter(r => r.alreadyImported);
 
     if (toImport.length > 0) {
       console.log('='.repeat(80));
