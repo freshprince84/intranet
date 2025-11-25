@@ -609,14 +609,6 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
     });
   }
 };
-  } catch (error) {
-    console.error('[createTour] Fehler:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Fehler beim Erstellen der Tour'
-    });
-  }
-};
 
 // PUT /api/tours/:id - Tour aktualisieren
 export const updateTour = async (req: AuthenticatedRequest, res: Response) => {

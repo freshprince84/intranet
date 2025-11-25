@@ -440,8 +440,13 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
 
     // Bei externer Tour: WhatsApp-Nachricht an Anbieter senden
     if (tour.type === 'external' && tour.externalProvider?.phone) {
-      // TODO: Implementiere TourWhatsAppService.sendBookingRequestToProvider()
-      console.log(`[createTourBooking] TODO: WhatsApp-Nachricht an Anbieter senden: ${tour.externalProvider.phone}`);
+      try {
+        const { TourWhatsAppService } = await import('../services/tourWhatsAppService');
+        await TourWhatsAppService.sendBookingRequestToProvider(booking.id, organizationId, branchId);
+      } catch (whatsappError) {
+        console.error('[createTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+        // Nicht abbrechen, nur loggen
+      }
     }
 
     // Notifications erstellen
@@ -757,7 +762,21 @@ export const cancelTourBooking = async (req: AuthenticatedRequest, res: Response
       }
     }
 
-    // TODO: TourWhatsAppService.sendCancellationToCustomer()
+    // WhatsApp-Benachrichtigung an Kunde senden
+    if (bookingForNotification?.customerPhone) {
+      try {
+        const { TourWhatsAppService } = await import('../services/tourWhatsAppService');
+        await TourWhatsAppService.sendCancellationToCustomer(
+          bookingId,
+          bookingForNotification.tour.organizationId,
+          bookingForNotification.branchId || null,
+          reason?.trim() || undefined
+        );
+      } catch (whatsappError) {
+        console.error('[cancelTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+        // Nicht abbrechen, nur loggen
+      }
+    }
 
     res.json({
       success: true,
