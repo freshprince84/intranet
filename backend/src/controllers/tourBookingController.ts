@@ -11,6 +11,7 @@ import { checkUserPermission } from '../middleware/permissionMiddleware';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
+  roleId: string;
 }
 
 const userSelect = {
@@ -239,7 +240,9 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
       parseInt(req.userId),
+      parseInt(req.roleId),
       'tour_booking_create',
+      'write',
       'button'
     );
     if (!hasPermission) {
@@ -479,7 +482,9 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
       parseInt(req.userId),
+      parseInt(req.roleId),
       'tour_booking_edit',
+      'write',
       'button'
     );
     if (!hasPermission) {
@@ -621,7 +626,9 @@ export const deleteTourBooking = async (req: AuthenticatedRequest, res: Response
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
       parseInt(req.userId),
+      parseInt(req.roleId),
       'tour_booking_edit',
+      'write',
       'button'
     );
     if (!hasPermission) {

@@ -27,8 +27,8 @@ export interface FilterCondition {
 export function convertFilterConditionsToPrismaWhere(
   conditions: FilterCondition[],
   operators: ('AND' | 'OR')[],
-  entityType: 'request' | 'task'
-): Prisma.RequestWhereInput | Prisma.TaskWhereInput | {} {
+  entityType: 'request' | 'task' | 'tour' | 'tour_booking'
+): Prisma.RequestWhereInput | Prisma.TaskWhereInput | Prisma.TourWhereInput | Prisma.TourBookingWhereInput | {} {
   if (conditions.length === 0) {
     return {};
   }
@@ -85,7 +85,7 @@ export function convertFilterConditionsToPrismaWhere(
  */
 function convertSingleCondition(
   condition: FilterCondition,
-  entityType: 'request' | 'task'
+  entityType: 'request' | 'task' | 'tour' | 'tour_booking'
 ): any {
   const { column, operator, value } = condition;
 
@@ -119,6 +119,8 @@ function convertSingleCondition(
       return {};
 
     case 'dueDate':
+    case 'tourDate':
+    case 'bookingDate':
       return convertDateCondition(value, operator);
 
     case 'responsible':
@@ -133,6 +135,18 @@ function convertSingleCondition(
     case 'requestedBy':
       if (entityType === 'request') {
         return convertUserRoleCondition(value, operator, entityType, 'requestedBy');
+      }
+      return {};
+
+    case 'createdBy':
+      if (entityType === 'tour') {
+        return convertUserRoleCondition(value, operator, entityType, 'createdBy');
+      }
+      return {};
+
+    case 'bookedBy':
+      if (entityType === 'tour_booking') {
+        return convertUserRoleCondition(value, operator, entityType, 'bookedBy');
       }
       return {};
 
@@ -183,8 +197,8 @@ function convertDateCondition(value: any, operator: string): any {
 function convertUserRoleCondition(
   value: any,
   operator: string,
-  entityType: 'request' | 'task',
-  field: 'responsible' | 'qualityControl' | 'requestedBy'
+  entityType: 'request' | 'task' | 'tour' | 'tour_booking',
+  field: 'responsible' | 'qualityControl' | 'requestedBy' | 'createdBy' | 'bookedBy'
 ): any {
   if (typeof value !== 'string') {
     return {};
@@ -215,6 +229,14 @@ function convertUserRoleCondition(
       return operator === 'notEquals'
         ? { requesterId: { not: userId } }
         : { requesterId: userId };
+    } else if (field === 'createdBy' && entityType === 'tour') {
+      return operator === 'notEquals'
+        ? { createdById: { not: userId } }
+        : { createdById: userId };
+    } else if (field === 'bookedBy' && entityType === 'tour_booking') {
+      return operator === 'notEquals'
+        ? { bookedById: { not: userId } }
+        : { bookedById: userId };
     }
   }
 

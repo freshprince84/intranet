@@ -5,6 +5,7 @@ import { checkUserPermission } from '../middleware/permissionMiddleware';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
+  roleId: string;
 }
 
 // GET /api/tour-providers - Alle Anbieter (mit Filtern)
@@ -223,7 +224,9 @@ export const updateTourProvider = async (req: AuthenticatedRequest, res: Respons
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
       parseInt(req.userId),
+      parseInt(req.roleId),
       'tour_provider_edit',
+      'write',
       'button'
     );
     if (!hasPermission) {
@@ -316,7 +319,9 @@ export const deleteTourProvider = async (req: AuthenticatedRequest, res: Respons
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
       parseInt(req.userId),
+      parseInt(req.roleId),
       'tour_provider_delete',
+      'write',
       'button'
     );
     if (!hasPermission) {
