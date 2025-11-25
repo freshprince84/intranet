@@ -445,11 +445,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   }, [showOptimisticFilters, tableId]);
 
   const displayFilters = showOptimisticFilters ? optimisticFilters : sortedFilters.filter(f => f != null);
-  // WICHTIG: Immer alle Tags rendern für scrollWidth-Prüfung, auch wenn nicht sichtbar
-  // Die nicht-sichtbaren Tags werden mit CSS versteckt (opacity: 0, pointer-events: none)
+  // Beim Messen: Alle Tags rendern, sonst nur sichtbare
   const currentVisibleCount = showOptimisticFilters 
     ? optimisticFilters.length 
-    : sortedFilters.length; // Immer alle rendern für korrekte scrollWidth-Berechnung
+    : (isMeasuring ? sortedFilters.length : visibleTagCount);
 
   // Tag-Breiten-Berechnung: Verwende gemessene Breiten wenn verfügbar, sonst aggressive Schätzung
   const averageTagWidth = useMemo(() => {
@@ -471,7 +470,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       }, 0) / sortedFilters.filter(filter => filter != null).length;
   }, [sortedFilters, measuredTagWidths]);
 
-  // ScrollWidth-basierte Sichtbarkeits-Berechnung - prüft tatsächlichen Overflow
+  // Optimierte Sichtbarkeits-Berechnung mit useCallback
   const calculateVisibleTags = useCallback(() => {
     if (!containerRef.current || sortedFilters.length === 0) return;
     // Nicht berechnen während Messung
@@ -479,62 +478,84 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
 
     const container = containerRef.current;
     const currentWidth = container.clientWidth;
-    
+
     // Nur neu berechnen wenn sich die Breite signifikant geändert hat (>= 10px)
     if (Math.abs(currentWidth - containerWidth) < 10 && containerWidth > 0) return;
-    
+
     setContainerWidth(currentWidth);
-    
-    // WICHTIG: Prüfe scrollWidth vs clientWidth - das zeigt ob wirklich Overflow vorhanden ist
-    // scrollWidth ist die tatsächliche benötigte Breite (inkl. aller gerenderten Elemente)
-    // clientWidth ist die sichtbare Breite
-    const scrollWidth = container.scrollWidth;
-    const hasOverflow = scrollWidth > currentWidth;
-    
-    // Wenn kein Overflow vorhanden ist, zeige alle Tags
-    if (!hasOverflow) {
-      setVisibleTagCount(sortedFilters.length);
-      return;
-    }
-    
-    // Overflow vorhanden - berechne wie viele Tags sichtbar sein können
-    const DROPDOWN_BUTTON_WIDTH = 60;
+
+    // Reduzierte, realistischere UI-Element-Breiten
+    const DROPDOWN_BUTTON_WIDTH = 60; // Reduziert von 70
     const GAP_BETWEEN_TAGS = 6; // gap-1.5 = 6px
-    const availableWidth = currentWidth - DROPDOWN_BUTTON_WIDTH - GAP_BETWEEN_TAGS;
-    
-    // Verwende gemessene Breiten wenn verfügbar für präzise Berechnung
-    if (measuredTagWidths.size > 0) {
+    const BUFFER = 4; // Minimaler Puffer
+
+    const availableWidth = currentWidth - BUFFER;
+
+    // Verwende gemessene Breiten wenn verfügbar, sonst Durchschnitt
+    let totalWidth = 0;
+    let measuredCount = 0;
+
+    // Berechne Gesamtbreite der Tags mit gemessenen Breiten
+    sortedFilters.forEach((filter) => {
+      const measuredWidth = measuredTagWidths.get(filter.id);
+      if (measuredWidth) {
+        totalWidth += measuredWidth + GAP_BETWEEN_TAGS;
+        measuredCount++;
+      }
+    });
+
+    // Wenn wir gemessene Breiten für alle Tags haben, verwende diese
+    if (measuredCount === sortedFilters.length && totalWidth > 0) {
+      const totalWidthWithoutLastGap = totalWidth - GAP_BETWEEN_TAGS;
+
+      // Prüfe ob alle Tags ohne Dropdown passen
+      if (totalWidthWithoutLastGap <= availableWidth) {
+        setVisibleTagCount(sortedFilters.length);
+        return;
+      }
+
+      // Prüfe ob alle Tags mit Dropdown passen
+      const availableWithDropdown = availableWidth - DROPDOWN_BUTTON_WIDTH - GAP_BETWEEN_TAGS;
+      if (totalWidthWithoutLastGap <= availableWithDropdown) {
+        setVisibleTagCount(sortedFilters.length);
+        return;
+      }
+
+      // Berechne wie viele Tags mit Dropdown passen
       let cumulativeWidth = 0;
       let visibleCount = 0;
-      
       for (const filter of sortedFilters) {
-        const width = measuredTagWidths.get(filter.id);
-        if (width) {
-          // Prüfe ob dieser Tag noch passt
-          if (cumulativeWidth + width + GAP_BETWEEN_TAGS <= availableWidth) {
-            cumulativeWidth += width + GAP_BETWEEN_TAGS;
-            visibleCount++;
-          } else {
-            break;
-          }
+        const width = measuredTagWidths.get(filter.id) || averageTagWidth;
+        if (cumulativeWidth + width + GAP_BETWEEN_TAGS <= availableWithDropdown) {
+          cumulativeWidth += width + GAP_BETWEEN_TAGS;
+          visibleCount++;
         } else {
-          // Wenn keine gemessene Breite vorhanden, verwende Durchschnitt
-          if (cumulativeWidth + averageTagWidth + GAP_BETWEEN_TAGS <= availableWidth) {
-            cumulativeWidth += averageTagWidth + GAP_BETWEEN_TAGS;
-            visibleCount++;
-          } else {
-            break;
-          }
+          break;
         }
       }
-      
       setVisibleTagCount(Math.max(1, visibleCount));
       return;
     }
-    
-    // Fallback: Verwende Durchschnittsbreite wenn keine Messungen vorhanden
-    const maxTagsWithDropdown = Math.max(1, Math.floor(availableWidth / (averageTagWidth + GAP_BETWEEN_TAGS)));
-    setVisibleTagCount(Math.max(1, maxTagsWithDropdown));
+
+    // Fallback: Verwende Durchschnittsbreite
+    const maxPossibleTags = Math.max(1, Math.floor(availableWidth / (averageTagWidth + GAP_BETWEEN_TAGS)));
+
+    if (maxPossibleTags >= sortedFilters.length) {
+      // Alle Tags passen rein - zeige alle
+      setVisibleTagCount(sortedFilters.length);
+    } else {
+      // Prüfe ob alle Tags mit Dropdown passen würden
+      const availableWithDropdown = availableWidth - DROPDOWN_BUTTON_WIDTH - GAP_BETWEEN_TAGS;
+      const maxTagsWithDropdown = Math.max(1, Math.floor(availableWithDropdown / (averageTagWidth + GAP_BETWEEN_TAGS)));
+
+      if (maxTagsWithDropdown >= sortedFilters.length) {
+        // Alle Tags passen mit Dropdown - zeige alle
+        setVisibleTagCount(sortedFilters.length);
+      } else {
+        // Zeige berechnete Anzahl
+        setVisibleTagCount(Math.max(1, maxTagsWithDropdown));
+      }
+    }
   }, [sortedFilters, averageTagWidth, containerWidth, isMeasuring, measuredTagWidths]);
 
   // Debounced ResizeObserver für bessere Performance
@@ -570,12 +591,17 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   // Messung der tatsächlichen Tag-Breiten nach Render
   useLayoutEffect(() => {
     if (sortedFilters.length === 0) return;
-    
+
     const widths = new Map<number, number>();
     let hasMeasurements = false;
-    
-    // WICHTIG: Immer alle Tags messen, da alle gerendert werden (auch wenn versteckt)
-    sortedFilters.forEach((filter) => {
+
+    // Beim ersten Messen: Alle Tags messen (wenn isMeasuring true)
+    // Später: Nur die sichtbaren + ein paar mehr messen
+    const tagsToMeasure = isMeasuring
+      ? sortedFilters.length
+      : Math.min(visibleTagCount + 5, sortedFilters.length);
+
+    sortedFilters.slice(0, tagsToMeasure).forEach((filter) => {
       const tagElement = tagRefs.current.get(filter.id);
       if (tagElement) {
         const width = tagElement.offsetWidth;
@@ -585,7 +611,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         }
       }
     });
-    
+
     if (hasMeasurements) {
       // State-Updates verzögern um React Error #185 zu vermeiden
       const shouldEndMeasuring = isMeasuring;
@@ -603,7 +629,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         }
       }, 0);
     }
-  }, [sortedFilters, isMeasuring, calculateVisibleTags]);
+  }, [sortedFilters, visibleTagCount, isMeasuring, calculateVisibleTags]);
 
   // Initial calculation nach Filter-Änderungen (nur wenn nicht im Messmodus)
   useLayoutEffect(() => {
@@ -929,14 +955,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           );
         })}
         
-        {/* Einzelne Filter-Tags - Alle rendern für scrollWidth-Berechnung */}
-        {displayFilters.map((filter, index) => {
-          // Prüfe ob Tag sichtbar sein soll (nur wenn nicht im Messmodus und nicht alle Tags passen)
-          const isVisible = showOptimisticFilters 
-            ? true 
-            : (isMeasuring || visibleTagCount >= sortedFilters.length || index < visibleTagCount);
-          
-          return (
+        {/* Einzelne Filter-Tags */}
+        {displayFilters.slice(0, currentVisibleCount).map(filter => (
           <div
             key={filter.id}
             ref={(el) => {
@@ -953,8 +973,6 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             onDragEnd={handleDragEnd}
             onClick={() => !filter.isPlaceholder && handleSelectFilter(filter)}
             className={`relative group flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${
-              !isVisible ? 'invisible' : '' // Verstecke nicht-sichtbare Tags, aber sie nehmen Platz ein für scrollWidth
-            } ${
               filter.isPlaceholder
                 ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 animate-pulse cursor-default'
                 : draggedFilterId === filter.id
@@ -985,8 +1003,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               {filter.isPlaceholder ? t('common.loading') : translateFilterName(filter.name)}
             </div>
           </div>
-          );
-        })}
+        ))}
         
         {/* Dropdown nur bei echten Filtern und tatsächlichem Platzmangel */}
         {!showOptimisticFilters && sortedFilters.length > visibleTagCount && (

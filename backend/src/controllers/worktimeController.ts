@@ -639,19 +639,40 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
       let hoursWorked: number;
       
       if (entry.endTime === null) {
-        // Aktive Zeitmessung: DIREKTE DIFFERENZ wie im Modal
-        // WICHTIG: entry.startTime aus Prisma ist ein Date-Objekt, das UTC-Millisekunden enthält
-        // Date.now() gibt auch UTC-Millisekunden zurück
-        // Beide Werte sind UTC, daher ist die Differenz korrekt
-        // Stelle sicher, dass wir UTC-Millisekunden verwenden:
-        const startTimeUtcMs = entry.startTime.getTime(); // UTC-Millisekunden
-        const nowUtcMs = Date.now(); // UTC-Millisekunden
-        const diffMs = nowUtcMs - startTimeUtcMs;
-        hoursWorked = diffMs / (1000 * 60 * 60);
-        
-        // Für Verteilung: Verwende entry.startTime und effectiveEndTime (nicht begrenzt)
-        actualStartTime = entry.startTime;
-        actualEndTime = effectiveEndTime;
+        // Aktive Zeitmessung: Berechne Differenz unter Berücksichtigung der Zeitzone
+        // PROBLEM: entry.startTime wurde als lokale Zeit gespeichert, aber Prisma interpretiert es als UTC
+        // LÖSUNG: Wenn entry.timezone vorhanden ist, korrigiere die Interpretation
+        if (entry.timezone) {
+          // entry.startTime wurde als lokale Zeit gespeichert (z.B. 10:36 lokal in Kolumbien)
+          // Prisma interpretiert es fälschlicherweise als UTC (10:36 UTC)
+          // Tatsächlich sollte es sein: 10:36 lokal = 15:36 UTC (für UTC-5)
+          // 
+          // Lösung: Interpretiere entry.startTime als lokale Zeit und konvertiere zu UTC
+          // fromZonedTime konvertiert lokale Zeit (in timezone) zu UTC
+          // Da entry.startTime bereits als UTC interpretiert wird (falsch), müssen wir es
+          // zuerst als lokale Zeit interpretieren, dann zu UTC konvertieren
+          const startTimeUtcCorrected = fromZonedTime(entry.startTime, entry.timezone);
+          
+          // Berechne Differenz mit korrigierter Startzeit
+          const nowUtcMs = Date.now(); // UTC-Millisekunden (korrekt)
+          const startTimeUtcMs = startTimeUtcCorrected.getTime(); // UTC-Millisekunden (korrigiert)
+          const diffMs = nowUtcMs - startTimeUtcMs;
+          hoursWorked = diffMs / (1000 * 60 * 60);
+          
+          // Für Verteilung: Verwende korrigierte Zeiten
+          actualStartTime = startTimeUtcCorrected;
+          actualEndTime = effectiveEndTime;
+        } else {
+          // Fallback: Wenn keine Zeitzone gespeichert ist, verwende direkte Differenz
+          // (kann falsch sein, aber besser als nichts)
+          const startTimeUtcMs = entry.startTime.getTime();
+          const nowUtcMs = Date.now();
+          const diffMs = nowUtcMs - startTimeUtcMs;
+          hoursWorked = diffMs / (1000 * 60 * 60);
+          
+          actualStartTime = entry.startTime;
+          actualEndTime = effectiveEndTime;
+        }
       } else {
         // Abgeschlossene Zeitmessung: Verwende Periodenbegrenzung
         actualStartTime = entry.startTime < periodStart ? periodStart : entry.startTime;
