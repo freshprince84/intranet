@@ -71,7 +71,7 @@ export const getAllTours = async (req: Request, res: Response) => {
       : undefined;
     const limit = req.query.limit 
       ? parseInt(req.query.limit as string, 10) 
-      : 50;
+      : undefined; // Kein Limit wenn nicht angegeben - alle Tours werden zurückgegeben
     const type = req.query.type as TourType | undefined;
     const isActive = req.query.isActive !== undefined 
       ? req.query.isActive === 'true' 
@@ -151,7 +151,7 @@ export const getAllTours = async (req: Request, res: Response) => {
 
     const tours = await prisma.tour.findMany({
       where: whereClause,
-      take: limit,
+      ...(limit ? { take: limit } : {}), // Nur Limit wenn angegeben
       include: {
         createdBy: {
           select: userSelect

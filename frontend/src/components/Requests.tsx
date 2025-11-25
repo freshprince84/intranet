@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CircularProgress } from '@mui/material';
 import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
@@ -200,6 +201,12 @@ const Requests: React.FC = () => {
   const [allRequests, setAllRequests] = useState<Request[]>([]); // Alle Requests (für Hintergrund-Laden und Filter-Wechsel)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination State für Requests Infinite Scroll
+  const [requestsPage, setRequestsPage] = useState(1); // Aktuelle Seite für Requests
+  const [requestsHasMore, setRequestsHasMore] = useState(true); // Gibt es weitere Requests?
+  const [requestsLoadingMore, setRequestsLoadingMore] = useState(false); // Lädt weitere Requests?
+  const REQUESTS_PER_PAGE = 20; // Requests pro Seite
   const [searchTerm, setSearchTerm] = useState('');
   
   // State-Variablen für erweiterte Filterbedingungen
@@ -361,14 +368,25 @@ const Requests: React.FC = () => {
     }
   }, [viewMode]);
 
-  const fetchRequests = async (filterId?: number, filterConditions?: any[], background = false) => {
+  const fetchRequests = async (
+    filterId?: number, 
+    filterConditions?: any[], 
+    background = false,
+    page: number = 1, // Neue Parameter für Pagination
+    append: boolean = false // Neue Parameter: Sollen Requests angehängt werden?
+  ) => {
     try {
-      if (!background) {
+      if (!background && !append) {
         setLoading(true);
+      }
+      if (append) {
+        setRequestsLoadingMore(true);
       }
       
       // Baue Query-Parameter
-      const params: any = {};
+      const params: any = {
+        limit: REQUESTS_PER_PAGE, // Immer Limit für initiales Laden
+      };
       if (filterId) {
         params.filterId = filterId;
       } else if (filterConditions && filterConditions.length > 0) {
@@ -404,16 +422,25 @@ const Requests: React.FC = () => {
         // Hintergrund-Laden: Speichere in allRequests
         console.log('📋 Alle Requests im Hintergrund geladen:', requestsWithAttachments.length, 'Requests');
         setAllRequests(requestsWithAttachments);
+      } else if (append) {
+        // Infinite Scroll: Füge Requests zu bestehenden hinzu
+        setRequests(prevRequests => [...prevRequests, ...requestsWithAttachments]);
+        // Prüfe ob es weitere Requests gibt
+        setRequestsHasMore(requestsWithAttachments.length === REQUESTS_PER_PAGE);
+        setRequestsPage(page);
+        console.log('📋 Weitere Requests geladen:', requestsWithAttachments.length, 'Requests (Seite', page, ')');
       } else {
-        // Vordergrund-Laden: Zeige sofort an
+        // Initiales Laden: Ersetze Requests
         setRequests(requestsWithAttachments);
+        setRequestsHasMore(requestsWithAttachments.length === REQUESTS_PER_PAGE);
+        setRequestsPage(1);
       }
       setError(null);
     } catch (err) {
       console.error('Request Error:', err);
       // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
-      if (!background) {
+      if (!background && !append) {
         if (axiosError.code === 'ERR_NETWORK') {
           setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
         } else {
@@ -421,10 +448,27 @@ const Requests: React.FC = () => {
         }
       }
     } finally {
-      if (!background) {
+      if (!background && !append) {
         setLoading(false);
       }
+      if (append) {
+        setRequestsLoadingMore(false);
+      }
     }
+  };
+  
+  // Funktion zum Laden weiterer Requests (Infinite Scroll)
+  const loadMoreRequests = async () => {
+    if (requestsLoadingMore || !requestsHasMore) return;
+    
+    const nextPage = requestsPage + 1;
+    await fetchRequests(
+      selectedFilterId || undefined,
+      filterConditions.length > 0 ? filterConditions : undefined,
+      false,
+      nextPage,
+      true // append = true
+    );
   };
 
   // Standard-Filter erstellen und speichern
@@ -517,6 +561,23 @@ const Requests: React.FC = () => {
 
     createStandardFilters();
   }, []);
+
+  // Infinite Scroll Handler für Requests
+  useEffect(() => {
+    const handleScroll = () => {
+      // Prüfe ob User nahe am Ende der Seite ist
+      if (
+        window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000 &&
+        !requestsLoadingMore &&
+        requestsHasMore
+      ) {
+        loadMoreRequests();
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [requestsLoadingMore, requestsHasMore, selectedFilterId, filterConditions]);
 
   // Initialer Default-Filter setzen (Controlled Mode)
   // Initialer Default-Filter setzen und Requests laden
@@ -708,10 +769,14 @@ const Requests: React.FC = () => {
     // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
     setSortConfig({ key: 'dueDate', direction: 'asc' });
     
+    // Pagination zurücksetzen bei Filter-Wechsel
+    setRequestsPage(1);
+    setRequestsHasMore(true);
+    
     // Wenn Filter-ID vorhanden (Standardfilter): Server-seitig laden
     // Sonst: Client-seitig filtern (komplexe Filter)
     if (id) {
-      await fetchRequests(id);
+      await fetchRequests(id, undefined, false, 1, false); // Reset auf Seite 1, nicht append
     }
     // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedRequests angewendet
   };
@@ -1847,7 +1912,18 @@ const Requests: React.FC = () => {
         )}
         
         {/* "Mehr anzeigen" Button */}
-        {filteredAndSortedRequests.length > displayLimit && (
+        {/* Loading Indicator für Infinite Scroll - Requests */}
+        {requestsLoadingMore && (
+          <div className="mt-4 flex justify-center items-center py-4">
+            <CircularProgress size={24} />
+            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+              {t('common.loadingMoreRequests', 'Lädt weitere Requests...')}
+            </span>
+          </div>
+        )}
+        
+        {/* "Mehr anzeigen" Button - Requests (Fallback) */}
+        {!requestsLoadingMore && filteredAndSortedRequests.length > displayLimit && (
           <div className="mt-4 flex justify-center">
             <div className="relative group">
               <button

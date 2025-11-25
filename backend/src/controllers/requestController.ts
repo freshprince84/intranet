@@ -70,7 +70,7 @@ export const getAllRequests = async (req: Request, res: Response) => {
             : undefined;
         const limit = req.query.limit 
             ? parseInt(req.query.limit as string, 10) 
-            : 50; // OPTIMIERUNG: Standard-Limit 50 statt alle
+            : undefined; // Kein Limit wenn nicht angegeben - alle Requests werden zurückgegeben
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         
         // Filter-Bedingungen konvertieren (falls vorhanden)
@@ -150,7 +150,7 @@ export const getAllRequests = async (req: Request, res: Response) => {
         const queryStartTime = Date.now();
         const requests = await prisma.request.findMany({
             where: whereClause,
-            take: limit,
+            ...(limit ? { take: limit } : {}), // Nur Limit wenn angegeben
             include: {
                 requester: {
                     select: userSelect
