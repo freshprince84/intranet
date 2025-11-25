@@ -19,7 +19,7 @@ import SendInvitationSidepane from '../components/reservations/SendInvitationSid
 import SendPasscodeSidepane from '../components/reservations/SendPasscodeSidepane.tsx';
 import ReservationNotificationLogs from '../components/reservations/ReservationNotificationLogs.tsx';
 import { Reservation, ReservationStatus, PaymentStatus } from '../types/reservation.ts';
-import { Tour, TourType } from '../types/tour.ts';
+import { Tour, TourType, TourBooking } from '../types/tour.ts';
 import { useNavigate } from 'react-router-dom';
 import useMessage from '../hooks/useMessage.ts';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
@@ -391,6 +391,15 @@ const Worktracker: React.FC = () => {
     const [isSendInvitationSidepaneOpen, setIsSendInvitationSidepaneOpen] = useState(false);
     const [selectedReservationForPasscode, setSelectedReservationForPasscode] = useState<Reservation | null>(null);
     const [isSendPasscodeSidepaneOpen, setIsSendPasscodeSidepaneOpen] = useState(false);
+    
+    // Tour-Bookings States
+    const [tourBookings, setTourBookings] = useState<TourBooking[]>([]);
+    const [allTourBookings, setAllTourBookings] = useState<TourBooking[]>([]);
+    const [tourBookingsLoading, setTourBookingsLoading] = useState(false);
+    const [tourBookingsError, setTourBookingsError] = useState<string | null>(null);
+    const [tourBookingsSearchTerm, setTourBookingsSearchTerm] = useState('');
+    const [selectedBookingForLink, setSelectedBookingForLink] = useState<TourBooking | null>(null);
+    const [isTourReservationLinkModalOpen, setIsTourReservationLinkModalOpen] = useState(false);
     
     // Reservations Filter States (analog zu Tasks)
     const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
