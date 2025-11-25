@@ -5,6 +5,7 @@ import { reservationService } from '../../services/reservationService.ts';
 import { Reservation } from '../../types/reservation.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
+import { CountryLanguageService } from '../../services/countryLanguageService.ts';
 
 interface SendInvitationSidepaneProps {
   isOpen: boolean;
@@ -34,20 +35,59 @@ const SendInvitationSidepane: React.FC<SendInvitationSidepaneProps> = ({
   const [previewMessage, setPreviewMessage] = useState('');
 
   // Standard-Nachricht generieren (entspricht Meta Business Template: reservation_checkin_invitation)
+  // Sprache basierend auf reservation.guestNationality bestimmen
   const generateStandardMessage = () => {
+    const languageCode = CountryLanguageService.getLanguageForReservation({
+      guestNationality: reservation.guestNationality
+    });
+
+    if (languageCode === 'en') {
+      // Englische Version (wie im Backend E-Mail-Service)
+      return `Hello {{guestName}},
+
+We are pleased to welcome you to La Familia Hostel! 🎊
+
+In case that you arrive after 18:00 or before 09:00, our recepcion 🛎️ will be closed.
+
+We would then kindly ask you to complete check-in & payment online in advance:
+
+Check-In:
+
+{{checkInLink}}
+
+Please make the payment in advance:
+
+{{paymentLink}}
+
+Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.
+
+Thank you!
+
+We look forward to seeing you soon!`;
+    }
+
+    // Spanische Version (korrigiert, wie im Backend E-Mail-Service)
     return `Hola {{guestName}},
 
-¡Nos complace darte la bienvenida a La Familia Hostel!
+¡Nos complace darte la bienvenida a La Familia Hostel! 🎊
 
-Como llegarás después de las 22:00, puedes realizar el check-in en línea ahora:
+En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.
+
+Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:
+
+Check-In:
+
 {{checkInLink}}
 
 Por favor, realiza el pago por adelantado:
+
 {{paymentLink}}
 
-Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago. ¡Gracias!
+Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.
 
-¡Te esperamos mañana!`;
+¡Gracias!
+
+¡Esperamos verte pronto!`;
   };
 
   // Initialisiere Standard-Nachricht beim Öffnen
@@ -66,6 +106,10 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       // (reservation.guestEmail), nicht mit der geänderten E-Mail (guestEmail)
       // Der Check-in-Link muss immer die Original-E-Mail verwenden, die beim Import verwendet wurde
       // WICHTIG: Verwende lobbyReservationId (LobbyPMS booking_id) als codigo, nicht die interne ID
+      // Sprache basierend auf reservation.guestNationality bestimmen
+      const languageCode = CountryLanguageService.getLanguageForReservation({
+        guestNationality: reservation.guestNationality
+      });
       const email = reservation.guestEmail || '';
       let checkInLink = '[Check-in-Link wird generiert]';
       if (email) {
@@ -75,7 +119,8 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         const params = new URLSearchParams();
         params.append('codigo', codigo);
         params.append('email', email);
-        params.append('lg', 'GB'); // Standard: Englisch
+        // Sprache für Check-in-Link: 'GB' für Englisch, 'ES' für Spanisch
+        params.append('lg', languageCode === 'en' ? 'GB' : 'ES');
         checkInLink = `${baseUrl}?${params.toString()}`;
       }
       
@@ -88,7 +133,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         .replace(/\{\{paymentLink\}\}/g, paymentLink);
       setPreviewMessage(preview);
     }
-  }, [customMessage, reservation.guestName, reservation.paymentLink, reservation.id, reservation.guestEmail]);
+  }, [customMessage, reservation.guestName, reservation.paymentLink, reservation.id, reservation.guestEmail, reservation.guestNationality]);
 
   // Responsive-Verhalten
   useEffect(() => {

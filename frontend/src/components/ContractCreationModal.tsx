@@ -325,6 +325,7 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
             ${isMobile ? 'rounded-none' : 'rounded-l-lg'}
             flex flex-col
             max-h-[calc(100vh-4rem)]
+            ${isMobile ? '' : 'sidepane-panel-container'}
           `}
         >
           {/* Header */}

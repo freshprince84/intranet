@@ -5,6 +5,7 @@ import { reservationService } from '../../services/reservationService.ts';
 import { Reservation } from '../../types/reservation.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
+import { CountryLanguageService } from '../../services/countryLanguageService.ts';
 
 interface SendPasscodeSidepaneProps {
   isOpen: boolean;
@@ -36,12 +37,47 @@ const SendPasscodeSidepane: React.FC<SendPasscodeSidepaneProps> = ({
   // Standard-Nachricht generieren (entspricht Meta Business Template: reservation_checkin_completed)
   // Template verwendet 2 Variablen: {{1}} = Begrüßung, {{2}} = Kompletter Text mit Zimmerinfo und PIN
   // Für die Vorschau kombinieren wir beide zu einem vollständigen Text
+  // Sprache basierend auf reservation.guestNationality bestimmen
   const generateStandardMessage = () => {
+    const languageCode = CountryLanguageService.getLanguageForReservation({
+      guestNationality: reservation.guestNationality
+    });
+
+    // Template-Format: {{1}} = Begrüßung, {{2}} = Kompletter Text
+    // Für Vorschau im Sidepane verwenden wir Platzhalter, die dann ersetzt werden
+    if (languageCode === 'en') {
+      // Englische Version
+      return `Welcome,
+
+Hello {{guestName}},
+
+Your check-in has been completed successfully!
+
+Your room information:
+- Room: {{roomNumber}}
+- Description: {{roomDescription}}
+
+Access:
+- Door PIN: {{passcode}}
+- App: {{doorAppName}}
+
+We wish you a pleasant stay!`;
+    }
+
+    // Spanische Version
     return `Bienvenido,
 
 Hola {{guestName}},
 
-¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: {{roomNumber}} - Descripción: {{roomDescription}} Acceso: - PIN de la puerta: {{passcode}} - App: TTLock
+¡Tu check-in se ha completado exitosamente!
+
+Información de tu habitación:
+- Habitación: {{roomNumber}}
+- Descripción: {{roomDescription}}
+
+Acceso:
+- PIN de la puerta: {{passcode}}
+- App: {{doorAppName}}
 
 ¡Te deseamos una estancia agradable!`;
   };
@@ -60,15 +96,19 @@ Hola {{guestName}},
       const passcode = reservation.doorPin || reservation.ttlLockPassword || '[Passcode wird generiert]';
       const roomNumber = reservation.roomNumber || '[Zimmernummer]';
       const roomDescription = reservation.roomDescription || '[Zimmerbeschreibung]';
+      const doorAppName = reservation.doorAppName || 'TTLock';
       
+      // Ersetze Variablen in der Nachricht
+      // Unterstützt sowohl Template-Format ({{1}}, {{2}}) als auch einzelne Variablen ({{guestName}}, etc.)
       let preview = customMessage
         .replace(/\{\{guestName\}\}/g, reservation.guestName)
         .replace(/\{\{passcode\}\}/g, passcode)
         .replace(/\{\{roomNumber\}\}/g, roomNumber)
-        .replace(/\{\{roomDescription\}\}/g, roomDescription);
+        .replace(/\{\{roomDescription\}\}/g, roomDescription)
+        .replace(/\{\{doorAppName\}\}/g, doorAppName);
       setPreviewMessage(preview);
     }
-  }, [customMessage, reservation.guestName, reservation.doorPin, reservation.ttlLockPassword, reservation.roomNumber, reservation.roomDescription]);
+  }, [customMessage, reservation.guestName, reservation.doorPin, reservation.ttlLockPassword, reservation.roomNumber, reservation.roomDescription, reservation.doorAppName, reservation.guestNationality]);
 
   // Responsive-Verhalten
   useEffect(() => {

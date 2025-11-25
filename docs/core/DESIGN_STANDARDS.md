@@ -2593,6 +2593,10 @@ if (isMobile) {
 - `CreateOrganizationModal.tsx` - Standard Sidepane Pattern
 - `JoinOrganizationModal.tsx` - Standard Sidepane Pattern
 - `ProcessJoinRequestModal.tsx` - Standard Sidepane Pattern
+- `CreateTourModal.tsx` - Standard Sidepane Pattern (**⚠️ UMGESTELLT 2025-01-27: War fälschlicherweise als zentriertes Modal implementiert**)
+- `EditTourModal.tsx` - Standard Sidepane Pattern (**⚠️ UMGESTELLT 2025-01-27: War fälschlicherweise als zentriertes Modal implementiert**)
+- `CreateTourProviderModal.tsx` - Standard Sidepane Pattern (**⚠️ UMGESTELLT 2025-01-27: War fälschlicherweise als zentriertes Modal implementiert**)
+- `EditTourProviderModal.tsx` - Standard Sidepane Pattern (**⚠️ UMGESTELLT 2025-01-27: War fälschlicherweise als zentriertes Modal implementiert**)
 
 **⚠️ Alternative Sidepane-Struktur (für komplexere Bearbeitungen):**
 Die folgenden Komponenten verwenden eine alternative, komplexere Struktur für sehr umfangreiche Bearbeitungsformen mit separatem Header-Bereich. Diese sollte NUR für spezielle Fälle verwendet werden, NICHT als Standard:
@@ -2722,8 +2726,20 @@ useEffect(() => {
 3. **Standard-Implementierungen**:
    
    **✅ KORREKTE Referenzen (Standard-Pattern):**
-   - **Sidepanes für Create/Edit:** `CreateTaskModal.tsx`, `CreateRequestModal.tsx`, `EditTaskModal.tsx`, `EditRequestModal.tsx`
+   - **Sidepanes für Create/Edit:** `CreateTaskModal.tsx`, `CreateRequestModal.tsx`, `EditTaskModal.tsx`, `EditRequestModal.tsx`, `CreateTourModal.tsx`, `EditTourModal.tsx`, `CreateTourProviderModal.tsx`, `EditTourProviderModal.tsx`
    - **Modals für Bestätigungen:** `ClientSelectModal.tsx` (wenn als Bestätigung verwendet)
+
+**⚠️ KRITISCH: Standards beachten!**
+
+**WICHTIGER HINWEIS (2025-01-27):** Die Tour-Komponenten (`CreateTourModal.tsx`, `EditTourModal.tsx`, `CreateTourProviderModal.tsx`, `EditTourProviderModal.tsx`) wurden **fälschlicherweise als zentrierte Modals** implementiert und mussten auf das **Standard-Sidepane-Pattern** umgestellt werden.
+
+**Bei zukünftigen Implementierungen:**
+- **IMMER** zuerst die bestehenden Standards prüfen (`DESIGN_STANDARDS.md`, `CODING_STANDARDS.md`)
+- **IMMER** das Standard-Sidepane-Pattern für Create/Edit-Komponenten verwenden
+- **NIEMALS** zentrierte Modals für Create/Edit-Komponenten implementieren
+- **Referenz-Komponenten** als Vorlage verwenden: `CreateRequestModal.tsx`, `CreateTaskModal.tsx`
+
+**Diese Standards müssen eingehalten werden, um Konsistenz im System zu gewährleisten!**
    
    **⚠️ Alternative Implementierung (für sehr komplexe Fälle):**
    - `InvoiceManagementTab.tsx` - verwendet alternative Sidepane-Struktur mit separatem Header-Bereich (NUR für spezielle Fälle)
