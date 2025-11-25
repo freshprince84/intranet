@@ -2890,6 +2890,20 @@
     "export.noData": "Keine Daten zum Exportieren",
     "export.success": "Export erfolgreich",
     "export.error": "Fehler beim Exportieren",
+    "reservationLink": {
+      "title": "Tour mit Reservation verknüpfen",
+      "reservation": "Reservation",
+      "tourPrice": "Tour-Preis",
+      "accommodationPrice": "Betten-Preis",
+      "totalPrice": "Gesamtpreis",
+      "exceedsAmount": "Überschreitet Reservationsbetrag",
+      "fillAllFields": "Bitte füllen Sie alle Felder aus",
+      "success": "Verknüpfung erfolgreich erstellt",
+      "confirmDelete": "Möchten Sie diese Verknüpfung wirklich löschen?",
+      "deleted": "Verknüpfung gelöscht",
+      "reservationAmount": "Reservationsbetrag",
+      "existingLinks": "Bestehende Verknüpfungen"
+    },
     "columns": {
       "title": "Titel",
       "type": "Typ",

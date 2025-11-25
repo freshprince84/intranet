@@ -120,6 +120,60 @@ export class WhatsAppMessageHandler {
       // 3. Lade/Erstelle Conversation State
       const conversation = await this.getOrCreateConversation(normalizedPhone, branchId, user?.id);
 
+      // 3.5. Tour-Buchungsantwort vom Anbieter erkennen (VOR Keyword-Erkennung)
+      const tourProvider = await prisma.tourProvider.findFirst({
+        where: {
+          phone: normalizedPhone
+        },
+        include: {
+          tours: {
+            include: {
+              bookings: {
+                where: {
+                  status: 'pending',
+                  isExternal: true
+                },
+                orderBy: {
+                  createdAt: 'desc'
+                },
+                take: 1
+              }
+            }
+          }
+        }
+      });
+
+      if (tourProvider && tourProvider.tours.length > 0) {
+        const tour = tourProvider.tours[0];
+        if (tour.bookings && tour.bookings.length > 0) {
+          const latestBooking = tour.bookings[0];
+          // Verarbeite Anbieter-Antwort
+          try {
+            const { TourWhatsAppService } = await import('./tourWhatsAppService');
+            const branch = await prisma.branch.findUnique({
+              where: { id: branchId },
+              select: { organizationId: true }
+            });
+            await TourWhatsAppService.processProviderResponse(
+              latestBooking.id,
+              messageText,
+              branch?.organizationId || 0,
+              branchId
+            );
+            const language = LanguageDetectionService.detectLanguageFromPhoneNumber(normalizedPhone);
+            const translations: Record<string, string> = {
+              es: 'Gracias por tu respuesta. La reserva será procesada.',
+              de: 'Vielen Dank für Ihre Antwort. Die Buchung wird verarbeitet.',
+              en: 'Thank you for your response. The booking will be processed.'
+            };
+            return translations[language] || translations.es;
+          } catch (error) {
+            console.error('[WhatsApp Message Handler] Fehler bei Tour-Anbieter-Antwort:', error);
+            // Weiter mit normaler Verarbeitung
+          }
+        }
+      }
+
       // 4. Prüfe Keywords
       const normalizedText = messageText.toLowerCase().trim();
       

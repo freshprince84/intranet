@@ -14,6 +14,7 @@ import EditTourModal from '../components/tours/EditTourModal.tsx';
 import TourDetailsModal from '../components/tours/TourDetailsModal.tsx';
 import TourBookingsModal from '../components/tours/TourBookingsModal.tsx';
 import TourExportDialog from '../components/tours/TourExportDialog.tsx';
+import TourReservationLinkModal from '../components/tours/TourReservationLinkModal.tsx';
 import SendInvitationSidepane from '../components/reservations/SendInvitationSidepane.tsx';
 import SendPasscodeSidepane from '../components/reservations/SendPasscodeSidepane.tsx';
 import ReservationNotificationLogs from '../components/reservations/ReservationNotificationLogs.tsx';
@@ -368,7 +369,7 @@ const Worktracker: React.FC = () => {
         return getStatusText(status, 'task', t);
     };
     // Tab-State
-    const [activeTab, setActiveTab] = useState<'todos' | 'reservations' | 'tours'>('todos');
+    const [activeTab, setActiveTab] = useState<'todos' | 'reservations' | 'tours' | 'tourBookings'>('todos');
     
     const [tasks, setTasks] = useState<Task[]>([]);
     const [allTasks, setAllTasks] = useState<Task[]>([]); // Alle Tasks (für Hintergrund-Laden und Filter-Wechsel)
@@ -742,6 +743,33 @@ const Worktracker: React.FC = () => {
     useEffect(() => {
         if (activeTab === 'tours' && hasPermission('tours', 'read', 'table')) {
             loadTours();
+        }
+    }, [activeTab]);
+    
+    // Funktion zum Laden der Tour-Buchungen
+    const loadTourBookings = async () => {
+        try {
+            setTourBookingsLoading(true);
+            setTourBookingsError(null);
+            const response = await axiosInstance.get(API_ENDPOINTS.TOUR_BOOKINGS.BASE);
+            const bookingsData = response.data?.data || response.data || [];
+            console.log('📋 Tour-Buchungen geladen:', bookingsData.length, 'Buchungen');
+            setTourBookings(bookingsData);
+            setAllTourBookings(bookingsData);
+        } catch (err: any) {
+            console.error('Fehler beim Laden der Tour-Buchungen:', err);
+            const errorMessage = err.response?.data?.message || t('tourBookings.loadError', 'Fehler beim Laden der Tour-Buchungen');
+            setTourBookingsError(errorMessage);
+            showMessage(errorMessage, 'error');
+        } finally {
+            setTourBookingsLoading(false);
+        }
+    };
+    
+    // Lade Tour-Buchungen, wenn Tab aktiv ist
+    useEffect(() => {
+        if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
+            loadTourBookings();
         }
     }, [activeTab]);
     
@@ -4985,6 +5013,170 @@ const Worktracker: React.FC = () => {
                 onClose={() => setIsTourExportDialogOpen(false)}
                 tourCount={filteredAndSortedTours.length}
             />
+            
+            {/* Tour Bookings Tab Content */}
+            {activeTab === 'tourBookings' && (
+                <div className="space-y-4">
+                    {tourBookingsLoading ? (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            {t('common.loading')}
+                        </div>
+                    ) : tourBookingsError ? (
+                        <div className="text-center py-8 text-red-500 dark:text-red-400">
+                            {tourBookingsError}
+                        </div>
+                    ) : tourBookings.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                            {t('tourBookings.noBookings', 'Keine Buchungen vorhanden')}
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('tourBookings.tour', 'Tour')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('tourBookings.customerName', 'Kunde')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('tourBookings.tourDate', 'Tour-Datum')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('tourBookings.numberOfParticipants', 'Teilnehmer')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('tourBookings.totalPrice', 'Gesamtpreis')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('tourBookings.paymentStatus', 'Zahlungsstatus')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('tourBookings.status', 'Status')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('tourBookings.bookedBy', 'Gebucht von')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            {t('common.actions', 'Aktionen')}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {tourBookings
+                                        .filter(booking => {
+                                            if (!tourBookingsSearchTerm) return true;
+                                            const search = tourBookingsSearchTerm.toLowerCase();
+                                            return (
+                                                booking.customerName?.toLowerCase().includes(search) ||
+                                                booking.customerEmail?.toLowerCase().includes(search) ||
+                                                booking.tour?.title?.toLowerCase().includes(search) ||
+                                                booking.customerPhone?.includes(search)
+                                            );
+                                        })
+                                        .map((booking) => (
+                                            <tr key={booking.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                                        {booking.tour?.title || '-'}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-900 dark:text-white">
+                                                        {booking.customerName}
+                                                    </div>
+                                                    {booking.customerEmail && (
+                                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                            {booking.customerEmail}
+                                                        </div>
+                                                    )}
+                                                    {booking.customerPhone && (
+                                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                            {booking.customerPhone}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-900 dark:text-white">
+                                                        {format(new Date(booking.tourDate), 'dd.MM.yyyy', { locale: de })}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-900 dark:text-white">
+                                                        {booking.numberOfParticipants}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                        {Number(booking.totalPrice).toLocaleString()} {booking.currency}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                                        booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                                        booking.paymentStatus === 'partially_paid' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                                        booking.paymentStatus === 'pending' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                    }`}>
+                                                        {t(`tourBookings.paymentStatus.${booking.paymentStatus}`, booking.paymentStatus)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                                        booking.status === 'confirmed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                                                        booking.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                        booking.status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                                        'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                                    }`}>
+                                                        {t(`tourBookings.status.${booking.status}`, booking.status)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {booking.bookedBy ? (
+                                                        <div className="text-sm text-gray-900 dark:text-white">
+                                                            {booking.bookedBy.firstName} {booking.bookedBy.lastName}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                            -
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedBookingForLink(booking);
+                                                            setIsTourReservationLinkModalOpen(true);
+                                                        }}
+                                                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-3"
+                                                    >
+                                                        <LinkIcon className="h-5 w-5" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+            
+            {/* Tour Reservation Link Modal */}
+            {selectedBookingForLink && (
+                <TourReservationLinkModal
+                    isOpen={isTourReservationLinkModalOpen}
+                    onClose={() => {
+                        setIsTourReservationLinkModalOpen(false);
+                        setSelectedBookingForLink(null);
+                    }}
+                    booking={selectedBookingForLink}
+                    onLinked={async () => {
+                        await loadTourBookings();
+                    }}
+                />
+            )}
         </div>
     );
 };
