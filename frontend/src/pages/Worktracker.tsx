@@ -343,19 +343,6 @@ const Worktracker: React.FC = () => {
         { id: 'doorPin', label: t('reservations.columns.doorPin', 'Tür-PIN'), shortLabel: t('reservations.columns.doorPin', 'Tür-PIN').substring(0, 3) },
     ], [t]);
     
-    // Tours-Spalten
-    const availableTourColumns = useMemo(() => [
-        { id: 'title', label: t('tours.columns.title', 'Titel'), shortLabel: t('tours.columns.title', 'Titel').substring(0, 4) },
-        { id: 'type', label: t('tours.columns.type', 'Typ'), shortLabel: t('tours.columns.type', 'Typ').substring(0, 3) },
-        { id: 'price', label: t('tours.columns.price', 'Preis'), shortLabel: t('tours.columns.price', 'Preis').substring(0, 3) },
-        { id: 'location', label: t('tours.columns.location', 'Ort'), shortLabel: t('tours.columns.location', 'Ort').substring(0, 3) },
-        { id: 'duration', label: t('tours.columns.duration', 'Dauer'), shortLabel: t('tours.columns.duration', 'Dauer').substring(0, 3) },
-        { id: 'branch', label: t('tours.columns.branch', 'Niederlassung'), shortLabel: t('tours.columns.branch', 'Niederlassung').substring(0, 5) },
-        { id: 'createdBy', label: t('tours.columns.createdBy', 'Erstellt von'), shortLabel: t('tours.columns.createdBy', 'Erstellt von').substring(0, 5) },
-        { id: 'isActive', label: t('tours.columns.status', 'Status'), shortLabel: t('tours.columns.status', 'Status').substring(0, 3) },
-        { id: 'actions', label: t('tours.columns.actions', 'Aktionen'), shortLabel: t('common.actions').substring(0, 3) },
-    ], [t]);
-    
     // Tours Filter-Spalten (zusätzliche Spalten nur für Filter)
     const tourFilterOnlyColumns = useMemo(() => [
         { id: 'description', label: t('tours.columns.description', 'Beschreibung'), shortLabel: t('tours.columns.description', 'Beschreibung').substring(0, 3) },
