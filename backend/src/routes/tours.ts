@@ -28,6 +28,11 @@ router.put('/:id', updateTour);
 router.put('/:id/toggle-active', toggleTourActive);
 router.get('/:id/bookings', getTourBookings);
 
+// Bild-Upload-Routen
+router.post('/:id/image', tourImageUpload.single('image'), uploadTourImage);
+router.post('/:id/gallery', tourImageUpload.single('image'), uploadTourGalleryImage);
+router.delete('/:id/gallery/:imageIndex', deleteTourGalleryImage);
+
 export default router;
 
 

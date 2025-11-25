@@ -11,10 +11,10 @@ import {
   KeyIcon,
   ShieldCheckIcon,
   ClockIcon,
-  FunnelIcon,
   ArrowsUpDownIcon
 } from '@heroicons/react/24/outline';
 import { usePermissions } from '../hooks/usePermissions.ts';
+import { useAuth } from '../hooks/useAuth.tsx';
 import { passwordManagerApi, PasswordEntry } from '../services/passwordManagerApi.ts';
 import { toast } from 'react-toastify';
 import PasswordEntrySidepane from './PasswordEntrySidepane.tsx';
@@ -24,6 +24,7 @@ import PasswordEntryAuditLogsModal from './PasswordEntryAuditLogsModal.tsx';
 const PasswordManagerTab: React.FC = () => {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
+  const { user } = useAuth();
   const [entries, setEntries] = useState<PasswordEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,6 +86,15 @@ const PasswordManagerTab: React.FC = () => {
       
       const password = viewedPasswords[entry.id];
       await navigator.clipboard.writeText(password);
+      
+      // Audit-Log für copy_password erstellen
+      try {
+        await passwordManagerApi.logPasswordCopy(entry.id);
+      } catch (logError) {
+        // Nicht kritisch, nur loggen
+        console.warn('Error logging password copy:', logError);
+      }
+      
       toast.success(t('passwordManager.passwordCopied'));
     } catch (error: any) {
       console.error('Error copying password:', error);
@@ -103,6 +113,14 @@ const PasswordManagerTab: React.FC = () => {
       
       const password = viewedPasswords[entry.id];
       await navigator.clipboard.writeText(password);
+      
+      // Audit-Log für copy_password erstellen
+      try {
+        await passwordManagerApi.logPasswordCopy(entry.id);
+      } catch (logError) {
+        // Nicht kritisch, nur loggen
+        console.warn('Error logging password copy:', logError);
+      }
       
       // URL in neuem Tab öffnen (nur wenn gültig)
       if (entry.url && isValidUrl(entry.url)) {
@@ -277,7 +295,7 @@ const PasswordManagerTab: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 text-center">
           <p className="text-gray-600 dark:text-gray-400">{t('passwordManager.loading')}</p>
         </div>
-      ) : filteredEntries.length === 0 ? (
+      ) : filteredAndSortedEntries.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 text-center">
           <p className="text-gray-600 dark:text-gray-400">
             {searchTerm ? t('passwordManager.noEntries') : t('passwordManager.noEntries')}
@@ -368,7 +386,7 @@ const PasswordManagerTab: React.FC = () => {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 ml-4 flex-wrap">
-                  {entry.createdById === parseInt(localStorage.getItem('userId') || '0') && (
+                  {user && entry.createdById === user.id && (
                     <>
                       <button
                         onClick={() => setPermissionsEntryId(entry.id)}

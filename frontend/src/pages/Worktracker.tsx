@@ -9,6 +9,10 @@ import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCi
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import CreateReservationModal from '../components/reservations/CreateReservationModal.tsx';
+import CreateTourModal from '../components/tours/CreateTourModal.tsx';
+import EditTourModal from '../components/tours/EditTourModal.tsx';
+import TourDetailsModal from '../components/tours/TourDetailsModal.tsx';
+import TourBookingsModal from '../components/tours/TourBookingsModal.tsx';
 import SendInvitationSidepane from '../components/reservations/SendInvitationSidepane.tsx';
 import SendPasscodeSidepane from '../components/reservations/SendPasscodeSidepane.tsx';
 import ReservationNotificationLogs from '../components/reservations/ReservationNotificationLogs.tsx';
@@ -295,6 +299,26 @@ const Worktracker: React.FC = () => {
         { id: 'qualityControl', label: t('tasks.columns.qualityControl'), shortLabel: t('tasks.columns.qualityControl').substring(0, 2) },
     ], [t]);
     
+    // Tours-Spalten
+    const availableTourColumns = useMemo(() => [
+        { id: 'title', label: t('tours.columns.title', 'Titel'), shortLabel: t('tours.columns.title', 'Titel') },
+        { id: 'type', label: t('tours.columns.type', 'Typ'), shortLabel: t('tours.columns.type', 'Typ') },
+        { id: 'price', label: t('tours.columns.price', 'Preis'), shortLabel: t('tours.columns.price', 'Preis') },
+        { id: 'location', label: t('tours.columns.location', 'Ort'), shortLabel: t('tours.columns.location', 'Ort') },
+        { id: 'duration', label: t('tours.columns.duration', 'Dauer'), shortLabel: t('tours.columns.duration', 'Dauer') },
+        { id: 'branch', label: t('tours.columns.branch', 'Niederlassung'), shortLabel: t('tours.columns.branch', 'Niederlassung') },
+        { id: 'createdBy', label: t('tours.columns.createdBy', 'Erstellt von'), shortLabel: t('tours.columns.createdBy', 'Erstellt von') },
+        { id: 'isActive', label: t('tours.columns.status', 'Status'), shortLabel: t('tours.columns.status', 'Status') },
+        { id: 'actions', label: t('tours.columns.actions', 'Aktionen'), shortLabel: t('common.actions').substring(0, 3) },
+    ], [t]);
+    
+    // Tours: Zusätzliche Spalten, die nur für den Filter verfügbar sind
+    const tourFilterOnlyColumns = useMemo(() => [
+        { id: 'description', label: t('tours.columns.description', 'Beschreibung'), shortLabel: t('tours.columns.description', 'Beschreibung') },
+        { id: 'maxParticipants', label: t('tours.columns.maxParticipants', 'Max. Teilnehmer'), shortLabel: t('tours.columns.maxParticipants', 'Max. Teilnehmer') },
+        { id: 'minParticipants', label: t('tours.columns.minParticipants', 'Min. Teilnehmer'), shortLabel: t('tours.columns.minParticipants', 'Min. Teilnehmer') },
+    ], [t]);
+    
     // Reservations-Spalten
     const availableReservationColumns = useMemo(() => [
         { id: 'guestName', label: t('reservations.columns.guestName', 'Gast'), shortLabel: t('reservations.columns.guestName', 'Gast').substring(0, 4) },
@@ -373,7 +397,10 @@ const Worktracker: React.FC = () => {
     const [tourSelectedFilterId, setTourSelectedFilterId] = useState<number | null>(null);
     const [isCreateTourModalOpen, setIsCreateTourModalOpen] = useState(false);
     const [isEditTourModalOpen, setIsEditTourModalOpen] = useState(false);
+    const [isTourDetailsModalOpen, setIsTourDetailsModalOpen] = useState(false);
+    const [isTourBookingsModalOpen, setIsTourBookingsModalOpen] = useState(false);
     const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+    const [selectedTourId, setSelectedTourId] = useState<number | null>(null);
     const [isCreateReservationModalOpen, setIsCreateReservationModalOpen] = useState(false);
     const [syncingReservations, setSyncingReservations] = useState(false);
     const [generatingPinForReservation, setGeneratingPinForReservation] = useState<number | null>(null);
@@ -4550,70 +4577,254 @@ const Worktracker: React.FC = () => {
                                 </div>
                             )}
                             
-                            {/* Tours Tab Content */}
-                            {activeTab === 'tours' && (
-                                <div className="space-y-4">
+                            {/* Tours Tab Content - Table View */}
+                            {activeTab === 'tours' && viewMode === 'table' && (
+                                <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead className="bg-gray-50 dark:bg-gray-800">
+                                            <tr>
+                                                {visibleColumnIds.map(columnId => {
+                                                    const column = availableTourColumns.find(col => col.id === columnId);
+                                                    if (!column) return null;
+                                                    
+                                                    return (
+                                                        <th
+                                                            key={columnId}
+                                                            scope="col"
+                                                            className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                        >
+                                                            {column.label}
+                                                        </th>
+                                                    );
+                                                })}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                            {toursLoading ? (
+                                                <tr>
+                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                                        {t('common.loading')}
+                                                    </td>
+                                                </tr>
+                                            ) : toursError ? (
+                                                <tr>
+                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-8 text-center text-red-500 dark:text-red-400">
+                                                        {toursError}
+                                                    </td>
+                                                </tr>
+                                            ) : filteredAndSortedTours.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                                        {t('tours.noTours')}
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                <>
+                                                    {filteredAndSortedTours.slice(0, displayLimit).map(tour => (
+                                                        <tr 
+                                                            key={tour.id} 
+                                                            className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                                                        >
+                                                            {visibleColumnIds.map(columnId => {
+                                                                switch (columnId) {
+                                                                    case 'title':
+                                                                        return (
+                                                                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4">
+                                                                                <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
+                                                                                    {tour.title}
+                                                                                </div>
+                                                                            </td>
+                                                                        );
+                                                                    case 'type':
+                                                                        return (
+                                                                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                    {tour.type === TourType.OWN ? t('tours.typeOwn') : t('tours.typeExternal')}
+                                                                                </div>
+                                                                            </td>
+                                                                        );
+                                                                    case 'price':
+                                                                        return (
+                                                                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                    {tour.price ? `${Number(tour.price).toLocaleString()} ${tour.currency || 'COP'}` : '-'}
+                                                                                </div>
+                                                                            </td>
+                                                                        );
+                                                                    case 'location':
+                                                                        return (
+                                                                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                    {tour.location || '-'}
+                                                                                </div>
+                                                                            </td>
+                                                                        );
+                                                                    case 'duration':
+                                                                        return (
+                                                                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                    {tour.duration ? `${tour.duration} ${t('common.hours', 'h')}` : '-'}
+                                                                                </div>
+                                                                            </td>
+                                                                        );
+                                                                    case 'branch':
+                                                                        return (
+                                                                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                    {tour.branch?.name || '-'}
+                                                                                </div>
+                                                                            </td>
+                                                                        );
+                                                                    case 'createdBy':
+                                                                        return (
+                                                                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                    {tour.createdBy ? `${tour.createdBy.firstName} ${tour.createdBy.lastName}` : '-'}
+                                                                                </div>
+                                                                            </td>
+                                                                        );
+                                                                    case 'isActive':
+                                                                        return (
+                                                                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                <span className={`px-2 py-1 text-xs rounded ${
+                                                                                    tour.isActive 
+                                                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                                                                }`}>
+                                                                                    {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
+                                                                                </span>
+                                                                            </td>
+                                                                        );
+                                                                    case 'actions':
+                                                                        return (
+                                                                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                                <div className="flex space-x-2 action-buttons">
+                                                                                    <div className="relative group">
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                setSelectedTourId(tour.id);
+                                                                                                setIsTourDetailsModalOpen(true);
+                                                                                            }}
+                                                                                            className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                                        >
+                                                                                            <InformationCircleIcon className="h-4 w-4" />
+                                                                                        </button>
+                                                                                        <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                            {t('common.viewDetails', 'Details anzeigen')}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    {hasPermission('tour_edit', 'write', 'button') && (
+                                                                                        <div className="relative group">
+                                                                                            <button
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    setSelectedTour(tour);
+                                                                                                    setIsEditTourModalOpen(true);
+                                                                                                }}
+                                                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                            >
+                                                                                                <PencilIcon className="h-4 w-4" />
+                                                                                            </button>
+                                                                                            <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                {t('tours.edit', 'Bearbeiten')}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </td>
+                                                                        );
+                                                                    default:
+                                                                        return null;
+                                                                }
+                                                            })}
+                                                        </tr>
+                                                    ))}
+                                                </>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            
+                            {/* Tours Tab Content - Card View */}
+                            {activeTab === 'tours' && viewMode === 'cards' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {toursLoading ? (
-                                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                        <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
                                             {t('common.loading')}
                                         </div>
                                     ) : toursError ? (
-                                        <div className="text-center py-8 text-red-500 dark:text-red-400">
+                                        <div className="col-span-full text-center py-8 text-red-500 dark:text-red-400">
                                             {toursError}
                                         </div>
-                                    ) : tours.length === 0 ? (
-                                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    ) : filteredAndSortedTours.length === 0 ? (
+                                        <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
                                             {t('tours.noTours')}
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {tours
-                                                .filter(tour => {
-                                                    if (!tourSearchTerm) return true;
-                                                    const search = tourSearchTerm.toLowerCase();
-                                                    return (
-                                                        tour.title?.toLowerCase().includes(search) ||
-                                                        tour.description?.toLowerCase().includes(search) ||
-                                                        tour.location?.toLowerCase().includes(search)
-                                                    );
-                                                })
-                                                .map((tour) => (
-                                                    <div
-                                                        key={tour.id}
-                                                        className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4"
-                                                    >
-                                                        <div className="flex items-start justify-between mb-2">
-                                                            <h4 className="text-lg font-semibold dark:text-white">{tour.title}</h4>
-                                                            <span className={`px-2 py-1 text-xs rounded ${
-                                                                tour.isActive 
-                                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                                                            }`}>
-                                                                {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
-                                                            </span>
-                                                        </div>
-                                                        
-                                                        {tour.description && (
-                                                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
-                                                                {tour.description}
-                                                            </p>
-                                                        )}
+                                        filteredAndSortedTours.slice(0, displayLimit).map((tour) => (
+                                            <div
+                                                key={tour.id}
+                                                className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 hover:shadow-md transition-shadow"
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <h4 className="text-lg font-semibold dark:text-white">{tour.title}</h4>
+                                                    <span className={`px-2 py-1 text-xs rounded ${
+                                                        tour.isActive 
+                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                                    }`}>
+                                                        {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
+                                                    </span>
+                                                </div>
+                                                
+                                                {tour.description && (
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                                                        {tour.description}
+                                                    </p>
+                                                )}
 
-                                                        <div className="flex items-center justify-between mt-4">
-                                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                                <span className="font-medium">{t('tours.type')}:</span>{' '}
-                                                                {tour.type === TourType.OWN ? t('tours.typeOwn') : t('tours.typeExternal')}
-                                                            </div>
-                                                            {tour.price && (
-                                                                <div className="text-sm font-semibold dark:text-white">
-                                                                    {Number(tour.price).toLocaleString()} {tour.currency || 'COP'}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                <div className="flex items-center justify-between mt-4">
+                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                        <span className="font-medium">{t('tours.type')}:</span>{' '}
+                                                        {tour.type === TourType.OWN ? t('tours.typeOwn') : t('tours.typeExternal')}
                                                     </div>
-                                                ))}
-                                        </div>
+                                                    {tour.price && (
+                                                        <div className="text-sm font-semibold dark:text-white">
+                                                            {Number(tour.price).toLocaleString()} {tour.currency || 'COP'}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                {hasPermission('tour_edit', 'write', 'button') && (
+                                                    <div className="mt-4 flex justify-end">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedTour(tour);
+                                                                setIsEditTourModalOpen(true);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+                                                        >
+                                                            {t('tours.edit', 'Bearbeiten')}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
                                     )}
+                                </div>
+                            )}
+                            
+                            {/* "Mehr anzeigen" Button - Desktop - Tours */}
+                            {activeTab === 'tours' && filteredAndSortedTours.length > displayLimit && (
+                                <div className="mt-4 flex justify-center">
+                                    <button
+                                        className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
+                                        onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                                    >
+                                        {t('common.showMore')} ({filteredAndSortedTours.length - displayLimit} {t('common.remaining')})
+                                    </button>
                                 </div>
                             )}
                             
@@ -4706,6 +4917,63 @@ const Worktracker: React.FC = () => {
                         // Lade Reservations neu, um den aktualisierten Status zu erhalten
                         await loadReservations();
                     }}
+                />
+            )}
+            
+            {/* Create Tour Modal */}
+            <CreateTourModal
+                isOpen={isCreateTourModalOpen}
+                onClose={() => setIsCreateTourModalOpen(false)}
+                onTourCreated={async (newTour) => {
+                    setTours(prev => [newTour, ...prev]);
+                    setIsCreateTourModalOpen(false);
+                    await loadTours();
+                }}
+            />
+            
+            {/* Edit Tour Modal */}
+            {selectedTour && (
+                <EditTourModal
+                    isOpen={isEditTourModalOpen}
+                    onClose={() => {
+                        setIsEditTourModalOpen(false);
+                        setSelectedTour(null);
+                    }}
+                    onTourUpdated={async (updatedTour) => {
+                        setTours(prev => prev.map(t => t.id === updatedTour.id ? updatedTour : t));
+                        setIsEditTourModalOpen(false);
+                        setSelectedTour(null);
+                        await loadTours();
+                    }}
+                    tour={selectedTour}
+                />
+            )}
+            
+            {/* Tour Details Modal */}
+            {selectedTourId && (
+                <TourDetailsModal
+                    isOpen={isTourDetailsModalOpen}
+                    onClose={() => {
+                        setIsTourDetailsModalOpen(false);
+                        setSelectedTourId(null);
+                    }}
+                    tourId={selectedTourId}
+                    onTourUpdated={async (updatedTour) => {
+                        setTours(prev => prev.map(t => t.id === updatedTour.id ? updatedTour : t));
+                        await loadTours();
+                    }}
+                />
+            )}
+            
+            {/* Tour Bookings Modal */}
+            {selectedTourId && (
+                <TourBookingsModal
+                    isOpen={isTourBookingsModalOpen}
+                    onClose={() => {
+                        setIsTourBookingsModalOpen(false);
+                        setSelectedTourId(null);
+                    }}
+                    tourId={selectedTourId}
                 />
             )}
         </div>

@@ -189,6 +189,13 @@ export const passwordManagerApi = {
    */
   async updatePermissions(id: number, data: UpdatePermissionsData): Promise<void> {
     await axiosInstance.put(API_ENDPOINTS.PASSWORD_MANAGER.PERMISSIONS(id), data);
+  },
+
+  /**
+   * Passwort kopiert - Erstellt copy_password Audit-Log
+   */
+  async logPasswordCopy(id: number): Promise<void> {
+    await axiosInstance.post(API_ENDPOINTS.PASSWORD_MANAGER.COPY_PASSWORD(id));
   }
 };
 

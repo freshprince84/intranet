@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { checkPermission } from '../middleware/permissionMiddleware';
 import { passwordManagerRateLimiter } from '../middleware/rateLimiter';
+import { organizationMiddleware } from '../middleware/organization';
 import * as passwordManagerController from '../controllers/passwordManagerController';
 
 const router = express.Router();
@@ -16,14 +17,17 @@ router.use((req, res, next) => {
     next();
 });
 
-// Alle Routen benötigen Authentifizierung
-router.use(authenticateToken);
-
-// Rate-Limiting für alle Passwort-Manager-Routen
-router.use(passwordManagerRateLimiter);
-
 // Öffentliche Route (keine Auth erforderlich) - Passwort generieren
 router.post('/generate-password', passwordManagerController.generatePassword);
+
+// Alle anderen Routen benötigen Authentifizierung
+router.use(authenticateToken);
+
+// Organization-Middleware für organizationId
+router.use(organizationMiddleware);
+
+// Rate-Limiting für alle authentifizierten Passwort-Manager-Routen
+router.use(passwordManagerRateLimiter);
 
 // Alle Einträge abrufen
 router.get(
@@ -44,6 +48,13 @@ router.get(
     '/:id/password',
     checkPermission('password_manager', 'read', 'page'),
     passwordManagerController.getPasswordEntryPassword
+);
+
+// Passwort kopiert - Audit-Log erstellen
+router.post(
+    '/:id/copy-password',
+    checkPermission('password_manager', 'read', 'page'),
+    passwordManagerController.logPasswordCopy
 );
 
 // Neuen Eintrag erstellen

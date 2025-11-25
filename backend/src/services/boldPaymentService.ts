@@ -253,18 +253,34 @@ export class BoldPaymentService {
       const timestamp = Date.now();
       const reference = `RES-${reservation.id}-${timestamp}`.substring(0, 60);
 
+      // 5% Aufschlag für Kartenzahlung hinzufügen
+      const CARD_PAYMENT_SURCHARGE_PERCENT = 0.05; // 5%
+      const baseAmount = amount;
+      const surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT * 100) / 100; // Auf 2 Dezimalstellen runden
+      const totalAmount = baseAmount + surcharge;
+
+      // Beschreibung mit Aufschlagsausweis
+      const surchargeDescription = `${paymentDescription} (inkl. 5% Kartenzahlungsaufschlag)`;
+      const finalDescription = surchargeDescription.substring(0, 100);
+
       // Payload gemäß API Link de pagos Dokumentation
       const payload: any = {
         amount_type: 'CLOSE', // Geschlossener Betrag (vom Merchant festgelegt)
         amount: {
           currency: currency,
-          total_amount: amount,
-          subtotal: amount, // TODO: Berechnung mit Steuern wenn nötig
-          taxes: [], // TODO: Steuern hinzufügen wenn nötig
+          total_amount: totalAmount, // Gesamtbetrag mit 5% Aufschlag
+          subtotal: baseAmount, // Basispreis ohne Aufschlag
+          taxes: [
+            {
+              name: 'Kartenzahlungsaufschlag',
+              amount: surcharge,
+              rate: 5.0 // 5%
+            }
+          ],
           tip_amount: 0
         },
         reference: reference,
-        description: paymentDescription,
+        description: finalDescription, // Mit Aufschlagsausweis
         // payment_methods: optional - Array von Methoden (z.B. ["PSE", "CREDIT_CARD"])
       };
 

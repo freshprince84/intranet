@@ -370,6 +370,51 @@ export const getPasswordEntryPassword = async (req: PasswordManagerRequest, res:
 };
 
 /**
+ * Passwort kopiert - Erstellt copy_password Audit-Log
+ */
+export const logPasswordCopy = async (req: PasswordManagerRequest, res: Response) => {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        const userId = parseInt(req.userId, 10);
+        const roleId = req.roleId ? parseInt(req.roleId, 10) : undefined;
+        const entryId = parseInt(req.params.id, 10);
+
+        // Prüfe Berechtigung
+        const hasPermission = await checkPasswordEntryPermission(userId, roleId, entryId, 'view');
+        if (!hasPermission) {
+            return res.status(403).json({ message: 'Keine Berechtigung für diesen Eintrag' });
+        }
+
+        // Prüfe ob Eintrag existiert
+        const entry = await prisma.passwordEntry.findUnique({
+            where: { id: entryId },
+            select: { id: true }
+        });
+
+        if (!entry) {
+            return res.status(404).json({ message: 'Eintrag nicht gefunden' });
+        }
+
+        // Audit-Log erstellen
+        await createAuditLog(
+            entryId,
+            userId,
+            'copy_password',
+            undefined,
+            req.ip,
+            req.get('user-agent')
+        );
+
+        res.json({ message: 'Audit-Log erstellt' });
+    } catch (error) {
+        console.error('Error logging password copy:', error);
+        res.status(500).json({ message: 'Fehler beim Erstellen des Audit-Logs' });
+    }
+};
+
+/**
  * Neuen Passwort-Eintrag erstellen
  */
 export const createPasswordEntry = async (req: PasswordManagerRequest, res: Response) => {
@@ -656,8 +701,20 @@ export const getPasswordEntryAuditLogs = async (req: PasswordManagerRequest, res
 
         // Nur Creator oder Admin können Audit-Logs sehen
         if (entry.createdById !== userId) {
-            // TODO: Prüfe ob User Admin ist
-            return res.status(403).json({ message: 'Keine Berechtigung für Audit-Logs' });
+            // Prüfe ob User Admin ist
+            if (roleId) {
+                const role = await prisma.role.findUnique({
+                    where: { id: roleId },
+                    select: { name: true }
+                });
+                if (role && role.name.toLowerCase() === 'admin') {
+                    // Admin darf Audit-Logs sehen
+                } else {
+                    return res.status(403).json({ message: 'Keine Berechtigung für Audit-Logs' });
+                }
+            } else {
+                return res.status(403).json({ message: 'Keine Berechtigung für Audit-Logs' });
+            }
         }
 
         const auditLogs = await prisma.passwordEntryAuditLog.findMany({

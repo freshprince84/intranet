@@ -2,7 +2,7 @@
 
 ## Übersicht
 **Startdatum:** 2025-01-22  
-**Status:** ⏳ Geplant (noch nicht gestartet)  
+**Status:** ✅ Phase 1-3 Abgeschlossen, Phase 4-5 Geplant  
 **Hauptplan:** [PASSWORTMANAGER_IMPLEMENTATION_VOLLSTAENDIG.md](../implementation_plans/PASSWORTMANAGER_IMPLEMENTATION_VOLLSTAENDIG.md)
 
 ---
@@ -56,14 +56,16 @@
 
 #### 2.1 Controller erstellen
 - [x] `backend/src/controllers/passwordManagerController.ts` erstellen
-- [ ] `getPasswordEntries()` - Alle Einträge abrufen (mit Berechtigungsprüfung)
-- [ ] `getPasswordEntryById()` - Einzelnen Eintrag abrufen
-- [ ] `getPasswordEntryPassword()` - Passwort entschlüsselt abrufen (mit Audit-Log)
-- [ ] `createPasswordEntry()` - Neuen Eintrag erstellen
-- [ ] `updatePasswordEntry()` - Eintrag aktualisieren
-- [ ] `deletePasswordEntry()` - Eintrag löschen
-- [ ] `generatePassword()` - Passwort generieren
-- [ ] `getAuditLogs()` - Audit-Logs abrufen
+- [x] `getAllPasswordEntries()` - Alle Einträge abrufen (mit Berechtigungsprüfung)
+- [x] `getPasswordEntry()` - Einzelnen Eintrag abrufen
+- [x] `getPasswordEntryPassword()` - Passwort entschlüsselt abrufen (mit Audit-Log)
+- [x] `createPasswordEntry()` - Neuen Eintrag erstellen
+- [x] `updatePasswordEntry()` - Eintrag aktualisieren
+- [x] `deletePasswordEntry()` - Eintrag löschen
+- [x] `generatePassword()` - Passwort generieren
+- [x] `getPasswordEntryAuditLogs()` - Audit-Logs abrufen
+- [x] `getPasswordEntryPermissions()` - Berechtigungen abrufen
+- [x] `updatePasswordEntryPermissions()` - Berechtigungen aktualisieren
 
 #### 2.2 Verschlüsselung implementieren
 - [ ] `encryptPassword()` - Passwort verschlüsseln (AES-256-GCM)
@@ -85,29 +87,35 @@
 
 #### 2.5 Routes erstellen
 - [x] `backend/src/routes/passwordManager.ts` erstellen
-- [ ] Route: `GET /api/password-manager/entries` - Alle Einträge
-- [ ] Route: `GET /api/password-manager/entries/:id` - Einzelner Eintrag
-- [ ] Route: `GET /api/password-manager/entries/:id/password` - Passwort abrufen
-- [ ] Route: `POST /api/password-manager/entries` - Eintrag erstellen
-- [ ] Route: `PUT /api/password-manager/entries/:id` - Eintrag aktualisieren
-- [ ] Route: `DELETE /api/password-manager/entries/:id` - Eintrag löschen
-- [ ] Route: `POST /api/password-manager/generate-password` - Passwort generieren
-- [ ] Route: `GET /api/password-manager/audit-logs` - Audit-Logs abrufen
+- [x] Route: `GET /api/password-manager` - Alle Einträge
+- [x] Route: `GET /api/password-manager/:id` - Einzelner Eintrag
+- [x] Route: `GET /api/password-manager/:id/password` - Passwort abrufen
+- [x] Route: `POST /api/password-manager` - Eintrag erstellen
+- [x] Route: `PUT /api/password-manager/:id` - Eintrag aktualisieren
+- [x] Route: `DELETE /api/password-manager/:id` - Eintrag löschen
+- [x] Route: `POST /api/password-manager/generate-password` - Passwort generieren (öffentlich)
+- [x] Route: `GET /api/password-manager/:id/audit-logs` - Audit-Logs abrufen
+- [x] Route: `GET /api/password-manager/:id/permissions` - Berechtigungen abrufen
+- [x] Route: `PUT /api/password-manager/:id/permissions` - Berechtigungen aktualisieren
+- [x] Route: `POST /api/password-manager/:id/copy-password` - copy_password Audit-Log erstellen
 - [x] Routes in `backend/src/app.ts` registriert
 - [x] `authenticateToken` Middleware hinzugefügt
 - [x] `checkPermission` Middleware hinzugefügt
+- [x] `passwordManagerRateLimiter` Middleware hinzugefügt (nur für authentifizierte Routen)
 
 #### 2.6 Rate-Limiting implementieren
-- [ ] Rate-Limiting-Middleware erstellen (später, nicht kritisch für Phase 2)
-- [ ] Max. 10 Anfragen pro Minute pro User
-- [ ] Rate-Limiting für Passwort-Manager-Endpunkte aktivieren
-- [ ] Fehlerbehandlung für Rate-Limit-Überschreitung
+- [x] Rate-Limiting-Middleware erstellt (`backend/src/middleware/rateLimiter.ts`)
+- [x] Max. 10 Anfragen pro Minute pro User
+- [x] Rate-Limiting für Passwort-Manager-Endpunkte aktiviert (nur authentifizierte Routen)
+- [x] Öffentliche Route `/generate-password` ohne Rate-Limiting
+- [x] Fehlerbehandlung für Rate-Limit-Überschreitung (HTTP 429)
 
 #### 2.7 URL-Validierung implementieren
-- [ ] URL-Validierung für Passwort-Manager-URLs
-- [ ] Schutz vor JavaScript-URLs (javascript:, data:, etc.)
-- [ ] SSRF-Schutz implementieren
-- [ ] Nur http:// und https:// erlauben
+- [x] URL-Validierung für Passwort-Manager-URLs (`validatePasswordManagerUrl()`)
+- [x] Schutz vor JavaScript-URLs (javascript:, data:, file:)
+- [x] SSRF-Schutz implementiert
+- [x] Nur http:// und https:// erlauben
+- [x] Validierung in `createPasswordEntry()` und `updatePasswordEntry()`
 
 #### 2.8 Seed-File aktualisieren
 - [x] Berechtigungen in `backend/prisma/seed.ts` hinzugefügt
@@ -143,6 +151,9 @@
 - [x] `delete()` - API-Funktion
 - [x] `generatePassword()` - API-Funktion
 - [x] `getAuditLogs()` - API-Funktion
+- [x] `logPasswordCopy()` - API-Funktion
+- [x] `getPermissions()` - API-Funktion
+- [x] `updatePermissions()` - API-Funktion
 - [x] Fehlerbehandlung implementiert
 
 #### 3.3 Sidepane-Komponente erstellen
@@ -162,8 +173,10 @@
 - [x] `frontend/src/components/PasswordManagerTab.tsx` erstellt
 - [x] Liste aller Einträge anzeigen
 - [x] Suchfunktion implementiert
-- [ ] Filter-Funktion (optional, später)
-- [ ] Sortierung implementiert (optional, später)
+- [x] Sortierung implementiert (nach Titel, Erstellungsdatum, Änderungsdatum, auf-/absteigend)
+- [x] Berechtigungen-Button (nur für Creator)
+- [x] Audit-Logs-Button (nur für Creator)
+- [x] `useAuth()` Hook für User-ID-Zugriff (korrigiert von localStorage)
 - [x] Berechtigungsprüfung mit `usePermissions()` Hook
 - [x] "Erstellen"-Button (mit Berechtigungsprüfung)
 - [x] "Bearbeiten"-Button (mit Berechtigungsprüfung)
@@ -194,8 +207,26 @@
 - [x] Toast-Benachrichtigungen
 - [x] Audit-Log wird automatisch erstellt (Backend)
 
+#### 3.7 Berechtigungen-Modal
+- [x] `frontend/src/components/PasswordEntryPermissionsModal.tsx` erstellt
+- [x] Rollen-Berechtigungen verwalten
+- [x] User-Berechtigungen verwalten
+- [x] API-Endpunkte korrekt verwendet (`API_ENDPOINTS.ROLES.BASE`, `API_ENDPOINTS.USERS.BASE`)
+
+#### 3.8 Audit-Logs-Modal
+- [x] `frontend/src/components/PasswordEntryAuditLogsModal.tsx` erstellt
+- [x] Audit-Logs anzeigen mit Details
+- [x] Formatierte Datumsanzeige
+- [x] Action-Labels übersetzt
+
 **Notizen:**
-- 
+- Berechtigungen-Modal erstellt (`PasswordEntryPermissionsModal.tsx`)
+- Audit-Logs-Modal erstellt (`PasswordEntryAuditLogsModal.tsx`)
+- Sortierung implementiert mit `useMemo` für Performance
+- User-ID-Zugriff korrigiert: `useAuth()` statt `localStorage`
+- API-Endpunkte für Rollen/User korrigiert: `API_ENDPOINTS.ROLES.BASE` und `API_ENDPOINTS.USERS.BASE`
+- Rate-Limiting korrigiert: Öffentliche Route `/generate-password` ohne Rate-Limiting
+- Admin-Prüfung für Audit-Logs implementiert: Admins können Audit-Logs aller Einträge sehen
 
 ---
 

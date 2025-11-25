@@ -33,16 +33,17 @@ const SendPasscodeSidepane: React.FC<SendPasscodeSidepaneProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [previewMessage, setPreviewMessage] = useState('');
 
-  // Standard-Nachricht generieren
+  // Standard-Nachricht generieren (entspricht Meta Business Template: reservation_checkin_completed)
+  // Template verwendet 2 Variablen: {{1}} = Begrüßung, {{2}} = Kompletter Text mit Zimmerinfo und PIN
+  // Für die Vorschau kombinieren wir beide zu einem vollständigen Text
   const generateStandardMessage = () => {
-    return `Hola {{guestName}},
+    return `Bienvenido,
 
-¡Bienvenido a La Familia Hostel!
+Hola {{guestName}},
 
-Tu código de acceso TTLock:
-{{passcode}}
+¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: {{roomNumber}} - Descripción: {{roomDescription}} Acceso: - PIN de la puerta: {{passcode}} - App: TTLock
 
-¡Te esperamos!`;
+¡Te deseamos una estancia agradable!`;
   };
 
   // Initialisiere Standard-Nachricht beim Öffnen
@@ -57,13 +58,17 @@ Tu código de acceso TTLock:
     if (customMessage) {
       // Verwende bestehenden Passcode oder Platzhalter
       const passcode = reservation.doorPin || reservation.ttlLockPassword || '[Passcode wird generiert]';
+      const roomNumber = reservation.roomNumber || '[Zimmernummer]';
+      const roomDescription = reservation.roomDescription || '[Zimmerbeschreibung]';
       
       let preview = customMessage
         .replace(/\{\{guestName\}\}/g, reservation.guestName)
-        .replace(/\{\{passcode\}\}/g, passcode);
+        .replace(/\{\{passcode\}\}/g, passcode)
+        .replace(/\{\{roomNumber\}\}/g, roomNumber)
+        .replace(/\{\{roomDescription\}\}/g, roomDescription);
       setPreviewMessage(preview);
     }
-  }, [customMessage, reservation.guestName, reservation.doorPin, reservation.ttlLockPassword]);
+  }, [customMessage, reservation.guestName, reservation.doorPin, reservation.ttlLockPassword, reservation.roomNumber, reservation.roomDescription]);
 
   // Responsive-Verhalten
   useEffect(() => {
@@ -297,7 +302,7 @@ Tu código de acceso TTLock:
                   placeholder={generateStandardMessage()}
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {t('reservations.sendPasscode.messageVariables', 'Verfügbare Variablen: {{guestName}}, {{passcode}}')}
+                  {t('reservations.sendPasscode.messageVariables', 'Verfügbare Variablen: {{guestName}}, {{passcode}}, {{roomNumber}}, {{roomDescription}}')}
                 </p>
               </div>
 

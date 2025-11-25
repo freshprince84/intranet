@@ -33,24 +33,21 @@ const SendInvitationSidepane: React.FC<SendInvitationSidepaneProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [previewMessage, setPreviewMessage] = useState('');
 
-  // Standard-Nachricht generieren
+  // Standard-Nachricht generieren (entspricht Meta Business Template: reservation_checkin_invitation)
   const generateStandardMessage = () => {
-    const amount = reservation.amount || 0;
-    const currency = reservation.currency || 'COP';
     return `Hola {{guestName}},
 
-¡Bienvenido a La Familia Hostel!
+¡Nos complace darte la bienvenida a La Familia Hostel!
 
-Tu reserva ha sido confirmada.
-Cargos: ${amount} ${currency}
-
-Puedes realizar el check-in en línea ahora:
+Como llegarás después de las 22:00, puedes realizar el check-in en línea ahora:
 {{checkInLink}}
 
-Por favor, realiza el pago:
+Por favor, realiza el pago por adelantado:
 {{paymentLink}}
 
-¡Te esperamos!`;
+Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago. ¡Gracias!
+
+¡Te esperamos mañana!`;
   };
 
   // Initialisiere Standard-Nachricht beim Öffnen

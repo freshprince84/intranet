@@ -38,35 +38,38 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
 
 ---
 
-## Template 2: Check-in-Bestätigung
+## Template 2: Check-in-Bestätigung (TTLock-Code)
 
-**Name**: `reservation_checkin_confirmation`  
+**Name**: `reservation_checkin_completed`  
 **Category**: `UTILITY`  
-**Language**: `Spanish (es)` ⚠️ **WICHTIG: Spanisch, da Text auf Spanisch ist!**
+**Language**: `Spanish (es)` ⚠️ **WICHTIG: Spanisch, da Text auf Spanisch ist!**  
+**Hinweis**: ⚠️ **WICHTIG: Gleicher Name für ES und EN!** (kein `_` am Ende für Englisch)
 
-**Body-Text (kopieren):**
+**Body-Text (kopieren - Spanisch):**
 ```
-Hola {{1}},
+Bienvenido,
 
-¡Tu check-in se ha completado exitosamente!
+{{1}}
 
-Información de tu habitación:
-- Habitación: {{2}}
-- Descripción: {{3}}
-
-Acceso:
-- PIN de la puerta: {{4}}
-- App: {{5}}
+{{2}}
 
 ¡Te deseamos una estancia agradable!
 ```
 
-**Variablen**: `{{1}}`, `{{2}}`, `{{3}}`, `{{4}}`, `{{5}}`
-- `{{1}}` = Gast-Name (z.B. "Juan Pérez")
-- `{{2}}` = Zimmernummer (z.B. "101")
-- `{{3}}` = Zimmerbeschreibung (z.B. "Zimmer mit Balkon")
-- `{{4}}` = Tür-PIN (z.B. "1234")
-- `{{5}}` = App-Name (z.B. "TTLock")
+**Variablen**: `{{1}}`, `{{2}}`
+- `{{1}}` = Begrüßung mit Gast-Name (z.B. "Hola Juan,")
+- `{{2}}` = Kompletter Text mit Check-in-Bestätigung, Zimmerinfo und PIN (z.B. "¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: 101 - Descripción: Zimmer mit Balkon Acceso: - PIN de la puerta: 1234 - App: TTLock")
+
+**Beispiel (Spanisch):**
+```
+Bienvenido,
+
+Hola Juan,
+
+¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: 101 - Descripción: Zimmer mit Balkon Acceso: - PIN de la puerta: 1234 - App: TTLock
+
+¡Te deseamos una estancia agradable!
+```
 
 ---
 
@@ -228,35 +231,37 @@ We look forward to seeing you tomorrow!
 
 ---
 
-## Template 2 EN: Check-in-Bestätigung (English)
+## Template 2 EN: Check-in-Bestätigung (TTLock-Code) (English)
 
-**Name**: `reservation_checkin_confirmation_en`  
+**Name**: `reservation_checkin_completed` ⚠️ **WICHTIG: Gleicher Name wie Spanisch!**  
 **Category**: `UTILITY`  
 **Language**: `English (en)` ⚠️ **WICHTIG: Englisch!**
 
-**Body-Text (kopieren):**
+**Body-Text (kopieren - Englisch):**
 ```
-Hello {{1}},
+Welcome,
 
-Your check-in has been completed successfully!
+{{1}}
 
-Room information:
-- Room: {{2}}
-- Description: {{3}}
-
-Access:
-- Door PIN: {{4}}
-- App: {{5}}
+{{2}}
 
 We wish you a pleasant stay!
 ```
 
-**Variablen**: `{{1}}`, `{{2}}`, `{{3}}`, `{{4}}`, `{{5}}`
-- `{{1}}` = Guest Name (z.B. "John Smith")
-- `{{2}}` = Room Number (z.B. "101")
-- `{{3}}` = Room Description (z.B. "Room with balcony")
-- `{{4}}` = Door PIN (z.B. "1234")
-- `{{5}}` = App Name (z.B. "TTLock")
+**Variablen**: `{{1}}`, `{{2}}`
+- `{{1}}` = Begrüßung mit Gast-Name (z.B. "Hello [Gast-Name],")
+- `{{2}}` = Kompletter Text mit Check-in-Bestätigung, Zimmerinfo und PIN (z.B. "Your check-in has been completed successfully! Your room information: - Room: [Zimmernummer] - Description: [Zimmerbeschreibung] Access: - Door PIN: [PIN]")
+
+**Beispiel (Englisch):**
+```
+Welcome,
+
+Hello [Gast-Name],
+
+Your check-in has been completed successfully! Your room information: - Room: [Zimmernummer] - Description: [Zimmerbeschreibung] Access: - Door PIN: [PIN]
+
+We wish you a pleasant stay!
+```
 
 ---
 

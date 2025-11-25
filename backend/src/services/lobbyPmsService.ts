@@ -590,8 +590,26 @@ export class LobbyPmsService {
     const checkOutDate = this.parseLocalDate(checkOutDateString);
     
     // Zimmer-Daten aus assigned_room-Objekt
-    const roomNumber = lobbyReservation.assigned_room?.name || lobbyReservation.room_number || null;
-    const roomDescription = lobbyReservation.assigned_room?.type || lobbyReservation.room_description || lobbyReservation.category?.name || null;
+    // WICHTIG: Für Dorms (compartida) enthält assigned_room.name nur die Bettnummer,
+    // der Zimmername steht in category.name. Für Privatzimmer (privada) steht der
+    // Zimmername direkt in assigned_room.name.
+    const assignedRoom = lobbyReservation.assigned_room;
+    const isDorm = assignedRoom?.type === 'compartida';
+    
+    let roomNumber: string | null = null;
+    let roomDescription: string | null = null;
+    
+    if (isDorm) {
+      // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
+      const dormName = lobbyReservation.category?.name || null;
+      const bedNumber = assignedRoom?.name || null;
+      roomNumber = bedNumber; // Bettnummer (z.B. "Cama 5")
+      roomDescription = dormName; // Zimmername (z.B. "La tia artista")
+    } else {
+      // Für Privatzimmer: assigned_room.name = Zimmername
+      roomNumber = assignedRoom?.name || lobbyReservation.room_number || null;
+      roomDescription = assignedRoom?.type || lobbyReservation.room_description || lobbyReservation.category?.name || null;
+    }
     
     // Status: API gibt checked_in/checked_out Booleans zurück
     let status: ReservationStatus = ReservationStatus.confirmed;
