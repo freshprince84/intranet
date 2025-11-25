@@ -10,11 +10,10 @@ import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { toast } from 'react-toastify';
 import { useTheme } from '../contexts/ThemeContext.tsx';
-import { Cog6ToothIcon, UserCircleIcon, ComputerDesktopIcon, DocumentArrowUpIcon, CheckIcon, ArrowPathIcon, AcademicCapIcon, MapIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, UserCircleIcon, ComputerDesktopIcon, DocumentArrowUpIcon, CheckIcon, ArrowPathIcon, AcademicCapIcon, KeyIcon } from '@heroicons/react/24/outline';
 import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
 import MonthlyReportSettingsModal from '../components/MonthlyReportSettingsModal.tsx';
 import DatabaseManagement from '../components/DatabaseManagement.tsx';
-import ToursManagementTab from '../components/ToursManagementTab.tsx';
 import PasswordManagerTab from '../components/PasswordManagerTab.tsx';
 import { API_URL } from '../config/api.ts';
 import { useOnboarding } from '../contexts/OnboardingContext.tsx';
@@ -38,7 +37,7 @@ const Settings: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isSaving, setIsSaving] = useState(false);
     // Tab-Zustand für Navigation zwischen den Einstellungen
-    const [activeTab, setActiveTab] = useState<'personal' | 'notifications' | 'system' | 'tours' | 'password_manager'>('personal');
+    const [activeTab, setActiveTab] = useState<'personal' | 'notifications' | 'system' | 'password_manager'>('personal');
     
     // Monatsabrechnungs-Einstellungen
     const [monthlyReportSettings, setMonthlyReportSettings] = useState<MonthlyReportSettings>({
@@ -224,7 +223,7 @@ const Settings: React.FC = () => {
     };
 
     // Tab-Wechsel Handler - Fehler beim Wechsel zurücksetzen
-    const handleTabChange = (tab: 'personal' | 'notifications' | 'system' | 'tours') => {
+    const handleTabChange = (tab: 'personal' | 'notifications' | 'system' | 'password_manager') => {
         setActiveTab(tab);
         setError(null);
     };
@@ -282,14 +281,14 @@ const Settings: React.FC = () => {
                         </button>
                         <button
                             className={`${
-                                activeTab === 'tours'
+                                activeTab === 'password_manager'
                                 ? 'border-blue-500 text-blue-600'
                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
-                            onClick={() => handleTabChange('tours')}
+                            onClick={() => handleTabChange('password_manager')}
                         >
-                            <MapIcon className="h-4 w-4 mr-2" />
-                            {t('settings.tours')}
+                            <KeyIcon className="h-4 w-4 mr-2" />
+                            {t('settings.passwordManager')}
                         </button>
                     </nav>
                 </div>
@@ -563,11 +562,6 @@ const Settings: React.FC = () => {
                     </div>
                 )}
 
-                {activeTab === 'tours' && (
-                    <div className="space-y-4">
-                        <ToursManagementTab />
-                    </div>
-                )}
                 {activeTab === 'password_manager' && (
                     <div className="space-y-4">
                         <PasswordManagerTab />

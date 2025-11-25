@@ -2740,7 +2740,32 @@
     "passwordStrengthWeak": "Débil",
     "passwordStrengthMedium": "Medio",
     "passwordStrengthStrong": "Fuerte",
-    "passwordStrengthVeryStrong": "Muy Fuerte"
+    "passwordStrengthVeryStrong": "Muy Fuerte",
+    "managePermissions": "Gestionar Permisos",
+    "rolePermissions": "Permisos de Rol",
+    "userPermissions": "Permisos de Usuario",
+    "selectRole": "Seleccionar Rol",
+    "selectUser": "Seleccionar Usuario",
+    "canView": "Ver",
+    "canEdit": "Editar",
+    "canDelete": "Eliminar",
+    "noRolePermissions": "Sin permisos de rol",
+    "noUserPermissions": "Sin permisos de usuario",
+    "permissionsUpdated": "Permisos actualizados exitosamente",
+    "errorLoadingPermissions": "Error al cargar permisos",
+    "errorSavingPermissions": "Error al guardar permisos",
+    "auditLogActionView": "Ver",
+    "auditLogActionViewPassword": "Ver Contraseña",
+    "auditLogActionCopyPassword": "Copiar Contraseña",
+    "auditLogActionCreate": "Crear",
+    "auditLogActionUpdate": "Actualizar",
+    "auditLogActionDelete": "Eliminar",
+    "errorLoadingAuditLogs": "Error al cargar registros de auditoría",
+    "sortByTitle": "Por Título",
+    "sortByCreated": "Por Fecha de Creación",
+    "sortByUpdated": "Por Fecha de Actualización",
+    "sortAsc": "Ordenar Ascendente",
+    "sortDesc": "Ordenar Descendente"
   },
   "tours": {
     "title": "Gestión de Tours",
@@ -2765,7 +2790,27 @@
     "meetingPoint": "Punto de Encuentro",
     "noTours": "No hay tours disponibles",
     "bookings": "Reservas",
-    "export": "Exportar"
+    "export": "Exportar",
+    "columns": {
+      "title": "Título",
+      "type": "Tipo",
+      "price": "Precio",
+      "location": "Ubicación",
+      "duration": "Duración",
+      "branch": "Sucursal",
+      "createdBy": "Creado Por",
+      "status": "Estado",
+      "actions": "Acciones",
+      "description": "Descripción",
+      "maxParticipants": "Máx. Participantes",
+      "minParticipants": "Mín. Participantes"
+    },
+    "filters": {
+      "current": "Actual",
+      "active": "Activo",
+      "inactive": "Inactivo",
+      "all": "Todos"
+    }
   },
   "tourBookings": {
     "title": "Reservas de Tours",

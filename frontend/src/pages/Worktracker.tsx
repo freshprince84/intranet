@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon, LinkIcon, CurrencyDollarIcon, ClockIcon, KeyIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon, LinkIcon, CurrencyDollarIcon, ClockIcon, KeyIcon, PaperAirplaneIcon, MapIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import CreateReservationModal from '../components/reservations/CreateReservationModal.tsx';
@@ -13,6 +13,7 @@ import SendInvitationSidepane from '../components/reservations/SendInvitationSid
 import SendPasscodeSidepane from '../components/reservations/SendPasscodeSidepane.tsx';
 import ReservationNotificationLogs from '../components/reservations/ReservationNotificationLogs.tsx';
 import { Reservation, ReservationStatus, PaymentStatus } from '../types/reservation.ts';
+import { Tour, TourType } from '../types/tour.ts';
 import { useNavigate } from 'react-router-dom';
 import useMessage from '../hooks/useMessage.ts';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
@@ -89,6 +90,9 @@ const TODOS_TABLE_ID = 'worktracker-todos';
 
 // Definiere eine tableId für die Reservations Tabelle
 const RESERVATIONS_TABLE_ID = 'worktracker-reservations';
+
+// Definiere eine tableId für die Tours Tabelle
+const TOURS_TABLE_ID = 'worktracker-tours';
 
 // Card-Einstellungen Standardwerte
 const defaultCardMetadata = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
@@ -198,6 +202,53 @@ const reservationCardToTableMapping: Record<string, string> = {
   'arrivalTime': 'arrivalTime'
 };
 
+// Tours: Tabellen-Spalte -> Card-Metadaten (1:1 Mapping)
+const tourTableToCardMapping: Record<string, string[]> = {
+  'title': ['title'],
+  'type': ['type'],
+  'price': ['price'],
+  'location': ['location'],
+  'duration': ['duration'],
+  'branch': ['branch'],
+  'createdBy': ['createdBy'],
+  'isActive': ['isActive'],
+  'actions': [] // Keine Card-Entsprechung
+};
+
+// Tours: Reverse Mapping: Card-Metadaten -> Tabellen-Spalten (1:1 Mapping)
+const tourCardToTableMapping: Record<string, string> = {
+  'title': 'title',
+  'type': 'type',
+  'price': 'price',
+  'location': 'location',
+  'duration': 'duration',
+  'branch': 'branch',
+  'createdBy': 'createdBy',
+  'isActive': 'isActive'
+};
+
+// Tours: Helfer-Funktion: Tabellen-Spalte ausgeblendet -> Card-Metadaten ausblenden
+const getTourHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> => {
+  const hiddenCardMetadata = new Set<string>();
+  hiddenTableColumns.forEach(tableCol => {
+    const cardMetadata = tourTableToCardMapping[tableCol] || [];
+    cardMetadata.forEach(cardMeta => hiddenCardMetadata.add(cardMeta));
+  });
+  return hiddenCardMetadata;
+};
+
+// Tours: Helfer-Funktion: Card-Metadaten zu Tabellen-Spalten konvertieren
+const getTourCardMetadataFromColumnOrder = (columnOrder: string[]): string[] => {
+  const cardMetadata: string[] = [];
+  columnOrder.forEach(tableCol => {
+    const cardMeta = tourTableToCardMapping[tableCol] || [];
+    if (cardMeta.length > 0) {
+      cardMetadata.push(...cardMeta);
+    }
+  });
+  return cardMetadata;
+};
+
 // Reservations: Helfer-Funktion: Tabellen-Spalte ausgeblendet -> Card-Metadaten ausblenden
 const getReservationHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> => {
   const hiddenCardMetadata = new Set<string>();
@@ -266,13 +317,33 @@ const Worktracker: React.FC = () => {
         { id: 'doorPin', label: t('reservations.columns.doorPin', 'Tür-PIN'), shortLabel: t('reservations.columns.doorPin', 'Tür-PIN').substring(0, 3) },
     ], [t]);
     
+    // Tours-Spalten
+    const availableTourColumns = useMemo(() => [
+        { id: 'title', label: t('tours.columns.title', 'Titel'), shortLabel: t('tours.columns.title', 'Titel').substring(0, 4) },
+        { id: 'type', label: t('tours.columns.type', 'Typ'), shortLabel: t('tours.columns.type', 'Typ').substring(0, 3) },
+        { id: 'price', label: t('tours.columns.price', 'Preis'), shortLabel: t('tours.columns.price', 'Preis').substring(0, 3) },
+        { id: 'location', label: t('tours.columns.location', 'Ort'), shortLabel: t('tours.columns.location', 'Ort').substring(0, 3) },
+        { id: 'duration', label: t('tours.columns.duration', 'Dauer'), shortLabel: t('tours.columns.duration', 'Dauer').substring(0, 3) },
+        { id: 'branch', label: t('tours.columns.branch', 'Niederlassung'), shortLabel: t('tours.columns.branch', 'Niederlassung').substring(0, 5) },
+        { id: 'createdBy', label: t('tours.columns.createdBy', 'Erstellt von'), shortLabel: t('tours.columns.createdBy', 'Erstellt von').substring(0, 5) },
+        { id: 'isActive', label: t('tours.columns.status', 'Status'), shortLabel: t('tours.columns.status', 'Status').substring(0, 3) },
+        { id: 'actions', label: t('tours.columns.actions', 'Aktionen'), shortLabel: t('common.actions').substring(0, 3) },
+    ], [t]);
+    
+    // Tours Filter-Spalten (zusätzliche Spalten nur für Filter)
+    const tourFilterOnlyColumns = useMemo(() => [
+        { id: 'description', label: t('tours.columns.description', 'Beschreibung'), shortLabel: t('tours.columns.description', 'Beschreibung').substring(0, 3) },
+        { id: 'maxParticipants', label: t('tours.columns.maxParticipants', 'Max. Teilnehmer'), shortLabel: t('tours.columns.maxParticipants', 'Max. Teilnehmer').substring(0, 3) },
+        { id: 'minParticipants', label: t('tours.columns.minParticipants', 'Min. Teilnehmer'), shortLabel: t('tours.columns.minParticipants', 'Min. Teilnehmer').substring(0, 3) },
+    ], [t]);
+    
     // Status-Übersetzungen (verwende zentrale Utils mit Übersetzungsunterstützung)
     // WICHTIG: Funktionalität bleibt identisch - nur Code-Duplikation entfernt!
     const getStatusLabel = (status: Task['status']): string => {
         return getStatusText(status, 'task', t);
     };
     // Tab-State
-    const [activeTab, setActiveTab] = useState<'todos' | 'reservations'>('todos');
+    const [activeTab, setActiveTab] = useState<'todos' | 'reservations' | 'tours'>('todos');
     
     const [tasks, setTasks] = useState<Task[]>([]);
     const [allTasks, setAllTasks] = useState<Task[]>([]); // Alle Tasks (für Hintergrund-Laden und Filter-Wechsel)
@@ -288,6 +359,21 @@ const Worktracker: React.FC = () => {
     const [reservationSearchTerm, setReservationSearchTerm] = useState('');
     const [reservationFilterStatus, setReservationFilterStatus] = useState<ReservationStatus | 'all'>('all');
     const [reservationFilterPaymentStatus, setReservationFilterPaymentStatus] = useState<PaymentStatus | 'all'>('all');
+    
+    // Tours-States
+    const [tours, setTours] = useState<Tour[]>([]);
+    const [allTours, setAllTours] = useState<Tour[]>([]);
+    const [toursLoading, setToursLoading] = useState(false);
+    const [toursError, setToursError] = useState<string | null>(null);
+    const [tourSearchTerm, setTourSearchTerm] = useState('');
+    const [tourFilterConditions, setTourFilterConditions] = useState<FilterCondition[]>([]);
+    const [tourFilterLogicalOperators, setTourFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+    const [tourFilterSortDirections, setTourFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
+    const [tourActiveFilterName, setTourActiveFilterName] = useState<string>(t('tours.filters.current', 'Aktuell'));
+    const [tourSelectedFilterId, setTourSelectedFilterId] = useState<number | null>(null);
+    const [isCreateTourModalOpen, setIsCreateTourModalOpen] = useState(false);
+    const [isEditTourModalOpen, setIsEditTourModalOpen] = useState(false);
+    const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
     const [isCreateReservationModalOpen, setIsCreateReservationModalOpen] = useState(false);
     const [syncingReservations, setSyncingReservations] = useState(false);
     const [generatingPinForReservation, setGeneratingPinForReservation] = useState<number | null>(null);
@@ -353,14 +439,30 @@ const Worktracker: React.FC = () => {
         defaultViewMode: 'cards'
     });
     
+    // Tabellen-Einstellungen laden - Tours
+    const defaultTourColumnOrder = ['title', 'type', 'price', 'location', 'duration', 'branch', 'isActive', 'actions'];
+    const {
+        settings: toursSettings,
+        isLoading: isLoadingToursSettings,
+        updateColumnOrder: updateToursColumnOrder,
+        updateHiddenColumns: updateToursHiddenColumns,
+        toggleColumnVisibility: toggleToursColumnVisibility,
+        isColumnVisible: isToursColumnVisible,
+        updateViewMode: updateToursViewMode
+    } = useTableSettings('worktracker-tours', {
+        defaultColumnOrder: defaultTourColumnOrder,
+        defaultHiddenColumns: [],
+        defaultViewMode: 'cards'
+    });
+    
     // Dynamische Settings basierend auf activeTab
-    const settings = activeTab === 'todos' ? tasksSettings : reservationsSettings;
-    const isLoadingSettings = activeTab === 'todos' ? isLoadingTasksSettings : isLoadingReservationsSettings;
-    const updateColumnOrder = activeTab === 'todos' ? updateTasksColumnOrder : updateReservationsColumnOrder;
-    const updateHiddenColumns = activeTab === 'todos' ? updateTasksHiddenColumns : updateReservationsHiddenColumns;
-    const toggleColumnVisibility = activeTab === 'todos' ? toggleTasksColumnVisibility : toggleReservationsColumnVisibility;
-    const isColumnVisible = activeTab === 'todos' ? isTasksColumnVisible : isReservationsColumnVisible;
-    const updateViewMode = activeTab === 'todos' ? updateTasksViewMode : updateReservationsViewMode;
+    const settings = activeTab === 'todos' ? tasksSettings : activeTab === 'reservations' ? reservationsSettings : toursSettings;
+    const isLoadingSettings = activeTab === 'todos' ? isLoadingTasksSettings : activeTab === 'reservations' ? isLoadingReservationsSettings : isLoadingToursSettings;
+    const updateColumnOrder = activeTab === 'todos' ? updateTasksColumnOrder : activeTab === 'reservations' ? updateReservationsColumnOrder : updateToursColumnOrder;
+    const updateHiddenColumns = activeTab === 'todos' ? updateTasksHiddenColumns : activeTab === 'reservations' ? updateReservationsHiddenColumns : updateToursHiddenColumns;
+    const toggleColumnVisibility = activeTab === 'todos' ? toggleTasksColumnVisibility : activeTab === 'reservations' ? toggleReservationsColumnVisibility : toggleToursColumnVisibility;
+    const isColumnVisible = activeTab === 'todos' ? isTasksColumnVisible : activeTab === 'reservations' ? isReservationsColumnVisible : isToursColumnVisible;
+    const updateViewMode = activeTab === 'todos' ? updateTasksViewMode : activeTab === 'reservations' ? updateReservationsViewMode : updateToursViewMode;
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -560,6 +662,86 @@ const Worktracker: React.FC = () => {
             loadReservations();
         }
     }, [activeTab]);
+    
+    // Funktion zum Laden der Tours
+    const loadTours = async (filterId?: number, filterConditions?: any[], background = false) => {
+        try {
+            if (!background) {
+                setToursLoading(true);
+                setToursError(null);
+            }
+            
+            const params: any = {};
+            if (filterId) {
+                params.filterId = filterId;
+            } else if (filterConditions && filterConditions.length > 0) {
+                params.filterConditions = JSON.stringify({
+                    conditions: filterConditions,
+                    operators: tourFilterLogicalOperators
+                });
+            }
+            
+            const response = await axiosInstance.get(API_ENDPOINTS.TOURS.BASE, { params });
+            if (response.data.success) {
+                const toursData = response.data.data || [];
+                setAllTours(toursData);
+                if (!background) {
+                    setTours(toursData);
+                }
+            } else {
+                const errorMessage = response.data.message || t('errors.loadError');
+                if (!background) {
+                    setToursError(errorMessage);
+                    showMessage(errorMessage, 'error');
+                }
+            }
+        } catch (err: any) {
+            console.error('Fehler beim Laden der Touren:', err);
+            const errorMessage = err.response?.data?.message || t('errors.loadError');
+            if (!background) {
+                setToursError(errorMessage);
+                showMessage(errorMessage, 'error');
+            }
+        } finally {
+            if (!background) {
+                setToursLoading(false);
+            }
+        }
+    };
+    
+    // Lade Tours, wenn Tab aktiv ist
+    useEffect(() => {
+        if (activeTab === 'tours' && hasPermission('tours', 'read', 'table')) {
+            loadTours();
+        }
+    }, [activeTab]);
+    
+    // Tour-Filter-Funktionen
+    const applyTourFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        setTourFilterConditions(conditions);
+        setTourFilterLogicalOperators(operators);
+        setTourFilterSortDirections(sortDirections);
+        loadTours(undefined, conditions, false);
+    };
+    
+    const resetTourFilterConditions = () => {
+        setTourFilterConditions([]);
+        setTourFilterLogicalOperators([]);
+        setTourFilterSortDirections([]);
+        setTourActiveFilterName(t('tours.filters.current', 'Aktuell'));
+        setTourSelectedFilterId(null);
+        loadTours();
+    };
+    
+    const handleTourFilterChange = (filterId: number | null, filterName: string) => {
+        setTourSelectedFilterId(filterId);
+        setTourActiveFilterName(filterName);
+        if (filterId) {
+            loadTours(filterId);
+        } else {
+            resetTourFilterConditions();
+        }
+    };
 
     // Lade Tasks beim ersten Render (nur einmal, auch bei React.StrictMode)
     useEffect(() => {
@@ -940,13 +1122,25 @@ const Worktracker: React.FC = () => {
                 await loadTasks(id);
             }
             // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedTasks angewendet
-        } else {
+        } else if (activeTab === 'reservations') {
             setReservationActiveFilterName(name);
             setReservationSelectedFilterId(id);
             applyReservationFilterConditions(conditions, operators, sortDirections);
             // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
             setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
+        } else {
+            setTourActiveFilterName(name);
+            setTourSelectedFilterId(id);
+            applyTourFilterConditions(conditions, operators, sortDirections || []);
+            // TODO: Tour Table Sort Config wenn implementiert
         }
+    };
+    
+    const handleReservationFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        setReservationActiveFilterName(name);
+        setReservationSelectedFilterId(id);
+        applyReservationFilterConditions(conditions, operators, sortDirections);
+        setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
     };
 
     const getStatusPriority = (status: Task['status']): number => {
@@ -1574,6 +1768,121 @@ const Worktracker: React.FC = () => {
         console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
         return sorted;
     }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterConditions, reservationFilterLogicalOperators, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
+    
+    // Filter- und Sortierlogik für Tours
+    const filteredAndSortedTours = useMemo(() => {
+        console.log('🔄 Filtere Tours:', tours.length, 'Tours vorhanden');
+        const validTours = tours.filter(tour => tour != null);
+        
+        let filtered = validTours.filter(tour => {
+            // Such-Filter
+            if (tourSearchTerm) {
+                const searchLower = tourSearchTerm.toLowerCase();
+                const matchesSearch = 
+                    (tour.title && tour.title.toLowerCase().includes(searchLower)) ||
+                    (tour.description && tour.description.toLowerCase().includes(searchLower)) ||
+                    (tour.location && tour.location.toLowerCase().includes(searchLower));
+                
+                if (!matchesSearch) return false;
+            }
+            
+            return true;
+        });
+
+        // Erweiterte Filterbedingungen anwenden
+        if (tourFilterConditions.length > 0) {
+            const columnEvaluators: any = {
+                'title': (tour: Tour, cond: FilterCondition) => {
+                    const value = (cond.value as string || '').toLowerCase();
+                    const title = (tour.title || '').toLowerCase();
+                    if (cond.operator === 'equals') return tour.title === cond.value;
+                    if (cond.operator === 'contains') return title.includes(value);
+                    if (cond.operator === 'startsWith') return title.startsWith(value);
+                    if (cond.operator === 'endsWith') return title.endsWith(value);
+                    return null;
+                },
+                'type': (tour: Tour, cond: FilterCondition) => {
+                    if (cond.operator === 'equals') return tour.type === cond.value;
+                    if (cond.operator === 'notEquals') return tour.type !== cond.value;
+                    return null;
+                },
+                'isActive': (tour: Tour, cond: FilterCondition) => {
+                    const value = cond.value === 'true' || cond.value === true || cond.value === '1';
+                    if (cond.operator === 'equals') return tour.isActive === value;
+                    if (cond.operator === 'notEquals') return tour.isActive !== value;
+                    return null;
+                },
+                'price': (tour: Tour, cond: FilterCondition) => {
+                    const price = typeof tour.price === 'string' ? parseFloat(tour.price) : (tour.price || 0);
+                    const compareValue = typeof cond.value === 'string' ? parseFloat(cond.value) : (cond.value || 0);
+                    if (isNaN(price) || isNaN(compareValue)) return false;
+                    if (cond.operator === 'equals') return Math.abs(price - compareValue) < 0.01;
+                    if (cond.operator === 'greaterThan') return price > compareValue;
+                    if (cond.operator === 'lessThan') return price < compareValue;
+                    return null;
+                },
+                'location': (tour: Tour, cond: FilterCondition) => {
+                    const value = (cond.value as string || '').toLowerCase();
+                    const location = (tour.location || '').toLowerCase();
+                    if (cond.operator === 'equals') return tour.location === cond.value;
+                    if (cond.operator === 'contains') return location.includes(value);
+                    if (cond.operator === 'startsWith') return location.startsWith(value);
+                    if (cond.operator === 'endsWith') return location.endsWith(value);
+                    return null;
+                },
+                'branch': (tour: Tour, cond: FilterCondition) => {
+                    const branchName = (tour.branch?.name || '').toLowerCase();
+                    const value = (cond.value as string || '').toLowerCase();
+                    if (cond.operator === 'equals') return branchName === value;
+                    if (cond.operator === 'contains') return branchName.includes(value);
+                    return null;
+                },
+                'createdBy': (tour: Tour, cond: FilterCondition) => {
+                    const createdByName = tour.createdBy
+                        ? `${tour.createdBy.firstName} ${tour.createdBy.lastName}`
+                        : '';
+                    return evaluateUserRoleCondition(
+                        tour.createdById || null,
+                        null,
+                        cond,
+                        createdByName
+                    );
+                }
+            };
+
+            const getFieldValue = (tour: Tour, columnId: string): any => {
+                switch (columnId) {
+                    case 'title': return tour.title || '';
+                    case 'type': return tour.type || '';
+                    case 'price': return typeof tour.price === 'string' ? parseFloat(tour.price) : (tour.price || 0);
+                    case 'location': return tour.location || '';
+                    case 'duration': return tour.duration || 0;
+                    case 'branch': return tour.branch?.name || '';
+                    case 'createdBy': return tour.createdBy ? `${tour.createdBy.firstName} ${tour.createdBy.lastName}` : '';
+                    case 'isActive': return tour.isActive;
+                    default: return '';
+                }
+            };
+
+            filtered = applyFilters(
+                filtered,
+                tourFilterConditions,
+                tourFilterLogicalOperators,
+                getFieldValue,
+                columnEvaluators
+            );
+        }
+        
+        // Sortierung (vereinfacht - nur nach Titel)
+        const sorted = filtered.sort((a, b) => {
+            const titleA = (a.title || '').toLowerCase();
+            const titleB = (b.title || '').toLowerCase();
+            return titleA.localeCompare(titleB);
+        });
+        
+        console.log('✅ Gefilterte und sortierte Tours:', sorted.length);
+        return sorted;
+    }, [tours, tourSearchTerm, tourFilterConditions, tourFilterLogicalOperators]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
@@ -1627,10 +1936,10 @@ const Worktracker: React.FC = () => {
         // Sicherstellen, dass keine undefined/null Werte im Array sind
         const validOrder = currentOrder.filter(id => id != null && typeof id === 'string');
         // Fehlende Spalten aus defaultColumnOrder hinzufügen (dynamisch basierend auf activeTab)
-        const defaultOrder = activeTab === 'todos' ? defaultColumnOrder : defaultReservationColumnOrder;
+        const defaultOrder = activeTab === 'todos' ? defaultColumnOrder : activeTab === 'reservations' ? defaultReservationColumnOrder : defaultTourColumnOrder;
         const missingColumns = defaultOrder.filter(id => !validOrder.includes(id));
         return [...validOrder, ...missingColumns];
-    }, [settings.columnOrder, activeTab, defaultColumnOrder, defaultReservationColumnOrder]);
+    }, [settings.columnOrder, activeTab, defaultColumnOrder, defaultReservationColumnOrder, defaultTourColumnOrder]);
 
     const visibleColumnIds = completeColumnOrder.filter(id => id != null && typeof id === 'string' && isColumnVisible(id));
 
@@ -1777,12 +2086,14 @@ const Worktracker: React.FC = () => {
                                         type="text"
                                         placeholder={t('common.search') + '...'}
                                         className="w-[120px] sm:w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        value={activeTab === 'todos' ? searchTerm : reservationSearchTerm}
+                                        value={activeTab === 'todos' ? searchTerm : activeTab === 'reservations' ? reservationSearchTerm : tourSearchTerm}
                                         onChange={(e) => {
                                             if (activeTab === 'todos') {
                                                 setSearchTerm(e.target.value);
-                                            } else {
+                                            } else if (activeTab === 'reservations') {
                                                 setReservationSearchTerm(e.target.value);
+                                            } else {
+                                                setTourSearchTerm(e.target.value);
                                             }
                                         }}
                                     />
@@ -2005,13 +2316,13 @@ const Worktracker: React.FC = () => {
                             {(
                                 <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
                                     <SavedFilterTags
-                                    tableId={activeTab === 'todos' ? TODOS_TABLE_ID : RESERVATIONS_TABLE_ID}
-                                    onSelectFilter={activeTab === 'todos' ? applyFilterConditions : applyReservationFilterConditions}
-                                    onReset={activeTab === 'todos' ? resetFilterConditions : resetReservationFilterConditions}
-                                    activeFilterName={activeTab === 'todos' ? activeFilterName : reservationActiveFilterName}
-                                    selectedFilterId={activeTab === 'todos' ? selectedFilterId : reservationSelectedFilterId}
-                                    onFilterChange={handleFilterChange}
-                                    defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : t('reservations.filters.current', 'Aktuell')}
+                                    tableId={activeTab === 'todos' ? TODOS_TABLE_ID : activeTab === 'reservations' ? RESERVATIONS_TABLE_ID : TOURS_TABLE_ID}
+                                    onSelectFilter={activeTab === 'todos' ? applyFilterConditions : activeTab === 'reservations' ? applyReservationFilterConditions : applyTourFilterConditions}
+                                    onReset={activeTab === 'todos' ? resetFilterConditions : activeTab === 'reservations' ? resetReservationFilterConditions : resetTourFilterConditions}
+                                    activeFilterName={activeTab === 'todos' ? activeFilterName : activeTab === 'reservations' ? reservationActiveFilterName : tourActiveFilterName}
+                                    selectedFilterId={activeTab === 'todos' ? selectedFilterId : activeTab === 'reservations' ? reservationSelectedFilterId : tourSelectedFilterId}
+                                    onFilterChange={activeTab === 'todos' ? handleFilterChange : activeTab === 'reservations' ? handleReservationFilterChange : handleTourFilterChange}
+                                    defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : activeTab === 'reservations' ? t('reservations.filters.current', 'Aktuell') : t('tours.filters.current', 'Aktuell')}
                                 />
                                 </div>
                             )}
@@ -3002,6 +3313,21 @@ const Worktracker: React.FC = () => {
                                             </div>
                                         </div>
                                     )}
+                                    {activeTab === 'tours' && hasPermission('tour_create', 'write', 'button') && (
+                                        <div className="relative group">
+                                            <button
+                                                onClick={() => setIsCreateTourModalOpen(true)}
+                                                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                                style={{ width: '30.19px', height: '30.19px' }}
+                                                aria-label={t('tours.create', 'Neue Tour erstellen')}
+                                            >
+                                                <PlusIcon className="h-4 w-4" />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('tours.create', 'Neue Tour erstellen')}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 {/* Mitte: Tab-Navigation */}
@@ -3040,12 +3366,14 @@ const Worktracker: React.FC = () => {
                                         type="text"
                                         placeholder={t('common.search') + '...'}
                                         className="w-[120px] sm:w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        value={activeTab === 'todos' ? searchTerm : reservationSearchTerm}
+                                        value={activeTab === 'todos' ? searchTerm : activeTab === 'reservations' ? reservationSearchTerm : tourSearchTerm}
                                         onChange={(e) => {
                                             if (activeTab === 'todos') {
                                                 setSearchTerm(e.target.value);
-                                            } else {
+                                            } else if (activeTab === 'reservations') {
                                                 setReservationSearchTerm(e.target.value);
+                                            } else {
+                                                setTourSearchTerm(e.target.value);
                                             }
                                         }}
                                     />
@@ -4219,6 +4547,73 @@ const Worktracker: React.FC = () => {
                                     >
                                         {t('common.showMore')} ({filteredAndSortedReservations.length - displayLimit} {t('common.remaining')})
                                     </button>
+                                </div>
+                            )}
+                            
+                            {/* Tours Tab Content */}
+                            {activeTab === 'tours' && (
+                                <div className="space-y-4">
+                                    {toursLoading ? (
+                                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                            {t('common.loading')}
+                                        </div>
+                                    ) : toursError ? (
+                                        <div className="text-center py-8 text-red-500 dark:text-red-400">
+                                            {toursError}
+                                        </div>
+                                    ) : tours.length === 0 ? (
+                                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                                            {t('tours.noTours')}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {tours
+                                                .filter(tour => {
+                                                    if (!tourSearchTerm) return true;
+                                                    const search = tourSearchTerm.toLowerCase();
+                                                    return (
+                                                        tour.title?.toLowerCase().includes(search) ||
+                                                        tour.description?.toLowerCase().includes(search) ||
+                                                        tour.location?.toLowerCase().includes(search)
+                                                    );
+                                                })
+                                                .map((tour) => (
+                                                    <div
+                                                        key={tour.id}
+                                                        className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4"
+                                                    >
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <h4 className="text-lg font-semibold dark:text-white">{tour.title}</h4>
+                                                            <span className={`px-2 py-1 text-xs rounded ${
+                                                                tour.isActive 
+                                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                                            }`}>
+                                                                {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        {tour.description && (
+                                                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                                                                {tour.description}
+                                                            </p>
+                                                        )}
+
+                                                        <div className="flex items-center justify-between mt-4">
+                                                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                                <span className="font-medium">{t('tours.type')}:</span>{' '}
+                                                                {tour.type === TourType.OWN ? t('tours.typeOwn') : t('tours.typeExternal')}
+                                                            </div>
+                                                            {tour.price && (
+                                                                <div className="text-sm font-semibold dark:text-white">
+                                                                    {Number(tour.price).toLocaleString()} {tour.currency || 'COP'}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             

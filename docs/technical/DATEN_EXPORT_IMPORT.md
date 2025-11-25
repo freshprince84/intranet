@@ -100,6 +100,10 @@ sudo systemctl restart nginx
 2. **Idempotent**: Import kann mehrfach ausgeführt werden ohne Probleme
 3. **ID-Mapping**: Das Import-Skript mappt automatisch IDs, falls sich diese geändert haben
 4. **Passwörter**: User-Passwörter werden beim Import NICHT aktualisiert (Sicherheit)
+5. **⚠️ User active-Status wird geschützt**: 
+   - Der `active`-Status von Usern wird beim Import **NUR** aktualisiert, wenn er explizit in den importierten Daten vorhanden ist
+   - Wenn `active` nicht in den Daten vorhanden ist, wird der bestehende Status beibehalten
+   - Dies verhindert, dass inaktive User (z.B. in Organisation 1) durch Imports wieder aktiviert werden
 
 ## Fehlerbehebung
 

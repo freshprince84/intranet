@@ -91,6 +91,7 @@ echo ""
 
 # 11. Queue-Einstellungen in .env prüfen
 echo "📝 Schritt 11: Queue-Einstellungen prüfen..."
+cd /var/www/intranet/backend
 if ! grep -q "QUEUE_ENABLED=true" .env 2>/dev/null; then
   echo "   ⚠️  QUEUE_ENABLED nicht in .env gefunden"
   echo "   ⚠️  Bitte manuell in .env hinzufügen:"

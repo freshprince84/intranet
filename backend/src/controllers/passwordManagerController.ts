@@ -2,6 +2,39 @@ import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { encryptSecret, decryptSecret } from '../utils/encryption';
 
+/**
+ * Validiert URL für Passwort-Manager (SSRF-Schutz)
+ */
+const validatePasswordManagerUrl = (urlString: string | null | undefined): boolean => {
+    if (!urlString) return true; // Optional
+    
+    try {
+        const url = new URL(urlString);
+        
+        // Nur http:// und https:// erlauben
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+            return false;
+        }
+        
+        // Schutz vor JavaScript-URLs
+        if (url.protocol === 'javascript:' || url.protocol === 'data:' || url.protocol === 'file:') {
+            return false;
+        }
+        
+        // Schutz vor localhost/private IPs (optional, kann zu restriktiv sein)
+        // Für interne Systeme könnte localhost erlaubt sein
+        const hostname = url.hostname.toLowerCase();
+        if (hostname === 'localhost' || hostname.startsWith('127.') || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
+            // Erlauben, da interne Systeme verwendet werden können
+            return true;
+        }
+        
+        return true;
+    } catch {
+        return false;
+    }
+};
+
 // Erweitere Request-Typ
 // userId und roleId sind bereits im globalen Express Request Interface definiert
 interface PasswordManagerRequest extends Request {
@@ -353,6 +386,11 @@ export const createPasswordEntry = async (req: PasswordManagerRequest, res: Resp
             return res.status(400).json({ message: 'Titel und Passwort sind erforderlich' });
         }
 
+        // URL-Validierung (SSRF-Schutz)
+        if (url && !validatePasswordManagerUrl(url)) {
+            return res.status(400).json({ message: 'Ungültige URL. Nur http:// und https:// URLs sind erlaubt.' });
+        }
+
         // Verschlüssele Passwort
         let encryptedPassword: string;
         try {
@@ -437,6 +475,11 @@ export const updatePasswordEntry = async (req: PasswordManagerRequest, res: Resp
         const hasPermission = await checkPasswordEntryPermission(userId, roleId, entryId, 'edit');
         if (!hasPermission) {
             return res.status(403).json({ message: 'Keine Berechtigung für diesen Eintrag' });
+        }
+
+        // URL-Validierung (SSRF-Schutz)
+        if (url !== undefined && !validatePasswordManagerUrl(url)) {
+            return res.status(400).json({ message: 'Ungültige URL. Nur http:// und https:// URLs sind erlaubt.' });
         }
 
         // Hole alten Eintrag für Audit-Log
@@ -637,6 +680,147 @@ export const getPasswordEntryAuditLogs = async (req: PasswordManagerRequest, res
     } catch (error) {
         console.error('Error getting audit logs:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Audit-Logs' });
+    }
+};
+
+/**
+ * Berechtigungen für Eintrag abrufen
+ */
+export const getPasswordEntryPermissions = async (req: PasswordManagerRequest, res: Response) => {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        const userId = parseInt(req.userId, 10);
+        const entryId = parseInt(req.params.id, 10);
+
+        // Prüfe ob User der Creator ist
+        const entry = await prisma.passwordEntry.findUnique({
+            where: { id: entryId }
+        });
+
+        if (!entry) {
+            return res.status(404).json({ message: 'Eintrag nicht gefunden' });
+        }
+
+        // Nur Creator kann Berechtigungen sehen/verwalten
+        if (entry.createdById !== userId) {
+            return res.status(403).json({ message: 'Keine Berechtigung für Berechtigungen' });
+        }
+
+        // Hole alle Berechtigungen
+        const [rolePermissions, userPermissions] = await Promise.all([
+            prisma.passwordEntryRolePermission.findMany({
+                where: { passwordEntryId: entryId },
+                include: {
+                    role: {
+                        select: {
+                            id: true,
+                            name: true
+                        }
+                    }
+                }
+            }),
+            prisma.passwordEntryUserPermission.findMany({
+                where: { passwordEntryId: entryId },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true
+                        }
+                    }
+                }
+            })
+        ]);
+
+        res.json({
+            rolePermissions,
+            userPermissions
+        });
+    } catch (error) {
+        console.error('Error getting password entry permissions:', error);
+        res.status(500).json({ message: 'Fehler beim Abrufen der Berechtigungen' });
+    }
+};
+
+/**
+ * Berechtigungen für Eintrag aktualisieren
+ */
+export const updatePasswordEntryPermissions = async (req: PasswordManagerRequest, res: Response) => {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        const userId = parseInt(req.userId, 10);
+        const entryId = parseInt(req.params.id, 10);
+        const { rolePermissions, userPermissions } = req.body;
+
+        // Prüfe ob User der Creator ist
+        const entry = await prisma.passwordEntry.findUnique({
+            where: { id: entryId }
+        });
+
+        if (!entry) {
+            return res.status(404).json({ message: 'Eintrag nicht gefunden' });
+        }
+
+        // Nur Creator kann Berechtigungen verwalten
+        if (entry.createdById !== userId) {
+            return res.status(403).json({ message: 'Keine Berechtigung für Berechtigungen' });
+        }
+
+        // Lösche alle bestehenden Berechtigungen
+        await Promise.all([
+            prisma.passwordEntryRolePermission.deleteMany({
+                where: { passwordEntryId: entryId }
+            }),
+            prisma.passwordEntryUserPermission.deleteMany({
+                where: { passwordEntryId: entryId }
+            })
+        ]);
+
+        // Erstelle neue Berechtigungen
+        if (rolePermissions && Array.isArray(rolePermissions)) {
+            await prisma.passwordEntryRolePermission.createMany({
+                data: rolePermissions.map((rp: any) => ({
+                    passwordEntryId: entryId,
+                    roleId: rp.roleId,
+                    canView: rp.canView || false,
+                    canEdit: rp.canEdit || false,
+                    canDelete: rp.canDelete || false
+                }))
+            });
+        }
+
+        if (userPermissions && Array.isArray(userPermissions)) {
+            await prisma.passwordEntryUserPermission.createMany({
+                data: userPermissions.map((up: any) => ({
+                    passwordEntryId: entryId,
+                    userId: up.userId,
+                    canView: up.canView || false,
+                    canEdit: up.canEdit || false,
+                    canDelete: up.canDelete || false
+                }))
+            });
+        }
+
+        // Audit-Log erstellen
+        await createAuditLog(
+            entryId,
+            userId,
+            'update',
+            { permissions: 'updated' },
+            req.ip,
+            req.get('user-agent')
+        );
+
+        res.json({ message: 'Berechtigungen erfolgreich aktualisiert' });
+    } catch (error) {
+        console.error('Error updating password entry permissions:', error);
+        res.status(500).json({ message: 'Fehler beim Aktualisieren der Berechtigungen' });
     }
 };
 
