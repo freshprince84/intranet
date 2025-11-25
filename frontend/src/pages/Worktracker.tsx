@@ -2289,6 +2289,19 @@ const Worktracker: React.FC = () => {
                                                 {t('reservations.title', 'Reservations')}
                                             </button>
                                         )}
+                                        {hasPermission('tours', 'read', 'table') && (
+                                            <button
+                                                onClick={() => setActiveTab('tours')}
+                                                className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
+                                                    activeTab === 'tours'
+                                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                                }`}
+                                            >
+                                                <MapIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                {t('tours.title', 'Touren')}
+                                            </button>
+                                        )}
                                     </nav>
                                 </div>
                                 
@@ -3597,6 +3610,19 @@ const Worktracker: React.FC = () => {
                                             >
                                                 <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                                                 {t('reservations.title', 'Reservations')}
+                                            </button>
+                                        )}
+                                        {hasPermission('tours', 'read', 'table') && (
+                                            <button
+                                                onClick={() => setActiveTab('tours')}
+                                                className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
+                                                    activeTab === 'tours'
+                                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                                }`}
+                                            >
+                                                <MapIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                                                {t('tours.title', 'Touren')}
                                             </button>
                                         )}
                                     </nav>
