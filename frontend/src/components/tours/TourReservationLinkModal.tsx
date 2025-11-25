@@ -99,7 +99,7 @@ const TourReservationLinkModal = ({ isOpen, onClose, booking, onLinked }: TourRe
     };
 
     const handleDeleteLink = async (linkId: number) => {
-        if (!confirm(t('tours.reservationLink.confirmDelete', 'Möchten Sie diese Verknüpfung wirklich löschen?'))) {
+        if (!window.confirm(t('tours.reservationLink.confirmDelete', 'Möchten Sie diese Verknüpfung wirklich löschen?'))) {
             return;
         }
 
