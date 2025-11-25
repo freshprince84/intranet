@@ -109,3 +109,4 @@ Schwellenwert erreicht oder überschritten. Stoppe Zeiterfassung automatisch.  �
 - Die Gesamtarbeitszeit wird falsch berechnet
 - Die Prüfung schlägt zu früh an
 
+

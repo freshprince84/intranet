@@ -24,3 +24,4 @@ router.get('/booking/:bookingId', getTourReservationsByBooking);
 
 export default router;
 
+

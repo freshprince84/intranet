@@ -32,3 +32,4 @@ router.get('/user/:userId/commissions', getUserCommissions);
 
 export default router;
 
+
