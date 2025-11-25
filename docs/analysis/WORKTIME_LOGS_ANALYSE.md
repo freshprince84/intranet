@@ -110,3 +110,4 @@ Schwellenwert erreicht oder überschritten. Stoppe Zeiterfassung automatisch.  �
 - Die Prüfung schlägt zu früh an
 
 
+
