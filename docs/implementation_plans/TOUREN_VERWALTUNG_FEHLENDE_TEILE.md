@@ -74,8 +74,11 @@
 - KEINE Komponente zum Bearbeiten von TourProvidern
 - KEINE Komponente zum Löschen von TourProvidern
 - KEINE Liste/Übersicht von TourProvidern
-- KEIN Tab/Seite für TourProvider-Verwaltung
+- KEIN Tab/Seite für TourProvider-Verwaltung in Organisation.tsx
 - KEINE Integration in Tour-Modals (nur Dropdown, kein "Neu erstellen"-Button)
+- ❌ **KRITISCH:** Tab "Proveedores" fehlt komplett in Organisation.tsx (zwischen "Sucursales" und "Organización")
+- ❌ **KRITISCH:** `TourProvidersTab.tsx` existiert nicht
+- ❌ **KRITISCH:** Berechtigungen `tour_providers` fehlen in seed.ts (ALL_TABLES, ALL_BUTTONS)
 
 ❌ **Frontend - Tour-Buchungen:**
 - KEINE Komponente zum Erstellen von Buchungen (nur Modal für einzelne Tour)
@@ -114,6 +117,12 @@
 
 ❌ **Frontend - Export:**
 - CSV-Export fehlt (nur JSON)
+
+❌ **KRITISCH - Berechtigungen:**
+- **Rezeption-Rolle:** Tours-Tab im Worktracker nicht sichtbar trotz vergebener Berechtigungen
+  - Problem: `table_tours` mit `read` fehlt wahrscheinlich für Rezeption-Rolle
+  - Rezeption-Rolle existiert nicht im seed.ts (wurde manuell erstellt)
+  - Lösung: Berechtigung in DB prüfen und setzen
 
 ---
 
@@ -445,7 +454,11 @@ export const book_tour = async (args: any, userId: number, roleId: number, branc
 ## 4. PRIORISIERUNG
 
 ### Kritisch (muss sofort implementiert werden):
+0. **Rezeption-Rolle Berechtigung** - Tours-Tab nicht sichtbar (DB-Fix erforderlich)
 1. **TourProvider-Verwaltung** - Ohne Provider können keine externen Touren erstellt werden
+   - Backend: Berechtigungen in seed.ts hinzufügen
+   - Frontend: TourProvidersTab.tsx erstellen
+   - Frontend: Tab in Organisation.tsx hinzufügen
 2. **Bild-Upload GET-Routes** - Bilder werden nicht angezeigt
 3. **Validierungen im Frontend** - Datenintegrität
 
@@ -463,52 +476,71 @@ export const book_tour = async (args: any, userId: number, roleId: number, branc
 
 ## 5. IMPLEMENTIERUNGS-REIHENFOLGE
 
-### Schritt 1: TourProvider-Verwaltung
+### Schritt 0: KRITISCH - Rezeption-Rolle Berechtigung
+1. SQL-Query auf Prod-Server ausführen:
+   - Finde Rezeption-Rolle: `SELECT id, name FROM "Role" WHERE name ILIKE '%rezeption%'`
+   - Prüfe Berechtigung: `SELECT * FROM "Permission" WHERE "roleId" = ? AND entity = 'tours' AND "entityType" = 'table'`
+2. Falls fehlt: Script erstellen und ausführen um `table_tours` mit `read` zu setzen
+
+### Schritt 1: TourProvider-Verwaltung (Backend - Berechtigungen)
+1. `tour_providers` zu `ALL_TABLES` in seed.ts hinzufügen
+2. `tour_provider_create`, `tour_provider_edit`, `tour_provider_delete` zu `ALL_BUTTONS` in seed.ts hinzufügen
+3. Seed ausführen (Berechtigungen werden gesetzt)
+
+### Schritt 2: TourProvider-Verwaltung (Frontend - Komponenten)
 1. `CreateTourProviderModal.tsx` erstellen
 2. `EditTourProviderModal.tsx` erstellen
 3. `TourProvidersTab.tsx` erstellen
-4. Tab "Proveedores" in Organisation-Seite hinzufügen (zwischen "Sucursales" und "Organización")
-5. "Neuer Provider"-Button in Tour-Modals hinzufügen
 
-### Schritt 2: Bild-Upload GET-Routes
+### Schritt 3: TourProvider-Verwaltung (Frontend - Integration)
+1. Tab "Proveedores" in Organisation-Seite hinzufügen (zwischen "Sucursales" und "Organización")
+   - Tab-Type erweitern: `'users' | 'roles' | 'branches' | 'providers' | 'organization'`
+   - Tab-Button hinzufügen (mit TruckIcon)
+   - Tab-Content hinzufügen
+   - Berechtigungsprüfung: `canViewProviders = hasPermission('tour_providers', 'read', 'table')`
+   - Imports hinzufügen (TruckIcon, TourProvidersTab)
+2. "Neuer Provider"-Button in Tour-Modals hinzufügen
+3. Übersetzungen hinzufügen
+
+### Schritt 4: Bild-Upload GET-Routes
 1. `getTourImage` in `tourController.ts` implementieren
 2. `getTourGalleryImage` in `tourController.ts` implementieren
 3. Routes in `tours.ts` hinzufügen
 4. Bild-Anzeige in `TourDetailsModal.tsx` testen
 
-### Schritt 3: Validierungen
+### Schritt 5: Validierungen
 1. Validierungen in `CreateTourModal.tsx` hinzufügen
 2. Validierungen in `EditTourModal.tsx` hinzufügen
 3. Validierungen in `CreateTourBookingModal.tsx` hinzufügen
 
-### Schritt 4: Tour-Buchungen
+### Schritt 6: Tour-Buchungen
 1. `CreateTourBookingModal.tsx` erstellen
 2. `EditTourBookingModal.tsx` erstellen
 3. Buttons in `TourBookingsTab.tsx` hinzufügen
 4. Cancel/Complete-Funktionalität implementieren
 
-### Schritt 5: Soft Delete
+### Schritt 7: Soft Delete
 1. Toggle-Button in Tour-Liste hinzufügen
 2. API-Call implementieren
 3. Toast-Nachrichten hinzufügen
 
-### Schritt 6: Notifications
+### Schritt 8: Notifications
 1. Notification-Texts in `translations.ts` hinzufügen
 2. TODO-Kommentare im Backend entfernen
 3. Notification-Events implementieren
 
-### Schritt 7: WhatsApp-Integration
+### Schritt 9: WhatsApp-Integration
 1. `get_tours` Function implementieren
 2. `book_tour` Function implementieren
 3. Keyword-Erkennung in Message Handler
 4. Provider-Response-Erkennung
 
-### Schritt 8: Kommissions-Tracking
+### Schritt 10: Kommissions-Tracking
 1. WorktimeStats Tab erweitern
 2. API-Integration
 3. Statistiken anzeigen
 
-### Schritt 9: CSV-Export
+### Schritt 11: CSV-Export
 1. CSV-Generierung implementieren
 2. Format-Parameter hinzufügen
 3. Frontend erweitern
@@ -579,7 +611,11 @@ export const book_tour = async (args: any, userId: number, roleId: number, branc
 ## 7. ZUSAMMENFASSUNG
 
 **Kritische Fehler:**
-1. TourProvider-Verwaltung fehlt komplett im Frontend
+0. **Rezeption-Rolle:** Tours-Tab nicht sichtbar (Berechtigung `table_tours` fehlt in DB)
+1. **TourProvider-Verwaltung fehlt komplett:**
+   - Backend: Berechtigungen fehlen in seed.ts (`tour_providers` in ALL_TABLES, Buttons in ALL_BUTTONS)
+   - Frontend: TourProvidersTab.tsx existiert nicht
+   - Frontend: Tab "Proveedores" fehlt in Organisation.tsx (Tab-Type, Button, Content, Imports)
 2. Bild-Upload GET-Routes fehlen im Backend
 3. Validierungen fehlen im Frontend
 4. Tour-Buchungen Create/Edit fehlen
@@ -593,5 +629,34 @@ export const book_tour = async (args: any, userId: number, roleId: number, branc
 **Kleinere Fehler:**
 9. CSV-Export fehlt
 
-**Gesamt:** 9 fehlende Implementierungen, davon 5 kritisch
+**Gesamt:** 10 fehlende Implementierungen, davon 6 kritisch
+
+---
+
+## 8. WAS BEREITS UMGESETZT WURDE (für Klarstellung)
+
+✅ **Tours-Tab im Worktracker:**
+- **Status:** ✅ **VOLLSTÄNDIG IMPLEMENTIERT**
+- **Datei:** `frontend/src/pages/Worktracker.tsx`
+- **Zeile:** 3691 - Tab-Button mit Berechtigungsprüfung `hasPermission('tours', 'read', 'table')`
+- **Funktionalität:** Vollständig implementiert (Create, Edit, Details, Bookings, Export, Filter, etc.)
+- **Hinweis:** Tours-Tab ist NICHT in Settings, sondern im Worktracker (wie geplant)
+
+✅ **Backend:**
+- Alle Controller, Services, Routes implementiert
+- TourProvider-Controller existiert (`tourProviderController.ts`)
+- API-Endpunkte funktionieren (`/api/tour-providers`)
+
+✅ **Frontend-Komponenten (bereits implementiert):**
+- CreateTourModal.tsx ✅
+- EditTourModal.tsx ✅
+- TourDetailsModal.tsx ✅
+- TourBookingsModal.tsx ✅
+- TourExportDialog.tsx ✅
+- TourReservationLinkModal.tsx ✅
+- TourBookingsTab.tsx ✅
+- TourImageUpload.tsx ✅
+- TourGalleryUpload.tsx ✅
+
+**WICHTIG:** Diese Komponenten sind bereits implementiert und funktionieren. Nur TourProvider-Verwaltung fehlt noch!
 
