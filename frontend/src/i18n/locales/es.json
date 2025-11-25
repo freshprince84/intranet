@@ -701,7 +701,9 @@
       "organization_management": "Gestión de Organización",
       "cerebro": "Cerebro",
       "settings": "Configuración",
-      "profile": "Perfil"
+      "profile": "Perfil",
+      "tour_management": "Gestión de Tours",
+      "password_manager": "Administrador de Contraseñas"
     },
     "tables": {
       "tasks": "Tareas",
@@ -760,7 +762,20 @@
       "payroll_generate": "Generar",
       "payroll_export": "Exportar",
       "payroll_edit": "Editar",
-      "cerebro": "Cerebro"
+      "cerebro": "Cerebro",
+      "tour_create": "Crear Tour",
+      "tour_edit": "Editar Tour",
+      "tour_delete": "Eliminar Tour",
+      "tour_view": "Ver Tour",
+      "tour_booking_create": "Crear Reserva",
+      "tour_booking_edit": "Editar Reserva",
+      "tour_booking_cancel": "Cancelar Reserva",
+      "tour_provider_create": "Crear Proveedor",
+      "tour_provider_edit": "Editar Proveedor",
+      "tour_provider_delete": "Eliminar Proveedor",
+      "password_entry_create": "Crear Entrada",
+      "password_entry_edit": "Editar Entrada",
+      "password_entry_delete": "Eliminar Entrada"
     }
   },
   "countries": {

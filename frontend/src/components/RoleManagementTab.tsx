@@ -34,7 +34,9 @@ const defaultPages = [
   'organization_management', // = organisation (Hauptseite)
   'cerebro',
   'settings',
-  'profile'
+  'profile',
+  'tour_management', // NEU: Touren-Verwaltung
+  'password_manager' // NEU: Passwort-Manager
 ];
 
 // ALLE TABELLEN IM SYSTEM (synchron mit Backend)
@@ -54,7 +56,9 @@ const defaultTables = [
   'branches',          // auf settings/system
   'notifications',     // allgemein
   'settings',          // auf settings
-  'monthly_reports'    // auf consultations/reports
+  'monthly_reports',    // auf consultations/reports
+  'tours',             // NEU: auf tour_management
+  'tour_bookings'      // NEU: auf tour_management
 ];
 
 // ALLE BUTTONS IM SYSTEM (synchron mit Backend)
@@ -118,7 +122,24 @@ const defaultButtons = [
   // Payroll Buttons
   'payroll_generate',
   'payroll_export',
-  'payroll_edit'
+  'payroll_edit',
+  
+  // Tour Management Buttons
+  'tour_create',
+  'tour_edit',
+  'tour_delete',
+  'tour_view',
+  'tour_booking_create',
+  'tour_booking_edit',
+  'tour_booking_cancel',
+  'tour_provider_create',
+  'tour_provider_edit',
+  'tour_provider_delete',
+  
+  // Password Manager Buttons
+  'password_entry_create',
+  'password_entry_edit',
+  'password_entry_delete'
 ];
 
 // Definiert die Zuordnung von Tabellen zu ihren übergeordneten Seiten
@@ -138,7 +159,9 @@ const tableToPageMapping = {
   'branches': 'settings',
   'notifications': 'general',
   'settings': 'settings',
-  'monthly_reports': 'consultations'
+  'monthly_reports': 'consultations',
+  'tours': 'tour_management',
+  'tour_bookings': 'tour_management'
 };
 
 // Definiert die Zuordnung von Buttons zu ihren übergeordneten Seiten/Bereichen
@@ -181,7 +204,20 @@ const buttonToPageMapping = {
   'settings_profile': 'settings',
   'payroll_generate': 'payroll',
   'payroll_export': 'payroll',
-  'payroll_edit': 'payroll'
+  'payroll_edit': 'payroll',
+  'tour_create': 'tour_management',
+  'tour_edit': 'tour_management',
+  'tour_delete': 'tour_management',
+  'tour_view': 'tour_management',
+  'tour_booking_create': 'tour_management',
+  'tour_booking_edit': 'tour_management',
+  'tour_booking_cancel': 'tour_management',
+  'tour_provider_create': 'tour_management',
+  'tour_provider_edit': 'tour_management',
+  'tour_provider_delete': 'tour_management',
+  'password_entry_create': 'password_manager',
+  'password_entry_edit': 'password_manager',
+  'password_entry_delete': 'password_manager'
 };
 
 // Definiert die Zuordnung von Buttons zu ihren zugehörigen Tabellen
@@ -226,6 +262,21 @@ const buttonToTableMapping: Record<string, string | null> = {
   'settings_system': 'settings',
   'settings_notifications': 'settings',
   'settings_profile': 'settings',
+  // Tour Management Buttons → tours/tour_bookings Tabellen
+  'tour_create': 'tours',
+  'tour_edit': 'tours',
+  'tour_delete': 'tours',
+  'tour_view': 'tours',
+  'tour_booking_create': 'tour_bookings',
+  'tour_booking_edit': 'tour_bookings',
+  'tour_booking_cancel': 'tour_bookings',
+  'tour_provider_create': null, // Keine direkte Tabelle
+  'tour_provider_edit': null,
+  'tour_provider_delete': null,
+  // Password Manager Buttons → keine direkte Tabelle (entry-level permissions)
+  'password_entry_create': null,
+  'password_entry_edit': null,
+  'password_entry_delete': null,
   // Buttons ohne direkte Tabelle-Zuordnung
   'database_reset_table': null,
   'database_logs': null,
@@ -403,7 +454,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     'organization_management': t('roles.pages.organization_management'), // Organisation-Seite (Hauptseite)
     'cerebro': t('roles.pages.cerebro'),
     'settings': t('roles.pages.settings'),
-    'profile': t('roles.pages.profile')
+    'profile': t('roles.pages.profile'),
+    'tour_management': t('roles.pages.tour_management', 'Touren-Verwaltung'),
+    'password_manager': t('roles.pages.password_manager', 'Passwort-Manager')
   }), [t]);
 
   // Display-Name-Mapping für Tabellen (dynamisch aus Übersetzungen)
@@ -423,7 +476,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     'settings': t('roles.tables.settings'),
     'notifications': t('roles.tables.notifications'),
     'branches': t('roles.tables.branches'),
-    'monthly_reports': t('roles.tables.monthly_reports')
+    'monthly_reports': t('roles.tables.monthly_reports'),
+    'tours': t('roles.tables.tours', 'Touren'),
+    'tour_bookings': t('roles.tables.tour_bookings', 'Tour-Buchungen')
   }), [t]);
 
   // Display-Name-Mapping für Buttons (dynamisch aus Übersetzungen)

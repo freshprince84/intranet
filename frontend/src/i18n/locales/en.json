@@ -686,7 +686,9 @@
       "organization_management": "Organization Management",
       "cerebro": "Cerebro",
       "settings": "Settings",
-      "profile": "Profile"
+      "profile": "Profile",
+      "tour_management": "Tour Management",
+      "password_manager": "Password Manager"
     },
     "tables": {
       "tasks": "Tasks",
@@ -704,7 +706,9 @@
       "settings": "Settings",
       "notifications": "Notifications",
       "branches": "Branches",
-      "monthly_reports": "Monthly Reports"
+      "monthly_reports": "Monthly Reports",
+      "tours": "Tours",
+      "tour_bookings": "Tour Bookings"
     },
     "buttons": {
       "worktime_start": "Start",
@@ -745,7 +749,20 @@
       "payroll_generate": "Generate",
       "payroll_export": "Export",
       "payroll_edit": "Edit",
-      "cerebro": "Cerebro"
+      "cerebro": "Cerebro",
+      "tour_create": "Create Tour",
+      "tour_edit": "Edit Tour",
+      "tour_delete": "Delete Tour",
+      "tour_view": "View Tour",
+      "tour_booking_create": "Create Booking",
+      "tour_booking_edit": "Edit Booking",
+      "tour_booking_cancel": "Cancel Booking",
+      "tour_provider_create": "Create Provider",
+      "tour_provider_edit": "Edit Provider",
+      "tour_provider_delete": "Delete Provider",
+      "password_entry_create": "Create Entry",
+      "password_entry_edit": "Edit Entry",
+      "password_entry_delete": "Delete Entry"
     }
   },
   "countries": {
