@@ -19,6 +19,7 @@ Dieses Dokument definiert die verbindlichen Design-Standards für das Intranet-P
 13. [Scrollbars-Design](#scrollbars-design)
 14. [Responsive Design](#responsive-design)
 15. [Modals und Sidepanes](#modals-und-sidepanes)
+16. [⚠️ KRITISCHE CHECKLISTE FÜR NEUE IMPLEMENTIERUNGEN](#-kritische-checkliste-für-neue-implementierungen)
 
 ## Allgemeine Designprinzipien
 
@@ -537,47 +538,76 @@ const getStatusText = (status: string, processType?: 'task' | 'request' | 'defau
 
 #### Tabellen-Filter-System
 
+**⚠️ KRITISCH: Alle Tabellen mit Filterfunktionalität MÜSSEN das FilterPane-System verwenden!**
+
+**VERBOTEN:**
+- ❌ Einfache Suchfelder mit `searchTerm` State
+- ❌ Eigene Sortierung mit Select-Dropdowns
+- ❌ Client-seitige Filterung ohne FilterPane
+
+**ERFORDERLICH:**
+- ✅ FilterPane-Komponente verwenden
+- ✅ SavedFilterTags-Komponente verwenden
+- ✅ Filter-Button mit FunnelIcon
+- ✅ Controlled Mode für Filter-State
+
 Alle Tabellen mit Filterfunktionalität müssen dem folgenden Standard entsprechen:
 
 ##### 1. Filter-Button und konditionales Panel
 
 ```jsx
-{/* Filter-Button mit aktivem Indikator */}
-<button
-    className={`p-2 rounded-md border ${activeFilters > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
-    onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-    title="Filter"
->
-    <FunnelIcon className="h-5 w-5" />
-    {activeFilters > 0 && (
+{/* Filter-Button mit aktivem Indikator - IMMER RECHTS */}
+<div className="flex items-center gap-2">
+  <div className="relative">
+    <button
+      className={`p-2 rounded-md border ${filterConditions.length > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+      onClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
+      title="Filter"
+    >
+      <FunnelIcon className="h-5 w-5" />
+      {filterConditions.length > 0 && (
         <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
-            {activeFilters}
+          {filterConditions.length}
         </span>
-    )}
-</button>
+      )}
+    </button>
+  </div>
+</div>
 
 {/* Konditionales Filter-Panel */}
-{isFilterPanelOpen && (
+{isFilterPaneOpen && (
+  <div className="px-3 sm:px-4 md:px-6">
     <FilterPane
-        columns={availableColumns}
-        onApply={applyFilterConditions}
-        onReset={resetFilterConditions}
-        savedConditions={currentConditions}
-        savedOperators={currentOperators}
-        tableId={TABLE_ID}
+      columns={availableColumns}
+      onApply={applyFilterConditions}
+      onReset={resetFilterConditions}
+      savedConditions={filterConditions}
+      savedOperators={filterLogicalOperators}
+      savedSortDirections={filterSortDirections}
+      onSortDirectionsChange={setFilterSortDirections}
+      tableId={TABLE_ID}
     />
+  </div>
 )}
 
 {/* Gespeicherte Filter (Controlled Mode) */}
-<SavedFilterTags
+<div className="px-3 sm:px-4 md:px-6">
+  <SavedFilterTags
     tableId={TABLE_ID}
-    onSelectFilter={applyFilterConditions}
+    onSelectFilter={(conditions, operators, sortDirections) => applyFilterConditions(conditions, operators, sortDirections)}
     onReset={resetFilterConditions}
     activeFilterName={activeFilterName}
     selectedFilterId={selectedFilterId}
     onFilterChange={handleFilterChange}
-/>
+    defaultFilterName={t('common.all', 'Alle')}
+  />
+</div>
 ```
+
+**Referenz-Implementierungen (IMMER VERWENDEN!):**
+- `frontend/src/pages/Cerebro.tsx` Zeile 149-200
+- `frontend/src/pages/Worktracker.tsx` Zeile 3654-3683
+- `frontend/src/components/teamWorktime/ActiveUsersList.tsx` Zeile 1067-1099
 
 ##### 2. Filter-Komponenten
 
@@ -1602,13 +1632,18 @@ Alle Action-Buttons (`btn-action`) haben folgende Eigenschaften:
 **Richtige Implementierung:**
 ```jsx
 // ✅ RICHTIG: Icon-only Button mit Tooltip
-<button
-  onClick={handleSave}
-  className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-  title="Speichern"
->
-  <CheckIcon className="h-4 w-4" />
-</button>
+<div className="relative group">
+  <button
+    onClick={handleSave}
+    className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+    title="Speichern"
+  >
+    <CheckIcon className="h-5 w-5" />
+  </button>
+  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+    Speichern
+  </div>
+</div>
 
 // ❌ FALSCH: Button mit sichtbarem Text
 <button
@@ -1620,13 +1655,13 @@ Alle Action-Buttons (`btn-action`) haben folgende Eigenschaften:
 ```
 
 **Standard-Icons für häufige Aktionen:**
-- **Speichern**: `CheckIcon` (grün/blau)
-- **Abbrechen**: `XMarkIcon` (grau)
-- **Löschen**: `TrashIcon` (rot)
-- **Bearbeiten**: `PencilIcon` (blau)
-- **Umbenennen**: `PencilIcon` (blau)
-- **Hinzufügen**: `PlusIcon` (blau)
-- **Entfernen**: `XMarkIcon` oder `TrashIcon` (rot)
+- **Speichern**: `CheckIcon` (blau, mit blauem Hintergrund `bg-blue-600`)
+- **Abbrechen**: `XMarkIcon` (grau, transparent)
+- **Löschen**: `TrashIcon` (rot, transparent)
+- **Bearbeiten**: `PencilIcon` (blau, transparent)
+- **Umbenennen**: `PencilIcon` (blau, transparent)
+- **Hinzufügen**: `PlusIcon` (blau, transparent)
+- **Entfernen**: `XMarkIcon` oder `TrashIcon` (rot, transparent)
 
 **Diese Regel gilt für ALLE Buttons im gesamten System!**
 - Modals
@@ -1639,8 +1674,66 @@ Alle Action-Buttons (`btn-action`) haben folgende Eigenschaften:
 **Bei jeder neuen Button-Implementierung:**
 1. Prüfe: Hat der Button sichtbaren Text? → ENTFERNEN!
 2. Prüfe: Ist ein passendes Icon vorhanden? → HINZUFÜGEN!
-3. Prüfe: Ist der Text im `title` Attribut? → HINZUFÜGEN!
+3. Prüfe: Ist der Text im `title` Attribut UND im Tooltip? → HINZUFÜGEN!
 4. Prüfe: Entspricht der Style dem Standard? → ANPASSEN!
+
+---
+
+### ⚠️ KRITISCH: Create-Button Standard - IMMER LINKS, IMMER RUND, IMMER ICON-ONLY!
+
+**WICHTIGSTE REGEL FÜR CREATE-BUTTONS:**
+- **Create-Buttons müssen IMMER links positioniert sein!**
+- **Create-Buttons müssen IMMER rund sein (`rounded-full`)!**
+- **Create-Buttons müssen IMMER Icon-only sein (OHNE Text)!**
+- **Create-Buttons haben IMMER weißen Hintergrund, blaues Icon, blauen Rand!**
+- **Create-Buttons haben IMMER die Größe `p-1.5` mit `style={{ width: '30.19px', height: '30.19px' }}`!**
+
+**Richtige Implementierung (Create-Button):**
+```jsx
+// ✅ RICHTIG: Create-Button links, rund, Icon-only
+<div className="flex items-center">
+  {canCreate && (
+    <div className="relative group">
+      <button
+        onClick={() => setIsCreateModalOpen(true)}
+        className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+        style={{ width: '30.19px', height: '30.19px' }}
+        aria-label={t('tasks.createTask')}
+      >
+        <PlusIcon className="h-4 w-4" />
+      </button>
+      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+        {t('tasks.createTask')}
+      </div>
+    </div>
+  )}
+</div>
+
+// ❌ FALSCH: Create-Button rechts, mit Text, blauer Hintergrund
+<div className="flex items-center justify-end">
+  <button
+    onClick={() => setIsCreateModalOpen(true)}
+    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+  >
+    <PlusIcon className="h-5 w-5" />
+    {t('tasks.createTask')}
+  </button>
+</div>
+```
+
+**Referenz-Implementierungen (IMMER VERWENDEN!):**
+- `frontend/src/components/UserManagementTab.tsx` Zeile 738-752
+- `frontend/src/pages/Worktracker.tsx` Zeile 2104-2115
+- `frontend/src/components/cerebro/CerebroHeader.tsx` Zeile 100-114
+- `frontend/src/components/ConsultationTracker.tsx` Zeile 499-508
+
+**Bei jeder neuen Create-Button-Implementierung:**
+1. Prüfe: Ist der Button LINKS positioniert? → KORRIGIEREN!
+2. Prüfe: Ist der Button RUND (`rounded-full`)? → KORRIGIEREN!
+3. Prüfe: Hat der Button KEINEN sichtbaren Text? → KORRIGIEREN!
+4. Prüfe: Hat der Button weißen Hintergrund, blaues Icon, blauen Rand? → KORRIGIEREN!
+5. Prüfe: Hat der Button die korrekte Größe? → KORRIGIEREN!
+6. Prüfe: Wurde eine der Referenz-Implementierungen verwendet? → VERGLEICHEN!
 
 ### ⚠️ KRITISCH: Layout- und Positionierungsänderungen - STRENG VERBOTEN!
 
@@ -1683,6 +1776,79 @@ const checkInLink = generateLobbyPmsCheckInLink(...);  // War: window.location.o
 1. **NUR Funktionalität ändern** - Keine Layout-Änderungen
 2. **NUR Logik ändern** - Keine CSS-Klassen für Position/Layout
 3. **NUR Inhalt ändern** - Keine Container-Struktur ändern
+
+---
+
+## ⚠️ KRITISCHE CHECKLISTE FÜR NEUE IMPLEMENTIERUNGEN
+
+**Diese Checkliste MUSS bei JEDER neuen UI-Implementierung durchgegangen werden!**
+
+### 1. Create-Button Checkliste
+
+- [ ] **Position:** Create-Button ist LINKS positioniert (nicht rechts!)
+- [ ] **Form:** Create-Button ist RUND (`rounded-full`)
+- [ ] **Größe:** Create-Button hat `p-1.5` mit `style={{ width: '30.19px', height: '30.19px' }}`
+- [ ] **Hintergrund:** Create-Button hat weißen Hintergrund (`bg-white dark:bg-gray-700`)
+- [ ] **Icon:** Create-Button hat blaues Icon (`text-blue-600 dark:text-blue-400`)
+- [ ] **Rand:** Create-Button hat blauen Rand (`border border-blue-200 dark:border-gray-600`)
+- [ ] **Schatten:** Create-Button hat Schatten (`shadow-sm`)
+- [ ] **Text:** Create-Button hat KEINEN sichtbaren Text (nur im Tooltip!)
+- [ ] **Tooltip:** Create-Button hat Tooltip mit `group` und `absolute` positioning
+- [ ] **Referenz:** Eine der Referenz-Implementierungen wurde verwendet:
+  - `UserManagementTab.tsx` Zeile 738-752
+  - `Worktracker.tsx` Zeile 2104-2115
+  - `CerebroHeader.tsx` Zeile 100-114
+
+### 2. Alle Buttons Checkliste
+
+- [ ] **Text:** Button hat KEINEN sichtbaren Text
+- [ ] **Icon:** Button hat ein passendes Icon
+- [ ] **Tooltip:** Button hat `title` Attribut UND Tooltip-Div mit `group` pattern
+- [ ] **Hintergrund:** Button hat KEINEN blauen Hintergrund (außer Speichern-Button in Sidepanes)
+- [ ] **Style:** Button verwendet Standard-Styles (transparent mit Hover-Effekt)
+
+### 3. Filter & Search Checkliste
+
+- [ ] **FilterPane:** FilterPane-Komponente wird verwendet (nicht einfaches Suchfeld!)
+- [ ] **SavedFilterTags:** SavedFilterTags-Komponente wird verwendet
+- [ ] **Filter-Button:** Filter-Button mit `FunnelIcon` ist vorhanden
+- [ ] **TableID:** `tableId` ist definiert (z.B. `const TABLE_ID = 'password-manager-table'`)
+- [ ] **State Management:** Controlled Mode wird verwendet (`activeFilterName`, `selectedFilterId`, `onFilterChange`)
+- [ ] **Column Evaluators:** Column Evaluators sind implementiert
+- [ ] **getFieldValue:** `getFieldValue` Funktion ist implementiert
+- [ ] **applyFilters:** `applyFilters` aus `filterLogic.ts` wird verwendet
+- [ ] **Sortierung:** Sortierung erfolgt über FilterPane (nicht eigene Select-Dropdowns!)
+- [ ] **Referenz:** Eine der Referenz-Implementierungen wurde verwendet:
+  - `Cerebro.tsx` Zeile 32-200
+  - `Worktracker.tsx` Zeile 280-1203
+  - `ActiveUsersList.tsx` Zeile 121-1099
+
+### 4. Layout-Positionierung Checkliste
+
+- [ ] **Create-Button:** Create-Button ist LINKS (nicht rechts!)
+- [ ] **Filter-Button:** Filter-Button ist RECHTS
+- [ ] **Suchfeld:** Suchfeld ist im Header-Bereich (nicht in der Box!)
+- [ ] **FilterPane:** FilterPane ist unter dem Header (nicht in der Box!)
+
+### 5. Imports Checkliste
+
+- [ ] **FilterPane:** `import FilterPane from './FilterPane.tsx'`
+- [ ] **SavedFilterTags:** `import SavedFilterTags from './SavedFilterTags.tsx'`
+- [ ] **FilterCondition:** `import { FilterCondition } from './FilterRow.tsx'`
+- [ ] **applyFilters:** `import { applyFilters } from '../utils/filterLogic.ts'`
+- [ ] **FunnelIcon:** `import { FunnelIcon } from '@heroicons/react/24/outline'`
+- [ ] **useMemo:** `import { useMemo } from 'react'` (für Spalten-Definitionen)
+
+### 6. Finale Prüfung
+
+- [ ] **Alle Buttons:** Alle Buttons sind Icon-only
+- [ ] **Create-Button:** Create-Button ist links, rund, weißer Hintergrund
+- [ ] **Filter-System:** FilterPane-System ist implementiert
+- [ ] **Layout:** Layout entspricht den Standards
+- [ ] **Referenzen:** Referenz-Implementierungen wurden verwendet
+- [ ] **Dokumentation:** Dokumentation wurde gelesen und verstanden
+
+**Wenn auch nur EIN Punkt nicht erfüllt ist → STOPPEN und korrigieren!**
 4. **Responsive Klassen nur für Konsistenz** - Nicht für Position-Änderungen
 
 **Checkliste vor JEDEM Fix:**

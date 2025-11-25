@@ -2829,7 +2829,8 @@
     "sortByCreated": "Nach Erstellungsdatum",
     "sortByUpdated": "Nach Änderungsdatum",
     "sortAsc": "Aufsteigend sortieren",
-    "sortDesc": "Absteigend sortieren"
+    "sortDesc": "Absteigend sortieren",
+    "allEntries": "Alle Einträge"
   },
   "tours": {
     "title": "Touren-Verwaltung",

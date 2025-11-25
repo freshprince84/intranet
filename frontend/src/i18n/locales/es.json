@@ -2779,7 +2779,8 @@
     "sortByCreated": "Por Fecha de Creación",
     "sortByUpdated": "Por Fecha de Actualización",
     "sortAsc": "Ordenar Ascendente",
-    "sortDesc": "Ordenar Descendente"
+    "sortDesc": "Ordenar Descendente",
+    "allEntries": "Todas las Entradas"
   },
   "tours": {
     "title": "Gestión de Tours",

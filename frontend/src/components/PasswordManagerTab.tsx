@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   PlusIcon, 
@@ -7,11 +7,11 @@ import {
   ClipboardIcon, 
   LinkIcon,
   EyeIcon,
-  MagnifyingGlassIcon,
+  EyeSlashIcon,
   KeyIcon,
   ShieldCheckIcon,
   ClockIcon,
-  ArrowsUpDownIcon
+  FunnelIcon
 } from '@heroicons/react/24/outline';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -20,6 +20,13 @@ import { toast } from 'react-toastify';
 import PasswordEntrySidepane from './PasswordEntrySidepane.tsx';
 import PasswordEntryPermissionsModal from './PasswordEntryPermissionsModal.tsx';
 import PasswordEntryAuditLogsModal from './PasswordEntryAuditLogsModal.tsx';
+import FilterPane from './FilterPane.tsx';
+import SavedFilterTags from './SavedFilterTags.tsx';
+import { FilterCondition } from './FilterRow.tsx';
+import { applyFilters } from '../utils/filterLogic.ts';
+
+// TableID für gespeicherte Filter
+const PASSWORD_MANAGER_TABLE_ID = 'password-manager-table';
 
 const PasswordManagerTab: React.FC = () => {
   const { t } = useTranslation();
@@ -27,15 +34,31 @@ const PasswordManagerTab: React.FC = () => {
   const { user } = useAuth();
   const [entries, setEntries] = useState<PasswordEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [isCreateSidepaneOpen, setIsCreateSidepaneOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<PasswordEntry | null>(null);
   const [viewingPassword, setViewingPassword] = useState<number | null>(null);
   const [viewedPasswords, setViewedPasswords] = useState<Record<number, string>>({});
   const [permissionsEntryId, setPermissionsEntryId] = useState<number | null>(null);
   const [auditLogsEntryId, setAuditLogsEntryId] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<'title' | 'createdAt' | 'updatedAt'>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // Filter State Management (Controlled Mode)
+  const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
+  const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+  const [filterSortDirections, setFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
+  const [isFilterPaneOpen, setIsFilterPaneOpen] = useState(false);
+  const [activeFilterName, setActiveFilterName] = useState<string>('');
+  const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
+  
+  // Spalten-Definitionen für Filter
+  const availableColumns = useMemo(() => [
+    { id: 'title', label: t('passwordManager.entryTitle') },
+    { id: 'url', label: t('passwordManager.entryUrl') },
+    { id: 'username', label: t('passwordManager.entryUsername') },
+    { id: 'notes', label: t('passwordManager.entryNotes') },
+    { id: 'createdAt', label: t('passwordManager.sortByCreated') },
+    { id: 'updatedAt', label: t('passwordManager.sortByUpdated') },
+    { id: 'createdBy', label: t('common.createdBy') }
+  ], [t]);
 
   // Prüfe Berechtigungen
   const canView = hasPermission('password_manager', 'read', 'page');
@@ -191,44 +214,148 @@ const PasswordManagerTab: React.FC = () => {
     setEditingEntry(null);
   };
 
+  // Filter-Funktionen
+  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
+    if (sortDirections) {
+      setFilterSortDirections(sortDirections);
+    }
+  };
+
+  const resetFilterConditions = () => {
+    setFilterConditions([]);
+    setFilterLogicalOperators([]);
+    setFilterSortDirections([]);
+    setActiveFilterName('');
+    setSelectedFilterId(null);
+  };
+
+  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    setActiveFilterName(name);
+    setSelectedFilterId(id);
+    applyFilterConditions(conditions, operators, sortDirections);
+  };
+
+  // Column Evaluators für Filter
+  const columnEvaluators: any = {
+    'title': (item: PasswordEntry, cond: FilterCondition) => {
+      const value = item.title?.toLowerCase() || '';
+      return evaluateTextCondition(value, cond);
+    },
+    'url': (item: PasswordEntry, cond: FilterCondition) => {
+      const value = item.url?.toLowerCase() || '';
+      return evaluateTextCondition(value, cond);
+    },
+    'username': (item: PasswordEntry, cond: FilterCondition) => {
+      const value = item.username?.toLowerCase() || '';
+      return evaluateTextCondition(value, cond);
+    },
+    'notes': (item: PasswordEntry, cond: FilterCondition) => {
+      const value = item.notes?.toLowerCase() || '';
+      return evaluateTextCondition(value, cond);
+    },
+    'createdAt': (item: PasswordEntry, cond: FilterCondition) => {
+      return evaluateDateCondition(new Date(item.createdAt), cond);
+    },
+    'updatedAt': (item: PasswordEntry, cond: FilterCondition) => {
+      return evaluateDateCondition(new Date(item.updatedAt), cond);
+    },
+    'createdBy': (item: PasswordEntry, cond: FilterCondition) => {
+      const value = item.createdBy ? `${item.createdBy.firstName} ${item.createdBy.lastName}`.toLowerCase() : '';
+      return evaluateTextCondition(value, cond);
+    }
+  };
+
+  const evaluateTextCondition = (value: string, cond: FilterCondition): boolean => {
+    const condValue = (cond.value || '').toLowerCase();
+    switch (cond.operator) {
+      case 'equals': return value === condValue;
+      case 'contains': return value.includes(condValue);
+      case 'startsWith': return value.startsWith(condValue);
+      case 'endsWith': return value.endsWith(condValue);
+      case 'isNull': return !value;
+      case 'isNotNull': return !!value;
+      default: return false;
+    }
+  };
+
+  const evaluateDateCondition = (date: Date, cond: FilterCondition): boolean => {
+    const condDate = cond.value ? new Date(cond.value) : null;
+    if (!condDate || isNaN(condDate.getTime())) return false;
+    
+    const dateMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const condMidnight = new Date(condDate.getFullYear(), condDate.getMonth(), condDate.getDate());
+    
+    switch (cond.operator) {
+      case 'equals': return dateMidnight.getTime() === condMidnight.getTime();
+      case 'before': return dateMidnight.getTime() < condMidnight.getTime();
+      case 'after': return dateMidnight.getTime() > condMidnight.getTime();
+      default: return false;
+    }
+  };
+
+  const getFieldValue = (item: PasswordEntry, columnId: string): any => {
+    switch (columnId) {
+      case 'title': return item.title;
+      case 'url': return item.url;
+      case 'username': return item.username;
+      case 'notes': return item.notes;
+      case 'createdAt': return item.createdAt;
+      case 'updatedAt': return item.updatedAt;
+      case 'createdBy': return item.createdBy ? `${item.createdBy.firstName} ${item.createdBy.lastName}` : '';
+      default: return (item as any)[columnId];
+    }
+  };
+
   // Gefilterte und sortierte Einträge
-  const filteredAndSortedEntries = React.useMemo(() => {
-    let filtered = entries.filter(entry => {
-      if (!searchTerm) return true;
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        entry.title.toLowerCase().includes(searchLower) ||
-        entry.url?.toLowerCase().includes(searchLower) ||
-        entry.username?.toLowerCase().includes(searchLower) ||
-        entry.notes?.toLowerCase().includes(searchLower)
+  const filteredAndSortedEntries = useMemo(() => {
+    let filtered = [...entries];
+
+    // Filter anwenden
+    if (filterConditions.length > 0) {
+      filtered = applyFilters(
+        filtered,
+        filterConditions,
+        filterLogicalOperators,
+        getFieldValue,
+        columnEvaluators
       );
-    });
+    }
 
-    // Sortierung
-    filtered.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      if (sortBy === 'title') {
-        aValue = a.title.toLowerCase();
-        bValue = b.title.toLowerCase();
-      } else if (sortBy === 'createdAt') {
-        aValue = new Date(a.createdAt).getTime();
-        bValue = new Date(b.createdAt).getTime();
-      } else {
-        aValue = new Date(a.updatedAt).getTime();
-        bValue = new Date(b.updatedAt).getTime();
-      }
-
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
+    // Sortierung anwenden (aus Filter oder Standard)
+    if (filterSortDirections.length > 0) {
+      filtered.sort((a, b) => {
+        for (const sortDir of filterSortDirections.sort((x, y) => x.priority - y.priority)) {
+          const aValue = getFieldValue(a, sortDir.column);
+          const bValue = getFieldValue(b, sortDir.column);
+          
+          let comparison = 0;
+          if (typeof aValue === 'string' && typeof bValue === 'string') {
+            comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+          } else if (aValue instanceof Date && bValue instanceof Date) {
+            comparison = aValue.getTime() - bValue.getTime();
+          } else {
+            comparison = aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+          }
+          
+          if (comparison !== 0) {
+            return sortDir.direction === 'asc' ? comparison : -comparison;
+          }
+        }
+        return 0;
+      });
+    } else {
+      // Standard-Sortierung: nach createdAt desc
+      filtered.sort((a, b) => {
+        const aTime = new Date(a.createdAt).getTime();
+        const bTime = new Date(b.createdAt).getTime();
+        return bTime - aTime;
+      });
+    }
 
     return filtered;
-  }, [entries, searchTerm, sortBy, sortOrder]);
+  }, [entries, filterConditions, filterLogicalOperators, filterSortDirections]);
 
   if (!canView) {
     return (
@@ -242,52 +369,76 @@ const PasswordManagerTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header mit Suchleiste, Sortierung und Erstellen-Button */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex-1 relative min-w-[200px]">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={t('passwordManager.searchPlaceholder')}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Sortierung */}
-          <div className="flex items-center gap-2">
-            <ArrowsUpDownIcon className="h-5 w-5 text-gray-400" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'title' | 'createdAt' | 'updatedAt')}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-            >
-              <option value="title">{t('passwordManager.sortByTitle')}</option>
-              <option value="createdAt">{t('passwordManager.sortByCreated')}</option>
-              <option value="updatedAt">{t('passwordManager.sortByUpdated')}</option>
-            </select>
-            <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-              title={sortOrder === 'asc' ? t('passwordManager.sortAsc') : t('passwordManager.sortDesc')}
-            >
-              <ArrowsUpDownIcon className="h-5 w-5" />
-            </button>
-          </div>
+      {/* Header-Bereich: Create-Button links, Filter-Button rechts */}
+      <div className="flex items-center justify-between mb-4">
+        {/* Linke Seite: Create-Button */}
+        <div className="flex items-center">
           {canCreate && (
-            <button
-              onClick={() => {
-                setEditingEntry(null);
-                setIsCreateSidepaneOpen(true);
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 flex items-center gap-2"
-            >
-              <PlusIcon className="h-5 w-5" />
-              {t('passwordManager.createEntry')}
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => {
+                  setEditingEntry(null);
+                  setIsCreateSidepaneOpen(true);
+                }}
+                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                style={{ width: '30.19px', height: '30.19px' }}
+                aria-label={t('passwordManager.createEntry')}
+              >
+                <PlusIcon className="h-4 w-4" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('passwordManager.createEntry')}
+              </div>
+            </div>
           )}
         </div>
+        
+        {/* Rechte Seite: Filter-Button */}
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button
+              className={`p-2 rounded-md border ${filterConditions.length > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+              onClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
+              title={t('common.filter')}
+            >
+              <FunnelIcon className="h-5 w-5" />
+              {filterConditions.length > 0 && (
+                <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                  {filterConditions.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter-Panel */}
+      {isFilterPaneOpen && (
+        <div className="px-3 sm:px-4 md:px-6">
+          <FilterPane
+            columns={availableColumns}
+            onApply={applyFilterConditions}
+            onReset={resetFilterConditions}
+            savedConditions={filterConditions}
+            savedOperators={filterLogicalOperators}
+            savedSortDirections={filterSortDirections}
+            onSortDirectionsChange={setFilterSortDirections}
+            tableId={PASSWORD_MANAGER_TABLE_ID}
+          />
+        </div>
+      )}
+
+      {/* Gespeicherte Filter als Tags */}
+      <div className="px-3 sm:px-4 md:px-6">
+        <SavedFilterTags
+          tableId={PASSWORD_MANAGER_TABLE_ID}
+          onSelectFilter={(conditions, operators, sortDirections) => applyFilterConditions(conditions, operators, sortDirections)}
+          onReset={resetFilterConditions}
+          activeFilterName={activeFilterName}
+          selectedFilterId={selectedFilterId}
+          onFilterChange={handleFilterChange}
+          defaultFilterName={t('passwordManager.allEntries', 'Alle Einträge')}
+        />
       </div>
 
       {/* Liste der Einträge */}
@@ -354,32 +505,51 @@ const PasswordManagerTab: React.FC = () => {
 
                   <div className="mt-3 flex items-center gap-2 flex-wrap">
                     {/* Passwort anzeigen */}
-                    <button
-                      onClick={() => handleShowPassword(entry)}
-                      className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1"
-                    >
-                      <EyeIcon className="h-4 w-4" />
-                      {viewingPassword === entry.id ? t('passwordManager.hidePassword') : t('passwordManager.showPassword')}
-                    </button>
+                    <div className="relative group">
+                      <button
+                        onClick={() => handleShowPassword(entry)}
+                        className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                        title={viewingPassword === entry.id ? t('passwordManager.hidePassword') : t('passwordManager.showPassword')}
+                      >
+                        {viewingPassword === entry.id ? (
+                          <EyeSlashIcon className="h-5 w-5" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {viewingPassword === entry.id ? t('passwordManager.hidePassword') : t('passwordManager.showPassword')}
+                      </div>
+                    </div>
 
                     {/* Passwort kopieren */}
-                    <button
-                      onClick={() => handleCopyPassword(entry)}
-                      className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1"
-                    >
-                      <ClipboardIcon className="h-4 w-4" />
-                      {t('passwordManager.copyPassword')}
-                    </button>
+                    <div className="relative group">
+                      <button
+                        onClick={() => handleCopyPassword(entry)}
+                        className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                        title={t('passwordManager.copyPassword')}
+                      >
+                        <ClipboardIcon className="h-5 w-5" />
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('passwordManager.copyPassword')}
+                      </div>
+                    </div>
 
                     {/* Öffnen & Passwort kopieren */}
                     {entry.url && (
-                      <button
-                        onClick={() => handleOpenAndCopy(entry)}
-                        className="px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 flex items-center gap-1"
-                      >
-                        <LinkIcon className="h-4 w-4" />
-                        {t('passwordManager.openAndCopy')}
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={() => handleOpenAndCopy(entry)}
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md"
+                          title={t('passwordManager.openAndCopy')}
+                        >
+                          <LinkIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('passwordManager.openAndCopy')}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>

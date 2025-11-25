@@ -330,19 +330,24 @@ const PasswordEntrySidepane: React.FC<PasswordEntrySidepaneProps> = ({ isOpen, o
                         )}
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleGeneratePassword}
-                      disabled={generatingPassword}
-                      className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      title={t('passwordManager.generatePassword')}
-                    >
-                      {generatingPassword ? (
-                        <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <KeyIcon className="h-5 w-5" />
-                      )}
-                    </button>
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        onClick={handleGeneratePassword}
+                        disabled={generatingPassword}
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={t('passwordManager.generatePassword')}
+                      >
+                        {generatingPassword ? (
+                          <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <KeyIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('passwordManager.generatePassword')}
+                      </div>
+                    </div>
                   </div>
                   {passwordStrength && (
                     <div className="mt-2">
@@ -520,19 +525,24 @@ const PasswordEntrySidepane: React.FC<PasswordEntrySidepaneProps> = ({ isOpen, o
                     )}
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleGeneratePassword}
-                  disabled={generatingPassword}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  title={t('passwordManager.generatePassword')}
-                >
-                  {generatingPassword ? (
-                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <KeyIcon className="h-5 w-5" />
-                  )}
-                </button>
+                <div className="relative group">
+                  <button
+                    type="button"
+                    onClick={handleGeneratePassword}
+                    disabled={generatingPassword}
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={t('passwordManager.generatePassword')}
+                  >
+                    {generatingPassword ? (
+                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <KeyIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('passwordManager.generatePassword')}
+                  </div>
+                </div>
               </div>
               {passwordStrength && (
                 <div className="mt-2">
