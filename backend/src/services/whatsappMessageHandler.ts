@@ -130,7 +130,7 @@ export class WhatsAppMessageHandler {
             include: {
               bookings: {
                 where: {
-                  status: 'pending',
+                  status: { in: ['confirmed'] },
                   isExternal: true
                 },
                 orderBy: {

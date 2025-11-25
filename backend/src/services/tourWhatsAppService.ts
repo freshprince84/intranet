@@ -62,10 +62,10 @@ export class TourWhatsAppService {
         await prisma.tourWhatsAppMessage.create({
           data: {
             bookingId,
-            direction: 'outbound',
+            direction: 'outgoing',
             status: 'sent',
-            message,
-            recipientPhone: provider.phone
+            phoneNumber: provider.phone,
+            message
           }
         });
         console.log(`[TourWhatsApp] ✅ Buchungsanfrage gesendet an Anbieter ${provider.phone}`);
@@ -108,10 +108,10 @@ export class TourWhatsAppService {
       await prisma.tourWhatsAppMessage.create({
         data: {
           bookingId,
-          direction: 'inbound',
-          status: 'received',
-          message: providerMessage,
-          senderPhone: booking.tour?.externalProvider?.phone || null
+          direction: 'incoming',
+          status: 'delivered',
+          phoneNumber: booking.tour?.externalProvider?.phone || '',
+          message: providerMessage
         }
       });
 
@@ -135,7 +135,7 @@ export class TourWhatsAppService {
         await prisma.tourBooking.update({
           where: { id: bookingId },
           data: {
-            status: TourBookingStatus.CONFIRMED,
+            status: 'confirmed',
             externalStatus: 'confirmed'
           }
         });
@@ -161,10 +161,10 @@ export class TourWhatsAppService {
         await prisma.tourWhatsAppMessage.create({
           data: {
             bookingId,
-            direction: 'outbound',
+            direction: 'outgoing',
             status: 'sent',
-            message: confirmationMessage,
-            recipientPhone: booking.customerPhone
+            phoneNumber: booking.customerPhone || '',
+            message: confirmationMessage
           }
         });
 
@@ -174,7 +174,7 @@ export class TourWhatsAppService {
         await prisma.tourBooking.update({
           where: { id: bookingId },
           data: {
-            status: TourBookingStatus.CANCELLED,
+            status: 'cancelled',
             externalStatus: 'cancelled',
             cancelledBy: 'provider'
           }
@@ -189,10 +189,10 @@ export class TourWhatsAppService {
         await prisma.tourWhatsAppMessage.create({
           data: {
             bookingId,
-            direction: 'outbound',
+            direction: 'outgoing',
             status: 'sent',
-            message: cancellationMessage,
-            recipientPhone: booking.customerPhone
+            phoneNumber: booking.customerPhone || '',
+            message: cancellationMessage
           }
         });
 
@@ -242,10 +242,10 @@ export class TourWhatsAppService {
         await prisma.tourWhatsAppMessage.create({
           data: {
             bookingId,
-            direction: 'outbound',
+            direction: 'outgoing',
             status: 'sent',
-            message,
-            recipientPhone: booking.customerPhone
+            phoneNumber: booking.customerPhone || '',
+            message
           }
         });
       }

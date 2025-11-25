@@ -6,7 +6,11 @@ import {
   updateTour,
   toggleTourActive,
   getTourBookings,
-  exportTours
+  exportTours,
+  tourImageUpload,
+  uploadTourImage,
+  uploadTourGalleryImage,
+  deleteTourGalleryImage
 } from '../controllers/tourController';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';

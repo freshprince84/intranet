@@ -36,7 +36,9 @@ export class TourNotificationService {
         where: {
           roles: {
             some: {
-              organizationId
+              role: {
+                organizationId: organizationId
+              }
             }
           },
           active: true
@@ -140,8 +142,7 @@ export class TourNotificationService {
           where: {
             roles: {
               some: {
-                roleId: adminRole.id,
-                organizationId
+                roleId: adminRole.id
               }
             },
             active: true
@@ -165,9 +166,7 @@ export class TourNotificationService {
           where: {
             roles: {
               some: {
-                roleId: role.id,
-                organizationId,
-                ...(branchId ? { branchId } : {})
+                roleId: role.id
               }
             },
             active: true
@@ -256,7 +255,9 @@ export class TourNotificationService {
         where: {
           roles: {
             some: {
-              organizationId
+              role: {
+                organizationId: organizationId
+              }
             }
           },
           active: true
@@ -315,7 +316,9 @@ export class TourNotificationService {
         where: {
           roles: {
             some: {
-              organizationId
+              role: {
+                organizationId: organizationId
+              }
             }
           },
           active: true
