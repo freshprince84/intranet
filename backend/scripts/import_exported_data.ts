@@ -230,59 +230,75 @@ async function importUsers(stats: ImportStats) {
       
       if (existing) {
         // Update falls nötig (aber NICHT das Passwort!)
+        // WICHTIG: active-Status wird NUR aktualisiert, wenn er explizit in den Daten vorhanden ist
+        // Dies verhindert, dass inaktive User (z.B. in Organisation 1) durch Imports überschrieben werden
+        const updateData: any = {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          birthday: user.birthday ? new Date(user.birthday) : null,
+          bankDetails: user.bankDetails,
+          contract: user.contract,
+          salary: user.salary,
+          country: user.country,
+          hourlyRate: user.hourlyRate ? parseFloat(user.hourlyRate) : null,
+          language: user.language,
+          normalWorkingHours: user.normalWorkingHours,
+          payrollCountry: user.payrollCountry,
+          approvedOvertimeHours: user.approvedOvertimeHours,
+          contractType: user.contractType,
+          monthlySalary: user.monthlySalary,
+          employeeNumber: user.employeeNumber,
+          identificationNumber: user.identificationNumber,
+          taxIdentificationNumber: user.taxIdentificationNumber
+        };
+        
+        // Nur active setzen, wenn es explizit in den Daten vorhanden ist
+        if (user.active !== undefined && user.active !== null) {
+          updateData.active = Boolean(user.active);
+        }
+        
         await prisma.user.update({
           where: { id: existing.id },
-          data: {
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            birthday: user.birthday ? new Date(user.birthday) : null,
-            bankDetails: user.bankDetails,
-            contract: user.contract,
-            salary: user.salary,
-            country: user.country,
-            hourlyRate: user.hourlyRate ? parseFloat(user.hourlyRate) : null,
-            language: user.language,
-            normalWorkingHours: user.normalWorkingHours,
-            payrollCountry: user.payrollCountry,
-            approvedOvertimeHours: user.approvedOvertimeHours,
-            contractType: user.contractType,
-            monthlySalary: user.monthlySalary,
-            employeeNumber: user.employeeNumber,
-            identificationNumber: user.identificationNumber,
-            taxIdentificationNumber: user.taxIdentificationNumber,
-            active: user.active !== undefined ? user.active : true
-          }
+          data: updateData
         });
         idMappings.users.set(user.id, existing.id);
         stats.users.updated++;
         console.log(`  🔄 Aktualisiert: ${user.username} (ID: ${existing.id})`);
       } else {
         // Erstelle neu
+        // WICHTIG: active-Status wird NUR gesetzt, wenn er explizit in den Daten vorhanden ist
+        // Ansonsten wird der DEFAULT-Wert (true) aus dem Schema verwendet
+        const createData: any = {
+          username: user.username,
+          email: user.email,
+          password: user.password,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          birthday: user.birthday ? new Date(user.birthday) : null,
+          bankDetails: user.bankDetails,
+          contract: user.contract,
+          salary: user.salary,
+          country: user.country,
+          hourlyRate: user.hourlyRate ? parseFloat(user.hourlyRate) : null,
+          language: user.language,
+          normalWorkingHours: user.normalWorkingHours,
+          payrollCountry: user.payrollCountry,
+          approvedOvertimeHours: user.approvedOvertimeHours,
+          contractType: user.contractType,
+          monthlySalary: user.monthlySalary,
+          employeeNumber: user.employeeNumber,
+          identificationNumber: user.identificationNumber,
+          taxIdentificationNumber: user.taxIdentificationNumber
+        };
+        
+        // Nur active setzen, wenn es explizit in den Daten vorhanden ist
+        if (user.active !== undefined && user.active !== null) {
+          createData.active = Boolean(user.active);
+        }
+        
         const created = await prisma.user.create({
-          data: {
-            username: user.username,
-            email: user.email,
-            password: user.password,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            birthday: user.birthday ? new Date(user.birthday) : null,
-            bankDetails: user.bankDetails,
-            contract: user.contract,
-            salary: user.salary,
-            country: user.country,
-            hourlyRate: user.hourlyRate ? parseFloat(user.hourlyRate) : null,
-            language: user.language,
-            normalWorkingHours: user.normalWorkingHours,
-            payrollCountry: user.payrollCountry,
-            approvedOvertimeHours: user.approvedOvertimeHours,
-            contractType: user.contractType,
-            monthlySalary: user.monthlySalary,
-            employeeNumber: user.employeeNumber,
-            identificationNumber: user.identificationNumber,
-            taxIdentificationNumber: user.taxIdentificationNumber,
-            active: user.active !== undefined ? user.active : true
-          }
+          data: createData
         });
         idMappings.users.set(user.id, created.id);
         stats.users.created++;

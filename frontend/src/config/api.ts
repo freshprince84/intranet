@@ -335,6 +335,7 @@ export const API_ENDPOINTS = {
         BY_ID: (id: number) => `/password-manager/${id}`,
         PASSWORD: (id: number) => `/password-manager/${id}/password`,
         AUDIT_LOGS: (id: number) => `/password-manager/${id}/audit-logs`,
+        PERMISSIONS: (id: number) => `/password-manager/${id}/permissions`,
         GENERATE_PASSWORD: '/password-manager/generate-password'
     }
 };

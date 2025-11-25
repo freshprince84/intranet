@@ -8,12 +8,18 @@ import {
   LinkIcon,
   EyeIcon,
   MagnifyingGlassIcon,
-  KeyIcon
+  KeyIcon,
+  ShieldCheckIcon,
+  ClockIcon,
+  FunnelIcon,
+  ArrowsUpDownIcon
 } from '@heroicons/react/24/outline';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { passwordManagerApi, PasswordEntry } from '../services/passwordManagerApi.ts';
 import { toast } from 'react-toastify';
 import PasswordEntrySidepane from './PasswordEntrySidepane.tsx';
+import PasswordEntryPermissionsModal from './PasswordEntryPermissionsModal.tsx';
+import PasswordEntryAuditLogsModal from './PasswordEntryAuditLogsModal.tsx';
 
 const PasswordManagerTab: React.FC = () => {
   const { t } = useTranslation();
@@ -25,6 +31,10 @@ const PasswordManagerTab: React.FC = () => {
   const [editingEntry, setEditingEntry] = useState<PasswordEntry | null>(null);
   const [viewingPassword, setViewingPassword] = useState<number | null>(null);
   const [viewedPasswords, setViewedPasswords] = useState<Record<number, string>>({});
+  const [permissionsEntryId, setPermissionsEntryId] = useState<number | null>(null);
+  const [auditLogsEntryId, setAuditLogsEntryId] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<'title' | 'createdAt' | 'updatedAt'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Prüfe Berechtigungen
   const canView = hasPermission('password_manager', 'read', 'page');
@@ -163,17 +173,44 @@ const PasswordManagerTab: React.FC = () => {
     setEditingEntry(null);
   };
 
-  // Gefilterte Einträge
-  const filteredEntries = entries.filter(entry => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      entry.title.toLowerCase().includes(searchLower) ||
-      entry.url?.toLowerCase().includes(searchLower) ||
-      entry.username?.toLowerCase().includes(searchLower) ||
-      entry.notes?.toLowerCase().includes(searchLower)
-    );
-  });
+  // Gefilterte und sortierte Einträge
+  const filteredAndSortedEntries = React.useMemo(() => {
+    let filtered = entries.filter(entry => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        entry.title.toLowerCase().includes(searchLower) ||
+        entry.url?.toLowerCase().includes(searchLower) ||
+        entry.username?.toLowerCase().includes(searchLower) ||
+        entry.notes?.toLowerCase().includes(searchLower)
+      );
+    });
+
+    // Sortierung
+    filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      if (sortBy === 'title') {
+        aValue = a.title.toLowerCase();
+        bValue = b.title.toLowerCase();
+      } else if (sortBy === 'createdAt') {
+        aValue = new Date(a.createdAt).getTime();
+        bValue = new Date(b.createdAt).getTime();
+      } else {
+        aValue = new Date(a.updatedAt).getTime();
+        bValue = new Date(b.updatedAt).getTime();
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    return filtered;
+  }, [entries, searchTerm, sortBy, sortOrder]);
 
   if (!canView) {
     return (
@@ -187,9 +224,9 @@ const PasswordManagerTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header mit Suchleiste und Erstellen-Button */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1 relative">
+      {/* Header mit Suchleiste, Sortierung und Erstellen-Button */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex-1 relative min-w-[200px]">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
@@ -199,18 +236,40 @@ const PasswordManagerTab: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
           />
         </div>
-        {canCreate && (
-          <button
-            onClick={() => {
-              setEditingEntry(null);
-              setIsCreateSidepaneOpen(true);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 flex items-center gap-2"
-          >
-            <PlusIcon className="h-5 w-5" />
-            {t('passwordManager.createEntry')}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Sortierung */}
+          <div className="flex items-center gap-2">
+            <ArrowsUpDownIcon className="h-5 w-5 text-gray-400" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'title' | 'createdAt' | 'updatedAt')}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+            >
+              <option value="title">{t('passwordManager.sortByTitle')}</option>
+              <option value="createdAt">{t('passwordManager.sortByCreated')}</option>
+              <option value="updatedAt">{t('passwordManager.sortByUpdated')}</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+              title={sortOrder === 'asc' ? t('passwordManager.sortAsc') : t('passwordManager.sortDesc')}
+            >
+              <ArrowsUpDownIcon className="h-5 w-5" />
+            </button>
+          </div>
+          {canCreate && (
+            <button
+              onClick={() => {
+                setEditingEntry(null);
+                setIsCreateSidepaneOpen(true);
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 flex items-center gap-2"
+            >
+              <PlusIcon className="h-5 w-5" />
+              {t('passwordManager.createEntry')}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Liste der Einträge */}
@@ -226,7 +285,7 @@ const PasswordManagerTab: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredEntries.map(entry => (
+          {filteredAndSortedEntries.map(entry => (
             <div
               key={entry.id}
               className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-4"
@@ -308,7 +367,25 @@ const PasswordManagerTab: React.FC = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex items-center gap-2 ml-4 flex-wrap">
+                  {entry.createdById === parseInt(localStorage.getItem('userId') || '0') && (
+                    <>
+                      <button
+                        onClick={() => setPermissionsEntryId(entry.id)}
+                        className="p-2 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-md"
+                        title={t('passwordManager.managePermissions')}
+                      >
+                        <ShieldCheckIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => setAuditLogsEntryId(entry.id)}
+                        className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900/20 rounded-md"
+                        title={t('passwordManager.auditLogs')}
+                      >
+                        <ClockIcon className="h-5 w-5" />
+                      </button>
+                    </>
+                  )}
                   {canEdit && (
                     <button
                       onClick={() => handleEdit(entry)}
@@ -341,6 +418,28 @@ const PasswordManagerTab: React.FC = () => {
         entry={editingEntry}
         onEntrySaved={handleEntrySaved}
       />
+
+      {/* Berechtigungen-Modal */}
+      {permissionsEntryId && (
+        <PasswordEntryPermissionsModal
+          isOpen={!!permissionsEntryId}
+          onClose={() => setPermissionsEntryId(null)}
+          entryId={permissionsEntryId}
+          onPermissionsUpdated={() => {
+            loadEntries();
+            setPermissionsEntryId(null);
+          }}
+        />
+      )}
+
+      {/* Audit-Logs-Modal */}
+      {auditLogsEntryId && (
+        <PasswordEntryAuditLogsModal
+          isOpen={!!auditLogsEntryId}
+          onClose={() => setAuditLogsEntryId(null)}
+          entryId={auditLogsEntryId}
+        />
+      )}
     </div>
   );
 };

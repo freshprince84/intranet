@@ -72,6 +72,46 @@ export interface PasswordEntryAuditLog {
   createdAt: string;
 }
 
+export interface PasswordEntryPermission {
+  id: number;
+  passwordEntryId: number;
+  roleId?: number;
+  userId?: number;
+  canView: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  role?: {
+    id: number;
+    name: string;
+  };
+  user?: {
+    id: number;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  };
+}
+
+export interface PasswordEntryPermissions {
+  rolePermissions: PasswordEntryPermission[];
+  userPermissions: PasswordEntryPermission[];
+}
+
+export interface UpdatePermissionsData {
+  rolePermissions?: Array<{
+    roleId: number;
+    canView: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  }>;
+  userPermissions?: Array<{
+    userId: number;
+    canView: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+  }>;
+}
+
 export const passwordManagerApi = {
   /**
    * Alle Passwort-Einträge abrufen (nur Metadaten, keine Passwörter)
@@ -134,6 +174,21 @@ export const passwordManagerApi = {
   async getAuditLogs(id: number): Promise<PasswordEntryAuditLog[]> {
     const response = await axiosInstance.get(API_ENDPOINTS.PASSWORD_MANAGER.AUDIT_LOGS(id));
     return response.data;
+  },
+
+  /**
+   * Berechtigungen für Eintrag abrufen
+   */
+  async getPermissions(id: number): Promise<PasswordEntryPermissions> {
+    const response = await axiosInstance.get(API_ENDPOINTS.PASSWORD_MANAGER.PERMISSIONS(id));
+    return response.data;
+  },
+
+  /**
+   * Berechtigungen für Eintrag aktualisieren
+   */
+  async updatePermissions(id: number, data: UpdatePermissionsData): Promise<void> {
+    await axiosInstance.put(API_ENDPOINTS.PASSWORD_MANAGER.PERMISSIONS(id), data);
   }
 };
 

@@ -92,6 +92,11 @@ npx prisma db seed
 - Der Admin-User muss diese Berechtigungen haben
 - Der Seed ist **idempotent** - er fügt nur hinzu, was fehlt
 
+**⚠️ WICHTIG: User active-Status wird geschützt**
+- Der Seed aktualisiert **NICHT** den `active`-Status von Usern
+- Inaktive User (z.B. in Organisation 1) bleiben inaktiv, auch nach Seed-Ausführung
+- Dies verhindert, dass manuell inaktivierte User durch Deployments oder DB-Updates wieder aktiviert werden
+
 ---
 
 ## Komplette Befehlssequenz (zum Kopieren)

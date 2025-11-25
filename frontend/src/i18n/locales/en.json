@@ -2741,7 +2741,32 @@
     "passwordStrengthWeak": "Weak",
     "passwordStrengthMedium": "Medium",
     "passwordStrengthStrong": "Strong",
-    "passwordStrengthVeryStrong": "Very Strong"
+    "passwordStrengthVeryStrong": "Very Strong",
+    "managePermissions": "Manage Permissions",
+    "rolePermissions": "Role Permissions",
+    "userPermissions": "User Permissions",
+    "selectRole": "Select Role",
+    "selectUser": "Select User",
+    "canView": "View",
+    "canEdit": "Edit",
+    "canDelete": "Delete",
+    "noRolePermissions": "No role permissions",
+    "noUserPermissions": "No user permissions",
+    "permissionsUpdated": "Permissions updated successfully",
+    "errorLoadingPermissions": "Error loading permissions",
+    "errorSavingPermissions": "Error saving permissions",
+    "auditLogActionView": "View",
+    "auditLogActionViewPassword": "View Password",
+    "auditLogActionCopyPassword": "Copy Password",
+    "auditLogActionCreate": "Create",
+    "auditLogActionUpdate": "Update",
+    "auditLogActionDelete": "Delete",
+    "errorLoadingAuditLogs": "Error loading audit logs",
+    "sortByTitle": "By Title",
+    "sortByCreated": "By Created Date",
+    "sortByUpdated": "By Updated Date",
+    "sortAsc": "Sort Ascending",
+    "sortDesc": "Sort Descending"
   },
   "tours": {
     "title": "Tour Management",
@@ -2766,7 +2791,27 @@
     "meetingPoint": "Meeting Point",
     "noTours": "No tours available",
     "bookings": "Bookings",
-    "export": "Export"
+    "export": "Export",
+    "columns": {
+      "title": "Title",
+      "type": "Type",
+      "price": "Price",
+      "location": "Location",
+      "duration": "Duration",
+      "branch": "Branch",
+      "createdBy": "Created By",
+      "status": "Status",
+      "actions": "Actions",
+      "description": "Description",
+      "maxParticipants": "Max. Participants",
+      "minParticipants": "Min. Participants"
+    },
+    "filters": {
+      "current": "Current",
+      "active": "Active",
+      "inactive": "Inactive",
+      "all": "All"
+    }
   },
   "tourBookings": {
     "title": "Tour Bookings",

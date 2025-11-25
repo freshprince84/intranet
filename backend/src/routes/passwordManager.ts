@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { checkPermission } from '../middleware/permissionMiddleware';
+import { passwordManagerRateLimiter } from '../middleware/rateLimiter';
 import * as passwordManagerController from '../controllers/passwordManagerController';
 
 const router = express.Router();
@@ -17,6 +18,9 @@ router.use((req, res, next) => {
 
 // Alle Routen benötigen Authentifizierung
 router.use(authenticateToken);
+
+// Rate-Limiting für alle Passwort-Manager-Routen
+router.use(passwordManagerRateLimiter);
 
 // Öffentliche Route (keine Auth erforderlich) - Passwort generieren
 router.post('/generate-password', passwordManagerController.generatePassword);
@@ -68,6 +72,20 @@ router.get(
     '/:id/audit-logs',
     checkPermission('password_manager', 'read', 'page'),
     passwordManagerController.getPasswordEntryAuditLogs
+);
+
+// Berechtigungen abrufen
+router.get(
+    '/:id/permissions',
+    checkPermission('password_manager', 'read', 'page'),
+    passwordManagerController.getPasswordEntryPermissions
+);
+
+// Berechtigungen aktualisieren
+router.put(
+    '/:id/permissions',
+    checkPermission('password_manager', 'write', 'page'),
+    passwordManagerController.updatePasswordEntryPermissions
 );
 
 export default router;
