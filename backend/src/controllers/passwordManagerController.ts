@@ -16,8 +16,9 @@ const validatePasswordManagerUrl = (urlString: string | null | undefined): boole
             return false;
         }
         
-        // Schutz vor JavaScript-URLs
-        if (url.protocol === 'javascript:' || url.protocol === 'data:' || url.protocol === 'file:') {
+        // Zusätzliche Sicherheitsprüfungen (redundant, aber sicherheitshalber)
+        const unsafeProtocols = ['javascript:', 'data:', 'file:', 'vbscript:'];
+        if (unsafeProtocols.includes(url.protocol.toLowerCase())) {
             return false;
         }
         
@@ -768,7 +769,7 @@ export const getPasswordEntryPermissions = async (req: PasswordManagerRequest, r
         // Hole alle Berechtigungen
         const [rolePermissions, userPermissions] = await Promise.all([
             prisma.passwordEntryRolePermission.findMany({
-                where: { passwordEntryId: entryId },
+                where: { entryId: entryId },
                 include: {
                     role: {
                         select: {
@@ -779,7 +780,7 @@ export const getPasswordEntryPermissions = async (req: PasswordManagerRequest, r
                 }
             }),
             prisma.passwordEntryUserPermission.findMany({
-                where: { passwordEntryId: entryId },
+                where: { entryId: entryId },
                 include: {
                     user: {
                         select: {
@@ -832,10 +833,10 @@ export const updatePasswordEntryPermissions = async (req: PasswordManagerRequest
         // Lösche alle bestehenden Berechtigungen
         await Promise.all([
             prisma.passwordEntryRolePermission.deleteMany({
-                where: { passwordEntryId: entryId }
+                where: { entryId: entryId }
             }),
             prisma.passwordEntryUserPermission.deleteMany({
-                where: { passwordEntryId: entryId }
+                where: { entryId: entryId }
             })
         ]);
 
@@ -843,7 +844,7 @@ export const updatePasswordEntryPermissions = async (req: PasswordManagerRequest
         if (rolePermissions && Array.isArray(rolePermissions)) {
             await prisma.passwordEntryRolePermission.createMany({
                 data: rolePermissions.map((rp: any) => ({
-                    passwordEntryId: entryId,
+                    entryId: entryId,
                     roleId: rp.roleId,
                     canView: rp.canView || false,
                     canEdit: rp.canEdit || false,
@@ -855,7 +856,7 @@ export const updatePasswordEntryPermissions = async (req: PasswordManagerRequest
         if (userPermissions && Array.isArray(userPermissions)) {
             await prisma.passwordEntryUserPermission.createMany({
                 data: userPermissions.map((up: any) => ({
-                    passwordEntryId: entryId,
+                    entryId: entryId,
                     userId: up.userId,
                     canView: up.canView || false,
                     canEdit: up.canEdit || false,
