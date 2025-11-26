@@ -324,6 +324,59 @@ npx ts-node scripts/test-header-setting-method.ts
 
 ---
 
+## ✅ TEST-ERGEBNISSE: HEADER-SETTING-METHODE (26.11.2025 22:15 UTC)
+
+### 🧪 TESTS AUSGEFÜHRT:
+
+**Test-Script:** `backend/scripts/test-header-setting-method.ts`
+
+**Ergebnisse:**
+
+1. ✅ **`config.headers.Authorization =` funktioniert:**
+   - Header wird korrekt gesetzt
+   - Header-Wert: `x-api-key test-merchant-id-12345`
+   - Header vorhanden: `true`
+   - Headers-Objekt enthält Authorization
+
+2. ❌ **`config.headers.set()` funktioniert NICHT:**
+   - Fehler: `TypeError: config.headers.set is not a function`
+   - **Das bedeutet: `config.headers.set()` existiert NICHT in Axios!**
+
+### 🎯 FAZIT:
+
+**Die Header-Setting-Methode ist NICHT das Problem!**
+
+- ✅ `config.headers.Authorization =` ist die korrekte Methode
+- ❌ `config.headers.set()` existiert nicht in Axios
+- ✅ Header wird korrekt gesetzt
+
+### 🔍 DAS PROBLEM LIEGT WOANDERS:
+
+**Mögliche Ursachen:**
+1. **Settings werden nicht korrekt geladen** (merchantId ist undefined/leer?)
+2. **Timing-Problem** (Settings werden zu spät geladen?)
+3. **Request wird vor Settings-Loading gesendet?**
+4. **Andere Header-Probleme** (Header wird überschrieben?)
+
+### 📋 NÄCHSTE PRÜFUNGEN:
+
+**1. Prüfe ob merchantId wirklich gesetzt wird:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 500 --nostream | grep -E "merchantId Wert|merchantId Länge|Authorization Header" | tail -50
+# Prüfe ob merchantId wirklich einen Wert hat
+```
+
+**2. Prüfe Settings-Loading-Timing:**
+- Werden Settings vor dem Request geladen?
+- Oder wird Request gesendet, bevor Settings geladen sind?
+
+**3. Prüfe ob Header wirklich im Request ankommt:**
+- Wird Header wirklich gesendet?
+- Oder wird Header überschrieben/entfernt?
+
+---
+
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
 
 **Server-Prüfung vom 26.11.2025 17:00 UTC:**
