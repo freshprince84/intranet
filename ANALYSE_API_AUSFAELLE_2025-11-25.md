@@ -2915,3 +2915,112 @@ pm2 logs intranet-backend --lines 50 --nostream | head -50
 **4. Queue/Redis:**
 - Prüfe Redis-Verbindung
 - Prüfe REDIS_HOST, REDIS_PORT in .env
+
+---
+
+## ⚠️⚠️⚠️ WICHTIG: PROBLEM BESTEHT WEITERHIN! (26.11.2025 21:10 UTC)
+
+### 🔴 BENUTZER-FEEDBACK:
+
+**"das problem ist 0, absolut 0 behoben. ein anderes problem vielleicht, aber das problem von dem ich rede besteht weiterhin, seit nun über 24h."**
+
+### 🎯 URSPRÜNGLICHES PROBLEM:
+
+**Alle APIs funktionieren nicht mehr seit über 24h:**
+- ❌ Bold Payment: 403 Forbidden
+- ❌ TTLock: PIN-Fehler
+- ❌ Alle APIs betroffen
+- ❌ Problem besteht seit ~24h
+
+### 📋 AKTUELLER STAND:
+
+**✅ BEHOBEN (aber nicht das Hauptproblem):**
+- ✅ DB-Verbindungsproblem (Connection Pool)
+- ✅ Settings können aus DB geladen werden
+
+**❌ BESTEHT WEITERHIN (DAS EIGENTLICHE PROBLEM):**
+- ❌ **Bold Payment API: 403 Forbidden** (seit 24h)
+- ❌ **TTLock API: PIN-Fehler** (seit 24h)
+- ❌ **Alle APIs funktionieren nicht** (seit 24h)
+
+### 🔍 SYSTEMATISCHE ANALYSE - WAS HAT SICH VOR 24H GEÄNDERT?
+
+**Mögliche Ursachen für gleichzeitigen Ausfall ALLER APIs:**
+
+**1. Code-Deployment:**
+- Wurde Code deployed, der alle APIs betrifft?
+- Wurde etwas geändert, das alle Services betrifft?
+- Git-Historie prüfen: Was wurde vor 24h committed?
+
+**2. Environment-Variablen:**
+- Wurde .env geändert/gelöscht?
+- Fehlen kritische Variablen für APIs?
+- Wurden API-Keys geändert?
+
+**3. API-Provider-Änderungen:**
+- Haben Bold Payment, TTLock, etc. ihre APIs geändert?
+- Wurden Authentifizierungsformate geändert?
+- Wurden Endpunkte geändert?
+
+**4. Server-Konfiguration:**
+- Wurde Server neu gestartet?
+- Wurden Firewall-Regeln geändert?
+- Wurde Netzwerk-Konfiguration geändert?
+
+### 📋 NÄCHSTE SYSTEMATISCHE PRÜFUNGEN:
+
+**1. Prüfe Git-Historie (was wurde vor 24h geändert?):**
+```bash
+# Auf Server oder lokal:
+git log --since="2 days ago" --oneline --all
+git log --since="2 days ago" --name-status
+# Prüfe welche Dateien geändert wurden
+```
+
+**2. Prüfe ob API-Keys wirklich korrekt sind:**
+```bash
+# Auf Server:
+cd /var/www/intranet/backend
+npx ts-node -e "
+import { PrismaClient } from '@prisma/client';
+import { decryptBranchApiSettings } from './dist/utils/encryption';
+const prisma = new PrismaClient();
+(async () => {
+  const branch = await prisma.branch.findUnique({
+    where: { id: 3 },
+    select: { boldPaymentSettings: true }
+  });
+  if (branch?.boldPaymentSettings) {
+    const settings = decryptBranchApiSettings(branch.boldPaymentSettings as any);
+    console.log('Bold Payment Merchant ID:', settings?.boldPayment?.merchantId);
+    console.log('Bold Payment API Key:', settings?.boldPayment?.apiKey?.substring(0, 20) + '...');
+  }
+  await prisma.\$disconnect();
+})();
+"
+```
+
+**3. Teste API direkt mit den Werten aus DB:**
+```bash
+# Auf Server:
+# Verwende die Werte aus Schritt 2 und teste mit curl
+curl -X POST "https://integrations.api.bold.co/v1/payment-links" \
+  -H "Authorization: x-api-key <MERCHANT_ID_AUS_DB>" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 10000, "currency": "COP"}' \
+  -v
+```
+
+**4. Prüfe ob API-Endpunkte korrekt sind:**
+- Bold Payment: `https://integrations.api.bold.co` - ist das korrekt?
+- TTLock: Welcher Endpunkt wird verwendet?
+- Gibt es Dokumentation für die APIs?
+
+### 🎯 FOKUS: WARUM ALLE APIs GLEICHZEITIG?
+
+**Wenn ALLE APIs gleichzeitig nicht funktionieren, muss es eine GEMEINSAME Ursache sein:**
+1. ✅ DB-Problem (behoben, aber APIs funktionieren immer noch nicht)
+2. ⚠️ Code-Änderung (muss geprüft werden)
+3. ⚠️ Environment-Variablen (muss geprüft werden)
+4. ⚠️ API-Provider-Änderungen (muss geprüft werden)
+5. ⚠️ Server-Konfiguration (muss geprüft werden)
