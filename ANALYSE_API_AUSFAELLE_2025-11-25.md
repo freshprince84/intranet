@@ -2918,6 +2918,73 @@ pm2 logs intranet-backend --lines 50 --nostream | head -50
 
 ---
 
+## 🔍 GIT-HISTORIE ANALYSE (26.11.2025 21:15 UTC)
+
+### ✅ WICHTIGE COMMITS DER LETZTEN 2 TAGE:
+
+**Zeile 508-544: Git-Log zeigt:**
+
+**KRITISCHER COMMIT:**
+- `0ee9113 Fix: decryptBranchApiSettings entschlüsselt jetzt verschachtelte Settings`
+- **Das ist der Fix, den wir implementiert haben!**
+
+**ABER:**
+- Wurde dieser Fix auf dem Server deployed?
+- Wurde der Code neu kompiliert?
+- Läuft der Server mit dem neuen Code?
+
+### 📋 SYSTEMATISCHE PRÜFUNG:
+
+**1. Prüfe ob Fix auf Server ist:**
+```bash
+# Auf Server:
+cd /var/www/intranet/backend
+git log --oneline -10
+# Prüfe ob Commit 0ee9113 vorhanden ist
+```
+
+**2. Prüfe ob Code neu kompiliert wurde:**
+```bash
+# Auf Server:
+cd /var/www/intranet/backend
+ls -la dist/utils/encryption.js
+# Prüfe Änderungsdatum
+grep -A 10 "boldPayment.*merchantId" dist/utils/encryption.js
+# Prüfe ob Fix im kompilierten Code ist
+```
+
+**3. Prüfe ob Server mit neuem Code läuft:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 20 --nostream | grep -i "started\|listening"
+# Prüfe wann Server zuletzt gestartet wurde
+```
+
+**4. Prüfe ob Code deployed wurde:**
+```bash
+# Auf Server:
+cd /var/www/intranet
+git status
+# Prüfe ob Code auf neuestem Stand ist
+git log --oneline -1
+# Prüfe letzten Commit
+```
+
+### 🎯 HYPOTHESE:
+
+**Das Problem könnte sein:**
+- ✅ Fix wurde committed (0ee9113)
+- ❌ **ABER:** Code wurde nicht auf Server deployed
+- ❌ **ODER:** Code wurde deployed, aber nicht neu kompiliert
+- ❌ **ODER:** Server läuft noch mit altem Code
+
+**Das würde erklären:**
+- Warum Script-Tests funktionieren (verwenden neuen Code)
+- Warum Server nicht funktioniert (verwendet alten Code)
+- Warum Problem seit 24h besteht (Code wurde nicht deployed/kompiliert)
+
+---
+
 ## ⚠️⚠️⚠️ WICHTIG: PROBLEM BESTEHT WEITERHIN! (26.11.2025 21:10 UTC)
 
 ### 🔴 BENUTZER-FEEDBACK:
