@@ -231,15 +231,21 @@ export class BoldPaymentService {
     // KRITISCH: Stelle sicher, dass axiosInstance den Interceptor hat
     // Prüfe ob axiosInstance bereits mit Interceptor erstellt wurde
     // Wenn apiUrl noch der Placeholder ist, wurde createAxiosInstance() noch nicht aufgerufen
-    if (!this.apiUrl || this.apiUrl === 'https://sandbox.bold.co' || !this.merchantId) {
-      await this.loadSettings();
-    }
+    const needsLoadSettings = !this.apiUrl || 
+                              this.apiUrl === 'https://sandbox.bold.co' || 
+                              !this.merchantId ||
+                              (this.axiosInstance && this.axiosInstance.defaults.baseURL === 'https://sandbox.bold.co');
     
-    // ZUSÄTZLICHE SICHERHEIT: Prüfe ob axiosInstance wirklich mit Interceptor erstellt wurde
-    // Wenn baseURL noch der Placeholder ist, wurde createAxiosInstance() nicht aufgerufen
-    if (this.axiosInstance && this.axiosInstance.defaults.baseURL === 'https://sandbox.bold.co') {
-      // Axios-Instance wurde noch nicht mit Interceptor erstellt
+    if (needsLoadSettings) {
+      console.log('[Bold Payment] Lade Settings (createPaymentLink) - apiUrl:', this.apiUrl, 'merchantId:', !!this.merchantId, 'baseURL:', this.axiosInstance?.defaults.baseURL);
       await this.loadSettings();
+      
+      // NACH loadSettings() PRÜFEN: Wurde createAxiosInstance() wirklich aufgerufen?
+      if (!this.apiUrl || this.apiUrl === 'https://sandbox.bold.co' || 
+          (this.axiosInstance && this.axiosInstance.defaults.baseURL === 'https://sandbox.bold.co')) {
+        console.error('[Bold Payment] KRITISCH: loadSettings() wurde aufgerufen, aber createAxiosInstance() wurde NICHT aufgerufen!');
+        throw new Error('Bold Payment Settings konnten nicht geladen werden - createAxiosInstance() wurde nicht aufgerufen');
+      }
     }
 
     try {
