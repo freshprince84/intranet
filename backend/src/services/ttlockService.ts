@@ -295,19 +295,27 @@ export class TTLockService {
         passwordLength: this.password?.length || 0
       });
       
-      const response = await axios.post<TTLockResponse<TTLockAccessToken>>(
-        `${oauthUrl}/oauth2/token`,
+      // KRITISCH: Verwende this.axiosInstance statt axios.post() direkt!
+      // axios.post() verwendet die globale Instanz ohne Interceptor
+      // this.axiosInstance verwendet die konfigurierte Instanz mit Interceptor
+      // ABER: OAuth-Endpunkt ist auf api.sciener.com, nicht auf euapi.ttlock.com
+      // Daher müssen wir eine temporäre Instanz für OAuth erstellen
+      const oauthInstance = axios.create({
+        baseURL: oauthUrl,
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+      
+      const response = await oauthInstance.post<TTLockResponse<TTLockAccessToken>>(
+        '/oauth2/token',
         new URLSearchParams({
           client_id: this.clientId || '',
           client_secret: this.clientSecret || '',
           username: this.username || '',
           password: this.password || '' // Already MD5-hashed
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        }
+        })
       );
 
       // TTLock OAuth gibt entweder errcode=0 mit data zurück, oder direkt access_token

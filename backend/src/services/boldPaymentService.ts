@@ -174,10 +174,11 @@ export class BoldPaymentService {
         if (!this.merchantId) {
           throw new Error('Bold Payment Merchant ID (Llave de identidad) fehlt');
         }
-        // KRITISCH: Bold Payment API erwartet "x-api-key" als SEPARATEN Header, NICHT im Authorization Header!
-        // Die Dokumentation zeigt: Header "x-api-key" mit Wert der Merchant ID
-        // NICHT: Authorization Header mit Wert "x-api-key <merchantId>"
-        config.headers['x-api-key'] = this.merchantId;
+        // Bold Payment "API Link de pagos" verwendet:
+        // Authorization Header mit Wert: x-api-key <llave_de_identidad>
+        // Quelle: https://developers.bold.co/pagos-en-linea/api-link-de-pagos
+        // WICHTIG: Format ist "x-api-key <merchantId>" im Authorization Header, NICHT als separater Header!
+        config.headers.Authorization = `x-api-key ${this.merchantId}`;
         
         // Debug: Prüfe ob Header korrekt gesetzt wurde
         console.log(`[Bold Payment] ${config.method?.toUpperCase()} ${config.url}`);
