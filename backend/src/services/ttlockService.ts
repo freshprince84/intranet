@@ -243,7 +243,18 @@ export class TTLockService {
    */
   private async getAccessToken(): Promise<string> {
     // Lade Settings falls noch nicht geladen
-    if (!this.clientId || !this.clientSecret || !this.username || !this.password) {
+    // WICHTIG: loadSettings() muss IMMER aufgerufen werden, um createAxiosInstance() aufzurufen
+    // Auch wenn clientId bereits gesetzt ist, muss die Axios-Instance mit Interceptor erstellt werden
+    if (!this.clientId || !this.clientSecret || !this.username || !this.password || !this.apiUrl || this.apiUrl === 'https://euopen.ttlock.com') {
+      await this.loadSettings();
+    }
+    
+    // KRITISCH: Stelle sicher, dass axiosInstance den Interceptor hat
+    // Prüfe ob axiosInstance bereits den Interceptor hat (durch createAxiosInstance erstellt)
+    // Wenn nicht, erstelle sie neu
+    if (!this.axiosInstance || !this.apiUrl || this.apiUrl === 'https://euopen.ttlock.com') {
+      // Axios-Instance wurde noch nicht mit Interceptor erstellt
+      // Lade Settings erneut, um createAxiosInstance() aufzurufen
       await this.loadSettings();
     }
 
