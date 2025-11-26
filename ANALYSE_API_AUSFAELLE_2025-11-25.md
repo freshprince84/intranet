@@ -153,14 +153,19 @@ config.headers.set('Authorization', `x-api-key ${this.merchantId}`);
 config.headers.Authorization = `x-api-key ${this.merchantId}`;
 ```
 
-### 🔴 PROBLEM GEFUNDEN!
+### ✅ KORREKTUR (26.11.2025 22:20 UTC):
 
-**`config.headers.set()` vs. `config.headers.Authorization =` könnte ein Problem sein!**
+**⚠️ FRÜHERE ANALYSE WAR FALSCH!**
+
+**Test-Ergebnisse zeigen:**
+- ✅ `config.headers.Authorization =` ist die **korrekte** Methode
+- ❌ `config.headers.set()` existiert **nicht** in Axios
+- ✅ Die aktuelle Implementierung ist **korrekt**
 
 **Axios Header-Objekte:**
-- `config.headers` ist ein `Headers` Objekt (nicht ein normales Objekt)
-- `config.headers.set()` ist die korrekte Methode
-- `config.headers.Authorization =` könnte nicht funktionieren!
+- `config.headers` ist ein normales Objekt (nicht ein `Headers` Objekt)
+- `config.headers.Authorization =` ist die korrekte Methode
+- `config.headers.set()` existiert nicht!
 
 ### 🎯 HYPOTHESE:
 
@@ -326,7 +331,7 @@ npx ts-node scripts/test-header-setting-method.ts
 
 ## ✅ TEST-ERGEBNISSE: HEADER-SETTING-METHODE (26.11.2025 22:15 UTC)
 
-### 🧪 TESTS AUSGEFÜHRT:
+### 🧪 TESTS AUSGEFÜHRT AUF SERVER:
 
 **Test-Script:** `backend/scripts/test-header-setting-method.ts`
 
@@ -337,18 +342,30 @@ npx ts-node scripts/test-header-setting-method.ts
    - Header-Wert: `x-api-key test-merchant-id-12345`
    - Header vorhanden: `true`
    - Headers-Objekt enthält Authorization
+   - **✅ DIESE METHODE FUNKTIONIERT KORREKT!**
 
 2. ❌ **`config.headers.set()` funktioniert NICHT:**
    - Fehler: `TypeError: config.headers.set is not a function`
    - **Das bedeutet: `config.headers.set()` existiert NICHT in Axios!**
+   - **❌ DIESE METHODE IST FALSCH - EXISTIERT NICHT!**
+
+3. ✅ **TEST 3: Direkter Vergleich:**
+   - `config.headers.Authorization =` funktioniert
+   - `config.headers.set()` schlägt fehl
+
+4. ✅ **TEST 4: Request-Konfiguration:**
+   - Header wird korrekt gesetzt
+   - Header ist vorhanden
+   - Alle Header-Zugriffsmethoden funktionieren
 
 ### 🎯 FAZIT:
 
 **Die Header-Setting-Methode ist NICHT das Problem!**
 
-- ✅ `config.headers.Authorization =` ist die korrekte Methode
-- ❌ `config.headers.set()` existiert nicht in Axios
+- ✅ `config.headers.Authorization =` ist die **korrekte** Methode
+- ❌ `config.headers.set()` existiert **nicht** in Axios (war ein Fehler in der Analyse)
 - ✅ Header wird korrekt gesetzt
+- ✅ Die aktuelle Implementierung ist **korrekt**
 
 ### 🔍 DAS PROBLEM LIEGT WOANDERS:
 
@@ -356,7 +373,8 @@ npx ts-node scripts/test-header-setting-method.ts
 1. **Settings werden nicht korrekt geladen** (merchantId ist undefined/leer?)
 2. **Timing-Problem** (Settings werden zu spät geladen?)
 3. **Request wird vor Settings-Loading gesendet?**
-4. **Andere Header-Probleme** (Header wird überschrieben?)
+4. **merchantId-Wert ist falsch** (verschlüsselt statt entschlüsselt?)
+5. **Header wird überschrieben** (nach dem Setzen?)
 
 ### 📋 NÄCHSTE PRÜFUNGEN:
 
@@ -374,6 +392,10 @@ pm2 logs intranet-backend --lines 500 --nostream | grep -E "merchantId Wert|merc
 **3. Prüfe ob Header wirklich im Request ankommt:**
 - Wird Header wirklich gesendet?
 - Oder wird Header überschrieben/entfernt?
+
+**4. Prüfe merchantId-Wert:**
+- Ist merchantId entschlüsselt?
+- Oder ist merchantId noch verschlüsselt (mit `:`)?
 
 ---
 
