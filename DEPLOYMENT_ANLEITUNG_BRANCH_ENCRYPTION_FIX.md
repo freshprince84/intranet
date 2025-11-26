@@ -104,7 +104,7 @@ ls -la backend/scripts/prove-branch-encryption-bug.ts
 cd /var/www/intranet/backend
 
 # 2. Script ausführen
-npm run ts-node scripts/prove-branch-encryption-bug.ts
+npx ts-node scripts/prove-branch-encryption-bug.ts
 ```
 
 **Erwartetes Ergebnis (VOR dem Fix):**
@@ -173,7 +173,7 @@ grep -A 5 "boldPayment" backend/src/utils/encryption.ts
 
 ```bash
 cd /var/www/intranet/backend
-npm run ts-node scripts/prove-branch-encryption-bug.ts
+npx ts-node scripts/prove-branch-encryption-bug.ts
 ```
 
 **Erwartetes Ergebnis (NACH dem Fix):**
@@ -190,7 +190,7 @@ npm run ts-node scripts/prove-branch-encryption-bug.ts
 
 ```bash
 # Teste alle Branch Settings
-npm run ts-node scripts/check-all-api-settings-decryption.ts
+npx ts-node scripts/check-all-api-settings-decryption.ts
 ```
 
 **Erwartetes Ergebnis:**
