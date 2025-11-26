@@ -4317,6 +4317,59 @@ pm2 logs intranet-backend --lines 200 --nostream | grep -E "createForBranch|Bold
 
 ---
 
+## ✅✅✅ ERFOLG: REQUEST-INTERCEPTOR WIRD JETZT AUSGEFÜHRT! (26.11.2025 23:30 UTC)
+
+### ✅ SERVER-LOGS BEWEISEN:
+
+**Logs zeigen:**
+```
+[Bold Payment] POST /online/link/v1
+[Bold Payment] Authorization Header: x-api-key CTkrL5f5IxvMpX722zXivqnd1KU5VyoNBOFQFUUnf-E
+[Bold Payment] Header Länge: 53
+[Bold Payment] merchantId Wert: "CTkrL5f5IxvMpX722zXivqnd1KU5VyoNBOFQFUUnf-E"
+[Bold Payment] merchantId Länge: 43
+[Bold Payment] Full Headers: {
+```
+
+**Das bedeutet:**
+- ✅ **Request-Interceptor wird JETZT ausgeführt!**
+- ✅ **Header wird korrekt gesetzt!**
+- ✅ **merchantId ist korrekt!**
+- ✅ **Debug-Logs erscheinen!**
+
+**FAZIT:** Der Fix funktioniert! `createAxiosInstance()` wird jetzt aufgerufen und der Interceptor wird registriert.
+
+### ⚠️ ABER: API GIBT IMMER NOCH FEHLER ZURÜCK
+
+**Logs zeigen:**
+```
+[Bold Payment] API Error: {
+[Bold Payment] API Error Details:
+```
+
+**Das bedeutet:**
+- ✅ Request-Interceptor funktioniert
+- ✅ Header wird gesetzt
+- ❌ **ABER: API gibt immer noch einen Fehler zurück**
+
+**Nächster Schritt:**
+- Vollständige API-Fehlerdetails prüfen
+- Prüfen ob es ein anderes Problem ist (Payload, Endpunkt, etc.)
+
+**Befehl zum Prüfen der vollständigen Fehlerdetails:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 200 --nostream | grep -A 10 "\[Bold Payment\] API Error" | tail -50
+```
+
+**ODER:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "\[Bold Payment\].*Error|status.*403|Forbidden" | tail -30
+```
+
+---
+
 ## 🔍 SERVICE-INITIALISIERUNGS-FLOW ANALYSIERT (26.11.2025 21:35 UTC)
 
 ### ✅ CODE-FLOW GEFUNDEN:
