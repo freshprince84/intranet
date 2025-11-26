@@ -2172,45 +2172,228 @@ pm2 logs intranet-backend --lines 100 --nostream | grep -iE "\[Bold Payment\]|\[
 
 ---
 
-## 🔴🔴🔴 ROOT CAUSE GEFUNDEN: 26.11.2025 18:45 UTC
+## 🔴🔴🔴 UPDATE: 26.11.2025 19:00 UTC - CONNECTION POOL FIX ANGEWENDET, PROBLEM BESTEHT WEITERHIN
 
-### ⚠️ DAS ECHTE PROBLEM:
+### ✅ DURCHGEFÜHRTE MASSNAHMEN:
 
-**DATABASE_URL hat KEINE Connection Pool Einstellungen!**
+**1. Connection Pool Fix implementiert:**
+- ✅ DATABASE_URL erweitert: `&connection_limit=20&pool_timeout=20`
+- ✅ Prüfung bestätigt: `check-database-url.ts` zeigt Parameter vorhanden
+- ✅ PM2 neu gestartet mit `--update-env` Flag
 
-**Aktuelle DATABASE_URL (vom Server):**
+**2. Server-Status nach Fix:**
+- ✅ PM2 läuft: `intranet-backend` online
+- ✅ Connection Pool Parameter vorhanden
+- ❌ **ABER: Problem besteht weiterhin!**
+
+### ❌ PROBLEM BESTEHT WEITERHIN:
+
+**Benutzer-Bericht:**
+- "es geht weiterhin nicht. weiterhin gleiches problem"
+- "es funktioniert weiterhin nicht. weiterhin exakt genau gleicher fehler wie seit knapp 24h"
+- "ttlock api funktioniert ebenfalls weiterhin nicht, ebenfalls gleicher fehler wie seit knapp 24h"
+
+**Fehler:**
+- ❌ Bold Payment: 403 Forbidden (weiterhin)
+- ❌ TTLock: Fehler (weiterhin)
+- ❌ Alle APIs: Betroffen (weiterhin)
+
+### 🔍 ANALYSE: WARUM FUNKTIONIERT DER CONNECTION POOL FIX NICHT?
+
+**Mögliche Ursachen:**
+
+1. **PM2 hat .env nicht korrekt geladen:**
+   - `--update-env` wurde verwendet, aber vielleicht nicht korrekt?
+   - Prüfe: `pm2 env 0 | grep DATABASE_URL`
+
+2. **Prisma verwendet alte Connection Pool Einstellungen:**
+   - Prisma Client wurde möglicherweise mit alter DATABASE_URL initialisiert
+   - Prisma Client muss neu initialisiert werden (Server-Neustart reicht nicht?)
+
+3. **Connection Pool Parameter sind falsch formatiert:**
+   - Prüfe ob `&connection_limit=20&pool_timeout=20` korrekt in URL ist
+   - Prüfe ob keine Syntax-Fehler in DATABASE_URL
+
+4. **Das Problem ist NICHT der Connection Pool:**
+   - Connection Pool Timeouts sind nur ein Symptom
+   - Das eigentliche Problem liegt woanders
+
+### 📋 SYSTEMATISCHE PRÜFUNG - NÄCHSTE SCHRITTE:
+
+**1. Prüfe ob PM2 die neue DATABASE_URL geladen hat:**
+```bash
+# Auf Server ausführen:
+pm2 env 0 | grep DATABASE_URL
+# Sollte zeigen: ...&connection_limit=20&pool_timeout=20
 ```
-postgresql://intranetuser:password@localhost:5432/intranet?schema=public
+
+**2. Prüfe ob Prisma die Connection Pool Parameter verwendet:**
+```bash
+# Auf Server ausführen:
+cd /var/www/intranet/backend
+npx ts-node scripts/check-database-url.ts
+# Sollte zeigen: ✅ connection_limit: Vorhanden (20)
 ```
 
-**Problem:**
-- ❌ Kein `connection_limit` → Standard: **nur 5 Verbindungen**
-- ❌ Kein `pool_timeout` → Standard: **10 Sekunden Timeout**
-- ❌ Bei mehreren gleichzeitigen Requests → Pool erschöpft → Timeouts
-- ❌ Alle APIs schlagen fehl, weil sie nicht auf DB zugreifen können
-
-**Das erklärt:**
-- ✅ Warum ALLE APIs nicht funktionieren (DB-Verbindungen blockiert)
-- ✅ Warum das System langsam wird (Requests warten auf freie Verbindung)
-- ✅ Warum Prisma Connection Pool Timeouts auftreten
-- ✅ Warum es schlimmer wird (mehr Requests = mehr Blockierungen)
-- ✅ Warum Scripts funktionieren (weniger gleichzeitige Requests)
-
-**LÖSUNG:**
-
-**DATABASE_URL erweitern:**
-```
-postgresql://intranetuser:password@localhost:5432/intranet?schema=public&connection_limit=20&pool_timeout=20
+**3. Prüfe aktuelle Server-Logs auf Connection Pool Timeouts:**
+```bash
+# Auf Server ausführen:
+pm2 logs intranet-backend --lines 200 --nostream | grep -iE "connection pool|timeout|Can't reach database" | tail -30
+# Sollte KEINE Timeouts mehr zeigen (wenn Fix funktioniert)
 ```
 
-**Schritte:**
-1. Backup der .env Datei erstellen
-2. DATABASE_URL in .env erweitern (connection_limit=20&pool_timeout=20 hinzufügen)
-3. Server neu starten (damit neue DATABASE_URL geladen wird)
-4. System sollte wieder funktionieren
+**4. Prüfe ob das Problem wirklich Connection Pool ist:**
+```bash
+# Auf Server ausführen:
+pm2 logs intranet-backend --lines 500 --nostream | grep -iE "403|forbidden|Bold Payment.*Error" | tail -50
+# Zeigt: Sind es wirklich Connection Pool Fehler oder andere Fehler?
+```
 
-**BEWEIS:**
-- Script `check-database-url.ts` zeigt: `connection_limit: ❌ FEHLT!` und `pool_timeout: ❌ FEHLT!`
-- Browser zeigt: "Timed out fetching a new connection from the connection pool"
-- System wird immer langsamer (mehr Requests = mehr Blockierungen)
-- Alle APIs betroffen (nicht nur Bold Payment)
+**5. Prüfe PostgreSQL-Status:**
+```bash
+# Auf Server ausführen:
+systemctl status postgresql
+# Prüfe ob PostgreSQL läuft und Verbindungen akzeptiert
+```
+
+**6. Prüfe aktive DB-Verbindungen:**
+```bash
+# Auf Server ausführen:
+psql -U intranetuser -d intranet -c "SELECT count(*) FROM pg_stat_activity WHERE datname = 'intranet';"
+# Zeigt: Wie viele aktive Verbindungen gibt es?
+```
+
+### 🔍 HYPOTHESE: DAS PROBLEM IST NICHT DER CONNECTION POOL!
+
+**Beweise:**
+1. ✅ Connection Pool Fix wurde angewendet
+2. ❌ Problem besteht weiterhin
+3. ❌ **Gleicher Fehler:** 403 Forbidden (nicht Connection Pool Timeout!)
+
+**Das bedeutet:**
+- **Connection Pool Timeouts** waren möglicherweise nur ein **Symptom**
+- **Das eigentliche Problem** ist etwas anderes:
+  - ❌ **Bold Payment API:** 403 Forbidden → **API-Authentifizierung fehlgeschlagen**
+  - ❌ **TTLock API:** Fehler → **API-Authentifizierung fehlgeschlagen**
+  - ❌ **Alle APIs:** Betroffen → **Gemeinsame Ursache**
+
+### 🎯 NEUE HYPOTHESE: API-AUTHENTIFIZIERUNG IST DAS PROBLEM!
+
+**Warum alle APIs betroffen sind:**
+- Bold Payment: 403 Forbidden → Authentifizierung fehlgeschlagen
+- TTLock: Fehler → Authentifizierung fehlgeschlagen
+- **Gemeinsame Ursache:** API-Keys werden nicht korrekt geladen/verwendet
+
+**Mögliche Ursachen:**
+1. **Settings werden nicht korrekt geladen:**
+   - `decryptBranchApiSettings()` funktioniert, aber Settings werden nicht verwendet?
+   - Settings werden geladen, aber falsche Werte?
+
+2. **API-Keys sind falsch/ungültig:**
+   - Keys wurden geändert?
+   - Keys sind abgelaufen?
+   - Keys haben falsche Berechtigungen?
+
+3. **Header-Format ist falsch:**
+   - Bold Payment erwartet anderes Format?
+   - Axios sendet Header anders als erwartet?
+
+4. **Timing-Problem:**
+   - Settings werden zu spät geladen?
+   - Race Condition beim Laden der Settings?
+
+### 📋 NÄCHSTE SYSTEMATISCHE PRÜFUNG:
+
+**1. Prüfe EXAKTEN Request-Header (was wird wirklich gesendet?):**
+- Server-Logs zeigen bereits detailliertes Logging
+- Prüfe: Sind Header wirklich korrekt?
+
+**2. Prüfe ob API-Keys wirklich korrekt sind:**
+- Vergleiche Keys aus DB mit Keys in API-Dashboard
+- Prüfe ob Keys aktiviert sind
+
+**3. Prüfe ob Settings wirklich geladen werden:**
+- Server-Logs zeigen: "[BoldPayment] Verwende Branch-spezifische Settings"
+- Prüfe: Werden Settings wirklich verwendet?
+
+**4. Teste API direkt mit curl (umgeht Server-Code):**
+```bash
+# Auf Server ausführen:
+curl -X POST "https://integrations.api.bold.co/v1/payment-links" \
+  -H "Authorization: x-api-key CTkrL5f5IxvMpX722zXivqnd1KU5VyoNBOFQFUUnf-E" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 10000, "currency": "COP"}' \
+  -v
+# Zeigt: Funktioniert API-Call direkt?
+```
+
+---
+
+## 📊 ZUSAMMENFASSUNG ALLER ERKENNTNISSE:
+
+### ✅ WAS WURDE BEREITS GEPRÜFT/BEHOBEN:
+
+1. ✅ **Environment-Variablen:** Alle vorhanden
+2. ✅ **ENCRYPTION_KEY:** Korrekt (64 Zeichen)
+3. ✅ **Settings in DB:** Unverschlüsselt
+4. ✅ **decryptBranchApiSettings():** Fix implementiert (verschachtelte Settings)
+5. ✅ **Connection Pool:** Fix implementiert (connection_limit=20, pool_timeout=20)
+6. ✅ **PM2:** Neu gestartet mit --update-env
+
+### ❌ WAS FUNKTIONIERT IMMER NOCH NICHT:
+
+1. ❌ **Bold Payment API:** 403 Forbidden (seit ~24h)
+2. ❌ **TTLock API:** Fehler (seit ~24h)
+3. ❌ **Alle APIs:** Betroffen (seit ~24h)
+
+### 🔍 WIDERSPRÜCHE:
+
+1. **Script-Tests funktionieren** → API-Calls mit denselben Werten funktionieren
+2. **Server zeigt 403 Fehler** → Echte Requests schlagen fehl
+3. **Connection Pool Fix angewendet** → Problem besteht weiterhin
+4. **Gleicher Fehler** → 403 Forbidden (nicht Connection Pool Timeout!)
+
+### 🎯 AKTUELLE HYPOTHESE:
+
+**Das Problem ist NICHT:**
+- ❌ Connection Pool (Fix wurde angewendet, Problem besteht)
+- ❌ Entschlüsselung (funktioniert)
+- ❌ Environment-Variablen (alle vorhanden)
+
+**Das Problem IST wahrscheinlich:**
+- ⚠️ **API-Authentifizierung** (403 Forbidden = Authentifizierung fehlgeschlagen)
+- ⚠️ **API-Keys werden nicht korrekt verwendet** (Header-Format? Timing? Werte?)
+- ⚠️ **Oder:** API-Keys sind falsch/ungültig/abgelaufen
+
+---
+
+## 🔧 NÄCHSTE SOFORT-MASSNAHMEN:
+
+**1. Prüfe ob PM2 die neue DATABASE_URL geladen hat:**
+```bash
+pm2 env 0 | grep DATABASE_URL
+```
+
+**2. Prüfe aktuelle Server-Logs:**
+```bash
+pm2 logs intranet-backend --lines 200 --nostream | grep -iE "403|forbidden|Bold Payment|Connection Pool" | tail -50
+```
+
+**3. Teste API direkt mit curl:**
+```bash
+curl -X POST "https://integrations.api.bold.co/v1/payment-links" \
+  -H "Authorization: x-api-key CTkrL5f5IxvMpX722zXivqnd1KU5VyoNBOFQFUUnf-E" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 10000, "currency": "COP"}' \
+  -v
+```
+
+**4. Prüfe PostgreSQL-Status:**
+```bash
+systemctl status postgresql
+```
+
+**5. Prüfe aktive DB-Verbindungen:**
+```bash
+psql -U intranetuser -d intranet -c "SELECT count(*) FROM pg_stat_activity WHERE datname = 'intranet';"
+```
