@@ -64,7 +64,7 @@ scp -i ~/.ssh/intranet_rsa backend/scripts/{test-branch-decryption.ts,re-encrypt
 **Auf Server ausführen:**
 ```bash
 cd /var/www/intranet/backend
-npm run ts-node scripts/test-branch-decryption.ts
+npx ts-node scripts/test-branch-decryption.ts
 ```
 
 **Erwartetes Ergebnis:**
@@ -95,7 +95,7 @@ BRANCH 3 (Manila) - Entschlüsselungstest
 **Auf Server ausführen:**
 ```bash
 cd /var/www/intranet/backend
-npm run ts-node scripts/re-encrypt-all-api-settings.ts
+npx ts-node scripts/re-encrypt-all-api-settings.ts
 ```
 
 **Erwartetes Ergebnis:**
@@ -139,7 +139,7 @@ npm run ts-node scripts/re-encrypt-all-api-settings.ts
 **Auf Server ausführen:**
 ```bash
 cd /var/www/intranet/backend
-npm run ts-node scripts/verify-branch-decryption.ts
+npx ts-node scripts/verify-branch-decryption.ts
 ```
 
 **Erwartetes Ergebnis:**
