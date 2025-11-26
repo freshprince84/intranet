@@ -4356,17 +4356,48 @@ pm2 logs intranet-backend --lines 200 --nostream | grep -E "createForBranch|Bold
 - Vollständige API-Fehlerdetails prüfen
 - Prüfen ob es ein anderes Problem ist (Payload, Endpunkt, etc.)
 
-**Befehl zum Prüfen der vollständigen Fehlerdetails:**
-```bash
-# Auf Server:
-pm2 logs intranet-backend --lines 200 --nostream | grep -A 10 "\[Bold Payment\] API Error" | tail -50
+### ✅ API-FEHLERDETAILS GEFUNDEN (26.11.2025 23:35 UTC):
+
+**Server-Logs zeigen:**
+```
+[Bold Payment] API Error: {
+  status: 403,
+  statusText: 'Forbidden',
+  data: { message: 'Forbidden' },
+  url: '/online/link/v1'
+}
 ```
 
-**ODER:**
-```bash
-# Auf Server:
-pm2 logs intranet-backend --lines 200 --nostream | grep -E "\[Bold Payment\].*Error|status.*403|Forbidden" | tail -30
-```
+**Das bedeutet:**
+- ✅ Request-Interceptor funktioniert (Header wird gesetzt)
+- ✅ Request wird gesendet
+- ❌ **API gibt 403 Forbidden zurück**
+
+**Mögliche Ursachen:**
+1. **API-Key/Merchant ID hat nicht die richtigen Berechtigungen**
+   - "API Link de pagos" ist nicht aktiviert im Dashboard
+   - Keys haben nicht die richtigen Berechtigungen
+   - Keys sind für falsche Umgebung (Sandbox vs. Production)
+
+2. **API-Endpunkt ist falsch**
+   - Aktuell: `https://integrations.api.bold.co/online/link/v1`
+   - Möglicherweise: Anderer Endpunkt?
+
+3. **Payload-Format ist falsch**
+   - API erwartet anderes Format
+   - Aber: Hat vorher funktioniert
+
+4. **API wurde geändert**
+   - API erwartet jetzt anderes Authentifizierungsformat (AWS Signature v4?)
+   - API erwartet andere Header
+
+**Nächste Schritte:**
+1. Prüfe Payload in Logs: `pm2 logs intranet-backend --lines 200 | grep "\[Bold Payment\] Payload"`
+2. Prüfe Bold Payment Dashboard:
+   - Ist "API Link de pagos" aktiviert?
+   - Haben die Keys die richtigen Berechtigungen?
+   - Sind die Keys für die richtige Umgebung aktiviert?
+3. Prüfe API-Dokumentation: Wurde die API kürzlich geändert?
 
 ---
 
