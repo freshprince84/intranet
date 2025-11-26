@@ -2169,3 +2169,48 @@ pm2 logs intranet-backend --lines 100 --nostream | grep -iE "\[Bold Payment\]|\[
 **3. Prüfe ob Settings anders geladen werden:**
 - Script-Tests verwenden `decryptBranchApiSettings()` direkt
 - Server verwendet `BoldPaymentService.loadSettings()` → könnte anders sein
+
+---
+
+## 🔴🔴🔴 ROOT CAUSE GEFUNDEN: 26.11.2025 18:45 UTC
+
+### ⚠️ DAS ECHTE PROBLEM:
+
+**DATABASE_URL hat KEINE Connection Pool Einstellungen!**
+
+**Aktuelle DATABASE_URL (vom Server):**
+```
+postgresql://intranetuser:password@localhost:5432/intranet?schema=public
+```
+
+**Problem:**
+- ❌ Kein `connection_limit` → Standard: **nur 5 Verbindungen**
+- ❌ Kein `pool_timeout` → Standard: **10 Sekunden Timeout**
+- ❌ Bei mehreren gleichzeitigen Requests → Pool erschöpft → Timeouts
+- ❌ Alle APIs schlagen fehl, weil sie nicht auf DB zugreifen können
+
+**Das erklärt:**
+- ✅ Warum ALLE APIs nicht funktionieren (DB-Verbindungen blockiert)
+- ✅ Warum das System langsam wird (Requests warten auf freie Verbindung)
+- ✅ Warum Prisma Connection Pool Timeouts auftreten
+- ✅ Warum es schlimmer wird (mehr Requests = mehr Blockierungen)
+- ✅ Warum Scripts funktionieren (weniger gleichzeitige Requests)
+
+**LÖSUNG:**
+
+**DATABASE_URL erweitern:**
+```
+postgresql://intranetuser:password@localhost:5432/intranet?schema=public&connection_limit=20&pool_timeout=20
+```
+
+**Schritte:**
+1. Backup der .env Datei erstellen
+2. DATABASE_URL in .env erweitern (connection_limit=20&pool_timeout=20 hinzufügen)
+3. Server neu starten (damit neue DATABASE_URL geladen wird)
+4. System sollte wieder funktionieren
+
+**BEWEIS:**
+- Script `check-database-url.ts` zeigt: `connection_limit: ❌ FEHLT!` und `pool_timeout: ❌ FEHLT!`
+- Browser zeigt: "Timed out fetching a new connection from the connection pool"
+- System wird immer langsamer (mehr Requests = mehr Blockierungen)
+- Alle APIs betroffen (nicht nur Bold Payment)
