@@ -942,6 +942,28 @@ pm2 logs intranet-backend --lines 100 --nostream | grep -E "\[Bold Payment\] Aut
 - Versuche Payment-Link zu erstellen
 - Prüfe ob 403-Fehler behoben ist
 
+### ⚠️ FIX VERBESSERT (26.11.2025 23:20 UTC):
+
+**Problem mit erstem Fix:**
+- Prüfung war nicht robust genug
+- `apiUrl` könnte bereits gesetzt sein, aber Axios-Instance noch ohne Interceptor
+
+**Verbesserter Fix:**
+```typescript
+// Prüfe ob axiosInstance wirklich mit Interceptor erstellt wurde
+// Wenn baseURL noch der Placeholder ist, wurde createAxiosInstance() nicht aufgerufen
+if (this.axiosInstance && this.axiosInstance.defaults.baseURL === 'https://sandbox.bold.co') {
+  // Axios-Instance wurde noch nicht mit Interceptor erstellt
+  await this.loadSettings();
+}
+```
+
+**Was der verbesserte Fix macht:**
+1. ✅ Prüft `apiUrl` (Placeholder = nicht initialisiert)
+2. ✅ Prüft `merchantId` (fehlt = nicht initialisiert)
+3. ✅ **NEU:** Prüft `axiosInstance.defaults.baseURL` (Placeholder = nicht mit Interceptor erstellt)
+4. ✅ **Garantiert, dass `createAxiosInstance()` IMMER aufgerufen wird**
+
 ### ✅ FIX AUCH FÜR TTLOCKSERVICE IMPLEMENTIERT:
 
 **Datei:** `backend/src/services/ttlockService.ts`
