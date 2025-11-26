@@ -528,6 +528,89 @@ npx ts-node scripts/check-code-compilation-and-logs.ts
 
 ---
 
+## 🔴🔴🔴 KRITISCHES ERGEBNIS: CODE-KOMPILIERUNGS-PRÜFUNG (26.11.2025 22:45 UTC)
+
+### ✅ PRÜFUNG AUSGEFÜHRT:
+
+**Ergebnisse:**
+
+1. ✅ **Code ist kompiliert:**
+   - `dist/services/boldPaymentService.js` existiert
+   - ✅ Code wurde kompiliert
+
+2. ✅ **Debug-Logs sind im kompilierten Code:**
+   - `merchantId Wert`: ✅ Gefunden
+   - `merchantId Länge`: ✅ Gefunden
+   - `Authorization Header`: ✅ Gefunden
+   - `Header Länge`: ✅ Gefunden
+   - `Full Headers`: ✅ Gefunden
+   - **✅ Alle 5 Debug-Logs sind vorhanden!**
+
+3. ✅ **Request-Interceptor ist im Code:**
+   - `interceptors.request.use`: ✅ Gefunden
+   - `config.headers.Authorization`: ✅ Gefunden
+   - `x-api-key`: ✅ Gefunden
+   - **✅ Request-Interceptor ist vorhanden!**
+
+4. ✅ **PM2 Prozess läuft:**
+   - Status: `online`
+   - Uptime: 93m
+   - **✅ PM2 läuft korrekt!**
+
+5. ❌ **KEINE Bold Payment Logs in PM2:**
+   - **⚠️ PROBLEM: Request-Interceptor wird NICHT ausgeführt!**
+   - **⚠️ Logs werden nicht geschrieben!**
+
+### 🎯 KRITISCHE ERKENNTNIS:
+
+**Der Request-Interceptor wird NICHT ausgeführt!**
+
+**Das bedeutet:**
+- Der Code ist kompiliert ✅
+- Der Interceptor ist im Code ✅
+- **ABER: Der Interceptor wird nicht ausgeführt** ❌
+
+**Mögliche Ursachen:**
+1. **`createAxiosInstance()` wird nicht aufgerufen?**
+   - Wird `loadSettings()` aufgerufen?
+   - Wird `createAxiosInstance()` in `loadSettings()` aufgerufen?
+
+2. **Axios-Instance wird nicht verwendet?**
+   - Wird `this.axiosInstance.post()` verwendet?
+   - Oder wird eine andere Axios-Instance verwendet?
+
+3. **Code-Pfad wird nicht erreicht?**
+   - Wird `createPaymentLink()` überhaupt aufgerufen?
+   - Gibt es einen frühen Return/Error?
+
+### 📋 NÄCHSTE PRÜFUNGEN:
+
+**1. Prüfe ob `createPaymentLink()` aufgerufen wird:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "createPaymentLink|Erstelle Payment-Link|Payment-Link" | tail -20
+# Prüfe ob createPaymentLink überhaupt aufgerufen wird
+```
+
+**2. Prüfe ob `loadSettings()` aufgerufen wird:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "loadSettings|Verwende Branch-spezifische|Bold Payment Settings" | tail -20
+# Prüfe ob loadSettings aufgerufen wird
+```
+
+**3. Prüfe ob `createAxiosInstance()` aufgerufen wird:**
+- Wird `this.axiosInstance = this.createAxiosInstance()` in `loadSettings()` aufgerufen?
+- Oder wird die alte Axios-Instance verwendet?
+
+**4. Prüfe Code-Flow:**
+- Wird `createPaymentLink()` aufgerufen?
+- Wird `loadSettings()` aufgerufen?
+- Wird `createAxiosInstance()` aufgerufen?
+- Wird `this.axiosInstance.post()` verwendet?
+
+---
+
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
 
 **Server-Prüfung vom 26.11.2025 17:00 UTC:**
