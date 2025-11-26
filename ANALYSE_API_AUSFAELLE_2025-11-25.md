@@ -204,6 +204,70 @@ config.headers.set('Authorization', `x-api-key ${this.merchantId}`);
 
 **ODER:** Prüfe ob `config.headers.Authorization =` wirklich funktioniert in Axios.
 
+---
+
+## 🔴🔴🔴 GIT-HISTORIE: HEADER-SETTING-METHODE MEHRMALS GEÄNDERT! (26.11.2025 21:55 UTC)
+
+### ✅ GIT-LOG ERGEBNIS:
+
+**Commit-Historie der Header-Setting-Änderungen:**
+
+1. **Commit 49df134 (25.11.2025 17:53:19):**
+   - `config.headers.set()` → `config.headers.Authorization =` geändert
+   - **ZEITPUNKT: NACH MITTAG 25.11.2025!**
+
+2. **Commit d63b933 (25.11.2025):**
+   - `config.headers.Authorization =` → `config.headers.set()` geändert (zurück)
+
+3. **Commit 0cdb278 (26.11.2025):**
+   - `config.headers.set()` → `config.headers.Authorization =` geändert (wieder)
+
+### 🎯 KRITISCHER ZEITPUNKT GEFUNDEN!
+
+**Commit 49df134 (25.11.2025 17:53:19):**
+- **ZEITPUNKT: NACH MITTAG 25.11.2025!**
+- **ÄNDERUNG: `config.headers.set()` → `config.headers.Authorization =`**
+- **DAS IST DER ZEITPUNKT, AN DEM ES KAPUTT GING!**
+
+### 🔴 HYPOTHESE BESTÄTIGT!
+
+**Wenn `config.headers.Authorization =` nicht funktioniert in Axios:**
+- Header wird nicht gesetzt
+- Request wird ohne Authorization Header gesendet
+- API gibt 403 Forbidden zurück
+- **Das würde ALLE APIs betreffen, die diese Methode verwenden!**
+
+### 📋 SYSTEMATISCHE PRÜFUNG:
+
+**1. Prüfe ob andere Services dasselbe Problem haben:**
+```bash
+# Auf Server oder lokal:
+grep -r "config.headers.Authorization =\|config.headers\['Authorization'\] =" backend/src/services/
+# Prüfe ob andere Services dasselbe Problem haben
+```
+
+**2. Teste ob Header wirklich gesetzt wird:**
+- Prüfe Server-Logs: Wird Header wirklich gesendet?
+- Oder: Wird Header nicht gesetzt?
+
+**3. Prüfe Axios-Dokumentation:**
+- Funktioniert `config.headers.Authorization =` in Axios?
+- Oder muss `config.headers.set()` verwendet werden?
+
+### 🔧 SOFORT-MASSNAHME:
+
+**Ändere Header-Setting zurück zu `config.headers.set()`:**
+
+```typescript
+// AKTUELL (falsch? - seit 25.11.2025 17:53:19):
+config.headers.Authorization = `x-api-key ${this.merchantId}`;
+
+// KORREKT (wie vorher):
+config.headers.set('Authorization', `x-api-key ${this.merchantId}`);
+```
+
+**ODER:** Prüfe ob `config.headers.Authorization =` wirklich funktioniert in Axios.
+
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
 
 **Server-Prüfung vom 26.11.2025 17:00 UTC:**
