@@ -3085,6 +3085,78 @@ pm2 logs intranet-backend --lines 50 --nostream | grep -A 5 "\[Bold Payment\] me
 
 ---
 
+## ✅✅✅ BEWIESEN: SETTINGS SIND UNVERSCHLÜSSELT! (26.11.2025 21:25 UTC)
+
+### ✅ PRÜFUNGS-ERGEBNISSE (Zeile 975-999):
+
+**1. Settings-Prüfung:**
+- Zeile 994: `Merchant ID: CTkrL5f5IxvMpX722zXivqnd1KU5VyoNBOFQFUUnf-E`
+- Zeile 995: `Ist verschlüsselt (enthält ":"): false` ✅
+- Zeile 996: `Länge: 43`
+
+**2. Logs-Prüfung:**
+- Zeile 998: Keine Logs gefunden (möglicherweise zu alt)
+
+### 🔴 KRITISCH: PROBLEM LIEGT NICHT AN ENTSCHLÜSSELUNG!
+
+**Das bedeutet:**
+- ✅ Settings sind **UNVERSCHLÜSSELT** in DB
+- ✅ Settings werden direkt verwendet (keine Entschlüsselung nötig)
+- ✅ Fix wird nicht ausgeführt (weil `includes(':')` false ist)
+- ❌ **ABER: API gibt 403 Forbidden zurück!**
+
+### 🎯 ROOT CAUSE: PROBLEM LIEGT WOANDERS!
+
+**Wenn Settings unverschlüsselt sind und direkt verwendet werden, warum funktioniert die API dann nicht?**
+
+**Mögliche Ursachen:**
+
+**1. API-Authentifizierungsformat ist falsch:**
+- Header-Format ist falsch (wie curl-Test zeigte: AWS Signature erforderlich?)
+- Code sendet: `Authorization: x-api-key <merchantId>`
+- API erwartet: AWS Signature v4 Format?
+
+**2. API-Keys sind falsch/ungültig:**
+- Merchant ID ist korrekt (`CTkrL5f5IxvMpX722zXivqnd1KU5VyoNBOFQFUUnf-E`)
+- ABER: Key könnte abgelaufen/ungültig sein
+- ODER: Key hat falsche Berechtigungen
+
+**3. API-Endpunkt ist falsch:**
+- Aktuell: `https://integrations.api.bold.co`
+- Möglicherweise: Falscher Endpunkt?
+- ODER: API wurde geändert
+
+**4. API wurde geändert:**
+- Bold Payment hat Authentifizierung geändert (vor ~24h?)
+- Von "x-api-key" auf AWS Signature umgestellt?
+
+### 📋 ZUSAMMENFASSUNG:
+
+**✅ AUSGESCHLOSSEN:**
+- ❌ Entschlüsselungsproblem (Settings sind unverschlüsselt)
+- ❌ DB-Verbindungsproblem (behoben)
+- ❌ Environment-Variablen (alle vorhanden)
+- ❌ Code-Deployment (Fix ist auf Server)
+
+**❌ BESTEHT WEITERHIN:**
+- ❌ Bold Payment API: 403 Forbidden
+- ❌ TTLock API: PIN-Fehler
+- ❌ Alle APIs funktionieren nicht
+
+**🎯 FOKUS: API-AUTHENTIFIZIERUNG!**
+
+**Das Problem ist:**
+- API-Authentifizierungsformat ist falsch
+- ODER: API-Keys sind falsch/ungültig
+- ODER: API wurde geändert
+
+**NÄCHSTER SCHRITT:**
+- Prüfe Bold Payment API-Dokumentation
+- Prüfe ob API-Endpunkt korrekt ist
+- Prüfe ob Authentifizierungsformat korrekt ist
+
+---
+
 ## ⚠️⚠️⚠️ WICHTIG: PROBLEM BESTEHT WEITERHIN! (26.11.2025 21:10 UTC)
 
 ### 🔴 BENUTZER-FEEDBACK:
