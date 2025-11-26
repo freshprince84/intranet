@@ -3325,6 +3325,63 @@ pm2 logs intranet-backend --lines 200 --nostream | grep -E "createForBranch|Bold
 - Werden Headers korrekt gesetzt?
 - Gibt es async-Probleme?
 
+---
+
+## 🔍 SERVICE-INITIALISIERUNGS-FLOW ANALYSIERT (26.11.2025 21:35 UTC)
+
+### ✅ CODE-FLOW GEFUNDEN:
+
+**1. ReservationNotificationService.sendReservationInvitation():**
+- Zeile 272-274: `BoldPaymentService.createForBranch(reservation.branchId)` wird aufgerufen
+- Zeile 277: `boldPaymentService.createPaymentLink()` wird aufgerufen
+
+**2. BoldPaymentService.createForBranch():**
+- Zeile 142: `await service.loadSettings()` wird aufgerufen
+- Settings sollten geladen sein, bevor `createPaymentLink()` aufgerufen wird
+
+**3. BoldPaymentService.createPaymentLink():**
+- Zeile 225: Methode wird aufgerufen
+- Zeile 231: `await this.loadSettings()` wird NOCHMAL aufgerufen (falls nicht geladen)
+- Zeile 315: `await this.axiosInstance.post('/online/link/v1', payload)` wird aufgerufen
+
+### 🔍 MÖGLICHE PROBLEME:
+
+**1. Settings werden nicht korrekt geladen:**
+- `createForBranch()` ruft `loadSettings()` auf
+- ABER: Was wenn `loadSettings()` fehlschlägt?
+- ABER: Was wenn Settings nicht korrekt geladen werden?
+
+**2. Axios-Instance wird zu früh erstellt:**
+- Zeile 55-58: `axiosInstance` wird im Constructor erstellt
+- Zeile 85: `this.axiosInstance = this.createAxiosInstance()` wird in `loadSettings()` aufgerufen
+- ABER: Was wenn `createAxiosInstance()` vor `loadSettings()` aufgerufen wird?
+
+**3. Request-Interceptor lädt Settings zu spät:**
+- Zeile 167-168: Interceptor ruft `loadSettings()` auf, wenn `merchantId` fehlt
+- ABER: Was wenn Request gesendet wird, bevor Settings geladen sind?
+
+### 📋 SYSTEMATISCHE PRÜFUNG:
+
+**1. Prüfe ob Settings wirklich geladen werden:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 500 --nostream | grep -E "\[BoldPayment\] Verwende|loadSettings|Erstelle Payment-Link" | tail -50
+# Prüfe Reihenfolge: Wird loadSettings vor createPaymentLink aufgerufen?
+```
+
+**2. Prüfe ob createForBranch erfolgreich ist:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 500 --nostream | grep -E "createForBranch|BoldPaymentService|Fehler beim Laden" | tail -50
+# Prüfe ob createForBranch Fehler wirft
+```
+
+**3. Prüfe Request-Flow-Timing:**
+- Wird `loadSettings()` aufgerufen?
+- Wird `createAxiosInstance()` aufgerufen?
+- Wird Request gesendet?
+- In welcher Reihenfolge?
+
 ### 🎯 FOKUS: REQUEST-FLOW, NICHT API!
 
 **Das Problem ist:**
