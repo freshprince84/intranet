@@ -178,15 +178,30 @@ export class BoldPaymentService {
         // Authorization Header mit Wert: x-api-key <llave_de_identidad>
         // Quelle: https://developers.bold.co/pagos-en-linea/api-link-de-pagos
         // WICHTIG: Format ist "x-api-key <merchantId>" im Authorization Header, NICHT als separater Header!
-        config.headers.Authorization = `x-api-key ${this.merchantId}`;
+        const authHeaderValue = `x-api-key ${this.merchantId}`;
+        config.headers.Authorization = authHeaderValue;
+        
+        // KRITISCH: Prüfe NACH dem Setzen, ob Header wirklich gesetzt ist
+        if (!config.headers.Authorization || config.headers.Authorization !== authHeaderValue) {
+          console.error('[Bold Payment] KRITISCH: Header wurde nach dem Setzen überschrieben!');
+          console.error('[Bold Payment] Erwartet:', authHeaderValue);
+          console.error('[Bold Payment] Tatsächlich:', config.headers.Authorization);
+          config.headers.Authorization = authHeaderValue;
+        }
         
         // Debug: Prüfe ob Header korrekt gesetzt wurde
         console.log(`[Bold Payment] ${config.method?.toUpperCase()} ${config.url}`);
-        console.log(`[Bold Payment] x-api-key Header: ${config.headers['x-api-key']}`);
-        console.log(`[Bold Payment] Header Länge: ${config.headers['x-api-key']?.length}`);
+        console.log(`[Bold Payment] Authorization Header: ${config.headers.Authorization}`);
+        console.log(`[Bold Payment] Header Länge: ${config.headers.Authorization?.length}`);
         console.log(`[Bold Payment] merchantId Wert: "${this.merchantId}"`);
         console.log(`[Bold Payment] merchantId Länge: ${this.merchantId?.length}`);
         console.log(`[Bold Payment] Full Headers:`, JSON.stringify(config.headers, null, 2));
+        
+        // KRITISCH: Prüfe NOCHMAL direkt vor dem Return
+        if (!config.headers.Authorization || config.headers.Authorization !== authHeaderValue) {
+          console.error('[Bold Payment] KRITISCH: Header wurde VOR dem Return überschrieben!');
+          config.headers.Authorization = authHeaderValue;
+        }
         
         return config;
       },
