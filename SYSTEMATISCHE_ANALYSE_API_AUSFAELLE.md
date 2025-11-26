@@ -214,6 +214,26 @@ Vergleiche Byte-für-Byte die Werte aus Tests und Server.
 
 ---
 
+## 🔴🔴🔴 ROOT CAUSE GEFUNDEN: 26.11.2025 18:45 UTC
+
+### ✅ PROBLEM IDENTIFIZIERT: Prisma Connection Pool Timeout!
+
+**Beweis:**
+- Script zeigt: `connection_limit: ❌ FEHLT!`
+- Script zeigt: `pool_timeout: ❌ FEHLT!`
+- DATABASE_URL: `postgresql://...?schema=public` (KEINE Connection Pool Parameter!)
+
+**Das erklärt ALLES:**
+1. ✅ **Warum alle APIs nicht funktionieren** → DB-Verbindungen blockiert
+2. ✅ **Warum das System langsam wird** → Requests warten auf freie Verbindung
+3. ✅ **Warum Prisma Connection Pool Timeouts auftreten** → Nur 5 Verbindungen (Standard), Timeout 10 Sekunden
+4. ✅ **Warum es schlimmer wird** → Mehr Requests = Mehr Blockierungen
+
+**LÖSUNG:**
+DATABASE_URL muss erweitert werden mit Connection Pool Parametern!
+
+---
+
 ## ⚠️ WICHTIG:
 
 **NICHT MEHR PRÜFEN:**
@@ -221,50 +241,9 @@ Vergleiche Byte-für-Byte die Werte aus Tests und Server.
 - ❌ Entschlüsselung (bereits geprüft)
 - ❌ Settings-Werte (bereits geprüft)
 - ❌ Fix-Implementierung (bereits geprüft)
+- ❌ **ROOT CAUSE GEFUNDEN: Connection Pool fehlt!**
 
-**NUR NOCH PRÜFEN:**
-- ✅ **EXAKTER Request (was wird wirklich gesendet?)**
-- ✅ **Axios-Konfiguration-Unterschied**
-- ✅ **Byte-für-Byte Vergleich**
-
----
-
-## 🔴🔴🔴 ROOT CAUSE GEFUNDEN: 26.11.2025 18:45 UTC
-
-### ⚠️ DAS ECHTE PROBLEM:
-
-**DATABASE_URL hat KEINE Connection Pool Einstellungen!**
-
-**Aktuelle DATABASE_URL:**
-```
-postgresql://intranetuser:password@localhost:5432/intranet?schema=public
-```
-
-**Problem:**
-- ❌ Kein `connection_limit` → Standard: **nur 5 Verbindungen**
-- ❌ Kein `pool_timeout` → Standard: **10 Sekunden Timeout**
-- ❌ Bei mehreren gleichzeitigen Requests → Pool erschöpft → Timeouts
-- ❌ Alle APIs schlagen fehl, weil sie nicht auf DB zugreifen können
-
-**Das erklärt:**
-- ✅ Warum ALLE APIs nicht funktionieren (DB-Verbindungen blockiert)
-- ✅ Warum das System langsam wird (Requests warten auf freie Verbindung)
-- ✅ Warum Prisma Connection Pool Timeouts auftreten
-- ✅ Warum es schlimmer wird (mehr Requests = mehr Blockierungen)
-
-**LÖSUNG:**
-
-**DATABASE_URL erweitern:**
-```
-postgresql://intranetuser:password@localhost:5432/intranet?schema=public&connection_limit=20&pool_timeout=20
-```
-
-**Nach Änderung:**
-1. Server neu starten (damit neue DATABASE_URL geladen wird)
-2. System sollte wieder funktionieren
-
-**BEWEIS:**
-- Script `check-database-url.ts` zeigt: `connection_limit: ❌ FEHLT!`
-- Browser zeigt: "Timed out fetching a new connection from the connection pool"
-- System wird immer langsamer (mehr Requests = mehr Blockierungen)
+**NÄCHSTER SCHRITT:**
+- ✅ **DATABASE_URL in .env aktualisieren**
+- ✅ **Server neu starten**
 
