@@ -43,3 +43,4 @@ prisma/.env
 
 # Android
 IntranetMobileApp/android/app/release.keystore  .env.backup.*
+backend/.env.backup.*
