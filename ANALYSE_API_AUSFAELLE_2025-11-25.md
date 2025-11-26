@@ -1849,3 +1849,222 @@ config.headers['x-api-key'] = this.merchantId;
 ### Zusätzliche Probleme:
 1. **Bold Payment Header-Format** - muss auch korrigiert werden
 2. **PM2 Restart-Problem** - 75 Restarts in 12h muss untersucht werden
+
+---
+
+## ✅ UPDATE: Re-Encryption erfolgreich durchgeführt (26.11.2025 17:33 UTC)
+
+### Verifikation nach Re-Encryption:
+
+**Server-Test-Ergebnisse:**
+```
+✅ ALLE ENTSCHLÜSSELUNGEN ERFOLGREICH!
+✅ Problem behoben!
+
+Branch 3 (Manila):
+   ✅ Bold Payment: Entschlüsselung erfolgreich
+   ✅ LobbyPMS: Entschlüsselung erfolgreich
+   ✅ TTLock: Entschlüsselung erfolgreich
+   ✅ WhatsApp: Entschlüsselung erfolgreich
+
+Branch 4 (Parque Poblado):
+   ✅ Bold Payment: Entschlüsselung erfolgreich
+   ✅ LobbyPMS: Entschlüsselung erfolgreich
+   ✅ WhatsApp: Entschlüsselung erfolgreich
+```
+
+**PM2-Logs-Prüfung:**
+```bash
+pm2 logs intranet-backend --lines 200 --nostream | grep -iE "Error decrypting|403 Forbidden|Bold Payment" | tail -50
+# Ergebnis: KEINE Fehler mehr gefunden!
+```
+
+### ⚠️ ABER: Weitere Probleme identifiziert
+
+**Browser Console zeigt (26.11.2025 17:33+ UTC):**
+- ❌ **500 Internal Server Error** bei `/api/users/profile`
+- ❌ **500 Internal Server Error** bei `/api/auth/login`
+- ❌ **"Fehler im Response Interceptor: q"** (sehr merkwürdige Fehlermeldung)
+- ❌ **"Login-Fehler: q"**
+- ❌ **WebSocket-Verbindungsfehler** zu `wss://65.109.228.106.nip.io:5000/ws/claude-console`
+
+**FAZIT:**
+1. ✅ **Entschlüsselungsproblem ist behoben** - Re-Encryption war erfolgreich
+2. ⚠️ **ABER: Es gibt noch andere Probleme:**
+   - 500-Fehler bei Auth-Endpoints deuten auf **Backend-Fehler** hin
+   - Mögliche Ursachen:
+     - **DB-Verbindungsprobleme** (siehe `PRISMA_FEHLER_UND_RESPONSE_ZEITEN_ANALYSE.md`)
+     - **Andere Backend-Fehler** (nicht Entschlüsselung)
+     - **Fehlerbehandlung** gibt nur "q" zurück (sehr merkwürdig)
+
+**Nächste Schritte:**
+1. ✅ Entschlüsselungsproblem behoben - **ERLEDIGT**
+2. ⚠️ **Backend-Logs prüfen** für 500-Fehler bei `/api/users/profile` und `/api/auth/login`
+3. ⚠️ **DB-Verbindung prüfen** (möglicherweise Connection Pool Problem)
+4. ⚠️ **Fehlerbehandlung prüfen** - warum wird nur "q" als Fehlermeldung zurückgegeben?
+
+---
+
+## 🔴🔴 KRITISCH: ECHTES PROBLEM IDENTIFIZIERT (26.11.2025 17:56 UTC)
+
+### ⚠️ Entschlüsselungsproblem ist behoben, ABER:
+
+**Server-Logs zeigen MASSIVE DB-Verbindungsprobleme:**
+
+```bash
+pm2 logs intranet-backend --lines 500 --nostream | grep -iE "Can't reach database|PrismaClient" | tail -50
+```
+
+**Ergebnis:**
+```
+[UserCache] Fehler beim Laden für User 16: PrismaClientKnownRequestError:
+Can't reach database server at `localhost:5432`
+[UserCache] Fehler beim Laden für User 16: PrismaClientKnownRequestError:
+Can't reach database server at `localhost:5432`
+[WorktimeCache] Fehler beim Laden für User 16: PrismaClientKnownRequestError:
+Can't reach database server at `localhost:5432`
+Error in getLifecycleRoles: PrismaClientKnownRequestError:
+Can't reach database server at `localhost:5432`
+Prisma-Fehler beim Abrufen der Filter: PrismaClientKnownRequestError:
+Can't reach database server at `localhost:5432`
+Error in getOrganizationStats: PrismaClientKnownRequestError:
+Can't reach database server at `localhost:5432`
+```
+
+**Betroffene Bereiche:**
+- ❌ UserCache (mehrfach)
+- ❌ WorktimeCache
+- ❌ getLifecycleRoles
+- ❌ Filter-Abruf
+- ❌ OrganizationStats
+- ❌ Reservation Notification-Logs
+
+### 🔍 ROOT CAUSE: DB-Verbindungsprobleme
+
+**Das erklärt die 500-Fehler in der Browser Console:**
+- `/api/users/profile` → benötigt UserCache → DB-Fehler → 500
+- `/api/auth/login` → benötigt DB-Query → DB-Fehler → 500
+- "Fehler im Response Interceptor: q" → Fehler wird nicht richtig serialisiert (nur erster Buchstabe "q" von "query" oder ähnlich)
+
+**Bekanntes Problem:**
+- Siehe `docs/technical/PRISMA_FEHLER_UND_RESPONSE_ZEITEN_ANALYSE.md` (vom 22.11.2025)
+- Problem existiert bereits seit mindestens 4 Tagen
+- **Ursache:** PostgreSQL schließt idle Verbindungen, Prisma kann nicht reconnecten
+
+### 📋 ZUSAMMENFASSUNG
+
+1. ✅ **Entschlüsselungsproblem:** BEHOBEN (Re-Encryption erfolgreich)
+2. 🔴 **ECHTES Problem:** DB-Verbindungsfehler verursachen 500-Fehler
+3. ⚠️ **Bekanntes Problem:** Bereits dokumentiert in `PRISMA_FEHLER_UND_RESPONSE_ZEITEN_ANALYSE.md`
+4. ⚠️ **Lösung existiert:** `executeWithRetry` Helper-Funktion wurde erstellt, aber möglicherweise nicht überall verwendet
+
+### 🔧 NÄCHSTE SCHRITTE
+
+1. ✅ Entschlüsselungsproblem behoben - **ERLEDIGT**
+2. 🔴 **DB-Verbindungsproblem beheben:**
+   - Prüfe PostgreSQL-Status: `systemctl status postgresql`
+   - Prüfe DATABASE_URL in `.env`: `cat .env | grep DATABASE_URL`
+   - Prüfe Connection Pool Einstellungen: Sollte `?connection_limit=20&pool_timeout=20` enthalten
+   - Prüfe ob `executeWithRetry` überall verwendet wird (siehe `backend/src/utils/prisma.ts`)
+3. ⚠️ **Fehlerbehandlung verbessern:** Warum wird nur "q" als Fehlermeldung zurückgegeben?
+
+---
+
+## 🔴🔴🔴 KRITISCH: ROOT CAUSE IDENTIFIZIERT - WARUM ES IMMER SCHLIMMER WIRD (26.11.2025 18:00 UTC)
+
+### ⚠️ DAS ECHTE PROBLEM:
+
+**`executeWithRetry` existiert, wird aber NIRGENDWO verwendet!**
+
+**Beweis:**
+- `executeWithRetry` wurde in `backend/src/utils/prisma.ts` erstellt (Zeile 38-80)
+- **Wird aber nirgendwo im Code verwendet!** (grep zeigt nur Definition, keine Verwendung)
+- Alle Prisma-Queries laufen **direkt ohne Retry-Logik**
+
+### 🔍 WARUM ES IMMER SCHLIMMER WIRD:
+
+**Kaskadierender Effekt:**
+
+1. **DB-Verbindungsfehler treten auf** → "Can't reach database server at `localhost:5432`"
+2. **Keine Retry-Logik** → Fehler wird sofort an Client weitergegeben
+3. **Client retryt automatisch** → Mehr Requests → Mehr DB-Verbindungsversuche
+4. **Connection Pool wird ausgeschöpft** → Noch mehr Fehler
+5. **Mehr Fehler → Mehr Retries → Mehr DB-Last → Mehr Fehler** → **Teufelskreis!**
+
+### 📊 BETROFFENE BEREICHE (OHNE RETRY-LOGIK):
+
+**Kritische Stellen ohne Retry-Logik:**
+- ❌ `backend/src/middleware/auth.ts` - Auth-Middleware (UserCache, User-Query)
+- ❌ `backend/src/middleware/organization.ts` - Organization-Middleware
+- ❌ `backend/src/utils/translations.ts` - getUserLanguage
+- ❌ `backend/src/controllers/worktimeController.ts` - getActiveWorktime (wird sehr häufig aufgerufen!)
+- ❌ `backend/src/controllers/userController.ts` - getCurrentUser (UserCache)
+- ❌ `backend/src/controllers/notificationController.ts` - Notification-Erstellung
+- ❌ **ALLE anderen Controller und Services** - Hunderte von Prisma-Queries ohne Retry-Logik
+
+**Das erklärt ALLE Symptome:**
+
+1. **Login schlägt fehl** → `authMiddleware` macht User-Query → DB-Fehler → Kein Retry → 500
+2. **Ladezeiten sind lang** → DB-Queries schlagen fehl → Client retryt → Mehr Requests → Mehr Fehler
+3. **API-Fehler** → Backend kann keine DB-Queries ausführen → Kein Retry → 500
+4. **"Benutzer nicht gefunden"** → UserCache schlägt fehl → Kein Retry → Fehler
+5. **Es wird immer schlimmer** → Kaskadierender Effekt: Mehr Fehler → Mehr Retries → Mehr DB-Last → Mehr Fehler
+
+### 🔴 WARUM FUNKTIONIERTE ES VORHER?
+
+**Mögliche Erklärungen:**
+
+1. **Connection Pool war nicht ausgeschöpft** → Weniger gleichzeitige Requests
+2. **PostgreSQL war stabiler** → Weniger Verbindungsabbrüche
+3. **Weniger gleichzeitige Nutzer** → Weniger DB-Last
+4. **Server wurde neu gestartet** → Connection Pool wurde zurückgesetzt
+
+**ABER:** Das Problem existiert bereits seit mindestens 4 Tagen (siehe `PRISMA_FEHLER_UND_RESPONSE_ZEITEN_ANALYSE.md` vom 22.11.2025)
+
+### 💡 LÖSUNG:
+
+**`executeWithRetry` in kritischen Stellen verwenden:**
+
+1. **Auth-Middleware** (`backend/src/middleware/auth.ts`)
+2. **Organization-Middleware** (`backend/src/middleware/organization.ts`)
+3. **UserCache** (wo auch immer UserCache verwendet wird)
+4. **WorktimeCache** (wo auch immer WorktimeCache verwendet wird)
+5. **getActiveWorktime** (`backend/src/controllers/worktimeController.ts`)
+6. **getCurrentUser** (`backend/src/controllers/userController.ts`)
+7. **Notification-Erstellung** (`backend/src/controllers/notificationController.ts`)
+
+**Code-Beispiel:**
+```typescript
+import { executeWithRetry } from '../utils/prisma';
+
+// VORHER (ohne Retry):
+const user = await prisma.user.findUnique({ where: { id: userId } });
+
+// NACHHER (mit Retry):
+const user = await executeWithRetry(() => 
+  prisma.user.findUnique({ where: { id: userId } })
+);
+```
+
+### 📋 ZUSAMMENFASSUNG:
+
+1. ✅ **Entschlüsselungsproblem:** BEHOBEN (Re-Encryption erfolgreich)
+2. 🔴 **ECHTES Problem:** DB-Verbindungsfehler + **KEINE Retry-Logik**
+3. 🔴 **Warum es schlimmer wird:** Kaskadierender Effekt (Mehr Fehler → Mehr Retries → Mehr DB-Last → Mehr Fehler)
+4. ⚠️ **Lösung existiert:** `executeWithRetry` wurde erstellt, aber **wird nirgendwo verwendet!**
+5. ⚠️ **Bekanntes Problem:** Bereits dokumentiert in `PRISMA_FEHLER_UND_RESPONSE_ZEITEN_ANALYSE.md` (vom 22.11.2025)
+
+### 🔧 SOFORT-MASSNAHME:
+
+**`executeWithRetry` in kritischen Stellen implementieren:**
+- Auth-Middleware
+- Organization-Middleware
+- UserCache
+- WorktimeCache
+- getActiveWorktime
+- getCurrentUser
+- Notification-Erstellung
+
+**Zusätzlich prüfen:**
+- PostgreSQL-Status: `systemctl status postgresql`
+- DATABASE_URL Connection Pool: Sollte `?connection_limit=20&pool_timeout=20` enthalten
