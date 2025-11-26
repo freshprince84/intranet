@@ -1976,6 +1976,22 @@ Can't reach database server at `localhost:5432`
 
 **`executeWithRetry` existiert, wird aber NIRGENDWO verwendet!**
 
+**Wann wurde es erstellt:**
+- **Git-Commit:** `af104a8` vom **2025-11-21 23:26:39 -0500** (vor 5 Tagen)
+- **Commit-Message:** "Performance: Optimiere /api/organizations/current und Prisma reconnect-Logik"
+- **Erstellt von:** Performance-Optimierung (wahrscheinlich Claude/Assistant)
+
+**Warum wird es nicht verwendet:**
+- **Dokumentation vom 22.11.2025 05:00 UTC** (`PERFORMANCE_ANALYSE_AKTUELL_DETAILLIERT.md`):
+  - ✅ Problem wurde identifiziert: "`executeWithRetry` wird NIRGENDWO verwendet"
+  - ✅ Lösung wurde vorgeschlagen: "`executeWithRetry` in kritischen Stellen verwenden"
+  - ❌ **ABER: Lösung wurde NIE implementiert!**
+- **Dokumentation vom 22.11.2025** (`PRISMA_FEHLER_UND_RESPONSE_ZEITEN_ANALYSE.md`):
+  - ✅ "✅ `executeWithRetry` Helper-Funktion erstellt"
+  - ✅ "Kann in kritischen Stellen verwendet werden (z.B. `getUserLanguage`, Auth-Middleware)"
+  - ❌ **ABER: "Kann verwendet werden" bedeutet NICHT "wird verwendet"!**
+  - ❌ **Es wurde nur erstellt, aber nie integriert!**
+
 **Beweis:**
 - `executeWithRetry` wurde in `backend/src/utils/prisma.ts` erstellt (Zeile 38-80)
 - **Wird aber nirgendwo im Code verwendet!** (grep zeigt nur Definition, keine Verwendung)
@@ -2068,3 +2084,88 @@ const user = await executeWithRetry(() =>
 **Zusätzlich prüfen:**
 - PostgreSQL-Status: `systemctl status postgresql`
 - DATABASE_URL Connection Pool: Sollte `?connection_limit=20&pool_timeout=20` enthalten
+
+---
+
+## 🔴🔴🔴 UPDATE: 26.11.2025 18:30 UTC - SYSTEMATISCHE PRÜFUNG
+
+### ⚠️ NEUE ERKENNTNISSE:
+
+**1. Branch Settings sind UNVERSCHLÜSSELT in der DB:**
+- ✅ Prüfung vom 26.11.2025 18:30 UTC zeigt: `boldPayment.apiKey` und `boldPayment.merchantId` sind **UNVERSCHLÜSSELT**
+- ✅ Keine ":" im Format → Werte sind bereits entschlüsselt/unverschlüsselt
+- ✅ Fix für verschachtelte Settings funktioniert (Tests zeigen Erfolg)
+- ❌ **ABER:** Server zeigt weiterhin 403 Forbidden Fehler
+
+**2. Tests funktionieren, Server nicht:**
+- ✅ Script-Tests: API-Calls funktionieren (Status 200)
+- ✅ Branch-Level Settings: API-Calls funktionieren (Status 200)
+- ❌ **ABER:** Server zeigt weiterhin 403 Forbidden bei echten Requests
+
+**3. Mögliche Ursache: .env Datei fehlt etwas:**
+- ⚠️ Benutzer berichtet: ".env wurde ausversehen gelöscht"
+- ⚠️ Seit 24h funktionieren ALLE APIs nicht mehr
+- ⚠️ Möglicherweise fehlt eine Environment-Variable, die ALLE APIs betrifft
+
+### 📋 SYSTEMATISCHE PRÜFUNG GESTARTET:
+
+**Script erstellt:** `backend/scripts/check-all-env-vars.ts`
+- Prüft ALLE benötigten Environment-Variablen
+- Zeigt welche fehlen oder leer sind
+- Identifiziert kritische Variablen für APIs
+
+**Nächster Schritt:**
+1. Script auf Server ausführen: `npx ts-node scripts/check-all-env-vars.ts`
+2. Prüfen welche Variablen fehlen
+3. Dokumentieren welche Variablen für APIs kritisch sind
+4. Prüfen ob .env Datei vollständig wiederhergestellt wurde
+
+### ✅ UPDATE: 26.11.2025 18:35 UTC - ENVIRONMENT-VARIABLEN PRÜFUNG
+
+**Ergebnis der Prüfung:**
+- ✅ `.env` Datei existiert: `/var/www/intranet/backend/.env`
+- ✅ **ALLE kritischen Variablen vorhanden:**
+  - ✅ DATABASE_URL: Vorhanden
+  - ✅ ENCRYPTION_KEY: Vorhanden (64 Zeichen)
+  - ✅ JWT_SECRET: Vorhanden
+- ✅ **18/19 Variablen vorhanden** (nur REDIS_PASSWORD leer, aber optional)
+- ✅ **Keine fehlenden Variablen**
+
+**FAZIT:** Das Problem liegt **NICHT** an fehlenden Environment-Variablen!
+
+### 🔍 AKTUELLER STAND - WAS WIR WISSEN:
+
+**✅ FUNKTIONIERT:**
+1. Environment-Variablen: Alle vorhanden
+2. Entschlüsselung: Funktioniert (ENCRYPTION_KEY korrekt)
+3. Branch Settings in DB: Sind unverschlüsselt (keine ":" im Format)
+4. Script-Tests: API-Calls funktionieren (Status 200)
+5. Fix implementiert: `decryptBranchApiSettings()` entschlüsselt jetzt verschachtelte Settings
+
+**❌ FUNKTIONIERT NICHT:**
+1. Server zeigt weiterhin 403 Forbidden bei echten Requests
+2. Alle APIs betroffen: Bold Payment, TTLock, etc.
+3. Problem besteht seit ~24h
+
+**🔍 WIDERSPRÜCHE:**
+1. **Script-Tests funktionieren** → API-Calls mit denselben Werten funktionieren
+2. **Server zeigt 403 Fehler** → Echte Requests schlagen fehl
+3. **Werte sind unverschlüsselt** → Fix sollte nicht nötig sein, aber wurde implementiert
+
+### 📋 NÄCHSTE SYSTEMATISCHE PRÜFUNGEN:
+
+**1. Prüfe ob Server die neue kompilierte Version verwendet:**
+```bash
+# Prüfe ob Fix im kompilierten Code ist
+grep -A 5 "boldPayment.*merchantId" /var/www/intranet/backend/dist/utils/encryption.js
+```
+
+**2. Prüfe Server-Logs auf tatsächliche Fehler:**
+```bash
+# Prüfe letzte API-Calls und Fehler
+pm2 logs intranet-backend --lines 100 --nostream | grep -iE "\[Bold Payment\]|\[TTLock\]|403|forbidden" | tail -50
+```
+
+**3. Prüfe ob Settings anders geladen werden:**
+- Script-Tests verwenden `decryptBranchApiSettings()` direkt
+- Server verwendet `BoldPaymentService.loadSettings()` → könnte anders sein

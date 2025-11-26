@@ -1,4 +1,4 @@
-import { prisma } from './prisma';
+import { prisma, executeWithRetry } from './prisma';
 
 interface OrganizationCacheEntry {
   data: {
@@ -26,54 +26,58 @@ class OrganizationCache {
     }
 
     try {
-      // Hole aktuelle Rolle und Organisation des Users
-      const userRole = await prisma.userRole.findFirst({
-        where: { 
-          userId: Number(userId),
-          lastUsed: true 
-        },
-        include: {
-          role: {
-            include: {
-              organization: {
-                // ✅ PERFORMANCE: Settings NICHT laden (19.8 MB!)
-                // Settings werden nur geladen wenn explizit angefragt (in getCurrentOrganization)
-                select: {
-                  id: true,
-                  name: true,
-                  displayName: true,
-                  domain: true,
-                  logo: true,
-                  isActive: true,
-                  maxUsers: true,
-                  subscriptionPlan: true,
-                  country: true,
-                  nit: true,
-                  createdAt: true,
-                  updatedAt: true
-                  // settings wird NICHT geladen
-                }
-              },
-              permissions: true
+      // Hole aktuelle Rolle und Organisation des Users mit Retry-Logik
+      const userRole = await executeWithRetry(() =>
+        prisma.userRole.findFirst({
+          where: { 
+            userId: Number(userId),
+            lastUsed: true 
+          },
+          include: {
+            role: {
+              include: {
+                organization: {
+                  // ✅ PERFORMANCE: Settings NICHT laden (19.8 MB!)
+                  // Settings werden nur geladen wenn explizit angefragt (in getCurrentOrganization)
+                  select: {
+                    id: true,
+                    name: true,
+                    displayName: true,
+                    domain: true,
+                    logo: true,
+                    isActive: true,
+                    maxUsers: true,
+                    subscriptionPlan: true,
+                    country: true,
+                    nit: true,
+                    createdAt: true,
+                    updatedAt: true
+                    // settings wird NICHT geladen
+                  }
+                },
+                permissions: true
+              }
             }
           }
-        }
-      });
+        })
+      );
 
       if (!userRole) {
         return null;
       }
 
-      // Hole aktive Branch des Users
-      const userBranch = await prisma.usersBranches.findFirst({
-        where: {
-          userId: Number(userId),
-          lastUsed: true
-        },
-        select: {
-          branchId: true
-        }
-      });
+      // Hole aktive Branch des Users mit Retry-Logik
+      const userBranch = await executeWithRetry(() =>
+        prisma.usersBranches.findFirst({
+          where: {
+            userId: Number(userId),
+            lastUsed: true
+          },
+          select: {
+            branchId: true
+          }
+        })
+      );
 
       const data = {
         organizationId: userRole.role.organizationId,

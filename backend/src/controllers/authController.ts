@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { Prisma } from '@prisma/client';
 import { sendRegistrationEmail, sendPasswordResetEmail } from '../services/emailService';
-import { prisma } from '../utils/prisma';
+import { prisma, executeWithRetry } from '../utils/prisma';
 import { userCache } from '../services/userCache';
 import { organizationCache } from '../utils/organizationCache';
 
@@ -407,28 +407,30 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            include: {
-                roles: {
-                    include: {
-                        role: {
-                            include: {
-                                permissions: true,
-                                organization: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        displayName: true,
-                                        logo: true
+        const user = await executeWithRetry(() =>
+            prisma.user.findUnique({
+                where: { id: userId },
+                include: {
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: true,
+                                    organization: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            displayName: true,
+                                            logo: true
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-        });
+            })
+        );
 
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });

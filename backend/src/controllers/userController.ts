@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { Prisma, NotificationType } from '@prisma/client';
-import { prisma } from '../utils/prisma';
+import { prisma, executeWithRetry } from '../utils/prisma';
 import bcrypt from 'bcrypt';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getUserNotificationText } from '../utils/translations';
@@ -224,55 +224,57 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
         const includeInvoiceSettings = req.query.includeInvoiceSettings === 'true';
         const includeDocuments = req.query.includeDocuments === 'true';
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                id: true,
-                username: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                birthday: true,
-                bankDetails: true,
-                contract: true,
-                salary: true,
-                normalWorkingHours: true,
-                gender: true,
-                phoneNumber: true,
-                country: true,
-                language: true,
-                profileComplete: true,
-                identificationNumber: true,
-                // ✅ PERFORMANCE: Settings nur laden wenn benötigt
-                ...(includeSettings ? { settings: true } : {}),
-                // ✅ PERFORMANCE: InvoiceSettings nur laden wenn benötigt
-                ...(includeInvoiceSettings ? { invoiceSettings: true } : {}),
-                // ✅ PERFORMANCE: Documents nur laden wenn benötigt
-                ...(includeDocuments ? {
-                    identificationDocuments: {
-                        orderBy: { createdAt: 'desc' },
-                        take: 1 // Neuestes Dokument
-                    }
-                } : {}),
-                roles: {
-                    include: {
-                        role: {
-                            include: {
-                                permissions: true,
-                                organization: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        displayName: true,
-                                        logo: true
+        const user = await executeWithRetry(() =>
+            prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    username: true,
+                    email: true,
+                    firstName: true,
+                    lastName: true,
+                    birthday: true,
+                    bankDetails: true,
+                    contract: true,
+                    salary: true,
+                    normalWorkingHours: true,
+                    gender: true,
+                    phoneNumber: true,
+                    country: true,
+                    language: true,
+                    profileComplete: true,
+                    identificationNumber: true,
+                    // ✅ PERFORMANCE: Settings nur laden wenn benötigt
+                    ...(includeSettings ? { settings: true } : {}),
+                    // ✅ PERFORMANCE: InvoiceSettings nur laden wenn benötigt
+                    ...(includeInvoiceSettings ? { invoiceSettings: true } : {}),
+                    // ✅ PERFORMANCE: Documents nur laden wenn benötigt
+                    ...(includeDocuments ? {
+                        identificationDocuments: {
+                            orderBy: { createdAt: 'desc' },
+                            take: 1 // Neuestes Dokument
+                        }
+                    } : {}),
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: true,
+                                    organization: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            displayName: true,
+                                            logo: true
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-        });
+            })
+        );
         
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
