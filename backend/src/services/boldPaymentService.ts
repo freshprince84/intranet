@@ -179,6 +179,12 @@ export class BoldPaymentService {
         // Debug: Prüfe ob Header korrekt gesetzt wurde
         console.log(`[Bold Payment] ${config.method?.toUpperCase()} ${config.url}`);
         console.log(`[Bold Payment] Authorization Header: ${config.headers.Authorization}`);
+        console.log(`[Bold Payment] Header Länge: ${config.headers.Authorization?.length}`);
+        console.log(`[Bold Payment] Header Bytes (hex): ${Buffer.from(config.headers.Authorization || '').toString('hex')}`);
+        console.log(`[Bold Payment] merchantId Wert: "${this.merchantId}"`);
+        console.log(`[Bold Payment] merchantId Länge: ${this.merchantId?.length}`);
+        console.log(`[Bold Payment] merchantId Bytes (hex): ${Buffer.from(this.merchantId || '').toString('hex')}`);
+        console.log(`[Bold Payment] Full Headers:`, JSON.stringify(config.headers, null, 2));
         return config;
       },
       (error) => {
