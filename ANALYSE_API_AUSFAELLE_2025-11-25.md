@@ -397,6 +397,28 @@ pm2 logs intranet-backend --lines 500 --nostream | grep -E "merchantId Wert|merc
 - Ist merchantId entschlüsselt?
 - Oder ist merchantId noch verschlüsselt (mit `:`)?
 
+### 📋 LOG-ANALYSE-SCRIPT ERSTELLT:
+
+**Datei:** `backend/scripts/analyze-merchantid-in-logs.ts`
+
+**Ziel:** Analysiert Server-Logs auf merchantId-Werte und korreliert sie mit 403-Fehlern
+
+**Was es prüft:**
+1. ✅ merchantId-Werte in Logs
+2. ✅ Authorization Header in Logs
+3. ✅ Fehler beim Laden
+4. ✅ 403 Forbidden Fehler
+5. ✅ Zeitliche Korrelation zwischen merchantId und 403-Fehlern
+6. ✅ Prüft ob merchantId verschlüsselt ist (enthält `:`)
+
+**Ausführung:**
+```bash
+# Auf Server:
+cd /var/www/intranet/backend
+git pull origin main
+npx ts-node scripts/analyze-merchantid-in-logs.ts
+```
+
 ---
 
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
