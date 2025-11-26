@@ -2846,3 +2846,72 @@ pm2 logs intranet-backend --lines 200 --nostream | grep -iE "\[Bold Payment\]|\[
 pm2 logs intranet-backend --lines 50 --nostream | head -50
 # Prüfe ob Server erfolgreich gestartet ist
 ```
+
+---
+
+## ✅✅✅ ERFOLG: DB-PROBLEM BEHOBEN! (26.11.2025 21:05 UTC)
+
+### ✅ TEST-ERGEBNISSE (Zeile 366-495):
+
+**1. DB-Verbindungsfehler:**
+- ✅ **KEINE "Can't reach database" Fehler mehr!**
+- ✅ **KEINE Connection Pool Timeout Fehler mehr!**
+- ✅ **DB-Verbindung funktioniert jetzt!**
+
+**2. API-Fehler bestehen weiterhin:**
+- ❌ Bold Payment: 403 Forbidden (weiterhin)
+- ❌ TTLock: PIN-Fehler (weiterhin)
+- ⚠️ WhatsApp: Service nicht initialisiert
+- ⚠️ Queue/Redis: Connection-Fehler
+
+### 🎯 ANALYSE:
+
+**DB-Problem ist behoben:**
+- PM2-Neustart hat funktioniert
+- DATABASE_URL wird jetzt korrekt geladen
+- Connection Pool Parameter werden verwendet
+- **Alle Services können jetzt Settings aus DB laden!**
+
+**ABER: API-Fehler bestehen weiterhin:**
+- Bold Payment 403 Forbidden ist ein **ANDERES Problem**
+- Nicht mehr DB-bezogen!
+- Mögliche Ursachen:
+  1. **API-Authentifizierung** (Header-Format?)
+  2. **API-Keys sind falsch/ungültig**
+  3. **API-Endpunkt ist falsch**
+  4. **API wurde geändert** (AWS Signature erforderlich?)
+
+### 📋 ZUSAMMENFASSUNG:
+
+**✅ BEHOBEN:**
+- ✅ DB-Verbindungsproblem (Connection Pool)
+- ✅ Settings können aus DB geladen werden
+- ✅ Keine "Can't reach database" Fehler mehr
+
+**❌ BESTEHT WEITERHIN:**
+- ❌ Bold Payment API: 403 Forbidden
+- ❌ TTLock API: PIN-Fehler
+- ⚠️ WhatsApp Service: Nicht initialisiert
+- ⚠️ Queue/Redis: Connection-Fehler
+
+### 🔧 NÄCHSTE SCHRITTE:
+
+**Das DB-Problem ist behoben. Jetzt müssen die API-Probleme separat analysiert werden:**
+
+**1. Bold Payment 403 Forbidden:**
+- Prüfe API-Dokumentation für korrektes Authentifizierungsformat
+- Prüfe ob API-Keys korrekt sind
+- Prüfe ob API-Endpunkt korrekt ist
+
+**2. TTLock PIN-Fehler:**
+- Prüfe TTLock Service-Logs
+- Prüfe ob Lock IDs konfiguriert sind
+- Prüfe ob TTLock API-Keys korrekt sind
+
+**3. WhatsApp Service:**
+- Prüfe warum Service nicht initialisiert wird
+- Prüfe WhatsApp Settings in DB
+
+**4. Queue/Redis:**
+- Prüfe Redis-Verbindung
+- Prüfe REDIS_HOST, REDIS_PORT in .env
