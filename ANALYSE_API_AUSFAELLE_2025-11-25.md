@@ -8,6 +8,135 @@ Alle APIs funktionieren nicht mehr. Zuerst dachte man, nur Bold Payment Link-Ers
 
 **Wichtige Erkenntnis:** Per Skript funktionieren die APIs, wenn sie direkt angesprochen werden.
 
+**⚠️⚠️⚠️ KRITISCH: TIMING DES PROBLEMS (26.11.2025 21:40 UTC)**
+
+**Benutzer-Bericht:**
+- "halte auch fest, dass es mit einer änderung seit ca. mittag, 25.11.25 kaputt ist. vorher ging das alles einwandfrei (zahlungslink erstellt, ttlock passcode erstellen lassen, etc.)"
+
+**Das bedeutet:**
+- ✅ **Vor Mittag 25.11.25:** Alles funktionierte einwandfrei
+- ❌ **Seit Mittag 25.11.25:** Alle APIs funktionieren nicht mehr
+- 🎯 **ROOT CAUSE:** Etwas wurde am 25.11.25 um Mittag geändert!
+
+**Nächster Schritt:**
+- Git-Historie für 25.11.25 prüfen (was wurde um Mittag committed?)
+- Code-Änderungen analysieren, die ALLE Services betreffen könnten
+
+---
+
+## 🔍 GIT-HISTORIE ANALYSE: 25.11.2025 (26.11.2025 21:45 UTC)
+
+### ✅ COMMITS AM 25.11.2025 (10:00-18:00):
+
+**WICHTIGE COMMITS MIT ÄNDERUNGEN AN `boldPaymentService.ts`:**
+
+**1. Commit 2215065 (16:39:11):**
+- `Fix: Bold Payment Service und Tour Management Dokumentation`
+- **Änderungen:** Payload-Struktur geändert (`taxes: []` wurde geändert)
+
+**2. Commit 130fdd4 (16:57:57):**
+- `Fix: Bold Payment Service und .gitignore Update`
+- **Änderungen:** Weitere Payload-Struktur-Änderungen
+
+**3. Commit 49df134 (17:53:19):**
+- `Update: Bold Payment Service und Tour Management Dokumentation`
+- **Änderungen:** Weitere Updates
+
+### 🔍 DIFF-ANALYSE:
+
+**Commit 2215065 (16:39:11) - Payload-Struktur geändert:**
+```diff
+- taxes: [
+-   {
+-     name: 'Kartenzahlungsaufschlag',
+-     amount: surcharge,
+-     rate: 5.0
+-   }
+- ],
++ taxes: [], // Leeres Array wie vorher - API akzeptiert diese Struktur
+```
+
+**Commit 130fdd4 (16:57:57) - Weitere Payload-Änderungen:**
+- Änderungen an `total_amount`, `subtotal` Berechnung
+- `taxes: []` bleibt leer
+
+### 🎯 HYPOTHESE:
+
+**Wenn die Payload-Struktur geändert wurde und die API diese nicht akzeptiert, könnte das 403 Forbidden verursachen!**
+
+**ABER:** Der Benutzer sagt, die API funktioniert. Also muss es etwas anderes sein.
+
+**Mögliche Ursachen:**
+1. **Payload wird falsch gesendet** (Struktur-Problem?)
+2. **Header wird falsch gesetzt** (Zeile 177: `config.headers.set()` vs. `config.headers.Authorization =`?)
+3. **Timing-Problem** (Settings werden zu spät geladen?)
+
+### 📋 SYSTEMATISCHE PRÜFUNG:
+
+**1. Prüfe ob Header-Setting geändert wurde:**
+```bash
+# Auf Server:
+git show 2215065:backend/src/services/boldPaymentService.ts | grep -A 5 "config.headers"
+# Prüfe ob Header-Setting anders war
+```
+
+**2. Prüfe aktuelle Header-Setting-Methode:**
+- Aktuell: `config.headers.Authorization = ...` (Zeile 177)
+- Vorher: `config.headers.set('Authorization', ...)`?
+- Könnte das ein Problem sein?
+
+**3. Prüfe Payload-Struktur-Änderungen:**
+- Commit 2215065: `taxes: []` wurde geändert (von Array mit Objekt zu leerem Array)
+- Könnte die API diese Struktur nicht akzeptieren?
+
+---
+
+## 🔍 DIFF-ANALYSE: COMMIT 2215065 (16:39:11) - PAYLOAD-STRUKTUR GEÄNDERT
+
+### ✅ GEFUNDENE ÄNDERUNGEN:
+
+**1. Payload-Struktur geändert:**
+```diff
+- taxes: [
+-   {
+-     name: 'Kartenzahlungsaufschlag',
+-     amount: surcharge,
+-     rate: 5.0
+-   }
+- ],
++ taxes: [], // Leeres Array wie vorher - API akzeptiert diese Struktur
+```
+
+**2. Berechnung geändert:**
+- `total_amount` und `subtotal` Berechnung wurde geändert
+- Rundungslogik wurde geändert
+
+### 🎯 HYPOTHESE:
+
+**Wenn die Payload-Struktur geändert wurde und die API diese nicht akzeptiert, könnte das 403 Forbidden verursachen!**
+
+**ABER:** Der Benutzer sagt, die API funktioniert. Also muss es etwas anderes sein.
+
+**Mögliche Ursachen:**
+1. **Payload wird falsch gesendet** (Struktur-Problem?)
+2. **Header wird falsch gesetzt** (Zeile 177: `config.headers.Authorization =` vs. `config.headers.set()`?)
+3. **Timing-Problem** (Settings werden zu spät geladen?)
+
+### 📋 SYSTEMATISCHE PRÜFUNG:
+
+**1. Prüfe ob Header-Setting-Methode geändert wurde:**
+- Aktuell: `config.headers.Authorization = ...` (Zeile 177)
+- Vorher: `config.headers.set('Authorization', ...)`?
+- Könnte das ein Problem sein?
+
+**2. Prüfe Payload-Struktur:**
+- Wurde `taxes: []` wirklich akzeptiert vorher?
+- Oder war es `taxes: [{...}]`?
+
+**3. Teste mit alter Payload-Struktur:**
+- Revertiere Payload-Änderungen temporär
+- Teste ob es funktioniert
+
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
 
 **Server-Prüfung vom 26.11.2025 17:00 UTC:**
