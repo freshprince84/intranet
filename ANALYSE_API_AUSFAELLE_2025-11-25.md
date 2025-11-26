@@ -2798,3 +2798,51 @@ pm2 logs intranet-backend --lines 100 --nostream | grep -iE "\[Bold Payment\]|\[
 **4. Teste eine API-Funktion:**
 - Versuche eine Reservierung zu erstellen oder einen Payment-Link zu generieren
 - Prüfe ob Fehler noch auftreten
+
+---
+
+## ⚠️ WICHTIG: PM2 ID ÄNDERUNG
+
+**Nach `pm2 delete intranet-backend`:**
+- Alter Prozess hatte id 0
+- Neuer Prozess hat id 3
+- **Verwende id 3 für alle PM2-Befehle!**
+
+**Korrekte Befehle:**
+```bash
+# FALSCH (id 0 existiert nicht mehr):
+pm2 env 0 | grep DATABASE_URL
+
+# RICHTIG (neue id 3):
+pm2 env 3 | grep DATABASE_URL
+pm2 logs intranet-backend --lines 50
+pm2 status
+```
+
+---
+
+## 📋 PRÜFUNG NACH PM2 NEUSTART:
+
+**Auf Server ausführen:**
+
+**1. Prüfe ob PM2 die korrekte DATABASE_URL geladen hat:**
+```bash
+pm2 env 3 | grep DATABASE_URL
+# Sollte zeigen: ...&connection_limit=20&pool_timeout=20
+```
+
+**2. Prüfe ob Server jetzt auf DB zugreifen kann:**
+```bash
+pm2 logs intranet-backend --lines 100 --nostream | grep -iE "Can't reach database|connection pool|timeout|✅|error|started" | tail -50
+```
+
+**3. Prüfe ob APIs jetzt funktionieren:**
+```bash
+pm2 logs intranet-backend --lines 200 --nostream | grep -iE "\[Bold Payment\]|\[TTLock\]|403|forbidden|success|Payment-Link|PIN" | tail -50
+```
+
+**4. Prüfe Server-Start-Logs:**
+```bash
+pm2 logs intranet-backend --lines 50 --nostream | head -50
+# Prüfe ob Server erfolgreich gestartet ist
+```
