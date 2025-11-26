@@ -641,6 +641,105 @@ npx ts-node scripts/diagnose-request-interceptor.ts
 
 ---
 
+## 🔴🔴🔴 KRITISCHES ERGEBNIS: DIAGNOSE (26.11.2025 23:00 UTC)
+
+### ✅ DIAGNOSE AUSGEFÜHRT:
+
+**Ergebnisse:**
+
+1. ✅ **`createPaymentLink()` wird aufgerufen:**
+   - 5 Aufrufe gefunden
+   - ✅ Funktion wird ausgeführt
+
+2. ✅ **`loadSettings()` wird aufgerufen:**
+   - 6 Aufrufe gefunden
+   - ✅ Funktion wird ausgeführt
+
+3. ✅ **Bold Payment Logs gefunden:**
+   - 22 Logs gefunden
+   - ✅ Service wird verwendet
+
+4. ✅ **Code ist vorhanden:**
+   - `createAxiosInstance()` im Code: ✅
+   - `this.axiosInstance = this.createAxiosInstance()`: ✅
+   - `interceptors.request.use` im Code: ✅
+   - `this.axiosInstance.post` im Code: ✅
+
+5. ❌ **KEINE Debug-Logs vom Request-Interceptor:**
+   - `[Bold Payment] Authorization Header`: ❌ NICHT gefunden
+   - `[Bold Payment] merchantId Wert`: ❌ NICHT gefunden
+   - `[Bold Payment] Header Länge`: ❌ NICHT gefunden
+   - **⚠️ PROBLEM: Request-Interceptor wird NICHT ausgeführt!**
+
+### 🎯 KRITISCHE ERKENNTNIS:
+
+**Der Request-Interceptor wird NICHT ausgeführt, obwohl:**
+- ✅ `createPaymentLink()` aufgerufen wird
+- ✅ `loadSettings()` aufgerufen wird
+- ✅ `createAxiosInstance()` im Code ist
+- ✅ `this.axiosInstance.post()` verwendet wird
+
+**Das bedeutet:**
+- Der Interceptor wird registriert, aber nicht ausgeführt
+- Oder die Axios-Instance wird nicht verwendet
+- Oder es gibt einen Fehler im Interceptor
+
+### 🔍 MÖGLICHE URSACHEN:
+
+**1. Axios-Instance wird nicht neu erstellt:**
+- `loadSettings()` ruft `createAxiosInstance()` auf
+- ABER: Wenn `this.merchantId` bereits gesetzt ist, wird `loadSettings()` nicht aufgerufen
+- ABER: Die alte Axios-Instance (ohne Interceptor) wird verwendet
+
+**2. Interceptor wird nicht registriert:**
+- `createAxiosInstance()` wird aufgerufen
+- ABER: Der Interceptor wird nicht registriert
+- Oder: Der Interceptor wird überschrieben
+
+**3. Timing-Problem:**
+- `createAxiosInstance()` wird aufgerufen
+- ABER: `this.axiosInstance.post()` wird aufgerufen, bevor der Interceptor registriert ist
+
+### 📋 NÄCHSTE PRÜFUNGEN:
+
+**1. Prüfe ob `createAxiosInstance()` wirklich aufgerufen wird:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 500 --nostream | grep -E "createAxiosInstance|Verwende Branch-spezifische" | tail -20
+# Prüfe ob createAxiosInstance aufgerufen wird
+```
+
+**2. Prüfe ob `this.merchantId` bereits gesetzt ist:**
+- Wenn `this.merchantId` bereits gesetzt ist, wird `loadSettings()` nicht aufgerufen
+- Dann wird `createAxiosInstance()` nicht aufgerufen
+- Dann wird die alte Axios-Instance (ohne Interceptor) verwendet
+
+**3. Prüfe Code-Flow in `createPaymentLink()`:**
+- Zeile 232-234: `if (!this.merchantId) { await this.loadSettings(); }`
+- Wenn `this.merchantId` bereits gesetzt ist, wird `loadSettings()` nicht aufgerufen
+- Dann wird `createAxiosInstance()` nicht aufgerufen
+
+### 🎯 HYPOTHESE:
+
+**Wenn `BoldPaymentService.createForBranch()` aufgerufen wird:**
+- `loadSettings()` wird aufgerufen
+- `createAxiosInstance()` wird aufgerufen
+- Interceptor wird registriert
+- ✅ Sollte funktionieren
+
+**ABER: Wenn `new BoldPaymentService()` verwendet wird:**
+- `loadSettings()` wird NICHT automatisch aufgerufen
+- `createAxiosInstance()` wird NICHT aufgerufen
+- Alte Axios-Instance (ohne Interceptor) wird verwendet
+- ❌ Request-Interceptor wird nicht ausgeführt!
+
+**Diagnose zeigt:**
+- ⚠️ Keine `createForBranch`-Aufrufe gefunden
+- Das bedeutet: `new BoldPaymentService()` wird verwendet
+- Dann wird `loadSettings()` nur aufgerufen, wenn `this.merchantId` nicht gesetzt ist
+
+---
+
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
 
 **Server-Prüfung vom 26.11.2025 17:00 UTC:**
