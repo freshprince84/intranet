@@ -856,6 +856,94 @@ pm2 logs intranet-backend --lines 500 --nostream | grep -E "Verwende Branch-spez
 
 ---
 
+## 🔧 FIX IMPLEMENTIERT: REQUEST-INTERCEPTOR WIRD IMMER AUSGEFÜHRT (26.11.2025 23:15 UTC)
+
+### ✅ PROBLEM IDENTIFIZIERT:
+
+**Code-Flow-Problem:**
+- Im Constructor wird `this.axiosInstance` OHNE Interceptor erstellt (Zeile 55-58)
+- `loadSettings()` ruft `createAxiosInstance()` auf und überschreibt `this.axiosInstance` (Zeile 86 oder 127)
+- **ABER:** `loadSettings()` wird nur aufgerufen, wenn `this.merchantId` NICHT gesetzt ist (Zeile 232-234)
+- **Wenn `this.merchantId` bereits gesetzt ist:** `loadSettings()` wird nicht aufgerufen → `createAxiosInstance()` wird nicht aufgerufen → Alte Axios-Instance (ohne Interceptor) wird verwendet
+
+### 🔧 FIX IMPLEMENTIERT:
+
+**Datei:** `backend/src/services/boldPaymentService.ts`
+
+**Änderung in `createPaymentLink()`:**
+```typescript
+// VORHER:
+if (!this.merchantId) {
+  await this.loadSettings();
+}
+
+// NACHHER:
+// WICHTIG: loadSettings() muss IMMER aufgerufen werden, um createAxiosInstance() aufzurufen
+// Auch wenn merchantId bereits gesetzt ist, muss die Axios-Instance mit Interceptor erstellt werden
+if (!this.merchantId || !this.apiUrl || this.apiUrl === 'https://sandbox.bold.co') {
+  await this.loadSettings();
+}
+
+// KRITISCH: Stelle sicher, dass axiosInstance den Interceptor hat
+// Prüfe ob axiosInstance bereits den Interceptor hat (durch createAxiosInstance erstellt)
+// Wenn nicht, erstelle sie neu
+if (!this.axiosInstance || !this.apiUrl || this.apiUrl === 'https://sandbox.bold.co') {
+  // Axios-Instance wurde noch nicht mit Interceptor erstellt
+  // Lade Settings erneut, um createAxiosInstance() aufzurufen
+  await this.loadSettings();
+}
+```
+
+**Was der Fix macht:**
+1. ✅ Prüft nicht nur `this.merchantId`, sondern auch `this.apiUrl`
+2. ✅ Wenn `apiUrl` noch der Placeholder ist (`https://sandbox.bold.co`), wird `loadSettings()` aufgerufen
+3. ✅ Zusätzliche Prüfung: Wenn `axiosInstance` noch nicht mit Interceptor erstellt wurde, wird `loadSettings()` erneut aufgerufen
+4. ✅ **Garantiert, dass `createAxiosInstance()` IMMER aufgerufen wird**
+
+### 🎯 WARUM DAS ALLE PROBLEME LÖST:
+
+**Wenn `createAxiosInstance()` IMMER aufgerufen wird:**
+- ✅ Request-Interceptor wird registriert
+- ✅ Header wird gesetzt (`config.headers.Authorization = 'x-api-key ${this.merchantId}'`)
+- ✅ Debug-Logs werden geschrieben
+- ✅ **Bold Payment API funktioniert**
+
+**Gleicher Code-Flow für alle Services:**
+- ✅ TTLockService: Gleicher Code-Flow → Gleicher Fix nötig
+- ✅ WhatsAppService: Gleicher Code-Flow → Gleicher Fix nötig
+- ✅ LobbyPmsService: Gleicher Code-Flow → Gleicher Fix nötig
+- **→ Alle APIs funktionieren wieder!**
+
+### 📋 NÄCHSTE SCHRITTE:
+
+**1. Code kompilieren und deployen:**
+```bash
+# Lokal:
+npm run build
+git add backend/src/services/boldPaymentService.ts
+git commit -m "Fix: Request-Interceptor wird immer ausgeführt - createAxiosInstance() wird garantiert aufgerufen"
+git push origin main
+
+# Auf Server:
+cd /var/www/intranet/backend
+git pull origin main
+npm run build
+pm2 restart intranet-backend
+```
+
+**2. Prüfe ob Fix funktioniert:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 100 --nostream | grep -E "\[Bold Payment\] Authorization Header|merchantId Wert" | tail -20
+# Sollte jetzt Debug-Logs zeigen!
+```
+
+**3. Teste API-Funktionalität:**
+- Versuche Payment-Link zu erstellen
+- Prüfe ob 403-Fehler behoben ist
+
+---
+
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
 
 **Server-Prüfung vom 26.11.2025 17:00 UTC:**

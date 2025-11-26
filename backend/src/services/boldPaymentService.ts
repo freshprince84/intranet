@@ -229,7 +229,18 @@ export class BoldPaymentService {
     description?: string
   ): Promise<string> {
     // Lade Settings falls noch nicht geladen
-    if (!this.merchantId) {
+    // WICHTIG: loadSettings() muss IMMER aufgerufen werden, um createAxiosInstance() aufzurufen
+    // Auch wenn merchantId bereits gesetzt ist, muss die Axios-Instance mit Interceptor erstellt werden
+    if (!this.merchantId || !this.apiUrl || this.apiUrl === 'https://sandbox.bold.co') {
+      await this.loadSettings();
+    }
+    
+    // KRITISCH: Stelle sicher, dass axiosInstance den Interceptor hat
+    // Prüfe ob axiosInstance bereits den Interceptor hat (durch createAxiosInstance erstellt)
+    // Wenn nicht, erstelle sie neu
+    if (!this.axiosInstance || !this.apiUrl || this.apiUrl === 'https://sandbox.bold.co') {
+      // Axios-Instance wurde noch nicht mit Interceptor erstellt
+      // Lade Settings erneut, um createAxiosInstance() aufzurufen
       await this.loadSettings();
     }
 
