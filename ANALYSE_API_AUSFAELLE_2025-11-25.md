@@ -2757,3 +2757,44 @@ pm2 env 0 | grep DATABASE_URL
 - ✅ Warum direkter Test funktioniert (lädt .env)
 - ✅ Warum Server nicht funktioniert (alte Env-Vars im PM2-Prozess)
 - ✅ Warum alle APIs betroffen sind (keine DB = keine Settings)
+
+---
+
+## ✅ UPDATE: PM2 NEU GESTARTET (26.11.2025 21:00 UTC)
+
+### ✅ DURCHGEFÜHRTE MASSNAHMEN:
+
+**1. PM2 Environment-Variablen geprüft:**
+- Zeile 346: `DATABASE_URL="postgresql://intranetuser:Postgres123!@localhost:5432/intranet?schema=public&connection_limit=20&pool_timeout=20"`
+- ✅ Connection Pool Parameter vorhanden!
+
+**2. PM2 komplett neu gestartet:**
+- Zeile 340: `pm2 delete intranet-backend` ✅
+- Zeile 342: `pm2 start npm --name "intranet-backend" -- start` ✅
+- Zeile 362: Neuer Prozess läuft (id 3, pid 204409) ✅
+
+**3. Status:**
+- ✅ PM2-Prozess läuft
+- ✅ DATABASE_URL enthält Connection Pool Parameter
+
+### 📋 NÄCHSTE PRÜFUNGEN:
+
+**1. Prüfe ob PM2 die korrekte DATABASE_URL geladen hat:**
+```bash
+pm2 env 3 | grep DATABASE_URL
+# Sollte zeigen: ...&connection_limit=20&pool_timeout=20
+```
+
+**2. Prüfe ob Server jetzt auf DB zugreifen kann:**
+```bash
+pm2 logs intranet-backend --lines 50 --nostream | grep -iE "Can't reach database|connection pool|timeout|✅|error" | tail -30
+```
+
+**3. Prüfe ob APIs jetzt funktionieren:**
+```bash
+pm2 logs intranet-backend --lines 100 --nostream | grep -iE "\[Bold Payment\]|\[TTLock\]|403|forbidden|success" | tail -30
+```
+
+**4. Teste eine API-Funktion:**
+- Versuche eine Reservierung zu erstellen oder einen Payment-Link zu generieren
+- Prüfe ob Fehler noch auftreten
