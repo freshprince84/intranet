@@ -421,6 +421,88 @@ npx ts-node scripts/analyze-merchantid-in-logs.ts
 
 ---
 
+## 🔴🔴🔴 KRITISCHES ERGEBNIS: LOG-ANALYSE (26.11.2025 22:30 UTC)
+
+### ✅ LOG-ANALYSE AUSGEFÜHRT:
+
+**Ergebnisse:**
+
+1. ❌ **Keine merchantId-Logs gefunden:**
+   - `merchantId Wert` Logs: **0**
+   - `merchantId Länge` Logs: **0**
+   - **⚠️ PROBLEM: merchantId wird möglicherweise nicht geloggt oder nicht gesetzt!**
+
+2. ❌ **Keine Authorization Header in Logs:**
+   - `Authorization Header` Logs: **0**
+   - **⚠️ PROBLEM: Authorization Header wird möglicherweise nicht geloggt!**
+
+3. ✅ **Keine Fehler beim Laden:**
+   - Fehler beim Laden: **0**
+   - ✅ Keine Fehler beim Settings-Loading
+
+4. 🔴 **34 403-Fehler gefunden:**
+   - API gibt weiterhin 403 Forbidden zurück
+   - Fehler: `Bold Payment API Fehler (403 Forbidden): Forbidden`
+
+### 🎯 KRITISCHE ERKENNTNIS:
+
+**Die Debug-Logs werden NICHT ausgeführt!**
+
+**Das bedeutet:**
+- Entweder wird der Request-Interceptor nicht ausgeführt
+- Oder die Debug-Logs werden nicht in PM2-Logs geschrieben
+- Oder der Code-Pfad wird nicht erreicht
+
+### 🔍 MÖGLICHE URSACHEN:
+
+**1. Code wird nicht kompiliert/ausgeführt:**
+- TypeScript wird nicht kompiliert?
+- Alte Version läuft noch?
+- Build wurde nicht aktualisiert?
+
+**2. Logs werden nicht geschrieben:**
+- PM2 fängt Logs nicht ab?
+- Logs gehen nach stderr statt stdout?
+- Log-Level filtert Debug-Logs?
+
+**3. Request-Interceptor wird nicht ausgeführt:**
+- Axios-Instance wird nicht verwendet?
+- Interceptor wird nicht registriert?
+- Request wird über anderen Pfad gesendet?
+
+### 📋 NÄCHSTE PRÜFUNGEN:
+
+**1. Prüfe ob Code kompiliert wurde:**
+```bash
+# Auf Server:
+cd /var/www/intranet/backend
+ls -la dist/services/boldPaymentService.js
+grep -n "merchantId Wert" dist/services/boldPaymentService.js
+# Prüfe ob Debug-Logs im kompilierten Code sind
+```
+
+**2. Prüfe ob PM2 die aktuelle Version läuft:**
+```bash
+# Auf Server:
+pm2 restart intranet-backend
+pm2 logs intranet-backend --lines 50
+# Prüfe ob neue Logs erscheinen
+```
+
+**3. Prüfe ob Request-Interceptor ausgeführt wird:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "\[Bold Payment\]|POST|GET" | tail -20
+# Prüfe ob überhaupt Bold Payment Logs erscheinen
+```
+
+**4. Prüfe ob Code-Pfad erreicht wird:**
+- Wird `createAxiosInstance()` aufgerufen?
+- Wird der Request-Interceptor registriert?
+- Wird der Interceptor ausgeführt?
+
+---
+
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
 
 **Server-Prüfung vom 26.11.2025 17:00 UTC:**
