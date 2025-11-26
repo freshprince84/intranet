@@ -227,14 +227,31 @@ export class BoldPaymentService {
 
     // Response Interceptor für Error Handling
     instance.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError) => {
-        console.error('[Bold Payment] API Error:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          url: error.config?.url
+      (response) => {
+        console.log('[Bold Payment] API Success:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.config?.url,
+          headers: response.headers
         });
+        return response;
+      },
+      (error: AxiosError) => {
+        // KRITISCH: Zeige auch die REQUEST-Headers, die tatsächlich gesendet wurden
+        console.error('[Bold Payment] API Error Details:');
+        console.error('[Bold Payment] Request URL:', error.config?.url);
+        console.error('[Bold Payment] Request Method:', error.config?.method);
+        console.error('[Bold Payment] Request Headers (die tatsächlich gesendet wurden):', JSON.stringify(error.config?.headers, null, 2));
+        console.error('[Bold Payment] Response Status:', error.response?.status);
+        console.error('[Bold Payment] Response StatusText:', error.response?.statusText);
+        console.error('[Bold Payment] Response Data:', JSON.stringify(error.response?.data, null, 2));
+        console.error('[Bold Payment] Response Headers:', JSON.stringify(error.response?.headers, null, 2));
+        
+        // Prüfe ob Authorization Header wirklich im Request war
+        const requestHeaders = error.config?.headers || {};
+        console.error('[Bold Payment] Authorization Header im Request vorhanden:', !!requestHeaders.Authorization);
+        console.error('[Bold Payment] Authorization Header Wert:', requestHeaders.Authorization);
+        
         return Promise.reject(error);
       }
     );
