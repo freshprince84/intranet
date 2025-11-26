@@ -2985,6 +2985,106 @@ git log --oneline -1
 
 ---
 
+## ✅✅✅ ERKENNTNIS: FIX IST AUF SERVER, ABER PROBLEM BESTEHT WEITERHIN! (26.11.2025 21:20 UTC)
+
+### ✅ PRÜFUNGS-ERGEBNISSE (Zeile 837-975):
+
+**1. Commit vorhanden:**
+- Zeile 847: `0ee9113 Fix: decryptBranchApiSettings entschlüsselt jetzt verschachtelte Settings` ✅
+- **Fix ist auf Server!**
+
+**2. Code kompiliert:**
+- Zeile 855: `dist/utils/encryption.js` geändert am 26.11. 19:17 ✅
+- Zeile 856-863: **Fix IST im kompilierten Code!** ✅
+  ```javascript
+  if (decrypted.boldPayment.merchantId && typeof decrypted.boldPayment.merchantId === 'string' && decrypted.boldPayment.merchantId.includes(':')) {
+      try {
+          boldPaymentUpdates.merchantId = (0, exports.decryptSecret)(decrypted.boldPayment.merchantId);
+      }
+  }
+  ```
+
+**3. Git Status:**
+- Zeile 973: Letzter Commit: `0bd5de3` (neuester Stand) ✅
+- Viele modified files in `dist/` (lokal kompiliert, nicht committed)
+
+### 🔴 KRITISCH: FIX IST DA, ABER FUNKTIONIERT NICHT!
+
+**Das bedeutet:**
+- ✅ Fix ist auf Server
+- ✅ Fix ist im kompilierten Code
+- ❌ **ABER: Problem besteht weiterhin!**
+
+### 🎯 NEUE HYPOTHESE:
+
+**Der Fix wird nicht ausgeführt, weil:**
+1. **Settings sind UNVERSCHLÜSSELT** (kein ":" im Format) → Fix prüft `includes(':')` → wird nicht ausgeführt
+2. **ODER:** Settings sind bereits entschlüsselt → Fix wird nicht benötigt
+3. **ODER:** Es gibt ein ANDERES Problem (nicht Entschlüsselung)
+
+### 📋 SYSTEMATISCHE PRÜFUNG:
+
+**1. Prüfe ob Settings wirklich verschlüsselt sind:**
+```bash
+# Auf Server:
+cd /var/www/intranet/backend
+npx ts-node -e "
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+(async () => {
+  const branch = await prisma.branch.findUnique({
+    where: { id: 3 },
+    select: { boldPaymentSettings: true }
+  });
+  if (branch?.boldPaymentSettings) {
+    const settings = branch.boldPaymentSettings as any;
+    const merchantId = settings?.boldPayment?.merchantId || settings?.merchantId;
+    console.log('Merchant ID:', merchantId);
+    console.log('Ist verschlüsselt (enthält \":\"):', merchantId?.includes(':'));
+    console.log('Länge:', merchantId?.length);
+  }
+  await prisma.\$disconnect();
+})();
+"
+```
+
+**2. Prüfe was wirklich an API gesendet wird:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 50 --nostream | grep -A 5 "\[Bold Payment\] merchantId Wert" | tail -20
+# Prüfe ob merchantId verschlüsselt oder entschlüsselt ist
+```
+
+### 🔍 MÖGLICHE URSACHEN:
+
+**1. Settings sind unverschlüsselt:**
+- Fix prüft `includes(':')` → wird nicht ausgeführt
+- Settings werden direkt verwendet (sollten funktionieren)
+- **ABER:** API gibt 403 zurück → Problem liegt woanders!
+
+**2. API-Format ist falsch:**
+- Header-Format ist falsch (wie curl-Test zeigte: AWS Signature erforderlich?)
+- Oder: API-Endpunkt ist falsch
+- Oder: API-Keys sind falsch/ungültig
+
+### 📋 ZUSAMMENFASSUNG:
+
+**✅ BEHOBEN:**
+- ✅ Fix ist auf Server
+- ✅ Fix ist im kompilierten Code
+- ✅ DB-Verbindung funktioniert
+
+**❌ BESTEHT WEITERHIN:**
+- ❌ Bold Payment API: 403 Forbidden
+- ❌ TTLock API: PIN-Fehler
+- ❌ Alle APIs funktionieren nicht
+
+**🎯 NÄCHSTER SCHRITT:**
+- Prüfe ob Settings verschlüsselt oder unverschlüsselt sind
+- Wenn Settings unverschlüsselt sind → Problem liegt NICHT an Entschlüsselung!
+
+---
+
 ## ⚠️⚠️⚠️ WICHTIG: PROBLEM BESTEHT WEITERHIN! (26.11.2025 21:10 UTC)
 
 ### 🔴 BENUTZER-FEEDBACK:
