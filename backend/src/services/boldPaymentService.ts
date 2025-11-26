@@ -195,7 +195,21 @@ export class BoldPaymentService {
         console.log(`[Bold Payment] Header Länge: ${config.headers.Authorization?.length}`);
         console.log(`[Bold Payment] merchantId Wert: "${this.merchantId}"`);
         console.log(`[Bold Payment] merchantId Länge: ${this.merchantId?.length}`);
-        console.log(`[Bold Payment] Full Headers:`, JSON.stringify(config.headers, null, 2));
+        
+        // KRITISCH: Zeige Authorization Header EXPLIZIT (nicht in JSON.stringify, da abgeschnitten werden könnte)
+        console.log(`[Bold Payment] Authorization Header EXPLIZIT:`, config.headers.Authorization);
+        console.log(`[Bold Payment] Authorization Header vorhanden:`, !!config.headers.Authorization);
+        console.log(`[Bold Payment] Authorization Header Typ:`, typeof config.headers.Authorization);
+        
+        // Zeige alle Header-Keys
+        console.log(`[Bold Payment] Header Keys:`, Object.keys(config.headers));
+        
+        // Zeige Full Headers (kann abgeschnitten sein, daher auch einzeln)
+        const headersObj: any = {};
+        Object.keys(config.headers).forEach(key => {
+          headersObj[key] = config.headers[key];
+        });
+        console.log(`[Bold Payment] Full Headers:`, JSON.stringify(headersObj, null, 2));
         
         // KRITISCH: Prüfe NOCHMAL direkt vor dem Return
         if (!config.headers.Authorization || config.headers.Authorization !== authHeaderValue) {
