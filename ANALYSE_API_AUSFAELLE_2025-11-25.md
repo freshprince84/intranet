@@ -4840,3 +4840,300 @@ pm2 logs intranet-backend --lines 500 --nostream | grep -E "createForBranch|Bold
 - ✅ **API FUNKTIONIERT** (nicht das Problem!)
 - ✅ **Scripts haben das bewiesen** (10000 mal geprüft)
 - ❌ **Problem liegt WOANDERS im Request-Flow!**
+
+---
+
+## 🔴🔴🔴 KRITISCH: BROWSER CONSOLE ANALYSE (27.11.2025)
+
+### ✅ BROWSER CONSOLE FEHLER GEFUNDEN:
+
+**Browser Console zeigt (27.11.2025):**
+- 🔴 **76 Fehler** insgesamt
+- 🟡 **4 Warnungen**
+- 🔵 **3 Info-Meldungen**
+
+### 🔴 HAUPTFEHLER:
+
+**1. API-Timeout-Fehler (mehrfach):**
+```
+DEBUGAUSGABE API-Client: Fehler im Response Interceptor: timeout of 60000ms exceeded
+DEBUGAUSGABE API-Client: Keine Response erhalten
+```
+- ⚠️ **API-Requests haben 60 Sekunden Timeout**
+- ⚠️ **Requests kommen nicht durch** (keine Response)
+- ⚠️ **Betrifft ALLE API-Requests**, nicht nur Bold Payment!
+
+**2. Response Interceptor zeigt nur "q":**
+```
+Fehler im Response Interceptor: ▸ q
+Fehler beim Laden der Lebenszyklus-Rollen: ▸ q
+```
+- ⚠️ **Fehler wird nicht richtig serialisiert**
+- ⚠️ **Zeigt nur ersten Buchstaben "q"** (möglicherweise von "query" oder ähnlich?)
+- ⚠️ **Fehlerbehandlung funktioniert nicht korrekt**
+
+**3. WebSocket-Verbindungsfehler:**
+```
+WebSocket connection to 'wss://65.109.228.106.nip.io:5000/ws/claude-console' failed
+Claude Console Bridge error: ▸ Event
+Claude Console Bridge disconnected
+```
+- ⚠️ **WebSocket-Verbindung schlägt fehl**
+- ⚠️ **Claude Console Bridge funktioniert nicht**
+
+### 🎯 KRITISCHE ERKENNTNIS:
+
+**Das Frontend wartet 60 Sekunden auf Backend-Responses, die nie kommen!**
+
+**Das bedeutet:**
+- ✅ Frontend sendet Requests korrekt
+- ❌ **Backend antwortet nicht** (oder sehr langsam)
+- ❌ **60 Sekunden Timeout** wird erreicht
+- ❌ **Alle API-Requests betroffen**, nicht nur Bold Payment!
+
+### 🔍 MÖGLICHE URSACHEN:
+
+**1. Backend hängt:**
+- Backend-Requests hängen (nicht nur Bold Payment, sondern ALLE)
+- Backend antwortet nicht innerhalb von 60 Sekunden
+- **Möglicherweise:** DB-Verbindungsprobleme verursachen langsame Responses?
+
+**2. Fehlerbehandlung funktioniert nicht:**
+- Response Interceptor zeigt nur "q" statt vollständiger Fehlermeldung
+- **Möglicherweise:** Fehler wird nicht richtig serialisiert?
+- **Code:** `frontend/src/config/axios.ts:126` - `console.error('Fehler im Response Interceptor:', error);`
+
+**3. WebSocket funktioniert nicht:**
+- WebSocket-Verbindung schlägt fehl
+- **Möglicherweise:** Server läuft nicht oder Port 5000 ist blockiert?
+
+### 📋 CODE-ANALYSE:
+
+**Frontend Response Interceptor (`frontend/src/config/axios.ts:126`):**
+```typescript
+console.error('Fehler im Response Interceptor:', error);
+```
+
+**Problem:** Wenn `error` ein Objekt ist, wird es möglicherweise nicht richtig serialisiert.
+
+**Frontend API Client (`frontend/src/api/apiClient.ts:39`):**
+```typescript
+console.error('DEBUGAUSGABE API-Client: Fehler im Response Interceptor:', error.message);
+```
+
+**Problem:** `error.message` könnte nur "q" sein, wenn der Fehler nicht richtig serialisiert wird.
+
+### 🎯 NEUE HYPOTHESE:
+
+**Das Problem ist NICHT nur Bold Payment, sondern ALLE Backend-API-Requests!**
+
+**Beweis:**
+- Browser Console zeigt Timeouts für ALLE Requests
+- "Fehler beim Laden der Lebenszyklus-Rollen" → Backend-Request
+- "Keine Response erhalten" → Backend antwortet nicht
+
+**Das bedeutet:**
+- ❌ Backend-API-Requests hängen (nicht nur Bold Payment)
+- ❌ Backend antwortet nicht innerhalb von 60 Sekunden
+- ❌ **Möglicherweise:** DB-Verbindungsprobleme verursachen langsame Responses?
+- ❌ **ODER:** Backend-Prozess hängt komplett?
+
+---
+
+## 📋 NÄCHSTE SERVER-PRÜFUNGEN (27.11.2025)
+
+### 🔍 PRÜFUNG 1: Backend-Prozess-Status
+
+**Ziel:** Prüfe ob Backend-Prozess hängt oder überlastet ist
+
+**Befehle:**
+```bash
+# 1. PM2 Status prüfen
+pm2 status
+pm2 describe intranet-backend
+
+# 2. CPU und Memory prüfen
+pm2 monit
+# ODER:
+pm2 list
+# Prüfe: CPU %, Memory, Restarts
+
+# 3. Prozess-Details
+ps aux | grep node | grep intranet
+# Prüfe: CPU %, Memory %, Status
+
+# 4. System-Last prüfen
+top -b -n 1 | head -20
+# ODER:
+htop
+# Prüfe: CPU-Last, Memory-Verbrauch
+```
+
+**Erwartete Ergebnisse:**
+- ✅ CPU < 100% (normal)
+- ✅ Memory < 80% (normal)
+- ❌ **Wenn CPU = 100%:** Prozess hängt oder ist überlastet
+- ❌ **Wenn Memory > 90%:** Memory-Leak oder zu viele Verbindungen
+
+---
+
+### 🔍 PRÜFUNG 2: Backend-Logs auf hängende Requests
+
+**Ziel:** Prüfe ob Backend-Requests hängen oder sehr langsam sind
+
+**Befehle:**
+```bash
+# 1. Aktuelle Backend-Logs prüfen
+pm2 logs intranet-backend --lines 200 --nostream | tail -100
+
+# 2. Prüfe auf Timeout-Fehler
+pm2 logs intranet-backend --lines 500 --nostream | grep -iE "timeout|hang|stuck|slow|Can't reach database" | tail -50
+
+# 3. Prüfe auf DB-Verbindungsfehler
+pm2 logs intranet-backend --lines 500 --nostream | grep -iE "Can't reach database|connection pool|PrismaClient|ECONNREFUSED" | tail -50
+
+# 4. Prüfe auf hängende Requests (lange Laufzeiten)
+pm2 logs intranet-backend --lines 1000 --nostream | grep -E "GET|POST|PUT|DELETE" | tail -50
+# Prüfe: Gibt es Requests, die sehr lange dauern?
+
+# 5. Prüfe auf Deadlocks oder Blockierungen
+pm2 logs intranet-backend --lines 500 --nostream | grep -iE "deadlock|lock|wait|block" | tail -30
+```
+
+**Erwartete Ergebnisse:**
+- ✅ Keine Timeout-Fehler
+- ✅ Keine DB-Verbindungsfehler
+- ❌ **Wenn Timeout-Fehler:** Requests hängen
+- ❌ **Wenn DB-Fehler:** Connection Pool Problem
+
+---
+
+### 🔍 PRÜFUNG 3: DB-Verbindungsstatus
+
+**Ziel:** Prüfe ob DB-Verbindungen funktionieren und ob Connection Pool ausgeschöpft ist
+
+**Befehle:**
+```bash
+# 1. PostgreSQL-Status prüfen
+systemctl status postgresql
+
+# 2. Aktive DB-Verbindungen prüfen
+psql -U intranetuser -d intranet -c "SELECT count(*) as active_connections, state FROM pg_stat_activity WHERE datname = 'intranet' GROUP BY state;"
+
+# 3. Alle aktiven Verbindungen anzeigen
+psql -U intranetuser -d intranet -c "SELECT pid, usename, application_name, state, query_start, wait_event_type, wait_event FROM pg_stat_activity WHERE datname = 'intranet' AND state != 'idle';"
+
+# 4. Connection Pool Limit prüfen
+psql -U intranetuser -d intranet -c "SHOW max_connections;"
+psql -U intranetuser -d intranet -c "SELECT count(*) FROM pg_stat_activity WHERE datname = 'intranet';"
+
+# 5. Lange laufende Queries prüfen
+psql -U intranetuser -d intranet -c "SELECT pid, now() - query_start as duration, query FROM pg_stat_activity WHERE datname = 'intranet' AND state = 'active' AND now() - query_start > interval '5 seconds' ORDER BY duration DESC;"
+```
+
+**Erwartete Ergebnisse:**
+- ✅ PostgreSQL läuft
+- ✅ Aktive Verbindungen < max_connections
+- ✅ Keine lange laufenden Queries (> 5 Sekunden)
+- ❌ **Wenn viele aktive Verbindungen:** Connection Pool ausgeschöpft
+- ❌ **Wenn lange laufende Queries:** DB-Queries hängen
+
+---
+
+### 🔍 PRÜFUNG 4: Backend-API-Endpoint-Tests
+
+**Ziel:** Prüfe ob bestimmte Endpoints hängen oder sehr langsam sind
+
+**Befehle:**
+```bash
+# 1. Teste einfachen Endpoint (Health Check)
+time curl -X GET "http://localhost:5000/api/health" -H "Authorization: Bearer $(cat /var/www/intranet/backend/.env | grep JWT_SECRET | cut -d '=' -f2)" -v
+
+# 2. Teste User-Profile-Endpoint (der im Browser fehlschlägt)
+time curl -X GET "http://localhost:5000/api/users/profile" -H "Authorization: Bearer $(cat /var/www/intranet/backend/.env | grep JWT_SECRET | cut -d '=' -f2)" -v
+
+# 3. Teste Auth-Login-Endpoint (der im Browser fehlschlägt)
+time curl -X POST "http://localhost:5000/api/auth/login" -H "Content-Type: application/json" -d '{"email":"test@test.com","password":"test"}' -v
+
+# 4. Prüfe Response-Zeiten
+# Wenn curl hängt (> 60 Sekunden), dann hängt Backend
+```
+
+**Erwartete Ergebnisse:**
+- ✅ Endpoints antworten innerhalb von 1-2 Sekunden
+- ❌ **Wenn curl hängt (> 60 Sekunden):** Backend-Endpoint hängt
+- ❌ **Wenn Timeout:** Backend antwortet nicht
+
+---
+
+### 🔍 PRÜFUNG 5: Backend-Request-Logging erweitern
+
+**Ziel:** Prüfe ob Requests wirklich ankommen und wie lange sie dauern
+
+**Befehle:**
+```bash
+# 1. Prüfe ob Request-Logging aktiviert ist
+grep -r "Request.*received\|Request.*started\|Request.*duration" /var/www/intranet/backend/src/
+
+# 2. Prüfe aktuelle Request-Logs
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "Request|GET|POST|PUT|DELETE" | tail -50
+
+# 3. Prüfe Response-Zeiten in Logs
+pm2 logs intranet-backend --lines 500 --nostream | grep -E "duration|time|ms|seconds" | tail -50
+```
+
+**Erwartete Ergebnisse:**
+- ✅ Requests werden geloggt
+- ✅ Response-Zeiten < 5 Sekunden
+- ❌ **Wenn keine Request-Logs:** Logging fehlt oder Requests kommen nicht an
+- ❌ **Wenn Response-Zeiten > 60 Sekunden:** Requests hängen
+
+---
+
+### 🔍 PRÜFUNG 6: WebSocket-Status
+
+**Ziel:** Prüfe warum WebSocket-Verbindung fehlschlägt
+
+**Befehle:**
+```bash
+# 1. Prüfe ob Port 5000 offen ist
+netstat -tuln | grep 5000
+# ODER:
+ss -tuln | grep 5000
+
+# 2. Prüfe ob WebSocket-Server läuft
+pm2 logs intranet-backend --lines 200 --nostream | grep -iE "websocket|ws|socket" | tail -30
+
+# 3. Teste WebSocket-Verbindung
+curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: test" "http://localhost:5000/ws/claude-console"
+
+# 4. Prüfe Firewall-Regeln
+iptables -L -n | grep 5000
+# ODER:
+ufw status | grep 5000
+```
+
+**Erwartete Ergebnisse:**
+- ✅ Port 5000 ist offen
+- ✅ WebSocket-Server läuft
+- ❌ **Wenn Port nicht offen:** Firewall blockiert oder Server läuft nicht
+- ❌ **Wenn WebSocket-Fehler:** Server-Problem
+
+---
+
+### 📊 ZUSAMMENFASSUNG DER PRÜFUNGEN:
+
+**Kritische Prüfungen (sofort):**
+1. ✅ **PRÜFUNG 1:** Backend-Prozess-Status (CPU, Memory)
+2. ✅ **PRÜFUNG 2:** Backend-Logs auf hängende Requests
+3. ✅ **PRÜFUNG 3:** DB-Verbindungsstatus
+
+**Weitere Prüfungen:**
+4. ✅ **PRÜFUNG 4:** Backend-API-Endpoint-Tests
+5. ✅ **PRÜFUNG 5:** Backend-Request-Logging erweitern
+6. ✅ **PRÜFUNG 6:** WebSocket-Status
+
+**Erwartete Ergebnisse:**
+- Wenn Backend-Prozess hängt → PM2 Restart nötig
+- Wenn DB-Verbindungen ausgeschöpft → Connection Pool Problem
+- Wenn Endpoints hängen → Backend-Problem (nicht nur Bold Payment)
