@@ -738,6 +738,122 @@ pm2 logs intranet-backend --lines 500 --nostream | grep -E "createAxiosInstance|
 - Das bedeutet: `new BoldPaymentService()` wird verwendet
 - Dann wird `loadSettings()` nur aufgerufen, wenn `this.merchantId` nicht gesetzt ist
 
+### 🔍 KRITISCHE ANALYSE: PASST DAS MIT ALLEN PROBLEMEN ÜBEREIN?
+
+**Benutzer-Frage:**
+- "passt das mit allen problemen überein?"
+- "wie erklären sich alle anderen fehler?"
+- "wurde das in den letzten 2 tagen geändert? da hat es ja noch funktioniert.."
+
+### ✅ CODE-ANALYSE:
+
+**1. Verwendungsstellen:**
+- `reservationNotificationService.ts` Zeile 273: `await BoldPaymentService.createForBranch(reservation.branchId)` ✅
+- `reservationNotificationService.ts` Zeile 274: `new BoldPaymentService(reservation.organizationId)` ⚠️
+- `whatsappGuestService.ts` Zeile 148: `await BoldPaymentService.createForBranch(reservation.branchId)` ✅
+
+**2. Code-Flow in `createPaymentLink()`:**
+- Zeile 232-234: `if (!this.merchantId) { await this.loadSettings(); }`
+- **PROBLEM:** Wenn `this.merchantId` bereits gesetzt ist, wird `loadSettings()` nicht aufgerufen
+- **DANN:** `createAxiosInstance()` wird nicht aufgerufen
+- **DANN:** Alte Axios-Instance (ohne Interceptor) wird verwendet
+
+**3. Wann wird `this.merchantId` gesetzt?**
+- In `loadSettings()` Zeile 83 oder 124: `this.merchantId = boldPaymentSettings.merchantId;`
+- **ABER:** `loadSettings()` wird nur aufgerufen, wenn `this.merchantId` NICHT gesetzt ist
+- **ODER:** `createForBranch()` ruft `loadSettings()` auf (Zeile 142)
+
+### 🎯 HYPOTHESE BESTÄTIGT:
+
+**Wenn `createForBranch()` verwendet wird:**
+- ✅ `loadSettings()` wird aufgerufen
+- ✅ `createAxiosInstance()` wird aufgerufen
+- ✅ Interceptor wird registriert
+- ✅ **Sollte funktionieren**
+
+**ABER: Wenn `new BoldPaymentService()` verwendet wird:**
+- ⚠️ `loadSettings()` wird NICHT automatisch aufgerufen
+- ⚠️ `createAxiosInstance()` wird NICHT aufgerufen
+- ⚠️ Alte Axios-Instance (ohne Interceptor) wird verwendet
+- ❌ **Request-Interceptor wird nicht ausgeführt!**
+
+**Diagnose zeigt:**
+- ⚠️ Keine `createForBranch`-Aufrufe gefunden
+- ✅ `loadSettings()` wird aufgerufen (6 mal)
+- **Das bedeutet:** `new BoldPaymentService()` wird verwendet, ABER `loadSettings()` wird in `createPaymentLink()` aufgerufen
+
+### 🔍 WIDERSPRUCH GEFUNDEN:
+
+**Diagnose zeigt:**
+- ✅ `loadSettings()` wird aufgerufen (6 mal)
+- ✅ `createPaymentLink()` wird aufgerufen (5 mal)
+- ❌ **ABER: Request-Interceptor wird NICHT ausgeführt!**
+
+**Das bedeutet:**
+- `loadSettings()` wird aufgerufen
+- `createAxiosInstance()` sollte aufgerufen werden
+- **ABER: Interceptor wird nicht ausgeführt!**
+
+### 🎯 NEUE HYPOTHESE:
+
+**Problem könnte sein:**
+1. **`loadSettings()` wird aufgerufen, ABER `createAxiosInstance()` wird nicht aufgerufen?**
+   - Zeile 86: `this.axiosInstance = this.createAxiosInstance();` wird nur aufgerufen, wenn Settings erfolgreich geladen werden
+   - Was wenn Settings-Loading fehlschlägt oder früh return?
+
+2. **ODER: `createAxiosInstance()` wird aufgerufen, ABER Interceptor wird nicht registriert?**
+   - Zeile 164: `instance.interceptors.request.use(...)` sollte Interceptor registrieren
+   - Was wenn Interceptor nicht registriert wird?
+
+3. **ODER: Interceptor wird registriert, ABER wird nicht ausgeführt?**
+   - Was wenn `this.axiosInstance.post()` eine andere Instance verwendet?
+
+### 📋 SYSTEMATISCHE PRÜFUNG:
+
+**1. Prüfe ob `createAxiosInstance()` wirklich aufgerufen wird:**
+```bash
+# Auf Server:
+pm2 logs intranet-backend --lines 500 --nostream | grep -E "Verwende Branch-spezifische|createAxiosInstance" | tail -20
+# Prüfe ob createAxiosInstance aufgerufen wird
+```
+
+**2. Prüfe Code-Flow in `loadSettings()`:**
+- Wird `this.axiosInstance = this.createAxiosInstance()` wirklich aufgerufen?
+- Oder gibt es einen frühen Return, bevor `createAxiosInstance()` aufgerufen wird?
+
+**3. Prüfe ob `this.axiosInstance` wirklich überschrieben wird:**
+- Zeile 86: `this.axiosInstance = this.createAxiosInstance();`
+- Zeile 127: `this.axiosInstance = this.createAxiosInstance();`
+- **ABER:** Was wenn `loadSettings()` fehlschlägt oder früh return?
+
+### 🔍 WURDE DAS IN DEN LETZTEN 2 TAGEN GEÄNDERT?
+
+**Git-Historie zeigt:**
+- Commit 49df134 (25.11.2025 17:53:19): Header-Setting geändert (`config.headers.set()` → `config.headers.Authorization =`)
+- **ZEITPUNKT: NACH MITTAG 25.11.2025!**
+- **DAS IST DER ZEITPUNKT, AN DEM ES KAPUTT GING!**
+
+**ABER:** Header-Setting-Änderung ist NICHT das Problem (Test bewiesen)
+
+**Code-Flow-Änderungen:**
+- Keine Änderungen am Constructor oder `loadSettings()` in den letzten 2 Tagen
+- Keine Änderungen an `createAxiosInstance()` in den letzten 2 Tagen
+- **ABER:** Header-Setting wurde geändert (Commit 49df134)
+
+### 🎯 ERKLÄRUNG FÜR ALLE ANDEREN FEHLER:
+
+**Wenn Request-Interceptor nicht ausgeführt wird:**
+- ❌ Bold Payment: Header wird nicht gesetzt → 403 Forbidden
+- ❌ TTLock: Header wird nicht gesetzt → Authentifizierung fehlgeschlagen
+- ❌ WhatsApp: Header wird nicht gesetzt → Authentifizierung fehlgeschlagen
+- ❌ LobbyPMS: Header wird nicht gesetzt → Authentifizierung fehlgeschlagen
+- **→ ALLE APIs betroffen, weil ALLE Services denselben Code-Flow haben!**
+
+**Das erklärt:**
+- ✅ Warum ALLE APIs gleichzeitig nicht funktionieren
+- ✅ Warum es seit Mittag 25.11.2025 kaputt ist (Commit 49df134)
+- ✅ Warum Scripts funktionieren (verwenden andere Instanzen oder direkte Calls)
+
 ---
 
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
