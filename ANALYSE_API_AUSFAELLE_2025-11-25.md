@@ -2397,3 +2397,129 @@ systemctl status postgresql
 ```bash
 psql -U intranetuser -d intranet -c "SELECT count(*) FROM pg_stat_activity WHERE datname = 'intranet';"
 ```
+
+---
+
+## 🔴🔴🔴 KRITISCH: ROOT CAUSE GEFUNDEN! (26.11.2025 20:30 UTC)
+
+### ✅ CURL-TEST ERGEBNISSE ANALYSIERT:
+
+**Server-Logs (Zeile 132-274):**
+
+**1. Server-Logs zeigen:**
+```
+[Bold Payment] Authorization Header: x-api-key CTkrL5f5IxvMpX722zXivqnd1KU5VyoNBOFQFUUnf-E
+[Bold Payment] Header Länge: 53
+[Bold Payment] merchantId Wert: "CTkrL5f5IxvMpX722zXivqnd1KU5VyoNBOFQFUUnf-E"
+[Bold Payment] merchantId Länge: 43
+```
+
+**2. curl-Test Ergebnis (Zeile 224-234):**
+```
+< HTTP/2 403 
+< x-amzn-errortype: IncompleteSignatureException
+< x-amzn-requestid: 000eced4-06f5-4d99-860c-619858fcbfd5
+{"message":"Invalid key=value pair (missing equal-sign) in Authorization header (hashed with SHA-256 and encoded with Base64): 'MZ1DdfK/poPwXem5nlPM..."}
+```
+
+### 🔴 ROOT CAUSE IDENTIFIZIERT:
+
+**Die Bold Payment API erwartet AWS Signature v4 Format, NICHT einfach "x-api-key"!**
+
+**Fehlermeldung-Analyse:**
+- `IncompleteSignatureException` → API erwartet AWS Signature!
+- `Invalid key=value pair (missing equal-sign) in Authorization header` → API erwartet Format: `key=value`
+- `hashed with SHA-256 and encoded with Base64` → API erwartet signierte Requests!
+
+**Das bedeutet:**
+- ❌ **Aktueller Code:** `Authorization: x-api-key <merchantId>` → **FALSCH!**
+- ✅ **API erwartet:** AWS Signature v4 Format mit signierten Requests!
+
+### 📋 AWS SIGNATURE v4 FORMAT:
+
+**Korrektes Format:**
+```
+Authorization: AWS4-HMAC-SHA256 
+  Credential=<access-key-id>/<date>/<region>/<service>/aws4_request,
+  SignedHeaders=<headers>,
+  Signature=<signature>
+```
+
+**ODER für API Gateway:**
+```
+Authorization: AWS4-HMAC-SHA256 
+  Credential=<api-key>/<date>/<region>/execute-api/aws4_request,
+  SignedHeaders=host;x-amz-date,
+  Signature=<calculated-signature>
+```
+
+### 🔍 WARUM FUNKTIONIERTE ES VORHER?
+
+**Mögliche Erklärungen:**
+
+1. **API wurde geändert:**
+   - Bold Payment hat die Authentifizierung von "x-api-key" auf AWS Signature umgestellt
+   - Änderung erfolgte vor ~24h (als das Problem begann)
+
+2. **Falsche API-Endpunkt:**
+   - `integrations.api.bold.co` erfordert AWS Signature
+   - Möglicherweise gibt es einen anderen Endpunkt für "x-api-key" Authentifizierung?
+
+3. **Falsche API-Version:**
+   - `/v1/payment-links` erfordert AWS Signature
+   - Möglicherweise gibt es eine andere Version oder Endpunkt?
+
+### 📋 NÄCHSTE SCHRITTE:
+
+**1. Prüfe Bold Payment API-Dokumentation:**
+- Welches Authentifizierungsformat wird für `integrations.api.bold.co` verwendet?
+- Gibt es einen anderen Endpunkt für "API Link de pagos"?
+- Wurde die API kürzlich geändert?
+
+**2. Prüfe ob es einen anderen Endpunkt gibt:**
+- Möglicherweise: `https://api.bold.co` statt `https://integrations.api.bold.co`?
+- Oder: Ein anderer Pfad für "API Link de pagos"?
+
+**3. Implementiere AWS Signature v4:**
+- Falls AWS Signature erforderlich ist, muss der Code angepasst werden
+- Verwende AWS SDK oder implementiere Signature v4 manuell
+
+### 🔧 SOFORT-MASSNAHME:
+
+**1. Prüfe Bold Payment API-Dokumentation:**
+```bash
+# Suche nach korrektem Authentifizierungsformat
+# URL: https://developers.bold.co/pagos-en-linea/api-link-de-pagos
+```
+
+**2. Teste mit anderem Endpunkt:**
+```bash
+# Teste ob es einen anderen Endpunkt gibt
+curl -X POST "https://api.bold.co/v1/payment-links" \
+  -H "x-api-key: CTkrL5f5IxvMpX722zXivqnd1KU5VyoNBOFQFUUnf-E" \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 10000, "currency": "COP"}' \
+  -v
+```
+
+**3. Prüfe ob API-Key für richtige Umgebung ist:**
+- Sandbox vs. Production?
+- Möglicherweise sind die Keys für eine andere Umgebung?
+
+---
+
+## 📊 ZUSAMMENFASSUNG - ROOT CAUSE:
+
+**✅ PROBLEM IDENTIFIZIERT:**
+- Bold Payment API erwartet **AWS Signature v4 Format**
+- Aktueller Code verwendet **"x-api-key" Format** → **FALSCH!**
+
+**❌ NICHT DAS PROBLEM:**
+- ❌ Connection Pool (war nur ein Symptom)
+- ❌ Entschlüsselung (funktioniert)
+- ❌ Environment-Variablen (alle vorhanden)
+- ❌ Settings-Werte (korrekt)
+
+**✅ DAS ECHTE PROBLEM:**
+- 🔴 **Authentifizierungsformat ist falsch!**
+- 🔴 **API erwartet AWS Signature v4, Code sendet "x-api-key"**
