@@ -4339,13 +4339,50 @@ pm2 logs intranet-backend --lines 200 --nostream | grep -E "createForBranch|Bold
 
 **FAZIT:** Der Fix funktioniert! `createAxiosInstance()` wird jetzt aufgerufen und der Interceptor wird registriert.
 
-### ⚠️ ABER: API GIBT IMMER NOCH FEHLER ZURÜCK
+### ⚠️ ABER: API GIBT IMMER NOCH FEHLER ZURÜCK (26.11.2025 23:50 UTC)
+
+**Benutzer-Feedback:**
+- "weiterhin nicht" (nach Deployment des Header-Überschreibung-Checks)
+- Problem besteht weiterhin seit über 24h
 
 **Logs zeigen:**
 ```
 [Bold Payment] API Error: {
 [Bold Payment] API Error Details:
 ```
+
+**Was wurde bereits geprüft:**
+1. ✅ Request-Interceptor funktioniert (Header wird gesetzt, Logs zeigen das)
+2. ✅ Header wird gesetzt (Logs zeigen das)
+3. ✅ Header-Überschreibung-Check implementiert
+4. ✅ TTLock verwendet jetzt konfigurierte Instance
+5. ❌ **ABER: API gibt immer noch 403 zurück**
+
+**Mögliche Ursachen:**
+1. **Header wird gesetzt, aber nicht im Request ankommt**
+   - Header wird im Interceptor gesetzt
+   - ABER: Wird beim tatsächlichen Request nicht mitgesendet?
+   - ABER: Wird durch Axios-Interna entfernt?
+
+2. **Header-Format ist falsch**
+   - Aktuell: `Authorization: x-api-key <merchantId>`
+   - ABER: API erwartet vielleicht anderes Format?
+   - ABER: Benutzer sagt, API funktioniert (Scripts belegen das)
+
+3. **merchantId ist falsch/verschlüsselt**
+   - Header wird gesetzt
+   - ABER: merchantId ist vielleicht noch verschlüsselt?
+   - ABER: decryptBranchApiSettings() wurde gefixt
+
+4. **Timing-Problem**
+   - Header wird gesetzt
+   - ABER: Request wird zu früh gesendet?
+   - ABER: Race Condition?
+
+**Nächste Prüfung:**
+- Prüfe Server-Logs: Erscheinen die neuen Debug-Logs (Header-Überschreibung-Check)?
+- Prüfe ob Header wirklich im Request ankommt (nicht nur im Interceptor gesetzt)
+- Prüfe ob merchantId wirklich entschlüsselt ist
 
 **Das bedeutet:**
 - ✅ Request-Interceptor funktioniert
