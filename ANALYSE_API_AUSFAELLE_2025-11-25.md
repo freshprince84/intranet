@@ -268,6 +268,62 @@ config.headers.set('Authorization', `x-api-key ${this.merchantId}`);
 
 **ODER:** Prüfe ob `config.headers.Authorization =` wirklich funktioniert in Axios.
 
+---
+
+## 🧪 TEST-PLAN: HEADER-SETTING-METHODE PRÜFEN (26.11.2025 22:00 UTC)
+
+### ✅ TEST-SCRIPT ERSTELLT:
+
+**Datei:** `backend/scripts/test-header-setting-method.ts`
+
+**Ziel:** Beweisen, ob `config.headers.Authorization =` vs. `config.headers.set()` funktioniert
+
+**Tests:**
+1. ✅ Test 1: `config.headers.Authorization =` (AKTUELLE METHODE)
+2. ✅ Test 2: `config.headers.set()` (ALTERNATIVE METHODE)
+3. ✅ Test 3: Direkter Vergleich - Beide Methoden auf derselben Instanz
+4. ✅ Test 4: Prüfe Request-Konfiguration (ohne echten API-Call)
+
+### 📋 AUSFÜHRUNG AUF SERVER:
+
+```bash
+# 1. Auf Server verbinden (manuell)
+ssh -i ~/.ssh/intranet_rsa root@65.109.228.106
+
+# 2. Ins Backend-Verzeichnis wechseln
+cd /var/www/intranet/backend
+
+# 3. Git pull (um Test-Script zu holen)
+git pull origin main
+
+# 4. Test-Script ausführen
+npx ts-node scripts/test-header-setting-method.ts
+```
+
+### 🎯 ERWARTETE ERGEBNISSE:
+
+**Wenn `config.headers.Authorization =` NICHT funktioniert:**
+- Header wird nicht gesetzt
+- `config.headers.Authorization` ist `undefined` oder leer
+- **→ DAS IST DAS PROBLEM!**
+
+**Wenn `config.headers.Authorization =` funktioniert:**
+- Header wird korrekt gesetzt
+- `config.headers.Authorization` hat den erwarteten Wert
+- **→ Problem liegt woanders**
+
+### 📋 NÄCHSTE SCHRITTE NACH TEST:
+
+**1. Wenn Header NICHT gesetzt wird:**
+- Ändere `config.headers.Authorization =` zu `config.headers.set()`
+- Teste ob das Problem behoben ist
+
+**2. Wenn Header gesetzt wird:**
+- Problem liegt woanders
+- Fokus auf andere mögliche Ursachen (Timing, Settings-Loading, etc.)
+
+---
+
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
 
 **Server-Prüfung vom 26.11.2025 17:00 UTC:**
