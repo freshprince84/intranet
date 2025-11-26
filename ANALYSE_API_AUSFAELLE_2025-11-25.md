@@ -609,6 +609,36 @@ pm2 logs intranet-backend --lines 200 --nostream | grep -E "loadSettings|Verwend
 - Wird `createAxiosInstance()` aufgerufen?
 - Wird `this.axiosInstance.post()` verwendet?
 
+### 📋 UMFASSENDES DIAGNOSE-SCRIPT ERSTELLT:
+
+**Datei:** `backend/scripts/diagnose-request-interceptor.ts`
+
+**Ziel:** Diagnostiziert warum Request-Interceptor nicht ausgeführt wird
+
+**Was es prüft:**
+1. ✅ Ob `createPaymentLink()` aufgerufen wird
+2. ✅ Ob `loadSettings()` aufgerufen wird
+3. ✅ Ob `createAxiosInstance()` aufgerufen wird
+4. ✅ Ob Axios-Instance verwendet wird
+5. ✅ ReservationNotificationService Logs
+6. ✅ Ob `BoldPaymentService.createForBranch()` aufgerufen wird
+7. ✅ Alle Bold Payment bezogenen Logs
+8. ✅ 403-Fehler im Kontext
+
+**Ausführung:**
+```bash
+# Auf Server:
+cd /var/www/intranet/backend
+git pull origin main
+npx ts-node scripts/diagnose-request-interceptor.ts
+```
+
+**Erwartete Ergebnisse:**
+- Zeigt welche Funktionen aufgerufen werden
+- Zeigt welche Logs vorhanden sind
+- Identifiziert fehlende Code-Pfade
+- Gibt konkrete nächste Schritte
+
 ---
 
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
