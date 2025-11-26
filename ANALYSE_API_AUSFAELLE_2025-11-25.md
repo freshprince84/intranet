@@ -2685,3 +2685,75 @@ const prisma = new PrismaClient();
 })();
 "
 ```
+
+---
+
+## 🔴🔴🔴 KRITISCH: WIDERSPRUCH GEFUNDEN! (26.11.2025 20:50 UTC)
+
+### ✅ TEST-ERGEBNISSE (Server-Logs Zeile 299-330):
+
+**1. Server-Logs zeigen:**
+```
+Can't reach database server at `localhost:5432`
+Can't reach database server at `localhost:5432`
+[... viele Wiederholungen ...]
+```
+
+**2. Direkter DB-Test zeigt:**
+```
+✅ DB-Verbindung erfolgreich
+✅ DB-Query erfolgreich: [ { '?column?': 1 } ]
+```
+
+### 🔴 WIDERSPRUCH IDENTIFIZIERT:
+
+- ❌ **Laufender Server (PM2):** Kann nicht auf DB zugreifen
+- ✅ **Direkter Test:** DB-Verbindung funktioniert perfekt!
+
+### 🎯 ROOT CAUSE:
+
+**PM2-Prozess verwendet andere Environment-Variablen als die .env Datei!**
+
+**Das bedeutet:**
+- `.env` Datei hat korrekte `DATABASE_URL` ✅
+- Direkter Test lädt `.env` korrekt ✅
+- **ABER:** PM2-Prozess hat alte/falsche `DATABASE_URL` im Speicher ❌
+
+### 🔧 LÖSUNG:
+
+**PM2 muss komplett neu gestartet werden (delete + start), damit Environment-Variablen neu geladen werden:**
+
+```bash
+# Auf Server ausführen:
+cd /var/www/intranet/backend
+
+# 1. Prüfe aktuelle PM2 Environment-Variablen
+pm2 env 0 | grep DATABASE_URL
+
+# 2. Prüfe .env Datei
+cat .env | grep DATABASE_URL
+
+# 3. Wenn unterschiedlich: PM2 komplett neu starten
+pm2 delete intranet-backend
+cd /var/www/intranet/backend
+pm2 start npm --name "intranet-backend" -- start
+
+# 4. Prüfe ob jetzt korrekt
+pm2 env 0 | grep DATABASE_URL
+```
+
+### 📋 ZUSAMMENFASSUNG:
+
+**Problem:**
+- PM2-Prozess verwendet alte/falsche `DATABASE_URL`
+- Direkter Test funktioniert (lädt .env korrekt)
+- Server kann nicht auf DB zugreifen → Alle APIs schlagen fehl
+
+**Lösung:**
+- PM2 komplett neu starten (delete + start)
+- Damit werden Environment-Variablen aus .env neu geladen
+
+**Das erklärt:**
+- ✅ Warum direkter Test funktioniert (lädt .env)
+- ✅ Warum Server nicht funktioniert (alte Env-Vars im PM2-Prozess)
+- ✅ Warum alle APIs betroffen sind (keine DB = keine Settings)
