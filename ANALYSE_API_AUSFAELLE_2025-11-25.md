@@ -501,6 +501,31 @@ pm2 logs intranet-backend --lines 200 --nostream | grep -E "\[Bold Payment\]|POS
 - Wird der Request-Interceptor registriert?
 - Wird der Interceptor ausgeführt?
 
+### 📋 AUTOMATISCHES PRÜF-SCRIPT ERSTELLT:
+
+**Datei:** `backend/scripts/check-code-compilation-and-logs.ts`
+
+**Ziel:** Prüft automatisch ob Code kompiliert wurde und Debug-Logs vorhanden sind
+
+**Was es prüft:**
+1. ✅ Ob `dist/services/boldPaymentService.js` existiert
+2. ✅ Ob Debug-Logs im kompilierten Code sind (`merchantId Wert`, `Authorization Header`, etc.)
+3. ✅ Ob Request-Interceptor im Code ist
+4. ✅ PM2 Status
+5. ✅ Ob Bold Payment Logs in PM2 erscheinen
+
+**Ausführung:**
+```bash
+# Auf Server:
+cd /var/www/intranet/backend
+git pull origin main
+npx ts-node scripts/check-code-compilation-and-logs.ts
+```
+
+**Erwartete Ergebnisse:**
+- Wenn Debug-Logs fehlen → Code muss neu kompiliert werden (`npm run build`)
+- Wenn Code kompiliert ist, aber keine Logs erscheinen → Request-Interceptor wird nicht ausgeführt
+
 ---
 
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
