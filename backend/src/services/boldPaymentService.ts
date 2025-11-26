@@ -174,7 +174,20 @@ export class BoldPaymentService {
         if (!this.merchantId) {
           throw new Error('Bold Payment Merchant ID (Llave de identidad) fehlt');
         }
-        config.headers.Authorization = `x-api-key ${this.merchantId}`;
+        // KRITISCH: Setze Header auf mehrere Arten, um sicherzustellen dass er gesetzt wird
+        const authHeader = `x-api-key ${this.merchantId}`;
+        config.headers.Authorization = authHeader;
+        // Zusätzliche Sicherheit: Setze auch direkt als Property
+        (config.headers as any)['Authorization'] = authHeader;
+        // Zusätzliche Sicherheit: Setze auch in defaults falls vorhanden
+        if (config.headers && typeof config.headers === 'object') {
+          Object.defineProperty(config.headers, 'Authorization', {
+            value: authHeader,
+            writable: true,
+            enumerable: true,
+            configurable: true
+          });
+        }
         
         // Debug: Prüfe ob Header korrekt gesetzt wurde
         console.log(`[Bold Payment] ${config.method?.toUpperCase()} ${config.url}`);
@@ -185,6 +198,16 @@ export class BoldPaymentService {
         console.log(`[Bold Payment] merchantId Länge: ${this.merchantId?.length}`);
         console.log(`[Bold Payment] merchantId Bytes (hex): ${Buffer.from(this.merchantId || '').toString('hex')}`);
         console.log(`[Bold Payment] Full Headers:`, JSON.stringify(config.headers, null, 2));
+        
+        // KRITISCH: Prüfe NACH dem Setzen, ob Header wirklich gesetzt ist
+        if (!config.headers.Authorization || config.headers.Authorization !== authHeader) {
+          console.error('[Bold Payment] KRITISCH: Header wurde nach dem Setzen überschrieben oder entfernt!');
+          console.error('[Bold Payment] Erwartet:', authHeader);
+          console.error('[Bold Payment] Tatsächlich:', config.headers.Authorization);
+          // Setze Header erneut
+          config.headers.Authorization = authHeader;
+        }
+        
         return config;
       },
       (error) => {
