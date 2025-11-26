@@ -174,39 +174,18 @@ export class BoldPaymentService {
         if (!this.merchantId) {
           throw new Error('Bold Payment Merchant ID (Llave de identidad) fehlt');
         }
-        // KRITISCH: Setze Header auf mehrere Arten, um sicherzustellen dass er gesetzt wird
-        const authHeader = `x-api-key ${this.merchantId}`;
-        config.headers.Authorization = authHeader;
-        // Zusätzliche Sicherheit: Setze auch direkt als Property
-        (config.headers as any)['Authorization'] = authHeader;
-        // Zusätzliche Sicherheit: Setze auch in defaults falls vorhanden
-        if (config.headers && typeof config.headers === 'object') {
-          Object.defineProperty(config.headers, 'Authorization', {
-            value: authHeader,
-            writable: true,
-            enumerable: true,
-            configurable: true
-          });
-        }
+        // KRITISCH: Bold Payment API erwartet "x-api-key" als SEPARATEN Header, NICHT im Authorization Header!
+        // Die Dokumentation zeigt: Header "x-api-key" mit Wert der Merchant ID
+        // NICHT: Authorization Header mit Wert "x-api-key <merchantId>"
+        config.headers['x-api-key'] = this.merchantId;
         
         // Debug: Prüfe ob Header korrekt gesetzt wurde
         console.log(`[Bold Payment] ${config.method?.toUpperCase()} ${config.url}`);
-        console.log(`[Bold Payment] Authorization Header: ${config.headers.Authorization}`);
-        console.log(`[Bold Payment] Header Länge: ${config.headers.Authorization?.length}`);
-        console.log(`[Bold Payment] Header Bytes (hex): ${Buffer.from(config.headers.Authorization || '').toString('hex')}`);
+        console.log(`[Bold Payment] x-api-key Header: ${config.headers['x-api-key']}`);
+        console.log(`[Bold Payment] Header Länge: ${config.headers['x-api-key']?.length}`);
         console.log(`[Bold Payment] merchantId Wert: "${this.merchantId}"`);
         console.log(`[Bold Payment] merchantId Länge: ${this.merchantId?.length}`);
-        console.log(`[Bold Payment] merchantId Bytes (hex): ${Buffer.from(this.merchantId || '').toString('hex')}`);
         console.log(`[Bold Payment] Full Headers:`, JSON.stringify(config.headers, null, 2));
-        
-        // KRITISCH: Prüfe NACH dem Setzen, ob Header wirklich gesetzt ist
-        if (!config.headers.Authorization || config.headers.Authorization !== authHeader) {
-          console.error('[Bold Payment] KRITISCH: Header wurde nach dem Setzen überschrieben oder entfernt!');
-          console.error('[Bold Payment] Erwartet:', authHeader);
-          console.error('[Bold Payment] Tatsächlich:', config.headers.Authorization);
-          // Setze Header erneut
-          config.headers.Authorization = authHeader;
-        }
         
         return config;
       },
