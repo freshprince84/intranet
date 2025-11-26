@@ -942,6 +942,38 @@ pm2 logs intranet-backend --lines 100 --nostream | grep -E "\[Bold Payment\] Aut
 - Versuche Payment-Link zu erstellen
 - Prüfe ob 403-Fehler behoben ist
 
+### ✅ FIX AUCH FÜR TTLOCKSERVICE IMPLEMENTIERT:
+
+**Datei:** `backend/src/services/ttlockService.ts`
+
+**Gleiches Problem:**
+- Constructor erstellt `axiosInstance` OHNE Interceptor
+- `getAccessToken()` ruft `loadSettings()` nur auf, wenn Settings nicht gesetzt sind
+- **Fix:** Gleiche Logik wie bei BoldPaymentService
+
+**Änderung in `getAccessToken()`:**
+```typescript
+// VORHER:
+if (!this.clientId || !this.clientSecret || !this.username || !this.password) {
+  await this.loadSettings();
+}
+
+// NACHHER:
+// WICHTIG: loadSettings() muss IMMER aufgerufen werden, um createAxiosInstance() aufzurufen
+if (!this.clientId || !this.clientSecret || !this.username || !this.password || !this.apiUrl || this.apiUrl === 'https://euopen.ttlock.com') {
+  await this.loadSettings();
+}
+
+// KRITISCH: Stelle sicher, dass axiosInstance den Interceptor hat
+if (!this.axiosInstance || !this.apiUrl || this.apiUrl === 'https://euopen.ttlock.com') {
+  await this.loadSettings();
+}
+```
+
+**Das erklärt:**
+- ✅ Warum TTLock auch nicht funktioniert (gleiches Problem)
+- ✅ Warum alle APIs betroffen sind (gleicher Code-Flow)
+
 ---
 
 ## ⚠️ WICHTIG: Server-Beweise zeigen - Entschlüsselung funktioniert!
