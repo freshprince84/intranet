@@ -2523,3 +2523,165 @@ curl -X POST "https://api.bold.co/v1/payment-links" \
 **✅ DAS ECHTE PROBLEM:**
 - 🔴 **Authentifizierungsformat ist falsch!**
 - 🔴 **API erwartet AWS Signature v4, Code sendet "x-api-key"**
+
+---
+
+## ⚠️⚠️⚠️ WICHTIGE FRAGE: WARUM FUNKTIONIERTE ES GESTERN NOCH?
+
+### 🔍 SYSTEMATISCHE ANALYSE - WARUM ALLE APIs GLEICHZEITIG?
+
+**Benutzer-Frage:**
+- "wieso hat es dann bis gestern morgen einwandfrei funktioniert???"
+- "wieso funktionieren dann alle anderen api's auch nicht mehr (wie nun schon 100 fach erklärt)?"
+- "wie erklärt sich, dass alles zusammen gleichzeitig nicht mehr funktioniert hat?????"
+
+### 🔴 KRITISCH: AWS SIGNATURE ERKLÄRT NICHT ALLE APIs!
+
+**Problem mit meiner Analyse:**
+- ❌ AWS Signature Fehler betrifft nur **Bold Payment**
+- ❌ **TTLock, LobbyPMS, WhatsApp** verwenden andere APIs
+- ❌ Warum sollten ALLE gleichzeitig nicht mehr funktionieren?
+
+### 🎯 WAS IST DIE GEMEINSAME URSACHE FÜR ALLE APIs?
+
+**Alle Services haben gemeinsam:**
+1. ✅ **Prisma für DB-Zugriffe** → Settings laden
+2. ✅ **decryptApiSettings() / decryptBranchApiSettings()** → Settings entschlüsseln
+3. ✅ **Axios für HTTP-Requests** → API-Calls
+
+**Wenn ALLE gleichzeitig nicht funktionieren, muss es eine GEMEINSAME Ursache sein:**
+
+### 🔍 MÖGLICHE GEMEINSAME URSACHEN:
+
+**1. Database Connection Problem:**
+- ✅ Connection Pool Fix wurde angewendet
+- ❌ **ABER:** Problem besteht weiterhin
+- ⚠️ **Möglicherweise:** PM2 hat .env nicht korrekt neu geladen?
+- ⚠️ **Möglicherweise:** Prisma Client wurde mit alter DATABASE_URL initialisiert?
+
+**2. PM2 Environment Variables:**
+- ✅ `--update-env` wurde verwendet
+- ❌ **ABER:** Problem besteht weiterhin
+- ⚠️ **Möglicherweise:** PM2 hat .env nicht neu geladen?
+- ⚠️ **Möglicherweise:** Alte Werte noch im Speicher?
+
+**3. Code-Deployment:**
+- ⚠️ Wurde Code deployed, der alle APIs betrifft?
+- ⚠️ Wurde etwas geändert, das alle Services betrifft?
+
+**4. .env Datei wurde gelöscht (Benutzer erwähnte das):**
+- ✅ .env wurde wiederhergestellt
+- ✅ Alle Variablen sind vorhanden
+- ⚠️ **ABER:** Könnte PM2 noch alte Werte verwenden?
+- ⚠️ **ABER:** Könnte Prisma Client noch alte Werte verwenden?
+
+### 🔍 HYPOTHESE: PM2 / PRISMA VERWENDET ALTE WERTE!
+
+**Timeline:**
+1. **Gestern:** Alles funktionierte
+2. **Heute:** .env wurde gelöscht (ausversehen)
+3. **Heute:** .env wurde wiederhergestellt
+4. **Heute:** PM2 wurde neu gestartet
+5. **Heute:** Problem besteht weiterhin
+
+**Mögliche Erklärung:**
+- PM2 lädt .env beim Start
+- **ABER:** Prisma Client wird beim Start initialisiert
+- **ABER:** Wenn .env beim Start fehlte, wurde Prisma Client mit Standard-Werten initialisiert
+- **ABER:** Nach .env-Wiederherstellung wurde PM2 neu gestartet
+- **ABER:** Prisma Client könnte noch alte/fehlende Werte verwenden?
+
+### 📋 SYSTEMATISCHE PRÜFUNG - WAS IST WIRKLICH DAS PROBLEM?
+
+**1. Prüfe ob PM2 die .env wirklich neu geladen hat:**
+```bash
+# Auf Server ausführen:
+pm2 env 0 | grep -E "DATABASE_URL|ENCRYPTION_KEY|JWT_SECRET"
+# Vergleiche mit .env Datei:
+cat /var/www/intranet/backend/.env | grep -E "DATABASE_URL|ENCRYPTION_KEY|JWT_SECRET"
+```
+
+**2. Prüfe ob Prisma Client die DATABASE_URL korrekt verwendet:**
+```bash
+# Auf Server ausführen:
+cd /var/www/intranet/backend
+npx ts-node -e "
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
+console.log('Connection Pool:', process.env.DATABASE_URL?.includes('connection_limit'));
+prisma.\$disconnect();
+"
+```
+
+**3. Prüfe ob alle Services DB-Zugriffe machen können:**
+```bash
+# Auf Server ausführen:
+pm2 logs intranet-backend --lines 500 --nostream | grep -iE "Can't reach database|connection pool|PrismaClient" | tail -50
+```
+
+**4. Prüfe ob das Problem wirklich DB-bezogen ist:**
+- Wenn alle APIs DB-Zugriffe benötigen (Settings laden)
+- Wenn DB-Zugriffe fehlschlagen → Alle APIs können keine Settings laden
+- Wenn Settings nicht geladen werden können → Alle APIs schlagen fehl
+
+### 🎯 NEUE HYPOTHESE: DATABASE CONNECTION IST DAS PROBLEM!
+
+**Warum alle APIs betroffen sind:**
+1. **Alle Services** müssen Settings aus DB laden (Prisma)
+2. **Wenn DB-Verbindung fehlschlägt** → Settings können nicht geladen werden
+3. **Wenn Settings nicht geladen werden** → API-Keys fehlen
+4. **Wenn API-Keys fehlen** → Alle API-Calls schlagen fehl
+
+**Warum hat es gestern funktioniert:**
+- DB-Verbindung funktionierte
+- Settings konnten geladen werden
+- API-Calls funktionierten
+
+**Warum funktioniert es jetzt nicht:**
+- .env wurde gelöscht → DATABASE_URL fehlte
+- Prisma Client wurde mit fehlender DATABASE_URL initialisiert
+- .env wurde wiederhergestellt
+- **ABER:** Prisma Client verwendet noch alte/fehlende Werte?
+- **ODER:** Connection Pool Parameter fehlen noch?
+
+### 🔧 SOFORT-MASSNAHME:
+
+**1. Prüfe ob PM2 .env wirklich neu geladen hat:**
+```bash
+pm2 env 0 | grep DATABASE_URL
+cat /var/www/intranet/backend/.env | grep DATABASE_URL
+# Vergleiche beide Ausgaben!
+```
+
+**2. Prüfe ob Connection Pool Parameter wirklich vorhanden sind:**
+```bash
+cd /var/www/intranet/backend
+npx ts-node scripts/check-database-url.ts
+```
+
+**3. Prüfe aktuelle DB-Verbindungsfehler:**
+```bash
+pm2 logs intranet-backend --lines 200 --nostream | grep -iE "Can't reach database|connection pool|timeout" | tail -30
+```
+
+**4. Teste DB-Verbindung direkt:**
+```bash
+cd /var/www/intranet/backend
+npx ts-node -e "
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+(async () => {
+  try {
+    await prisma.\$connect();
+    console.log('✅ DB-Verbindung erfolgreich');
+    const result = await prisma.\$queryRaw\`SELECT 1\`;
+    console.log('✅ DB-Query erfolgreich:', result);
+  } catch (error) {
+    console.error('❌ DB-Fehler:', error);
+  } finally {
+    await prisma.\$disconnect();
+  }
+})();
+"
+```
