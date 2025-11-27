@@ -54,7 +54,9 @@ async function checkLobbyPmsImportStatus() {
         const decryptedBranchSettings = branchSettings ? decryptBranchApiSettings(branchSettings) : null;
         const decryptedOrgSettings = orgSettings ? decryptApiSettings(orgSettings) : null;
         
-        const lobbyPmsSettings = decryptedBranchSettings || decryptedOrgSettings?.lobbyPms;
+        // Branch Settings können direkt LobbyPMS Settings sein oder verschachtelt unter lobbyPms
+        // Org Settings sind immer verschachtelt unter lobbyPms
+        const lobbyPmsSettings = (decryptedBranchSettings?.lobbyPms || decryptedBranchSettings) || decryptedOrgSettings?.lobbyPms;
 
         if (!lobbyPmsSettings?.apiKey) {
           console.log('  ⚠️  Kein LobbyPMS API Key konfiguriert');
