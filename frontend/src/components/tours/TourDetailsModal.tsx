@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axiosInstance from '../../config/axios.ts';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon, MapPinIcon, ClockIcon, UsersIcon, CurrencyDollarIcon, BuildingOfficeIcon, UserIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, MapPinIcon, ClockIcon, UsersIcon, CurrencyDollarIcon, BuildingOfficeIcon, UserIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../../config/api.ts';
-import { Tour, TourType } from '../../types/tour.ts';
+import { Tour, TourType, TourBooking } from '../../types/tour.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import CreateTourBookingModal from './CreateTourBookingModal.tsx';
+import { usePermissions } from '../../hooks/usePermissions.ts';
 
 interface TourDetailsModalProps {
     isOpen: boolean;
