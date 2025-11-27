@@ -8,7 +8,7 @@ import { usePermissions } from '../../hooks/usePermissions.ts';
 import { validateApiUrl } from '../../utils/urlValidation.ts';
 
 // Feste LobbyPMS API URL
-const LOBBYPMS_API_URL = 'https://app.lobbypms.com/api';
+const LOBBYPMS_API_URL = 'https://api.lobbypms.com';
 
 interface Props {
   organization: Organization | null;

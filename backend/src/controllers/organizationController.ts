@@ -1244,7 +1244,7 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
         
         // ✅ LobbyPMS: Setze feste URL wenn nicht vorhanden
         if (newSettings.lobbyPms && !newSettings.lobbyPms.apiUrl) {
-          newSettings.lobbyPms.apiUrl = 'https://app.lobbypms.com/api';
+          newSettings.lobbyPms.apiUrl = 'https://api.lobbypms.com';
         }
 
       // ✅ VALIDIERUNG: Validiere API-Settings-Struktur

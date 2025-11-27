@@ -115,7 +115,7 @@ export class LobbyPmsService {
     this.branchId = branchId;
     // Settings werden beim ersten API-Call geladen (lazy loading)
     this.axiosInstance = axios.create({
-      baseURL: 'https://app.lobbypms.com/api', // Placeholder, wird in loadSettings überschrieben
+      baseURL: 'https://api.lobbypms.com', // Placeholder, wird in loadSettings überschrieben
       timeout: 30000
     });
   }
