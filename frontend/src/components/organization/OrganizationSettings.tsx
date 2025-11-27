@@ -39,12 +39,12 @@ const OrganizationSettings: React.FC = () => {
   const { refreshOrganization } = useOrganization();
   const { fetchCurrentUser } = useAuth();
 
-  const fetchOrganization = useCallback(async () => {
+  const fetchOrganization = useCallback(async (includeSettings = false) => {
     try {
       setLoading(true);
       setError(null);
-      // ✅ PERFORMANCE: Settings nur laden wenn wirklich benötigt (in Settings-Seite)
-      const org = await organizationService.getCurrentOrganization(undefined, true);
+      // ✅ PERFORMANCE: Settings nur laden wenn wirklich benötigt (beim Bearbeiten)
+      const org = await organizationService.getCurrentOrganization(undefined, includeSettings);
       setOrganization(org);
       
       // Statistiken laden
@@ -94,8 +94,9 @@ const OrganizationSettings: React.FC = () => {
 
     const hasPermission = canViewOrganization();
     if (hasPermission) {
-      hasInitialLoadRef.current = true;
-      fetchOrganization();
+    hasInitialLoadRef.current = true;
+    // ✅ PERFORMANCE: Initial OHNE Settings laden (nur beim Bearbeiten)
+    fetchOrganization(false);
     } else {
       setError(t('organization.noPermission'));
       setLoading(false);
@@ -105,7 +106,8 @@ const OrganizationSettings: React.FC = () => {
   }, [permissionsLoading]);
 
   const handleEditSuccess = () => {
-    fetchOrganization();
+    // ✅ PERFORMANCE: Nach Bearbeiten Settings laden (für Anzeige)
+    fetchOrganization(true);
     // Aktualisiere auch den OrganizationContext
     refreshOrganization();
   };
@@ -132,12 +134,13 @@ const OrganizationSettings: React.FC = () => {
   }
 
   const handleCreateSuccess = () => {
-    fetchOrganization();
+    // ✅ PERFORMANCE: Nach Erstellen OHNE Settings laden (nicht benötigt)
+    fetchOrganization(false);
   };
 
   const handleJoinSuccess = async () => {
-    // Nach Beitritt: Organisation neu laden
-    fetchOrganization();
+    // Nach Beitritt: Organisation neu laden (OHNE Settings, nicht benötigt)
+    fetchOrganization(false);
     // WICHTIG: User-Rollen neu laden, damit neue Rolle sichtbar wird
     // OnboardingContext erkennt dann automatisch die neue Rolle
     await fetchCurrentUser();
@@ -228,7 +231,13 @@ const OrganizationSettings: React.FC = () => {
             </div>
                     {canManageOrganization() && (
                       <button
-                        onClick={() => setIsEditModalOpen(true)}
+                        onClick={async () => {
+                          // ✅ PERFORMANCE: Settings nur laden wenn Bearbeiten-Modal geöffnet wird
+                          if (!organization?.settings) {
+                            await fetchOrganization(true);
+                          }
+                          setIsEditModalOpen(true);
+                        }}
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
                         title={t('organization.edit.title')}
                       >

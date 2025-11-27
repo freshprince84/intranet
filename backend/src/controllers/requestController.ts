@@ -111,6 +111,7 @@ export const getAllRequests = async (req: Request, res: Response) => {
         const baseWhereConditions: any[] = [];
         
         // Isolation-Filter: organizationId (wenn vorhanden)
+        // ✅ PERFORMANCE: Flachere OR-Struktur für bessere Index-Nutzung
         if (organizationId) {
             baseWhereConditions.push({
                 OR: [
@@ -119,14 +120,17 @@ export const getAllRequests = async (req: Request, res: Response) => {
                         isPrivate: false,
                         organizationId: organizationId
                     },
-                    // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                    // Private Requests: Nur wenn User Ersteller ist
                     {
                         isPrivate: true,
                         organizationId: organizationId,
-                        OR: [
-                            { requesterId: userId },
-                            { responsibleId: userId }
-                        ]
+                        requesterId: userId
+                    },
+                    // Private Requests: Nur wenn User Verantwortlicher ist
+                    {
+                        isPrivate: true,
+                        organizationId: organizationId,
+                        responsibleId: userId
                     }
                 ]
             });
