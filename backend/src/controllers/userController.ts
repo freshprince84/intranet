@@ -2088,25 +2088,18 @@ export const getOnboardingStatus = async (req: AuthenticatedRequest, res: Respon
     try {
         const userId = parseInt(req.userId, 10);
         
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                onboardingCompleted: true,
-                onboardingProgress: true,
-                onboardingStartedAt: true,
-                onboardingCompletedAt: true
-            }
-        });
-
-        if (!user) {
-            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        // ✅ PERFORMANCE: Verwende OnboardingCache statt DB-Query
+        const { onboardingCache } = await import('../services/onboardingCache');
+        const cachedStatus = await onboardingCache.get(userId);
+        
+        if (cachedStatus) {
+            return res.json(cachedStatus);
         }
-
-        res.json({
-            onboardingCompleted: user.onboardingCompleted,
-            onboardingProgress: user.onboardingProgress,
-            onboardingStartedAt: user.onboardingStartedAt,
-            onboardingCompletedAt: user.onboardingCompletedAt
+        
+        // Fallback: DB-Query (sollte nicht nötig sein)
+        return res.status(500).json({ 
+            message: 'Fehler beim Abrufen des Onboarding-Status',
+            error: 'Cache-Fehler'
         });
     } catch (error) {
         console.error('Error in getOnboardingStatus:', error);
@@ -2139,6 +2132,10 @@ export const updateOnboardingProgress = async (req: AuthenticatedRequest, res: R
             }
         });
 
+        // ✅ PERFORMANCE: Cache invalidieren nach Onboarding-Status-Änderung
+        const { onboardingCache } = await import('../services/onboardingCache');
+        await onboardingCache.invalidate(userId);
+
         res.json({
             message: 'Onboarding-Fortschritt aktualisiert',
             onboardingProgress: user.onboardingProgress
@@ -2164,6 +2161,10 @@ export const completeOnboarding = async (req: AuthenticatedRequest, res: Respons
                 onboardingCompletedAt: new Date()
             }
         });
+
+        // ✅ PERFORMANCE: Cache invalidieren nach Onboarding-Status-Änderung
+        const { onboardingCache } = await import('../services/onboardingCache');
+        await onboardingCache.invalidate(userId);
 
         res.json({
             message: 'Onboarding abgeschlossen',
@@ -2231,6 +2232,10 @@ export const resetOnboarding = async (req: AuthenticatedRequest, res: Response) 
                 onboardingCompletedAt: null
             }
         });
+
+        // ✅ PERFORMANCE: Cache invalidieren nach Onboarding-Status-Änderung
+        const { onboardingCache } = await import('../services/onboardingCache');
+        await onboardingCache.invalidate(userId);
 
         res.json({
             message: 'Onboarding zurückgesetzt',

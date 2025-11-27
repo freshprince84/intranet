@@ -1,4 +1,4 @@
-import { prisma, executeWithRetry } from '../utils/prisma';
+import { prisma } from '../utils/prisma';
 
 /**
  * Cache-Eintrag für Filter-Listen
@@ -55,16 +55,14 @@ class FilterListCache {
       return cached!.filters;
     }
 
-    // 2. Lade aus Datenbank mit Retry-Logik
+    // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
     try {
-      const savedFilters = await executeWithRetry(() =>
-        prisma.savedFilter.findMany({
-          where: {
-            userId,
-            tableId
-          }
-        })
-      );
+      const savedFilters = await prisma.savedFilter.findMany({
+        where: {
+          userId,
+          tableId
+        }
+      });
 
       // 3. Parse die JSON-Strings zurück in Arrays
       const parsedFilters = savedFilters.map(filter => {
@@ -141,26 +139,24 @@ class FilterListCache {
       return cached!.groups;
     }
 
-    // 2. Lade aus Datenbank mit Retry-Logik
+    // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
     try {
-      const groups = await executeWithRetry(() =>
-        prisma.filterGroup.findMany({
-          where: {
-            userId,
-            tableId
-          },
-          include: {
-            filters: {
-              orderBy: {
-                order: 'asc'
-              }
+      const groups = await prisma.filterGroup.findMany({
+        where: {
+          userId,
+          tableId
+        },
+        include: {
+          filters: {
+            orderBy: {
+              order: 'asc'
             }
-          },
-          orderBy: {
-            order: 'asc'
           }
-        })
-      );
+        },
+        orderBy: {
+          order: 'asc'
+        }
+      });
 
       // 3. Parse die JSON-Strings der Filter zurück in Arrays
       const parsedGroups = groups.map(group => ({

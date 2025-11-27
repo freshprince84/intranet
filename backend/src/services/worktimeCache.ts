@@ -1,4 +1,4 @@
-import { prisma, executeWithRetry } from '../utils/prisma';
+import { prisma } from '../utils/prisma';
 
 interface WorktimeCacheEntry {
   data: {
@@ -42,19 +42,17 @@ class WorktimeCache {
       return cached!.data;
     }
 
-    // 2. Lade aus Datenbank mit Retry-Logik
+    // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
     try {
-      const activeWorktime = await executeWithRetry(() =>
-        prisma.workTime.findFirst({
-          where: {
-            userId: userId,
-            endTime: null
-          },
-          include: {
-            branch: true
-          }
-        })
-      );
+      const activeWorktime = await prisma.workTime.findFirst({
+        where: {
+          userId: userId,
+          endTime: null
+        },
+        include: {
+          branch: true
+        }
+      });
 
       const data = activeWorktime
         ? {
