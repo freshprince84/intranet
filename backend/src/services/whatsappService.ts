@@ -505,12 +505,65 @@ export class WhatsAppService {
   ): Promise<boolean> {
     // Prüfe ob 24h-Fenster möglicherweise nicht aktiv ist (durch Datenbank-Prüfung)
     // Wenn die letzte erfolgreiche WhatsApp-Nachricht länger als 24h her ist, verwende direkt Template
+    // ODER wenn es eine fehlgeschlagene Nachricht mit 24h-Fenster-Fehler in den letzten 24h gibt
     if (templateName) {
       try {
         const { prisma } = await import('../utils/prisma');
         const normalizedPhone = this.normalizePhoneNumber(to);
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         
+        // Prüfe zuerst, ob es eine fehlgeschlagene Nachricht mit 24h-Fenster-Fehler gibt
+        const lastFailedMessage = await prisma.reservationNotificationLog.findFirst({
+          where: {
+            sentTo: normalizedPhone,
+            channel: 'whatsapp',
+            success: false,
+            errorMessage: {
+              contains: '131047' // Error Code für 24h-Fenster
+            },
+            sentAt: { gte: twentyFourHoursAgo }
+          },
+          orderBy: {
+            sentAt: 'desc'
+          }
+        });
+        
+        if (lastFailedMessage) {
+          console.log(`[WhatsApp Service] ⚠️ Fehlgeschlagene WhatsApp-Nachricht mit 24h-Fenster-Fehler gefunden (vor ${Math.round((Date.now() - lastFailedMessage.sentAt.getTime()) / (60 * 60 * 1000))} Stunden) - verwende direkt Template Message`);
+          // Überspringe Session Message und verwende direkt Template
+          await this.loadSettings();
+          
+          if (!this.axiosInstance || !this.phoneNumberId) {
+            throw new Error('WhatsApp Service nicht initialisiert');
+          }
+          
+          const normalizedPhone2 = this.normalizePhoneNumber(to);
+          const formattedParams = templateParams?.map(text => ({
+            type: 'text' as const,
+            text: text
+          })) || [];
+          
+          // Template-Sprache: Reservation > Environment-Variable > Fallback
+          let languageCode: string;
+          if (reservation) {
+            const { CountryLanguageService } = require('./countryLanguageService');
+            languageCode = CountryLanguageService.getLanguageForReservation(reservation);
+          } else {
+            languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+          }
+          
+          const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
+          const templateResult = await this.sendViaWhatsAppBusiness(normalizedPhone2, message, adjustedTemplateName, formattedParams, languageCode);
+          
+          if (templateResult) {
+            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (direkt, da 24h-Fenster-Fehler in letzten 24h)`);
+            return true;
+          } else {
+            throw new Error('Template Message gab false zurück');
+          }
+        }
+        
+        // Prüfe auf erfolgreiche Nachricht (nur wenn keine fehlgeschlagene Nachricht gefunden wurde)
         const lastSuccessfulMessage = await prisma.reservationNotificationLog.findFirst({
           where: {
             sentTo: normalizedPhone,
