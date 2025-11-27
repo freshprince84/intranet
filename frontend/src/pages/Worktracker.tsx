@@ -703,19 +703,20 @@ const Worktracker: React.FC = () => {
         }
     };
     
-    // Funktion zum Laden weiterer Tasks (Infinite Scroll)
-    const loadMoreTasks = async () => {
+    // ✅ PERFORMANCE: loadMoreTasks als useCallback (stabile Referenz für useEffect)
+    const loadMoreTasks = useCallback(async () => {
         if (tasksLoadingMore || !tasksHasMore) return;
         
         const nextPage = tasksPage + 1;
+        // ✅ PERFORMANCE: Verwende filterConditionsRef.current (wird im Scroll-Handler verwendet)
         await loadTasks(
             selectedFilterId || undefined,
-            filterConditions.length > 0 ? filterConditions : undefined,
+            filterConditionsRef.current.length > 0 ? filterConditionsRef.current : undefined,
             false,
             nextPage,
             true // append = true
         );
-    };
+    }, [tasksLoadingMore, tasksHasMore, tasksPage, selectedFilterId, loadTasks]);
 
     const handleGeneratePinAndSend = async (reservationId: number) => {
         try {
@@ -761,6 +762,12 @@ const Worktracker: React.FC = () => {
     }, [activeTab]);
     
     // Infinite Scroll Handler für Tasks
+    // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
+    const filterConditionsRef = useRef(filterConditions);
+    useEffect(() => {
+        filterConditionsRef.current = filterConditions;
+    }, [filterConditions]);
+    
     useEffect(() => {
         const handleScroll = () => {
             // Prüfe ob User nahe am Ende der Seite ist
@@ -770,13 +777,16 @@ const Worktracker: React.FC = () => {
                 tasksHasMore &&
                 activeTab === 'todos'
             ) {
+                // ✅ PERFORMANCE: Verwende loadMoreTasks (nutzt filterConditionsRef.current)
                 loadMoreTasks();
             }
         };
         
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [tasksLoadingMore, tasksHasMore, activeTab, selectedFilterId, filterConditions]);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, [tasksLoadingMore, tasksHasMore, activeTab, selectedFilterId, loadMoreTasks]);
     
     // Funktion zum Laden der Tours
     const loadTours = async (filterId?: number, filterConditions?: any[], background = false) => {

@@ -455,18 +455,26 @@ const Requests: React.FC = () => {
   };
   
   // Funktion zum Laden weiterer Requests (Infinite Scroll)
-  const loadMoreRequests = async () => {
+  // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
+  const filterConditionsRef = useRef(filterConditions);
+  useEffect(() => {
+    filterConditionsRef.current = filterConditions;
+  }, [filterConditions]);
+
+  // ✅ PERFORMANCE: loadMoreRequests als useCallback (stabile Referenz für useEffect)
+  const loadMoreRequests = useCallback(async () => {
     if (requestsLoadingMore || !requestsHasMore) return;
     
     const nextPage = requestsPage + 1;
+    // ✅ PERFORMANCE: Verwende filterConditionsRef.current (wird im Scroll-Handler verwendet)
     await fetchRequests(
       selectedFilterId || undefined,
-      filterConditions.length > 0 ? filterConditions : undefined,
+      filterConditionsRef.current.length > 0 ? filterConditionsRef.current : undefined,
       false,
       nextPage,
       true // append = true
     );
-  };
+  }, [requestsLoadingMore, requestsHasMore, requestsPage, selectedFilterId, fetchRequests]);
 
   // Standard-Filter erstellen und speichern
   useEffect(() => {
@@ -560,6 +568,7 @@ const Requests: React.FC = () => {
   }, []);
 
   // Infinite Scroll Handler für Requests
+  // ✅ PERFORMANCE: Scroll-Handler ohne filterConditions Dependency (verhindert Re-Render-Loops)
   useEffect(() => {
     const handleScroll = () => {
       // Prüfe ob User nahe am Ende der Seite ist
@@ -573,8 +582,10 @@ const Requests: React.FC = () => {
     };
     
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [requestsLoadingMore, requestsHasMore, selectedFilterId]);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [requestsLoadingMore, requestsHasMore, selectedFilterId, requestsPage]);
 
   // Initial Requests laden (ohne Filter - SavedFilterTags wendet Default-Filter an)
   useEffect(() => {

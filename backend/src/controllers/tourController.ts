@@ -538,6 +538,135 @@ export const uploadTourGalleryImage = async (req: AuthenticatedRequest, res: Res
   }
 };
 
+// GET /api/tours/:id/image - Hauptbild abrufen
+export const getTourImage = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tourId = parseInt(id, 10);
+
+    if (isNaN(tourId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ungültige Tour-ID'
+      });
+    }
+
+    const tour = await prisma.tour.findUnique({
+      where: { id: tourId },
+      select: { imageUrl: true }
+    });
+
+    if (!tour || !tour.imageUrl) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bild nicht gefunden'
+      });
+    }
+
+    // Extrahiere Dateinamen aus URL (z.B. /uploads/tours/tour-123.jpg -> tour-123.jpg)
+    const filename = path.basename(tour.imageUrl);
+    const imagePath = path.join(TOURS_UPLOAD_DIR, filename);
+
+    // Prüfe ob Datei existiert
+    if (!fs.existsSync(imagePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bilddatei nicht gefunden'
+      });
+    }
+
+    // Setze Content-Type basierend auf Dateiendung
+    const ext = path.extname(filename).toLowerCase();
+    const contentTypeMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp'
+    };
+    const contentType = contentTypeMap[ext] || 'image/jpeg';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 Jahr Cache
+    res.sendFile(imagePath);
+  } catch (error) {
+    console.error('[getTourImage] Fehler:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Fehler beim Laden des Bildes'
+    });
+  }
+};
+
+// GET /api/tours/:id/gallery/:index - Galerie-Bild abrufen
+export const getTourGalleryImage = async (req: Request, res: Response) => {
+  try {
+    const { id, index } = req.params;
+    const tourId = parseInt(id, 10);
+    const imageIndex = parseInt(index, 10);
+
+    if (isNaN(tourId) || isNaN(imageIndex)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ungültige Tour-ID oder Bild-Index'
+      });
+    }
+
+    const tour = await prisma.tour.findUnique({
+      where: { id: tourId },
+      select: { galleryUrls: true }
+    });
+
+    if (!tour || !tour.galleryUrls) {
+      return res.status(404).json({
+        success: false,
+        message: 'Galerie nicht gefunden'
+      });
+    }
+
+    const galleryUrls = tour.galleryUrls as string[];
+    if (imageIndex < 0 || imageIndex >= galleryUrls.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bild-Index außerhalb des gültigen Bereichs'
+      });
+    }
+
+    const imageUrl = galleryUrls[imageIndex];
+    const filename = path.basename(imageUrl);
+    const imagePath = path.join(TOURS_UPLOAD_DIR, filename);
+
+    // Prüfe ob Datei existiert
+    if (!fs.existsSync(imagePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bilddatei nicht gefunden'
+      });
+    }
+
+    // Setze Content-Type basierend auf Dateiendung
+    const ext = path.extname(filename).toLowerCase();
+    const contentTypeMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp'
+    };
+    const contentType = contentTypeMap[ext] || 'image/jpeg';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 Jahr Cache
+    res.sendFile(imagePath);
+  } catch (error) {
+    console.error('[getTourGalleryImage] Fehler:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Fehler beim Laden des Galerie-Bildes'
+    });
+  }
+};
+
 // DELETE /api/tours/:id/gallery/:imageIndex - Galerie-Bild löschen
 export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Response) => {
   try {
