@@ -28,8 +28,6 @@ export class LobbyPmsReservationSyncService {
           lobbyPmsLastSyncAt: true, // OPTIMIERUNG: Letzte Sync-Zeit für Caching
           organizationId: true,
           lobbyPmsSettings: true,
-        },
-        include: { 
           organization: {
             select: {
               id: true,
