@@ -406,15 +406,27 @@ export class WhatsAppService {
         console.log(`[WhatsApp Business] ⚠️ Die tatsächliche Zustellung kann über Webhook-Status-Updates verfolgt werden.`);
       } else {
         // Keine Message-ID zurückgegeben - könnte ein Problem sein
-        console.warn(`[WhatsApp Business] ⚠️ Keine Message-ID in Response zurückgegeben - möglicherweise wurde die Nachricht nicht akzeptiert`);
+        console.error(`[WhatsApp Business] ❌ Keine Message-ID in Response zurückgegeben - möglicherweise wurde die Nachricht nicht akzeptiert`);
+        console.error(`[WhatsApp Business] Response-Daten:`, JSON.stringify(response.data, null, 2));
+        
         // Prüfe ob es Warnungen gibt
         if (response.data?.warnings) {
           console.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, response.data.warnings);
         }
+        
         // Prüfe ob response.data leer ist oder unerwartete Struktur hat
         if (!response.data || Object.keys(response.data).length === 0) {
           console.error(`[WhatsApp Business] ❌ Response-Daten sind leer - möglicherweise wurde die Nachricht nicht akzeptiert`);
           throw new Error('WhatsApp Business API: Response-Daten sind leer - Nachricht wurde möglicherweise nicht akzeptiert');
+        }
+        
+        // Wenn Template verwendet wird, ist Message-ID optional (kann später kommen)
+        // Aber bei Session Messages sollte eine Message-ID vorhanden sein
+        if (!template) {
+          console.error(`[WhatsApp Business] ❌ Session Message: Keine Message-ID zurückgegeben - Nachricht wurde möglicherweise nicht akzeptiert`);
+          throw new Error('WhatsApp Business API: Session Message - Keine Message-ID zurückgegeben - Nachricht wurde möglicherweise nicht akzeptiert');
+        } else {
+          console.warn(`[WhatsApp Business] ⚠️ Template Message: Keine Message-ID zurückgegeben (kann normal sein, wird später über Webhook bestätigt)`);
         }
       }
 
