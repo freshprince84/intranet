@@ -879,6 +879,7 @@ const sendPasscode = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 exports.sendPasscode = sendPasscode;
 /**
  * GET /api/reservations/:id/notification-logs
+ * Gibt Notification-Logs UND WhatsApp-Nachrichten zurück
  * Holt Log-Historie für eine Reservation
  */
 const getReservationNotificationLogs = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -920,9 +921,21 @@ const getReservationNotificationLogs = (req, res) => __awaiter(void 0, void 0, v
                 sentAt: 'desc' // Neueste zuerst
             }
         });
+        // Lade WhatsApp-Nachrichten (eingehend und ausgehend)
+        const whatsappMessages = yield prisma_1.prisma.whatsAppMessage.findMany({
+            where: {
+                reservationId: reservationId
+            },
+            orderBy: {
+                sentAt: 'desc' // Neueste zuerst
+            }
+        });
         return res.json({
             success: true,
-            data: logs
+            data: {
+                notificationLogs: logs,
+                whatsappMessages: whatsappMessages
+            }
         });
     }
     catch (error) {

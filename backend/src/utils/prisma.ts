@@ -5,34 +5,79 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 // Verhindert mehrere Instanzen in Development (Hot Reload)
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  prismaPools: PrismaClient[] | undefined;
 };
 
-// ✅ PERFORMANCE: Prisma Client mit reconnect-Logik
-const createPrismaClient = () => {
-  // TEMPORÄR: Query-Logging aktivieren für Performance-Analyse
+// ✅ PERFORMANCE: Mehrere Prisma-Instanzen für bessere Lastverteilung
+const createPrismaClient = (poolId: number) => {
   const enableQueryLogging = process.env.ENABLE_QUERY_LOGGING === 'true' || process.env.NODE_ENV === 'development';
+  
+  // Connection Pool pro Instanz: 10-15 Verbindungen
+  // Gesamt: 5 Pools × 12 = 60 Verbindungen
+  // ABER: PostgreSQL begrenzt auf 100 Verbindungen (default)
+  const connectionLimit = 12; // 12 Verbindungen pro Pool
+  const poolTimeout = 20;
+  
+  // DATABASE_URL mit connection_limit für diese Instanz
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
+  
+  // Erstelle URL mit connection_limit für diese Instanz
+  const urlWithPool = databaseUrl.includes('connection_limit=')
+    ? databaseUrl.replace(/connection_limit=\d+/, `connection_limit=${connectionLimit}`)
+    : `${databaseUrl}${databaseUrl.includes('?') ? '&' : '?'}connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`;
+  
   const client = new PrismaClient({
+    datasources: {
+      db: {
+        url: urlWithPool
+      }
+    },
     log: enableQueryLogging ? ['query', 'error', 'warn'] : ['error'],
   });
 
-  // ✅ Reconnect-Logik: Bei DB-Verbindungsfehlern reconnect versuchen
-  const originalQuery = (client as any).$connect;
-  
   // Prisma reconnect bei geschlossenen Verbindungen
   client.$connect().catch((error) => {
-    console.error('[Prisma] Initial connection error:', error);
+    console.error(`[Prisma Pool ${poolId}] Initial connection error:`, error);
   });
 
   return client;
 };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  createPrismaClient();
+// 5 Prisma-Instanzen erstellen für bessere Lastverteilung
+const NUM_POOLS = 5;
+let prismaPools: PrismaClient[] = [];
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
+// Singleton-Pattern: Nur einmal erstellen (Development Hot Reload)
+if (!globalForPrisma.prismaPools) {
+  for (let i = 1; i <= NUM_POOLS; i++) {
+    prismaPools.push(createPrismaClient(i));
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    globalForPrisma.prismaPools = prismaPools;
+  }
+} else {
+  prismaPools = globalForPrisma.prismaPools;
 }
+
+// Round-Robin-Verteilung für Lastverteilung
+let currentPoolIndex = 0;
+const getPrismaPool = (): PrismaClient => {
+  const pool = prismaPools[currentPoolIndex];
+  currentPoolIndex = (currentPoolIndex + 1) % prismaPools.length;
+  return pool;
+};
+
+// Export: Haupt-Instanz (für Rückwärtskompatibilität)
+export const prisma = prismaPools[0];
+
+// Export: Pool-Getter (für Lastverteilung - optional)
+export const getPrisma = (): PrismaClient => getPrismaPool();
+
+// Export: Alle Pools (für Graceful Shutdown)
+export const getAllPrismaPools = (): PrismaClient[] => prismaPools;
 
 // ✅ Helper-Funktion für Retry bei DB-Fehlern
 // WICHTIG: Keine disconnect/connect Logik - Prisma reconnect automatisch!

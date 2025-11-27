@@ -8,7 +8,7 @@ import http from 'http';
 import app from './app';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { stopWorkers } from './queues';
-import { prisma } from './utils/prisma';
+import { prisma, getAllPrismaPools } from './utils/prisma';
 
 // ENCRYPTION_KEY-Prüfung beim Start
 const encryptionKey = process.env.ENCRYPTION_KEY;
@@ -63,7 +63,9 @@ server.listen(PORT, () => {
 process.on('SIGTERM', async () => {
   console.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
   await stopWorkers();
-  await prisma.$disconnect();
+  // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
+  const pools = getAllPrismaPools();
+  await Promise.all(pools.map(pool => pool.$disconnect()));
   server.close(() => {
     console.log('Server erfolgreich heruntergefahren.');
     process.exit(0);
@@ -73,7 +75,9 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   console.log('SIGINT signal empfangen. Server wird heruntergefahren...');
   await stopWorkers();
-  await prisma.$disconnect();
+  // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
+  const pools = getAllPrismaPools();
+  await Promise.all(pools.map(pool => pool.$disconnect()));
   server.close(() => {
     console.log('Server erfolgreich heruntergefahren.');
     process.exit(0);

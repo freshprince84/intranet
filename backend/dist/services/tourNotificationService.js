@@ -46,6 +46,7 @@ exports.TourNotificationService = void 0;
 const prisma_1 = require("../utils/prisma");
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("../controllers/notificationController");
+const translations_1 = require("../utils/translations");
 /**
  * Service für Tour-Benachrichtigungen
  */
@@ -84,10 +85,12 @@ class TourNotificationService {
                 });
                 // Notification an alle User senden
                 for (const user of users) {
+                    const userLanguage = yield (0, translations_1.getUserLanguage)(user.id);
+                    const notificationText = (0, translations_1.getTourNotificationText)(userLanguage, 'booked', bookedByName, tourTitle);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId: user.id,
-                        title: 'Tour gebucht',
-                        message: `${bookedByName} hat die Tour "${tourTitle}" gebucht.`,
+                        title: notificationText.title,
+                        message: notificationText.message,
                         type: client_1.NotificationType.system,
                         relatedEntityId: tourBookingId,
                         relatedEntityType: 'tour_booking'
@@ -172,10 +175,12 @@ class TourNotificationService {
                         select: { id: true }
                     });
                     for (const user of adminUsers) {
+                        const userLanguage = yield (0, translations_1.getUserLanguage)(user.id);
+                        const notificationText = (0, translations_1.getTourNotificationText)(userLanguage, 'requested', bookedByName, tourTitle);
                         yield (0, notificationController_1.createNotificationIfEnabled)({
                             userId: user.id,
-                            title: 'Externe Tour angefragt',
-                            message: `${bookedByName} hat eine Anfrage für die externe Tour "${tourTitle}" gestellt.`,
+                            title: notificationText.title,
+                            message: notificationText.message,
                             type: client_1.NotificationType.system,
                             relatedEntityId: tourBookingId,
                             relatedEntityType: 'tour_booking_request'
@@ -196,10 +201,12 @@ class TourNotificationService {
                         select: { id: true }
                     });
                     for (const user of roleUsers) {
+                        const userLanguage = yield (0, translations_1.getUserLanguage)(user.id);
+                        const notificationText = (0, translations_1.getTourNotificationText)(userLanguage, 'requested', bookedByName, tourTitle);
                         yield (0, notificationController_1.createNotificationIfEnabled)({
                             userId: user.id,
-                            title: 'Externe Tour angefragt',
-                            message: `${bookedByName} hat eine Anfrage für die externe Tour "${tourTitle}" gestellt.`,
+                            title: notificationText.title,
+                            message: notificationText.message,
                             type: client_1.NotificationType.system,
                             relatedEntityId: tourBookingId,
                             relatedEntityType: 'tour_booking_request'
@@ -225,10 +232,12 @@ class TourNotificationService {
                 });
                 const tourTitle = (tour === null || tour === void 0 ? void 0 : tour.title) || 'Tour';
                 // Notification an den Buchenden User
+                const userLanguage = yield (0, translations_1.getUserLanguage)(bookedByUserId);
+                const notificationText = (0, translations_1.getTourNotificationText)(userLanguage, 'paid', undefined, tourTitle);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: bookedByUserId,
-                    title: 'Tour bezahlt',
-                    message: `Die Tour "${tourTitle}" wurde erfolgreich bezahlt.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: client_1.NotificationType.system,
                     relatedEntityId: tourBookingId,
                     relatedEntityType: 'tour_booking_paid'
@@ -274,10 +283,12 @@ class TourNotificationService {
                 });
                 // Notification an alle User senden
                 for (const user of users) {
+                    const userLanguage = yield (0, translations_1.getUserLanguage)(user.id);
+                    const notificationText = (0, translations_1.getTourNotificationText)(userLanguage, 'cancelled_by_customer', bookedByName, tourTitle);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId: user.id,
-                        title: 'Tour storniert',
-                        message: `Die Tour "${tourTitle}" wurde von ${bookedByName} storniert.`,
+                        title: notificationText.title,
+                        message: notificationText.message,
                         type: client_1.NotificationType.system,
                         relatedEntityId: tourBookingId,
                         relatedEntityType: 'tour_booking_cancelled_customer'
@@ -304,10 +315,12 @@ class TourNotificationService {
                 const providerName = ((_a = tour === null || tour === void 0 ? void 0 : tour.externalProvider) === null || _a === void 0 ? void 0 : _a.name) || 'Anbieter';
                 const tourTitle = (tour === null || tour === void 0 ? void 0 : tour.title) || 'Tour';
                 // Notification an den Buchenden User
+                const bookedByLanguage = yield (0, translations_1.getUserLanguage)(bookedByUserId);
+                const bookedByNotificationText = (0, translations_1.getTourNotificationText)(bookedByLanguage, 'cancelled_by_provider', undefined, tourTitle, providerName);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: bookedByUserId,
-                    title: 'Tour storniert',
-                    message: `Die Tour "${tourTitle}" wurde vom Anbieter "${providerName}" storniert.`,
+                    title: bookedByNotificationText.title,
+                    message: bookedByNotificationText.message,
                     type: client_1.NotificationType.system,
                     relatedEntityId: tourBookingId,
                     relatedEntityType: 'tour_booking_cancelled_provider'
@@ -328,10 +341,12 @@ class TourNotificationService {
                 });
                 for (const user of users) {
                     if (user.id !== bookedByUserId) {
+                        const userLanguage = yield (0, translations_1.getUserLanguage)(user.id);
+                        const notificationText = (0, translations_1.getTourNotificationText)(userLanguage, 'cancelled_by_provider', undefined, tourTitle, providerName);
                         yield (0, notificationController_1.createNotificationIfEnabled)({
                             userId: user.id,
-                            title: 'Tour storniert',
-                            message: `Die Tour "${tourTitle}" wurde vom Anbieter "${providerName}" storniert.`,
+                            title: notificationText.title,
+                            message: notificationText.message,
                             type: client_1.NotificationType.system,
                             relatedEntityId: tourBookingId,
                             relatedEntityType: 'tour_booking_cancelled_provider'
