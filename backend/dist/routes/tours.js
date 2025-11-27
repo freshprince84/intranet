@@ -17,6 +17,9 @@ router.post('/', tourController_1.createTour);
 router.put('/:id', tourController_1.updateTour);
 router.put('/:id/toggle-active', tourController_1.toggleTourActive);
 router.get('/:id/bookings', tourController_1.getTourBookings);
+// Bild-Routen (GET vor POST, damit :id nicht mit /image kollidiert)
+router.get('/:id/image', tourController_1.getTourImage);
+router.get('/:id/gallery/:index', tourController_1.getTourGalleryImage);
 // Bild-Upload-Routen
 router.post('/:id/image', tourController_1.tourImageUpload.single('image'), tourController_1.uploadTourImage);
 router.post('/:id/gallery', tourController_1.tourImageUpload.single('image'), tourController_1.uploadTourGalleryImage);

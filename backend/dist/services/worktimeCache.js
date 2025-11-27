@@ -46,9 +46,9 @@ class WorktimeCache {
             if (this.isCacheValid(cached)) {
                 return cached.data;
             }
-            // 2. Lade aus Datenbank mit Retry-Logik
+            // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
             try {
-                const activeWorktime = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.workTime.findFirst({
+                const activeWorktime = yield prisma_1.prisma.workTime.findFirst({
                     where: {
                         userId: userId,
                         endTime: null
@@ -56,7 +56,7 @@ class WorktimeCache {
                     include: {
                         branch: true
                     }
-                }));
+                });
                 const data = activeWorktime
                     ? {
                         active: true,

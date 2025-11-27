@@ -50,14 +50,14 @@ class FilterListCache {
                 console.log(`[FilterListCache] ✅ Cache-Hit für Filter-Liste ${cacheKey}`);
                 return cached.filters;
             }
-            // 2. Lade aus Datenbank mit Retry-Logik
+            // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
             try {
-                const savedFilters = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findMany({
+                const savedFilters = yield prisma_1.prisma.savedFilter.findMany({
                     where: {
                         userId,
                         tableId
                     }
-                }));
+                });
                 // 3. Parse die JSON-Strings zurück in Arrays
                 const parsedFilters = savedFilters.map(filter => {
                     let sortDirections = [];
@@ -132,9 +132,9 @@ class FilterListCache {
                 console.log(`[FilterListCache] ✅ Cache-Hit für Filter-Gruppen ${cacheKey}`);
                 return cached.groups;
             }
-            // 2. Lade aus Datenbank mit Retry-Logik
+            // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
             try {
-                const groups = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findMany({
+                const groups = yield prisma_1.prisma.filterGroup.findMany({
                     where: {
                         userId,
                         tableId
@@ -149,7 +149,7 @@ class FilterListCache {
                     orderBy: {
                         order: 'asc'
                     }
-                }));
+                });
                 // 3. Parse die JSON-Strings der Filter zurück in Arrays
                 const parsedGroups = groups.map(group => ({
                     id: group.id,

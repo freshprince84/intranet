@@ -1731,23 +1731,16 @@ exports.deleteUser = deleteUser;
 const getOnboardingStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
-        const user = yield prisma_1.prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                onboardingCompleted: true,
-                onboardingProgress: true,
-                onboardingStartedAt: true,
-                onboardingCompletedAt: true
-            }
-        });
-        if (!user) {
-            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        // ✅ PERFORMANCE: Verwende OnboardingCache statt DB-Query
+        const { onboardingCache } = yield Promise.resolve().then(() => __importStar(require('../services/onboardingCache')));
+        const cachedStatus = yield onboardingCache.get(userId);
+        if (cachedStatus) {
+            return res.json(cachedStatus);
         }
-        res.json({
-            onboardingCompleted: user.onboardingCompleted,
-            onboardingProgress: user.onboardingProgress,
-            onboardingStartedAt: user.onboardingStartedAt,
-            onboardingCompletedAt: user.onboardingCompletedAt
+        // Fallback: DB-Query (sollte nicht nötig sein)
+        return res.status(500).json({
+            message: 'Fehler beim Abrufen des Onboarding-Status',
+            error: 'Cache-Fehler'
         });
     }
     catch (error) {
@@ -1778,6 +1771,9 @@ const updateOnboardingProgress = (req, res) => __awaiter(void 0, void 0, void 0,
                 onboardingStartedAt: req.body.onboardingStartedAt ? new Date(req.body.onboardingStartedAt) : undefined
             }
         });
+        // ✅ PERFORMANCE: Cache invalidieren nach Onboarding-Status-Änderung
+        const { onboardingCache } = yield Promise.resolve().then(() => __importStar(require('../services/onboardingCache')));
+        yield onboardingCache.invalidate(userId);
         res.json({
             message: 'Onboarding-Fortschritt aktualisiert',
             onboardingProgress: user.onboardingProgress
@@ -1803,6 +1799,9 @@ const completeOnboarding = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 onboardingCompletedAt: new Date()
             }
         });
+        // ✅ PERFORMANCE: Cache invalidieren nach Onboarding-Status-Änderung
+        const { onboardingCache } = yield Promise.resolve().then(() => __importStar(require('../services/onboardingCache')));
+        yield onboardingCache.invalidate(userId);
         res.json({
             message: 'Onboarding abgeschlossen',
             onboardingCompleted: user.onboardingCompleted,
@@ -1866,6 +1865,9 @@ const resetOnboarding = (req, res) => __awaiter(void 0, void 0, void 0, function
                 onboardingCompletedAt: null
             }
         });
+        // ✅ PERFORMANCE: Cache invalidieren nach Onboarding-Status-Änderung
+        const { onboardingCache } = yield Promise.resolve().then(() => __importStar(require('../services/onboardingCache')));
+        yield onboardingCache.invalidate(userId);
         res.json({
             message: 'Onboarding zurückgesetzt',
             onboardingCompleted: user.onboardingCompleted

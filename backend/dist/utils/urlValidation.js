@@ -7,7 +7,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateAllApiUrls = exports.validateApiUrl = void 0;
 const ALLOWED_DOMAINS = {
-    lobbyPms: ['app.lobbypms.com'],
+    lobbyPms: ['app.lobbypms.com', 'api.lobbypms.com'], // app.lobbypms.com für Check-in Links, api.lobbypms.com für API
     ttlock: ['open.ttlock.com', 'euopen.ttlock.com', 'api.sciener.com'],
     boldPayment: ['api.bold.co', 'sandbox.bold.co'],
 };
@@ -56,8 +56,9 @@ const validateAllApiUrls = (settings) => {
     if (!settings || typeof settings !== 'object') {
         return errors;
     }
-    // LobbyPMS URL - nicht mehr validieren, da fest: https://app.lobbypms.com/api
+    // LobbyPMS API URL - nicht mehr validieren, da fest: https://api.lobbypms.com
     // URL wird automatisch gesetzt, wenn nicht vorhanden
+    // Hinweis: app.lobbypms.com wird für Check-in Links verwendet (Web-URL für Gäste)
     // TTLock URL
     if ((_a = settings.doorSystem) === null || _a === void 0 ? void 0 : _a.apiUrl) {
         if (!(0, exports.validateApiUrl)(settings.doorSystem.apiUrl, 'ttlock')) {

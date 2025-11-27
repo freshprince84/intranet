@@ -91,7 +91,7 @@ class LobbyPmsService {
         this.branchId = branchId;
         // Settings werden beim ersten API-Call geladen (lazy loading)
         this.axiosInstance = axios_1.default.create({
-            baseURL: 'https://app.lobbypms.com/api', // Placeholder, wird in loadSettings überschrieben
+            baseURL: 'https://api.lobbypms.com', // Placeholder, wird in loadSettings überschrieben
             timeout: 30000
         });
     }
@@ -275,6 +275,7 @@ class LobbyPmsService {
                 let page = 1;
                 let hasMore = true;
                 const maxPages = 200; // Sicherheitslimit (20.000 Reservierungen max)
+                let knownTotalPages = undefined; // Speichere totalPages aus erster Response
                 while (hasMore && page <= maxPages) {
                     const response = yield this.axiosInstance.get('/api/v1/bookings', {
                         params: Object.assign(Object.assign({}, params), { page }),
@@ -308,12 +309,40 @@ class LobbyPmsService {
                     allReservations = allReservations.concat(pageReservations);
                     // Prüfe ob es weitere Seiten gibt
                     const meta = responseData.meta || {};
-                    const totalPages = meta.total_pages || 1;
-                    if (pageReservations.length === 0 || page >= totalPages) {
+                    const totalPages = meta.total_pages;
+                    const currentPage = meta.current_page || page;
+                    const perPage = meta.per_page || params.per_page || 100;
+                    // Speichere totalPages aus erster Response (falls vorhanden)
+                    if (totalPages !== undefined && knownTotalPages === undefined) {
+                        knownTotalPages = totalPages;
+                    }
+                    // Verwende bekannte totalPages falls in aktueller Response nicht vorhanden
+                    const effectiveTotalPages = totalPages !== undefined ? totalPages : knownTotalPages;
+                    // Stoppe wenn:
+                    // 1. Keine Reservierungen auf dieser Seite (leere Seite = Ende)
+                    // 2. Weniger Reservierungen als per_page (letzte Seite)
+                    // 3. totalPages ist bekannt UND page >= totalPages (NACH dem Erhöhen von page)
+                    if (pageReservations.length === 0) {
+                        hasMore = false;
+                    }
+                    else if (pageReservations.length < perPage) {
+                        // Weniger als per_page = letzte Seite
+                        hasMore = false;
+                    }
+                    else if (effectiveTotalPages !== undefined && page >= effectiveTotalPages) {
+                        // WICHTIG: Prüfe VOR dem Erhöhen, ob nächste Seite noch existiert
                         hasMore = false;
                     }
                     else {
                         page++;
+                        // Prüfe NACH dem Erhöhen, ob wir die letzte Seite erreicht haben
+                        if (effectiveTotalPages !== undefined && page > effectiveTotalPages) {
+                            hasMore = false;
+                        }
+                    }
+                    // Debug-Log für Pagination (bei ersten 5 Seiten oder wenn totalPages erreicht)
+                    if (page <= 5 || (effectiveTotalPages !== undefined && page >= effectiveTotalPages)) {
+                        console.log(`[LobbyPMS] Seite ${page - 1}: ${pageReservations.length} Reservierungen, totalPages: ${effectiveTotalPages || 'N/A'}, hasMore: ${hasMore}`);
                     }
                 }
                 // CLIENT-SEITIGES FILTERN nach creation_date (da API-Filter nicht korrekt funktioniert)

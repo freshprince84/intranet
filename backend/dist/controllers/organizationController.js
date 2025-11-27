@@ -732,9 +732,11 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
         const includeSettings = req.query.includeSettings === 'true';
         // Hole Organization-Daten aus Cache (userRole.role.organization ist bereits geladen)
         let organization = cachedData.userRole.role.organization;
-        // Wenn Settings benötigt werden, lade sie separat mit Retry-Logik
+        // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
         if (includeSettings && organization) {
-            const orgWithSettings = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.organization.findUnique({
+            // ✅ MONITORING: Timing-Log für Settings-Query
+            const settingsStartTime = Date.now();
+            const orgWithSettings = yield prisma_1.prisma.organization.findUnique({
                 where: { id: organization.id },
                 select: {
                     id: true,
@@ -751,12 +753,18 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
                     updatedAt: true,
                     settings: true // Settings nur wenn explizit angefragt
                 }
-            }));
+            });
+            const settingsDuration = Date.now() - settingsStartTime;
             if (orgWithSettings) {
                 organization = orgWithSettings;
                 // ✅ ENTschlüssele Settings für Response
                 const { decryptApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                const decryptStartTime = Date.now();
                 organization.settings = decryptApiSettings(organization.settings);
+                const decryptDuration = Date.now() - decryptStartTime;
+                // ✅ MONITORING: Settings-Größe und Performance loggen
+                const settingsSize = JSON.stringify(orgWithSettings.settings || {}).length;
+                console.log(`[getCurrentOrganization] ⏱️ Settings-Query: ${settingsDuration}ms | Decrypt: ${decryptDuration}ms | Size: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
             }
         }
         else {
@@ -1157,7 +1165,7 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
             const newSettings = Object.assign(Object.assign({}, currentSettings), validatedData.settings);
             // ✅ LobbyPMS: Setze feste URL wenn nicht vorhanden
             if (newSettings.lobbyPms && !newSettings.lobbyPms.apiUrl) {
-                newSettings.lobbyPms.apiUrl = 'https://app.lobbypms.com/api';
+                newSettings.lobbyPms.apiUrl = 'https://api.lobbypms.com';
             }
             // ✅ VALIDIERUNG: Validiere API-Settings-Struktur
             try {

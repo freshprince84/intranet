@@ -81,6 +81,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Kombiniere organizationId direkt in OR-Bedingung statt verschachtelter AND/OR
         const baseWhereConditions = [];
         // Isolation-Filter: organizationId (wenn vorhanden)
+        // ✅ PERFORMANCE: Flachere OR-Struktur für bessere Index-Nutzung
         if (organizationId) {
             baseWhereConditions.push({
                 OR: [
@@ -89,14 +90,17 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         isPrivate: false,
                         organizationId: organizationId
                     },
-                    // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                    // Private Requests: Nur wenn User Ersteller ist
                     {
                         isPrivate: true,
                         organizationId: organizationId,
-                        OR: [
-                            { requesterId: userId },
-                            { responsibleId: userId }
-                        ]
+                        requesterId: userId
+                    },
+                    // Private Requests: Nur wenn User Verantwortlicher ist
+                    {
+                        isPrivate: true,
+                        organizationId: organizationId,
+                        responsibleId: userId
                     }
                 ]
             });

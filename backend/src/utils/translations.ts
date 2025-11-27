@@ -132,6 +132,112 @@ const worktimeNotifications: Record<string, WorktimeNotificationTranslations> = 
 };
 
 /**
+ * Typ für Tour-Notification-Übersetzungen
+ */
+type TourNotificationTranslations = {
+  bookedTitle: string;
+  bookedMessage: (bookedByName: string, tourTitle: string) => string;
+  requestedTitle: string;
+  requestedMessage: (bookedByName: string, tourTitle: string) => string;
+  paidTitle: string;
+  paidMessage: (tourTitle: string) => string;
+  cancelledByCustomerTitle: string;
+  cancelledByCustomerMessage: (tourTitle: string, bookedByName: string) => string;
+  cancelledByProviderTitle: string;
+  cancelledByProviderMessage: (tourTitle: string, providerName: string) => string;
+};
+
+/**
+ * Übersetzungen für Tour-Notifications
+ */
+const tourNotifications: Record<string, TourNotificationTranslations> = {
+  de: {
+    bookedTitle: 'Tour gebucht',
+    bookedMessage: (bookedByName: string, tourTitle: string) => `${bookedByName} hat die Tour "${tourTitle}" gebucht.`,
+    requestedTitle: 'Externe Tour angefragt',
+    requestedMessage: (bookedByName: string, tourTitle: string) => `${bookedByName} hat eine Anfrage für die externe Tour "${tourTitle}" gestellt.`,
+    paidTitle: 'Tour bezahlt',
+    paidMessage: (tourTitle: string) => `Die Tour "${tourTitle}" wurde erfolgreich bezahlt.`,
+    cancelledByCustomerTitle: 'Tour storniert',
+    cancelledByCustomerMessage: (tourTitle: string, bookedByName: string) => `Die Tour "${tourTitle}" wurde von ${bookedByName} storniert.`,
+    cancelledByProviderTitle: 'Tour storniert',
+    cancelledByProviderMessage: (tourTitle: string, providerName: string) => `Die Tour "${tourTitle}" wurde vom Anbieter "${providerName}" storniert.`
+  },
+  es: {
+    bookedTitle: 'Tour reservado',
+    bookedMessage: (bookedByName: string, tourTitle: string) => `${bookedByName} ha reservado el tour "${tourTitle}".`,
+    requestedTitle: 'Tour externo solicitado',
+    requestedMessage: (bookedByName: string, tourTitle: string) => `${bookedByName} ha solicitado el tour externo "${tourTitle}".`,
+    paidTitle: 'Tour pagado',
+    paidMessage: (tourTitle: string) => `El tour "${tourTitle}" ha sido pagado exitosamente.`,
+    cancelledByCustomerTitle: 'Tour cancelado',
+    cancelledByCustomerMessage: (tourTitle: string, bookedByName: string) => `El tour "${tourTitle}" fue cancelado por ${bookedByName}.`,
+    cancelledByProviderTitle: 'Tour cancelado',
+    cancelledByProviderMessage: (tourTitle: string, providerName: string) => `El tour "${tourTitle}" fue cancelado por el proveedor "${providerName}".`
+  },
+  en: {
+    bookedTitle: 'Tour booked',
+    bookedMessage: (bookedByName: string, tourTitle: string) => `${bookedByName} has booked the tour "${tourTitle}".`,
+    requestedTitle: 'External tour requested',
+    requestedMessage: (bookedByName: string, tourTitle: string) => `${bookedByName} has requested the external tour "${tourTitle}".`,
+    paidTitle: 'Tour paid',
+    paidMessage: (tourTitle: string) => `The tour "${tourTitle}" has been successfully paid.`,
+    cancelledByCustomerTitle: 'Tour cancelled',
+    cancelledByCustomerMessage: (tourTitle: string, bookedByName: string) => `The tour "${tourTitle}" was cancelled by ${bookedByName}.`,
+    cancelledByProviderTitle: 'Tour cancelled',
+    cancelledByProviderMessage: (tourTitle: string, providerName: string) => `The tour "${tourTitle}" was cancelled by the provider "${providerName}".`
+  }
+};
+
+/**
+ * Gibt die übersetzte Notification-Nachricht für Tour-Events zurück
+ */
+export function getTourNotificationText(
+  language: string,
+  type: 'booked' | 'requested' | 'paid' | 'cancelled_by_customer' | 'cancelled_by_provider',
+  bookedByName?: string,
+  tourTitle?: string,
+  providerName?: string
+): { title: string; message: string } {
+  // Fallback auf Deutsch wenn Sprache nicht unterstützt
+  const lang = language in tourNotifications ? language : 'de';
+  const translations = tourNotifications[lang];
+
+  switch (type) {
+    case 'booked':
+      return {
+        title: translations.bookedTitle,
+        message: translations.bookedMessage(bookedByName || 'Unbekannt', tourTitle || 'Tour')
+      };
+    case 'requested':
+      return {
+        title: translations.requestedTitle,
+        message: translations.requestedMessage(bookedByName || 'Unbekannt', tourTitle || 'Tour')
+      };
+    case 'paid':
+      return {
+        title: translations.paidTitle,
+        message: translations.paidMessage(tourTitle || 'Tour')
+      };
+    case 'cancelled_by_customer':
+      return {
+        title: translations.cancelledByCustomerTitle,
+        message: translations.cancelledByCustomerMessage(tourTitle || 'Tour', bookedByName || 'Unbekannt')
+      };
+    case 'cancelled_by_provider':
+      return {
+        title: translations.cancelledByProviderTitle,
+        message: translations.cancelledByProviderMessage(tourTitle || 'Tour', providerName || 'Anbieter')
+      };
+    default:
+      return {
+        title: 'Tour Notification',
+        message: 'Tour-Event'
+      };
+  }
+}
+
+/**
  * Gibt die übersetzte Notification-Nachricht für Worktime-Events zurück
  */
 export function getWorktimeNotificationText(

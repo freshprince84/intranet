@@ -14,6 +14,8 @@ import CreateTourModal from '../components/tours/CreateTourModal.tsx';
 import EditTourModal from '../components/tours/EditTourModal.tsx';
 import TourDetailsModal from '../components/tours/TourDetailsModal.tsx';
 import TourBookingsModal from '../components/tours/TourBookingsModal.tsx';
+import CreateTourBookingModal from '../components/tours/CreateTourBookingModal.tsx';
+import EditTourBookingModal from '../components/tours/EditTourBookingModal.tsx';
 import TourExportDialog from '../components/tours/TourExportDialog.tsx';
 import TourReservationLinkModal from '../components/tours/TourReservationLinkModal.tsx';
 import SendInvitationSidepane from '../components/reservations/SendInvitationSidepane.tsx';
@@ -393,6 +395,9 @@ const Worktracker: React.FC = () => {
     const [isEditTourModalOpen, setIsEditTourModalOpen] = useState(false);
     const [isTourDetailsModalOpen, setIsTourDetailsModalOpen] = useState(false);
     const [isTourBookingsModalOpen, setIsTourBookingsModalOpen] = useState(false);
+    const [isCreateTourBookingModalOpen, setIsCreateTourBookingModalOpen] = useState(false);
+    const [isEditTourBookingModalOpen, setIsEditTourBookingModalOpen] = useState(false);
+    const [selectedBookingForEdit, setSelectedBookingForEdit] = useState<TourBooking | null>(null);
     const [isTourExportDialogOpen, setIsTourExportDialogOpen] = useState(false);
     const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
     const [selectedTourId, setSelectedTourId] = useState<number | null>(null);
@@ -5011,13 +5016,44 @@ const Worktracker: React.FC = () => {
                                                                     case 'isActive':
                                                                         return (
                                                                             <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                                                                <span className={`px-2 py-1 text-xs rounded ${
-                                                                                    tour.isActive 
-                                                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                                                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                                                                                }`}>
-                                                                                    {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
-                                                                                </span>
+                                                                                {hasPermission('tour_edit', 'write', 'button') ? (
+                                                                                    <button
+                                                                                        onClick={async (e) => {
+                                                                                            e.stopPropagation();
+                                                                                            try {
+                                                                                                await axiosInstance.put(API_ENDPOINTS.TOURS.TOGGLE_ACTIVE(tour.id));
+                                                                                                showMessage(
+                                                                                                    tour.isActive 
+                                                                                                        ? t('tours.deactivated', { defaultValue: 'Tour deaktiviert' })
+                                                                                                        : t('tours.activated', { defaultValue: 'Tour aktiviert' }),
+                                                                                                    'success'
+                                                                                                );
+                                                                                                await loadTours();
+                                                                                            } catch (err: any) {
+                                                                                                console.error('Fehler beim Toggle der Tour:', err);
+                                                                                                showMessage(
+                                                                                                    err.response?.data?.message || t('errors.unknownError'),
+                                                                                                    'error'
+                                                                                                );
+                                                                                            }
+                                                                                        }}
+                                                                                        className={`px-2 py-1 text-xs rounded transition-colors ${
+                                                                                            tour.isActive 
+                                                                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800' 
+                                                                                                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                                                        }`}
+                                                                                    >
+                                                                                        {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <span className={`px-2 py-1 text-xs rounded ${
+                                                                                        tour.isActive 
+                                                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                                                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                                                                    }`}>
+                                                                                        {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
+                                                                                    </span>
+                                                                                )}
                                                                             </td>
                                                                         );
                                                                     case 'actions':
@@ -5095,13 +5131,43 @@ const Worktracker: React.FC = () => {
                                             >
                                                 <div className="flex items-start justify-between mb-2">
                                                     <h4 className="text-lg font-semibold dark:text-white">{tour.title}</h4>
-                                                    <span className={`px-2 py-1 text-xs rounded ${
-                                                        tour.isActive 
-                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                                                    }`}>
-                                                        {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
-                                                    </span>
+                                                    {hasPermission('tour_edit', 'write', 'button') ? (
+                                                        <button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await axiosInstance.put(API_ENDPOINTS.TOURS.TOGGLE_ACTIVE(tour.id));
+                                                                    showMessage(
+                                                                        tour.isActive 
+                                                                            ? t('tours.deactivated', { defaultValue: 'Tour deaktiviert' })
+                                                                            : t('tours.activated', { defaultValue: 'Tour aktiviert' }),
+                                                                        'success'
+                                                                    );
+                                                                    await loadTours();
+                                                                } catch (err: any) {
+                                                                    console.error('Fehler beim Toggle der Tour:', err);
+                                                                    showMessage(
+                                                                        err.response?.data?.message || t('errors.unknownError'),
+                                                                        'error'
+                                                                    );
+                                                                }
+                                                            }}
+                                                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                                                                tour.isActive 
+                                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800' 
+                                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                            }`}
+                                                        >
+                                                            {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
+                                                        </button>
+                                                    ) : (
+                                                        <span className={`px-2 py-1 text-xs rounded ${
+                                                            tour.isActive 
+                                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                                                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+                                                        }`}>
+                                                            {tour.isActive ? t('tours.statusActive') : t('tours.statusInactive')}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 
                                                 {tour.description && (
@@ -5312,6 +5378,33 @@ const Worktracker: React.FC = () => {
             {/* Tour Bookings Tab Content */}
             {activeTab === 'tourBookings' && (
                 <div className="space-y-4">
+                    {/* Header mit Create-Button */}
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {t('tourBookings.title', 'Tour-Buchungen')}
+                        </h2>
+                        {hasPermission('tour_bookings', 'write', 'table') && (
+                            <button
+                                onClick={() => setIsCreateTourBookingModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                            >
+                                <PlusIcon className="h-5 w-5" />
+                                {t('tourBookings.create', 'Neue Buchung')}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Suche */}
+                    <div className="max-w-md">
+                        <input
+                            type="text"
+                            placeholder={t('common.search', 'Suchen...')}
+                            value={tourBookingsSearchTerm}
+                            onChange={(e) => setTourBookingsSearchTerm(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                    </div>
+
                     {tourBookingsLoading ? (
                         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                             {t('common.loading')}
@@ -5439,15 +5532,30 @@ const Worktracker: React.FC = () => {
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedBookingForLink(booking);
-                                                            setIsTourReservationLinkModalOpen(true);
-                                                        }}
-                                                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-3"
-                                                    >
-                                                        <LinkIcon className="h-5 w-5" />
-                                                    </button>
+                                                    <div className="flex items-center gap-2">
+                                                        {hasPermission('tour_bookings', 'write', 'table') && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedBookingForEdit(booking);
+                                                                    setIsEditTourBookingModalOpen(true);
+                                                                }}
+                                                                className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                                                title={t('common.edit', 'Bearbeiten')}
+                                                            >
+                                                                <PencilIcon className="h-5 w-5" />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedBookingForLink(booking);
+                                                                setIsTourReservationLinkModalOpen(true);
+                                                            }}
+                                                            className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
+                                                            title={t('tours.reservationLink.title', 'Mit Reservation verknüpfen')}
+                                                        >
+                                                            <LinkIcon className="h-5 w-5" />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -5458,6 +5566,28 @@ const Worktracker: React.FC = () => {
                 </div>
             )}
             
+            {/* Create Tour Booking Modal */}
+            <CreateTourBookingModal
+                isOpen={isCreateTourBookingModalOpen}
+                onClose={() => setIsCreateTourBookingModalOpen(false)}
+                onBookingCreated={async (newBooking) => {
+                    await loadTourBookings();
+                }}
+            />
+
+            {/* Edit Tour Booking Modal */}
+            <EditTourBookingModal
+                isOpen={isEditTourBookingModalOpen}
+                onClose={() => {
+                    setIsEditTourBookingModalOpen(false);
+                    setSelectedBookingForEdit(null);
+                }}
+                booking={selectedBookingForEdit}
+                onBookingUpdated={async (updatedBooking) => {
+                    await loadTourBookings();
+                }}
+            />
+
             {/* Tour Reservation Link Modal */}
             {selectedBookingForLink && (
                 <TourReservationLinkModal
