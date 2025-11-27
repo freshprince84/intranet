@@ -98,9 +98,13 @@ async function checkLobbyPmsImportStatus() {
         }
 
         console.log('  ✅ LobbyPMS konfiguriert');
-        console.log(`     API URL: ${lobbyPmsSettings.apiUrl || 'Nicht gesetzt'}`);
+        console.log(`     API URL in Settings: ${lobbyPmsSettings.apiUrl || 'Nicht gesetzt (verwendet Fallback: https://api.lobbypms.com)'}`);
         console.log(`     Property ID: ${lobbyPmsSettings.propertyId || 'Nicht gesetzt'}`);
         console.log(`     Sync Enabled: ${lobbyPmsSettings.syncEnabled !== false ? 'Ja' : 'Nein'}`);
+        
+        // Zeige tatsächlich verwendete URL nach Service-Erstellung
+        const serviceApiUrl = (service as any).apiUrl;
+        console.log(`     Tatsächlich verwendete API URL: ${serviceApiUrl || 'Nicht geladen'}`);
 
         // Erstelle Service
         const service = await LobbyPmsService.createForBranch(branch.id);
