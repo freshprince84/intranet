@@ -468,6 +468,41 @@ export const decryptBranchApiSettings = (settings: any): any => {
     }
   }
 
+  // WhatsApp (verschachtelt in whatsappSettings)
+  if (decrypted.whatsapp && typeof decrypted.whatsapp === 'object') {
+    const whatsappUpdates: any = {};
+    if (decrypted.whatsapp.apiKey && typeof decrypted.whatsapp.apiKey === 'string' && decrypted.whatsapp.apiKey.includes(':')) {
+      try {
+        const encryptedLength = decrypted.whatsapp.apiKey.length;
+        const decryptedKey = decryptSecret(decrypted.whatsapp.apiKey);
+        console.log('[WhatsApp Token Debug] Branch Settings Entschlüsselung:', {
+          encryptedLength,
+          decryptedLength: decryptedKey.length,
+          decryptedStart: decryptedKey.substring(0, 30),
+          decryptedEnd: decryptedKey.substring(decryptedKey.length - 30),
+          containsColon: decryptedKey.includes(':'),
+          isValidFormat: /^[A-Za-z0-9]+$/.test(decryptedKey)
+        });
+        whatsappUpdates.apiKey = decryptedKey;
+      } catch (error) {
+        console.error('Error decrypting whatsapp.apiKey:', error);
+      }
+    }
+    if (decrypted.whatsapp.apiSecret && typeof decrypted.whatsapp.apiSecret === 'string' && decrypted.whatsapp.apiSecret.includes(':')) {
+      try {
+        whatsappUpdates.apiSecret = decryptSecret(decrypted.whatsapp.apiSecret);
+      } catch (error) {
+        console.error('Error decrypting whatsapp.apiSecret:', error);
+      }
+    }
+    if (Object.keys(whatsappUpdates).length > 0) {
+      decrypted.whatsapp = {
+        ...decrypted.whatsapp,
+        ...whatsappUpdates
+      };
+    }
+  }
+
   // Email IMAP Password (verschachtelt)
   if (decrypted.imap?.password && typeof decrypted.imap.password === 'string' && decrypted.imap.password.includes(':')) {
     try {

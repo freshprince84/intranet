@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireCompleteProfile = exports.isAdmin = exports.checkUserPermission = exports.checkPermission = void 0;
 const prisma_1 = require("../utils/prisma");
+const userCache_1 = require("../services/userCache");
 /**
  * Middleware zur Überprüfung von Berechtigungen
  * @param entity - Entität (z.B. 'page', 'table' oder 'cerebro')
@@ -48,25 +49,36 @@ const checkPermission = (entity, requiredAccess, entityType = 'page') => {
 };
 exports.checkPermission = checkPermission;
 // Hilfsfunktion zur Überprüfung der Berechtigungen eines Benutzers
+// ✅ PERFORMANCE: Verwendet UserCache statt eigene DB-Query
 const checkUserPermission = (userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1) => __awaiter(void 0, [userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1], void 0, function* (userId, roleId, currentEntity, requiredAccess, entityType = 'page') {
     try {
-        // Hole die Berechtigungen für die aktuelle Rolle des Benutzers
-        const role = yield prisma_1.prisma.role.findUnique({
-            where: { id: roleId },
-            include: { permissions: true }
-        });
-        if (!role) {
-            console.error(`[checkUserPermission] ❌ Rolle nicht gefunden: roleId=${roleId}`);
+        // ✅ PERFORMANCE: Verwende UserCache statt eigene DB-Query
+        const cached = yield userCache_1.userCache.get(userId);
+        if (!cached || !cached.user) {
+            console.error(`[checkUserPermission] ❌ User nicht gefunden: userId=${userId}`);
             return false;
         }
+        // Finde aktive Rolle (mit lastUsed: true)
+        const activeRole = cached.user.roles.find((r) => r.lastUsed);
+        if (!activeRole) {
+            console.error(`[checkUserPermission] ❌ Keine aktive Rolle gefunden: userId=${userId}`);
+            return false;
+        }
+        // Prüfe ob die roleId mit der aktiven Rolle übereinstimmt
+        if (activeRole.role.id !== roleId) {
+            console.warn(`[checkUserPermission] ⚠️ roleId mismatch: requested=${roleId}, active=${activeRole.role.id}, verwende aktive Rolle`);
+            // Verwende die aktive Rolle statt der angeforderten roleId
+        }
+        // Hole Permissions aus der aktiven Rolle (bereits im Cache geladen)
+        const permissions = activeRole.role.permissions || [];
         // Suche nach der Berechtigung für die angeforderte Entität
-        const permission = role.permissions.find(p => p.entity === currentEntity && p.entityType === entityType);
+        const permission = permissions.find((p) => p.entity === currentEntity && p.entityType === entityType);
         if (!permission) {
-            console.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${role.name}" (ID: ${role.id})`);
+            console.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${activeRole.role.name}" (ID: ${activeRole.role.id})`);
             console.log(`[checkUserPermission] Verfügbare Cerebro-Permissions:`);
-            role.permissions
-                .filter(p => p.entity.includes('cerebro'))
-                .forEach(p => {
+            permissions
+                .filter((p) => p.entity.includes('cerebro'))
+                .forEach((p) => {
                 console.log(`   - ${p.entity} (${p.entityType}): ${p.accessLevel}`);
             });
             return false;
