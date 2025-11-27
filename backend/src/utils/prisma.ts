@@ -34,7 +34,8 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
-// ✅ Helper-Funktion für reconnect bei DB-Fehlern
+// ✅ Helper-Funktion für Retry bei DB-Fehlern
+// WICHTIG: Keine disconnect/connect Logik - Prisma reconnect automatisch!
 export const executeWithRetry = async <T>(
   operation: () => Promise<T>,
   maxRetries = 3,
@@ -59,15 +60,9 @@ export const executeWithRetry = async <T>(
         console.warn(`[Prisma] DB connection error (attempt ${attempt}/${maxRetries}):`, error.message);
         
         if (attempt < maxRetries) {
-          // Versuche reconnect
-          try {
-            await prisma.$disconnect();
-            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-            await prisma.$connect();
-            console.log(`[Prisma] Reconnected after ${attempt} attempt(s)`);
-          } catch (reconnectError) {
-            console.error('[Prisma] Reconnect failed:', reconnectError);
-          }
+          // Retry mit Delay - Prisma reconnect automatisch, keine manuelle disconnect/connect nötig!
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+          console.log(`[Prisma] Retrying after ${attempt} attempt(s) - Prisma will reconnect automatically`);
         }
       } else {
         // Kein DB-Verbindungsfehler - sofort werfen
