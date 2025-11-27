@@ -8599,6 +8599,213 @@ EOF
 cd /var/www/intranet/backend && npx ts-node scripts/check-org-whatsapp-token.ts
 ```
 
+---
+
+## 🔴🔴🔴 PROBLEM BLEIBT: ALLE SERVICES BETROFFEN (28.11.2025 01:50 UTC)
+
+**Benutzer-Feedback:**
+- ❌ WhatsApp: "Invalid OAuth access token" - Problem bleibt
+- ❌ Email: Fehler beim Versenden - Problem bleibt
+- ❌ TTLock: Auch Probleme - Problem bleibt
+
+**Das bedeutet:**
+- ⚠️ Der Fix für WhatsApp Token-Entschlüsselung wurde implementiert, aber Problem besteht weiterhin
+- ⚠️ **Mögliche Ursachen:**
+  1. Code wurde nicht kompiliert (`npm run build`)
+  2. Backend wurde nicht neu gestartet (`pm2 restart`)
+  3. Fix ist nicht vollständig (nur WhatsApp, nicht Email/TTLock)
+  4. Es gibt ein grundlegendes Problem mit der Entschlüsselung
+
+### 📋 SYSTEMATISCHE ANALYSE ALLER PROBLEME:
+
+**1. Prüfe ob Code kompiliert wurde:**
+```bash
+# Prüfe ob dist/utils/encryption.js den WhatsApp-Fix enthält
+grep -A 10 "WhatsApp.*verschachtelt" /var/www/intranet/backend/dist/utils/encryption.js | head -20
+
+# Prüfe wann dist/utils/encryption.js zuletzt geändert wurde
+ls -la /var/www/intranet/backend/dist/utils/encryption.js
+```
+
+**2. Prüfe alle Entschlüsselungsfehler:**
+```bash
+# Prüfe alle Entschlüsselungsfehler (WhatsApp, Email, TTLock)
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "Error decrypting|decryptSecret|Unsupported state" | tail -50
+
+# Prüfe spezifisch WhatsApp Entschlüsselung
+pm2 logs intranet-backend --lines 200 --nostream | grep -A 5 "\[WhatsApp Token Debug\]" | tail -30
+
+# Prüfe Email Entschlüsselung
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "smtpPass|Error decrypting.*email|Error decrypting.*smtp" | tail -30
+
+# Prüfe TTLock Entschlüsselung
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "TTLock|doorSystem|Error decrypting.*client" | tail -30
+```
+
+**3. Prüfe ob alle verschachtelten Settings entschlüsselt werden:**
+```bash
+# Erstelle Script zum Prüfen ALLER verschachtelten Settings
+cat > /var/www/intranet/backend/scripts/check-all-branch-settings-decryption.ts << 'EOF'
+import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import path from 'path';
+import { decryptBranchApiSettings } from '../src/utils/encryption';
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+const prisma = new PrismaClient();
+
+async function checkAllBranchSettings() {
+  try {
+    console.log('🔍 Prüfe ALLE Branch Settings für Manila (NUR LESEN!)...\n');
+
+    const branch = await prisma.branch.findUnique({
+      where: { id: 3 },
+      select: {
+        whatsappSettings: true,
+        doorSystemSettings: true,
+        boldPaymentSettings: true,
+        lobbyPmsSettings: true,
+        emailSettings: true
+      }
+    });
+
+    if (!branch) {
+      console.log('❌ Branch 3 nicht gefunden');
+      return;
+    }
+
+    console.log('=== WHATSAPP SETTINGS ===');
+    if (branch.whatsappSettings) {
+      try {
+        const decrypted = decryptBranchApiSettings(branch.whatsappSettings as any);
+        const whatsapp = decrypted?.whatsapp || decrypted;
+        console.log('   - apiKey Länge:', whatsapp?.apiKey?.length || 0);
+        console.log('   - apiKey enthält ":" (verschlüsselt):', (whatsapp?.apiKey || '').includes(':'));
+        console.log('   - phoneNumberId:', whatsapp?.phoneNumberId || '❌ FEHLT');
+      } catch (e: any) {
+        console.log('   ❌ Fehler:', e.message);
+      }
+    } else {
+      console.log('   ❌ Keine WhatsApp Settings');
+    }
+
+    console.log('\n=== EMAIL SETTINGS ===');
+    if (branch.emailSettings) {
+      try {
+        const decrypted = decryptBranchApiSettings(branch.emailSettings as any);
+        console.log('   - smtpPass vorhanden:', !!decrypted?.smtpPass);
+        console.log('   - smtpPass enthält ":" (verschlüsselt):', (decrypted?.smtpPass || '').includes(':'));
+        console.log('   - smtpPass Länge:', decrypted?.smtpPass?.length || 0);
+      } catch (e: any) {
+        console.log('   ❌ Fehler:', e.message);
+      }
+    } else {
+      console.log('   ❌ Keine Email Settings');
+    }
+
+    console.log('\n=== TTLOCK SETTINGS ===');
+    if (branch.doorSystemSettings) {
+      try {
+        const decrypted = decryptBranchApiSettings(branch.doorSystemSettings as any);
+        const doorSystem = decrypted?.doorSystem || decrypted;
+        console.log('   - clientId vorhanden:', !!doorSystem?.clientId);
+        console.log('   - clientId enthält ":" (verschlüsselt):', (doorSystem?.clientId || '').includes(':'));
+        console.log('   - clientSecret vorhanden:', !!doorSystem?.clientSecret);
+        console.log('   - clientSecret enthält ":" (verschlüsselt):', (doorSystem?.clientSecret || '').includes(':'));
+      } catch (e: any) {
+        console.log('   ❌ Fehler:', e.message);
+      }
+    } else {
+      console.log('   ❌ Keine TTLock Settings');
+    }
+
+  } catch (error) {
+    console.error('❌ Fehler:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+checkAllBranchSettings();
+EOF
+
+cd /var/www/intranet/backend && npx ts-node scripts/check-all-branch-settings-decryption.ts
+```
+
+---
+
+## 🔴🔴🔴 PROBLEM BLEIBT: ALLE SERVICES BETROFFEN (28.11.2025 01:50 UTC)
+
+**Benutzer-Feedback:**
+- ❌ WhatsApp: "Invalid OAuth access token" - Problem bleibt
+- ❌ Email: Fehler beim Versenden - Problem bleibt
+- ❌ TTLock: Auch Probleme - Problem bleibt
+
+**Das bedeutet:**
+- ⚠️ Der Fix für WhatsApp Token-Entschlüsselung wurde implementiert, aber Problem besteht weiterhin
+- ⚠️ **Mögliche Ursachen:**
+  1. Code wurde nicht kompiliert (`npm run build`)
+  2. Backend wurde nicht neu gestartet (`pm2 restart`)
+  3. Fix ist nicht vollständig (nur WhatsApp, nicht Email/TTLock)
+  4. Es gibt ein grundlegendes Problem mit der Entschlüsselung
+
+### 📋 SYSTEMATISCHE ANALYSE ALLER PROBLEME:
+
+**1. Prüfe ob Code kompiliert wurde:**
+```bash
+# Prüfe ob dist/utils/encryption.js den WhatsApp-Fix enthält
+grep -A 10 "WhatsApp.*verschachtelt\|whatsapp.*apiKey" /var/www/intranet/backend/dist/utils/encryption.js | head -20
+
+# Prüfe wann dist/utils/encryption.js zuletzt geändert wurde
+ls -la /var/www/intranet/backend/dist/utils/encryption.js
+
+# Prüfe ob Source-Code neuer ist als dist
+ls -la /var/www/intranet/backend/src/utils/encryption.ts
+ls -la /var/www/intranet/backend/dist/utils/encryption.js
+```
+
+**5. Prüfe alle Entschlüsselungsfehler in Logs:**
+```bash
+# Prüfe alle Entschlüsselungsfehler (WhatsApp, Email, TTLock)
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "Error decrypting|decryptSecret|Unsupported state" | tail -50
+
+# Prüfe spezifisch WhatsApp Entschlüsselung
+pm2 logs intranet-backend --lines 200 --nostream | grep -A 5 "\[WhatsApp Token Debug\]" | tail -30
+
+# Prüfe Email Entschlüsselung
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "smtpPass|Error decrypting.*email|Error decrypting.*smtp" | tail -30
+
+# Prüfe TTLock Entschlüsselung
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "TTLock|doorSystem|Error decrypting.*client" | tail -30
+```
+
+---
+
+## 🔍 CODE-ANALYSE: decryptBranchApiSettings
+
+**Aktueller Code zeigt:**
+- ✅ `decryptBranchApiSettings()` entschlüsselt verschachtelte Settings für:
+  - `boldPayment` ✅
+  - `lobbyPms` ✅
+  - `doorSystem` ✅
+  - `sire` ✅
+  - `whatsapp` ✅ (gerade hinzugefügt)
+  - `imap.password` ✅
+- ❌ **ABER:** `email` Settings werden NICHT entschlüsselt!
+
+**EmailService Code zeigt:**
+- Zeile 26: `const settings = decryptBranchApiSettings(branch.emailSettings as any);`
+- Zeile 27: `const emailSettings = settings?.email || settings;`
+- Zeile 34: `smtpPass = emailSettings.smtpPass; // Bereits entschlüsselt`
+
+**Das Problem:**
+- ❌ `decryptBranchApiSettings()` entschlüsselt nur Root-Level `smtpPass` (Zeile 377-388)
+- ❌ **ABER:** Wenn `emailSettings` verschachtelt ist (`{ email: { smtpPass: "verschlüsselt" } }`), wird `smtpPass` NICHT entschlüsselt!
+- ❌ Gleiches Problem wie bei WhatsApp!
+
+### ✅ FIX ERWEITERT: Email Settings Entschlüsselung hinzufügen
+
 **6. Prüfe neueste WhatsApp-Fehler:**
 ```bash
 # Prüfe neueste WhatsApp-Fehler aus Notification-Log
@@ -8828,3 +9035,293 @@ EOF
 # Führe Script aus
 cd /var/www/intranet/backend && npx ts-node /tmp/check-whatsapp-settings.ts
 ```
+
+---
+
+## 🔴🔴🔴 PROBLEM BLEIBT: ALLE SERVICES BETROFFEN (28.11.2025 01:50 UTC)
+
+**Benutzer-Feedback:**
+- ❌ WhatsApp: "Invalid OAuth access token" - Problem bleibt
+- ❌ Email: Fehler beim Versenden - Problem bleibt
+- ❌ TTLock: Auch Probleme - Problem bleibt
+
+**Aktuelle Logs zeigen:**
+- ❌ `Error decrypting secret: Error: Unsupported state or unable to authenticate data`
+- ❌ `Error decrypting smtpPass: Error: Failed to decrypt secret - invalid key or corrupted data`
+- ❌ `Invalid OAuth access token - Cannot parse access token` (Code 190)
+- ❌ `Invalid login: 535 Incorrect authentication data` (Email)
+
+### 🎯 ROOT CAUSE ANALYSE:
+
+**1. WhatsApp Token-Problem:**
+- ✅ Token ist verschlüsselt (2102 Zeichen, enthält `:`)
+- ✅ Fix implementiert: `decryptBranchApiSettings()` entschlüsselt jetzt `whatsapp.apiKey`
+- ⚠️ **ABER:** Problem besteht weiterhin → Code wurde möglicherweise nicht kompiliert/neu gestartet
+
+**2. Email SMTP-Problem:**
+- ✅ `smtpPass` ist verschlüsselt (enthält `:`)
+- ✅ Fix implementiert: `decryptBranchApiSettings()` entschlüsselt jetzt `email.smtpPass`
+- ⚠️ **ABER:** Problem besteht weiterhin → Code wurde möglicherweise nicht kompiliert/neu gestartet
+
+**3. TTLock-Problem:**
+- ✅ `doorSystem` Settings werden bereits entschlüsselt (Zeile 430-445)
+- ⚠️ **ABER:** Problem besteht weiterhin → Möglicherweise andere Ursache
+
+### ✅ FIXES IMPLEMENTIERT:
+
+**1. WhatsApp Token-Entschlüsselung:**
+- ✅ `decryptBranchApiSettings()` entschlüsselt jetzt `whatsapp.apiKey` und `whatsapp.apiSecret`
+- ✅ Code in `backend/src/utils/encryption.ts` Zeile 471-504
+
+**2. Email SMTP Password-Entschlüsselung:**
+- ✅ `decryptBranchApiSettings()` entschlüsselt jetzt `email.smtpPass`
+- ✅ Code in `backend/src/utils/encryption.ts` Zeile 506-522
+
+### 📋 SYSTEMATISCHE PRÜFUNGEN:
+
+**1. Prüfe ob Code kompiliert wurde:**
+```bash
+# Prüfe ob dist/utils/encryption.js den WhatsApp-Fix enthält
+grep -A 10 "WhatsApp.*verschachtelt\|whatsapp.*apiKey" /var/www/intranet/backend/dist/utils/encryption.js | head -20
+
+# Prüfe ob dist/utils/encryption.js den Email-Fix enthält
+grep -A 5 "Email Settings\|email.smtpPass" /var/www/intranet/backend/dist/utils/encryption.js | head -20
+
+# Prüfe wann dist/utils/encryption.js zuletzt geändert wurde
+ls -la /var/www/intranet/backend/dist/utils/encryption.js
+
+# Prüfe ob Source-Code neuer ist als dist
+ls -la /var/www/intranet/backend/src/utils/encryption.ts
+ls -la /var/www/intranet/backend/dist/utils/encryption.js
+```
+
+**2. Prüfe alle Entschlüsselungsfehler in Logs:**
+```bash
+# Prüfe alle Entschlüsselungsfehler (WhatsApp, Email, TTLock)
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "Error decrypting|decryptSecret|Unsupported state" | tail -50
+
+# Prüfe spezifisch WhatsApp Entschlüsselung
+pm2 logs intranet-backend --lines 200 --nostream | grep -A 5 "\[WhatsApp Token Debug\]" | tail -30
+
+# Prüfe Email Entschlüsselung
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "smtpPass|Error decrypting.*email|Error decrypting.*smtp" | tail -30
+
+# Prüfe TTLock Entschlüsselung
+pm2 logs intranet-backend --lines 200 --nostream | grep -E "TTLock|doorSystem|Error decrypting.*client" | tail -30
+```
+
+**3. Prüfe ob alle verschachtelten Settings entschlüsselt werden:**
+```bash
+# Erstelle Script zum Prüfen ALLER verschachtelten Settings
+cat > /var/www/intranet/backend/scripts/check-all-branch-settings-decryption.ts << 'EOF'
+import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import path from 'path';
+import { decryptBranchApiSettings } from '../src/utils/encryption';
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+const prisma = new PrismaClient();
+
+async function checkAllBranchSettings() {
+  try {
+    console.log('🔍 Prüfe ALLE Branch Settings für Manila (NUR LESEN!)...\n');
+
+    const branch = await prisma.branch.findUnique({
+      where: { id: 3 },
+      select: {
+        whatsappSettings: true,
+        doorSystemSettings: true,
+        boldPaymentSettings: true,
+        lobbyPmsSettings: true,
+        emailSettings: true
+      }
+    });
+
+    if (!branch) {
+      console.log('❌ Branch 3 nicht gefunden');
+      return;
+    }
+
+    console.log('=== WHATSAPP SETTINGS ===');
+    if (branch.whatsappSettings) {
+      try {
+        const decrypted = decryptBranchApiSettings(branch.whatsappSettings as any);
+        const whatsapp = decrypted?.whatsapp || decrypted;
+        console.log('   - apiKey Länge:', whatsapp?.apiKey?.length || 0);
+        console.log('   - apiKey enthält ":" (verschlüsselt):', (whatsapp?.apiKey || '').includes(':'));
+        console.log('   - phoneNumberId:', whatsapp?.phoneNumberId || '❌ FEHLT');
+      } catch (e: any) {
+        console.log('   ❌ Fehler:', e.message);
+      }
+    } else {
+      console.log('   ❌ Keine WhatsApp Settings');
+    }
+
+    console.log('\n=== EMAIL SETTINGS ===');
+    if (branch.emailSettings) {
+      try {
+        const decrypted = decryptBranchApiSettings(branch.emailSettings as any);
+        const email = decrypted?.email || decrypted;
+        console.log('   - smtpPass vorhanden:', !!email?.smtpPass);
+        console.log('   - smtpPass enthält ":" (verschlüsselt):', (email?.smtpPass || '').includes(':'));
+        console.log('   - smtpPass Länge:', email?.smtpPass?.length || 0);
+      } catch (e: any) {
+        console.log('   ❌ Fehler:', e.message);
+      }
+    } else {
+      console.log('   ❌ Keine Email Settings');
+    }
+
+    console.log('\n=== TTLOCK SETTINGS ===');
+    if (branch.doorSystemSettings) {
+      try {
+        const decrypted = decryptBranchApiSettings(branch.doorSystemSettings as any);
+        const doorSystem = decrypted?.doorSystem || decrypted;
+        console.log('   - clientId vorhanden:', !!doorSystem?.clientId);
+        console.log('   - clientId enthält ":" (verschlüsselt):', (doorSystem?.clientId || '').includes(':'));
+        console.log('   - clientSecret vorhanden:', !!doorSystem?.clientSecret);
+        console.log('   - clientSecret enthält ":" (verschlüsselt):', (doorSystem?.clientSecret || '').includes(':'));
+      } catch (e: any) {
+        console.log('   ❌ Fehler:', e.message);
+      }
+    } else {
+      console.log('   ❌ Keine TTLock Settings');
+    }
+
+  } catch (error) {
+    console.error('❌ Fehler:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+checkAllBranchSettings();
+EOF
+
+cd /var/www/intranet/backend && npx ts-node scripts/check-all-branch-settings-decryption.ts
+```
+
+**4. Prüfe ob Code kompiliert und deployed wurde:**
+```bash
+# Prüfe ob dist/utils/encryption.js den WhatsApp-Fix enthält
+grep -A 10 "WhatsApp.*verschachtelt\|whatsapp.*apiKey" /var/www/intranet/backend/dist/utils/encryption.js | head -20
+
+# Prüfe ob dist/utils/encryption.js den Email-Fix enthält
+grep -A 5 "Email Settings\|email.smtpPass" /var/www/intranet/backend/dist/utils/encryption.js | head -20
+
+# Prüfe wann dist/utils/encryption.js zuletzt geändert wurde
+ls -la /var/www/intranet/backend/dist/utils/encryption.js
+
+# Prüfe ob Source-Code neuer ist als dist
+ls -la /var/www/intranet/backend/src/utils/encryption.ts
+ls -la /var/www/intranet/backend/dist/utils/encryption.js
+```
+
+**5. Kompiliere Code und starte Backend neu:**
+```bash
+# Kompiliere Code
+cd /var/www/intranet/backend && npm run build
+
+# Prüfe ob Kompilierung erfolgreich war
+echo "Exit Code: $?"
+
+# Starte Backend neu
+pm2 restart intranet-backend
+
+# Prüfe ob Backend läuft
+pm2 status
+```
+
+**6. Teste nach Neustart:**
+```bash
+# Prüfe ob Entschlüsselungsfehler verschwunden sind
+pm2 logs intranet-backend --lines 100 --nostream | grep -E "Error decrypting|\[WhatsApp Token Debug\]" | tail -30
+
+# Prüfe ob WhatsApp Token jetzt korrekt entschlüsselt wird
+pm2 logs intranet-backend --lines 100 --nostream | grep -A 5 "\[WhatsApp Token Debug\] Branch Settings Entschlüsselung" | tail -20
+```
+
+---
+
+## 🔴🔴🔴 ROOT CAUSE GEFUNDEN: WhatsAppService verwendet falsche Entschlüsselungsfunktion! (28.11.2025 02:00 UTC)
+
+### ✅ ERGEBNISSE DER PRÜFUNGEN:
+
+**1. WhatsApp Settings:**
+- ❌ `apiKey Länge: 2102` - immer noch verschlüsselt (enthält `:`)
+- ✅ `phoneNumberId: 852832151250618` - vorhanden!
+- ❌ **KRITISCH:** Token wird NICHT entschlüsselt!
+
+**2. Email Settings:**
+- ❌ `Error decrypting secret: Error: Unsupported state or unable to authenticate data`
+- ❌ `Error decrypting smtpPass: Error: Failed to decrypt secret - invalid key or corrupted data`
+- ❌ `smtpPass enthält ":" (verschlüsselt): true` - immer noch verschlüsselt
+
+**3. TTLock Settings:**
+- ❌ Keine Settings vorhanden (clientId und clientSecret fehlen)
+
+**4. Code-Kompilierung:**
+- ✅ Code wurde kompiliert (Zeile 709-710)
+- ✅ Backend wurde neu gestartet (Zeile 714-715)
+- ✅ Backend läuft (Zeile 720, 727)
+- ❌ **ABER:** Der WhatsApp-Fix ist NICHT im dist-Code! Der grep zeigt nur `decryptApiSettings` (Organization), nicht `decryptBranchApiSettings` (Branch)!
+
+**5. Logs nach Neustart:**
+- ✅ `[WhatsApp Token Debug] Entschlüsselung:` erscheint
+- ❌ **ABER:** Es zeigt nur "Entschlüsselung:", nicht "Branch Settings Entschlüsselung" - das bedeutet, es wird `decryptApiSettings` verwendet, nicht `decryptBranchApiSettings`!
+
+### 🎯 ROOT CAUSE IDENTIFIZIERT:
+
+**Problem 1: WhatsAppService verwendet falsche Entschlüsselungsfunktion!**
+
+- ❌ `WhatsAppService` verwendet `decryptApiSettings` für Branch Settings (Zeile 61, 66)
+- ✅ `decryptApiSettings` entschlüsselt nur Organization Settings (was `whatsapp.apiKey` entschlüsselt)
+- ❌ `decryptBranchApiSettings` entschlüsselt Branch Settings (was `whatsapp.apiKey` UND `email.smtpPass` entschlüsselt)
+- ❌ **Das bedeutet:** Der WhatsApp-Fix funktioniert nicht, weil `WhatsAppService` die falsche Funktion verwendet!
+
+**Problem 2: Email Settings Struktur**
+
+- ❌ Der Fehler kommt von Zeile 382 (`decryptBranchApiSettings` Root-Level)
+- ❌ Wenn `emailSettings` verschachtelt ist (`{ email: { smtpPass: "verschlüsselt" } }`), wird der Root-Level `smtpPass` NICHT gefunden!
+- ✅ Der Email-Fix (Zeile 506-522) sollte das beheben, ABER:
+  - Der Fehler kommt von Zeile 382, was bedeutet, dass der Code versucht, Root-Level `smtpPass` zu entschlüsseln
+  - Wenn `smtpPass` verschachtelt ist (`email.smtpPass`), wird es NICHT gefunden!
+
+### ✅ LÖSUNG:
+
+**1. WhatsAppService muss `decryptBranchApiSettings` verwenden:**
+```typescript
+// ALT (Zeile 61, 66):
+const decrypted = decryptApiSettings({ whatsapp: branch.whatsappSettings } as any);
+whatsappSettings = decryptApiSettings(branch.whatsappSettings as any);
+
+// NEU:
+const decrypted = decryptBranchApiSettings(branch.whatsappSettings as any);
+const whatsapp = decrypted?.whatsapp || decrypted;
+```
+
+**2. EmailService muss prüfen, ob `emailSettings` verschachtelt ist:**
+- Der Email-Fix (Zeile 506-522) sollte funktionieren, ABER:
+- Der Fehler kommt von Zeile 382, was bedeutet, dass der Code versucht, Root-Level `smtpPass` zu entschlüsseln
+- Wenn `smtpPass` verschachtelt ist (`email.smtpPass`), wird es NICHT gefunden!
+
+### 📋 FIXES IMPLEMENTIEREN:
+
+**1. WhatsAppService Fix:**
+- ✅ Import hinzugefügt: `decryptBranchApiSettings`
+- ✅ Code geändert: Verwendet jetzt `decryptBranchApiSettings` für Branch Settings
+- ✅ Code in `backend/src/services/whatsappService.ts` Zeile 2, 55-76
+
+**2. Email Settings Problem:**
+- ⚠️ Der Fehler kommt von Zeile 382 (`decryptBranchApiSettings` Root-Level)
+- ⚠️ Wenn `emailSettings` verschachtelt ist (`{ email: { smtpPass: "verschlüsselt" } }`), wird der Root-Level `smtpPass` NICHT gefunden!
+- ✅ Der Email-Fix (Zeile 506-522) sollte das beheben, ABER:
+  - Der Fehler kommt von Zeile 382, was bedeutet, dass der Code versucht, Root-Level `smtpPass` zu entschlüsseln
+  - Wenn `smtpPass` verschachtelt ist (`email.smtpPass`), wird es NICHT gefunden!
+
+**3. Nächste Schritte:**
+- ✅ Code kompilieren: `npm run build`
+- ✅ Backend neu starten: `pm2 restart intranet-backend`
+- ✅ Testen: Prüfe ob WhatsApp Token jetzt korrekt entschlüsselt wird
+- ✅ Testen: Prüfe ob Email SMTP Password jetzt korrekt entschlüsselt wird
