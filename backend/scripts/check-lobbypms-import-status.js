@@ -51,12 +51,41 @@ async function checkLobbyPmsImportStatus() {
         const branchSettings = branch.lobbyPmsSettings;
         const orgSettings = branch.organization?.settings;
         
+        console.log('  🔍 Debug: Prüfe Settings...');
+        console.log(`     Branch Settings vorhanden: ${!!branchSettings}`);
+        console.log(`     Org Settings vorhanden: ${!!orgSettings}`);
+        
         const decryptedBranchSettings = branchSettings ? decryptBranchApiSettings(branchSettings) : null;
         const decryptedOrgSettings = orgSettings ? decryptApiSettings(orgSettings) : null;
+        
+        console.log(`     Decrypted Branch Settings: ${decryptedBranchSettings ? 'vorhanden' : 'null'}`);
+        if (decryptedBranchSettings) {
+          console.log(`     Branch Settings Keys: ${Object.keys(decryptedBranchSettings).join(', ')}`);
+          console.log(`     Branch Settings hat lobbyPms: ${!!decryptedBranchSettings.lobbyPms}`);
+          if (decryptedBranchSettings.lobbyPms) {
+            console.log(`     Branch lobbyPms Keys: ${Object.keys(decryptedBranchSettings.lobbyPms).join(', ')}`);
+          }
+        }
+        
+        console.log(`     Decrypted Org Settings: ${decryptedOrgSettings ? 'vorhanden' : 'null'}`);
+        if (decryptedOrgSettings) {
+          console.log(`     Org Settings Keys: ${Object.keys(decryptedOrgSettings).join(', ')}`);
+          console.log(`     Org Settings hat lobbyPms: ${!!decryptedOrgSettings.lobbyPms}`);
+          if (decryptedOrgSettings.lobbyPms) {
+            console.log(`     Org lobbyPms Keys: ${Object.keys(decryptedOrgSettings.lobbyPms).join(', ')}`);
+            console.log(`     Org lobbyPms apiKey: ${decryptedOrgSettings.lobbyPms.apiKey ? 'vorhanden' : 'fehlt'}`);
+          }
+        }
         
         // Branch Settings können direkt LobbyPMS Settings sein oder verschachtelt unter lobbyPms
         // Org Settings sind immer verschachtelt unter lobbyPms
         const lobbyPmsSettings = (decryptedBranchSettings?.lobbyPms || decryptedBranchSettings) || decryptedOrgSettings?.lobbyPms;
+
+        console.log(`     Final lobbyPmsSettings: ${lobbyPmsSettings ? 'vorhanden' : 'null'}`);
+        if (lobbyPmsSettings) {
+          console.log(`     Final Settings Keys: ${Object.keys(lobbyPmsSettings).join(', ')}`);
+          console.log(`     Final apiKey: ${lobbyPmsSettings.apiKey ? 'vorhanden' : 'fehlt'}`);
+        }
 
         if (!lobbyPmsSettings?.apiKey) {
           console.log('  ⚠️  Kein LobbyPMS API Key konfiguriert');
