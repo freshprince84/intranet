@@ -500,21 +500,25 @@ useEffect(() => {
 
 ---
 
-## 🔍 WICHTIG: PRISMA INSTANZEN & CONNECTION POOLS
+## 🔴🔴🔴 WICHTIG: MEINE VORHERIGE ANALYSE WAR FALSCH!
 
 ### Frage: Warum wird der Connection Pool voll? Ist 1 Instanz oder 70+ Instanzen besser?
 
-**Siehe:** `docs/technical/PRISMA_INSTANZEN_MITTELWEG_ANALYSE_2025-01-26.md`
+**Siehe:** `docs/technical/PRISMA_INSTANZEN_FEHLER_ANALYSE_KORRIGIERT_2025-01-26.md`
 
-**Kurze Antwort:**
-- **Mehrere Prisma-Instanzen helfen NICHT** - Sie teilen sich alle den gleichen Connection Pool!
-- **Lösung:** Connection Pool erhöhen (von 20-30 auf 50-100 Verbindungen)
+**KORRIGIERTE Antwort:**
+- **Meine vorherige Analyse war FALSCH!**
+- **Jede PrismaClient-Instanz hat ihren eigenen Connection Pool!**
+- **Mehrere Instanzen = Mehrere separate Pools = Bessere Lastverteilung!**
+- **Die Reduzierung von 70+ auf 1 Instanz war ein Fehler!**
 
-**Begründung:**
-- Prisma Client verwendet `DATABASE_URL` aus der Umgebung
-- Alle Instanzen verwenden die gleiche `DATABASE_URL`
-- `connection_limit` in `DATABASE_URL` gilt für **alle** Instanzen
-- Mehrere Instanzen = Mehrere Referenzen auf den gleichen Pool
+**Tatsache:**
+- **Vorher:** 70+ Instanzen = 70+ separate Pools = System war schnell
+- **Jetzt:** 1 Instanz = 1 Pool = Alle Requests teilen sich einen Pool = Bottleneck = Langsam
+
+**Lösung:**
+- **Zurück zu mehreren Prisma-Instanzen!** (70+ oder Mittelweg 5-10)
+- Connection Pool erhöhen hilft NICHT, wenn alle Requests denselben Pool nutzen!
 
 **Empfehlung:**
 - Connection Pool auf **50-100 Verbindungen** erhöhen

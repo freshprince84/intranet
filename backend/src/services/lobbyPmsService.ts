@@ -355,11 +355,31 @@ export class LobbyPmsService {
 
         // Prüfe ob es weitere Seiten gibt
         const meta = responseData.meta || {};
-        const totalPages = meta.total_pages || 1;
-        if (pageReservations.length === 0 || page >= totalPages) {
+        const totalPages = meta.total_pages;
+        const currentPage = meta.current_page || page;
+        const perPage = meta.per_page || params.per_page || 100;
+        
+        // Stoppe wenn:
+        // 1. Keine Reservierungen auf dieser Seite (leere Seite = Ende)
+        // 2. Weniger Reservierungen als per_page (letzte Seite)
+        // 3. totalPages ist gesetzt UND page >= totalPages
+        // 4. currentPage ist gesetzt UND currentPage >= totalPages
+        if (pageReservations.length === 0) {
+          hasMore = false;
+        } else if (pageReservations.length < perPage) {
+          // Weniger als per_page = wahrscheinlich letzte Seite
+          hasMore = false;
+        } else if (totalPages !== undefined && page >= totalPages) {
+          hasMore = false;
+        } else if (currentPage !== undefined && totalPages !== undefined && currentPage >= totalPages) {
           hasMore = false;
         } else {
           page++;
+        }
+        
+        // Debug-Log für Pagination (nur bei ersten 3 Seiten)
+        if (page <= 3) {
+          console.log(`[LobbyPMS] Seite ${page}: ${pageReservations.length} Reservierungen, totalPages: ${totalPages || 'N/A'}, hasMore: ${hasMore}`);
         }
       }
 
