@@ -18,7 +18,7 @@ interface WorktimeCacheEntry {
  */
 class WorktimeCache {
   private cache: Map<number, WorktimeCacheEntry> = new Map();
-  private readonly TTL_MS = 5 * 1000; // 5 Sekunden
+  private readonly TTL_MS = 30 * 1000; // 30 Sekunden (gleich wie Polling-Intervall - reduziert DB-Queries um 83%)
 
   /**
    * Prüft, ob ein Cache-Eintrag noch gültig ist

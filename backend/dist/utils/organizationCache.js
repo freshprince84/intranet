@@ -14,7 +14,7 @@ const prisma_1 = require("./prisma");
 class OrganizationCache {
     constructor() {
         this.cache = new Map();
-        this.TTL_MS = 2 * 60 * 1000; // 2 Minuten Cache
+        this.TTL_MS = 10 * 60 * 1000; // 10 Minuten Cache (statt 2 Minuten - reduziert DB-Queries um 80%)
     }
     isCacheValid(entry) {
         if (!entry)
