@@ -384,30 +384,30 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
         // ✅ PERFORMANCE: executeWithRetry für DB-Query
         const request = await executeWithRetry(() =>
             prisma.request.create({
-                data: {
-                    title,
-                    description: description || '',
-                    status: status as RequestStatus,
-                    type: type as RequestType,
-                    isPrivate: is_private,
-                    requesterId,
-                    responsibleId,
-                    branchId,
-                    dueDate: due_date ? new Date(due_date) : null,
-                    createTodo: create_todo,
-                    organizationId: req.organizationId || null
+            data: {
+                title,
+                description: description || '',
+                status: status as RequestStatus,
+                type: type as RequestType,
+                isPrivate: is_private,
+                requesterId,
+                responsibleId,
+                branchId,
+                dueDate: due_date ? new Date(due_date) : null,
+                createTodo: create_todo,
+                organizationId: req.organizationId || null
+            },
+            include: {
+                requester: {
+                    select: userSelect
                 },
-                include: {
-                    requester: {
-                        select: userSelect
-                    },
-                    responsible: {
-                        select: userSelect
-                    },
-                    branch: {
-                        select: branchSelect
-                    }
+                responsible: {
+                    select: userSelect
+                },
+                branch: {
+                    select: branchSelect
                 }
+            }
             })
         );
 

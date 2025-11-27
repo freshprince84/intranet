@@ -229,13 +229,19 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         setSavedFilters(filters);
         setFilterGroups(groups);
 
-        // Nur Default-Filter anwenden wenn es eine uncontrolled component ist (legacy)
-        if (!onFilterChange && defaultFilterName && !activeFilterName) {
+        // Default-Filter anwenden wenn defaultFilterName vorhanden und activeFilterName leer ist
+        if (defaultFilterName && !activeFilterName) {
           const defaultFilter = filters.find((filter: SavedFilter) => filter != null && filter.name === defaultFilterName);
           if (defaultFilter) {
             // Sicherstellen, dass sortDirections ein Array ist
             const validSortDirections = Array.isArray(defaultFilter.sortDirections) ? defaultFilter.sortDirections : undefined;
-            onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
+            if (onFilterChange) {
+              // Controlled Mode: Verwende onFilterChange
+              onFilterChange(defaultFilter.name, defaultFilter.id, defaultFilter.conditions, defaultFilter.operators, validSortDirections);
+            } else {
+              // Uncontrolled Mode: Verwende onSelectFilter
+              onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
+            }
           }
         }
       } catch (err) {
