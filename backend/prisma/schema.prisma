@@ -209,6 +209,7 @@ model Branch {
   organization          Organization?                @relation(fields: [organizationId], references: [id])
   whatsappSettings      Json? // WhatsApp-Konfiguration pro Branch
   lobbyPmsSettings      Json? // NEU: LobbyPMS-Konfiguration pro Branch
+  lobbyPmsLastSyncAt    DateTime? // OPTIMIERUNG: Letzte erfolgreiche LobbyPMS Sync-Zeit (für Caching)
   boldPaymentSettings   Json? // NEU: Bold Payment-Konfiguration pro Branch
   doorSystemSettings    Json? // NEU: TTLock/Türsystem-Konfiguration pro Branch
   emailSettings         Json? // NEU: Email-Konfiguration pro Branch (SMTP + IMAP)

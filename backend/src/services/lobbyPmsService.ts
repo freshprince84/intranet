@@ -313,12 +313,15 @@ export class LobbyPmsService {
         params.property_id = this.propertyId;
       }
 
-      // Hole alle Seiten mit Pagination
+      // OPTIMIERUNG: Hole Seiten mit Pagination und stoppe früher wenn keine neuen Reservierungen mehr kommen
+      // Da die API keine Filter-Parameter unterstützt, filtern wir inline und stoppen nach X Seiten ohne neue Reservierungen
       let allReservations: LobbyPmsReservation[] = [];
       let page = 1;
       let hasMore = true;
       const maxPages = 200; // Sicherheitslimit (20.000 Reservierungen max)
       let knownTotalPages: number | undefined = undefined; // Speichere totalPages aus erster Response
+      let consecutiveOldPages = 0; // Zähler für aufeinanderfolgende "alte" Seiten
+      const MAX_CONSECUTIVE_OLD_PAGES = 3; // Stoppe nach 3 Seiten ohne neue Reservierungen
 
       while (hasMore && page <= maxPages) {
         const response = await this.axiosInstance.get<any>('/api/v1/bookings', {
@@ -352,7 +355,35 @@ export class LobbyPmsService {
           );
         }
 
-        allReservations = allReservations.concat(pageReservations);
+        // OPTIMIERUNG: Filtere sofort nach creation_date (statt erst am Ende)
+        const recentReservations = pageReservations.filter((reservation: LobbyPmsReservation) => {
+          if (!reservation.creation_date) {
+            return false;
+          }
+          const creationDate = new Date(reservation.creation_date);
+          const afterStartDate = creationDate >= startDate;
+          const beforeEndDate = !endDate || creationDate <= endDate;
+          return afterStartDate && beforeEndDate;
+        });
+
+        // Prüfe ob neue Reservierungen gefunden wurden
+        if (recentReservations.length > 0) {
+          // Neue Reservierungen gefunden - füge hinzu
+          allReservations = allReservations.concat(recentReservations);
+          consecutiveOldPages = 0; // Reset Counter
+          console.log(`[LobbyPMS] Seite ${page}: ${recentReservations.length} neue Reservierungen (von ${pageReservations.length} insgesamt)`);
+        } else {
+          // Keine neuen Reservierungen auf dieser Seite
+          consecutiveOldPages++;
+          console.log(`[LobbyPMS] Seite ${page}: 0 neue Reservierungen (${consecutiveOldPages}/${MAX_CONSECUTIVE_OLD_PAGES} aufeinanderfolgende "alte" Seiten)`);
+          
+          // OPTIMIERUNG: Stoppe nach X Seiten ohne neue Reservierungen
+          if (consecutiveOldPages >= MAX_CONSECUTIVE_OLD_PAGES) {
+            console.log(`[LobbyPMS] Stoppe Pagination: ${MAX_CONSECUTIVE_OLD_PAGES} aufeinanderfolgende Seiten ohne neue Reservierungen`);
+            hasMore = false;
+            break;
+          }
+        }
 
         // Prüfe ob es weitere Seiten gibt
         const meta = responseData.meta || {};
@@ -394,19 +425,8 @@ export class LobbyPmsService {
         }
       }
 
-      // CLIENT-SEITIGES FILTERN nach creation_date (da API-Filter nicht korrekt funktioniert)
-      const filteredReservations = allReservations.filter((reservation: LobbyPmsReservation) => {
-        if (!reservation.creation_date) {
-          return false; // Keine creation_date = nicht inkludieren
-        }
-        const creationDate = new Date(reservation.creation_date);
-        // Filtere nach startDate (inklusive) und endDate (optional, inklusive)
-        const afterStartDate = creationDate >= startDate;
-        const beforeEndDate = !endDate || creationDate <= endDate;
-        return afterStartDate && beforeEndDate;
-      });
-
-      return filteredReservations;
+      // Reservierungen sind bereits gefiltert (inline)
+      return allReservations;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<LobbyPmsApiResponse>;
