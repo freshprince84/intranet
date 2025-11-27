@@ -76,31 +76,45 @@ export const getAllTasks = async (req: Request, res: Response) => {
             );
         }
         
-        // OPTIMIERUNG: Vereinfachte WHERE-Klausel für bessere Performance
+        // ✅ PERFORMANCE: Vereinfachte WHERE-Klausel für bessere Performance
+        // ✅ PERFORMANCE: Flachere OR-Struktur für bessere Index-Nutzung
         const baseWhereConditions: any[] = [];
         
         // Isolation-Filter: organizationId (wenn vorhanden)
         if (organizationId) {
-            const taskFilter: any = {
-                organizationId: organizationId
-            };
-            
-            // Wenn User eine aktive Rolle hat, füge roleId-Filter hinzu
+            // ✅ PERFORMANCE: Flachere OR-Struktur - organizationId in jeder OR-Bedingung
             if (userRoleId) {
-                taskFilter.OR = [
-                    { responsibleId: userId },
-                    { qualityControlId: userId },
-                    { roleId: userRoleId }
-                ];
+                baseWhereConditions.push({
+                    OR: [
+                        {
+                            organizationId: organizationId,
+                            responsibleId: userId
+                        },
+                        {
+                            organizationId: organizationId,
+                            qualityControlId: userId
+                        },
+                        {
+                            organizationId: organizationId,
+                            roleId: userRoleId
+                        }
+                    ]
+                });
             } else {
                 // Fallback: Nur eigene Tasks
-                taskFilter.OR = [
-                    { responsibleId: userId },
-                    { qualityControlId: userId }
-                ];
+                baseWhereConditions.push({
+                    OR: [
+                        {
+                            organizationId: organizationId,
+                            responsibleId: userId
+                        },
+                        {
+                            organizationId: organizationId,
+                            qualityControlId: userId
+                        }
+                    ]
+                });
             }
-            
-            baseWhereConditions.push(taskFilter);
         } else {
             // Standalone User: Nur eigene Tasks
             baseWhereConditions.push({

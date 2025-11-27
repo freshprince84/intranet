@@ -69,7 +69,9 @@ server.listen(PORT, () => {
 process.on('SIGTERM', () => __awaiter(void 0, void 0, void 0, function* () {
     console.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
     yield (0, queues_1.stopWorkers)();
-    yield prisma_1.prisma.$disconnect();
+    // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
+    const pools = (0, prisma_1.getAllPrismaPools)();
+    yield Promise.all(pools.map(pool => pool.$disconnect()));
     server.close(() => {
         console.log('Server erfolgreich heruntergefahren.');
         process.exit(0);
@@ -78,7 +80,9 @@ process.on('SIGTERM', () => __awaiter(void 0, void 0, void 0, function* () {
 process.on('SIGINT', () => __awaiter(void 0, void 0, void 0, function* () {
     console.log('SIGINT signal empfangen. Server wird heruntergefahren...');
     yield (0, queues_1.stopWorkers)();
-    yield prisma_1.prisma.$disconnect();
+    // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
+    const pools = (0, prisma_1.getAllPrismaPools)();
+    yield Promise.all(pools.map(pool => pool.$disconnect()));
     server.close(() => {
         console.log('Server erfolgreich heruntergefahren.');
         process.exit(0);
