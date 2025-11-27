@@ -63,10 +63,13 @@ class LobbyPmsReservationSyncService {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
             try {
-                // Lade Branch mit Organisation
+                // Lade Branch mit Organisation und lastSyncAt
                 const branch = yield prisma_1.prisma.branch.findUnique({
                     where: { id: branchId },
-                    include: {
+                    select: {
+                        lobbyPmsLastSyncAt: true, // OPTIMIERUNG: Letzte Sync-Zeit für Caching
+                        organizationId: true,
+                        lobbyPmsSettings: true,
                         organization: {
                             select: {
                                 id: true,
@@ -97,17 +100,39 @@ class LobbyPmsReservationSyncService {
                     console.log(`[LobbyPmsSync] LobbyPMS Sync ist für Branch ${branchId} deaktiviert`);
                     return 0;
                 }
+                // OPTIMIERUNG: Verwende lastSyncAt wenn vorhanden, sonst letzte 24h
+                let syncStartDate;
+                if (startDate) {
+                    // Explizites startDate übergeben (z.B. manueller Sync)
+                    syncStartDate = startDate;
+                    console.log(`[LobbyPmsSync] Branch ${branchId}: Verwende explizites startDate: ${syncStartDate.toISOString()}`);
+                }
+                else if (branch.lobbyPmsLastSyncAt) {
+                    // Verwende letzte Sync-Zeit (z.B. vor 10 Minuten)
+                    syncStartDate = branch.lobbyPmsLastSyncAt;
+                    console.log(`[LobbyPmsSync] Branch ${branchId}: Verwende letzte Sync-Zeit: ${syncStartDate.toISOString()}`);
+                }
+                else {
+                    // Erster Sync: letzte 24 Stunden
+                    syncStartDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                    console.log(`[LobbyPmsSync] Branch ${branchId}: Erster Sync, verwende letzte 24 Stunden`);
+                }
                 // Erstelle LobbyPMS Service für Branch
                 const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
-                // Datum-Bereich bestimmen
-                // Standard: Letzte 24 Stunden (nur Reservierungen, die in den letzten 24h ERSTELLT wurden)
-                // WICHTIG: creation_date_from filtert nach Erstellungsdatum, nicht nach Check-in!
-                const syncStartDate = startDate || new Date(Date.now() - 24 * 60 * 60 * 1000); // -24 Stunden
-                // endDate wird nicht mehr benötigt, da creation_date_from nur einen Start-Parameter hat
                 // Hole Reservierungen von LobbyPMS und synchronisiere sie
                 // fetchReservations filtert jetzt nach creation_date, nicht nach Check-in!
                 const syncedCount = yield lobbyPmsService.syncReservations(syncStartDate);
                 console.log(`[LobbyPmsSync] Branch ${branchId}: ${syncedCount} Reservierungen synchronisiert`);
+                // OPTIMIERUNG: Speichere erfolgreiche Sync-Zeit
+                if (syncedCount >= 0) { // Auch bei 0 (keine neuen Reservierungen) speichern
+                    yield prisma_1.prisma.branch.update({
+                        where: { id: branchId },
+                        data: {
+                            lobbyPmsLastSyncAt: new Date(), // Aktuelle Zeit
+                        }
+                    });
+                    console.log(`[LobbyPmsSync] Branch ${branchId}: Sync-Zeit gespeichert`);
+                }
                 return syncedCount;
             }
             catch (error) {

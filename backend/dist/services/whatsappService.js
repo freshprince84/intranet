@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -286,7 +319,7 @@ class WhatsAppService {
      */
     sendViaWhatsAppBusiness(to, message, template, templateParams, templateLanguage, isGroup) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
             if (!this.axiosInstance) {
                 throw new Error('WhatsApp Business Service nicht initialisiert');
             }
@@ -344,8 +377,9 @@ class WhatsAppService {
                     console.error(`[WhatsApp Business] ⚠️ Authorization Header fehlt!`);
                 }
                 const response = yield this.axiosInstance.post('/messages', payload);
-                console.log(`[WhatsApp Business] ✅ Nachricht erfolgreich gesendet. Status: ${response.status}`);
-                console.log(`[WhatsApp Business] Response:`, JSON.stringify(response.data, null, 2));
+                console.log(`[WhatsApp Business] Response Status: ${response.status}`);
+                console.log(`[WhatsApp Business] Response Headers:`, JSON.stringify(response.headers, null, 2));
+                console.log(`[WhatsApp Business] Response Data:`, JSON.stringify(response.data, null, 2));
                 // WICHTIG: Prüfe Response-Daten auch bei Status 200
                 // Die API kann Status 200 zurückgeben, aber trotzdem Fehler in response.data enthalten
                 if ((_b = response.data) === null || _b === void 0 ? void 0 : _b.error) {
@@ -369,18 +403,79 @@ class WhatsAppService {
                     throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify(errorData)}`);
                 }
                 // Prüfe ob Message-ID zurückgegeben wurde
-                if ((_e = (_d = (_c = response.data) === null || _c === void 0 ? void 0 : _c.messages) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.id) {
-                    const messageId = response.data.messages[0].id;
-                    console.log(`[WhatsApp Business] Message-ID: ${messageId}`);
+                const returnedMessageId = (_e = (_d = (_c = response.data) === null || _c === void 0 ? void 0 : _c.messages) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.id;
+                if (returnedMessageId) {
+                    console.log(`[WhatsApp Business] ✅ Message-ID: ${returnedMessageId}`);
                     console.log(`[WhatsApp Business] ⚠️ WICHTIG: Status 200 bedeutet nur, dass die API die Nachricht akzeptiert hat.`);
                     console.log(`[WhatsApp Business] ⚠️ Die tatsächliche Zustellung kann über Webhook-Status-Updates verfolgt werden.`);
+                    // Speichere ausgehende Nachricht in Datenbank
+                    try {
+                        const normalizedPhone = this.normalizePhoneNumber(to);
+                        // Hole branchId (sollte bereits gesetzt sein, wenn Service mit branchId erstellt wurde)
+                        let branchId = this.branchId;
+                        if (!branchId && this.organizationId) {
+                            // Fallback: Suche ersten Branch der Organisation
+                            const branch = yield prisma_1.prisma.branch.findFirst({
+                                where: { organizationId: this.organizationId },
+                                select: { id: true }
+                            });
+                            branchId = branch === null || branch === void 0 ? void 0 : branch.id;
+                        }
+                        if (branchId) {
+                            yield prisma_1.prisma.whatsAppMessage.create({
+                                data: {
+                                    direction: 'outgoing',
+                                    phoneNumber: normalizedPhone,
+                                    message: message,
+                                    messageId: returnedMessageId,
+                                    status: 'sent',
+                                    branchId: branchId,
+                                    sentAt: new Date()
+                                }
+                            });
+                            console.log(`[WhatsApp Business] ✅ Ausgehende Nachricht in Datenbank gespeichert`);
+                        }
+                        else {
+                            console.warn(`[WhatsApp Business] ⚠️ BranchId nicht verfügbar - Nachricht nicht in DB gespeichert`);
+                        }
+                    }
+                    catch (dbError) {
+                        console.error(`[WhatsApp Business] ⚠️ Fehler beim Speichern der ausgehenden Nachricht:`, dbError);
+                        // Weiter mit Verarbeitung, auch wenn Speichern fehlschlägt
+                    }
+                    // Prüfe ob es Warnungen gibt (können auf mögliche Probleme hinweisen)
+                    if (((_f = response.data) === null || _f === void 0 ? void 0 : _f.warnings) && Array.isArray(response.data.warnings) && response.data.warnings.length > 0) {
+                        console.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, JSON.stringify(response.data.warnings, null, 2));
+                        // Prüfe ob Warnungen auf 24h-Fenster-Problem hinweisen
+                        const warningsText = JSON.stringify(response.data.warnings).toLowerCase();
+                        if (warningsText.includes('24 hour') || warningsText.includes('outside window') || warningsText.includes('template')) {
+                            console.warn(`[WhatsApp Business] ⚠️ Warnungen deuten auf mögliches 24h-Fenster-Problem hin - Template-Fallback wird empfohlen`);
+                            // Wir werfen hier keinen Error, weil die API die Nachricht akzeptiert hat
+                            // Aber wir loggen es, damit der Template-Fallback später ausgelöst werden kann
+                        }
+                    }
                 }
                 else {
                     // Keine Message-ID zurückgegeben - könnte ein Problem sein
-                    console.warn(`[WhatsApp Business] ⚠️ Keine Message-ID in Response zurückgegeben`);
+                    console.error(`[WhatsApp Business] ❌ Keine Message-ID in Response zurückgegeben - möglicherweise wurde die Nachricht nicht akzeptiert`);
+                    console.error(`[WhatsApp Business] Response-Daten:`, JSON.stringify(response.data, null, 2));
                     // Prüfe ob es Warnungen gibt
-                    if ((_f = response.data) === null || _f === void 0 ? void 0 : _f.warnings) {
+                    if ((_g = response.data) === null || _g === void 0 ? void 0 : _g.warnings) {
                         console.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, response.data.warnings);
+                    }
+                    // Prüfe ob response.data leer ist oder unerwartete Struktur hat
+                    if (!response.data || Object.keys(response.data).length === 0) {
+                        console.error(`[WhatsApp Business] ❌ Response-Daten sind leer - möglicherweise wurde die Nachricht nicht akzeptiert`);
+                        throw new Error('WhatsApp Business API: Response-Daten sind leer - Nachricht wurde möglicherweise nicht akzeptiert');
+                    }
+                    // Wenn Template verwendet wird, ist Message-ID optional (kann später kommen)
+                    // Aber bei Session Messages sollte eine Message-ID vorhanden sein
+                    if (!template) {
+                        console.error(`[WhatsApp Business] ❌ Session Message: Keine Message-ID zurückgegeben - Nachricht wurde möglicherweise nicht akzeptiert`);
+                        throw new Error('WhatsApp Business API: Session Message - Keine Message-ID zurückgegeben - Nachricht wurde möglicherweise nicht akzeptiert');
+                    }
+                    else {
+                        console.warn(`[WhatsApp Business] ⚠️ Template Message: Keine Message-ID zurückgegeben (kann normal sein, wird später über Webhook bestätigt)`);
                     }
                 }
                 return response.status === 200;
@@ -389,13 +484,13 @@ class WhatsAppService {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
                     console.error('[WhatsApp Business] API Fehler Details:');
-                    console.error('  Status:', (_g = axiosError.response) === null || _g === void 0 ? void 0 : _g.status);
-                    console.error('  Status Text:', (_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.statusText);
-                    console.error('  Response Data:', JSON.stringify((_j = axiosError.response) === null || _j === void 0 ? void 0 : _j.data, null, 2));
-                    console.error('  Request URL:', (_k = axiosError.config) === null || _k === void 0 ? void 0 : _k.url);
-                    console.error('  Request Method:', (_l = axiosError.config) === null || _l === void 0 ? void 0 : _l.method);
-                    console.error('  Request Headers:', JSON.stringify((_m = axiosError.config) === null || _m === void 0 ? void 0 : _m.headers, null, 2));
-                    throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify((_o = axiosError.response) === null || _o === void 0 ? void 0 : _o.data)}`);
+                    console.error('  Status:', (_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.status);
+                    console.error('  Status Text:', (_j = axiosError.response) === null || _j === void 0 ? void 0 : _j.statusText);
+                    console.error('  Response Data:', JSON.stringify((_k = axiosError.response) === null || _k === void 0 ? void 0 : _k.data, null, 2));
+                    console.error('  Request URL:', (_l = axiosError.config) === null || _l === void 0 ? void 0 : _l.url);
+                    console.error('  Request Method:', (_m = axiosError.config) === null || _m === void 0 ? void 0 : _m.method);
+                    console.error('  Request Headers:', JSON.stringify((_o = axiosError.config) === null || _o === void 0 ? void 0 : _o.headers, null, 2));
+                    throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify((_p = axiosError.response) === null || _p === void 0 ? void 0 : _p.data)}`);
                 }
                 console.error('[WhatsApp Business] Unbekannter Fehler:', error);
                 throw error;
@@ -438,6 +533,65 @@ class WhatsAppService {
     sendMessageWithFallback(to, message, templateName, templateParams, reservation // NEU: Für Sprache-Erkennung
     ) {
         return __awaiter(this, void 0, void 0, function* () {
+            // Prüfe ob 24h-Fenster aktiv ist (durch Datenbank-Prüfung auf eingehende Nachrichten)
+            // Das 24h-Fenster wird durch eingehende Nachrichten aktiviert (wenn der Empfänger uns schreibt)
+            if (templateName) {
+                try {
+                    const { prisma } = yield Promise.resolve().then(() => __importStar(require('../utils/prisma')));
+                    const normalizedPhone = this.normalizePhoneNumber(to);
+                    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                    // Prüfe, ob es eine eingehende Nachricht von dieser Nummer in den letzten 24h gibt
+                    const lastIncomingMessage = yield prisma.whatsAppMessage.findFirst({
+                        where: {
+                            phoneNumber: normalizedPhone,
+                            direction: 'incoming',
+                            sentAt: { gte: twentyFourHoursAgo }
+                        },
+                        orderBy: {
+                            sentAt: 'desc'
+                        }
+                    });
+                    if (!lastIncomingMessage) {
+                        console.log(`[WhatsApp Service] ⚠️ Keine eingehende WhatsApp-Nachricht von ${to} in den letzten 24h gefunden - 24h-Fenster nicht aktiv - verwende direkt Template Message`);
+                        // Überspringe Session Message und verwende direkt Template
+                        yield this.loadSettings();
+                        if (!this.axiosInstance || !this.phoneNumberId) {
+                            throw new Error('WhatsApp Service nicht initialisiert');
+                        }
+                        const normalizedPhone2 = this.normalizePhoneNumber(to);
+                        const formattedParams = (templateParams === null || templateParams === void 0 ? void 0 : templateParams.map(text => ({
+                            type: 'text',
+                            text: text
+                        }))) || [];
+                        // Template-Sprache: Reservation > Environment-Variable > Fallback
+                        let languageCode;
+                        if (reservation) {
+                            const { CountryLanguageService } = require('./countryLanguageService');
+                            languageCode = CountryLanguageService.getLanguageForReservation(reservation);
+                        }
+                        else {
+                            languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+                        }
+                        const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
+                        const templateResult = yield this.sendViaWhatsAppBusiness(normalizedPhone2, message, adjustedTemplateName, formattedParams, languageCode);
+                        if (templateResult) {
+                            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (direkt, da 24h-Fenster nicht aktiv)`);
+                            return true;
+                        }
+                        else {
+                            throw new Error('Template Message gab false zurück');
+                        }
+                    }
+                    else {
+                        const hoursAgo = Math.round((Date.now() - lastIncomingMessage.sentAt.getTime()) / (60 * 60 * 1000));
+                        console.log(`[WhatsApp Service] ✅ Eingehende WhatsApp-Nachricht von ${to} vor ${hoursAgo} Stunden gefunden - 24h-Fenster ist aktiv - versuche Session Message`);
+                    }
+                }
+                catch (dbError) {
+                    console.warn(`[WhatsApp Service] ⚠️ Fehler bei Datenbank-Prüfung für 24h-Fenster:`, dbError);
+                    // Bei Fehler: Versuche trotzdem Session Message
+                }
+            }
             try {
                 // Versuche zuerst Session Message (24h-Fenster)
                 console.log(`[WhatsApp Service] Versuche Session Message (24h-Fenster) für ${to}...`);

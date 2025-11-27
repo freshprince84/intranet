@@ -125,6 +125,39 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     return res.status(200).json({ success: false, error: 'Branch nicht gefunden' });
                 }
                 console.log('[WhatsApp Webhook] Branch identifiziert:', branchId);
+                // 1.5. Speichere eingehende Nachricht in Datenbank
+                try {
+                    const { LanguageDetectionService } = require('../services/languageDetectionService');
+                    const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(fromNumber);
+                    const messageId = message.id;
+                    // Prüfe ob es eine Reservation zu dieser Telefonnummer gibt
+                    const reservation = yield prisma_1.prisma.reservation.findFirst({
+                        where: {
+                            guestPhone: normalizedPhone,
+                            branchId: branchId
+                        },
+                        orderBy: {
+                            checkInDate: 'desc'
+                        }
+                    });
+                    // Speichere Nachricht
+                    yield prisma_1.prisma.whatsAppMessage.create({
+                        data: {
+                            direction: 'incoming',
+                            phoneNumber: normalizedPhone,
+                            message: messageText,
+                            messageId: messageId,
+                            branchId: branchId,
+                            reservationId: (reservation === null || reservation === void 0 ? void 0 : reservation.id) || null,
+                            sentAt: new Date(parseInt(message.timestamp) * 1000) // WhatsApp timestamp ist in Sekunden
+                        }
+                    });
+                    console.log('[WhatsApp Webhook] ✅ Eingehende Nachricht in Datenbank gespeichert');
+                }
+                catch (dbError) {
+                    console.error('[WhatsApp Webhook] ⚠️ Fehler beim Speichern der eingehenden Nachricht:', dbError);
+                    // Weiter mit Verarbeitung, auch wenn Speichern fehlschlägt
+                }
                 // 2. Prüfe ob es eine LobbyPMS Reservierungsnachricht ist (bestehende Funktionalität)
                 const parsedMessage = whatsappMessageParser_1.WhatsAppMessageParser.parseReservationMessage(messageText);
                 if (parsedMessage) {
