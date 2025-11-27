@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../utils/prisma';
 import { filterCache } from '../services/filterCache';
+import { filterListCache } from '../services/filterListCache';
 
 // Schnittstellendefinitionen
 interface SortDirection {
@@ -24,6 +25,7 @@ interface FilterGroupRequest {
 }
 
 // Funktion zum Abrufen aller gespeicherten Filter eines Benutzers für eine Tabelle
+// ✅ PERFORMANCE: Verwendet FilterListCache statt direkter DB-Query
 export const getUserSavedFilters = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = parseInt(req.userId, 10);
@@ -37,57 +39,13 @@ export const getUserSavedFilters = async (req: AuthenticatedRequest, res: Respon
       return res.status(400).json({ message: 'Table ID ist erforderlich' });
     }
 
-    // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
     try {
-      const savedFilters = await prisma.savedFilter.findMany({
-        where: {
-          userId,
-          tableId
-        }
-      });
+      // ✅ PERFORMANCE: Verwende FilterListCache statt direkter DB-Query
+      const parsedFilters = await filterListCache.getFilters(userId, tableId);
 
-      // Parse die JSON-Strings zurück in Arrays
-      const parsedFilters = savedFilters.map(filter => {
-        let sortDirections: SortDirection[] = [];
-        if (filter.sortDirections) {
-          try {
-            // Prüfe, ob es ein "null" String ist
-            if (filter.sortDirections.trim() === 'null' || filter.sortDirections.trim() === '') {
-              sortDirections = [];
-            } else {
-              const parsed = JSON.parse(filter.sortDirections);
-              // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
-              if (Array.isArray(parsed)) {
-                sortDirections = parsed;
-              } else if (typeof parsed === 'object' && parsed !== null) {
-                // Altes Format: { "status": "asc", "branch": "desc" }
-                sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                  column,
-                  direction: direction as 'asc' | 'desc',
-                  priority: index + 1
-                }));
-              }
-            }
-          } catch (e) {
-            console.error('Fehler beim Parsen von sortDirections:', e);
-            sortDirections = [];
-          }
-        }
-        
-        return {
-          id: filter.id,
-          userId: filter.userId,
-          tableId: filter.tableId,
-          name: filter.name,
-          conditions: JSON.parse(filter.conditions),
-          operators: JSON.parse(filter.operators),
-          sortDirections,
-          groupId: filter.groupId,
-          order: filter.order,
-          createdAt: filter.createdAt,
-          updatedAt: filter.updatedAt
-        };
-      });
+      if (!parsedFilters) {
+        return res.status(500).json({ message: 'Fehler beim Laden der Filter' });
+      }
 
       return res.status(200).json(parsedFilters);
     } catch (prismaError) {
@@ -150,6 +108,7 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
         });
         // Cache invalidieren
         filterCache.invalidate(existingFilter.id);
+        filterListCache.invalidate(userId, tableId);
       } else {
         // Erstelle neuen Filter
         filter = await prisma.savedFilter.create({
@@ -162,6 +121,8 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
             sortDirections: sortDirectionsJson
           }
         });
+        // Cache invalidieren
+        filterListCache.invalidate(userId, tableId);
       }
 
       // Parse die JSON-Strings zurück in Arrays für die Antwort
@@ -252,6 +213,7 @@ export const deleteFilter = async (req: AuthenticatedRequest, res: Response) => 
       });
       // Cache invalidieren
       filterCache.invalidate(filterId);
+      filterListCache.invalidate(userId, existingFilter.tableId);
 
       return res.status(200).json({ message: 'Filter erfolgreich gelöscht' });
     } catch (prismaError) {
@@ -324,6 +286,9 @@ export const createFilterGroup = async (req: AuthenticatedRequest, res: Response
         }
       });
 
+      // Cache invalidieren
+      filterListCache.invalidate(userId, tableId);
+
       return res.status(200).json({
         id: group.id,
         userId: group.userId,
@@ -345,6 +310,7 @@ export const createFilterGroup = async (req: AuthenticatedRequest, res: Response
 };
 
 // Funktion zum Abrufen aller Filter-Gruppen eines Benutzers für eine Tabelle
+// ✅ PERFORMANCE: Verwendet FilterListCache statt direkter DB-Query
 export const getFilterGroups = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = parseInt(req.userId, 10);
@@ -359,46 +325,12 @@ export const getFilterGroups = async (req: AuthenticatedRequest, res: Response) 
     }
 
     try {
-      const groups = await prisma.filterGroup.findMany({
-        where: {
-          userId,
-          tableId
-        },
-        include: {
-          filters: {
-            orderBy: {
-              order: 'asc'
-            }
-          }
-        },
-        orderBy: {
-          order: 'asc'
-        }
-      });
+      // ✅ PERFORMANCE: Verwende FilterListCache statt direkter DB-Query
+      const parsedGroups = await filterListCache.getFilterGroups(userId, tableId);
 
-      // Parse die JSON-Strings der Filter zurück in Arrays
-      const parsedGroups = groups.map(group => ({
-        id: group.id,
-        userId: group.userId,
-        tableId: group.tableId,
-        name: group.name,
-        order: group.order,
-        filters: group.filters.map(filter => ({
-          id: filter.id,
-          userId: filter.userId,
-          tableId: filter.tableId,
-          name: filter.name,
-          conditions: JSON.parse(filter.conditions),
-          operators: JSON.parse(filter.operators),
-          sortDirections: filter.sortDirections ? JSON.parse(filter.sortDirections) : {},
-          groupId: filter.groupId,
-          order: filter.order,
-          createdAt: filter.createdAt,
-          updatedAt: filter.updatedAt
-        })),
-        createdAt: group.createdAt,
-        updatedAt: group.updatedAt
-      }));
+      if (!parsedGroups) {
+        return res.status(500).json({ message: 'Fehler beim Laden der Filter-Gruppen' });
+      }
 
       return res.status(200).json(parsedGroups);
     } catch (prismaError) {
@@ -475,6 +407,9 @@ export const updateFilterGroup = async (req: AuthenticatedRequest, res: Response
           }
         }
       });
+
+      // Cache invalidieren
+      filterListCache.invalidate(userId, existingGroup.tableId);
 
       // Parse die JSON-Strings der Filter zurück in Arrays
       const parsedGroup = {
@@ -558,6 +493,9 @@ export const deleteFilterGroup = async (req: AuthenticatedRequest, res: Response
         }
       });
 
+      // Cache invalidieren
+      filterListCache.invalidate(userId, existingGroup.tableId);
+
       return res.status(200).json({ message: 'Gruppe erfolgreich gelöscht' });
     } catch (prismaError) {
       console.error('Prisma-Fehler beim Löschen der Gruppe:', prismaError);
@@ -640,6 +578,9 @@ export const addFilterToGroup = async (req: AuthenticatedRequest, res: Response)
         }
       });
 
+      // Cache invalidieren
+      filterListCache.invalidate(userId, filter.tableId);
+
       // Parse die JSON-Strings zurück in Arrays
       const parsedFilter = {
         id: updatedFilter.id,
@@ -702,6 +643,9 @@ export const removeFilterFromGroup = async (req: AuthenticatedRequest, res: Resp
           order: 0
         }
       });
+
+      // Cache invalidieren
+      filterListCache.invalidate(userId, filter.tableId);
 
       // Parse die JSON-Strings zurück in Arrays
       const parsedFilter = {
