@@ -56,24 +56,11 @@ class WhatsAppService {
                     // Branch hat eigene WhatsApp Settings
                     console.log(`[WhatsApp Service] Branch hat eigene WhatsApp Settings`);
                     try {
-                        // branch.whatsappSettings enthält direkt die WhatsApp Settings (nicht verschachtelt)
-                        // Versuche zu entschlüsseln (falls verschlüsselt)
-                        let whatsappSettings;
-                        try {
-                            // Versuche als verschachteltes Objekt zu entschlüsseln
-                            const decrypted = (0, encryption_1.decryptApiSettings)({ whatsapp: branch.whatsappSettings });
-                            whatsappSettings = decrypted === null || decrypted === void 0 ? void 0 : decrypted.whatsapp;
-                        }
-                        catch (_d) {
-                            // Falls das fehlschlägt, versuche direkt zu entschlüsseln
-                            try {
-                                whatsappSettings = (0, encryption_1.decryptApiSettings)(branch.whatsappSettings);
-                            }
-                            catch (_e) {
-                                // Falls auch das fehlschlägt, verwende direkt (unverschlüsselt)
-                                whatsappSettings = branch.whatsappSettings;
-                            }
-                        }
+                        // branch.whatsappSettings enthält direkt die WhatsApp Settings (kann verschachtelt sein)
+                        // Verwende decryptBranchApiSettings für Branch Settings (entschlüsselt verschachtelte Settings)
+                        const decrypted = (0, encryption_1.decryptBranchApiSettings)(branch.whatsappSettings);
+                        // WhatsApp Settings können direkt im Root sein oder verschachtelt in whatsapp
+                        let whatsappSettings = (decrypted === null || decrypted === void 0 ? void 0 : decrypted.whatsapp) || decrypted;
                         // Falls immer noch verschachtelt, extrahiere whatsapp
                         if (whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.whatsapp) {
                             whatsappSettings = whatsappSettings.whatsapp;

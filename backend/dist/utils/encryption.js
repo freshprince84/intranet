@@ -425,6 +425,21 @@ const decryptBranchApiSettings = (settings) => {
             decrypted.whatsapp = Object.assign(Object.assign({}, decrypted.whatsapp), whatsappUpdates);
         }
     }
+    // Email Settings (verschachtelt in emailSettings)
+    if (decrypted.email && typeof decrypted.email === 'object') {
+        const emailUpdates = {};
+        if (decrypted.email.smtpPass && typeof decrypted.email.smtpPass === 'string' && decrypted.email.smtpPass.includes(':')) {
+            try {
+                emailUpdates.smtpPass = (0, exports.decryptSecret)(decrypted.email.smtpPass);
+            }
+            catch (error) {
+                console.error('Error decrypting email.smtpPass:', error);
+            }
+        }
+        if (Object.keys(emailUpdates).length > 0) {
+            decrypted.email = Object.assign(Object.assign({}, decrypted.email), emailUpdates);
+        }
+    }
     // Email IMAP Password (verschachtelt)
     if (((_a = decrypted.imap) === null || _a === void 0 ? void 0 : _a.password) && typeof decrypted.imap.password === 'string' && decrypted.imap.password.includes(':')) {
         try {
