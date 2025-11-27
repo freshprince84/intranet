@@ -369,12 +369,47 @@ export class WhatsAppService {
       console.log(`[WhatsApp Business] ✅ Nachricht erfolgreich gesendet. Status: ${response.status}`);
       console.log(`[WhatsApp Business] Response:`, JSON.stringify(response.data, null, 2));
       
+      // WICHTIG: Prüfe Response-Daten auch bei Status 200
+      // Die API kann Status 200 zurückgeben, aber trotzdem Fehler in response.data enthalten
+      if (response.data?.error) {
+        const errorData = response.data.error;
+        const errorCode = errorData.code;
+        const errorMessage = (errorData.message || '').toLowerCase();
+        const errorSubcode = errorData.error_subcode;
+        
+        console.error(`[WhatsApp Business] ⚠️ Fehler in Response-Daten (trotz Status 200):`, errorData);
+        
+        // Prüfe ob es ein 24h-Fenster-Fehler ist
+        const is24HourWindowError = 
+          errorCode === 131047 ||
+          errorCode === 131026 ||
+          errorSubcode === 131047 ||
+          errorMessage.includes('24 hour') ||
+          errorMessage.includes('outside window') ||
+          errorMessage.includes('template required') ||
+          errorMessage.includes('outside the 24 hour');
+        
+        if (is24HourWindowError) {
+          console.log(`[WhatsApp Business] ⚠️ 24h-Fenster-Fehler erkannt in Response-Daten`);
+        }
+        
+        // Werfe Error, damit Template-Fallback ausgelöst wird
+        throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify(errorData)}`);
+      }
+      
       // Prüfe ob Message-ID zurückgegeben wurde
       if (response.data?.messages?.[0]?.id) {
         const messageId = response.data.messages[0].id;
         console.log(`[WhatsApp Business] Message-ID: ${messageId}`);
         console.log(`[WhatsApp Business] ⚠️ WICHTIG: Status 200 bedeutet nur, dass die API die Nachricht akzeptiert hat.`);
         console.log(`[WhatsApp Business] ⚠️ Die tatsächliche Zustellung kann über Webhook-Status-Updates verfolgt werden.`);
+      } else {
+        // Keine Message-ID zurückgegeben - könnte ein Problem sein
+        console.warn(`[WhatsApp Business] ⚠️ Keine Message-ID in Response zurückgegeben`);
+        // Prüfe ob es Warnungen gibt
+        if (response.data?.warnings) {
+          console.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, response.data.warnings);
+        }
       }
 
       return response.status === 200;
