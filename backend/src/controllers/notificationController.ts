@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Prisma, NotificationType } from '@prisma/client';
-import { prisma } from '../utils/prisma';
+import { prisma, executeWithRetry } from '../utils/prisma';
 import {
   NotificationCreateInput,
   NotificationUpdateInput,
