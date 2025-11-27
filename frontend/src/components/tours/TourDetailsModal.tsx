@@ -21,9 +21,11 @@ interface TourDetailsModalProps {
 const TourDetailsModal = ({ isOpen, onClose, tourId, onTourUpdated }: TourDetailsModalProps) => {
     const { t } = useTranslation();
     const { showMessage } = useMessage();
+    const { hasPermission } = usePermissions();
     const [tour, setTour] = useState<Tour | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isCreateBookingModalOpen, setIsCreateBookingModalOpen] = useState(false);
 
     useEffect(() => {
         if (isOpen && tourId) {
@@ -62,12 +64,23 @@ const TourDetailsModal = ({ isOpen, onClose, tourId, onTourUpdated }: TourDetail
                         <Dialog.Title className="text-xl font-semibold text-gray-900 dark:text-white">
                             {t('tours.details', 'Tour-Details')}
                         </Dialog.Title>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                        >
-                            <XMarkIcon className="h-6 w-6" />
-                        </button>
+                        <div className="flex items-center gap-3">
+                            {hasPermission('tour_bookings', 'write', 'table') && tour && tour.isActive && (
+                                <button
+                                    onClick={() => setIsCreateBookingModalOpen(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                                >
+                                    <PlusIcon className="h-5 w-5" />
+                                    {t('tourBookings.create', 'Buchung erstellen')}
+                                </button>
+                            )}
+                            <button
+                                onClick={onClose}
+                                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                            >
+                                <XMarkIcon className="h-6 w-6" />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="p-6">
