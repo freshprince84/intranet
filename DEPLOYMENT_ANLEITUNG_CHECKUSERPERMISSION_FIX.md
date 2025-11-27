@@ -1,8 +1,8 @@
-# Deployment-Anleitung: executeWithRetry Fix (2025-01-26)
+# Deployment-Anleitung: checkUserPermission Fix (2025-01-26)
 
 **Datum:** 2025-01-26  
 **Status:** ✅ Bereit zum Deployment  
-**Änderung:** disconnect/connect Logik aus `executeWithRetry` entfernt
+**Änderung:** `checkUserPermission` verwendet jetzt `UserCache` statt eigene DB-Query
 
 ---
 
@@ -21,8 +21,6 @@ cd /var/www/intranet
 ```
 
 **⚠️ WICHTIG: Falls lokale Änderungen in dist/ vorhanden sind:**
-
-Die `dist/` Dateien werden beim Build neu generiert. Falls Git Pull fehlschlägt wegen lokaler Änderungen:
 
 ```bash
 # Option 1: Dist-Dateien zurücksetzen (empfohlen, da sie sowieso neu gebaut werden)
@@ -44,8 +42,8 @@ git stash pop  # Falls nötig (normalerweise nicht, da dist/ neu gebaut wird)
 ```
 
 **Erwartetes Ergebnis:**
-- Neuer Commit wird gepullt: "Performance: disconnect/connect Logik aus executeWithRetry entfernt"
-- Datei `backend/src/utils/prisma.ts` wurde geändert
+- Neuer Commit wird gepullt: "Performance: checkUserPermission verwendet UserCache statt DB-Query"
+- Datei `backend/src/middleware/permissionMiddleware.ts` wurde geändert
 
 ---
 
@@ -59,7 +57,7 @@ npm run build
 
 **Erwartetes Ergebnis:**
 - TypeScript wird kompiliert
-- Neue `dist/utils/prisma.js` wird erstellt
+- Neue `dist/middleware/permissionMiddleware.js` wird erstellt
 - Keine Fehler
 
 ---
@@ -91,37 +89,34 @@ pm2 logs intranet-backend --lines 50 --nostream
 **Erwartetes Verhalten:**
 - Keine Fehler beim Start
 - System sollte normal funktionieren
-- Bei DB-Fehlern: Retry mit Delay, aber keine disconnect/connect Logik
+- Permission-Checks sollten deutlich schneller sein
 
 **Performance prüfen:**
-- System sollte wieder schnell sein
-- Ladezeiten sollten < 2 Sekunden sein
-- Keine 30+ Sekunden Wartezeiten mehr
+- Reservations Tab sollte schneller laden (von 4-8s auf 1.15-2.3s)
+- Permission-Checks sollten < 1ms sein (nach Cache-Warmup)
+- System sollte wieder normal schnell sein
 
 ---
 
 ## 🔍 WAS WURDE GEÄNDERT?
 
-### Datei: `backend/src/utils/prisma.ts`
+### Datei: `backend/src/middleware/permissionMiddleware.ts`
 
 **Vorher:**
 ```typescript
-if (attempt < maxRetries) {
-  try {
-    await prisma.$disconnect();  // ← ENTFERNT
-    await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-    await prisma.$connect();     // ← ENTFERNT
-  }
-}
+// DB-Query bei JEDEM Aufruf
+const role = await prisma.role.findUnique({
+  where: { id: roleId },
+  include: { permissions: true }
+});
 ```
 
 **Nachher:**
 ```typescript
-if (attempt < maxRetries) {
-  // Retry mit Delay - Prisma reconnect automatisch
-  await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-  console.log(`[Prisma] Retrying after ${attempt} attempt(s) - Prisma will reconnect automatically`);
-}
+// ✅ PERFORMANCE: Verwende UserCache statt eigene DB-Query
+const cached = await userCache.get(userId);
+const activeRole = cached.user.roles.find(r => r.lastUsed);
+const permissions = activeRole.role.permissions || [];
 ```
 
 ---
@@ -129,16 +124,16 @@ if (attempt < maxRetries) {
 ## 📊 ERWARTETE VERBESSERUNG
 
 ### Vorher:
-- **Request-Zeit bei DB-Fehler:** 12-90 Sekunden
-- **System:** Praktisch unbrauchbar
-- **Ladezeiten:** 30+ Sekunden
+- **Permission-Check:** DB-Query bei jedem Aufruf = ~1-2s
+- **Bei 3 Permission-Checks:** 3-6 Sekunden zusätzliche Wartezeit
+- **Bei getAllReservations:** 4-8 Sekunden
 
 ### Nachher:
-- **Request-Zeit bei DB-Fehler:** 0.5-3 Sekunden
-- **System:** Wieder nutzbar
-- **Ladezeiten:** < 2 Sekunden
+- **Permission-Check:** UserCache-Lookup = ~0-5ms (nach Cache-Warmup)
+- **Bei 3 Permission-Checks:** 0.15-0.3 Sekunden zusätzliche Wartezeit
+- **Bei getAllReservations:** 1.15-2.3 Sekunden
 
-**Reduktion:** 95-97% schneller
+**Reduktion:** 70-85% schneller
 
 ---
 
@@ -149,8 +144,12 @@ if (attempt < maxRetries) {
 - PM2 restart ist erforderlich
 
 **Keine Breaking Changes:**
-- Alle bestehenden Verwendungen von `executeWithRetry` funktionieren weiterhin
+- Alle bestehenden Verwendungen von `checkUserPermission` funktionieren weiterhin
 - Nur interne Logik wurde optimiert
+
+**Cache-Invalidierung:**
+- Wird bereits korrekt gemacht (bei Permission-Änderungen wird `UserCache` invalidiert)
+- Keine zusätzlichen Schritte nötig
 
 ---
 
@@ -173,10 +172,11 @@ pm2 logs intranet-backend --lines 100
 
 **Falls Fehler auftreten:**
 - Prüfe Logs auf Fehlermeldungen
-- Prüfe ob `backend/dist/utils/prisma.js` existiert
+- Prüfe ob `backend/dist/middleware/permissionMiddleware.js` existiert
 - Prüfe ob TypeScript-Kompilierung erfolgreich war
 
 ---
 
 **Erstellt:** 2025-01-26  
 **Status:** ✅ Bereit zum Deployment
+

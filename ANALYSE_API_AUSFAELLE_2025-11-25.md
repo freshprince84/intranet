@@ -8236,6 +8236,369 @@ EOF
 cd /var/www/intranet/backend && npx ts-node /tmp/restore-manila-whatsapp-settings.ts
 ```
 
+---
+
+## 🔴 NEUES PROBLEM: INVALID OAUTH ACCESS TOKEN (28.11.2025 01:35 UTC)
+
+**Fehlermeldung:**
+```
+Session Message fehlgeschlagen: WhatsApp Business API Fehler: {
+  "error": {
+    "message": "Invalid OAuth access token - Cannot parse access token",
+    "type": "OAuthException",
+    "code": 190,
+    "fbtrace_id": "..."
+  }
+}
+```
+
+**Das Problem:**
+- ✅ `phoneNumberId` ist jetzt gesetzt (manuell wiederhergestellt)
+- ❌ **ABER:** `apiKey` (OAuth Access Token) ist ungültig oder abgelaufen
+- ❌ WhatsApp Business API kann den Token nicht parsen
+
+**Code-Analyse:**
+- Zeile 199: `'Authorization': `Bearer ${this.apiKey}``
+- Der `apiKey` wird als OAuth Access Token verwendet
+- Facebook API gibt Code 190 zurück = Invalid OAuth access token
+
+**Mögliche Ursachen:**
+1. ❌ Token ist abgelaufen (WhatsApp Business API Tokens laufen ab)
+2. ❌ Token wurde ungültig gemacht (in Meta Business Manager)
+3. ❌ Token hat falsches Format (enthält ungültige Zeichen)
+4. ❌ Token wurde geändert, aber nicht in DB aktualisiert
+
+### 📋 PRÜFUNGEN (NUR LESEN, KEINE ÄNDERUNGEN!):
+
+**1. Prüfe Token-Format in Logs:**
+```bash
+# Prüfe wie der Token aussieht (nur Vorschau, nicht vollständig)
+pm2 logs intranet-backend --lines 500 --nostream | grep -A 5 "\[WhatsApp Business\] Authorization Header" | tail -30
+
+# Prüfe Token-Länge und Format
+pm2 logs intranet-backend --lines 500 --nostream | grep -E "Token Start|Token Ende|Authorization Header Länge" | tail -20
+```
+
+**2. Prüfe ob Token in Settings vorhanden ist:**
+```bash
+# Erstelle Script zum Prüfen des Tokens (NUR LESEN!)
+cat > /tmp/check-whatsapp-token.ts << 'EOF'
+import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import path from 'path';
+import { decryptBranchApiSettings } from './src/utils/encryption';
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+const prisma = new PrismaClient();
+
+async function checkWhatsAppToken() {
+  try {
+    console.log('🔍 Prüfe WhatsApp Token für Manila (NUR LESEN!)...\n');
+
+    const branch = await prisma.branch.findUnique({
+      where: { id: 3 },
+      select: {
+        whatsappSettings: true
+      }
+    });
+
+    if (!branch?.whatsappSettings) {
+      console.log('❌ Keine WhatsApp Settings gefunden');
+      return;
+    }
+
+    const decrypted = decryptBranchApiSettings(branch.whatsappSettings as any);
+    const whatsapp = decrypted?.whatsapp || decrypted;
+
+    console.log('✅ WhatsApp Settings gefunden:');
+    console.log('   - provider:', whatsapp?.provider);
+    console.log('   - apiKey vorhanden:', !!whatsapp?.apiKey);
+    console.log('   - apiKey Länge:', whatsapp?.apiKey?.length || 0);
+    console.log('   - apiKey Start (erste 30 Zeichen):', whatsapp?.apiKey?.substring(0, 30) || 'N/A');
+    console.log('   - apiKey Ende (letzte 30 Zeichen):', whatsapp?.apiKey?.substring(Math.max(0, (whatsapp?.apiKey?.length || 0) - 30)) || 'N/A');
+    console.log('   - apiKey enthält Leerzeichen:', (whatsapp?.apiKey || '').includes(' '));
+    console.log('   - apiKey enthält Zeilenumbrüche:', (whatsapp?.apiKey || '').includes('\n'));
+    console.log('   - phoneNumberId:', whatsapp?.phoneNumberId || '❌ FEHLT');
+
+    // Prüfe Token-Format (WhatsApp Business API Tokens sind normalerweise sehr lang)
+    if (whatsapp?.apiKey) {
+      const token = whatsapp.apiKey;
+      if (token.length < 50) {
+        console.log('\n⚠️  WARNUNG: Token ist sehr kurz (< 50 Zeichen) - möglicherweise falsch!');
+      }
+      if (token.includes(' ')) {
+        console.log('\n⚠️  WARNUNG: Token enthält Leerzeichen - sollte entfernt werden!');
+      }
+      if (token.includes('\n') || token.includes('\r')) {
+        console.log('\n⚠️  WARNUNG: Token enthält Zeilenumbrüche - sollte entfernt werden!');
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ Fehler:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+checkWhatsAppToken();
+EOF
+
+cd /var/www/intranet/backend && npx ts-node /tmp/check-whatsapp-token.ts
+```
+
+**3. Prüfe ob Token in Organization Settings anders ist:**
+```bash
+# Prüfe Organization Settings (falls Branch Settings falsch sind)
+cat > /tmp/check-org-whatsapp-token.ts << 'EOF'
+import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import path from 'path';
+import { decryptApiSettings } from './src/utils/encryption';
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+const prisma = new PrismaClient();
+
+async function checkOrgWhatsAppToken() {
+  try {
+    console.log('🔍 Prüfe WhatsApp Token in Organization Settings (NUR LESEN!)...\n');
+
+    const org = await prisma.organization.findUnique({
+      where: { id: 1 },
+      select: {
+        settings: true
+      }
+    });
+
+    if (!org?.settings) {
+      console.log('❌ Keine Organization Settings gefunden');
+      return;
+    }
+
+    const decrypted = decryptApiSettings(org.settings as any);
+    const whatsapp = decrypted?.whatsapp;
+
+    if (!whatsapp) {
+      console.log('❌ Keine WhatsApp Settings in Organization gefunden');
+      return;
+    }
+
+    console.log('✅ WhatsApp Settings in Organization gefunden:');
+    console.log('   - provider:', whatsapp.provider);
+    console.log('   - apiKey vorhanden:', !!whatsapp.apiKey);
+    console.log('   - apiKey Länge:', whatsapp.apiKey?.length || 0);
+    console.log('   - apiKey Start (erste 30 Zeichen):', whatsapp.apiKey?.substring(0, 30) || 'N/A');
+    console.log('   - phoneNumberId:', whatsapp.phoneNumberId || '❌ FEHLT');
+
+  } catch (error) {
+    console.error('❌ Fehler:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+checkOrgWhatsAppToken();
+EOF
+
+cd /var/www/intranet/backend && npx ts-node /tmp/check-org-whatsapp-token.ts
+```
+
+---
+
+## 🔍 ERGEBNISSE DER PRÜFUNGEN (28.11.2025 01:40 UTC)
+
+### ✅ WICHTIGE ERKENNTNISSE:
+
+**1. Token-Format in Logs:**
+- ✅ Authorization Header Länge: **2109 Zeichen** - Das ist SEHR ungewöhnlich lang!
+- ⚠️ **Normalerweise sind WhatsApp Business API Tokens ~200-300 Zeichen lang**
+- ⚠️ **Ein Token mit 2109 Zeichen deutet darauf hin:**
+  - Token wurde möglicherweise doppelt gespeichert
+  - Token enthält zusätzliche Daten (z.B. JSON-String statt nur Token)
+  - Token ist falsch formatiert
+
+**2. Token-Format:**
+- Token Start: `dcbae6e224287702c058a38...`
+- Token Ende: `...a6e12aca2032af570f77`
+- Das sieht aus wie ein normaler Token, aber die Länge ist verdächtig!
+
+**3. Script-Fehler:**
+- Scripts müssen im `backend/scripts` Verzeichnis erstellt werden (nicht `/tmp`)
+
+### 📋 KORRIGIERTE PRÜFUNGEN:
+
+**1. Prüfe Token-Länge und Format (Script im richtigen Verzeichnis):**
+```bash
+# Erstelle Script im richtigen Verzeichnis
+cat > /var/www/intranet/backend/scripts/check-whatsapp-token-manila.ts << 'EOF'
+import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import path from 'path';
+import { decryptBranchApiSettings } from '../src/utils/encryption';
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+const prisma = new PrismaClient();
+
+async function checkWhatsAppToken() {
+  try {
+    console.log('🔍 Prüfe WhatsApp Token für Manila (NUR LESEN!)...\n');
+
+    const branch = await prisma.branch.findUnique({
+      where: { id: 3 },
+      select: {
+        whatsappSettings: true
+      }
+    });
+
+    if (!branch?.whatsappSettings) {
+      console.log('❌ Keine WhatsApp Settings gefunden');
+      return;
+    }
+
+    const decrypted = decryptBranchApiSettings(branch.whatsappSettings as any);
+    const whatsapp = decrypted?.whatsapp || decrypted;
+
+    console.log('✅ WhatsApp Settings gefunden:');
+    console.log('   - provider:', whatsapp?.provider);
+    console.log('   - apiKey vorhanden:', !!whatsapp?.apiKey);
+    console.log('   - apiKey Länge:', whatsapp?.apiKey?.length || 0);
+    console.log('   - apiKey Start (erste 50 Zeichen):', whatsapp?.apiKey?.substring(0, 50) || 'N/A');
+    console.log('   - apiKey Ende (letzte 50 Zeichen):', whatsapp?.apiKey?.substring(Math.max(0, (whatsapp?.apiKey?.length || 0) - 50)) || 'N/A');
+    console.log('   - apiKey enthält Leerzeichen:', (whatsapp?.apiKey || '').includes(' '));
+    console.log('   - apiKey enthält Zeilenumbrüche:', (whatsapp?.apiKey || '').includes('\n'));
+    console.log('   - apiKey enthält Doppelpunkt:', (whatsapp?.apiKey || '').includes(':'));
+    console.log('   - phoneNumberId:', whatsapp?.phoneNumberId || '❌ FEHLT');
+
+    // Prüfe Token-Format
+    if (whatsapp?.apiKey) {
+      const token = whatsapp.apiKey;
+      console.log('\n=== TOKEN-ANALYSE ===');
+      
+      if (token.length > 500) {
+        console.log('⚠️  WARNUNG: Token ist sehr lang (> 500 Zeichen) - möglicherweise falsch formatiert!');
+        console.log('   Normalerweise sind WhatsApp Business API Tokens ~200-300 Zeichen lang');
+        
+        // Prüfe ob Token JSON enthält
+        if (token.startsWith('{') || token.includes('"')) {
+          console.log('⚠️  WARNUNG: Token sieht aus wie JSON - möglicherweise wurde JSON-String statt Token gespeichert!');
+        }
+        
+        // Prüfe ob Token doppelt ist
+        const firstHalf = token.substring(0, Math.floor(token.length / 2));
+        const secondHalf = token.substring(Math.floor(token.length / 2));
+        if (firstHalf === secondHalf) {
+          console.log('⚠️  WARNUNG: Token scheint doppelt zu sein!');
+        }
+      }
+      
+      if (token.length < 50) {
+        console.log('⚠️  WARNUNG: Token ist sehr kurz (< 50 Zeichen) - möglicherweise falsch!');
+      }
+      
+      if (token.includes(' ')) {
+        console.log('⚠️  WARNUNG: Token enthält Leerzeichen - sollte entfernt werden!');
+      }
+      
+      if (token.includes('\n') || token.includes('\r')) {
+        console.log('⚠️  WARNUNG: Token enthält Zeilenumbrüche - sollte entfernt werden!');
+      }
+      
+      // Prüfe ob Token ein gültiges Format hat (normalerweise alphanumerisch)
+      const isValidFormat = /^[A-Za-z0-9]+$/.test(token);
+      if (!isValidFormat) {
+        console.log('⚠️  WARNUNG: Token enthält ungültige Zeichen (nicht nur alphanumerisch)!');
+        console.log('   Ungültige Zeichen gefunden:', token.match(/[^A-Za-z0-9]/g)?.slice(0, 10) || []);
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ Fehler:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+checkWhatsAppToken();
+EOF
+
+# Führe Script aus
+cd /var/www/intranet/backend && npx ts-node scripts/check-whatsapp-token-manila.ts
+```
+
+**2. Prüfe Organization Settings (zum Vergleich):**
+```bash
+# Erstelle Script im richtigen Verzeichnis
+cat > /var/www/intranet/backend/scripts/check-org-whatsapp-token.ts << 'EOF'
+import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import path from 'path';
+import { decryptApiSettings } from '../src/utils/encryption';
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+const prisma = new PrismaClient();
+
+async function checkOrgWhatsAppToken() {
+  try {
+    console.log('🔍 Prüfe WhatsApp Token in Organization Settings (NUR LESEN!)...\n');
+
+    const org = await prisma.organization.findUnique({
+      where: { id: 1 },
+      select: {
+        settings: true
+      }
+    });
+
+    if (!org?.settings) {
+      console.log('❌ Keine Organization Settings gefunden');
+      return;
+    }
+
+    const decrypted = decryptApiSettings(org.settings as any);
+    const whatsapp = decrypted?.whatsapp;
+
+    if (!whatsapp) {
+      console.log('❌ Keine WhatsApp Settings in Organization gefunden');
+      return;
+    }
+
+    console.log('✅ WhatsApp Settings in Organization gefunden:');
+    console.log('   - provider:', whatsapp.provider);
+    console.log('   - apiKey vorhanden:', !!whatsapp.apiKey);
+    console.log('   - apiKey Länge:', whatsapp.apiKey?.length || 0);
+    console.log('   - apiKey Start (erste 50 Zeichen):', whatsapp.apiKey?.substring(0, 50) || 'N/A');
+    console.log('   - apiKey Ende (letzte 50 Zeichen):', whatsapp.apiKey?.substring(Math.max(0, (whatsapp.apiKey?.length || 0) - 50)) || 'N/A');
+    console.log('   - phoneNumberId:', whatsapp.phoneNumberId || '❌ FEHLT');
+    
+    // Vergleich mit Branch Settings
+    console.log('\n=== VERGLEICH ===');
+    if (whatsapp.apiKey) {
+      const orgTokenLength = whatsapp.apiKey.length;
+      console.log('   Organization Token Länge:', orgTokenLength);
+      console.log('   Branch Token Länge (aus Logs): 2109');
+      if (orgTokenLength !== 2109) {
+        console.log('   ⚠️  WARNUNG: Token-Längen unterscheiden sich!');
+        console.log('   → Organization Token könnte korrekt sein');
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ Fehler:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+checkOrgWhatsAppToken();
+EOF
+
+# Führe Script aus
+cd /var/www/intranet/backend && npx ts-node scripts/check-org-whatsapp-token.ts
+```
+
 **6. Prüfe neueste WhatsApp-Fehler:**
 ```bash
 # Prüfe neueste WhatsApp-Fehler aus Notification-Log
