@@ -318,6 +318,7 @@ export class LobbyPmsService {
       let page = 1;
       let hasMore = true;
       const maxPages = 200; // Sicherheitslimit (20.000 Reservierungen max)
+      let knownTotalPages: number | undefined = undefined; // Speichere totalPages aus erster Response
 
       while (hasMore && page <= maxPages) {
         const response = await this.axiosInstance.get<any>('/api/v1/bookings', {
@@ -359,27 +360,37 @@ export class LobbyPmsService {
         const currentPage = meta.current_page || page;
         const perPage = meta.per_page || params.per_page || 100;
         
+        // Speichere totalPages aus erster Response (falls vorhanden)
+        if (totalPages !== undefined && knownTotalPages === undefined) {
+          knownTotalPages = totalPages;
+        }
+        
+        // Verwende bekannte totalPages falls in aktueller Response nicht vorhanden
+        const effectiveTotalPages = totalPages !== undefined ? totalPages : knownTotalPages;
+        
         // Stoppe wenn:
         // 1. Keine Reservierungen auf dieser Seite (leere Seite = Ende)
         // 2. Weniger Reservierungen als per_page (letzte Seite)
-        // 3. totalPages ist gesetzt UND page >= totalPages
-        // 4. currentPage ist gesetzt UND currentPage >= totalPages
+        // 3. totalPages ist bekannt UND page >= totalPages (NACH dem Erhöhen von page)
         if (pageReservations.length === 0) {
           hasMore = false;
         } else if (pageReservations.length < perPage) {
-          // Weniger als per_page = wahrscheinlich letzte Seite
+          // Weniger als per_page = letzte Seite
           hasMore = false;
-        } else if (totalPages !== undefined && page >= totalPages) {
-          hasMore = false;
-        } else if (currentPage !== undefined && totalPages !== undefined && currentPage >= totalPages) {
+        } else if (effectiveTotalPages !== undefined && page >= effectiveTotalPages) {
+          // WICHTIG: Prüfe VOR dem Erhöhen, ob nächste Seite noch existiert
           hasMore = false;
         } else {
           page++;
+          // Prüfe NACH dem Erhöhen, ob wir die letzte Seite erreicht haben
+          if (effectiveTotalPages !== undefined && page > effectiveTotalPages) {
+            hasMore = false;
+          }
         }
         
-        // Debug-Log für Pagination (nur bei ersten 3 Seiten)
-        if (page <= 3) {
-          console.log(`[LobbyPMS] Seite ${page}: ${pageReservations.length} Reservierungen, totalPages: ${totalPages || 'N/A'}, hasMore: ${hasMore}`);
+        // Debug-Log für Pagination (bei ersten 5 Seiten oder wenn totalPages erreicht)
+        if (page <= 5 || (effectiveTotalPages !== undefined && page >= effectiveTotalPages)) {
+          console.log(`[LobbyPMS] Seite ${page - 1}: ${pageReservations.length} Reservierungen, totalPages: ${effectiveTotalPages || 'N/A'}, hasMore: ${hasMore}`);
         }
       }
 
