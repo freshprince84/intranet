@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { Prisma, RequestStatus, RequestType, NotificationType } from '@prisma/client';
-import { prisma } from '../utils/prisma';
+import { prisma, executeWithRetry } from '../utils/prisma';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getRequestNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
@@ -359,52 +359,61 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
         // Validierung: Prüfe ob User-IDs zur Organisation gehören
         const userFilter = getUserOrganizationFilter(req);
 
-        const requesterUser = await prisma.user.findFirst({
-            where: {
-                ...userFilter,
-                id: requesterId
-            }
-        });
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const requesterUser = await executeWithRetry(() =>
+            prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: requesterId
+                }
+            })
+        );
         if (!requesterUser) {
             return res.status(400).json({ message: 'Antragsteller gehört nicht zu Ihrer Organisation' });
         }
 
-        const responsibleUser = await prisma.user.findFirst({
-            where: {
-                ...userFilter,
-                id: responsibleId
-            }
-        });
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const responsibleUser = await executeWithRetry(() =>
+            prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: responsibleId
+                }
+            })
+        );
         if (!responsibleUser) {
             return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
         }
 
-        const request = await prisma.request.create({
-            data: {
-                title,
-                description: description || '',
-                status: status as RequestStatus,
-                type: type as RequestType,
-                isPrivate: is_private,
-                requesterId,
-                responsibleId,
-                branchId,
-                dueDate: due_date ? new Date(due_date) : null,
-                createTodo: create_todo,
-                organizationId: req.organizationId || null
-            },
-            include: {
-                requester: {
-                    select: userSelect
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const request = await executeWithRetry(() =>
+            prisma.request.create({
+                data: {
+                    title,
+                    description: description || '',
+                    status: status as RequestStatus,
+                    type: type as RequestType,
+                    isPrivate: is_private,
+                    requesterId,
+                    responsibleId,
+                    branchId,
+                    dueDate: due_date ? new Date(due_date) : null,
+                    createTodo: create_todo,
+                    organizationId: req.organizationId || null
                 },
-                responsible: {
-                    select: userSelect
-                },
-                branch: {
-                    select: branchSelect
+                include: {
+                    requester: {
+                        select: userSelect
+                    },
+                    responsible: {
+                        select: userSelect
+                    },
+                    branch: {
+                        select: branchSelect
+                    }
                 }
-            }
-        });
+            })
+        );
 
         // Formatiere die Daten für die Frontend-Nutzung
         const formattedRequest = {
@@ -563,7 +572,9 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
         }
 
         // Update den Request
-        const updatedRequest = await prisma.request.update({
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const updatedRequest = await executeWithRetry(() =>
+            prisma.request.update({
             where: { id: parseInt(id) },
             data: {
                 title: title,
@@ -588,7 +599,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
                     select: branchSelect
                 }
             }
-        });
+            })
+        );
 
         // Benachrichtigungen bei Statusänderungen
         if (status && status !== existingRequest.status) {

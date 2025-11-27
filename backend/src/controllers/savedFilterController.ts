@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { prisma } from '../utils/prisma';
+import { prisma, executeWithRetry } from '../utils/prisma';
 import { filterCache } from '../services/filterCache';
 import { filterListCache } from '../services/filterListCache';
 
@@ -84,43 +84,52 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
     // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
     try {
       // Prüfe, ob bereits ein Filter mit diesem Namen existiert
-      const existingFilter = await prisma.savedFilter.findFirst({
-        where: {
-          userId,
-          tableId,
-          name
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const existingFilter = await executeWithRetry(() =>
+        prisma.savedFilter.findFirst({
+          where: {
+            userId,
+            tableId,
+            name
+          }
+        })
+      );
 
       let filter;
 
       if (existingFilter) {
         // Aktualisiere bestehenden Filter
-        filter = await prisma.savedFilter.update({
-          where: {
-            id: existingFilter.id
-          },
-          data: {
-            conditions: conditionsJson,
-            operators: operatorsJson,
-            sortDirections: sortDirectionsJson
-          }
-        });
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        filter = await executeWithRetry(() =>
+          prisma.savedFilter.update({
+            where: {
+              id: existingFilter.id
+            },
+            data: {
+              conditions: conditionsJson,
+              operators: operatorsJson,
+              sortDirections: sortDirectionsJson
+            }
+          })
+        );
         // Cache invalidieren
         filterCache.invalidate(existingFilter.id);
         filterListCache.invalidate(userId, tableId);
       } else {
         // Erstelle neuen Filter
-        filter = await prisma.savedFilter.create({
-          data: {
-            userId,
-            tableId,
-            name,
-            conditions: conditionsJson,
-            operators: operatorsJson,
-            sortDirections: sortDirectionsJson
-          }
-        });
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        filter = await executeWithRetry(() =>
+          prisma.savedFilter.create({
+            data: {
+              userId,
+              tableId,
+              name,
+              conditions: conditionsJson,
+              operators: operatorsJson,
+              sortDirections: sortDirectionsJson
+            }
+          })
+        );
         // Cache invalidieren
         filterListCache.invalidate(userId, tableId);
       }
@@ -194,23 +203,29 @@ export const deleteFilter = async (req: AuthenticatedRequest, res: Response) => 
     // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
     try {
       // Prüfe, ob der Filter existiert und dem Benutzer gehört
-      const existingFilter = await prisma.savedFilter.findFirst({
-        where: {
-          id: filterId,
-          userId
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const existingFilter = await executeWithRetry(() =>
+        prisma.savedFilter.findFirst({
+          where: {
+            id: filterId,
+            userId
+          }
+        })
+      );
 
       if (!existingFilter) {
         return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung zum Löschen' });
       }
 
       // Lösche den Filter
-      await prisma.savedFilter.delete({
-        where: {
-          id: filterId
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      await executeWithRetry(() =>
+        prisma.savedFilter.delete({
+          where: {
+            id: filterId
+          }
+        })
+      );
       // Cache invalidieren
       filterCache.invalidate(filterId);
       filterListCache.invalidate(userId, existingFilter.tableId);
@@ -248,43 +263,52 @@ export const createFilterGroup = async (req: AuthenticatedRequest, res: Response
 
     try {
       // Prüfe, ob bereits eine Gruppe mit diesem Namen existiert
-      const existingGroup = await prisma.filterGroup.findFirst({
-        where: {
-          userId,
-          tableId,
-          name
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const existingGroup = await executeWithRetry(() =>
+        prisma.filterGroup.findFirst({
+          where: {
+            userId,
+            tableId,
+            name
+          }
+        })
+      );
 
       if (existingGroup) {
         return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
       }
 
       // Finde die höchste order-Nummer für diese Tabelle
-      const maxOrder = await prisma.filterGroup.findFirst({
-        where: {
-          userId,
-          tableId
-        },
-        orderBy: {
-          order: 'desc'
-        },
-        select: {
-          order: true
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const maxOrder = await executeWithRetry(() =>
+        prisma.filterGroup.findFirst({
+          where: {
+            userId,
+            tableId
+          },
+          orderBy: {
+            order: 'desc'
+          },
+          select: {
+            order: true
+          }
+        })
+      );
 
       const newOrder = maxOrder ? maxOrder.order + 1 : 0;
 
       // Erstelle neue Gruppe
-      const group = await prisma.filterGroup.create({
-        data: {
-          userId,
-          tableId,
-          name,
-          order: newOrder
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const group = await executeWithRetry(() =>
+        prisma.filterGroup.create({
+          data: {
+            userId,
+            tableId,
+            name,
+            order: newOrder
+          }
+        })
+      );
 
       // Cache invalidieren
       filterListCache.invalidate(userId, tableId);
@@ -364,49 +388,58 @@ export const updateFilterGroup = async (req: AuthenticatedRequest, res: Response
 
     try {
       // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-      const existingGroup = await prisma.filterGroup.findFirst({
-        where: {
-          id: groupId,
-          userId
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const existingGroup = await executeWithRetry(() =>
+        prisma.filterGroup.findFirst({
+          where: {
+            id: groupId,
+            userId
+          }
+        })
+      );
 
       if (!existingGroup) {
         return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
       }
 
       // Prüfe, ob bereits eine andere Gruppe mit diesem Namen existiert
-      const nameExists = await prisma.filterGroup.findFirst({
-        where: {
-          userId,
-          tableId: existingGroup.tableId,
-          name,
-          id: {
-            not: groupId
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const nameExists = await executeWithRetry(() =>
+        prisma.filterGroup.findFirst({
+          where: {
+            userId,
+            tableId: existingGroup.tableId,
+            name,
+            id: {
+              not: groupId
+            }
           }
-        }
-      });
+        })
+      );
 
       if (nameExists) {
         return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
       }
 
       // Aktualisiere die Gruppe
-      const updatedGroup = await prisma.filterGroup.update({
-        where: {
-          id: groupId
-        },
-        data: {
-          name
-        },
-        include: {
-          filters: {
-            orderBy: {
-              order: 'asc'
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const updatedGroup = await executeWithRetry(() =>
+        prisma.filterGroup.update({
+          where: {
+            id: groupId
+          },
+          data: {
+            name
+          },
+          include: {
+            filters: {
+              orderBy: {
+                order: 'asc'
+              }
             }
           }
-        }
-      });
+        })
+      );
 
       // Cache invalidieren
       filterListCache.invalidate(userId, existingGroup.tableId);
@@ -461,37 +494,46 @@ export const deleteFilterGroup = async (req: AuthenticatedRequest, res: Response
 
     try {
       // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-      const existingGroup = await prisma.filterGroup.findFirst({
-        where: {
-          id: groupId,
-          userId
-        },
-        include: {
-          filters: true
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const existingGroup = await executeWithRetry(() =>
+        prisma.filterGroup.findFirst({
+          where: {
+            id: groupId,
+            userId
+          },
+          include: {
+            filters: true
+          }
+        })
+      );
 
       if (!existingGroup) {
         return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
       }
 
       // Entferne alle Filter aus der Gruppe (setze groupId = null)
-      await prisma.savedFilter.updateMany({
-        where: {
-          groupId: groupId
-        },
-        data: {
-          groupId: null,
-          order: 0
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      await executeWithRetry(() =>
+        prisma.savedFilter.updateMany({
+          where: {
+            groupId: groupId
+          },
+          data: {
+            groupId: null,
+            order: 0
+          }
+        })
+      );
 
       // Lösche die Gruppe
-      await prisma.filterGroup.delete({
-        where: {
-          id: groupId
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      await executeWithRetry(() =>
+        prisma.filterGroup.delete({
+          where: {
+            id: groupId
+          }
+        })
+      );
 
       // Cache invalidieren
       filterListCache.invalidate(userId, existingGroup.tableId);
@@ -528,55 +570,67 @@ export const addFilterToGroup = async (req: AuthenticatedRequest, res: Response)
 
     try {
       // Prüfe, ob der Filter existiert und dem Benutzer gehört
-      const filter = await prisma.savedFilter.findFirst({
-        where: {
-          id: filterId,
-          userId
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const filter = await executeWithRetry(() =>
+        prisma.savedFilter.findFirst({
+          where: {
+            id: filterId,
+            userId
+          }
+        })
+      );
 
       if (!filter) {
         return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
       }
 
       // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-      const group = await prisma.filterGroup.findFirst({
-        where: {
-          id: groupId,
-          userId,
-          tableId: filter.tableId // Gruppe muss zur gleichen Tabelle gehören
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const group = await executeWithRetry(() =>
+        prisma.filterGroup.findFirst({
+          where: {
+            id: groupId,
+            userId,
+            tableId: filter.tableId // Gruppe muss zur gleichen Tabelle gehören
+          }
+        })
+      );
 
       if (!group) {
         return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
       }
 
       // Finde die höchste order-Nummer in der Gruppe
-      const maxOrder = await prisma.savedFilter.findFirst({
-        where: {
-          groupId: groupId
-        },
-        orderBy: {
-          order: 'desc'
-        },
-        select: {
-          order: true
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const maxOrder = await executeWithRetry(() =>
+        prisma.savedFilter.findFirst({
+          where: {
+            groupId: groupId
+          },
+          orderBy: {
+            order: 'desc'
+          },
+          select: {
+            order: true
+          }
+        })
+      );
 
       const newOrder = maxOrder ? maxOrder.order + 1 : 0;
 
       // Füge Filter zur Gruppe hinzu
-      const updatedFilter = await prisma.savedFilter.update({
-        where: {
-          id: filterId
-        },
-        data: {
-          groupId: groupId,
-          order: newOrder
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const updatedFilter = await executeWithRetry(() =>
+        prisma.savedFilter.update({
+          where: {
+            id: filterId
+          },
+          data: {
+            groupId: groupId,
+            order: newOrder
+          }
+        })
+      );
 
       // Cache invalidieren
       filterListCache.invalidate(userId, filter.tableId);
@@ -622,27 +676,33 @@ export const removeFilterFromGroup = async (req: AuthenticatedRequest, res: Resp
 
     try {
       // Prüfe, ob der Filter existiert und dem Benutzer gehört
-      const filter = await prisma.savedFilter.findFirst({
-        where: {
-          id: filterId,
-          userId
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const filter = await executeWithRetry(() =>
+        prisma.savedFilter.findFirst({
+          where: {
+            id: filterId,
+            userId
+          }
+        })
+      );
 
       if (!filter) {
         return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
       }
 
       // Entferne Filter aus der Gruppe
-      const updatedFilter = await prisma.savedFilter.update({
-        where: {
-          id: filterId
-        },
-        data: {
-          groupId: null,
-          order: 0
-        }
-      });
+      // ✅ PERFORMANCE: executeWithRetry für DB-Query
+      const updatedFilter = await executeWithRetry(() =>
+        prisma.savedFilter.update({
+          where: {
+            id: filterId
+          },
+          data: {
+            groupId: null,
+            order: 0
+          }
+        })
+      );
 
       // Cache invalidieren
       filterListCache.invalidate(userId, filter.tableId);
