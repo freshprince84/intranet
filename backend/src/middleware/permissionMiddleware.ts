@@ -78,7 +78,7 @@ export const checkUserPermission = async (
 
         // Finde aktive Rolle (mit lastUsed: true)
         const activeRole = cached.user.roles.find((r: any) => r.lastUsed);
-        
+
         if (!activeRole) {
             console.error(`[checkUserPermission] ❌ Keine aktive Rolle gefunden: userId=${userId}`);
             return false;

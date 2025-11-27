@@ -128,3 +128,5 @@ npx ts-node scripts/check-connection-pool.ts
 **Erstellt:** 2025-01-26  
 **Status:** Quick Check Anleitung
 
+
+

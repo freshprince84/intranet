@@ -288,17 +288,17 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Validierung: Prüfe ob User-IDs zur Organisation gehören
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-        // ✅ PERFORMANCE: executeWithRetry für DB-Query
-        const requesterUser = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findFirst({
+        // Validierung: executeWithRetry NICHT nötig (nicht kritisch)
+        const requesterUser = yield prisma_1.prisma.user.findFirst({
             where: Object.assign(Object.assign({}, userFilter), { id: requesterId })
-        }));
+        });
         if (!requesterUser) {
             return res.status(400).json({ message: 'Antragsteller gehört nicht zu Ihrer Organisation' });
         }
-        // ✅ PERFORMANCE: executeWithRetry für DB-Query
-        const responsibleUser = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findFirst({
+        // Validierung: executeWithRetry NICHT nötig (nicht kritisch)
+        const responsibleUser = yield prisma_1.prisma.user.findFirst({
             where: Object.assign(Object.assign({}, userFilter), { id: responsibleId })
-        }));
+        });
         if (!responsibleUser) {
             return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
         }

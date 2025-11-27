@@ -326,3 +326,5 @@ async createPaymentLink(
 2. Prüfe ob Header wirklich korrekt gesetzt wird (Debug-Logs zeigen es, aber API gibt 403 zurück)
 3. Prüfe ob API-Format wirklich korrekt ist (Header-Format vs. AWS Signature)
 
+
+
