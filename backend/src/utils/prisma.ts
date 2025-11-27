@@ -71,7 +71,7 @@ export const executeWithRetry = async <T>(
         
         if (attempt < maxRetries) {
           // Retry mit Delay - Prisma reconnect automatisch, keine manuelle disconnect/connect nötig!
-          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
           console.log(`[Prisma] Retrying after ${attempt} attempt(s) - Prisma will reconnect automatically`);
         }
       } else {

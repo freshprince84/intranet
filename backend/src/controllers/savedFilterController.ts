@@ -100,14 +100,14 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
         // ✅ PERFORMANCE: executeWithRetry für DB-Query
         filter = await executeWithRetry(() =>
           prisma.savedFilter.update({
-            where: {
-              id: existingFilter.id
-            },
-            data: {
-              conditions: conditionsJson,
-              operators: operatorsJson,
-              sortDirections: sortDirectionsJson
-            }
+          where: {
+            id: existingFilter.id
+          },
+          data: {
+            conditions: conditionsJson,
+            operators: operatorsJson,
+            sortDirections: sortDirectionsJson
+          }
           })
         );
         // Cache invalidieren
@@ -118,14 +118,14 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
         // ✅ PERFORMANCE: executeWithRetry für DB-Query
         filter = await executeWithRetry(() =>
           prisma.savedFilter.create({
-            data: {
-              userId,
-              tableId,
-              name,
-              conditions: conditionsJson,
-              operators: operatorsJson,
-              sortDirections: sortDirectionsJson
-            }
+          data: {
+            userId,
+            tableId,
+            name,
+            conditions: conditionsJson,
+            operators: operatorsJson,
+            sortDirections: sortDirectionsJson
+          }
           })
         );
         // Cache invalidieren
@@ -217,9 +217,9 @@ export const deleteFilter = async (req: AuthenticatedRequest, res: Response) => 
       // ✅ PERFORMANCE: executeWithRetry für DB-Query
       await executeWithRetry(() =>
         prisma.savedFilter.delete({
-          where: {
-            id: filterId
-          }
+        where: {
+          id: filterId
+        }
         })
       );
       // Cache invalidieren
@@ -293,12 +293,12 @@ export const createFilterGroup = async (req: AuthenticatedRequest, res: Response
       // ✅ PERFORMANCE: executeWithRetry für DB-Query
       const group = await executeWithRetry(() =>
         prisma.filterGroup.create({
-          data: {
-            userId,
-            tableId,
-            name,
-            order: newOrder
-          }
+        data: {
+          userId,
+          tableId,
+          name,
+          order: newOrder
+        }
         })
       );
 
@@ -413,19 +413,19 @@ export const updateFilterGroup = async (req: AuthenticatedRequest, res: Response
       // ✅ PERFORMANCE: executeWithRetry für DB-Query
       const updatedGroup = await executeWithRetry(() =>
         prisma.filterGroup.update({
-          where: {
-            id: groupId
-          },
-          data: {
-            name
-          },
-          include: {
-            filters: {
-              orderBy: {
-                order: 'asc'
-              }
+        where: {
+          id: groupId
+        },
+        data: {
+          name
+        },
+        include: {
+          filters: {
+            orderBy: {
+              order: 'asc'
             }
           }
+        }
         })
       );
 
@@ -501,13 +501,13 @@ export const deleteFilterGroup = async (req: AuthenticatedRequest, res: Response
       // ✅ PERFORMANCE: executeWithRetry für DB-Query
       await executeWithRetry(() =>
         prisma.savedFilter.updateMany({
-          where: {
-            groupId: groupId
-          },
-          data: {
-            groupId: null,
-            order: 0
-          }
+        where: {
+          groupId: groupId
+        },
+        data: {
+          groupId: null,
+          order: 0
+        }
         })
       );
 
@@ -515,9 +515,9 @@ export const deleteFilterGroup = async (req: AuthenticatedRequest, res: Response
       // ✅ PERFORMANCE: executeWithRetry für DB-Query
       await executeWithRetry(() =>
         prisma.filterGroup.delete({
-          where: {
-            id: groupId
-          }
+        where: {
+          id: groupId
+        }
         })
       );
 
@@ -602,13 +602,13 @@ export const addFilterToGroup = async (req: AuthenticatedRequest, res: Response)
       // ✅ PERFORMANCE: executeWithRetry für DB-Query
       const updatedFilter = await executeWithRetry(() =>
         prisma.savedFilter.update({
-          where: {
-            id: filterId
-          },
-          data: {
-            groupId: groupId,
-            order: newOrder
-          }
+        where: {
+          id: filterId
+        },
+        data: {
+          groupId: groupId,
+          order: newOrder
+        }
         })
       );
 
@@ -672,13 +672,13 @@ export const removeFilterFromGroup = async (req: AuthenticatedRequest, res: Resp
       // ✅ PERFORMANCE: executeWithRetry für DB-Query
       const updatedFilter = await executeWithRetry(() =>
         prisma.savedFilter.update({
-          where: {
-            id: filterId
-          },
-          data: {
-            groupId: null,
-            order: 0
-          }
+        where: {
+          id: filterId
+        },
+        data: {
+          groupId: null,
+          order: 0
+        }
         })
       );
 

@@ -125,8 +125,10 @@ async function copyTTLockSettingsOrgToBranch3() {
       username: orgDoorSystem.username,
       password: orgDoorSystem.password, // MD5-hashed
       apiUrl: orgDoorSystem.apiUrl || 'https://euopen.ttlock.com',
-      // Behalte Branch-spezifische Felder falls vorhanden
-      lockIds: branchDoorSystem.lockIds || orgDoorSystem.lockIds || [],
+      // Verwende Organization lockIds wenn Branch lockIds leer sind
+      lockIds: (branchDoorSystem.lockIds && branchDoorSystem.lockIds.length > 0) 
+        ? branchDoorSystem.lockIds 
+        : (orgDoorSystem.lockIds || []),
       appName: branchDoorSystem.appName || orgDoorSystem.appName,
       passcodeType: branchDoorSystem.passcodeType || orgDoorSystem.passcodeType || 'auto'
     };

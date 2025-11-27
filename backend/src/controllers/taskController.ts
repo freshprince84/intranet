@@ -277,21 +277,21 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
         // ✅ PERFORMANCE: executeWithRetry für DB-Query
         const task = await executeWithRetry(() =>
             prisma.task.create({
-                data: taskCreateData,
-                include: {
-                    responsible: {
-                        select: userSelect
-                    },
-                    role: {
-                        select: roleSelect
-                    },
-                    qualityControl: {
-                        select: userSelect
-                    },
-                    branch: {
-                        select: branchSelect
-                    }
+            data: taskCreateData,
+            include: {
+                responsible: {
+                    select: userSelect
+                },
+                role: {
+                    select: roleSelect
+                },
+                qualityControl: {
+                    select: userSelect
+                },
+                branch: {
+                    select: branchSelect
                 }
+            }
             })
         );
         
@@ -358,21 +358,21 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         // ✅ PERFORMANCE: executeWithRetry für DB-Query
         const currentTask = await executeWithRetry(() =>
             prisma.task.findFirst({
-                where: {
-                    id: taskId,
-                    ...isolationFilter
+            where: {
+                id: taskId,
+                ...isolationFilter
+            },
+            include: {
+                responsible: {
+                    select: userSelect
                 },
-                include: {
-                    responsible: {
-                        select: userSelect
-                    },
-                    qualityControl: {
-                        select: userSelect
-                    },
-                    role: {
-                        select: { id: true, name: true, organizationId: true }
-                    }
+                qualityControl: {
+                    select: userSelect
+                },
+                role: {
+                    select: { id: true, name: true, organizationId: true }
                 }
+            }
             })
         );
 
@@ -493,22 +493,22 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         // ✅ PERFORMANCE: executeWithRetry für DB-Query
         const task = await executeWithRetry(() =>
             prisma.task.update({
-                where: { id: taskId },
-                data: updateDataForPrisma,
-                include: {
-                    responsible: {
-                        select: userSelect
-                    },
-                    role: {
-                        select: roleSelect
-                    },
-                    qualityControl: {
-                        select: userSelect
-                    },
-                    branch: {
-                        select: branchSelect
-                    }
+            where: { id: taskId },
+            data: updateDataForPrisma,
+            include: {
+                responsible: {
+                    select: userSelect
+                },
+                role: {
+                    select: roleSelect
+                },
+                qualityControl: {
+                    select: userSelect
+                },
+                branch: {
+                    select: branchSelect
                 }
+            }
             })
         );
         

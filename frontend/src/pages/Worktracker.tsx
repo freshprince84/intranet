@@ -912,53 +912,12 @@ const Worktracker: React.FC = () => {
         }
     }, [tasks, location.search]);
 
-    // Initialer Default-Filter setzen und Tasks laden (Controlled Mode)
+    // Initial Tasks laden (ohne Filter - SavedFilterTags wendet Default-Filter an)
     useEffect(() => {
-        const setInitialFilterAndLoad = async () => {
-            try {
-                const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TODOS_TABLE_ID));
-                const filters = response.data;
-                
-                const aktuellFilter = filters.find((filter: any) => filter.name === 'Aktuell');
-                if (aktuellFilter) {
-                    // 1. Filter-State setzen
-                    setActiveFilterName(t('tasks.filters.current'));
-                    setSelectedFilterId(aktuellFilter.id);
-                    
-                    // Migration: Altes Format zu neuem Format konvertieren
-                    let sortDirections = aktuellFilter.sortDirections || [];
-                    if (Array.isArray(sortDirections) && sortDirections.length > 0) {
-                        // Bereits neues Format
-                    } else if (sortDirections && typeof sortDirections === 'object' && !Array.isArray(sortDirections)) {
-                        // Altes Format: Record -> Array konvertieren
-                        sortDirections = Object.entries(sortDirections as Record<string, 'asc' | 'desc'>).map(([column, direction], index) => ({
-                            column,
-                            direction,
-                            priority: index + 1,
-                            conditionIndex: filterConditions.findIndex(c => c.column === column)
-                        }));
-                    }
-                    applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators, sortDirections);
-                    
-                    // 2. Tasks mit Standardfilter laden (server-seitig gefiltert)
-                    await loadTasks(aktuellFilter.id);
-                    
-                    // 3. Restliche Tasks im Hintergrund laden (für Filter-Wechsel)
-                    setTimeout(() => {
-                        loadTasks(undefined, undefined, true);
-                    }, 2000); // 2 Sekunden Verzögerung, damit initiale Ladezeit nicht beeinflusst wird
-                } else {
-                    // Fallback: Alle Tasks laden (ohne Filter)
-                    await loadTasks();
-                }
-            } catch (error) {
-                console.error('Fehler beim Setzen des initialen Filters:', error);
-                // Fallback: Alle Tasks laden
-                await loadTasks();
-            }
-        };
-
-        setInitialFilterAndLoad();
+        if (!hasLoadedRef.current) {
+            hasLoadedRef.current = true;
+            loadTasks();
+        }
     }, []);
 
     // Standard-Filter erstellen und speichern
