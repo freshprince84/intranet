@@ -420,6 +420,22 @@ const TourDetailsModal = ({ isOpen, onClose, tourId, onTourUpdated }: TourDetail
                     </div>
                 </Dialog.Panel>
             </div>
+            
+            {/* Create Tour Booking Modal */}
+            {tour && (
+                <CreateTourBookingModal
+                    isOpen={isCreateBookingModalOpen}
+                    onClose={() => setIsCreateBookingModalOpen(false)}
+                    tour={tour}
+                    onBookingCreated={async (newBooking: TourBooking) => {
+                        showMessage(
+                            t('tourBookings.created', { defaultValue: 'Tour-Buchung erfolgreich erstellt' }),
+                            'success'
+                        );
+                        setIsCreateBookingModalOpen(false);
+                    }}
+                />
+            )}
         </Dialog>
     );
 };
