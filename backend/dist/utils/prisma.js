@@ -45,6 +45,13 @@ const executeWithRetry = (operation_1, ...args_1) => __awaiter(void 0, [operatio
         }
         catch (error) {
             lastError = error;
+            // 🔴 KRITISCH: Connection Pool Timeout = Sofortiger Fehler, kein Retry!
+            // Retry würde das Problem verschlimmern (noch mehr Requests → Pool noch voller)
+            if (error instanceof library_1.PrismaClientKnownRequestError &&
+                error.message.includes('Timed out fetching a new connection from the connection pool')) {
+                console.error(`[Prisma] Connection Pool Timeout - Kein Retry! Pool ist voll.`);
+                throw error; // Sofort werfen, kein Retry!
+            }
             // Prüfe ob es ein DB-Verbindungsfehler ist
             if (error instanceof library_1.PrismaClientKnownRequestError &&
                 (error.code === 'P1001' || // Can't reach database server

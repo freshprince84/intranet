@@ -37,11 +37,11 @@ function getUserLanguage(userId) {
             }
             // 2. OPTIMIERUNG: Zuerst nur User.language prüfen (einfache Query: ~0.165ms)
             // In 99.8% der Fälle ist User.language bereits gesetzt, komplexe Query ist unnötig
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const user = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findUnique({
+            // READ-Operation: executeWithRetry NICHT nötig (kann gecacht werden, nicht kritisch)
+            const user = yield prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 select: { language: true }
-            }));
+            });
             if (!user) {
                 console.log(`[getUserLanguage] User ${userId} nicht gefunden, Fallback: de`);
                 const fallback = 'de';
@@ -56,8 +56,8 @@ function getUserLanguage(userId) {
             }
             // Priorität 2: Organisation-Sprache (nur wenn User.language leer - selten!)
             // Jetzt erst die komplexe Query mit Joins
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const userWithRoles = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findUnique({
+            // READ-Operation: executeWithRetry NICHT nötig (kann gecacht werden, nicht kritisch)
+            const userWithRoles = yield prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 select: {
                     roles: {
@@ -78,7 +78,7 @@ function getUserLanguage(userId) {
                         take: 1
                     }
                 }
-            }));
+            });
             const userRole = userWithRoles === null || userWithRoles === void 0 ? void 0 : userWithRoles.roles[0];
             if ((_a = userRole === null || userRole === void 0 ? void 0 : userRole.role) === null || _a === void 0 ? void 0 : _a.organization) {
                 const orgSettings = userRole.role.organization.settings;

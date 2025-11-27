@@ -252,3 +252,5 @@ const groups = await prisma.filterGroup.findMany({
 **Erstellt:** 2025-01-26  
 **Status:** 🔴 KRITISCH - FilterTags sind der Bottleneck
 
+
+

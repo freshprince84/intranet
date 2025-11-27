@@ -11114,30 +11114,49 @@ npx ts-node scripts/check-ttlock-settings-manila.ts
 
 **Organization 1 Settings (Fallback):**
 - ✅ `doorSystem` Settings vorhanden
-- ✅ `clientId`: vorhanden
-- ✅ `clientSecret`: vorhanden
+- ✅ `clientId`: vorhanden (32 Zeichen, nicht verschlüsselt)
+- ✅ `clientSecret`: vorhanden (50110 Zeichen verschlüsselt → 25022 Zeichen entschlüsselt)
 - ✅ `username`: vorhanden
-- ✅ `password`: vorhanden
+- ✅ `password`: vorhanden (MD5-hashed)
 - ✅ `apiUrl`: `https://euopen.ttlock.com`
 - ✅ `lockIds`: `[22221412]`
 
+**Entschlüsselungs-Test:**
+- ✅ `clientSecret` ist verschlüsselt (`includes(':')`)
+- ✅ Entschlüsselung funktioniert erfolgreich
+- ✅ Verschlüsselte Länge: 50110 Zeichen
+- ✅ Entschlüsselte Länge: 25022 Zeichen
+
 **Analyse:**
 - **Branch Settings sind leer** → TTLockService sollte Organization Settings als Fallback verwenden
-- **Organization Settings sind vollständig** → TTLock sollte funktionieren
-- **ABER:** TTLock funktioniert nicht → Problem liegt wahrscheinlich an der Entschlüsselung
+- **Organization Settings sind vollständig** → Alle Credentials vorhanden
+- **Entschlüsselung funktioniert** → `decryptApiSettings` entschlüsselt `clientSecret` korrekt
+- **ABER:** TTLock funktioniert nicht → Problem liegt NICHT an der Entschlüsselung
 
-**Vermutung:**
-- TTLock Credentials in Organization Settings sind mit altem ENCRYPTION_KEY verschlüsselt
-- `decryptApiSettings` kann `clientSecret` nicht entschlüsseln
-- Fehler: "Error decrypting TTLock client secret: Failed to decrypt secret - invalid key or corrupted data"
+**Test-Ergebnis (28.11.2025 05:30 UTC):**
+- ✅ TTLockService kann für Branch 3 erstellt werden
+- ❌ Access Token kann NICHT abgerufen werden
+- **Fehler:** `password must be md5 encrypted` (errcode: 30005)
 
-### 🔍 NÄCHSTE SCHRITTE:
+**Root Cause (28.11.2025 06:00 UTC):**
+- **Branch 3 hat eigene doorSystemSettings** mit Klartext-Password ("DigitalAccess123!" - 17 Zeichen)
+- **Organization Settings haben korrektes MD5-hashed Password** (32 Zeichen)
+- **TTLockService verwendet Branch Settings** (weil alle Werte vorhanden sind)
+- **Problem:** Branch Settings enthalten Klartext-Password statt MD5-Hash
 
-**1. Prüfe ob TTLock Credentials verschlüsselt sind:**
-- Prüfe ob `clientSecret` in Organization Settings verschlüsselt ist (`includes(':')`)
-- Prüfe ob Entschlüsselung funktioniert
+**Debug-Ergebnis:**
+- Branch 3 doorSystemSettings: Password = "DigitalAccess123!" (17 Zeichen, NICHT MD5-hashed)
+- Organization Settings: Password = "36942b24802cfdbb2c9d6e5d3bc944c6" (32 Zeichen, korrekt MD5-hashed)
+- TTLockService prüft: `if (doorSystemSettings?.clientId && doorSystemSettings?.clientSecret && doorSystemSettings?.username && doorSystemSettings?.password)`
+- Alle Werte vorhanden → Branch Settings werden verwendet → Fehler!
 
-**2. Wenn Entschlüsselung fehlschlägt:**
-- TTLock Credentials müssen neu verschlüsselt werden
-- Benötigt: Korrekte `clientId`, `clientSecret`, `username`, `password` Werte
-- Script erstellen zum Neu-Verschlüsseln der Organization TTLock Settings
+**Lösung:**
+- Branch 3 sollte keine eigenen TTLock Settings haben
+- **Option 1:** doorSystemSettings für Branch 3 löschen (Fallback auf Organization)
+- **Option 2:** Password in Branch Settings MD5-hashen (aber nicht empfohlen, da Branch keine eigenen Settings haben sollte)
+
+### ✅ LÖSUNG IMPLEMENTIERT:
+
+**Script:** `backend/scripts/fix-ttlock-branch3-settings.ts`
+- Löscht doorSystemSettings für Branch 3
+- Branch 3 verwendet dann Organization Settings (mit korrektem MD5-Password)

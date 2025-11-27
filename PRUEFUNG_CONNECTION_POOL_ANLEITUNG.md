@@ -294,3 +294,5 @@ sudo -u postgres psql -d intranet -c "SELECT count(*) FROM pg_stat_activity WHER
 **Status:** 📋 Prüfungsanleitung  
 **Nächster Schritt:** Script auf Server ausführen
 
+
+

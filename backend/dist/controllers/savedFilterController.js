@@ -65,14 +65,14 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
             // Prüfe, ob bereits ein Filter mit diesem Namen existiert
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const existingFilter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const existingFilter = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     userId,
                     tableId,
                     name
                 }
-            }));
+            });
             let filter;
             if (existingFilter) {
                 // Aktualisiere bestehenden Filter
@@ -176,13 +176,13 @@ const deleteFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
             // Prüfe, ob der Filter existiert und dem Benutzer gehört
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const existingFilter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const existingFilter = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     id: filterId,
                     userId
                 }
-            }));
+            });
             if (!existingFilter) {
                 return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung zum Löschen' });
             }
@@ -226,20 +226,20 @@ const createFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         try {
             // Prüfe, ob bereits eine Gruppe mit diesem Namen existiert
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const existingGroup = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const existingGroup = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     userId,
                     tableId,
                     name
                 }
-            }));
+            });
             if (existingGroup) {
                 return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
             }
             // Finde die höchste order-Nummer für diese Tabelle
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const maxOrder = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const maxOrder = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     userId,
                     tableId
@@ -250,7 +250,7 @@ const createFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 select: {
                     order: true
                 }
-            }));
+            });
             const newOrder = maxOrder ? maxOrder.order + 1 : 0;
             // Erstelle neue Gruppe
             // ✅ PERFORMANCE: executeWithRetry für DB-Query
@@ -334,19 +334,19 @@ const updateFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         try {
             // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const existingGroup = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const existingGroup = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     id: groupId,
                     userId
                 }
-            }));
+            });
             if (!existingGroup) {
                 return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
             }
             // Prüfe, ob bereits eine andere Gruppe mit diesem Namen existiert
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const nameExists = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const nameExists = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     userId,
                     tableId: existingGroup.tableId,
@@ -355,7 +355,7 @@ const updateFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                         not: groupId
                     }
                 }
-            }));
+            });
             if (nameExists) {
                 return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
             }
@@ -426,8 +426,8 @@ const deleteFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         try {
             // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const existingGroup = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const existingGroup = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     id: groupId,
                     userId
@@ -435,7 +435,7 @@ const deleteFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 include: {
                     filters: true
                 }
-            }));
+            });
             if (!existingGroup) {
                 return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
             }
@@ -489,31 +489,31 @@ const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, functio
         }
         try {
             // Prüfe, ob der Filter existiert und dem Benutzer gehört
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const filter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const filter = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     id: filterId,
                     userId
                 }
-            }));
+            });
             if (!filter) {
                 return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
             }
             // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const group = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const group = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     id: groupId,
                     userId,
                     tableId: filter.tableId // Gruppe muss zur gleichen Tabelle gehören
                 }
-            }));
+            });
             if (!group) {
                 return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
             }
             // Finde die höchste order-Nummer in der Gruppe
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const maxOrder = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const maxOrder = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     groupId: groupId
                 },
@@ -523,7 +523,7 @@ const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 select: {
                     order: true
                 }
-            }));
+            });
             const newOrder = maxOrder ? maxOrder.order + 1 : 0;
             // Füge Filter zur Gruppe hinzu
             // ✅ PERFORMANCE: executeWithRetry für DB-Query
@@ -577,13 +577,13 @@ const removeFilterFromGroup = (req, res) => __awaiter(void 0, void 0, void 0, fu
         }
         try {
             // Prüfe, ob der Filter existiert und dem Benutzer gehört
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const filter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const filter = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     id: filterId,
                     userId
                 }
-            }));
+            });
             if (!filter) {
                 return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
             }
