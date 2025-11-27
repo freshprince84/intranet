@@ -359,28 +359,24 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
         // Validierung: Prüfe ob User-IDs zur Organisation gehören
         const userFilter = getUserOrganizationFilter(req);
 
-        // ✅ PERFORMANCE: executeWithRetry für DB-Query
-        const requesterUser = await executeWithRetry(() =>
-            prisma.user.findFirst({
-                where: {
-                    ...userFilter,
-                    id: requesterId
-                }
-            })
-        );
+        // Validierung: executeWithRetry NICHT nötig (nicht kritisch)
+        const requesterUser = await prisma.user.findFirst({
+            where: {
+                ...userFilter,
+                id: requesterId
+            }
+        });
         if (!requesterUser) {
             return res.status(400).json({ message: 'Antragsteller gehört nicht zu Ihrer Organisation' });
         }
 
-        // ✅ PERFORMANCE: executeWithRetry für DB-Query
-        const responsibleUser = await executeWithRetry(() =>
-            prisma.user.findFirst({
-                where: {
-                    ...userFilter,
-                    id: responsibleId
-                }
-            })
-        );
+        // Validierung: executeWithRetry NICHT nötig (nicht kritisch)
+        const responsibleUser = await prisma.user.findFirst({
+            where: {
+                ...userFilter,
+                id: responsibleId
+            }
+        });
         if (!responsibleUser) {
             return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
         }

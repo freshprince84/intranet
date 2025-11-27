@@ -1,4 +1,4 @@
-import { prisma, executeWithRetry } from './prisma';
+import { prisma } from './prisma';
 import { userLanguageCache } from '../services/userLanguageCache';
 
 /**
@@ -18,13 +18,11 @@ export async function getUserLanguage(userId: number): Promise<string> {
 
     // 2. OPTIMIERUNG: Zuerst nur User.language prüfen (einfache Query: ~0.165ms)
     // In 99.8% der Fälle ist User.language bereits gesetzt, komplexe Query ist unnötig
-    // ✅ PERFORMANCE: executeWithRetry für DB-Query
-    const user = await executeWithRetry(() =>
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: { language: true }
-      })
-    );
+    // READ-Operation: executeWithRetry NICHT nötig (kann gecacht werden, nicht kritisch)
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { language: true }
+    });
 
     if (!user) {
       console.log(`[getUserLanguage] User ${userId} nicht gefunden, Fallback: de`);
@@ -42,31 +40,29 @@ export async function getUserLanguage(userId: number): Promise<string> {
 
     // Priorität 2: Organisation-Sprache (nur wenn User.language leer - selten!)
     // Jetzt erst die komplexe Query mit Joins
-    // ✅ PERFORMANCE: executeWithRetry für DB-Query
-    const userWithRoles = await executeWithRetry(() =>
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          roles: {
-            where: {
-              lastUsed: true
-            },
-            include: {
-              role: {
-                include: {
-                  organization: {
-                    select: {
-                      settings: true
-                    }
+    // READ-Operation: executeWithRetry NICHT nötig (kann gecacht werden, nicht kritisch)
+    const userWithRoles = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        roles: {
+          where: {
+            lastUsed: true
+          },
+          include: {
+            role: {
+              include: {
+                organization: {
+                  select: {
+                    settings: true
                   }
                 }
               }
-            },
-            take: 1
-          }
+            }
+          },
+          take: 1
         }
-      })
-    );
+      }
+    });
 
     const userRole = userWithRoles?.roles[0];
     if (userRole?.role?.organization) {
