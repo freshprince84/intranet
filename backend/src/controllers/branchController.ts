@@ -63,7 +63,11 @@ export const getAllBranches = async (req: Request, res: Response) => {
             };
         }
         
+        // ✅ MONITORING: Timing-Log für DB-Query
+        const queryStartTime = Date.now();
         let branches = await prisma.branch.findMany(queryOptions);
+        const queryDuration = Date.now() - queryStartTime;
+        console.log(`[getAllBranches] ⏱️ Query: ${queryDuration}ms | Branches: ${branches.length}`);
         
         // Entschlüssele alle Settings für alle Branches
         // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
@@ -175,7 +179,15 @@ export const getUserBranches = async (req: Request, res: Response) => {
 
         // ✅ PERFORMANCE: Verwende BranchCache statt DB-Query
         // ✅ SICHERHEIT: BranchCache berücksichtigt getDataIsolationFilter
+        // ✅ MONITORING: Timing-Log für Cache-Operation
+        const cacheStartTime = Date.now();
         const cachedBranches = await branchCache.get(userId, req);
+        const cacheDuration = Date.now() - cacheStartTime;
+        if (cachedBranches) {
+            console.log(`[getUserBranches] ⏱️ Cache-Hit: ${cacheDuration}ms | Branches: ${cachedBranches.length}`);
+        } else {
+            console.log(`[getUserBranches] ⏱️ Cache-Miss: ${cacheDuration}ms`);
+        }
         
         if (cachedBranches) {
             return res.json(cachedBranches);

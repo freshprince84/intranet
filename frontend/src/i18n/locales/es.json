@@ -2882,6 +2882,16 @@
       "inactive": "Inactivo",
       "all": "Todos"
     },
+    "validation": {
+      "titleMinLength": "El título debe tener al menos 3 caracteres",
+      "maxParticipantsMin": "El número máximo de participantes debe ser >= número mínimo",
+      "externalProviderRequired": "El proveedor externo es obligatorio para tours externos",
+      "availableFromTo": "Disponible desde debe ser <= disponible hasta",
+      "priceNonNegative": "El precio debe ser >= 0",
+      "commissionNonNegative": "La comisión debe ser >= 0",
+      "numberOfParticipantsRange": "El número de participantes debe estar entre {min} y {max}",
+      "tourDateFuture": "La fecha del tour debe estar en el futuro"
+    },
     "providers": {
       "title": "Proveedores de Tours",
       "create": "Nuevo Proveedor de Tours",

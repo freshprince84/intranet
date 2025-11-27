@@ -149,6 +149,38 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
+        // Validierungen
+        if (!title.trim() || title.trim().length < 3) {
+            setError(t('tours.validation.titleMinLength', { defaultValue: 'Titel muss mindestens 3 Zeichen lang sein' }));
+            return;
+        }
+
+        const maxPart = maxParticipants ? Number(maxParticipants) : null;
+        const minPart = minParticipants ? Number(minParticipants) : null;
+        if (maxPart !== null && minPart !== null && maxPart < minPart) {
+            setError(t('tours.validation.maxParticipantsMin', { defaultValue: 'Maximale Teilnehmeranzahl muss >= minimale Teilnehmeranzahl sein' }));
+            return;
+        }
+
+        if (type === TourType.EXTERNAL && !externalProviderId) {
+            setError(t('tours.validation.externalProviderRequired', { defaultValue: 'Externer Anbieter ist bei externen Touren erforderlich' }));
+            return;
+        }
+
+        // availableFrom <= availableTo Validierung (falls beide gesetzt) - wird im Backend validiert
+
+        // Preise >= 0
+        if (price !== '' && Number(price) < 0) {
+            setError(t('tours.validation.priceNonNegative', { defaultValue: 'Preis muss >= 0 sein' }));
+            return;
+        }
+
+        if (totalCommission !== '' && Number(totalCommission) < 0) {
+            setError(t('tours.validation.commissionNonNegative', { defaultValue: 'Kommission muss >= 0 sein' }));
+            return;
+        }
+
         setLoading(true);
 
         try {
