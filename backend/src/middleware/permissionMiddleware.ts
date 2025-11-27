@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../utils/prisma';
+import { userCache } from '../services/userCache';
 
 // Erweitere den Request-Typ um userPermissions
 declare global {
@@ -58,6 +59,7 @@ export const checkPermission = (entity: string, requiredAccess: 'read' | 'write'
 };
 
 // Hilfsfunktion zur Überprüfung der Berechtigungen eines Benutzers
+// ✅ PERFORMANCE: Verwendet UserCache statt eigene DB-Query
 export const checkUserPermission = async (
     userId: number, 
     roleId: number, 
@@ -66,28 +68,42 @@ export const checkUserPermission = async (
     entityType: 'page' | 'table' | 'cerebro' | 'button' = 'page'
 ): Promise<boolean> => {
     try {
-        // Hole die Berechtigungen für die aktuelle Rolle des Benutzers
-        const role = await prisma.role.findUnique({
-            where: { id: roleId },
-            include: { permissions: true }
-        });
-
-        if (!role) {
-            console.error(`[checkUserPermission] ❌ Rolle nicht gefunden: roleId=${roleId}`);
+        // ✅ PERFORMANCE: Verwende UserCache statt eigene DB-Query
+        const cached = await userCache.get(userId);
+        
+        if (!cached || !cached.user) {
+            console.error(`[checkUserPermission] ❌ User nicht gefunden: userId=${userId}`);
             return false;
         }
 
+        // Finde aktive Rolle (mit lastUsed: true)
+        const activeRole = cached.user.roles.find((r: any) => r.lastUsed);
+        
+        if (!activeRole) {
+            console.error(`[checkUserPermission] ❌ Keine aktive Rolle gefunden: userId=${userId}`);
+            return false;
+        }
+
+        // Prüfe ob die roleId mit der aktiven Rolle übereinstimmt
+        if (activeRole.role.id !== roleId) {
+            console.warn(`[checkUserPermission] ⚠️ roleId mismatch: requested=${roleId}, active=${activeRole.role.id}, verwende aktive Rolle`);
+            // Verwende die aktive Rolle statt der angeforderten roleId
+        }
+
+        // Hole Permissions aus der aktiven Rolle (bereits im Cache geladen)
+        const permissions = activeRole.role.permissions || [];
+
         // Suche nach der Berechtigung für die angeforderte Entität
-        const permission = role.permissions.find(
-            p => p.entity === currentEntity && p.entityType === entityType
+        const permission = permissions.find(
+            (p: any) => p.entity === currentEntity && p.entityType === entityType
         );
 
         if (!permission) {
-            console.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${role.name}" (ID: ${role.id})`);
+            console.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${activeRole.role.name}" (ID: ${activeRole.role.id})`);
             console.log(`[checkUserPermission] Verfügbare Cerebro-Permissions:`);
-            role.permissions
-                .filter(p => p.entity.includes('cerebro'))
-                .forEach(p => {
+            permissions
+                .filter((p: any) => p.entity.includes('cerebro'))
+                .forEach((p: any) => {
                     console.log(`   - ${p.entity} (${p.entityType}): ${p.accessLevel}`);
                 });
             return false;
