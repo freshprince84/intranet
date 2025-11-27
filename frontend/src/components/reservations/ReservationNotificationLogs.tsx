@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { reservationService, ReservationNotificationLog } from '../../services/reservationService.ts';
+import { reservationService, ReservationNotificationLog, WhatsAppMessage } from '../../services/reservationService.ts';
 import { format } from 'date-fns';
 import { de, es, enUS } from 'date-fns/locale';
 import {
@@ -10,7 +10,9 @@ import {
   EnvelopeIcon,
   PhoneIcon,
   KeyIcon,
-  ClockIcon
+  ClockIcon,
+  ArrowDownIcon,
+  ArrowUpIcon
 } from '@heroicons/react/24/outline';
 
 interface ReservationNotificationLogsProps {
@@ -24,6 +26,7 @@ const ReservationNotificationLogs: React.FC<ReservationNotificationLogsProps> = 
 }) => {
   const { t, i18n } = useTranslation();
   const [logs, setLogs] = useState<ReservationNotificationLog[]>([]);
+  const [whatsappMessages, setWhatsappMessages] = useState<WhatsAppMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,8 +95,9 @@ const ReservationNotificationLogs: React.FC<ReservationNotificationLogsProps> = 
       try {
         setLoading(true);
         setError(null);
-        const logsData = await reservationService.getNotificationLogs(reservationId);
-        setLogs(logsData);
+        const data = await reservationService.getNotificationLogs(reservationId);
+        setLogs(data.notificationLogs || []);
+        setWhatsappMessages(data.whatsappMessages || []);
       } catch (err: any) {
         console.error('Fehler beim Laden der Notification-Logs:', err);
         setError(err.response?.data?.message || t('reservations.notificationLogs.loadError', 'Fehler beim Laden der Logs'));
@@ -126,7 +130,13 @@ const ReservationNotificationLogs: React.FC<ReservationNotificationLogsProps> = 
     );
   }
 
-  if (logs.length === 0) {
+  // Kombiniere und sortiere alle Nachrichten nach Zeit
+  const allMessages = [
+    ...logs.map(log => ({ type: 'notification' as const, data: log, timestamp: log.sentAt })),
+    ...whatsappMessages.map(msg => ({ type: 'whatsapp' as const, data: msg, timestamp: msg.sentAt }))
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  if (allMessages.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -146,84 +156,151 @@ const ReservationNotificationLogs: React.FC<ReservationNotificationLogsProps> = 
       </h3>
       
       <div className="space-y-3">
-        {logs.map((log) => (
-          <div
-            key={log.id}
-            className={`border rounded-lg p-3 ${
-              log.success
-                ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
-                : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'
-            }`}
-          >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                {log.success ? (
-                  <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-                ) : (
-                  <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
-                )}
-                <div className="flex items-center space-x-2">
-                  {getNotificationTypeIcon(log.notificationType)}
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    {getNotificationTypeLabel(log.notificationType)}
-                  </span>
+        {allMessages.map((item) => {
+          if (item.type === 'notification') {
+            const log = item.data as ReservationNotificationLog;
+            return (
+              <div
+                key={`notification-${log.id}`}
+                className={`border rounded-lg p-3 ${
+                  log.success
+                    ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
+                    : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    {log.success ? (
+                      <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    ) : (
+                      <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    )}
+                    <div className="flex items-center space-x-2">
+                      {getNotificationTypeIcon(log.notificationType)}
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {getNotificationTypeLabel(log.notificationType)}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1 text-gray-500 dark:text-gray-400">
+                      {getChannelIcon(log.channel)}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                    <ClockIcon className="h-4 w-4" />
+                    <span>{formatDateTime(log.sentAt)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-1 text-gray-500 dark:text-gray-400">
-                  {getChannelIcon(log.channel)}
+
+                {log.sentTo && (
+                  <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">
+                    <span className="font-medium">{t('reservations.notificationLogs.sentTo', 'Gesendet an')}:</span> {log.sentTo}
+                  </div>
+                )}
+
+                {log.message && (
+                  <div className="text-xs text-gray-600 dark:text-gray-300 mb-2 mt-2 p-2 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                    <div className="font-medium mb-1">{t('reservations.notificationLogs.message', 'Nachricht')}:</div>
+                    <div className="whitespace-pre-wrap break-words">{log.message}</div>
+                  </div>
+                )}
+
+                {(log.paymentLink || log.checkInLink) && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {log.paymentLink && (
+                      <a
+                        href={log.paymentLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        {t('reservations.notificationLogs.paymentLink', 'Zahlungslink')}
+                      </a>
+                    )}
+                    {log.checkInLink && (
+                      <a
+                        href={log.checkInLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        {t('reservations.notificationLogs.checkInLink', 'Check-in-Link')}
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {log.errorMessage && (
+                  <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300">
+                    <div className="font-medium mb-1">{t('reservations.notificationLogs.error', 'Fehler')}:</div>
+                    <div>{log.errorMessage}</div>
+                  </div>
+                )}
+              </div>
+            );
+          } else {
+            const msg = item.data as WhatsAppMessage;
+            const isIncoming = msg.direction === 'incoming';
+            const isFailed = msg.status === 'failed';
+            return (
+              <div
+                key={`whatsapp-${msg.id}`}
+                className={`border rounded-lg p-3 ${
+                  isIncoming
+                    ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                    : isFailed
+                    ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'
+                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    {isIncoming ? (
+                      <ArrowDownIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    ) : isFailed ? (
+                      <XCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    ) : (
+                      <ArrowUpIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                    )}
+                    <PhoneIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {isIncoming 
+                        ? t('reservations.notificationLogs.whatsapp.incoming', 'Eingehende WhatsApp-Nachricht')
+                        : t('reservations.notificationLogs.whatsapp.outgoing', 'Ausgehende WhatsApp-Nachricht')
+                      }
+                    </span>
+                    {msg.status && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        ({msg.status})
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                    <ClockIcon className="h-4 w-4" />
+                    <span>{formatDateTime(msg.sentAt)}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                <ClockIcon className="h-4 w-4" />
-                <span>{formatDateTime(log.sentAt)}</span>
-              </div>
-            </div>
 
-            {log.sentTo && (
-              <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">
-                <span className="font-medium">{t('reservations.notificationLogs.sentTo', 'Gesendet an')}:</span> {log.sentTo}
-              </div>
-            )}
+                <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">
+                  <span className="font-medium">{t('reservations.notificationLogs.sentTo', 'Gesendet an')}:</span> {msg.phoneNumber}
+                </div>
 
-            {log.message && (
-              <div className="text-xs text-gray-600 dark:text-gray-300 mb-2 mt-2 p-2 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
-                <div className="font-medium mb-1">{t('reservations.notificationLogs.message', 'Nachricht')}:</div>
-                <div className="whitespace-pre-wrap break-words">{log.message}</div>
-              </div>
-            )}
-
-            {(log.paymentLink || log.checkInLink) && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {log.paymentLink && (
-                  <a
-                    href={log.paymentLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    {t('reservations.notificationLogs.paymentLink', 'Zahlungslink')}
-                  </a>
+                {msg.message && (
+                  <div className="text-xs text-gray-600 dark:text-gray-300 mb-2 mt-2 p-2 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                    <div className="font-medium mb-1">{t('reservations.notificationLogs.message', 'Nachricht')}:</div>
+                    <div className="whitespace-pre-wrap break-words">{msg.message}</div>
+                  </div>
                 )}
-                {log.checkInLink && (
-                  <a
-                    href={log.checkInLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    {t('reservations.notificationLogs.checkInLink', 'Check-in-Link')}
-                  </a>
+
+                {msg.errorMessage && (
+                  <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300">
+                    <div className="font-medium mb-1">{t('reservations.notificationLogs.error', 'Fehler')}:</div>
+                    <div>{msg.errorMessage}</div>
+                  </div>
                 )}
               </div>
-            )}
-
-            {log.errorMessage && (
-              <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300">
-                <div className="font-medium mb-1">{t('reservations.notificationLogs.error', 'Fehler')}:</div>
-                <div>{log.errorMessage}</div>
-              </div>
-            )}
-          </div>
-        ))}
+            );
+          }
+        })}
       </div>
     </div>
   );

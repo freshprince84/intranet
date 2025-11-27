@@ -959,6 +959,7 @@ export const sendPasscode = async (req: Request, res: Response) => {
 
 /**
  * GET /api/reservations/:id/notification-logs
+ * Gibt Notification-Logs UND WhatsApp-Nachrichten zurück
  * Holt Log-Historie für eine Reservation
  */
 export const getReservationNotificationLogs = async (req: Request, res: Response) => {
@@ -1006,9 +1007,22 @@ export const getReservationNotificationLogs = async (req: Request, res: Response
       }
     });
 
+    // Lade WhatsApp-Nachrichten (eingehend und ausgehend)
+    const whatsappMessages = await prisma.whatsAppMessage.findMany({
+      where: {
+        reservationId: reservationId
+      },
+      orderBy: {
+        sentAt: 'desc' // Neueste zuerst
+      }
+    });
+
     return res.json({
       success: true,
-      data: logs
+      data: {
+        notificationLogs: logs,
+        whatsappMessages: whatsappMessages
+      }
     });
   } catch (error) {
     console.error('[Reservation] Fehler beim Laden der Notification-Logs:', error);

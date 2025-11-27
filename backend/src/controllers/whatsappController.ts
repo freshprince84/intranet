@@ -128,6 +128,42 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
         console.log('[WhatsApp Webhook] Branch identifiziert:', branchId);
 
+        // 1.5. Speichere eingehende Nachricht in Datenbank
+        try {
+          const { LanguageDetectionService } = require('../services/languageDetectionService');
+          const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(fromNumber);
+          const messageId = message.id;
+          
+          // Prüfe ob es eine Reservation zu dieser Telefonnummer gibt
+          const reservation = await prisma.reservation.findFirst({
+            where: {
+              guestPhone: normalizedPhone,
+              branchId: branchId
+            },
+            orderBy: {
+              checkInDate: 'desc'
+            }
+          });
+          
+          // Speichere Nachricht
+          await prisma.whatsAppMessage.create({
+            data: {
+              direction: 'incoming',
+              phoneNumber: normalizedPhone,
+              message: messageText,
+              messageId: messageId,
+              branchId: branchId,
+              reservationId: reservation?.id || null,
+              sentAt: new Date(parseInt(message.timestamp) * 1000) // WhatsApp timestamp ist in Sekunden
+            }
+          });
+          
+          console.log('[WhatsApp Webhook] ✅ Eingehende Nachricht in Datenbank gespeichert');
+        } catch (dbError) {
+          console.error('[WhatsApp Webhook] ⚠️ Fehler beim Speichern der eingehenden Nachricht:', dbError);
+          // Weiter mit Verarbeitung, auch wenn Speichern fehlschlägt
+        }
+
         // 2. Prüfe ob es eine LobbyPMS Reservierungsnachricht ist (bestehende Funktionalität)
         const parsedMessage = WhatsAppMessageParser.parseReservationMessage(messageText);
 
