@@ -248,7 +248,7 @@ export class BoldPaymentService {
         console.error('[Bold Payment] Response Headers:', JSON.stringify(error.response?.headers, null, 2));
         
         // Prüfe ob Authorization Header wirklich im Request war
-        const requestHeaders = error.config?.headers || {};
+        const requestHeaders = (error.config?.headers || {}) as Record<string, any>;
         console.error('[Bold Payment] Authorization Header im Request vorhanden:', !!requestHeaders.Authorization);
         console.error('[Bold Payment] Authorization Header Wert:', requestHeaders.Authorization);
         
