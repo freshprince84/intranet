@@ -2885,6 +2885,16 @@
       "inactive": "Inactive",
       "all": "All"
     },
+    "validation": {
+      "titleMinLength": "Title must be at least 3 characters long",
+      "maxParticipantsMin": "Maximum participants must be >= minimum participants",
+      "externalProviderRequired": "External provider is required for external tours",
+      "availableFromTo": "Available from must be <= available to",
+      "priceNonNegative": "Price must be >= 0",
+      "commissionNonNegative": "Commission must be >= 0",
+      "numberOfParticipantsRange": "Number of participants must be between {min} and {max}",
+      "tourDateFuture": "Tour date must be in the future"
+    },
     "providers": {
       "title": "Tour Providers",
       "create": "New Tour Provider",

@@ -763,6 +763,8 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
     
     // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
     if (includeSettings && organization) {
+      // ✅ MONITORING: Timing-Log für Settings-Query
+      const settingsStartTime = Date.now();
       const orgWithSettings = await prisma.organization.findUnique({
         where: { id: organization.id },
         select: {
@@ -781,12 +783,19 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
           settings: true // Settings nur wenn explizit angefragt
         }
       });
+      const settingsDuration = Date.now() - settingsStartTime;
       
       if (orgWithSettings) {
         organization = orgWithSettings;
         // ✅ ENTschlüssele Settings für Response
         const { decryptApiSettings } = await import('../utils/encryption');
+        const decryptStartTime = Date.now();
         organization.settings = decryptApiSettings(organization.settings as any);
+        const decryptDuration = Date.now() - decryptStartTime;
+        
+        // ✅ MONITORING: Settings-Größe und Performance loggen
+        const settingsSize = JSON.stringify(orgWithSettings.settings || {}).length;
+        console.log(`[getCurrentOrganization] ⏱️ Settings-Query: ${settingsDuration}ms | Decrypt: ${decryptDuration}ms | Size: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
       }
     } else {
       // Settings nicht geladen - setze auf null für Frontend

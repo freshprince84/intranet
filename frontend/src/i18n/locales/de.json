@@ -2948,6 +2948,16 @@
       "inactive": "Inaktive",
       "all": "Alle"
     },
+    "validation": {
+      "titleMinLength": "Titel muss mindestens 3 Zeichen lang sein",
+      "maxParticipantsMin": "Maximale Teilnehmeranzahl muss >= minimale Teilnehmeranzahl sein",
+      "externalProviderRequired": "Externer Anbieter ist bei externen Touren erforderlich",
+      "availableFromTo": "Verfügbar ab muss <= verfügbar bis sein",
+      "priceNonNegative": "Preis muss >= 0 sein",
+      "commissionNonNegative": "Kommission muss >= 0 sein",
+      "numberOfParticipantsRange": "Anzahl der Teilnehmer muss zwischen {min} und {max} sein",
+      "tourDateFuture": "Tour-Datum muss in der Zukunft liegen"
+    },
     "providers": {
       "title": "Tour-Provider",
       "create": "Neuer Tour-Provider",

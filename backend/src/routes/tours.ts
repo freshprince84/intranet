@@ -10,7 +10,9 @@ import {
   tourImageUpload,
   uploadTourImage,
   uploadTourGalleryImage,
-  deleteTourGalleryImage
+  deleteTourGalleryImage,
+  getTourImage,
+  getTourGalleryImage
 } from '../controllers/tourController';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
@@ -31,6 +33,10 @@ router.post('/', createTour);
 router.put('/:id', updateTour);
 router.put('/:id/toggle-active', toggleTourActive);
 router.get('/:id/bookings', getTourBookings);
+
+// Bild-Routen (GET vor POST, damit :id nicht mit /image kollidiert)
+router.get('/:id/image', getTourImage);
+router.get('/:id/gallery/:index', getTourGalleryImage);
 
 // Bild-Upload-Routen
 router.post('/:id/image', tourImageUpload.single('image'), uploadTourImage);
