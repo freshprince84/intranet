@@ -79,3 +79,4 @@ if (!hasConnectionLimit || !hasPoolTimeout) {
   console.log('   → Wenn das Problem weiterhin besteht, liegt es woanders');
 }
 
+
