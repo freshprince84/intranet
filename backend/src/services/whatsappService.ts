@@ -404,6 +404,18 @@ export class WhatsAppService {
         console.log(`[WhatsApp Business] ✅ Message-ID: ${messageId}`);
         console.log(`[WhatsApp Business] ⚠️ WICHTIG: Status 200 bedeutet nur, dass die API die Nachricht akzeptiert hat.`);
         console.log(`[WhatsApp Business] ⚠️ Die tatsächliche Zustellung kann über Webhook-Status-Updates verfolgt werden.`);
+        
+        // Prüfe ob es Warnungen gibt (können auf mögliche Probleme hinweisen)
+        if (response.data?.warnings && Array.isArray(response.data.warnings) && response.data.warnings.length > 0) {
+          console.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, JSON.stringify(response.data.warnings, null, 2));
+          // Prüfe ob Warnungen auf 24h-Fenster-Problem hinweisen
+          const warningsText = JSON.stringify(response.data.warnings).toLowerCase();
+          if (warningsText.includes('24 hour') || warningsText.includes('outside window') || warningsText.includes('template')) {
+            console.warn(`[WhatsApp Business] ⚠️ Warnungen deuten auf mögliches 24h-Fenster-Problem hin - Template-Fallback wird empfohlen`);
+            // Wir werfen hier keinen Error, weil die API die Nachricht akzeptiert hat
+            // Aber wir loggen es, damit der Template-Fallback später ausgelöst werden kann
+          }
+        }
       } else {
         // Keine Message-ID zurückgegeben - könnte ein Problem sein
         console.error(`[WhatsApp Business] ❌ Keine Message-ID in Response zurückgegeben - möglicherweise wurde die Nachricht nicht akzeptiert`);
@@ -491,6 +503,45 @@ export class WhatsAppService {
     templateParams?: string[],
     reservation?: { guestNationality?: string | null; guestPhone?: string | null } // NEU: Für Sprache-Erkennung
   ): Promise<boolean> {
+    // Prüfe ob 24h-Fenster möglicherweise nicht aktiv ist (durch Datenbank-Prüfung)
+    // Wenn die letzte erfolgreiche WhatsApp-Nachricht länger als 24h her ist, verwende direkt Template
+    if (templateName) {
+      try {
+        const { prisma } = await import('../utils/prisma');
+        const normalizedPhone = this.normalizePhoneNumber(to);
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        
+        const lastSuccessfulMessage = await prisma.reservationNotificationLog.findFirst({
+          where: {
+            sentTo: normalizedPhone,
+            channel: 'whatsapp',
+            success: true,
+            sentAt: { gte: twentyFourHoursAgo }
+          },
+          orderBy: {
+            sentAt: 'desc'
+          }
+        });
+        
+        if (!lastSuccessfulMessage) {
+          console.log(`[WhatsApp Service] ⚠️ Keine erfolgreiche WhatsApp-Nachricht an ${to} in den letzten 24h gefunden - verwende direkt Template Message`);
+          // Überspringe Session Message und verwende direkt Template
+          const templateResult = await this.sendMessage(to, message, templateName, templateParams);
+          if (templateResult) {
+            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to}`);
+            return true;
+          } else {
+            throw new Error('Template Message gab false zurück');
+          }
+        } else {
+          console.log(`[WhatsApp Service] ✅ Letzte erfolgreiche WhatsApp-Nachricht an ${to} war vor ${Math.round((Date.now() - lastSuccessfulMessage.sentAt.getTime()) / (60 * 60 * 1000))} Stunden - 24h-Fenster sollte aktiv sein`);
+        }
+      } catch (dbError) {
+        console.warn(`[WhatsApp Service] ⚠️ Fehler bei Datenbank-Prüfung für 24h-Fenster:`, dbError);
+        // Bei Fehler: Versuche trotzdem Session Message
+      }
+    }
+    
     try {
       // Versuche zuerst Session Message (24h-Fenster)
       console.log(`[WhatsApp Service] Versuche Session Message (24h-Fenster) für ${to}...`);
