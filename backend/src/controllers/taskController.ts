@@ -228,30 +228,26 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
         const userFilter = getUserOrganizationFilter(req);
         
         if (taskData.responsibleId) {
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const responsibleUser = await executeWithRetry(() =>
-                prisma.user.findFirst({
-                    where: {
-                        ...userFilter,
-                        id: taskData.responsibleId
-                    }
-                })
-            );
+            // Validierung: executeWithRetry NICHT nötig (nicht kritisch)
+            const responsibleUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: taskData.responsibleId
+                }
+            });
             if (!responsibleUser) {
                 return res.status(400).json({ error: 'Verantwortlicher Benutzer gehört nicht zu Ihrer Organisation' });
             }
         }
 
         if (taskData.qualityControlId) {
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const qualityControlUser = await executeWithRetry(() =>
-                prisma.user.findFirst({
-                    where: {
-                        ...userFilter,
-                        id: taskData.qualityControlId
-                    }
-                })
-            );
+            // Validierung: executeWithRetry NICHT nötig (nicht kritisch)
+            const qualityControlUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: taskData.qualityControlId
+                }
+            });
             if (!qualityControlUser) {
                 return res.status(400).json({ error: 'Qualitätskontrolle-Benutzer gehört nicht zu Ihrer Organisation' });
             }
@@ -389,32 +385,28 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         const roleId = parseInt((req as any).roleId as string, 10);
         
         // Prüfe ob User Admin ist
-        // ✅ PERFORMANCE: executeWithRetry für DB-Query
-        const userRole = await executeWithRetry(() =>
-            prisma.role.findUnique({
-                where: { id: roleId },
-                select: { name: true }
-            })
-        );
+        // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+        const userRole = await prisma.role.findUnique({
+            where: { id: roleId },
+            select: { name: true }
+        });
         const isAdmin = userRole?.name.toLowerCase() === 'admin' || userRole?.name.toLowerCase().includes('administrator');
 
         // User-Rolle: Kann nur eigene Tasks oder Tasks der eigenen Rolle "User" status-shiften
         if (updateData.status && !isAdmin) {
             // Prüfe ob User die User-Rolle in der Organisation hat
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const userRoleInOrg = await executeWithRetry(() =>
-                prisma.role.findFirst({
-                    where: {
-                        organizationId: currentTask.organizationId,
-                        name: 'User',
-                        users: {
-                            some: {
-                                userId: userId
-                            }
+            // READ-Operation: executeWithRetry NICHT nötig (nicht kritisch)
+            const userRoleInOrg = await prisma.role.findFirst({
+                where: {
+                    organizationId: currentTask.organizationId,
+                    name: 'User',
+                    users: {
+                        some: {
+                            userId: userId
                         }
                     }
-                })
-            );
+                }
+            });
 
             // Erlaube Status-Update nur wenn:
             // 1. Task ist dem User zugewiesen (responsibleId === userId), ODER
@@ -445,15 +437,13 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         // Validierung: Prüfe ob User-IDs zur Organisation gehören (wenn geändert)
         if (updateData.responsibleId !== undefined && updateData.responsibleId !== null) {
             const userFilter = getUserOrganizationFilter(req as any);
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const responsibleUser = await executeWithRetry(() =>
-                prisma.user.findFirst({
-                    where: {
-                        ...userFilter,
-                        id: updateData.responsibleId
-                    }
-                })
-            );
+            // Validierung: executeWithRetry NICHT nötig (nicht kritisch)
+            const responsibleUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: updateData.responsibleId
+                }
+            });
             if (!responsibleUser) {
                 return res.status(400).json({ error: 'Verantwortlicher Benutzer gehört nicht zu Ihrer Organisation' });
             }
@@ -461,15 +451,13 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
 
         if (updateData.qualityControlId !== undefined && updateData.qualityControlId !== null) {
             const userFilter = getUserOrganizationFilter(req as any);
-            // ✅ PERFORMANCE: executeWithRetry für DB-Query
-            const qualityControlUser = await executeWithRetry(() =>
-                prisma.user.findFirst({
-                    where: {
-                        ...userFilter,
-                        id: updateData.qualityControlId
-                    }
-                })
-            );
+            // Validierung: executeWithRetry NICHT nötig (nicht kritisch)
+            const qualityControlUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: updateData.qualityControlId
+                }
+            });
             if (!qualityControlUser) {
                 return res.status(400).json({ error: 'Qualitätskontrolle-Benutzer gehört nicht zu Ihrer Organisation' });
             }
