@@ -932,7 +932,7 @@ const Worktracker: React.FC = () => {
         if (!hasLoadedRef.current) {
             hasLoadedRef.current = true;
             loadTasks();
-        }
+                }
     }, []);
 
     // Standard-Filter erstellen und speichern
@@ -4949,7 +4949,7 @@ const Worktracker: React.FC = () => {
                                                                         <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                                                                     </button>
                                                                 )}
-                                                            </div>
+                        </div>
                                                         </th>
                                                     );
                                                 })}
@@ -4988,7 +4988,7 @@ const Worktracker: React.FC = () => {
                                                                             <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4">
                                                                                 <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
                                                                                     {tour.title}
-                                                                                </div>
+                    </div>
                                                                             </td>
                                                                         );
                                                                     case 'type':
@@ -4996,7 +4996,7 @@ const Worktracker: React.FC = () => {
                                                                             <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                                 <div className="text-sm text-gray-900 dark:text-gray-200">
                                                                                     {tour.type === TourType.OWN ? t('tours.typeOwn') : t('tours.typeExternal')}
-                                                                                </div>
+                </div>
                                                                             </td>
                                                                         );
                                                                     case 'price':
