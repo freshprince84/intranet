@@ -1,4 +1,4 @@
-import { prisma, executeWithRetry } from '../utils/prisma';
+import { prisma } from '../utils/prisma';
 
 interface UserCacheEntry {
   data: {
@@ -42,25 +42,23 @@ class UserCache {
       return cached!.data;
     }
 
-    // 2. Lade aus Datenbank mit Retry-Logik
+    // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
     try {
-      const user = await executeWithRetry(() =>
-        prisma.user.findUnique({
-          where: { id: userId },
-          include: {
-            roles: {
-              include: {
-                role: {
-                  include: {
-                    permissions: true
-                  }
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          roles: {
+            include: {
+              role: {
+                include: {
+                  permissions: true
                 }
               }
-            },
-            settings: true
-          }
-        })
-      );
+            }
+          },
+          settings: true
+        }
+      });
 
       if (!user) {
         return null;

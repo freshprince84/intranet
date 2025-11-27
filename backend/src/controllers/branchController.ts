@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { prisma } from '../utils/prisma';
+import { branchCache } from '../services/branchCache';
 
 interface TestBranch {
     id: number;
@@ -172,38 +173,19 @@ export const getUserBranches = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
 
-        // Datenisolation: Zeigt nur Branches der Organisation
-        const branchFilter = getDataIsolationFilter(req as any, 'branch');
-
-        // Lade alle Branches des Users mit lastUsed-Flag
-        const userBranches = await prisma.usersBranches.findMany({
-            where: {
-                userId: userId,
-                branch: branchFilter
-            },
-            include: {
-                branch: {
-                    select: {
-                        id: true,
-                        name: true
-                    }
-                }
-            },
-            orderBy: {
-                branch: {
-                    name: 'asc'
-                }
-            }
+        // ✅ PERFORMANCE: Verwende BranchCache statt DB-Query
+        // ✅ SICHERHEIT: BranchCache berücksichtigt getDataIsolationFilter
+        const cachedBranches = await branchCache.get(userId, req);
+        
+        if (cachedBranches) {
+            return res.json(cachedBranches);
+        }
+        
+        // Fallback: DB-Query (sollte nicht nötig sein, da Cache immer Daten liefert oder null)
+        return res.status(500).json({ 
+            message: 'Fehler beim Laden der Branches',
+            error: 'Cache-Fehler'
         });
-
-        // Transformiere zu einfachem Format mit lastUsed-Flag
-        const branches = userBranches.map(ub => ({
-            id: ub.branch.id,
-            name: ub.branch.name,
-            lastUsed: ub.lastUsed
-        }));
-
-        res.json(branches);
     } catch (error) {
         console.error('Error in getUserBranches:', error);
         res.status(500).json({ 
@@ -320,6 +302,11 @@ export const switchUserBranch = async (req: Request, res: Response) => {
             name: ub.branch.name,
             lastUsed: ub.lastUsed
         }));
+
+        // ✅ PERFORMANCE: Cache invalidieren nach Branch-Wechsel
+        const organizationId = (req as any).organizationId;
+        const roleId = (req as any).roleId;
+        branchCache.invalidate(userId, organizationId, roleId);
 
         return res.json({ 
             success: true, 
@@ -562,6 +549,9 @@ export const updateBranch = async (req: Request, res: Response) => {
                 console.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
             }
         }
+
+        // ✅ PERFORMANCE: Cache leeren nach Branch-Update (alle User betroffen)
+        branchCache.clear();
 
         res.json(updatedBranch);
     } catch (error) {

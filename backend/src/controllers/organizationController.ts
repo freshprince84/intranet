@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma, executeWithRetry } from '../utils/prisma';
+import { prisma } from '../utils/prisma';
 import { organizationCache } from '../utils/organizationCache';
 import { z } from 'zod';
 import multer from 'multer';
@@ -761,28 +761,26 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
     // Hole Organization-Daten aus Cache (userRole.role.organization ist bereits geladen)
     let organization = cachedData.userRole.role.organization;
     
-    // Wenn Settings benötigt werden, lade sie separat mit Retry-Logik
+    // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
     if (includeSettings && organization) {
-      const orgWithSettings = await executeWithRetry(() =>
-        prisma.organization.findUnique({
-          where: { id: organization.id },
-          select: {
-            id: true,
-            name: true,
-            displayName: true,
-            domain: true,
-            logo: true,
-            isActive: true,
-            maxUsers: true,
-            subscriptionPlan: true,
-            country: true,
-            nit: true,
-            createdAt: true,
-            updatedAt: true,
-            settings: true // Settings nur wenn explizit angefragt
-          }
-        })
-      );
+      const orgWithSettings = await prisma.organization.findUnique({
+        where: { id: organization.id },
+        select: {
+          id: true,
+          name: true,
+          displayName: true,
+          domain: true,
+          logo: true,
+          isActive: true,
+          maxUsers: true,
+          subscriptionPlan: true,
+          country: true,
+          nit: true,
+          createdAt: true,
+          updatedAt: true,
+          settings: true // Settings nur wenn explizit angefragt
+        }
+      });
       
       if (orgWithSettings) {
         organization = orgWithSettings;
