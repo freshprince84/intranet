@@ -526,9 +526,32 @@ export class WhatsAppService {
         if (!lastSuccessfulMessage) {
           console.log(`[WhatsApp Service] ⚠️ Keine erfolgreiche WhatsApp-Nachricht an ${to} in den letzten 24h gefunden - verwende direkt Template Message`);
           // Überspringe Session Message und verwende direkt Template
-          const templateResult = await this.sendMessage(to, message, templateName, templateParams);
+          await this.loadSettings();
+          
+          if (!this.axiosInstance || !this.phoneNumberId) {
+            throw new Error('WhatsApp Service nicht initialisiert');
+          }
+          
+          const normalizedPhone = this.normalizePhoneNumber(to);
+          const formattedParams = templateParams?.map(text => ({
+            type: 'text' as const,
+            text: text
+          })) || [];
+          
+          // Template-Sprache: Reservation > Environment-Variable > Fallback
+          let languageCode: string;
+          if (reservation) {
+            const { CountryLanguageService } = require('./countryLanguageService');
+            languageCode = CountryLanguageService.getLanguageForReservation(reservation);
+          } else {
+            languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+          }
+          
+          const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
+          const templateResult = await this.sendViaWhatsAppBusiness(normalizedPhone, message, adjustedTemplateName, formattedParams, languageCode);
+          
           if (templateResult) {
-            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to}`);
+            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (direkt, da keine Nachricht in letzten 24h)`);
             return true;
           } else {
             throw new Error('Template Message gab false zurück');
