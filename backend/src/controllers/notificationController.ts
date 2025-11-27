@@ -9,6 +9,7 @@ import {
 } from '../types/notification';
 import { validateNotification } from '../validation/notificationValidation';
 import { notificationSettingsCache } from '../services/notificationSettingsCache';
+import { AuthenticatedRequest } from '../middleware/auth';
 
 // Hilfsfunktion zum Prüfen, ob Benachrichtigung für einen Typ aktiviert ist
 async function isNotificationEnabled(
@@ -169,7 +170,7 @@ export async function createNotificationIfEnabled(
 }
 
 // Alle Benachrichtigungen abrufen
-export const getNotifications = async (req: Request, res: Response) => {
+export const getNotifications = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -203,7 +204,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 };
 
 // Einzelne Benachrichtigung abrufen
-export const getNotificationById = async (req: Request, res: Response) => {
+export const getNotificationById = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -232,7 +233,7 @@ export const getNotificationById = async (req: Request, res: Response) => {
 };
 
 // Neue Benachrichtigung erstellen
-export const createNotification = async (req: Request, res: Response) => {
+export const createNotification = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const data = req.body;
     
@@ -345,7 +346,7 @@ export const createNotification = async (req: Request, res: Response) => {
 };
 
 // Benachrichtigung aktualisieren (in der Regel nur das 'read'-Flag)
-export const updateNotification = async (req: Request, res: Response) => {
+export const updateNotification = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -381,7 +382,7 @@ export const updateNotification = async (req: Request, res: Response) => {
 };
 
 // Benachrichtigung löschen
-export const deleteNotification = async (req: Request, res: Response) => {
+export const deleteNotification = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
@@ -414,7 +415,7 @@ export const deleteNotification = async (req: Request, res: Response) => {
 };
 
 // Alle ungelesenen Benachrichtigungen markieren als gelesen
-export const markAllAsRead = async (req: Request, res: Response) => {
+export const markAllAsRead = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     
@@ -440,7 +441,7 @@ export const markAllAsRead = async (req: Request, res: Response) => {
 };
 
 // Benachrichtigungseinstellungen abrufen
-export const getNotificationSettings = async (req: Request, res: Response) => {
+export const getNotificationSettings = async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Systemweite Einstellungen abrufen
     const systemSettings = await prisma.notificationSettings.findFirst();
@@ -472,7 +473,7 @@ export const getNotificationSettings = async (req: Request, res: Response) => {
 };
 
 // Alle Benachrichtigungen eines Benutzers abrufen
-export const getUserNotifications = async (req: Request, res: Response) => {
+export const getUserNotifications = async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Unterstütze sowohl req.user?.id als auch req.userId für Kompatibilität
     const userId = req.user?.id || (req.userId ? parseInt(req.userId.toString(), 10) : null);
@@ -521,7 +522,7 @@ export const getUserNotifications = async (req: Request, res: Response) => {
 };
 
 // Ungelesene Benachrichtigungen zählen
-export const countUnreadNotifications = async (req: Request, res: Response) => {
+export const countUnreadNotifications = async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Unterstütze sowohl req.user?.id als auch req.userId für Kompatibilität
     const userId = req.user?.id || (req.userId ? parseInt(req.userId.toString(), 10) : null);
@@ -543,7 +544,7 @@ export const countUnreadNotifications = async (req: Request, res: Response) => {
 };
 
 // Benachrichtigung als gelesen markieren
-export const markNotificationAsRead = async (req: Request, res: Response) => {
+export const markNotificationAsRead = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     // Unterstütze sowohl req.user?.id als auch req.userId für Kompatibilität
@@ -578,7 +579,7 @@ export const markNotificationAsRead = async (req: Request, res: Response) => {
 };
 
 // Alle Benachrichtigungen eines Benutzers als gelesen markieren
-export const markAllNotificationsAsRead = async (req: Request, res: Response) => {
+export const markAllNotificationsAsRead = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     
@@ -602,7 +603,7 @@ export const markAllNotificationsAsRead = async (req: Request, res: Response) =>
 };
 
 // Alle Benachrichtigungen eines Benutzers löschen
-export const deleteAllNotifications = async (req: Request, res: Response) => {
+export const deleteAllNotifications = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
     
