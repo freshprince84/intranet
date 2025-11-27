@@ -45,6 +45,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteBranch = exports.updateBranch = exports.createBranch = exports.switchUserBranch = exports.getUserBranches = exports.getAllBranches = exports.getTest = void 0;
 const organization_1 = require("../middleware/organization");
 const prisma_1 = require("../utils/prisma");
+const branchCache_1 = require("../services/branchCache");
 // Debug-Funktion ohne DB-Zugriff
 const getTest = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const testBranches = [
@@ -93,7 +94,11 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 emailSettings: true
             };
         }
+        // ✅ MONITORING: Timing-Log für DB-Query
+        const queryStartTime = Date.now();
         let branches = yield prisma_1.prisma.branch.findMany(queryOptions);
+        const queryDuration = Date.now() - queryStartTime;
+        console.log(`[getAllBranches] ⏱️ Query: ${queryDuration}ms | Branches: ${branches.length}`);
         // Entschlüssele alle Settings für alle Branches
         // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
         const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
@@ -198,35 +203,26 @@ const getUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, function
         if (!userId || isNaN(userId) || userId <= 0) {
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
-        // Datenisolation: Zeigt nur Branches der Organisation
-        const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
-        // Lade alle Branches des Users mit lastUsed-Flag
-        const userBranches = yield prisma_1.prisma.usersBranches.findMany({
-            where: {
-                userId: userId,
-                branch: branchFilter
-            },
-            include: {
-                branch: {
-                    select: {
-                        id: true,
-                        name: true
-                    }
-                }
-            },
-            orderBy: {
-                branch: {
-                    name: 'asc'
-                }
-            }
+        // ✅ PERFORMANCE: Verwende BranchCache statt DB-Query
+        // ✅ SICHERHEIT: BranchCache berücksichtigt getDataIsolationFilter
+        // ✅ MONITORING: Timing-Log für Cache-Operation
+        const cacheStartTime = Date.now();
+        const cachedBranches = yield branchCache_1.branchCache.get(userId, req);
+        const cacheDuration = Date.now() - cacheStartTime;
+        if (cachedBranches) {
+            console.log(`[getUserBranches] ⏱️ Cache-Hit: ${cacheDuration}ms | Branches: ${cachedBranches.length}`);
+        }
+        else {
+            console.log(`[getUserBranches] ⏱️ Cache-Miss: ${cacheDuration}ms`);
+        }
+        if (cachedBranches) {
+            return res.json(cachedBranches);
+        }
+        // Fallback: DB-Query (sollte nicht nötig sein, da Cache immer Daten liefert oder null)
+        return res.status(500).json({
+            message: 'Fehler beim Laden der Branches',
+            error: 'Cache-Fehler'
         });
-        // Transformiere zu einfachem Format mit lastUsed-Flag
-        const branches = userBranches.map(ub => ({
-            id: ub.branch.id,
-            name: ub.branch.name,
-            lastUsed: ub.lastUsed
-        }));
-        res.json(branches);
     }
     catch (error) {
         console.error('Error in getUserBranches:', error);
@@ -328,6 +324,10 @@ const switchUserBranch = (req, res) => __awaiter(void 0, void 0, void 0, functio
             name: ub.branch.name,
             lastUsed: ub.lastUsed
         }));
+        // ✅ PERFORMANCE: Cache invalidieren nach Branch-Wechsel
+        const organizationId = req.organizationId;
+        const roleId = req.roleId;
+        branchCache_1.branchCache.invalidate(userId, organizationId, roleId);
         return res.json({
             success: true,
             branches,
@@ -550,6 +550,8 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 console.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
             }
         }
+        // ✅ PERFORMANCE: Cache leeren nach Branch-Update (alle User betroffen)
+        branchCache_1.branchCache.clear();
         res.json(updatedBranch);
     }
     catch (error) {

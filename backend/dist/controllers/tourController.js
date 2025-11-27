@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.exportTours = exports.getTourBookings = exports.toggleTourActive = exports.updateTour = exports.deleteTourGalleryImage = exports.uploadTourGalleryImage = exports.uploadTourImage = exports.createTour = exports.getTourById = exports.getAllTours = exports.tourImageUpload = void 0;
+exports.exportTours = exports.getTourBookings = exports.toggleTourActive = exports.updateTour = exports.deleteTourGalleryImage = exports.getTourGalleryImage = exports.getTourImage = exports.uploadTourGalleryImage = exports.uploadTourImage = exports.createTour = exports.getTourById = exports.getAllTours = exports.tourImageUpload = void 0;
 const prisma_1 = require("../utils/prisma");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
 const filterCache_1 = require("../services/filterCache");
@@ -452,6 +452,122 @@ const uploadTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, f
     }
 });
 exports.uploadTourGalleryImage = uploadTourGalleryImage;
+// GET /api/tours/:id/image - Hauptbild abrufen
+const getTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const tourId = parseInt(id, 10);
+        if (isNaN(tourId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültige Tour-ID'
+            });
+        }
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: { imageUrl: true }
+        });
+        if (!tour || !tour.imageUrl) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bild nicht gefunden'
+            });
+        }
+        // Extrahiere Dateinamen aus URL (z.B. /uploads/tours/tour-123.jpg -> tour-123.jpg)
+        const filename = path_1.default.basename(tour.imageUrl);
+        const imagePath = path_1.default.join(TOURS_UPLOAD_DIR, filename);
+        // Prüfe ob Datei existiert
+        if (!fs_1.default.existsSync(imagePath)) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bilddatei nicht gefunden'
+            });
+        }
+        // Setze Content-Type basierend auf Dateiendung
+        const ext = path_1.default.extname(filename).toLowerCase();
+        const contentTypeMap = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.webp': 'image/webp'
+        };
+        const contentType = contentTypeMap[ext] || 'image/jpeg';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 Jahr Cache
+        res.sendFile(imagePath);
+    }
+    catch (error) {
+        console.error('[getTourImage] Fehler:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Fehler beim Laden des Bildes'
+        });
+    }
+});
+exports.getTourImage = getTourImage;
+// GET /api/tours/:id/gallery/:index - Galerie-Bild abrufen
+const getTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id, index } = req.params;
+        const tourId = parseInt(id, 10);
+        const imageIndex = parseInt(index, 10);
+        if (isNaN(tourId) || isNaN(imageIndex)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültige Tour-ID oder Bild-Index'
+            });
+        }
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: { galleryUrls: true }
+        });
+        if (!tour || !tour.galleryUrls) {
+            return res.status(404).json({
+                success: false,
+                message: 'Galerie nicht gefunden'
+            });
+        }
+        const galleryUrls = tour.galleryUrls;
+        if (imageIndex < 0 || imageIndex >= galleryUrls.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bild-Index außerhalb des gültigen Bereichs'
+            });
+        }
+        const imageUrl = galleryUrls[imageIndex];
+        const filename = path_1.default.basename(imageUrl);
+        const imagePath = path_1.default.join(TOURS_UPLOAD_DIR, filename);
+        // Prüfe ob Datei existiert
+        if (!fs_1.default.existsSync(imagePath)) {
+            return res.status(404).json({
+                success: false,
+                message: 'Bilddatei nicht gefunden'
+            });
+        }
+        // Setze Content-Type basierend auf Dateiendung
+        const ext = path_1.default.extname(filename).toLowerCase();
+        const contentTypeMap = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.webp': 'image/webp'
+        };
+        const contentType = contentTypeMap[ext] || 'image/jpeg';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 Jahr Cache
+        res.sendFile(imagePath);
+    }
+    catch (error) {
+        console.error('[getTourGalleryImage] Fehler:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Fehler beim Laden des Galerie-Bildes'
+        });
+    }
+});
+exports.getTourGalleryImage = getTourGalleryImage;
 // DELETE /api/tours/:id/gallery/:imageIndex - Galerie-Bild löschen
 const deleteTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {

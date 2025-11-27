@@ -286,7 +286,7 @@ class WhatsAppService {
      */
     sendViaWhatsAppBusiness(to, message, template, templateParams, templateLanguage, isGroup) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
             if (!this.axiosInstance) {
                 throw new Error('WhatsApp Business Service nicht initialisiert');
             }
@@ -346,12 +346,42 @@ class WhatsAppService {
                 const response = yield this.axiosInstance.post('/messages', payload);
                 console.log(`[WhatsApp Business] ✅ Nachricht erfolgreich gesendet. Status: ${response.status}`);
                 console.log(`[WhatsApp Business] Response:`, JSON.stringify(response.data, null, 2));
+                // WICHTIG: Prüfe Response-Daten auch bei Status 200
+                // Die API kann Status 200 zurückgeben, aber trotzdem Fehler in response.data enthalten
+                if ((_b = response.data) === null || _b === void 0 ? void 0 : _b.error) {
+                    const errorData = response.data.error;
+                    const errorCode = errorData.code;
+                    const errorMessage = (errorData.message || '').toLowerCase();
+                    const errorSubcode = errorData.error_subcode;
+                    console.error(`[WhatsApp Business] ⚠️ Fehler in Response-Daten (trotz Status 200):`, errorData);
+                    // Prüfe ob es ein 24h-Fenster-Fehler ist
+                    const is24HourWindowError = errorCode === 131047 ||
+                        errorCode === 131026 ||
+                        errorSubcode === 131047 ||
+                        errorMessage.includes('24 hour') ||
+                        errorMessage.includes('outside window') ||
+                        errorMessage.includes('template required') ||
+                        errorMessage.includes('outside the 24 hour');
+                    if (is24HourWindowError) {
+                        console.log(`[WhatsApp Business] ⚠️ 24h-Fenster-Fehler erkannt in Response-Daten`);
+                    }
+                    // Werfe Error, damit Template-Fallback ausgelöst wird
+                    throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify(errorData)}`);
+                }
                 // Prüfe ob Message-ID zurückgegeben wurde
-                if ((_d = (_c = (_b = response.data) === null || _b === void 0 ? void 0 : _b.messages) === null || _c === void 0 ? void 0 : _c[0]) === null || _d === void 0 ? void 0 : _d.id) {
+                if ((_e = (_d = (_c = response.data) === null || _c === void 0 ? void 0 : _c.messages) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.id) {
                     const messageId = response.data.messages[0].id;
                     console.log(`[WhatsApp Business] Message-ID: ${messageId}`);
                     console.log(`[WhatsApp Business] ⚠️ WICHTIG: Status 200 bedeutet nur, dass die API die Nachricht akzeptiert hat.`);
                     console.log(`[WhatsApp Business] ⚠️ Die tatsächliche Zustellung kann über Webhook-Status-Updates verfolgt werden.`);
+                }
+                else {
+                    // Keine Message-ID zurückgegeben - könnte ein Problem sein
+                    console.warn(`[WhatsApp Business] ⚠️ Keine Message-ID in Response zurückgegeben`);
+                    // Prüfe ob es Warnungen gibt
+                    if ((_f = response.data) === null || _f === void 0 ? void 0 : _f.warnings) {
+                        console.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, response.data.warnings);
+                    }
                 }
                 return response.status === 200;
             }
@@ -359,13 +389,13 @@ class WhatsAppService {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
                     console.error('[WhatsApp Business] API Fehler Details:');
-                    console.error('  Status:', (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.status);
-                    console.error('  Status Text:', (_f = axiosError.response) === null || _f === void 0 ? void 0 : _f.statusText);
-                    console.error('  Response Data:', JSON.stringify((_g = axiosError.response) === null || _g === void 0 ? void 0 : _g.data, null, 2));
-                    console.error('  Request URL:', (_h = axiosError.config) === null || _h === void 0 ? void 0 : _h.url);
-                    console.error('  Request Method:', (_j = axiosError.config) === null || _j === void 0 ? void 0 : _j.method);
-                    console.error('  Request Headers:', JSON.stringify((_k = axiosError.config) === null || _k === void 0 ? void 0 : _k.headers, null, 2));
-                    throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify((_l = axiosError.response) === null || _l === void 0 ? void 0 : _l.data)}`);
+                    console.error('  Status:', (_g = axiosError.response) === null || _g === void 0 ? void 0 : _g.status);
+                    console.error('  Status Text:', (_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.statusText);
+                    console.error('  Response Data:', JSON.stringify((_j = axiosError.response) === null || _j === void 0 ? void 0 : _j.data, null, 2));
+                    console.error('  Request URL:', (_k = axiosError.config) === null || _k === void 0 ? void 0 : _k.url);
+                    console.error('  Request Method:', (_l = axiosError.config) === null || _l === void 0 ? void 0 : _l.method);
+                    console.error('  Request Headers:', JSON.stringify((_m = axiosError.config) === null || _m === void 0 ? void 0 : _m.headers, null, 2));
+                    throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify((_o = axiosError.response) === null || _o === void 0 ? void 0 : _o.data)}`);
                 }
                 console.error('[WhatsApp Business] Unbekannter Fehler:', error);
                 throw error;

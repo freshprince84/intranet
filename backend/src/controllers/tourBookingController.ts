@@ -6,8 +6,8 @@ import { calculateCommission } from '../services/commissionService';
 import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
 import { filterCache } from '../services/filterCache';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
-// TODO: import { TourWhatsAppService } from '../services/tourWhatsAppService';
-// TODO: import { createNotificationIfEnabled } from './notificationController';
+// TourWhatsAppService wird dynamisch importiert wenn benötigt
+// NotificationService wird dynamisch importiert wenn benötigt
 
 interface AuthenticatedRequest extends Request {
   userId: string;

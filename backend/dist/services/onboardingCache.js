@@ -9,24 +9,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userCache = void 0;
+exports.onboardingCache = void 0;
 const prisma_1 = require("../utils/prisma");
 /**
- * In-Memory Cache für User-Daten aus authMiddleware
+ * In-Memory Cache für Onboarding-Status
  *
- * Reduziert Datenbank-Queries drastisch, da authMiddleware bei JEDEM Request
- * eine komplexe Query ausführt (User + Roles + Permissions + Settings).
+ * Reduziert Datenbank-Queries drastisch, da getOnboardingStatus bei JEDEM Seitenaufruf
+ * aufgerufen wird. Mit Cache: Onboarding-Status wird nur einmal pro TTL geladen.
  *
- * TTL: 30 Sekunden (User-Daten ändern sich selten, aber müssen aktuell bleiben)
+ * TTL: 5 Minuten (Onboarding-Status ändert sich selten)
  */
-class UserCache {
+class OnboardingCache {
     constructor() {
         this.cache = new Map();
-        this.TTL_MS = 5 * 60 * 1000; // 5 Minuten (statt 30 Sekunden - reduziert DB-Queries um 90%)
+        this.TTL_MS = 5 * 60 * 1000; // 5 Minuten
     }
-    /**
-     * Prüft, ob ein Cache-Eintrag noch gültig ist
-     */
     isCacheValid(entry) {
         if (!entry)
             return false;
@@ -34,61 +31,52 @@ class UserCache {
         return (now - entry.timestamp) < this.TTL_MS;
     }
     /**
-     * Lädt User-Daten aus Cache oder Datenbank
+     * Lädt Onboarding-Status aus Cache oder Datenbank
      *
      * @param userId - User-ID
-     * @returns User-Daten mit Roles, Permissions, Settings oder null wenn nicht gefunden
+     * @returns Onboarding-Status oder null wenn nicht gefunden
      */
     get(userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            // 1. Prüfe Cache
             const cached = this.cache.get(userId);
             if (this.isCacheValid(cached)) {
                 return cached.data;
             }
-            // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
             try {
+                // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
                 const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
-                    include: {
-                        roles: {
-                            include: {
-                                role: {
-                                    include: {
-                                        permissions: true
-                                    }
-                                }
-                            }
-                        },
-                        settings: true
+                    select: {
+                        onboardingCompleted: true,
+                        onboardingProgress: true,
+                        onboardingStartedAt: true,
+                        onboardingCompletedAt: true
                     }
                 });
                 if (!user) {
                     return null;
                 }
-                // Finde aktive Rolle
-                const activeRole = user.roles.find(r => r.lastUsed);
-                const roleId = activeRole ? String(activeRole.role.id) : undefined;
-                const data = {
-                    user,
-                    roleId
+                const status = {
+                    onboardingCompleted: user.onboardingCompleted,
+                    onboardingProgress: user.onboardingProgress,
+                    onboardingStartedAt: user.onboardingStartedAt,
+                    onboardingCompletedAt: user.onboardingCompletedAt
                 };
-                // 3. Speichere im Cache
                 this.cache.set(userId, {
-                    data,
+                    data: status,
                     timestamp: Date.now()
                 });
-                return data;
+                return status;
             }
             catch (error) {
-                console.error(`[UserCache] Fehler beim Laden für User ${userId}:`, error);
+                console.error(`[OnboardingCache] Fehler beim Laden für User ${userId}:`, error);
                 return null;
             }
         });
     }
     /**
      * Invalidiert Cache für einen bestimmten User
-     * Wird aufgerufen, wenn User-Daten, Rollen oder Permissions geändert werden
+     * Wird aufgerufen, wenn Onboarding-Status geändert wird
      *
      * @param userId - User-ID
      */
@@ -119,5 +107,5 @@ class UserCache {
     }
 }
 // Singleton-Instanz
-exports.userCache = new UserCache();
-//# sourceMappingURL=userCache.js.map
+exports.onboardingCache = new OnboardingCache();
+//# sourceMappingURL=onboardingCache.js.map
