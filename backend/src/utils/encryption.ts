@@ -503,6 +503,24 @@ export const decryptBranchApiSettings = (settings: any): any => {
     }
   }
 
+  // Email Settings (verschachtelt in emailSettings)
+  if (decrypted.email && typeof decrypted.email === 'object') {
+    const emailUpdates: any = {};
+    if (decrypted.email.smtpPass && typeof decrypted.email.smtpPass === 'string' && decrypted.email.smtpPass.includes(':')) {
+      try {
+        emailUpdates.smtpPass = decryptSecret(decrypted.email.smtpPass);
+      } catch (error) {
+        console.error('Error decrypting email.smtpPass:', error);
+      }
+    }
+    if (Object.keys(emailUpdates).length > 0) {
+      decrypted.email = {
+        ...decrypted.email,
+        ...emailUpdates
+      };
+    }
+  }
+
   // Email IMAP Password (verschachtelt)
   if (decrypted.imap?.password && typeof decrypted.imap.password === 'string' && decrypted.imap.password.includes(':')) {
     try {

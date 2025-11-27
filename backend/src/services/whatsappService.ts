@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { decryptApiSettings } from '../utils/encryption';
+import { decryptApiSettings, decryptBranchApiSettings } from '../utils/encryption';
 import { prisma } from '../utils/prisma';
 
 /**
@@ -53,22 +53,11 @@ export class WhatsAppService {
         console.log(`[WhatsApp Service] Branch hat eigene WhatsApp Settings`);
         
         try {
-          // branch.whatsappSettings enthält direkt die WhatsApp Settings (nicht verschachtelt)
-          // Versuche zu entschlüsseln (falls verschlüsselt)
-          let whatsappSettings: any;
-          try {
-            // Versuche als verschachteltes Objekt zu entschlüsseln
-            const decrypted = decryptApiSettings({ whatsapp: branch.whatsappSettings } as any);
-            whatsappSettings = decrypted?.whatsapp;
-          } catch {
-            // Falls das fehlschlägt, versuche direkt zu entschlüsseln
-            try {
-              whatsappSettings = decryptApiSettings(branch.whatsappSettings as any);
-            } catch {
-              // Falls auch das fehlschlägt, verwende direkt (unverschlüsselt)
-              whatsappSettings = branch.whatsappSettings as any;
-            }
-          }
+          // branch.whatsappSettings enthält direkt die WhatsApp Settings (kann verschachtelt sein)
+          // Verwende decryptBranchApiSettings für Branch Settings (entschlüsselt verschachtelte Settings)
+          const decrypted = decryptBranchApiSettings(branch.whatsappSettings as any);
+          // WhatsApp Settings können direkt im Root sein oder verschachtelt in whatsapp
+          let whatsappSettings = decrypted?.whatsapp || decrypted;
 
           // Falls immer noch verschachtelt, extrahiere whatsapp
           if (whatsappSettings?.whatsapp) {
