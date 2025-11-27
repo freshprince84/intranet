@@ -138,13 +138,34 @@ async function checkLobbyPmsImportStatus() {
           console.log(`     Neueste: ID ${latest.id}, LobbyID ${latest.lobbyReservationId}, Check-in: ${checkInDate}`);
         }
 
-        // Hole Reservierungen von LobbyPMS API (letzte 30 Tage)
-        console.log('\n  📥 Hole Reservierungen von LobbyPMS API (letzte 30 Tage)...');
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        // Hole Reservierungen von LobbyPMS API (letzte 7 Tage - reduziert für Performance)
+        console.log('\n  📥 Hole Reservierungen von LobbyPMS API (letzte 7 Tage)...');
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         
-        const apiReservations = await service.fetchReservations(thirtyDaysAgo, new Date());
-        console.log(`  📊 Reservierungen von API: ${apiReservations.length} (letzte 30 Tage)`);
+        console.log('  ⏱️  Starte API-Abruf (kann einige Sekunden dauern, max. 30 Sekunden)...');
+        
+        // Timeout für API-Abruf (30 Sekunden)
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('API-Abruf Timeout nach 30 Sekunden')), 30000);
+        });
+        
+        let apiReservations = [];
+        try {
+          apiReservations = await Promise.race([
+            service.fetchReservations(sevenDaysAgo, new Date()),
+            timeoutPromise
+          ]);
+        } catch (error) {
+          if (error.message.includes('Timeout')) {
+            console.log('  ⚠️  API-Abruf dauerte zu lange (Timeout nach 30 Sekunden)');
+            console.log('  💡 Tipp: Prüfe die Pagination-Logik im LobbyPmsService');
+            continue;
+          }
+          throw error;
+        }
+        
+        console.log(`  📊 Reservierungen von API: ${apiReservations.length} (letzte 7 Tage)`);
         
         if (apiReservations.length > 0) {
           const latestApi = apiReservations[0];
