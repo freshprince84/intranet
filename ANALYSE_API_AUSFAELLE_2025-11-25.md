@@ -9321,7 +9321,42 @@ const whatsapp = decrypted?.whatsapp || decrypted;
   - Wenn `smtpPass` verschachtelt ist (`email.smtpPass`), wird es NICHT gefunden!
 
 **3. Nächste Schritte:**
-- ✅ Code kompilieren: `npm run build`
-- ✅ Backend neu starten: `pm2 restart intranet-backend`
-- ✅ Testen: Prüfe ob WhatsApp Token jetzt korrekt entschlüsselt wird
-- ✅ Testen: Prüfe ob Email SMTP Password jetzt korrekt entschlüsselt wird
+
+**⚠️ WICHTIG: Änderungen sind nur lokal! Sie müssen zuerst auf den Server!**
+
+**Schritt 1: Änderungen committen und pushen (lokal):**
+```bash
+# Prüfe geänderte Dateien
+git status
+
+# Committe Änderungen
+git add backend/src/services/whatsappService.ts backend/src/utils/encryption.ts ANALYSE_API_AUSFAELLE_2025-11-25.md
+git commit -m "Fix: WhatsAppService verwendet jetzt decryptBranchApiSettings für Branch Settings + Email SMTP Password Entschlüsselung für verschachtelte Settings"
+
+# Pushe Änderungen
+git push
+```
+
+**Schritt 2: Auf Server pullen, kompilieren und neu starten:**
+```bash
+# Auf Server: Änderungen pullen
+cd /var/www/intranet && git pull
+
+# Code kompilieren
+cd /var/www/intranet/backend && npm run build
+
+# Backend neu starten
+pm2 restart intranet-backend
+
+# Prüfe ob Backend läuft
+pm2 status
+```
+
+**Schritt 3: Testen:**
+```bash
+# Prüfe ob WhatsApp Token jetzt korrekt entschlüsselt wird
+pm2 logs intranet-backend --lines 50 --nostream | grep -A 5 "\[WhatsApp Token Debug\] Branch Settings Entschlüsselung" | tail -20
+
+# Prüfe ob Email SMTP Password jetzt korrekt entschlüsselt wird
+pm2 logs intranet-backend --lines 50 --nostream | grep -E "Error decrypting.*smtpPass|smtpPass.*entschlüsselt" | tail -10
+```
