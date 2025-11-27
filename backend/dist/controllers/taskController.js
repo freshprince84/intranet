@@ -195,17 +195,19 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Validierung: Prüfe ob User-IDs zur Organisation gehören
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         if (taskData.responsibleId) {
-            const responsibleUser = yield prisma_1.prisma.user.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const responsibleUser = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: taskData.responsibleId })
-            });
+            }));
             if (!responsibleUser) {
                 return res.status(400).json({ error: 'Verantwortlicher Benutzer gehört nicht zu Ihrer Organisation' });
             }
         }
         if (taskData.qualityControlId) {
-            const qualityControlUser = yield prisma_1.prisma.user.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const qualityControlUser = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: taskData.qualityControlId })
-            });
+            }));
             if (!qualityControlUser) {
                 return res.status(400).json({ error: 'Qualitätskontrolle-Benutzer gehört nicht zu Ihrer Organisation' });
             }
@@ -228,7 +230,8 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (taskData.roleId) {
             taskCreateData.roleId = taskData.roleId;
         }
-        const task = yield prisma_1.prisma.task.create({
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const task = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.task.create({
             data: taskCreateData,
             include: {
                 responsible: {
@@ -244,7 +247,7 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     select: branchSelect
                 }
             }
-        });
+        }));
         // Benachrichtigung für den Verantwortlichen erstellen, nur wenn ein Benutzer zugewiesen ist
         if (taskData.responsibleId) {
             const userLang = yield (0, translations_1.getUserLanguage)(taskData.responsibleId);
@@ -303,7 +306,8 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
         // Aktuellen Task abrufen, um Änderungen zu erkennen
-        const currentTask = yield prisma_1.prisma.task.findFirst({
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const currentTask = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.task.findFirst({
             where: Object.assign({ id: taskId }, isolationFilter),
             include: {
                 responsible: {
@@ -316,7 +320,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     select: { id: true, name: true, organizationId: true }
                 }
             }
-        });
+        }));
         if (!currentTask) {
             return res.status(404).json({ error: 'Task nicht gefunden' });
         }
@@ -324,15 +328,17 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const userId = parseInt(req.userId, 10);
         const roleId = parseInt(req.roleId, 10);
         // Prüfe ob User Admin ist
-        const userRole = yield prisma_1.prisma.role.findUnique({
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const userRole = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.role.findUnique({
             where: { id: roleId },
             select: { name: true }
-        });
+        }));
         const isAdmin = (userRole === null || userRole === void 0 ? void 0 : userRole.name.toLowerCase()) === 'admin' || (userRole === null || userRole === void 0 ? void 0 : userRole.name.toLowerCase().includes('administrator'));
         // User-Rolle: Kann nur eigene Tasks oder Tasks der eigenen Rolle "User" status-shiften
         if (updateData.status && !isAdmin) {
             // Prüfe ob User die User-Rolle in der Organisation hat
-            const userRoleInOrg = yield prisma_1.prisma.role.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const userRoleInOrg = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.role.findFirst({
                 where: {
                     organizationId: currentTask.organizationId,
                     name: 'User',
@@ -342,7 +348,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         }
                     }
                 }
-            });
+            }));
             // Erlaube Status-Update nur wenn:
             // 1. Task ist dem User zugewiesen (responsibleId === userId), ODER
             // 2. Task gehört zur User-Rolle und User hat diese Rolle
@@ -369,18 +375,20 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Validierung: Prüfe ob User-IDs zur Organisation gehören (wenn geändert)
         if (updateData.responsibleId !== undefined && updateData.responsibleId !== null) {
             const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-            const responsibleUser = yield prisma_1.prisma.user.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const responsibleUser = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: updateData.responsibleId })
-            });
+            }));
             if (!responsibleUser) {
                 return res.status(400).json({ error: 'Verantwortlicher Benutzer gehört nicht zu Ihrer Organisation' });
             }
         }
         if (updateData.qualityControlId !== undefined && updateData.qualityControlId !== null) {
             const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-            const qualityControlUser = yield prisma_1.prisma.user.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const qualityControlUser = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: updateData.qualityControlId })
-            });
+            }));
             if (!qualityControlUser) {
                 return res.status(400).json({ error: 'Qualitätskontrolle-Benutzer gehört nicht zu Ihrer Organisation' });
             }
@@ -416,7 +424,8 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             // Wenn explizit null gesetzt wird, entferne die Beziehung
             updateDataForPrisma.roleId = null;
         }
-        const task = yield prisma_1.prisma.task.update({
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const task = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.task.update({
             where: { id: taskId },
             data: updateDataForPrisma,
             include: {
@@ -433,7 +442,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     select: branchSelect
                 }
             }
-        });
+        }));
         // Benachrichtigung bei Statusänderung
         if (updateData.status && updateData.status !== currentTask.status) {
             // Status-History speichern

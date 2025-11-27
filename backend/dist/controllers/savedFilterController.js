@@ -12,7 +12,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeFilterFromGroup = exports.addFilterToGroup = exports.deleteFilterGroup = exports.updateFilterGroup = exports.getFilterGroups = exports.createFilterGroup = exports.deleteFilter = exports.saveFilter = exports.getUserSavedFilters = void 0;
 const prisma_1 = require("../utils/prisma");
 const filterCache_1 = require("../services/filterCache");
+const filterListCache_1 = require("../services/filterListCache");
 // Funktion zum Abrufen aller gespeicherten Filter eines Benutzers für eine Tabelle
+// ✅ PERFORMANCE: Verwendet FilterListCache statt direkter DB-Query
 const getUserSavedFilters = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
@@ -23,58 +25,12 @@ const getUserSavedFilters = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!tableId) {
             return res.status(400).json({ message: 'Table ID ist erforderlich' });
         }
-        // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
-            const savedFilters = yield prisma_1.prisma.savedFilter.findMany({
-                where: {
-                    userId,
-                    tableId
-                }
-            });
-            // Parse die JSON-Strings zurück in Arrays
-            const parsedFilters = savedFilters.map(filter => {
-                let sortDirections = [];
-                if (filter.sortDirections) {
-                    try {
-                        // Prüfe, ob es ein "null" String ist
-                        if (filter.sortDirections.trim() === 'null' || filter.sortDirections.trim() === '') {
-                            sortDirections = [];
-                        }
-                        else {
-                            const parsed = JSON.parse(filter.sortDirections);
-                            // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
-                            if (Array.isArray(parsed)) {
-                                sortDirections = parsed;
-                            }
-                            else if (typeof parsed === 'object' && parsed !== null) {
-                                // Altes Format: { "status": "asc", "branch": "desc" }
-                                sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                                    column,
-                                    direction: direction,
-                                    priority: index + 1
-                                }));
-                            }
-                        }
-                    }
-                    catch (e) {
-                        console.error('Fehler beim Parsen von sortDirections:', e);
-                        sortDirections = [];
-                    }
-                }
-                return {
-                    id: filter.id,
-                    userId: filter.userId,
-                    tableId: filter.tableId,
-                    name: filter.name,
-                    conditions: JSON.parse(filter.conditions),
-                    operators: JSON.parse(filter.operators),
-                    sortDirections,
-                    groupId: filter.groupId,
-                    order: filter.order,
-                    createdAt: filter.createdAt,
-                    updatedAt: filter.updatedAt
-                };
-            });
+            // ✅ PERFORMANCE: Verwende FilterListCache statt direkter DB-Query
+            const parsedFilters = yield filterListCache_1.filterListCache.getFilters(userId, tableId);
+            if (!parsedFilters) {
+                return res.status(500).json({ message: 'Fehler beim Laden der Filter' });
+            }
             return res.status(200).json(parsedFilters);
         }
         catch (prismaError) {
@@ -109,17 +65,19 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
             // Prüfe, ob bereits ein Filter mit diesem Namen existiert
-            const existingFilter = yield prisma_1.prisma.savedFilter.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const existingFilter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     userId,
                     tableId,
                     name
                 }
-            });
+            }));
             let filter;
             if (existingFilter) {
                 // Aktualisiere bestehenden Filter
-                filter = yield prisma_1.prisma.savedFilter.update({
+                // ✅ PERFORMANCE: executeWithRetry für DB-Query
+                filter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.update({
                     where: {
                         id: existingFilter.id
                     },
@@ -128,13 +86,15 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         operators: operatorsJson,
                         sortDirections: sortDirectionsJson
                     }
-                });
+                }));
                 // Cache invalidieren
                 filterCache_1.filterCache.invalidate(existingFilter.id);
+                filterListCache_1.filterListCache.invalidate(userId, tableId);
             }
             else {
                 // Erstelle neuen Filter
-                filter = yield prisma_1.prisma.savedFilter.create({
+                // ✅ PERFORMANCE: executeWithRetry für DB-Query
+                filter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.create({
                     data: {
                         userId,
                         tableId,
@@ -143,7 +103,9 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         operators: operatorsJson,
                         sortDirections: sortDirectionsJson
                     }
-                });
+                }));
+                // Cache invalidieren
+                filterListCache_1.filterListCache.invalidate(userId, tableId);
             }
             // Parse die JSON-Strings zurück in Arrays für die Antwort
             let sortDirections = [];
@@ -214,23 +176,26 @@ const deleteFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
             // Prüfe, ob der Filter existiert und dem Benutzer gehört
-            const existingFilter = yield prisma_1.prisma.savedFilter.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const existingFilter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     id: filterId,
                     userId
                 }
-            });
+            }));
             if (!existingFilter) {
                 return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung zum Löschen' });
             }
             // Lösche den Filter
-            yield prisma_1.prisma.savedFilter.delete({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.delete({
                 where: {
                     id: filterId
                 }
-            });
+            }));
             // Cache invalidieren
             filterCache_1.filterCache.invalidate(filterId);
+            filterListCache_1.filterListCache.invalidate(userId, existingFilter.tableId);
             return res.status(200).json({ message: 'Filter erfolgreich gelöscht' });
         }
         catch (prismaError) {
@@ -261,18 +226,20 @@ const createFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         try {
             // Prüfe, ob bereits eine Gruppe mit diesem Namen existiert
-            const existingGroup = yield prisma_1.prisma.filterGroup.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const existingGroup = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     userId,
                     tableId,
                     name
                 }
-            });
+            }));
             if (existingGroup) {
                 return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
             }
             // Finde die höchste order-Nummer für diese Tabelle
-            const maxOrder = yield prisma_1.prisma.filterGroup.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const maxOrder = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     userId,
                     tableId
@@ -283,17 +250,20 @@ const createFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 select: {
                     order: true
                 }
-            });
+            }));
             const newOrder = maxOrder ? maxOrder.order + 1 : 0;
             // Erstelle neue Gruppe
-            const group = yield prisma_1.prisma.filterGroup.create({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const group = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.create({
                 data: {
                     userId,
                     tableId,
                     name,
                     order: newOrder
                 }
-            });
+            }));
+            // Cache invalidieren
+            filterListCache_1.filterListCache.invalidate(userId, tableId);
             return res.status(200).json({
                 id: group.id,
                 userId: group.userId,
@@ -317,6 +287,7 @@ const createFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.createFilterGroup = createFilterGroup;
 // Funktion zum Abrufen aller Filter-Gruppen eines Benutzers für eine Tabelle
+// ✅ PERFORMANCE: Verwendet FilterListCache statt direkter DB-Query
 const getFilterGroups = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
@@ -328,45 +299,11 @@ const getFilterGroups = (req, res) => __awaiter(void 0, void 0, void 0, function
             return res.status(400).json({ message: 'Table ID ist erforderlich' });
         }
         try {
-            const groups = yield prisma_1.prisma.filterGroup.findMany({
-                where: {
-                    userId,
-                    tableId
-                },
-                include: {
-                    filters: {
-                        orderBy: {
-                            order: 'asc'
-                        }
-                    }
-                },
-                orderBy: {
-                    order: 'asc'
-                }
-            });
-            // Parse die JSON-Strings der Filter zurück in Arrays
-            const parsedGroups = groups.map(group => ({
-                id: group.id,
-                userId: group.userId,
-                tableId: group.tableId,
-                name: group.name,
-                order: group.order,
-                filters: group.filters.map(filter => ({
-                    id: filter.id,
-                    userId: filter.userId,
-                    tableId: filter.tableId,
-                    name: filter.name,
-                    conditions: JSON.parse(filter.conditions),
-                    operators: JSON.parse(filter.operators),
-                    sortDirections: filter.sortDirections ? JSON.parse(filter.sortDirections) : {},
-                    groupId: filter.groupId,
-                    order: filter.order,
-                    createdAt: filter.createdAt,
-                    updatedAt: filter.updatedAt
-                })),
-                createdAt: group.createdAt,
-                updatedAt: group.updatedAt
-            }));
+            // ✅ PERFORMANCE: Verwende FilterListCache statt direkter DB-Query
+            const parsedGroups = yield filterListCache_1.filterListCache.getFilterGroups(userId, tableId);
+            if (!parsedGroups) {
+                return res.status(500).json({ message: 'Fehler beim Laden der Filter-Gruppen' });
+            }
             return res.status(200).json(parsedGroups);
         }
         catch (prismaError) {
@@ -397,17 +334,19 @@ const updateFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         try {
             // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-            const existingGroup = yield prisma_1.prisma.filterGroup.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const existingGroup = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     id: groupId,
                     userId
                 }
-            });
+            }));
             if (!existingGroup) {
                 return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
             }
             // Prüfe, ob bereits eine andere Gruppe mit diesem Namen existiert
-            const nameExists = yield prisma_1.prisma.filterGroup.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const nameExists = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     userId,
                     tableId: existingGroup.tableId,
@@ -416,12 +355,13 @@ const updateFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                         not: groupId
                     }
                 }
-            });
+            }));
             if (nameExists) {
                 return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
             }
             // Aktualisiere die Gruppe
-            const updatedGroup = yield prisma_1.prisma.filterGroup.update({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const updatedGroup = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.update({
                 where: {
                     id: groupId
                 },
@@ -435,7 +375,9 @@ const updateFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                         }
                     }
                 }
-            });
+            }));
+            // Cache invalidieren
+            filterListCache_1.filterListCache.invalidate(userId, existingGroup.tableId);
             // Parse die JSON-Strings der Filter zurück in Arrays
             const parsedGroup = {
                 id: updatedGroup.id,
@@ -484,7 +426,8 @@ const deleteFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         try {
             // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-            const existingGroup = yield prisma_1.prisma.filterGroup.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const existingGroup = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     id: groupId,
                     userId
@@ -492,12 +435,13 @@ const deleteFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 include: {
                     filters: true
                 }
-            });
+            }));
             if (!existingGroup) {
                 return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
             }
             // Entferne alle Filter aus der Gruppe (setze groupId = null)
-            yield prisma_1.prisma.savedFilter.updateMany({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.updateMany({
                 where: {
                     groupId: groupId
                 },
@@ -505,13 +449,16 @@ const deleteFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                     groupId: null,
                     order: 0
                 }
-            });
+            }));
             // Lösche die Gruppe
-            yield prisma_1.prisma.filterGroup.delete({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.delete({
                 where: {
                     id: groupId
                 }
-            });
+            }));
+            // Cache invalidieren
+            filterListCache_1.filterListCache.invalidate(userId, existingGroup.tableId);
             return res.status(200).json({ message: 'Gruppe erfolgreich gelöscht' });
         }
         catch (prismaError) {
@@ -542,28 +489,31 @@ const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, functio
         }
         try {
             // Prüfe, ob der Filter existiert und dem Benutzer gehört
-            const filter = yield prisma_1.prisma.savedFilter.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const filter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     id: filterId,
                     userId
                 }
-            });
+            }));
             if (!filter) {
                 return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
             }
             // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-            const group = yield prisma_1.prisma.filterGroup.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const group = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     id: groupId,
                     userId,
                     tableId: filter.tableId // Gruppe muss zur gleichen Tabelle gehören
                 }
-            });
+            }));
             if (!group) {
                 return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
             }
             // Finde die höchste order-Nummer in der Gruppe
-            const maxOrder = yield prisma_1.prisma.savedFilter.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const maxOrder = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     groupId: groupId
                 },
@@ -573,10 +523,11 @@ const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 select: {
                     order: true
                 }
-            });
+            }));
             const newOrder = maxOrder ? maxOrder.order + 1 : 0;
             // Füge Filter zur Gruppe hinzu
-            const updatedFilter = yield prisma_1.prisma.savedFilter.update({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const updatedFilter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.update({
                 where: {
                     id: filterId
                 },
@@ -584,7 +535,9 @@ const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     groupId: groupId,
                     order: newOrder
                 }
-            });
+            }));
+            // Cache invalidieren
+            filterListCache_1.filterListCache.invalidate(userId, filter.tableId);
             // Parse die JSON-Strings zurück in Arrays
             const parsedFilter = {
                 id: updatedFilter.id,
@@ -624,17 +577,19 @@ const removeFilterFromGroup = (req, res) => __awaiter(void 0, void 0, void 0, fu
         }
         try {
             // Prüfe, ob der Filter existiert und dem Benutzer gehört
-            const filter = yield prisma_1.prisma.savedFilter.findFirst({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const filter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     id: filterId,
                     userId
                 }
-            });
+            }));
             if (!filter) {
                 return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
             }
             // Entferne Filter aus der Gruppe
-            const updatedFilter = yield prisma_1.prisma.savedFilter.update({
+            // ✅ PERFORMANCE: executeWithRetry für DB-Query
+            const updatedFilter = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.savedFilter.update({
                 where: {
                     id: filterId
                 },
@@ -642,7 +597,9 @@ const removeFilterFromGroup = (req, res) => __awaiter(void 0, void 0, void 0, fu
                     groupId: null,
                     order: 0
                 }
-            });
+            }));
+            // Cache invalidieren
+            filterListCache_1.filterListCache.invalidate(userId, filter.tableId);
             // Parse die JSON-Strings zurück in Arrays
             const parsedFilter = {
                 id: updatedFilter.id,

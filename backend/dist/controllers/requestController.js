@@ -288,19 +288,22 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Validierung: Prüfe ob User-IDs zur Organisation gehören
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-        const requesterUser = yield prisma_1.prisma.user.findFirst({
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const requesterUser = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findFirst({
             where: Object.assign(Object.assign({}, userFilter), { id: requesterId })
-        });
+        }));
         if (!requesterUser) {
             return res.status(400).json({ message: 'Antragsteller gehört nicht zu Ihrer Organisation' });
         }
-        const responsibleUser = yield prisma_1.prisma.user.findFirst({
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const responsibleUser = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findFirst({
             where: Object.assign(Object.assign({}, userFilter), { id: responsibleId })
-        });
+        }));
         if (!responsibleUser) {
             return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
         }
-        const request = yield prisma_1.prisma.request.create({
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const request = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.request.create({
             data: {
                 title,
                 description: description || '',
@@ -325,7 +328,7 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     select: branchSelect
                 }
             }
-        });
+        }));
         // Formatiere die Daten für die Frontend-Nutzung
         const formattedRequest = {
             id: request.id,
@@ -454,7 +457,8 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             }
         }
         // Update den Request
-        const updatedRequest = yield prisma_1.prisma.request.update({
+        // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const updatedRequest = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.request.update({
             where: { id: parseInt(id) },
             data: {
                 title: title,
@@ -479,7 +483,7 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     select: branchSelect
                 }
             }
-        });
+        }));
         // Benachrichtigungen bei Statusänderungen
         if (status && status !== existingRequest.status) {
             // Benachrichtigung für den Ersteller
