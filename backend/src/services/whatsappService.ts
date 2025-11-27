@@ -399,11 +399,46 @@ export class WhatsAppService {
       }
       
       // Prüfe ob Message-ID zurückgegeben wurde
-      if (response.data?.messages?.[0]?.id) {
-        const messageId = response.data.messages[0].id;
-        console.log(`[WhatsApp Business] ✅ Message-ID: ${messageId}`);
+      const returnedMessageId = response.data?.messages?.[0]?.id;
+      if (returnedMessageId) {
+        console.log(`[WhatsApp Business] ✅ Message-ID: ${returnedMessageId}`);
         console.log(`[WhatsApp Business] ⚠️ WICHTIG: Status 200 bedeutet nur, dass die API die Nachricht akzeptiert hat.`);
         console.log(`[WhatsApp Business] ⚠️ Die tatsächliche Zustellung kann über Webhook-Status-Updates verfolgt werden.`);
+        
+        // Speichere ausgehende Nachricht in Datenbank
+        try {
+          const normalizedPhone = this.normalizePhoneNumber(to);
+          // Hole branchId (sollte bereits gesetzt sein, wenn Service mit branchId erstellt wurde)
+          let branchId = this.branchId;
+          if (!branchId && this.organizationId) {
+            // Fallback: Suche ersten Branch der Organisation
+            const branch = await prisma.branch.findFirst({
+              where: { organizationId: this.organizationId },
+              select: { id: true }
+            });
+            branchId = branch?.id;
+          }
+          
+          if (branchId) {
+            await prisma.whatsAppMessage.create({
+              data: {
+                direction: 'outgoing',
+                phoneNumber: normalizedPhone,
+                message: message,
+                messageId: returnedMessageId,
+                status: 'sent',
+                branchId: branchId,
+                sentAt: new Date()
+              }
+            });
+            console.log(`[WhatsApp Business] ✅ Ausgehende Nachricht in Datenbank gespeichert`);
+          } else {
+            console.warn(`[WhatsApp Business] ⚠️ BranchId nicht verfügbar - Nachricht nicht in DB gespeichert`);
+          }
+        } catch (dbError) {
+          console.error(`[WhatsApp Business] ⚠️ Fehler beim Speichern der ausgehenden Nachricht:`, dbError);
+          // Weiter mit Verarbeitung, auch wenn Speichern fehlschlägt
+        }
         
         // Prüfe ob es Warnungen gibt (können auf mögliche Probleme hinweisen)
         if (response.data?.warnings && Array.isArray(response.data.warnings) && response.data.warnings.length > 0) {
@@ -503,24 +538,19 @@ export class WhatsAppService {
     templateParams?: string[],
     reservation?: { guestNationality?: string | null; guestPhone?: string | null } // NEU: Für Sprache-Erkennung
   ): Promise<boolean> {
-    // Prüfe ob 24h-Fenster möglicherweise nicht aktiv ist (durch Datenbank-Prüfung)
-    // Wenn die letzte erfolgreiche WhatsApp-Nachricht länger als 24h her ist, verwende direkt Template
-    // ODER wenn es eine fehlgeschlagene Nachricht mit 24h-Fenster-Fehler in den letzten 24h gibt
+    // Prüfe ob 24h-Fenster aktiv ist (durch Datenbank-Prüfung auf eingehende Nachrichten)
+    // Das 24h-Fenster wird durch eingehende Nachrichten aktiviert (wenn der Empfänger uns schreibt)
     if (templateName) {
       try {
         const { prisma } = await import('../utils/prisma');
         const normalizedPhone = this.normalizePhoneNumber(to);
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         
-        // Prüfe zuerst, ob es eine fehlgeschlagene Nachricht mit 24h-Fenster-Fehler gibt
-        const lastFailedMessage = await prisma.reservationNotificationLog.findFirst({
+        // Prüfe, ob es eine eingehende Nachricht von dieser Nummer in den letzten 24h gibt
+        const lastIncomingMessage = await prisma.whatsAppMessage.findFirst({
           where: {
-            sentTo: normalizedPhone,
-            channel: 'whatsapp',
-            success: false,
-            errorMessage: {
-              contains: '131047' // Error Code für 24h-Fenster
-            },
+            phoneNumber: normalizedPhone,
+            direction: 'incoming',
             sentAt: { gte: twentyFourHoursAgo }
           },
           orderBy: {
@@ -528,8 +558,8 @@ export class WhatsAppService {
           }
         });
         
-        if (lastFailedMessage) {
-          console.log(`[WhatsApp Service] ⚠️ Fehlgeschlagene WhatsApp-Nachricht mit 24h-Fenster-Fehler gefunden (vor ${Math.round((Date.now() - lastFailedMessage.sentAt.getTime()) / (60 * 60 * 1000))} Stunden) - verwende direkt Template Message`);
+        if (!lastIncomingMessage) {
+          console.log(`[WhatsApp Service] ⚠️ Keine eingehende WhatsApp-Nachricht von ${to} in den letzten 24h gefunden - 24h-Fenster nicht aktiv - verwende direkt Template Message`);
           // Überspringe Session Message und verwende direkt Template
           await this.loadSettings();
           
@@ -556,61 +586,14 @@ export class WhatsAppService {
           const templateResult = await this.sendViaWhatsAppBusiness(normalizedPhone2, message, adjustedTemplateName, formattedParams, languageCode);
           
           if (templateResult) {
-            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (direkt, da 24h-Fenster-Fehler in letzten 24h)`);
-            return true;
-          } else {
-            throw new Error('Template Message gab false zurück');
-          }
-        }
-        
-        // Prüfe auf erfolgreiche Nachricht (nur wenn keine fehlgeschlagene Nachricht gefunden wurde)
-        const lastSuccessfulMessage = await prisma.reservationNotificationLog.findFirst({
-          where: {
-            sentTo: normalizedPhone,
-            channel: 'whatsapp',
-            success: true,
-            sentAt: { gte: twentyFourHoursAgo }
-          },
-          orderBy: {
-            sentAt: 'desc'
-          }
-        });
-        
-        if (!lastSuccessfulMessage) {
-          console.log(`[WhatsApp Service] ⚠️ Keine erfolgreiche WhatsApp-Nachricht an ${to} in den letzten 24h gefunden - verwende direkt Template Message`);
-          // Überspringe Session Message und verwende direkt Template
-          await this.loadSettings();
-          
-          if (!this.axiosInstance || !this.phoneNumberId) {
-            throw new Error('WhatsApp Service nicht initialisiert');
-          }
-          
-          const normalizedPhone = this.normalizePhoneNumber(to);
-          const formattedParams = templateParams?.map(text => ({
-            type: 'text' as const,
-            text: text
-          })) || [];
-          
-          // Template-Sprache: Reservation > Environment-Variable > Fallback
-          let languageCode: string;
-          if (reservation) {
-            const { CountryLanguageService } = require('./countryLanguageService');
-            languageCode = CountryLanguageService.getLanguageForReservation(reservation);
-          } else {
-            languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
-          }
-          
-          const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
-          const templateResult = await this.sendViaWhatsAppBusiness(normalizedPhone, message, adjustedTemplateName, formattedParams, languageCode);
-          
-          if (templateResult) {
-            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (direkt, da keine Nachricht in letzten 24h)`);
+            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (direkt, da 24h-Fenster nicht aktiv)`);
             return true;
           } else {
             throw new Error('Template Message gab false zurück');
           }
         } else {
-          console.log(`[WhatsApp Service] ✅ Letzte erfolgreiche WhatsApp-Nachricht an ${to} war vor ${Math.round((Date.now() - lastSuccessfulMessage.sentAt.getTime()) / (60 * 60 * 1000))} Stunden - 24h-Fenster sollte aktiv sein`);
+          const hoursAgo = Math.round((Date.now() - lastIncomingMessage.sentAt.getTime()) / (60 * 60 * 1000));
+          console.log(`[WhatsApp Service] ✅ Eingehende WhatsApp-Nachricht von ${to} vor ${hoursAgo} Stunden gefunden - 24h-Fenster ist aktiv - versuche Session Message`);
         }
       } catch (dbError) {
         console.warn(`[WhatsApp Service] ⚠️ Fehler bei Datenbank-Prüfung für 24h-Fenster:`, dbError);

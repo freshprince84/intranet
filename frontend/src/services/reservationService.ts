@@ -89,13 +89,24 @@ export const reservationService = {
   },
 
   /**
-   * Holt Notification-Logs für eine Reservierung
+   * Holt Notification-Logs UND WhatsApp-Nachrichten für eine Reservierung
    */
-  async getNotificationLogs(id: number): Promise<ReservationNotificationLog[]> {
+  async getNotificationLogs(id: number): Promise<{
+    notificationLogs: ReservationNotificationLog[];
+    whatsappMessages: WhatsAppMessage[];
+  }> {
     const response = await axiosInstance.get(
       API_ENDPOINTS.RESERVATION.NOTIFICATION_LOGS(id)
     );
-    return response.data.data || response.data;
+    const data = response.data.data || response.data;
+    // Rückwärtskompatibilität: Wenn nur Array zurückgegeben wird, als notificationLogs behandeln
+    if (Array.isArray(data)) {
+      return {
+        notificationLogs: data,
+        whatsappMessages: []
+      };
+    }
+    return data;
   }
 };
 
@@ -112,5 +123,21 @@ export interface ReservationNotificationLog {
   checkInLink?: string | null;
   errorMessage?: string | null;
   createdAt: string; // ISO datetime string
+}
+
+export interface WhatsAppMessage {
+  id: number;
+  reservationId?: number | null;
+  branchId: number;
+  conversationId?: number | null;
+  direction: 'outgoing' | 'incoming';
+  phoneNumber: string;
+  message: string;
+  messageId?: string | null;
+  status?: 'sent' | 'delivered' | 'read' | 'failed' | null;
+  errorMessage?: string | null;
+  sentAt: string; // ISO datetime string
+  createdAt: string; // ISO datetime string
+  updatedAt: string; // ISO datetime string
 }
 

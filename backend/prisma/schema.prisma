@@ -219,6 +219,7 @@ model Branch {
   taskStatusChanges     TaskStatusHistory[]
   roles                 RoleBranch[] // Rollen, die für diese Branch verfügbar sind
   whatsappConversations WhatsAppConversation[]
+  whatsappMessages      WhatsAppMessage[]            @relation("WhatsAppMessages")
   phoneNumberMappings   WhatsAppPhoneNumberMapping[]
   shiftTemplates        ShiftTemplate[]
   shifts                Shift[]
@@ -1143,6 +1144,7 @@ model Reservation {
   updatedAt                DateTime                     @updatedAt
   syncHistory              ReservationSyncHistory[]
   notificationLogs         ReservationNotificationLog[] @relation("NotificationLogs")
+  whatsappMessages         WhatsAppMessage[]
   tourReservations         TourReservation[]
 
   @@index([organizationId])
@@ -1202,22 +1204,56 @@ model WhatsAppPhoneNumberMapping {
 }
 
 model WhatsAppConversation {
-  id            Int      @id @default(autoincrement())
+  id            Int               @id @default(autoincrement())
   phoneNumber   String // Telefonnummer des Users (mit Ländercode)
   userId        Int? // User-ID (falls identifiziert)
   branchId      Int // Branch, zu dem die Konversation gehört
   state         String // "idle", "request_creation", "task_creation", "waiting_for_responsible", etc.
   context       Json? // Kontext-Daten (z.B. teilweise erstellter Request)
-  lastMessageAt DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  branch        Branch   @relation(fields: [branchId], references: [id])
-  user          User?    @relation(fields: [userId], references: [id])
+  lastMessageAt DateTime          @default(now())
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  branch        Branch            @relation(fields: [branchId], references: [id])
+  user          User?             @relation(fields: [userId], references: [id])
+  messages      WhatsAppMessage[]
 
   @@unique([phoneNumber, branchId])
   @@index([phoneNumber])
   @@index([branchId])
   @@index([userId])
+}
+
+model WhatsAppMessage {
+  id             Int                   @id @default(autoincrement())
+  reservationId  Int? // Optional: Verknüpfung zu Reservation
+  reservation    Reservation?          @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  branchId       Int
+  branch         Branch                @relation("WhatsAppMessages", fields: [branchId], references: [id], onDelete: Cascade)
+  conversationId Int?
+  conversation   WhatsAppConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  // Nachrichtendetails
+  direction   MessageDirection @default(outgoing) // 'outgoing' oder 'incoming'
+  phoneNumber String // Telefonnummer (normalisiert)
+  message     String // Nachrichtentext
+  messageId   String? // WhatsApp Message ID (für Status-Updates)
+
+  // Status (für ausgehende Nachrichten)
+  status       MessageStatus? // 'sent', 'delivered', 'read', 'failed'
+  errorMessage String? // Fehlermeldung bei Fehlern
+
+  // Timestamps
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([reservationId])
+  @@index([branchId])
+  @@index([phoneNumber])
+  @@index([sentAt])
+  @@index([direction])
+  @@index([status])
+  @@index([conversationId])
 }
 
 // ============================================
