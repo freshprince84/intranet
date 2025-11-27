@@ -11151,12 +11151,16 @@ npx ts-node scripts/check-ttlock-settings-manila.ts
 - Alle Werte vorhanden → Branch Settings werden verwendet → Fehler!
 
 **Lösung:**
-- Branch 3 sollte keine eigenen TTLock Settings haben
-- **Option 1:** doorSystemSettings für Branch 3 löschen (Fallback auf Organization)
-- **Option 2:** Password in Branch Settings MD5-hashen (aber nicht empfohlen, da Branch keine eigenen Settings haben sollte)
+- Kopiere korrekte Daten von Organization Settings nach Branch Settings
+- Organization Settings haben korrektes MD5-hashed Password (32 Zeichen)
+- Branch Settings haben falsches Klartext-Password (17 Zeichen)
+- **Übertrage:** clientId, clientSecret, username, password (MD5-hashed), apiUrl von Organization nach Branch
 
 ### ✅ LÖSUNG IMPLEMENTIERT:
 
-**Script:** `backend/scripts/fix-ttlock-branch3-settings.ts`
-- Löscht doorSystemSettings für Branch 3
-- Branch 3 verwendet dann Organization Settings (mit korrektem MD5-Password)
+**Script:** `backend/scripts/copy-ttlock-settings-org-to-branch3.ts`
+- Lädt Organization Settings (Quelle - korrekte Daten)
+- Lädt Branch Settings (Ziel - falsche Daten)
+- Kopiert korrekte Werte von Organization nach Branch
+- Verschlüsselt und speichert Branch Settings
+- Branch 3 hat dann die korrekten Settings (mit MD5-gehashtem Password)

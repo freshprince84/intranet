@@ -11,7 +11,7 @@ interface OrganizationCacheEntry {
 
 class OrganizationCache {
   private cache: Map<number, OrganizationCacheEntry> = new Map();
-  private readonly TTL_MS = 2 * 60 * 1000; // 2 Minuten Cache
+  private readonly TTL_MS = 10 * 60 * 1000; // 10 Minuten Cache (statt 2 Minuten - reduziert DB-Queries um 80%)
 
   private isCacheValid(entry: OrganizationCacheEntry | undefined): boolean {
     if (!entry) return false;

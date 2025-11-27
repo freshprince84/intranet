@@ -22,7 +22,7 @@ const prisma_1 = require("../utils/prisma");
 class UserCache {
     constructor() {
         this.cache = new Map();
-        this.TTL_MS = 30 * 1000; // 30 Sekunden
+        this.TTL_MS = 5 * 60 * 1000; // 5 Minuten (statt 30 Sekunden - reduziert DB-Queries um 90%)
     }
     /**
      * Prüft, ob ein Cache-Eintrag noch gültig ist

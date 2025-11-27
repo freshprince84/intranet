@@ -22,7 +22,7 @@ const prisma_1 = require("../utils/prisma");
 class WorktimeCache {
     constructor() {
         this.cache = new Map();
-        this.TTL_MS = 5 * 1000; // 5 Sekunden
+        this.TTL_MS = 30 * 1000; // 30 Sekunden (gleich wie Polling-Intervall - reduziert DB-Queries um 83%)
     }
     /**
      * Prüft, ob ein Cache-Eintrag noch gültig ist
