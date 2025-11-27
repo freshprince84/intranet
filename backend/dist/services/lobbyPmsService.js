@@ -468,7 +468,7 @@ class LobbyPmsService {
      */
     syncReservation(lobbyReservation) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c;
+            var _a, _b;
             // Mappe LobbyPMS Status zu unserem ReservationStatus
             const mapStatus = (status) => {
                 switch (status === null || status === void 0 ? void 0 : status.toLowerCase()) {
@@ -520,8 +520,25 @@ class LobbyPmsService {
             const checkInDate = this.parseLocalDate(checkInDateString);
             const checkOutDate = this.parseLocalDate(checkOutDateString);
             // Zimmer-Daten aus assigned_room-Objekt
-            const roomNumber = ((_a = lobbyReservation.assigned_room) === null || _a === void 0 ? void 0 : _a.name) || lobbyReservation.room_number || null;
-            const roomDescription = ((_b = lobbyReservation.assigned_room) === null || _b === void 0 ? void 0 : _b.type) || lobbyReservation.room_description || ((_c = lobbyReservation.category) === null || _c === void 0 ? void 0 : _c.name) || null;
+            // WICHTIG: Für Dorms (compartida) enthält assigned_room.name nur die Bettnummer,
+            // der Zimmername steht in category.name. Für Privatzimmer (privada) steht der
+            // Zimmername direkt in assigned_room.name.
+            const assignedRoom = lobbyReservation.assigned_room;
+            const isDorm = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.type) === 'compartida';
+            let roomNumber = null;
+            let roomDescription = null;
+            if (isDorm) {
+                // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
+                const dormName = ((_a = lobbyReservation.category) === null || _a === void 0 ? void 0 : _a.name) || null;
+                const bedNumber = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.name) || null;
+                roomNumber = bedNumber; // Bettnummer (z.B. "Cama 5")
+                roomDescription = dormName; // Zimmername (z.B. "La tia artista")
+            }
+            else {
+                // Für Privatzimmer: assigned_room.name = Zimmername
+                roomNumber = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.name) || lobbyReservation.room_number || null;
+                roomDescription = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.type) || lobbyReservation.room_description || ((_b = lobbyReservation.category) === null || _b === void 0 ? void 0 : _b.name) || null;
+            }
             // Status: API gibt checked_in/checked_out Booleans zurück
             let status = client_1.ReservationStatus.confirmed;
             if (lobbyReservation.checked_out) {

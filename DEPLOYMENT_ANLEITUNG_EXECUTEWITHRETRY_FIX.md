@@ -27,9 +27,15 @@ git pull
 
 ---
 
-### Schritt 2: Backend neu bauen
+### Schritt 2: Git Pull erneut (falls TypeScript-Fix nötig war)
 
-**Im Backend-Verzeichnis:**
+**Falls beim ersten Build Fehler auftraten:**
+```bash
+cd /var/www/intranet
+git pull
+```
+
+**Dann Backend neu bauen:**
 ```bash
 cd /var/www/intranet/backend
 npm run build

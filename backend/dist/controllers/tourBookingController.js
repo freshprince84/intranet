@@ -68,7 +68,7 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
             : undefined;
         const limit = req.query.limit
             ? parseInt(req.query.limit, 10)
-            : 50;
+            : undefined; // Kein Limit wenn nicht angegeben - alle TourBookings werden zurückgegeben
         const tourId = req.query.tourId
             ? parseInt(req.query.tourId, 10)
             : undefined;
@@ -145,10 +145,7 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const whereClause = baseWhereConditions.length === 1
             ? baseWhereConditions[0]
             : { AND: baseWhereConditions };
-        const bookings = yield prisma_1.prisma.tourBooking.findMany({
-            where: whereClause,
-            take: limit,
-            include: {
+        const bookings = yield prisma_1.prisma.tourBooking.findMany(Object.assign(Object.assign({ where: whereClause }, (limit ? { take: limit } : {})), { include: {
                 tour: {
                     select: {
                         id: true,
@@ -165,11 +162,9 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         name: true
                     }
                 }
-            },
-            orderBy: {
+            }, orderBy: {
                 bookingDate: 'desc'
-            }
-        });
+            } }));
         res.json({
             success: true,
             data: bookings
@@ -414,12 +409,21 @@ const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         // Bei externer Tour: WhatsApp-Nachricht an Anbieter senden
         if (tour.type === 'external' && ((_a = tour.externalProvider) === null || _a === void 0 ? void 0 : _a.phone)) {
-            // TODO: Implementiere TourWhatsAppService.sendBookingRequestToProvider()
-            console.log(`[createTourBooking] TODO: WhatsApp-Nachricht an Anbieter senden: ${tour.externalProvider.phone}`);
+            try {
+                const { TourWhatsAppService } = yield Promise.resolve().then(() => __importStar(require('../services/tourWhatsAppService')));
+                yield TourWhatsAppService.sendBookingRequestToProvider(booking.id, organizationId, branchId);
+            }
+            catch (whatsappError) {
+                console.error('[createTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+                // Nicht abbrechen, nur loggen
+            }
         }
-        // TODO: Notifications erstellen
-        // - Tour gebucht (an alle in org)
-        // - Tour angefragt (an definierte Rolle in branch in org) - nur bei externer Tour
+        // Notifications erstellen
+        const { TourNotificationService } = yield Promise.resolve().then(() => __importStar(require('../services/tourNotificationService')));
+        yield TourNotificationService.notifyTourBooked(booking.id, tourId, organizationId, userId);
+        if (tour.type === 'external') {
+            yield TourNotificationService.notifyTourRequested(booking.id, tourId, organizationId, branchId, userId);
+        }
         // Lade vollständige Buchung
         const fullBooking = yield prisma_1.prisma.tourBooking.findUnique({
             where: { id: booking.id },
@@ -650,8 +654,44 @@ const cancelTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 }
             }
         });
-        // TODO: TourWhatsAppService.sendCancellationToCustomer()
-        // TODO: Notification erstellen (Tour gecancelt von kunde/anbieter)
+        // Notifications senden
+        const { TourNotificationService } = yield Promise.resolve().then(() => __importStar(require('../services/tourNotificationService')));
+        const bookingForNotification = yield prisma_1.prisma.tourBooking.findUnique({
+            where: { id: bookingId },
+            include: {
+                tour: {
+                    select: {
+                        id: true,
+                        title: true,
+                        organizationId: true
+                    }
+                },
+                bookedBy: {
+                    select: {
+                        id: true
+                    }
+                }
+            }
+        });
+        if (bookingForNotification) {
+            if (cancelledBy === 'customer') {
+                yield TourNotificationService.notifyTourCancelledByCustomer(bookingId, bookingForNotification.tour.id, bookingForNotification.tour.organizationId, bookingForNotification.bookedById);
+            }
+            else if (cancelledBy === 'provider') {
+                yield TourNotificationService.notifyTourCancelledByProvider(bookingId, bookingForNotification.tour.id, bookingForNotification.tour.organizationId, bookingForNotification.bookedById);
+            }
+        }
+        // WhatsApp-Benachrichtigung an Kunde senden
+        if (bookingForNotification === null || bookingForNotification === void 0 ? void 0 : bookingForNotification.customerPhone) {
+            try {
+                const { TourWhatsAppService } = yield Promise.resolve().then(() => __importStar(require('../services/tourWhatsAppService')));
+                yield TourWhatsAppService.sendCancellationToCustomer(bookingId, bookingForNotification.tour.organizationId, bookingForNotification.branchId || null, (reason === null || reason === void 0 ? void 0 : reason.trim()) || undefined);
+            }
+            catch (whatsappError) {
+                console.error('[cancelTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+                // Nicht abbrechen, nur loggen
+            }
+        }
         res.json({
             success: true,
             data: booking

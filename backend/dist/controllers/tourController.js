@@ -8,12 +8,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.exportTours = exports.getTourBookings = exports.toggleTourActive = exports.updateTour = exports.createTour = exports.getTourById = exports.getAllTours = void 0;
+exports.exportTours = exports.getTourBookings = exports.toggleTourActive = exports.updateTour = exports.deleteTourGalleryImage = exports.uploadTourGalleryImage = exports.uploadTourImage = exports.createTour = exports.getTourById = exports.getAllTours = exports.tourImageUpload = void 0;
 const prisma_1 = require("../utils/prisma");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
 const filterCache_1 = require("../services/filterCache");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const userSelect = {
     id: true,
     username: true,
@@ -24,6 +30,35 @@ const branchSelect = {
     id: true,
     name: true
 };
+// Multer-Konfiguration für Tour-Bilder
+const TOURS_UPLOAD_DIR = path_1.default.join(__dirname, '../../uploads/tours');
+if (!fs_1.default.existsSync(TOURS_UPLOAD_DIR)) {
+    fs_1.default.mkdirSync(TOURS_UPLOAD_DIR, { recursive: true });
+}
+const tourImageStorage = multer_1.default.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, TOURS_UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path_1.default.extname(file.originalname);
+        cb(null, `tour-${uniqueSuffix}${ext}`);
+    }
+});
+const tourImageFileFilter = (req, file, cb) => {
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+        cb(null, true);
+    }
+    else {
+        cb(new Error('Nur Bilddateien (JPEG, PNG, GIF, WEBP) sind erlaubt'));
+    }
+};
+exports.tourImageUpload = (0, multer_1.default)({
+    storage: tourImageStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: tourImageFileFilter
+});
 // GET /api/tours - Alle Touren (mit Filtern)
 const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -37,7 +72,7 @@ const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             : undefined;
         const limit = req.query.limit
             ? parseInt(req.query.limit, 10)
-            : 50;
+            : undefined; // Kein Limit wenn nicht angegeben - alle Tours werden zurückgegeben
         const type = req.query.type;
         const isActive = req.query.isActive !== undefined
             ? req.query.isActive === 'true'
@@ -100,10 +135,7 @@ const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         const whereClause = baseWhereConditions.length === 1
             ? baseWhereConditions[0]
             : { AND: baseWhereConditions };
-        const tours = yield prisma_1.prisma.tour.findMany({
-            where: whereClause,
-            take: limit,
-            include: {
+        const tours = yield prisma_1.prisma.tour.findMany(Object.assign(Object.assign({ where: whereClause }, (limit ? { take: limit } : {})), { include: {
                 createdBy: {
                     select: userSelect
                 },
@@ -118,11 +150,9 @@ const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                         displayName: true
                     }
                 }
-            },
-            orderBy: {
+            }, orderBy: {
                 createdAt: 'desc'
-            }
-        });
+            } }));
         res.json({
             success: true,
             data: tours
@@ -130,9 +160,13 @@ const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
     catch (error) {
         console.error('[getAllTours] Fehler:', error);
+        if (error instanceof Error) {
+            console.error('[getAllTours] Fehlermeldung:', error.message);
+            console.error('[getAllTours] Stack:', error.stack);
+        }
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden der Touren'
+            message: error instanceof Error ? error.message : 'Fehler beim Laden der Touren'
         });
     }
 });
@@ -301,6 +335,186 @@ const createTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.createTour = createTour;
+// POST /api/tours/:id/image - Hauptbild hochladen
+const uploadTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const tourId = parseInt(id, 10);
+        if (isNaN(tourId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültige Tour-ID'
+            });
+        }
+        // Berechtigung prüfen
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        if (!hasPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Keine Berechtigung zum Bearbeiten von Touren'
+            });
+        }
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Keine Datei hochgeladen'
+            });
+        }
+        // Altes Bild löschen (falls vorhanden)
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: { imageUrl: true }
+        });
+        if (tour === null || tour === void 0 ? void 0 : tour.imageUrl) {
+            const oldImagePath = path_1.default.join(__dirname, '../../uploads/tours', path_1.default.basename(tour.imageUrl));
+            if (fs_1.default.existsSync(oldImagePath)) {
+                fs_1.default.unlinkSync(oldImagePath);
+            }
+        }
+        // Bild-URL speichern (relativ zum uploads-Verzeichnis)
+        const imageUrl = `/uploads/tours/${req.file.filename}`;
+        const updatedTour = yield prisma_1.prisma.tour.update({
+            where: { id: tourId },
+            data: { imageUrl },
+            include: {
+                createdBy: { select: userSelect },
+                branch: { select: branchSelect },
+                externalProvider: true
+            }
+        });
+        res.json({
+            success: true,
+            data: updatedTour
+        });
+    }
+    catch (error) {
+        console.error('[uploadTourImage] Fehler:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Fehler beim Hochladen des Bildes'
+        });
+    }
+});
+exports.uploadTourImage = uploadTourImage;
+// POST /api/tours/:id/gallery - Galerie-Bild hinzufügen
+const uploadTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const tourId = parseInt(id, 10);
+        if (isNaN(tourId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültige Tour-ID'
+            });
+        }
+        // Berechtigung prüfen
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        if (!hasPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Keine Berechtigung zum Bearbeiten von Touren'
+            });
+        }
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Keine Datei hochgeladen'
+            });
+        }
+        // Aktuelle Galerie laden
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: { galleryUrls: true }
+        });
+        const currentGallery = (tour === null || tour === void 0 ? void 0 : tour.galleryUrls) || [];
+        const newImageUrl = `/uploads/tours/${req.file.filename}`;
+        const updatedGallery = [...currentGallery, newImageUrl];
+        const updatedTour = yield prisma_1.prisma.tour.update({
+            where: { id: tourId },
+            data: { galleryUrls: updatedGallery },
+            include: {
+                createdBy: { select: userSelect },
+                branch: { select: branchSelect },
+                externalProvider: true
+            }
+        });
+        res.json({
+            success: true,
+            data: updatedTour
+        });
+    }
+    catch (error) {
+        console.error('[uploadTourGalleryImage] Fehler:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Fehler beim Hochladen des Galerie-Bildes'
+        });
+    }
+});
+exports.uploadTourGalleryImage = uploadTourGalleryImage;
+// DELETE /api/tours/:id/gallery/:imageIndex - Galerie-Bild löschen
+const deleteTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id, imageIndex } = req.params;
+        const tourId = parseInt(id, 10);
+        const index = parseInt(imageIndex, 10);
+        if (isNaN(tourId) || isNaN(index)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültige Parameter'
+            });
+        }
+        // Berechtigung prüfen
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        if (!hasPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Keine Berechtigung zum Bearbeiten von Touren'
+            });
+        }
+        // Aktuelle Galerie laden
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: { galleryUrls: true }
+        });
+        const currentGallery = (tour === null || tour === void 0 ? void 0 : tour.galleryUrls) || [];
+        if (index < 0 || index >= currentGallery.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültiger Bild-Index'
+            });
+        }
+        // Bild löschen
+        const imageUrl = currentGallery[index];
+        const imagePath = path_1.default.join(__dirname, '../../uploads/tours', path_1.default.basename(imageUrl));
+        if (fs_1.default.existsSync(imagePath)) {
+            fs_1.default.unlinkSync(imagePath);
+        }
+        // Aus Galerie entfernen
+        const updatedGallery = currentGallery.filter((_, i) => i !== index);
+        const updatedTour = yield prisma_1.prisma.tour.update({
+            where: { id: tourId },
+            data: { galleryUrls: updatedGallery },
+            include: {
+                createdBy: { select: userSelect },
+                branch: { select: branchSelect },
+                externalProvider: true
+            }
+        });
+        res.json({
+            success: true,
+            data: updatedTour
+        });
+    }
+    catch (error) {
+        console.error('[deleteTourGalleryImage] Fehler:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Fehler beim Löschen des Galerie-Bildes'
+        });
+    }
+});
+exports.deleteTourGalleryImage = deleteTourGalleryImage;
 // PUT /api/tours/:id - Tour aktualisieren
 const updateTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -583,7 +797,22 @@ const exportTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 imageUrl: requestedFields.includes('imageUrl'),
                 galleryUrls: requestedFields.includes('galleryUrls'),
                 availableFrom: requestedFields.includes('availableFrom'),
-                availableTo: requestedFields.includes('availableTo')
+                availableTo: requestedFields.includes('availableTo'),
+                externalBookingUrl: requestedFields.includes('externalBookingUrl'),
+                branch: requestedFields.includes('branch') ? {
+                    select: branchSelect
+                } : false,
+                externalProvider: requestedFields.includes('externalProvider') ? {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                        email: true
+                    }
+                } : false
+            },
+            orderBy: {
+                createdAt: 'desc'
             }
         });
         res.json({

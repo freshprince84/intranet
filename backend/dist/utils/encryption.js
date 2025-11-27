@@ -324,6 +324,74 @@ const decryptBranchApiSettings = (settings) => {
             }
         }
     }
+    // 2. NEU: Verschachtelte Settings entschlüsseln
+    // Bold Payment
+    if (decrypted.boldPayment && typeof decrypted.boldPayment === 'object') {
+        const boldPaymentUpdates = {};
+        if (decrypted.boldPayment.apiKey && typeof decrypted.boldPayment.apiKey === 'string' && decrypted.boldPayment.apiKey.includes(':')) {
+            try {
+                boldPaymentUpdates.apiKey = (0, exports.decryptSecret)(decrypted.boldPayment.apiKey);
+            }
+            catch (error) {
+                console.error('Error decrypting boldPayment.apiKey:', error);
+            }
+        }
+        if (decrypted.boldPayment.merchantId && typeof decrypted.boldPayment.merchantId === 'string' && decrypted.boldPayment.merchantId.includes(':')) {
+            try {
+                boldPaymentUpdates.merchantId = (0, exports.decryptSecret)(decrypted.boldPayment.merchantId);
+            }
+            catch (error) {
+                console.error('Error decrypting boldPayment.merchantId:', error);
+            }
+        }
+        if (Object.keys(boldPaymentUpdates).length > 0) {
+            decrypted.boldPayment = Object.assign(Object.assign({}, decrypted.boldPayment), boldPaymentUpdates);
+        }
+    }
+    // LobbyPMS
+    if (decrypted.lobbyPms && typeof decrypted.lobbyPms === 'object') {
+        if (decrypted.lobbyPms.apiKey && typeof decrypted.lobbyPms.apiKey === 'string' && decrypted.lobbyPms.apiKey.includes(':')) {
+            try {
+                decrypted.lobbyPms = Object.assign(Object.assign({}, decrypted.lobbyPms), { apiKey: (0, exports.decryptSecret)(decrypted.lobbyPms.apiKey) });
+            }
+            catch (error) {
+                console.error('Error decrypting lobbyPms.apiKey:', error);
+            }
+        }
+    }
+    // TTLock/Door System
+    if (decrypted.doorSystem && typeof decrypted.doorSystem === 'object') {
+        const doorSystemFields = ['clientId', 'clientSecret', 'username', 'password'];
+        for (const field of doorSystemFields) {
+            if (decrypted.doorSystem[field] && typeof decrypted.doorSystem[field] === 'string' && decrypted.doorSystem[field].includes(':')) {
+                try {
+                    decrypted.doorSystem = Object.assign(Object.assign({}, decrypted.doorSystem), { [field]: (0, exports.decryptSecret)(decrypted.doorSystem[field]) });
+                }
+                catch (error) {
+                    console.error(`Error decrypting doorSystem.${field}:`, error);
+                }
+            }
+        }
+    }
+    // SIRE
+    if (decrypted.sire && typeof decrypted.sire === 'object') {
+        if (decrypted.sire.apiKey && typeof decrypted.sire.apiKey === 'string' && decrypted.sire.apiKey.includes(':')) {
+            try {
+                decrypted.sire = Object.assign(Object.assign({}, decrypted.sire), { apiKey: (0, exports.decryptSecret)(decrypted.sire.apiKey) });
+            }
+            catch (error) {
+                console.error('Error decrypting sire.apiKey:', error);
+            }
+        }
+        if (decrypted.sire.apiSecret && typeof decrypted.sire.apiSecret === 'string' && decrypted.sire.apiSecret.includes(':')) {
+            try {
+                decrypted.sire = Object.assign(Object.assign({}, decrypted.sire), { apiSecret: (0, exports.decryptSecret)(decrypted.sire.apiSecret) });
+            }
+            catch (error) {
+                console.error('Error decrypting sire.apiSecret:', error);
+            }
+        }
+    }
     // Email IMAP Password (verschachtelt)
     if (((_a = decrypted.imap) === null || _a === void 0 ? void 0 : _a.password) && typeof decrypted.imap.password === 'string' && decrypted.imap.password.includes(':')) {
         try {

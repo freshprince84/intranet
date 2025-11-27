@@ -333,7 +333,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const user = yield prisma_1.prisma.user.findUnique({
+        const user = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: {
                 roles: {
@@ -354,7 +354,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     }
                 }
             }
-        });
+        }));
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }

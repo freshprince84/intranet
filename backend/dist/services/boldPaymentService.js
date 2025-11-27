@@ -174,7 +174,7 @@ class BoldPaymentService {
         });
         // Request Interceptor für API-Key-Authentifizierung
         instance.interceptors.request.use((config) => __awaiter(this, void 0, void 0, function* () {
-            var _a;
+            var _a, _b, _c;
             // Lade Settings falls noch nicht geladen
             if (!this.merchantId) {
                 yield this.loadSettings();
@@ -185,22 +185,72 @@ class BoldPaymentService {
             if (!this.merchantId) {
                 throw new Error('Bold Payment Merchant ID (Llave de identidad) fehlt');
             }
-            config.headers.set('Authorization', `x-api-key ${this.merchantId}`);
+            // Bold Payment "API Link de pagos" verwendet:
+            // Authorization Header mit Wert: x-api-key <llave_de_identidad>
+            // Quelle: https://developers.bold.co/pagos-en-linea/api-link-de-pagos
+            // WICHTIG: Format ist "x-api-key <merchantId>" im Authorization Header, NICHT als separater Header!
+            const authHeaderValue = `x-api-key ${this.merchantId}`;
+            config.headers.Authorization = authHeaderValue;
+            // KRITISCH: Prüfe NACH dem Setzen, ob Header wirklich gesetzt ist
+            if (!config.headers.Authorization || config.headers.Authorization !== authHeaderValue) {
+                console.error('[Bold Payment] KRITISCH: Header wurde nach dem Setzen überschrieben!');
+                console.error('[Bold Payment] Erwartet:', authHeaderValue);
+                console.error('[Bold Payment] Tatsächlich:', config.headers.Authorization);
+                config.headers.Authorization = authHeaderValue;
+            }
+            // Debug: Prüfe ob Header korrekt gesetzt wurde
             console.log(`[Bold Payment] ${(_a = config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()} ${config.url}`);
+            console.log(`[Bold Payment] Authorization Header: ${config.headers.Authorization}`);
+            console.log(`[Bold Payment] Header Länge: ${(_b = config.headers.Authorization) === null || _b === void 0 ? void 0 : _b.length}`);
+            console.log(`[Bold Payment] merchantId Wert: "${this.merchantId}"`);
+            console.log(`[Bold Payment] merchantId Länge: ${(_c = this.merchantId) === null || _c === void 0 ? void 0 : _c.length}`);
+            // KRITISCH: Zeige Authorization Header EXPLIZIT (nicht in JSON.stringify, da abgeschnitten werden könnte)
+            console.log(`[Bold Payment] Authorization Header EXPLIZIT:`, config.headers.Authorization);
+            console.log(`[Bold Payment] Authorization Header vorhanden:`, !!config.headers.Authorization);
+            console.log(`[Bold Payment] Authorization Header Typ:`, typeof config.headers.Authorization);
+            // Zeige alle Header-Keys
+            console.log(`[Bold Payment] Header Keys:`, Object.keys(config.headers));
+            // Zeige Full Headers (kann abgeschnitten sein, daher auch einzeln)
+            const headersObj = {};
+            Object.keys(config.headers).forEach(key => {
+                headersObj[key] = config.headers[key];
+            });
+            console.log(`[Bold Payment] Full Headers:`, JSON.stringify(headersObj, null, 2));
+            // KRITISCH: Prüfe NOCHMAL direkt vor dem Return
+            if (!config.headers.Authorization || config.headers.Authorization !== authHeaderValue) {
+                console.error('[Bold Payment] KRITISCH: Header wurde VOR dem Return überschrieben!');
+                config.headers.Authorization = authHeaderValue;
+            }
             return config;
         }), (error) => {
             console.error('[Bold Payment] Request Error:', error);
             return Promise.reject(error);
         });
         // Response Interceptor für Error Handling
-        instance.interceptors.response.use((response) => response, (error) => {
-            var _a, _b, _c, _d;
-            console.error('[Bold Payment] API Error:', {
-                status: (_a = error.response) === null || _a === void 0 ? void 0 : _a.status,
-                statusText: (_b = error.response) === null || _b === void 0 ? void 0 : _b.statusText,
-                data: (_c = error.response) === null || _c === void 0 ? void 0 : _c.data,
-                url: (_d = error.config) === null || _d === void 0 ? void 0 : _d.url
+        instance.interceptors.response.use((response) => {
+            var _a;
+            console.log('[Bold Payment] API Success:', {
+                status: response.status,
+                statusText: response.statusText,
+                url: (_a = response.config) === null || _a === void 0 ? void 0 : _a.url,
+                headers: response.headers
             });
+            return response;
+        }, (error) => {
+            var _a, _b, _c, _d, _e, _f, _g, _h;
+            // KRITISCH: Zeige auch die REQUEST-Headers, die tatsächlich gesendet wurden
+            console.error('[Bold Payment] API Error Details:');
+            console.error('[Bold Payment] Request URL:', (_a = error.config) === null || _a === void 0 ? void 0 : _a.url);
+            console.error('[Bold Payment] Request Method:', (_b = error.config) === null || _b === void 0 ? void 0 : _b.method);
+            console.error('[Bold Payment] Request Headers (die tatsächlich gesendet wurden):', JSON.stringify((_c = error.config) === null || _c === void 0 ? void 0 : _c.headers, null, 2));
+            console.error('[Bold Payment] Response Status:', (_d = error.response) === null || _d === void 0 ? void 0 : _d.status);
+            console.error('[Bold Payment] Response StatusText:', (_e = error.response) === null || _e === void 0 ? void 0 : _e.statusText);
+            console.error('[Bold Payment] Response Data:', JSON.stringify((_f = error.response) === null || _f === void 0 ? void 0 : _f.data, null, 2));
+            console.error('[Bold Payment] Response Headers:', JSON.stringify((_g = error.response) === null || _g === void 0 ? void 0 : _g.headers, null, 2));
+            // Prüfe ob Authorization Header wirklich im Request war
+            const requestHeaders = (((_h = error.config) === null || _h === void 0 ? void 0 : _h.headers) || {});
+            console.error('[Bold Payment] Authorization Header im Request vorhanden:', !!requestHeaders.Authorization);
+            console.error('[Bold Payment] Authorization Header Wert:', requestHeaders.Authorization);
             return Promise.reject(error);
         });
         return instance;
@@ -219,10 +269,23 @@ class BoldPaymentService {
      */
     createPaymentLink(reservation_1, amount_1) {
         return __awaiter(this, arguments, void 0, function* (reservation, amount, currency = 'COP', description) {
-            var _a, _b, _c, _d, _e;
-            // Lade Settings falls noch nicht geladen
-            if (!this.merchantId) {
+            var _a, _b, _c, _d, _e, _f;
+            // KRITISCH: Stelle sicher, dass axiosInstance den Interceptor hat
+            // Prüfe ob axiosInstance bereits mit Interceptor erstellt wurde
+            // Wenn apiUrl noch der Placeholder ist, wurde createAxiosInstance() noch nicht aufgerufen
+            const needsLoadSettings = !this.apiUrl ||
+                this.apiUrl === 'https://sandbox.bold.co' ||
+                !this.merchantId ||
+                (this.axiosInstance && this.axiosInstance.defaults.baseURL === 'https://sandbox.bold.co');
+            if (needsLoadSettings) {
+                console.log('[Bold Payment] Lade Settings (createPaymentLink) - apiUrl:', this.apiUrl, 'merchantId:', !!this.merchantId, 'baseURL:', (_a = this.axiosInstance) === null || _a === void 0 ? void 0 : _a.defaults.baseURL);
                 yield this.loadSettings();
+                // NACH loadSettings() PRÜFEN: Wurde createAxiosInstance() wirklich aufgerufen?
+                if (!this.apiUrl || this.apiUrl === 'https://sandbox.bold.co' ||
+                    (this.axiosInstance && this.axiosInstance.defaults.baseURL === 'https://sandbox.bold.co')) {
+                    console.error('[Bold Payment] KRITISCH: loadSettings() wurde aufgerufen, aber createAxiosInstance() wurde NICHT aufgerufen!');
+                    throw new Error('Bold Payment Settings konnten nicht geladen werden - createAxiosInstance() wurde nicht aufgerufen');
+                }
             }
             try {
                 // Mindestbeträge je nach Währung (basierend auf typischen Payment-Provider-Anforderungen)
@@ -245,18 +308,39 @@ class BoldPaymentService {
                 // Empfehlung: Timestamp hinzufügen um Duplikate zu vermeiden
                 const timestamp = Date.now();
                 const reference = `RES-${reservation.id}-${timestamp}`.substring(0, 60);
+                // 5% Aufschlag für Kartenzahlung hinzufügen
+                const CARD_PAYMENT_SURCHARGE_PERCENT = 0.05; // 5%
+                const baseAmount = amount;
+                // Für COP: Auf ganze Zahlen runden (keine Dezimalstellen)
+                // Für andere Währungen (USD, EUR): Auf 2 Dezimalstellen runden
+                let totalAmount;
+                if (currency === 'COP') {
+                    // COP: Aufschlag auf ganze Zahl runden, dann zum Basisbetrag addieren
+                    const surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT);
+                    totalAmount = Math.round(baseAmount) + surcharge;
+                }
+                else {
+                    // USD, EUR, etc.: Auf 2 Dezimalstellen runden
+                    const surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT * 100) / 100;
+                    totalAmount = Math.round((baseAmount + surcharge) * 100) / 100;
+                }
+                // Beschreibung mit Aufschlagsausweis
+                const surchargeDescription = `${paymentDescription} (inkl. 5% Kartenzahlungsaufschlag)`;
+                const finalDescription = surchargeDescription.substring(0, 100);
                 // Payload gemäß API Link de pagos Dokumentation
+                // WICHTIG: Verwende die gleiche Struktur wie vorher (taxes: []) um Kompatibilität zu gewährleisten
+                // Der Aufschlag ist bereits im total_amount enthalten
                 const payload = {
                     amount_type: 'CLOSE', // Geschlossener Betrag (vom Merchant festgelegt)
                     amount: {
                         currency: currency,
-                        total_amount: amount,
-                        subtotal: amount, // TODO: Berechnung mit Steuern wenn nötig
-                        taxes: [], // TODO: Steuern hinzufügen wenn nötig
+                        total_amount: totalAmount, // Gesamtbetrag mit 5% Aufschlag (gerundet)
+                        subtotal: totalAmount, // Gleich wie total_amount (wie vorher)
+                        taxes: [], // Leeres Array wie vorher - API akzeptiert diese Struktur
                         tip_amount: 0
                     },
                     reference: reference,
-                    description: paymentDescription,
+                    description: finalDescription, // Mit Aufschlagsausweis
                     // payment_methods: optional - Array von Methoden (z.B. ["PSE", "CREDIT_CARD"])
                 };
                 // callback_url ist optional, aber wenn gesetzt muss es https:// sein
@@ -271,8 +355,8 @@ class BoldPaymentService {
                 // Endpoint: POST /online/link/v1
                 const response = yield this.axiosInstance.post('/online/link/v1', payload);
                 // Response-Struktur: { payload: { payment_link: "LNK_...", url: "https://..." }, errors: [] }
-                const paymentLinkUrl = (_a = response.data.payload) === null || _a === void 0 ? void 0 : _a.url;
-                const paymentLinkId = (_b = response.data.payload) === null || _b === void 0 ? void 0 : _b.payment_link;
+                const paymentLinkUrl = (_b = response.data.payload) === null || _b === void 0 ? void 0 : _b.url;
+                const paymentLinkId = (_c = response.data.payload) === null || _c === void 0 ? void 0 : _c.payment_link;
                 if (paymentLinkUrl) {
                     // Speichere Payment Link in Reservierung
                     yield prisma_1.prisma.reservation.update({
@@ -294,12 +378,12 @@ class BoldPaymentService {
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    const status = (_c = axiosError.response) === null || _c === void 0 ? void 0 : _c.status;
-                    const responseData = (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.data;
+                    const status = (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.status;
+                    const responseData = (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.data;
                     // Detailliertes Logging
                     console.error('[Bold Payment] API Error Details:');
                     console.error('  Status:', status);
-                    console.error('  Status Text:', (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.statusText);
+                    console.error('  Status Text:', (_f = axiosError.response) === null || _f === void 0 ? void 0 : _f.statusText);
                     console.error('  Response Data:', JSON.stringify(responseData, null, 2));
                     // Extrahiere Fehlermeldungen
                     let errorMessage = 'Unbekannter Fehler';

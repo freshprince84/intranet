@@ -243,7 +243,17 @@ class TTLockService {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b, _c, _d, _e, _f, _g, _h;
             // Lade Settings falls noch nicht geladen
-            if (!this.clientId || !this.clientSecret || !this.username || !this.password) {
+            // WICHTIG: loadSettings() muss IMMER aufgerufen werden, um createAxiosInstance() aufzurufen
+            // Auch wenn clientId bereits gesetzt ist, muss die Axios-Instance mit Interceptor erstellt werden
+            if (!this.clientId || !this.clientSecret || !this.username || !this.password || !this.apiUrl || this.apiUrl === 'https://euopen.ttlock.com') {
+                yield this.loadSettings();
+            }
+            // KRITISCH: Stelle sicher, dass axiosInstance den Interceptor hat
+            // Prüfe ob axiosInstance bereits den Interceptor hat (durch createAxiosInstance erstellt)
+            // Wenn nicht, erstelle sie neu
+            if (!this.axiosInstance || !this.apiUrl || this.apiUrl === 'https://euopen.ttlock.com') {
+                // Axios-Instance wurde noch nicht mit Interceptor erstellt
+                // Lade Settings erneut, um createAxiosInstance() aufzurufen
                 yield this.loadSettings();
             }
             // Prüfe ob Token vorhanden ist
@@ -280,16 +290,24 @@ class TTLockService {
                     hasPassword: !!this.password,
                     passwordLength: ((_c = this.password) === null || _c === void 0 ? void 0 : _c.length) || 0
                 });
-                const response = yield axios_1.default.post(`${oauthUrl}/oauth2/token`, new URLSearchParams({
-                    client_id: this.clientId || '',
-                    client_secret: this.clientSecret || '',
-                    username: this.username || '',
-                    password: this.password || '' // Already MD5-hashed
-                }), {
+                // KRITISCH: Verwende this.axiosInstance statt axios.post() direkt!
+                // axios.post() verwendet die globale Instanz ohne Interceptor
+                // this.axiosInstance verwendet die konfigurierte Instanz mit Interceptor
+                // ABER: OAuth-Endpunkt ist auf api.sciener.com, nicht auf euapi.ttlock.com
+                // Daher müssen wir eine temporäre Instanz für OAuth erstellen
+                const oauthInstance = axios_1.default.create({
+                    baseURL: oauthUrl,
+                    timeout: 30000,
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     }
                 });
+                const response = yield oauthInstance.post('/oauth2/token', new URLSearchParams({
+                    client_id: this.clientId || '',
+                    client_secret: this.clientSecret || '',
+                    username: this.username || '',
+                    password: this.password || '' // Already MD5-hashed
+                }));
                 // TTLock OAuth gibt entweder errcode=0 mit data zurück, oder direkt access_token
                 const responseData = response.data;
                 if (responseData.errcode === 0 && responseData.data) {

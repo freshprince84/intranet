@@ -46,9 +46,9 @@ class UserCache {
             if (this.isCacheValid(cached)) {
                 return cached.data;
             }
-            // 2. Lade aus Datenbank
+            // 2. Lade aus Datenbank mit Retry-Logik
             try {
-                const user = yield prisma_1.prisma.user.findUnique({
+                const user = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         roles: {
@@ -62,7 +62,7 @@ class UserCache {
                         },
                         settings: true
                     }
-                });
+                }));
                 if (!user) {
                     return null;
                 }

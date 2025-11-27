@@ -732,9 +732,9 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
         const includeSettings = req.query.includeSettings === 'true';
         // Hole Organization-Daten aus Cache (userRole.role.organization ist bereits geladen)
         let organization = cachedData.userRole.role.organization;
-        // Wenn Settings benötigt werden, lade sie separat
+        // Wenn Settings benötigt werden, lade sie separat mit Retry-Logik
         if (includeSettings && organization) {
-            const orgWithSettings = yield prisma_1.prisma.organization.findUnique({
+            const orgWithSettings = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.organization.findUnique({
                 where: { id: organization.id },
                 select: {
                     id: true,
@@ -751,7 +751,7 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
                     updatedAt: true,
                     settings: true // Settings nur wenn explizit angefragt
                 }
-            });
+            }));
             if (orgWithSettings) {
                 organization = orgWithSettings;
                 // ✅ ENTschlüssele Settings für Response

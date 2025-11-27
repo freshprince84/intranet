@@ -469,13 +469,20 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
             periodEndStr = (0, date_fns_1.format)(tempDate, 'yyyy-MM-dd');
             daysInPeriod = 7;
         }
-        // UTC-Zeitgrenzen für Datenbankabfrage
-        const periodStartUtc = new Date(`${periodStartStr}T00:00:00.000Z`);
-        const periodEndUtc = new Date(`${periodEndStr}T23:59:59.999Z`);
+        // KORREKT: Tagesgrenzen als lokale Zeit berechnen (ohne UTC-Konvertierung)
+        // Die Datenbank speichert Zeiten als lokale Zeit, daher müssen die Tagesgrenzen auch als lokale Zeit sein
+        // Siehe DATENBANKSCHEMA.md: "startTime DateTime // Enthält die lokale Systemzeit des Benutzers ohne UTC-Konvertierung"
+        // Parse periodStartStr und periodEndStr (Format: YYYY-MM-DD)
+        const [startYear, startMonth, startDay] = periodStartStr.split('-').map(Number);
+        const [endYear, endMonth, endDay] = periodEndStr.split('-').map(Number);
+        // Erstelle lokale Datum-Objekte für den Anfang und das Ende des Zeitraums
+        // WICHTIG: Diese werden als lokale Zeit interpretiert, nicht als UTC
+        const periodStart = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+        const periodEnd = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 999);
         // Aktuelle Zeit für aktive Zeitmessungen (UTC)
         // Date.now() gibt UTC-Millisekunden zurück, new Date() erstellt UTC-Date-Objekt
         const nowUtc = new Date(Date.now());
-        // Direkte Suche nach den Einträgen mit universellen UTC-Grenzen
+        // Direkte Suche nach den Einträgen mit lokalen Zeitgrenzen
         // WICHTIG: Auch aktive Zeitmessungen (endTime: null) holen, die im Zeitraum starten
         // ODER die vor dem Zeitraum starten aber noch aktiv sind (können in den Zeitraum hineinreichen)
         const entries = yield prisma_1.prisma.workTime.findMany({
@@ -485,14 +492,14 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     // Einträge, die im Zeitraum starten (abgeschlossen oder aktiv)
                     {
                         startTime: {
-                            gte: periodStartUtc,
-                            lte: periodEndUtc
+                            gte: periodStart,
+                            lte: periodEnd
                         }
                     },
                     // Aktive Einträge, die vor dem Zeitraum starten aber noch aktiv sind
                     {
                         startTime: {
-                            lt: periodStartUtc
+                            lt: periodStart
                         },
                         endTime: null
                     }
@@ -586,23 +593,43 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
             let actualEndTime;
             let hoursWorked;
             if (entry.endTime === null) {
-                // Aktive Zeitmessung: DIREKTE DIFFERENZ wie im Modal
-                // WICHTIG: entry.startTime aus Prisma ist ein Date-Objekt, das UTC-Millisekunden enthält
-                // Date.now() gibt auch UTC-Millisekunden zurück
-                // Beide Werte sind UTC, daher ist die Differenz korrekt
-                // Stelle sicher, dass wir UTC-Millisekunden verwenden:
-                const startTimeUtcMs = entry.startTime.getTime(); // UTC-Millisekunden
-                const nowUtcMs = Date.now(); // UTC-Millisekunden
-                const diffMs = nowUtcMs - startTimeUtcMs;
-                hoursWorked = diffMs / (1000 * 60 * 60);
-                // Für Verteilung: Verwende entry.startTime und effectiveEndTime (nicht begrenzt)
-                actualStartTime = entry.startTime;
-                actualEndTime = effectiveEndTime;
+                // Aktive Zeitmessung: Berechne Differenz unter Berücksichtigung der Zeitzone
+                // PROBLEM: entry.startTime wurde als lokale Zeit gespeichert, aber Prisma interpretiert es als UTC
+                // LÖSUNG: Wenn entry.timezone vorhanden ist, korrigiere die Interpretation
+                if (entry.timezone) {
+                    // entry.startTime wurde als lokale Zeit gespeichert (z.B. 10:36 lokal in Kolumbien)
+                    // Prisma interpretiert es fälschlicherweise als UTC (10:36 UTC)
+                    // Tatsächlich sollte es sein: 10:36 lokal = 15:36 UTC (für UTC-5)
+                    // 
+                    // Lösung: Interpretiere entry.startTime als lokale Zeit und konvertiere zu UTC
+                    // fromZonedTime konvertiert lokale Zeit (in timezone) zu UTC
+                    // Da entry.startTime bereits als UTC interpretiert wird (falsch), müssen wir es
+                    // zuerst als lokale Zeit interpretieren, dann zu UTC konvertieren
+                    const startTimeUtcCorrected = (0, date_fns_tz_1.fromZonedTime)(entry.startTime, entry.timezone);
+                    // Berechne Differenz mit korrigierter Startzeit
+                    const nowUtcMs = Date.now(); // UTC-Millisekunden (korrekt)
+                    const startTimeUtcMs = startTimeUtcCorrected.getTime(); // UTC-Millisekunden (korrigiert)
+                    const diffMs = nowUtcMs - startTimeUtcMs;
+                    hoursWorked = diffMs / (1000 * 60 * 60);
+                    // Für Verteilung: Verwende korrigierte Zeiten
+                    actualStartTime = startTimeUtcCorrected;
+                    actualEndTime = effectiveEndTime;
+                }
+                else {
+                    // Fallback: Wenn keine Zeitzone gespeichert ist, verwende direkte Differenz
+                    // (kann falsch sein, aber besser als nichts)
+                    const startTimeUtcMs = entry.startTime.getTime();
+                    const nowUtcMs = Date.now();
+                    const diffMs = nowUtcMs - startTimeUtcMs;
+                    hoursWorked = diffMs / (1000 * 60 * 60);
+                    actualStartTime = entry.startTime;
+                    actualEndTime = effectiveEndTime;
+                }
             }
             else {
                 // Abgeschlossene Zeitmessung: Verwende Periodenbegrenzung
-                actualStartTime = entry.startTime < periodStartUtc ? periodStartUtc : entry.startTime;
-                actualEndTime = effectiveEndTime > periodEndUtc ? periodEndUtc : effectiveEndTime;
+                actualStartTime = entry.startTime < periodStart ? periodStart : entry.startTime;
+                actualEndTime = effectiveEndTime > periodEnd ? periodEnd : effectiveEndTime;
                 // Nur berechnen, wenn tatsächlich Zeit im Zeitraum liegt
                 if (actualStartTime < actualEndTime) {
                     // Berechnung der Arbeitszeit in Millisekunden
