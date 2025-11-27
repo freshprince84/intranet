@@ -39,6 +39,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
+const rateLimiter_1 = require("../middleware/rateLimiter");
+const organization_1 = require("../middleware/organization");
 const passwordManagerController = __importStar(require("../controllers/passwordManagerController"));
 const router = express_1.default.Router();
 // Debug-Middleware (optional)
@@ -51,16 +53,22 @@ router.use((req, res, next) => {
     });
     next();
 });
-// Alle Routen benötigen Authentifizierung
-router.use(auth_1.authenticateToken);
 // Öffentliche Route (keine Auth erforderlich) - Passwort generieren
 router.post('/generate-password', passwordManagerController.generatePassword);
+// Alle anderen Routen benötigen Authentifizierung
+router.use(auth_1.authenticateToken);
+// Organization-Middleware für organizationId
+router.use(organization_1.organizationMiddleware);
+// Rate-Limiting für alle authentifizierten Passwort-Manager-Routen
+router.use(rateLimiter_1.passwordManagerRateLimiter);
 // Alle Einträge abrufen
 router.get('/', (0, permissionMiddleware_1.checkPermission)('password_manager', 'read', 'page'), passwordManagerController.getAllPasswordEntries);
 // Einzelnen Eintrag abrufen
 router.get('/:id', (0, permissionMiddleware_1.checkPermission)('password_manager', 'read', 'page'), passwordManagerController.getPasswordEntry);
 // Passwort abrufen (entschlüsselt)
 router.get('/:id/password', (0, permissionMiddleware_1.checkPermission)('password_manager', 'read', 'page'), passwordManagerController.getPasswordEntryPassword);
+// Passwort kopiert - Audit-Log erstellen
+router.post('/:id/copy-password', (0, permissionMiddleware_1.checkPermission)('password_manager', 'read', 'page'), passwordManagerController.logPasswordCopy);
 // Neuen Eintrag erstellen
 router.post('/', (0, permissionMiddleware_1.checkPermission)('password_entry_create', 'write', 'page'), passwordManagerController.createPasswordEntry);
 // Eintrag aktualisieren
@@ -69,5 +77,9 @@ router.put('/:id', (0, permissionMiddleware_1.checkPermission)('password_manager
 router.delete('/:id', (0, permissionMiddleware_1.checkPermission)('password_manager', 'write', 'page'), passwordManagerController.deletePasswordEntry);
 // Audit-Logs abrufen
 router.get('/:id/audit-logs', (0, permissionMiddleware_1.checkPermission)('password_manager', 'read', 'page'), passwordManagerController.getPasswordEntryAuditLogs);
+// Berechtigungen abrufen
+router.get('/:id/permissions', (0, permissionMiddleware_1.checkPermission)('password_manager', 'read', 'page'), passwordManagerController.getPasswordEntryPermissions);
+// Berechtigungen aktualisieren
+router.put('/:id/permissions', (0, permissionMiddleware_1.checkPermission)('password_manager', 'write', 'page'), passwordManagerController.updatePasswordEntryPermissions);
 exports.default = router;
 //# sourceMappingURL=passwordManager.js.map

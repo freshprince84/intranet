@@ -201,7 +201,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const includeSettings = req.query.includeSettings === 'true';
         const includeInvoiceSettings = req.query.includeInvoiceSettings === 'true';
         const includeDocuments = req.query.includeDocuments === 'true';
-        const user = yield prisma_1.prisma.user.findUnique({
+        const user = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: Object.assign(Object.assign(Object.assign(Object.assign({ id: true, username: true, email: true, firstName: true, lastName: true, birthday: true, bankDetails: true, contract: true, salary: true, normalWorkingHours: true, gender: true, phoneNumber: true, country: true, language: true, profileComplete: true, identificationNumber: true }, (includeSettings ? { settings: true } : {})), (includeInvoiceSettings ? { invoiceSettings: true } : {})), (includeDocuments ? {
                 identificationDocuments: {
@@ -225,7 +225,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         }
                     }
                 } })
-        });
+        }));
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }

@@ -29,8 +29,8 @@ class OrganizationCache {
                 return cached.data;
             }
             try {
-                // Hole aktuelle Rolle und Organisation des Users
-                const userRole = yield prisma_1.prisma.userRole.findFirst({
+                // Hole aktuelle Rolle und Organisation des Users mit Retry-Logik
+                const userRole = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.userRole.findFirst({
                     where: {
                         userId: Number(userId),
                         lastUsed: true
@@ -61,12 +61,12 @@ class OrganizationCache {
                             }
                         }
                     }
-                });
+                }));
                 if (!userRole) {
                     return null;
                 }
-                // Hole aktive Branch des Users
-                const userBranch = yield prisma_1.prisma.usersBranches.findFirst({
+                // Hole aktive Branch des Users mit Retry-Logik
+                const userBranch = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.usersBranches.findFirst({
                     where: {
                         userId: Number(userId),
                         lastUsed: true
@@ -74,7 +74,7 @@ class OrganizationCache {
                     select: {
                         branchId: true
                     }
-                });
+                }));
                 const data = {
                     organizationId: userRole.role.organizationId,
                     branchId: userBranch === null || userBranch === void 0 ? void 0 : userBranch.branchId,

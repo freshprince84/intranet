@@ -48,7 +48,10 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             : undefined;
         const limit = req.query.limit
             ? parseInt(req.query.limit, 10)
-            : 50; // OPTIMIERUNG: Standard-Limit 50 statt alle
+            : undefined; // Kein Limit wenn nicht angegeben - alle Requests werden zurückgegeben
+        const offset = req.query.offset
+            ? parseInt(req.query.offset, 10)
+            : undefined; // Offset für Pagination
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause = {};
@@ -116,10 +119,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             ? baseWhereConditions[0]
             : { AND: baseWhereConditions };
         const queryStartTime = Date.now();
-        const requests = yield prisma_1.prisma.request.findMany({
-            where: whereClause,
-            take: limit,
-            include: Object.assign({ requester: {
+        const requests = yield prisma_1.prisma.request.findMany(Object.assign(Object.assign(Object.assign({ where: whereClause }, (limit ? { take: limit } : {})), (offset !== undefined ? { skip: offset } : {})), { include: Object.assign({ requester: {
                     select: userSelect
                 }, responsible: {
                     select: userSelect
@@ -131,11 +131,9 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         uploadedAt: 'desc'
                     }
                 }
-            } : {})),
-            orderBy: {
+            } : {})), orderBy: {
                 createdAt: 'desc'
-            }
-        });
+            } }));
         const queryDuration = Date.now() - queryStartTime;
         console.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests in ${queryDuration}ms`);
         // Formatiere die Daten für die Frontend-Nutzung

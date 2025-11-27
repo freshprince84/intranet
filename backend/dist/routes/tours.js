@@ -17,5 +17,9 @@ router.post('/', tourController_1.createTour);
 router.put('/:id', tourController_1.updateTour);
 router.put('/:id/toggle-active', tourController_1.toggleTourActive);
 router.get('/:id/bookings', tourController_1.getTourBookings);
+// Bild-Upload-Routen
+router.post('/:id/image', tourController_1.tourImageUpload.single('image'), tourController_1.uploadTourImage);
+router.post('/:id/gallery', tourController_1.tourImageUpload.single('image'), tourController_1.uploadTourGalleryImage);
+router.delete('/:id/gallery/:imageIndex', tourController_1.deleteTourGalleryImage);
 exports.default = router;
 //# sourceMappingURL=tours.js.map
