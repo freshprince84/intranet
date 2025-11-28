@@ -573,13 +573,6 @@ const Requests: React.FC = () => {
     createStandardFilters();
   }, []);
 
-  // Infinite Scroll Handler für Requests
-  // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
-  const filterConditionsRef = useRef(filterConditions);
-  useEffect(() => {
-    filterConditionsRef.current = filterConditions;
-  }, [filterConditions]);
-
   // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
   const scrollHandlerRef = useRef<() => void>();
   useEffect(() => {
