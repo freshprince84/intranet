@@ -278,6 +278,128 @@ class WhatsAppService {
         });
     }
     /**
+     * Sendet ein Bild via WhatsApp
+     */
+    sendImage(to, imageUrl, caption) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                console.log(`[WhatsApp Service] sendImage aufgerufen für: ${to}, Bild: ${imageUrl}`);
+                yield this.loadSettings();
+                if (!this.axiosInstance) {
+                    console.error('[WhatsApp Service] Axios-Instanz nicht initialisiert');
+                    throw new Error('WhatsApp Service nicht initialisiert');
+                }
+                if (!this.apiKey) {
+                    console.error('[WhatsApp Service] API Key nicht gesetzt');
+                    throw new Error('WhatsApp API Key nicht gesetzt');
+                }
+                console.log(`[WhatsApp Service] Sende Bild via ${this.provider}...`);
+                // Normalisiere Telefonnummer
+                const normalizedPhone = this.normalizePhoneNumber(to);
+                if (this.provider === 'twilio') {
+                    // Twilio unterstützt Media Messages
+                    return yield this.sendImageViaTwilio(normalizedPhone, imageUrl, caption);
+                }
+                else if (this.provider === 'whatsapp-business-api') {
+                    return yield this.sendImageViaWhatsAppBusiness(normalizedPhone, imageUrl, caption);
+                }
+                else {
+                    throw new Error(`Unbekannter Provider: ${this.provider}`);
+                }
+            }
+            catch (error) {
+                console.error('[WhatsApp] Fehler beim Versenden des Bildes:', error);
+                throw error;
+            }
+        });
+    }
+    /**
+     * Sendet Bild über Twilio
+     */
+    sendImageViaTwilio(to, imageUrl, caption) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            if (!this.axiosInstance) {
+                throw new Error('Twilio Service nicht initialisiert');
+            }
+            const accountSid = this.apiKey;
+            const fromNumber = this.phoneNumberId || process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+            try {
+                const params = {
+                    From: fromNumber,
+                    To: `whatsapp:${to}`,
+                    MediaUrl: imageUrl
+                };
+                if (caption) {
+                    params.Body = caption;
+                }
+                const response = yield this.axiosInstance.post(`/Accounts/${accountSid}/Messages.json`, new URLSearchParams(params), {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+                return response.status === 201;
+            }
+            catch (error) {
+                if (axios_1.default.isAxiosError(error)) {
+                    const axiosError = error;
+                    console.error('[WhatsApp Twilio] API Fehler:', (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data);
+                    throw new Error(`Twilio API Fehler: ${JSON.stringify((_b = axiosError.response) === null || _b === void 0 ? void 0 : _b.data)}`);
+                }
+                throw error;
+            }
+        });
+    }
+    /**
+     * Sendet Bild über WhatsApp Business API
+     */
+    sendImageViaWhatsAppBusiness(to, imageUrl, caption) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c, _d;
+            if (!this.axiosInstance) {
+                throw new Error('WhatsApp Business Service nicht initialisiert');
+            }
+            if (!this.phoneNumberId) {
+                console.error('[WhatsApp Business] Phone Number ID fehlt!');
+                throw new Error('WhatsApp Phone Number ID ist nicht konfiguriert');
+            }
+            try {
+                // WhatsApp Business API unterstützt Media Messages via URL
+                // Die URL muss öffentlich erreichbar sein (HTTPS)
+                const payload = {
+                    messaging_product: 'whatsapp',
+                    to: to,
+                    type: 'image',
+                    image: {
+                        link: imageUrl // URL muss HTTPS sein und öffentlich erreichbar
+                    }
+                };
+                if (caption) {
+                    payload.image.caption = caption;
+                }
+                console.log(`[WhatsApp Business] Sende Bild an ${to} via Phone Number ID ${this.phoneNumberId}`);
+                console.log(`[WhatsApp Business] Payload:`, JSON.stringify(payload, null, 2));
+                const response = yield this.axiosInstance.post('/messages', payload);
+                console.log(`[WhatsApp Business] Response Status: ${response.status}`);
+                console.log(`[WhatsApp Business] Response Data:`, JSON.stringify(response.data, null, 2));
+                if ((_a = response.data) === null || _a === void 0 ? void 0 : _a.error) {
+                    const errorData = response.data.error;
+                    console.error(`[WhatsApp Business] ⚠️ Fehler in Response-Daten:`, errorData);
+                    throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify(errorData)}`);
+                }
+                const returnedMessageId = (_d = (_c = (_b = response.data) === null || _b === void 0 ? void 0 : _b.messages) === null || _c === void 0 ? void 0 : _c[0]) === null || _d === void 0 ? void 0 : _d.id;
+                if (returnedMessageId) {
+                    console.log(`[WhatsApp Business] ✅ Bild gesendet, Message-ID: ${returnedMessageId}`);
+                }
+                return true;
+            }
+            catch (error) {
+                console.error('[WhatsApp Business] Fehler beim Senden des Bildes:', error);
+                throw error;
+            }
+        });
+    }
+    /**
      * Sendet Nachricht über Twilio
      */
     sendViaTwilio(to, message) {

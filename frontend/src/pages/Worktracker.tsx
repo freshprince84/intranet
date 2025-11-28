@@ -1731,7 +1731,7 @@ const Worktracker: React.FC = () => {
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
-    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks.length, reservationsDisplayLimit, filteredAndSortedReservations.length, viewMode]);
+    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks, reservationsDisplayLimit, filteredAndSortedReservations, viewMode]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {

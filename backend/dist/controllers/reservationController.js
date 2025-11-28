@@ -52,6 +52,8 @@ const reservationNotificationService_1 = require("../services/reservationNotific
 const queueService_1 = require("../services/queueService");
 const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
+const filterToPrisma_1 = require("../utils/filterToPrisma");
+const filterCache_1 = require("../services/filterCache");
 /**
  * Utility: Erkennt ob ein String eine Telefonnummer oder Email ist
  */
@@ -524,6 +526,11 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 message: 'Keine Berechtigung zum Anzeigen von Reservierungen'
             });
         }
+        // Filter-Parameter aus Query lesen
+        const filterId = req.query.filterId;
+        const filterConditions = req.query.filterConditions
+            ? JSON.parse(req.query.filterConditions)
+            : undefined;
         // Baue Where-Clause auf
         const whereClause = {
             organizationId: req.organizationId
@@ -565,8 +572,31 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
         }
         // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
+        // Filter-Bedingungen konvertieren (falls vorhanden)
+        let filterWhereClause = {};
+        if (filterId) {
+            // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
+            const filterData = yield filterCache_1.filterCache.get(parseInt(filterId, 10));
+            if (filterData) {
+                const conditions = JSON.parse(filterData.conditions);
+                const operators = JSON.parse(filterData.operators);
+                filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'reservation');
+            }
+        }
+        else if (filterConditions) {
+            // Direkte Filter-Bedingungen
+            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'reservation');
+        }
+        // Kombiniere alle Filter-Bedingungen
+        const baseWhereConditions = [whereClause];
+        if (Object.keys(filterWhereClause).length > 0) {
+            baseWhereConditions.push(filterWhereClause);
+        }
+        const finalWhereClause = baseWhereConditions.length === 1
+            ? baseWhereConditions[0]
+            : { AND: baseWhereConditions };
         const reservations = yield prisma_1.prisma.reservation.findMany({
-            where: whereClause,
+            where: finalWhereClause,
             include: {
                 organization: {
                     select: {

@@ -131,9 +131,11 @@ class WhatsAppAiService {
             });
             // 3. Baue System Prompt
             const systemPrompt = this.buildSystemPrompt(aiConfig, language, conversationContext);
-            // 4. Prüfe ob Function Calling aktiviert werden soll (nur für Mitarbeiter, nicht für Gäste)
+            // 4. Prüfe ob Function Calling aktiviert werden soll
+            // WICHTIG: check_room_availability sollte auch für Gäste verfügbar sein!
             const isEmployee = !!(conversationContext === null || conversationContext === void 0 ? void 0 : conversationContext.userId);
-            const functionDefinitions = isEmployee ? this.getFunctionDefinitions() : [];
+            // Für Zimmerverfügbarkeit: Function auch für Gäste aktivieren
+            const functionDefinitions = this.getFunctionDefinitions();
             // 5. Rufe OpenAI API auf
             const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
             if (!OPENAI_API_KEY) {
@@ -183,7 +185,8 @@ class WhatsAppAiService {
                         });
                         try {
                             // Führe Function aus
-                            const result = yield whatsappFunctionHandlers_1.WhatsAppFunctionHandlers[functionName](functionArgs, conversationContext.userId, conversationContext.roleId, branchId);
+                            // WICHTIG: check_room_availability kann auch ohne userId aufgerufen werden
+                            const result = yield whatsappFunctionHandlers_1.WhatsAppFunctionHandlers[functionName](functionArgs, (conversationContext === null || conversationContext === void 0 ? void 0 : conversationContext.userId) || null, (conversationContext === null || conversationContext === void 0 ? void 0 : conversationContext.roleId) || null, branchId);
                             toolResults.push({
                                 tool_call_id: toolCall.id,
                                 role: 'tool',
@@ -391,6 +394,123 @@ class WhatsAppAiService {
                         }
                     }
                 }
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'check_room_availability',
+                    description: 'Prüft Zimmerverfügbarkeit für einen Zeitraum. Zeigt verfügbare Zimmer, Preise und Anzahl verfügbarer Zimmer pro Datum. Unterstützt Filter nach Zimmerart (compartida/privada).',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            startDate: {
+                                type: 'string',
+                                description: 'Check-in Datum im Format YYYY-MM-DD oder "today"/"heute"/"hoy" für heute (erforderlich). Verwende IMMER "today" wenn der User "heute" sagt!'
+                            },
+                            endDate: {
+                                type: 'string',
+                                description: 'Check-out Datum im Format YYYY-MM-DD oder "today"/"heute"/"hoy" für heute (optional, falls nicht angegeben: startDate + 1 Tag)'
+                            },
+                            roomType: {
+                                type: 'string',
+                                enum: ['compartida', 'privada'],
+                                description: 'Zimmerart (optional): "compartida" für Dorm-Zimmer, "privada" für private Zimmer'
+                            },
+                            branchId: {
+                                type: 'number',
+                                description: 'Branch ID (optional, verwendet Branch aus Context wenn nicht angegeben)'
+                            }
+                        },
+                        required: ['startDate']
+                    }
+                }
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'get_tours',
+                    description: 'Holt verfügbare Touren. Filtere nach Typ, Datum, etc. Zeigt Liste aller aktiven Touren mit Preisen, Dauer, Teilnehmeranzahl.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            type: {
+                                type: 'string',
+                                enum: ['own', 'external'],
+                                description: 'Tour-Typ (optional): "own" = eigene Tour, "external" = externe Tour'
+                            },
+                            availableFrom: {
+                                type: 'string',
+                                description: 'Verfügbar ab (ISO-Datum, z.B. "2025-01-27")'
+                            },
+                            availableTo: {
+                                type: 'string',
+                                description: 'Verfügbar bis (ISO-Datum)'
+                            },
+                            limit: {
+                                type: 'number',
+                                description: 'Maximale Anzahl Ergebnisse (Standard: 20)'
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'get_tour_details',
+                    description: 'Holt detaillierte Informationen zu einer Tour (inkl. Bilder, Beschreibung, Preise, Inklusivleistungen, Exklusivleistungen, Anforderungen, etc.). Verwende diese Funktion wenn der User Details zu einer spezifischen Tour wissen möchte.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            tourId: {
+                                type: 'number',
+                                description: 'ID der Tour (erforderlich)'
+                            }
+                        },
+                        required: ['tourId']
+                    }
+                }
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'book_tour',
+                    description: 'Erstellt eine Tour-Reservation/Buchung. Generiert automatisch Payment Link und setzt Zahlungsfrist (1 Stunde). Wenn Zahlung nicht innerhalb der Frist erfolgt, wird die Buchung automatisch storniert. Benötigt: tourId, tourDate, numberOfParticipants, customerName, und mindestens eine Kontaktinformation (customerPhone oder customerEmail).',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            tourId: {
+                                type: 'number',
+                                description: 'ID der Tour (erforderlich)'
+                            },
+                            tourDate: {
+                                type: 'string',
+                                description: 'Datum der Tour (ISO-Format, z.B. "2025-01-27T10:00:00Z" oder "2025-01-27")'
+                            },
+                            numberOfParticipants: {
+                                type: 'number',
+                                description: 'Anzahl Teilnehmer (erforderlich)'
+                            },
+                            customerName: {
+                                type: 'string',
+                                description: 'Name des Kunden (erforderlich)'
+                            },
+                            customerPhone: {
+                                type: 'string',
+                                description: 'Telefonnummer des Kunden (optional, falls customerEmail vorhanden)'
+                            },
+                            customerEmail: {
+                                type: 'string',
+                                description: 'E-Mail des Kunden (optional, falls customerPhone vorhanden)'
+                            },
+                            customerNotes: {
+                                type: 'string',
+                                description: 'Zusätzliche Notizen (optional)'
+                            }
+                        },
+                        required: ['tourId', 'tourDate', 'numberOfParticipants', 'customerName']
+                    }
+                }
             }
         ];
     }
@@ -444,19 +564,61 @@ class WhatsAppAiService {
         if (conversationContext) {
             prompt += `\n\nKontext der Konversation: ${JSON.stringify(conversationContext, null, 2)}`;
         }
-        // Füge Informationen zu verfügbaren Funktionen hinzu (nur für Mitarbeiter)
+        // Füge Informationen zu verfügbaren Funktionen hinzu
+        // WICHTIG: check_room_availability und Tour-Funktionen sind für ALLE verfügbar (auch Gäste)!
+        prompt += '\n\nVerfügbare Funktionen:\n';
+        // Zimmerverfügbarkeit - IMMER verfügbar
+        prompt += '- check_room_availability: Prüfe Zimmerverfügbarkeit für einen Zeitraum (startDate, endDate, roomType)\n';
+        prompt += '  WICHTIG: Verwende IMMER diese Function wenn der User nach Zimmerverfügbarkeit fragt!\n';
+        prompt += '  WICHTIG: Zeige ALLE verfügbaren Zimmer aus dem Function-Ergebnis an, nicht nur einige!\n';
+        prompt += '  WICHTIG: Jedes Zimmer im Function-Ergebnis muss in der Antwort erwähnt werden!\n';
+        prompt += '  WICHTIG: Terminologie beachten!\n';
+        prompt += '    - Bei compartida (Dorm-Zimmer): Verwende "Betten" (beds), NICHT "Zimmer"!\n';
+        prompt += '    - Bei privada (private Zimmer): Verwende "Zimmer" (rooms)!\n';
+        prompt += '    - Beispiel compartida: "1 Bett verfügbar" oder "3 Betten verfügbar"\n';
+        prompt += '    - Beispiel privada: "1 Zimmer verfügbar" oder "2 Zimmer verfügbar"\n';
+        prompt += '  Beispiele:\n';
+        prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "today" })\n';
+        prompt += '    - "Haben wir Zimmer frei vom 1.2. bis 3.2.?" → check_room_availability({ startDate: "2025-02-01", endDate: "2025-02-03" })\n';
+        prompt += '    - "gibt es Dorm-Zimmer frei?" → check_room_availability({ startDate: "today", roomType: "compartida" })\n';
+        prompt += '    - "¿tienen habitaciones privadas disponibles?" → check_room_availability({ startDate: "today", roomType: "privada" })\n';
+        // Tour-Funktionen - IMMER verfügbar (auch für Gäste)
+        prompt += '\n- get_tours: Hole verfügbare Touren (type, availableFrom, availableTo, limit)\n';
+        prompt += '  WICHTIG: Verwende diese Function wenn der User nach Touren fragt!\n';
+        prompt += '  Beispiele:\n';
+        prompt += '    - "welche touren gibt es?" → get_tours({})\n';
+        prompt += '    - "zeige mir alle touren" → get_tours({})\n';
+        prompt += '    - "¿qué tours tienen disponibles?" → get_tours({})\n';
+        prompt += '\n- get_tour_details: Hole detaillierte Informationen zu einer Tour (tourId)\n';
+        prompt += '  WICHTIG: Verwende diese Function wenn der User Details zu einer spezifischen Tour wissen möchte!\n';
+        prompt += '  Beispiele:\n';
+        prompt += '    - "zeige mir details zu tour 1" → get_tour_details({ tourId: 1 })\n';
+        prompt += '    - "was ist in tour 5 inkludiert?" → get_tour_details({ tourId: 5 })\n';
+        prompt += '\n- book_tour: Erstelle eine Tour-Buchung (tourId, tourDate, numberOfParticipants, customerName, customerPhone/customerEmail)\n';
+        prompt += '  WICHTIG: Verwende diese Function wenn der User eine Tour buchen möchte!\n';
+        prompt += '  WICHTIG: Generiert automatisch Payment Link und setzt Zahlungsfrist (1 Stunde)\n';
+        prompt += '  Beispiele:\n';
+        prompt += '    - "ich möchte tour 1 für morgen buchen" → book_tour({ tourId: 1, tourDate: "2025-01-27T10:00:00Z", numberOfParticipants: 2, customerName: "Max Mustermann", customerPhone: "+573001234567" })\n';
+        prompt += '    - "reservar tour 3 para mañana" → book_tour({ tourId: 3, tourDate: "2025-01-27", numberOfParticipants: 1, customerName: "Juan Pérez", customerEmail: "juan@example.com" })\n';
+        // Andere Funktionen - nur für Mitarbeiter
         if (conversationContext === null || conversationContext === void 0 ? void 0 : conversationContext.userId) {
-            prompt += '\n\nVerfügbare Funktionen:\n';
-            prompt += '- get_requests: Hole Requests basierend auf Filtern (status, dueDate)\n';
-            prompt += '- get_todos: Hole Todos/Tasks basierend auf Filtern (status, dueDate)\n';
-            prompt += '- get_worktime: Hole Arbeitszeiten für einen User (date, startDate, endDate)\n';
-            prompt += '- get_cerebro_articles: Hole Cerebro-Artikel basierend auf Suchbegriffen oder Tags\n';
-            prompt += '- get_user_info: Hole User-Informationen (Name, Email, Rollen)\n';
-            prompt += '\nVerwende diese Funktionen, wenn der User nach spezifischen Daten fragt.';
-            prompt += '\nBeispiel: "solicitudes abiertas de hoy" → get_requests({ status: "approval", dueDate: "today" })';
-            prompt += '\nBeispiel: "wie lange habe ich heute gearbeitet" → get_worktime({ date: "today" })';
-            prompt += '\nBeispiel: "welche cerebro artikel gibt es zu notfällen" → get_cerebro_articles({ tags: ["notfall"] })';
+            prompt += '- get_requests: Hole Requests basierend auf Filtern (status, dueDate) - NUR für Mitarbeiter\n';
+            prompt += '- get_todos: Hole Todos/Tasks basierend auf Filtern (status, dueDate) - NUR für Mitarbeiter\n';
+            prompt += '- get_worktime: Hole Arbeitszeiten für einen User (date, startDate, endDate) - NUR für Mitarbeiter\n';
+            prompt += '- get_cerebro_articles: Hole Cerebro-Artikel basierend auf Suchbegriffen oder Tags - NUR für Mitarbeiter\n';
+            prompt += '- get_user_info: Hole User-Informationen (Name, Email, Rollen) - NUR für Mitarbeiter\n';
+            prompt += '\nBeispiele für Mitarbeiter-Funktionen:';
+            prompt += '\n  - "solicitudes abiertas de hoy" → get_requests({ status: "approval", dueDate: "today" })';
+            prompt += '\n  - "wie lange habe ich heute gearbeitet" → get_worktime({ date: "today" })';
+            prompt += '\n  - "welche cerebro artikel gibt es zu notfällen" → get_cerebro_articles({ tags: ["notfall"] })';
         }
+        prompt += '\n\nWICHTIG: Wenn der User nach Zimmerverfügbarkeit fragt, verwende IMMER check_room_availability!';
+        prompt += '\nWICHTIG: Wenn der User nach Touren fragt, verwende IMMER get_tours oder get_tour_details!';
+        prompt += '\nWICHTIG: Wenn der User eine Tour buchen möchte, verwende IMMER book_tour!';
+        prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
+        prompt += '\nWICHTIG: Wenn check_room_availability mehrere Zimmer zurückgibt, zeige ALLE Zimmer in der Antwort an!';
+        prompt += '\nWICHTIG: Jedes Zimmer im Function-Ergebnis (rooms Array) muss in der Antwort erwähnt werden!';
+        prompt += '\nWICHTIG: Wenn get_tours mehrere Touren zurückgibt, zeige ALLE Touren in der Antwort an!';
         return prompt;
     }
     /**
@@ -476,6 +638,8 @@ class WhatsAppAiService {
         // Deutsche Wörter/Zeichen
         const germanIndicators = [
             /\b(hallo|guten tag|guten morgen|guten abend|danke|bitte|ja|nein|wie|wo|wann|warum|auf wiedersehen|tschüss)\b/i,
+            /\b(haben|wir|heute|frei|zimmer|sind|gibt|gibt es|verfügbar|verfügbarkeit|buchung|reservierung|reservieren|buchen)\b/i,
+            /\b(habt|hast|hat|seid|bist|ist|sind|werden|wird|kann|können|möchte|möchten|will|wollen)\b/i,
             /[äöüß]/,
             /\b(der|die|das|ein|eine|von|in|mit|für|ist|sind|sind)\b/i
         ];
