@@ -432,6 +432,93 @@ export class WhatsAppAiService {
             required: ['startDate']
           }
         }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'get_tours',
+          description: 'Holt verfügbare Touren. Filtere nach Typ, Datum, etc. Zeigt Liste aller aktiven Touren mit Preisen, Dauer, Teilnehmeranzahl.',
+          parameters: {
+            type: 'object',
+            properties: {
+              type: {
+                type: 'string',
+                enum: ['own', 'external'],
+                description: 'Tour-Typ (optional): "own" = eigene Tour, "external" = externe Tour'
+              },
+              availableFrom: {
+                type: 'string',
+                description: 'Verfügbar ab (ISO-Datum, z.B. "2025-01-27")'
+              },
+              availableTo: {
+                type: 'string',
+                description: 'Verfügbar bis (ISO-Datum)'
+              },
+              limit: {
+                type: 'number',
+                description: 'Maximale Anzahl Ergebnisse (Standard: 20)'
+              }
+            }
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'get_tour_details',
+          description: 'Holt detaillierte Informationen zu einer Tour (inkl. Bilder, Beschreibung, Preise, Inklusivleistungen, Exklusivleistungen, Anforderungen, etc.). Verwende diese Funktion wenn der User Details zu einer spezifischen Tour wissen möchte.',
+          parameters: {
+            type: 'object',
+            properties: {
+              tourId: {
+                type: 'number',
+                description: 'ID der Tour (erforderlich)'
+              }
+            },
+            required: ['tourId']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'book_tour',
+          description: 'Erstellt eine Tour-Reservation/Buchung. Generiert automatisch Payment Link und setzt Zahlungsfrist (1 Stunde). Wenn Zahlung nicht innerhalb der Frist erfolgt, wird die Buchung automatisch storniert. Benötigt: tourId, tourDate, numberOfParticipants, customerName, und mindestens eine Kontaktinformation (customerPhone oder customerEmail).',
+          parameters: {
+            type: 'object',
+            properties: {
+              tourId: {
+                type: 'number',
+                description: 'ID der Tour (erforderlich)'
+              },
+              tourDate: {
+                type: 'string',
+                description: 'Datum der Tour (ISO-Format, z.B. "2025-01-27T10:00:00Z" oder "2025-01-27")'
+              },
+              numberOfParticipants: {
+                type: 'number',
+                description: 'Anzahl Teilnehmer (erforderlich)'
+              },
+              customerName: {
+                type: 'string',
+                description: 'Name des Kunden (erforderlich)'
+              },
+              customerPhone: {
+                type: 'string',
+                description: 'Telefonnummer des Kunden (optional, falls customerEmail vorhanden)'
+              },
+              customerEmail: {
+                type: 'string',
+                description: 'E-Mail des Kunden (optional, falls customerPhone vorhanden)'
+              },
+              customerNotes: {
+                type: 'string',
+                description: 'Zusätzliche Notizen (optional)'
+              }
+            },
+            required: ['tourId', 'tourDate', 'numberOfParticipants', 'customerName']
+          }
+        }
       }
     ];
   }
@@ -499,17 +586,38 @@ export class WhatsAppAiService {
     }
 
     // Füge Informationen zu verfügbaren Funktionen hinzu
-    // WICHTIG: check_room_availability ist für ALLE verfügbar (auch Gäste)!
+    // WICHTIG: check_room_availability und Tour-Funktionen sind für ALLE verfügbar (auch Gäste)!
     prompt += '\n\nVerfügbare Funktionen:\n';
     
     // Zimmerverfügbarkeit - IMMER verfügbar
     prompt += '- check_room_availability: Prüfe Zimmerverfügbarkeit für einen Zeitraum (startDate, endDate, roomType)\n';
     prompt += '  WICHTIG: Verwende IMMER diese Function wenn der User nach Zimmerverfügbarkeit fragt!\n';
+    prompt += '  WICHTIG: Zeige ALLE verfügbaren Zimmer aus dem Function-Ergebnis an, nicht nur einige!\n';
+    prompt += '  WICHTIG: Jedes Zimmer im Function-Ergebnis muss in der Antwort erwähnt werden!\n';
     prompt += '  Beispiele:\n';
-    prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "2025-01-26" })\n';
+    prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "today" })\n';
     prompt += '    - "Haben wir Zimmer frei vom 1.2. bis 3.2.?" → check_room_availability({ startDate: "2025-02-01", endDate: "2025-02-03" })\n';
-    prompt += '    - "gibt es Dorm-Zimmer frei?" → check_room_availability({ startDate: "2025-02-01", roomType: "compartida" })\n';
-    prompt += '    - "¿tienen habitaciones privadas disponibles?" → check_room_availability({ startDate: "2025-02-01", roomType: "privada" })\n';
+    prompt += '    - "gibt es Dorm-Zimmer frei?" → check_room_availability({ startDate: "today", roomType: "compartida" })\n';
+    prompt += '    - "¿tienen habitaciones privadas disponibles?" → check_room_availability({ startDate: "today", roomType: "privada" })\n';
+    
+    // Tour-Funktionen - IMMER verfügbar (auch für Gäste)
+    prompt += '\n- get_tours: Hole verfügbare Touren (type, availableFrom, availableTo, limit)\n';
+    prompt += '  WICHTIG: Verwende diese Function wenn der User nach Touren fragt!\n';
+    prompt += '  Beispiele:\n';
+    prompt += '    - "welche touren gibt es?" → get_tours({})\n';
+    prompt += '    - "zeige mir alle touren" → get_tours({})\n';
+    prompt += '    - "¿qué tours tienen disponibles?" → get_tours({})\n';
+    prompt += '\n- get_tour_details: Hole detaillierte Informationen zu einer Tour (tourId)\n';
+    prompt += '  WICHTIG: Verwende diese Function wenn der User Details zu einer spezifischen Tour wissen möchte!\n';
+    prompt += '  Beispiele:\n';
+    prompt += '    - "zeige mir details zu tour 1" → get_tour_details({ tourId: 1 })\n';
+    prompt += '    - "was ist in tour 5 inkludiert?" → get_tour_details({ tourId: 5 })\n';
+    prompt += '\n- book_tour: Erstelle eine Tour-Buchung (tourId, tourDate, numberOfParticipants, customerName, customerPhone/customerEmail)\n';
+    prompt += '  WICHTIG: Verwende diese Function wenn der User eine Tour buchen möchte!\n';
+    prompt += '  WICHTIG: Generiert automatisch Payment Link und setzt Zahlungsfrist (1 Stunde)\n';
+    prompt += '  Beispiele:\n';
+    prompt += '    - "ich möchte tour 1 für morgen buchen" → book_tour({ tourId: 1, tourDate: "2025-01-27T10:00:00Z", numberOfParticipants: 2, customerName: "Max Mustermann", customerPhone: "+573001234567" })\n';
+    prompt += '    - "reservar tour 3 para mañana" → book_tour({ tourId: 3, tourDate: "2025-01-27", numberOfParticipants: 1, customerName: "Juan Pérez", customerEmail: "juan@example.com" })\n';
     
     // Andere Funktionen - nur für Mitarbeiter
     if (conversationContext?.userId) {
@@ -525,7 +633,12 @@ export class WhatsAppAiService {
     }
     
     prompt += '\n\nWICHTIG: Wenn der User nach Zimmerverfügbarkeit fragt, verwende IMMER check_room_availability!';
+    prompt += '\nWICHTIG: Wenn der User nach Touren fragt, verwende IMMER get_tours oder get_tour_details!';
+    prompt += '\nWICHTIG: Wenn der User eine Tour buchen möchte, verwende IMMER book_tour!';
     prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
+    prompt += '\nWICHTIG: Wenn check_room_availability mehrere Zimmer zurückgibt, zeige ALLE Zimmer in der Antwort an!';
+    prompt += '\nWICHTIG: Jedes Zimmer im Function-Ergebnis (rooms Array) muss in der Antwort erwähnt werden!';
+    prompt += '\nWICHTIG: Wenn get_tours mehrere Touren zurückgibt, zeige ALLE Touren in der Antwort an!';
 
     return prompt;
   }

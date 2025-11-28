@@ -1,6 +1,7 @@
 import { prisma } from '../utils/prisma';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import { LobbyPmsService } from './lobbyPmsService';
+import { BoldPaymentService } from './boldPaymentService';
 
 /**
  * WhatsApp Function Handlers
@@ -576,6 +577,13 @@ export class WhatsAppFunctionHandlers {
       // 5. Rufe Verfügbarkeits-API auf
       const availability = await service.checkAvailability(startDate, endDate);
 
+      // Debug: Logge alle gefundenen Kategorien
+      const uniqueCategories = new Set(availability.map(item => `${item.categoryId}:${item.roomName}`));
+      console.log(`[WhatsApp Function Handlers] check_room_availability: ${availability.length} Einträge, ${uniqueCategories.size} eindeutige Kategorien`);
+      for (const cat of uniqueCategories) {
+        console.log(`[WhatsApp Function Handlers]   - ${cat}`);
+      }
+
       // 6. Filtere nach roomType falls angegeben
       let filteredAvailability = availability;
       if (args.roomType) {
@@ -637,6 +645,12 @@ export class WhatsAppFunctionHandlers {
         }))
       }));
 
+      // Debug: Logge alle formatierten Zimmer
+      console.log(`[WhatsApp Function Handlers] check_room_availability: ${rooms.length} Zimmer formatiert`);
+      for (const room of rooms) {
+        console.log(`[WhatsApp Function Handlers]   - ${room.name} (${room.type}): ${room.availableRooms} verfügbar, ${room.pricePerNight.toLocaleString('de-CH')} COP`);
+      }
+
       return {
         startDate: args.startDate,
         endDate: endDate.toISOString().split('T')[0],
@@ -646,6 +660,343 @@ export class WhatsAppFunctionHandlers {
       };
     } catch (error: any) {
       console.error('[WhatsApp Function Handlers] check_room_availability Fehler:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Holt verfügbare Touren
+   */
+  static async get_tours(
+    args: any,
+    userId: number | null,
+    roleId: number | null,
+    branchId: number
+  ): Promise<any> {
+    try {
+      // Filter: isActive = true, availableFrom <= heute <= availableTo
+      const where: any = {
+        isActive: true,
+        OR: [
+          { branchId: branchId },
+          { branchId: null } // Touren ohne Branch (für alle Branches)
+        ]
+      };
+      
+      // Datum-Filter (optional)
+      const now = new Date();
+      if (args.availableFrom) {
+        where.availableFrom = { lte: new Date(args.availableFrom) };
+      } else {
+        // Standard: Nur Touren die bereits verfügbar sind
+        where.OR = [
+          { availableFrom: { lte: now } },
+          { availableFrom: null }
+        ];
+      }
+      
+      if (args.availableTo) {
+        where.availableTo = { gte: new Date(args.availableTo) };
+      } else {
+        // Standard: Nur Touren die noch verfügbar sind
+        where.AND = [
+          {
+            OR: [
+              { availableTo: { gte: now } },
+              { availableTo: null }
+            ]
+          }
+        ];
+      }
+      
+      // Typ-Filter (optional)
+      if (args.type) {
+        where.type = args.type; // 'own' oder 'external'
+      }
+      
+      const tours = await prisma.tour.findMany({
+        where,
+        include: {
+          branch: {
+            select: { id: true, name: true }
+          },
+          organization: {
+            select: { id: true }
+          }
+        },
+        orderBy: { title: 'asc' },
+        take: args.limit || 20
+      });
+      
+      return tours.map(t => ({
+        id: t.id,
+        title: t.title,
+        description: t.description || '',
+        type: t.type,
+        price: t.price ? Number(t.price) : null,
+        currency: t.currency || 'COP',
+        duration: t.duration,
+        maxParticipants: t.maxParticipants,
+        minParticipants: t.minParticipants,
+        location: t.location,
+        meetingPoint: t.meetingPoint,
+        imageUrl: t.imageUrl,
+        hasGallery: !!t.galleryUrls && Array.isArray(t.galleryUrls) && t.galleryUrls.length > 0
+      }));
+    } catch (error: any) {
+      console.error('[WhatsApp Function Handlers] get_tours Fehler:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Holt Details einer Tour (inkl. Bilder-URLs)
+   */
+  static async get_tour_details(
+    args: any,
+    userId: number | null,
+    roleId: number | null,
+    branchId: number
+  ): Promise<any> {
+    try {
+      if (!args.tourId) {
+        throw new Error('tourId ist erforderlich');
+      }
+      
+      const tour = await prisma.tour.findUnique({
+        where: { id: parseInt(args.tourId, 10) },
+        include: {
+          branch: {
+            select: { id: true, name: true }
+          },
+          externalProvider: {
+            select: { id: true, name: true, phone: true }
+          }
+        }
+      });
+      
+      if (!tour) {
+        throw new Error('Tour nicht gefunden');
+      }
+      
+      // Parse galleryUrls (JSON)
+      let galleryUrls: string[] = [];
+      if (tour.galleryUrls) {
+        try {
+          galleryUrls = typeof tour.galleryUrls === 'string' 
+            ? JSON.parse(tour.galleryUrls) 
+            : tour.galleryUrls;
+        } catch (e) {
+          console.warn('[get_tour_details] Fehler beim Parsen von galleryUrls:', e);
+        }
+      }
+      
+      return {
+        id: tour.id,
+        title: tour.title,
+        description: tour.description || '',
+        type: tour.type,
+        price: tour.price ? Number(tour.price) : null,
+        currency: tour.currency || 'COP',
+        duration: tour.duration,
+        maxParticipants: tour.maxParticipants,
+        minParticipants: tour.minParticipants,
+        location: tour.location,
+        meetingPoint: tour.meetingPoint,
+        includes: tour.includes,
+        excludes: tour.excludes,
+        requirements: tour.requirements,
+        imageUrl: tour.imageUrl,
+        galleryUrls: galleryUrls,
+        availableFrom: tour.availableFrom?.toISOString() || null,
+        availableTo: tour.availableTo?.toISOString() || null,
+        branch: tour.branch ? { id: tour.branch.id, name: tour.branch.name } : null,
+        externalProvider: tour.externalProvider ? {
+          id: tour.externalProvider.id,
+          name: tour.externalProvider.name,
+          phone: tour.externalProvider.phone
+        } : null
+      };
+    } catch (error: any) {
+      console.error('[WhatsApp Function Handlers] get_tour_details Fehler:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Erstellt eine Tour-Reservation/Buchung
+   */
+  static async book_tour(
+    args: any,
+    userId: number | null,
+    roleId: number | null,
+    branchId: number
+  ): Promise<any> {
+    try {
+      // Validierung
+      if (!args.tourId || !args.tourDate || !args.numberOfParticipants || !args.customerName) {
+        throw new Error('Fehlende erforderliche Parameter: tourId, tourDate, numberOfParticipants, customerName');
+      }
+      
+      if (!args.customerPhone && !args.customerEmail) {
+        throw new Error('Mindestens eine Kontaktinformation (customerPhone oder customerEmail) ist erforderlich');
+      }
+      
+      // Parse Datum
+      const tourDate = new Date(args.tourDate);
+      if (tourDate < new Date()) {
+        throw new Error('Tour-Datum muss in der Zukunft sein');
+      }
+      
+      // Hole Branch für organizationId
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { organizationId: true }
+      });
+      
+      if (!branch) {
+        throw new Error('Branch nicht gefunden');
+      }
+      
+      // Hole Tour
+      const tour = await prisma.tour.findUnique({
+        where: { id: parseInt(args.tourId, 10) },
+        include: {
+          externalProvider: true
+        }
+      });
+      
+      if (!tour) {
+        throw new Error('Tour nicht gefunden');
+      }
+      
+      if (!tour.isActive) {
+        throw new Error('Tour ist nicht aktiv');
+      }
+      
+      // Validierung: Anzahl Teilnehmer
+      if (tour.minParticipants && args.numberOfParticipants < tour.minParticipants) {
+        throw new Error(`Mindestens ${tour.minParticipants} Teilnehmer erforderlich`);
+      }
+      if (tour.maxParticipants && args.numberOfParticipants > tour.maxParticipants) {
+        throw new Error(`Maximal ${tour.maxParticipants} Teilnehmer erlaubt`);
+      }
+      
+      // Berechne Gesamtpreis
+      const totalPrice = tour.price 
+        ? Number(tour.price) * args.numberOfParticipants 
+        : 0;
+      
+      // Erstelle Buchung
+      const booking = await prisma.tourBooking.create({
+        data: {
+          tourId: tour.id,
+          tourDate: tourDate,
+          numberOfParticipants: args.numberOfParticipants,
+          totalPrice: totalPrice,
+          currency: tour.currency || 'COP',
+          customerName: args.customerName.trim(),
+          customerEmail: args.customerEmail?.trim() || null,
+          customerPhone: args.customerPhone?.trim() || null,
+          customerNotes: args.customerNotes?.trim() || null,
+          bookedById: userId || null,
+          organizationId: branch.organizationId,
+          branchId: branchId,
+          isExternal: tour.type === 'external',
+          amountPending: totalPrice,
+          // Automatische Stornierung
+          paymentDeadline: new Date(Date.now() + 60 * 60 * 1000), // 1 Stunde
+          autoCancelEnabled: true,
+          reservedUntil: new Date(Date.now() + 60 * 60 * 1000) // 1 Stunde
+        },
+        include: {
+          tour: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        }
+      });
+      
+      // Generiere Payment Link (analog zu tourBookingController)
+      let paymentLink: string | null = null;
+      if (totalPrice > 0 && (args.customerPhone || args.customerEmail)) {
+        try {
+          // Erstelle "Dummy"-Reservation für Payment Link
+          const dummyReservation = await prisma.reservation.create({
+            data: {
+              guestName: args.customerName,
+              guestPhone: args.customerPhone || null,
+              guestEmail: args.customerEmail || null,
+              checkInDate: tourDate,
+              checkOutDate: new Date(tourDate.getTime() + 24 * 60 * 60 * 1000), // +1 Tag
+              status: 'confirmed',
+              paymentStatus: 'pending',
+              amount: totalPrice,
+              currency: tour.currency || 'COP',
+              organizationId: branch.organizationId,
+              branchId: branchId
+            }
+          });
+          
+          const boldPaymentService = await BoldPaymentService.createForBranch(branchId);
+          paymentLink = await boldPaymentService.createPaymentLink(
+            dummyReservation,
+            totalPrice,
+            tour.currency || 'COP',
+            `Zahlung für Tour-Buchung: ${tour.title}`
+          );
+          
+          // Aktualisiere Buchung mit Payment Link
+          await prisma.tourBooking.update({
+            where: { id: booking.id },
+            data: { paymentLink }
+          });
+        } catch (paymentError) {
+          console.error('[book_tour] Fehler beim Erstellen des Payment-Links:', paymentError);
+          // Nicht abbrechen, nur loggen
+        }
+      }
+      
+      // Berechne Kommission (falls bookedById vorhanden)
+      if (userId) {
+        try {
+          const { calculateCommission } = await import('../services/commissionService');
+          await calculateCommission(booking.id);
+        } catch (commissionError) {
+          console.error('[book_tour] Fehler bei Kommissions-Berechnung:', commissionError);
+        }
+      }
+      
+      // Bei externer Tour: WhatsApp-Nachricht an Anbieter senden
+      if (tour.type === 'external' && tour.externalProvider?.phone) {
+        try {
+          const { TourWhatsAppService } = await import('../services/tourWhatsAppService');
+          await TourWhatsAppService.sendBookingRequestToProvider(
+            booking.id,
+            branch.organizationId,
+            branchId
+          );
+        } catch (whatsappError) {
+          console.error('[book_tour] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+        }
+      }
+      
+      return {
+        success: true,
+        bookingId: booking.id,
+        tourTitle: tour.title,
+        tourDate: tourDate.toISOString(),
+        numberOfParticipants: args.numberOfParticipants,
+        totalPrice: totalPrice,
+        currency: tour.currency || 'COP',
+        paymentLink: paymentLink,
+        paymentDeadline: booking.paymentDeadline?.toISOString() || null,
+        message: `Tour-Buchung erstellt. Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Buchung automatisch storniert.`
+      };
+    } catch (error: any) {
+      console.error('[WhatsApp Function Handlers] book_tour Fehler:', error);
       throw error;
     }
   }

@@ -436,7 +436,7 @@ const Requests: React.FC = () => {
       if (!background) {
         setLoading(false);
       }
-    }
+      }
   }, [filterLogicalOperators, viewMode]);
 
   // ❌ loadMoreRequests entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)

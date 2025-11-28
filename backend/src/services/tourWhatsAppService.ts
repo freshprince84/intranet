@@ -210,6 +210,66 @@ export class TourWhatsAppService {
   /**
    * Sendet Stornierungs-Benachrichtigung an Kunde
    */
+  /**
+   * Sendet Bestätigung an Kunden nach erfolgreicher Zahlung
+   */
+  static async sendConfirmationToCustomer(
+    bookingId: number,
+    organizationId: number,
+    branchId: number | null
+  ): Promise<boolean> {
+    try {
+      const booking = await prisma.tourBooking.findUnique({
+        where: { id: bookingId },
+        include: {
+          tour: true
+        }
+      });
+
+      if (!booking || !booking.customerPhone) {
+        return false;
+      }
+
+      const whatsappService = branchId
+        ? new WhatsAppService(undefined, branchId)
+        : new WhatsAppService(organizationId);
+
+      const tourDate = new Date(booking.tourDate).toLocaleDateString('de-DE', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      const message = `✅ Ihre Tour-Buchung wurde bestätigt!\n\n` +
+        `Tour: ${booking.tour?.title || 'Tour'}\n` +
+        `Datum: ${tourDate}\n` +
+        `Teilnehmer: ${booking.numberOfParticipants}\n` +
+        `Preis: ${Number(booking.totalPrice).toLocaleString()} ${booking.currency}\n\n` +
+        `Vielen Dank für Ihre Buchung! Wir freuen uns auf Sie.`;
+
+      const success = await whatsappService.sendMessage(booking.customerPhone, message);
+
+      if (success) {
+        await prisma.tourWhatsAppMessage.create({
+          data: {
+            bookingId,
+            direction: 'outgoing',
+            status: 'sent',
+            phoneNumber: booking.customerPhone || '',
+            message
+          }
+        });
+        console.log(`[TourWhatsApp] ✅ Bestätigung gesendet an Kunden für Buchung ${bookingId}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error('[TourWhatsApp] Fehler beim Senden der Bestätigung:', error);
+      return false;
+    }
+  }
+
   static async sendCancellationToCustomer(
     bookingId: number,
     organizationId: number,

@@ -84,4 +84,17 @@ process.on('SIGINT', async () => {
   });
 });
 
+// Timer für automatische Stornierung von Tour-Buchungen (alle 5 Minuten)
+let tourBookingSchedulerInterval: NodeJS.Timeout | null = null;
+setInterval(async () => {
+  try {
+    const { TourBookingScheduler } = await import('./services/tourBookingScheduler');
+    await TourBookingScheduler.checkExpiredBookings();
+  } catch (error) {
+    console.error('[Timer] Fehler beim Prüfen abgelaufener Tour-Buchungen:', error);
+  }
+}, 5 * 60 * 1000); // 5 Minuten
+
+console.log('✅ Tour-Booking-Scheduler Timer gestartet (prüft alle 5 Minuten)');
+
 export default server;
