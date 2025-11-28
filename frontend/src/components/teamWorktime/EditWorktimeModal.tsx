@@ -23,6 +23,8 @@ interface EditableEntry extends WorktimeEntry {
   date: string;
   startTimeTime: string;
   endTimeTime: string | null;
+  startDateTime: string; // datetime-local format: YYYY-MM-DDTHH:mm
+  endDateTime: string | null; // datetime-local format: YYYY-MM-DDTHH:mm
   isDeleted?: boolean;
   isModified?: boolean;
 }
@@ -90,11 +92,17 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
         const startTimePart = entry.startTime.split('T')[1].substring(0, 8); // HH:MM:SS
         const endTimePart = entry.endTime ? entry.endTime.split('T')[1].substring(0, 8) : null; // HH:MM:SS oder null
         
+        // Erstelle datetime-local Format (YYYY-MM-DDTHH:mm)
+        const startDateTime = `${datePart}T${startTimePart.substring(0, 5)}`; // YYYY-MM-DDTHH:mm
+        const endDateTime = endTimePart ? `${entry.endTime.split('T')[0]}T${endTimePart.substring(0, 5)}` : null;
+        
         return {
           ...entry,
           date: datePart,
           startTimeTime: startTimePart,
           endTimeTime: endTimePart,
+          startDateTime: startDateTime,
+          endDateTime: endDateTime,
           isDeleted: false,
           isModified: false
         };
@@ -106,22 +114,38 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
     }
   }, [entries]);
   
-  // Handler für Änderungen an der Startzeit
-  const handleStartTimeChange = (index: number, value: string) => {
+  // Handler für Änderungen an der Startzeit (datetime-local)
+  const handleStartDateTimeChange = (index: number, value: string) => {
     const newEntries = [...editedEntries];
-    if (newEntries[index].startTimeTime !== value) {
-      newEntries[index].startTimeTime = value;
+    if (newEntries[index].startDateTime !== value) {
+      // Extrahiere Datum und Zeit aus datetime-local Format
+      const [datePart, timePart] = value.split('T');
+      const timeWithSeconds = timePart ? `${timePart}:00` : '00:00:00';
+      
+      newEntries[index].date = datePart;
+      newEntries[index].startDateTime = value;
+      newEntries[index].startTimeTime = timeWithSeconds;
       newEntries[index].isModified = true;
       setEditedEntries(newEntries);
       validateEntries(newEntries);
     }
   };
   
-  // Handler für Änderungen an der Endzeit
-  const handleEndTimeChange = (index: number, value: string | null) => {
+  // Handler für Änderungen an der Endzeit (datetime-local)
+  const handleEndDateTimeChange = (index: number, value: string | null) => {
     const newEntries = [...editedEntries];
-    if (newEntries[index].endTimeTime !== value) {
-      newEntries[index].endTimeTime = value;
+    if (newEntries[index].endDateTime !== value) {
+      if (value) {
+        // Extrahiere Datum und Zeit aus datetime-local Format
+        const [datePart, timePart] = value.split('T');
+        const timeWithSeconds = timePart ? `${timePart}:00` : '00:00:00';
+        
+        newEntries[index].endDateTime = value;
+        newEntries[index].endTimeTime = timeWithSeconds;
+      } else {
+        newEntries[index].endDateTime = null;
+        newEntries[index].endTimeTime = null;
+      }
       newEntries[index].isModified = true;
       setEditedEntries(newEntries);
       validateEntries(newEntries);
@@ -145,9 +169,9 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
     for (let i = 0; i < activeEntries.length; i++) {
       const entry1 = activeEntries[i];
       
-      // Bei Zeitstrings können wir direkt vergleichen, da das Format immer gleich ist (HH:MM:SS)
-      const start1 = entry1.startTimeTime;
-      const end1 = entry1.endTimeTime;
+      // Verwende datetime-local Format für Vergleich (YYYY-MM-DDTHH:mm)
+      const start1 = entry1.startDateTime;
+      const end1 = entry1.endDateTime;
       
       // Prüfe, ob Endzeit nach Startzeit liegt
       if (end1 && start1 >= end1) {
@@ -159,10 +183,10 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
       for (let j = i + 1; j < activeEntries.length; j++) {
         const entry2 = activeEntries[j];
         
-        const start2 = entry2.startTimeTime;
-        const end2 = entry2.endTimeTime;
+        const start2 = entry2.startDateTime;
+        const end2 = entry2.endDateTime;
         
-        // Überlappung prüfen: Wir können direkt die Zeitstrings vergleichen
+        // Überlappung prüfen: Vergleiche datetime-local Strings
         if (
           (end1 && end2 && start1 < end2 && end1 > start2) ||
           (end1 && !end2 && end1 > start2) ||
@@ -195,9 +219,9 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
       // Achtung: Da im Backend new Date() verwendet wird, was zu einer Zeitzonenkonvertierung führt,
       // sollten wir hier mit den lokalen ISO-Strings ohne Zeitzone arbeiten
       const updatedEntries = modifiedEntries.map(entry => {
-        // Erstelle direkte ISO-Strings ohne Zeitzone
-        const startTimeStr = `${entry.date}T${entry.startTimeTime}`;
-        const endTimeStr = entry.endTimeTime ? `${entry.date}T${entry.endTimeTime}` : null;
+        // Erstelle direkte ISO-Strings ohne Zeitzone aus datetime-local Format
+        const startTimeStr = entry.startDateTime ? `${entry.startDateTime}:00` : `${entry.date}T${entry.startTimeTime}`;
+        const endTimeStr = entry.endDateTime ? `${entry.endDateTime}:00` : (entry.endTimeTime ? `${entry.date}T${entry.endTimeTime}` : null);
         
         return {
           ...entry,
@@ -259,33 +283,28 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
               ) : (
                 editedEntries.map((entry, index) => (
                   <tr key={entry.id} className={entry.isDeleted ? 'bg-red-50 dark:bg-red-900' : ''}>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {index + 1}
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
+                    <td className="px-4 py-3">
                       <input
-                        type="time"
-                        step="1"
-                        className={`w-full rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
-                        value={entry.startTimeTime.substring(0, 5)}
-                        onChange={(e) => handleStartTimeChange(index, e.target.value + ':00')}
+                        type="datetime-local"
+                        className={`w-full px-3 py-2 border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                        value={entry.startDateTime}
+                        onChange={(e) => handleStartDateTimeChange(index, e.target.value)}
                         disabled={entry.isDeleted}
                       />
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
+                    <td className="px-4 py-3">
                       <input
-                        type="time"
-                        step="1"
-                        className={`w-full rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
-                        value={entry.endTimeTime ? entry.endTimeTime.substring(0, 5) : ''}
-                        onChange={(e) => {
-                          const value = e.target.value ? e.target.value + ':00' : null;
-                          handleEndTimeChange(index, value);
-                        }}
+                        type="datetime-local"
+                        className={`w-full px-3 py-2 border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                        value={entry.endDateTime || ''}
+                        onChange={(e) => handleEndDateTimeChange(index, e.target.value || null)}
                         disabled={entry.isDeleted}
                       />
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         type="button"
                         onClick={() => handleToggleDelete(index)}

@@ -68,13 +68,19 @@ let prismaPools: PrismaClient[] = [];
 
 // Singleton-Pattern: Nur einmal erstellen (Development Hot Reload)
 if (!globalForPrisma.prismaPools) {
+  console.log(`[Prisma] Erstelle ${NUM_POOLS} Prisma-Instanzen für Round-Robin-Verteilung...`);
   for (let i = 1; i <= NUM_POOLS; i++) {
     prismaPools.push(createPrismaClient(i));
   }
+  console.log(`[Prisma] ✅ ${NUM_POOLS} Prisma-Instanzen erstellt (${NUM_POOLS} × 12 = ${NUM_POOLS * 12} Verbindungen)`);
   if (process.env.NODE_ENV !== 'production') {
+    globalForPrisma.prismaPools = prismaPools;
+  } else {
+    // In Production auch speichern, damit Pools nicht bei jedem Import neu erstellt werden
     globalForPrisma.prismaPools = prismaPools;
   }
 } else {
+  console.log(`[Prisma] Verwende existierende Prisma-Instanzen (${globalForPrisma.prismaPools.length} Pools)`);
   prismaPools = globalForPrisma.prismaPools;
 }
 
@@ -82,7 +88,12 @@ if (!globalForPrisma.prismaPools) {
 let currentPoolIndex = 0;
 const getPrismaPool = (): PrismaClient => {
   const pool = prismaPools[currentPoolIndex];
+  const poolId = currentPoolIndex + 1;
   currentPoolIndex = (currentPoolIndex + 1) % prismaPools.length;
+  // Logging nur bei jedem 100. Zugriff, um Logs nicht zu überfluten
+  if (Math.random() < 0.01) {
+    console.log(`[Prisma] Round-Robin: Nutze Pool ${poolId}/${prismaPools.length}`);
+  }
   return pool;
 };
 
