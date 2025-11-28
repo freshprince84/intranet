@@ -705,7 +705,16 @@ const Worktracker: React.FC = () => {
                 setAllTasks(tasksWithAttachments);
             } else if (append) {
                 // Infinite Scroll: Füge Tasks zu bestehenden hinzu
-                setTasks(prevTasks => [...prevTasks, ...tasksWithAttachments]);
+                // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
+                const MAX_ITEMS_IN_STATE = 100;
+                setTasks(prevTasks => {
+                    const newTasks = [...prevTasks, ...tasksWithAttachments];
+                    // Wenn mehr als MAX_ITEMS_IN_STATE: Älteste entfernen (behalte neueste)
+                    if (newTasks.length > MAX_ITEMS_IN_STATE) {
+                        return newTasks.slice(-MAX_ITEMS_IN_STATE);
+                    }
+                    return newTasks;
+                });
                 // Prüfe ob es weitere Tasks gibt
                 setTasksHasMore(tasksWithAttachments.length === TASKS_PER_PAGE);
                 setTasksPage(page);
