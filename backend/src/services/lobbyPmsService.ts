@@ -289,6 +289,13 @@ export class LobbyPmsService {
   }
 
   /**
+   * Formatiert Datum als YYYY-MM-DD
+   */
+  private formatDate(date: Date): string {
+    return date.toISOString().split('T')[0];
+  }
+
+  /**
    * Prüft Zimmerverfügbarkeit für einen Zeitraum
    * 
    * @param startDate - Check-in Datum (inklusive)
