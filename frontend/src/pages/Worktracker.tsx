@@ -417,35 +417,39 @@ const Worktracker: React.FC = () => {
         };
     }, []); // Nur beim Unmount ausführen
 
-    // ✅ MEMORY: allTasks automatisch nach 5 Minuten löschen (verhindert Memory-Leak)
+    // ✅ MEMORY: allTasks intelligent löschen (nur wenn nicht mehr benötigt - Best Practice)
+    // Löscht wenn: Standardfilter aktiviert wird ODER Tab gewechselt wird
     useEffect(() => {
-        if (allTasks.length === 0) return;
-        
-        const timeoutId = setTimeout(() => {
+        // Löschen wenn Standardfilter aktiviert wird (allTasks nicht mehr benötigt)
+        if (selectedFilterId && allTasks.length > 0) {
             if (process.env.NODE_ENV === 'development') {
-                console.log('🧹 allTasks automatisch gelöscht (5 Minuten)');
+                console.log('🧹 allTasks gelöscht (Standardfilter aktiviert)');
             }
             setAllTasks([]);
-        }, 5 * 60 * 1000); // 5 Minuten
+            return;
+        }
         
-        return () => clearTimeout(timeoutId);
-    }, [allTasks.length]);
+        // Löschen wenn Tab gewechselt wird (allTasks nicht mehr benötigt)
+        if (activeTab !== 'todos' && allTasks.length > 0) {
+            if (process.env.NODE_ENV === 'development') {
+                console.log('🧹 allTasks gelöscht (Tab gewechselt)');
+            }
+            setAllTasks([]);
+        }
+    }, [selectedFilterId, activeTab, allTasks.length]);
 
     // Note: allTours existiert nicht - nur tours (wird direkt geladen, kein Hintergrund-Laden)
 
-    // ✅ MEMORY: allTourBookings automatisch nach 5 Minuten löschen (verhindert Memory-Leak)
+    // ✅ MEMORY: allTourBookings intelligent löschen (nur wenn nicht mehr benötigt - Best Practice)
+    // Löscht wenn: Tab gewechselt wird
     useEffect(() => {
-        if (allTourBookings.length === 0) return;
-        
-        const timeoutId = setTimeout(() => {
+        if (activeTab !== 'tourBookings' && allTourBookings.length > 0) {
             if (process.env.NODE_ENV === 'development') {
-                console.log('🧹 allTourBookings automatisch gelöscht (5 Minuten)');
+                console.log('🧹 allTourBookings gelöscht (Tab gewechselt)');
             }
             setAllTourBookings([]);
-        }, 5 * 60 * 1000); // 5 Minuten
-        
-        return () => clearTimeout(timeoutId);
-    }, [allTourBookings.length]);
+        }
+    }, [activeTab, allTourBookings.length]);
 
     // Tabellen-Einstellungen laden - Tasks
     const {
