@@ -289,6 +289,110 @@ export class LobbyPmsService {
   }
 
   /**
+   * Prüft Zimmerverfügbarkeit für einen Zeitraum
+   * 
+   * @param startDate - Check-in Datum (inklusive)
+   * @param endDate - Check-out Datum (inklusive)
+   * @returns Array von verfügbaren Zimmern mit Preisen
+   */
+  async checkAvailability(startDate: Date, endDate: Date): Promise<Array<{
+    categoryId: number;
+    roomName: string;
+    roomType: 'compartida' | 'privada';
+    availableRooms: number;
+    pricePerNight: number;
+    currency: string;
+    date: string;
+    prices: Array<{ people: number; value: number }>;
+  }>> {
+    // Lade Settings falls noch nicht geladen
+    if (!this.apiKey) {
+      await this.loadSettings();
+    }
+
+    try {
+      // Parameter basierend auf Test-Ergebnissen
+      // WICHTIG: start_date UND end_date sind ERFORDERLICH!
+      const params: any = {
+        start_date: this.formatDate(startDate), // Format: "YYYY-MM-DD"
+        end_date: this.formatDate(endDate) // Format: "YYYY-MM-DD"
+      };
+
+      if (this.propertyId) {
+        params.property_id = this.propertyId; // Optional
+      }
+
+      // WICHTIG: room_type Parameter wird ignoriert (aus Tests bekannt)
+      // Stattdessen: Filtere nach category_id oder name
+
+      const response = await this.axiosInstance.get<any>(
+        '/api/v2/available-rooms',
+        { params }
+      );
+
+      // Response-Struktur basierend auf Test-Ergebnissen
+      // Struktur: { data: [{ date: "...", categories: [...] }] }
+      const responseData = response.data.data || [];
+      
+      // Flache alle Kategorien für alle Daten
+      const allCategories: Array<{
+        categoryId: number;
+        roomName: string;
+        roomType: 'compartida' | 'privada';
+        availableRooms: number;
+        pricePerNight: number;
+        currency: string;
+        date: string;
+        prices: Array<{ people: number; value: number }>;
+      }> = [];
+      
+      for (const dateEntry of responseData) {
+        const date = dateEntry.date;
+        const categories = dateEntry.categories || [];
+        
+        for (const category of categories) {
+          // Hole Preis für 1 Person (Standard)
+          const priceForOnePerson = category.plans?.[0]?.prices?.find((p: any) => p.people === 1);
+          const price = priceForOnePerson?.value || 0;
+          
+          // Bestimme room_type aus Namen oder category_id
+          // Heuristik: Namen mit "Dorm", "Compartida" = compartida, sonst privada
+          const name = category.name?.toLowerCase() || '';
+          let roomType: 'compartida' | 'privada' = 'privada';
+          if (name.includes('dorm') || name.includes('compartida') || 
+              category.category_id === 34280 || category.category_id === 34281) {
+            roomType = 'compartida';
+          }
+          
+          allCategories.push({
+            categoryId: category.category_id,
+            roomName: category.name,
+            roomType: roomType,
+            availableRooms: category.available_rooms || 0,
+            pricePerNight: price,
+            currency: 'COP', // Standard aus Tests
+            date: date,
+            prices: category.plans?.[0]?.prices || [] // Alle Preise (verschiedene Personenanzahl)
+          });
+        }
+      }
+      
+      return allCategories;
+    } catch (error) {
+      // Fehlerbehandlung basierend auf Test-Ergebnissen
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<any>;
+        throw new Error(
+          axiosError.response?.data?.error ||
+          axiosError.response?.data?.message ||
+          `LobbyPMS API Fehler: ${axiosError.message}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Ruft alle Reservierungen für einen Zeitraum ab
    * 
    * @param startDate - Startdatum (inklusive)
