@@ -684,17 +684,40 @@ const Worktracker: React.FC = () => {
         }
     };
 
-    // Funktion zum Laden der Reservations
-    const loadReservations = async () => {
+    // Funktion zum Laden der Reservations (mit Filter-Parameter)
+    const loadReservations = async (filterId?: number, filterConditions?: any[]) => {
         try {
             setReservationsLoading(true);
             setReservationsError(null);
-            const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE);
-            const reservationsData = response.data?.data || response.data || [];
-            if (process.env.NODE_ENV === 'development') {
-                console.log('📋 Reservations geladen:', reservationsData.length, 'Reservations');
+            
+            // Baue Query-Parameter (Filter server-seitig)
+            const params: any = {};
+            if (filterId) {
+                params.filterId = filterId;
+            } else if (filterConditions && filterConditions.length > 0) {
+                params.filterConditions = JSON.stringify({
+                    conditions: filterConditions,
+                    operators: reservationFilterLogicalOperators
+                });
             }
-            setReservations(reservationsData);
+            
+            const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE, { params });
+            const reservationsData = response.data?.data || response.data || [];
+            
+            // ✅ ALLE gefilterten Reservierungen werden geladen (server-seitig gefiltert)
+            if (process.env.NODE_ENV === 'development') {
+                console.log('📋 Reservations geladen:', reservationsData.length, 'Reservations (alle, gefiltert)');
+            }
+            
+            // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
+            const MAX_ITEMS_IN_STATE = 100;
+            const reservationsToStore = reservationsData.length > MAX_ITEMS_IN_STATE
+                ? reservationsData.slice(-MAX_ITEMS_IN_STATE)
+                : reservationsData;
+            
+            setReservations(reservationsToStore);
+            // ✅ Initial displayLimit setzen (abhängig von viewMode)
+            setReservationsDisplayLimit(viewMode === 'cards' ? 10 : 20);
         } catch (err: any) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('Fehler beim Laden der Reservations:', err);
@@ -707,10 +730,33 @@ const Worktracker: React.FC = () => {
         }
     };
 
-    // Lade Reservations, wenn Tab aktiv ist
+    // ✅ Initialer Filter-Load für Reservations (wie bei Tasks)
     useEffect(() => {
+        const setInitialReservationFilter = async () => {
+            try {
+                const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(RESERVATIONS_TABLE_ID));
+                const filters = response.data;
+                
+                const aktuellFilter = filters.find((filter: any) => filter.name === t('reservations.filters.current', 'Aktuell'));
+                if (aktuellFilter) {
+                    setReservationActiveFilterName(t('reservations.filters.current', 'Aktuell'));
+                    setReservationSelectedFilterId(aktuellFilter.id);
+                    applyReservationFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
+                    // ✅ Lade Reservierungen mit Filter
+                    await loadReservations(aktuellFilter.id);
+                } else {
+                    // Kein Filter: Lade alle Reservierungen
+                    await loadReservations();
+                }
+            } catch (error) {
+                console.error('Fehler beim Setzen des initialen Filters:', error);
+                // Fallback: Lade alle Reservierungen
+                await loadReservations();
+            }
+        };
+        
         if (activeTab === 'reservations' && hasPermission('reservations', 'read', 'table')) {
-            loadReservations();
+            setInitialReservationFilter();
         }
     }, [activeTab]);
     
@@ -744,7 +790,7 @@ const Worktracker: React.FC = () => {
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
-    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks.length, viewMode]);
+    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks.length, reservationsDisplayLimit, filteredAndSortedReservations.length, viewMode]);
     
     // Funktion zum Laden der Tour-Buchungen
     const loadTourBookings = async () => {
@@ -1133,6 +1179,18 @@ const Worktracker: React.FC = () => {
         setReservationSelectedFilterId(id);
         applyReservationFilterConditions(conditions, operators, sortDirections);
         setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
+        
+        // ✅ Filter zurücksetzen bei Filter-Wechsel
+        setReservationsDisplayLimit(viewMode === 'cards' ? 10 : 20);
+        
+        // ✅ Lade Reservierungen mit Filter (server-seitig)
+        if (id) {
+            await loadReservations(id);
+        } else if (conditions.length > 0) {
+            await loadReservations(undefined, conditions);
+        } else {
+            await loadReservations(); // Kein Filter
+        }
     };
 
     const getStatusPriority = (status: Task['status']): number => {
@@ -2650,7 +2708,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
+                                            {filteredAndSortedReservations.slice(0, reservationsDisplayLimit).map(reservation => {
                                                 const formatDate = (dateString: string) => {
                                                     try {
                                                         // Extrahiere nur den Datumsteil (YYYY-MM-DD) und parse als lokales Datum
@@ -2981,7 +3039,7 @@ const Worktracker: React.FC = () => {
                                                 </tr>
                                             ) : (
                                                 <>
-                                                    {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
+                                                    {filteredAndSortedReservations.slice(0, reservationsDisplayLimit).map(reservation => {
                                                         const formatDate = (dateString: string) => {
                                                             try {
                                                                 return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
@@ -3163,17 +3221,7 @@ const Worktracker: React.FC = () => {
                                 </div>
                             )}
                             
-                            {/* "Mehr anzeigen" Button - Reservations */}
-                            {activeTab === 'reservations' && filteredAndSortedReservations.length > displayLimit && (
-                                <div className="mt-4 flex justify-center">
-                                    <button
-                                        className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
-                                        onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-                                    >
-                                        {t('common.showMore')} ({filteredAndSortedReservations.length - displayLimit} {t('common.remaining')})
-                                    </button>
-                                </div>
-                            )}
+                            {/* ❌ "Mehr anzeigen" Button entfernt - Infinite Scroll macht das automatisch */}
                         </div>
                         
                         {/* Zeiterfassung - auf Mobilgeräten fixiert über dem Footermenü */}
@@ -3938,7 +3986,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
+                                            {filteredAndSortedReservations.slice(0, reservationsDisplayLimit).map(reservation => {
                                                 const formatDate = (dateString: string) => {
                                                     try {
                                                         // Extrahiere nur den Datumsteil (YYYY-MM-DD) und parse als lokales Datum
@@ -4258,7 +4306,7 @@ const Worktracker: React.FC = () => {
                                                 </tr>
                                             ) : (
                                                 <>
-                                                    {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
+                                                    {filteredAndSortedReservations.slice(0, reservationsDisplayLimit).map(reservation => {
                                                         const formatDate = (dateString: string) => {
                                                             try {
                                                                 return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
@@ -4440,17 +4488,7 @@ const Worktracker: React.FC = () => {
                                 </div>
                             )}
                             
-                            {/* "Mehr anzeigen" Button - Desktop - Reservations */}
-                            {activeTab === 'reservations' && filteredAndSortedReservations.length > displayLimit && (
-                                <div className="mt-4 flex justify-center">
-                                    <button
-                                        className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
-                                        onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-                                    >
-                                        {t('common.showMore')} ({filteredAndSortedReservations.length - displayLimit} {t('common.remaining')})
-                                    </button>
-                                </div>
-                            )}
+                            {/* ❌ "Mehr anzeigen" Button entfernt - Infinite Scroll macht das automatisch */}
                             
                             
                         </div>

@@ -25,6 +25,11 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
     const { user } = useAuth();
     const { showMessage } = useMessage();
     
+    // Sicherstellen, dass tour nicht null ist
+    if (!tour) {
+        return null;
+    }
+    
     const [title, setTitle] = useState(tour.title || '');
     const [description, setDescription] = useState(tour.description || '');
     const [type, setType] = useState<TourType>(tour.type || TourType.OWN);

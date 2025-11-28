@@ -201,11 +201,8 @@ const Requests: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Pagination State für Requests Infinite Scroll
-  const [requestsPage, setRequestsPage] = useState(1); // Aktuelle Seite für Requests
-  const [requestsHasMore, setRequestsHasMore] = useState(true); // Gibt es weitere Requests?
-  const [requestsLoadingMore, setRequestsLoadingMore] = useState(false); // Lädt weitere Requests?
-  const REQUESTS_PER_PAGE = 20; // Requests pro Seite
+  // ✅ Infinite Scroll für Anzeige (KEINE Pagination beim Laden)
+  const [requestsDisplayLimit, setRequestsDisplayLimit] = useState<number>(20); // Initial: 20 Items (wird basierend auf viewMode gesetzt)
   const [searchTerm, setSearchTerm] = useState('');
   
   // State-Variablen für erweiterte Filterbedingungen
@@ -365,27 +362,19 @@ const Requests: React.FC = () => {
   }, [viewMode]);
 
   // ✅ PERFORMANCE: fetchRequests als useCallback (stabile Referenz für useEffect)
+  // ❌ KEINE Pagination mehr - immer ALLE Ergebnisse laden
   const fetchRequests = useCallback(async (
     filterId?: number, 
     filterConditions?: any[], 
-    background = false,
-    page: number = 1, // Neue Parameter für Pagination
-    append: boolean = false // Neue Parameter: Sollen Requests angehängt werden?
+    background = false
   ) => {
     try {
-      if (!background && !append) {
+      if (!background) {
         setLoading(true);
       }
-      if (append) {
-        setRequestsLoadingMore(true);
-      }
       
-      // Baue Query-Parameter
-      const offset = (page - 1) * REQUESTS_PER_PAGE; // Offset für Pagination berechnen
-      const params: any = {
-        limit: REQUESTS_PER_PAGE, // Immer Limit für initiales Laden
-        offset: offset, // Offset für Pagination
-      };
+      // Baue Query-Parameter (❌ KEINE limit/offset Parameter mehr)
+      const params: any = {};
       if (filterId) {
         params.filterId = filterId;
       } else if (filterConditions && filterConditions.length > 0) {
@@ -398,6 +387,7 @@ const Requests: React.FC = () => {
       const response = await axiosInstance.get('/requests', { params });
       const requestsData = response.data;
       
+      // ✅ ALLE Requests werden geladen (kein limit/offset)
       // Attachments sind bereits in der Response enthalten
       // URL-Generierung für Attachments hinzufügen
       const requestsWithAttachments = requestsData.map((request: Request) => {
@@ -417,35 +407,23 @@ const Requests: React.FC = () => {
         };
       });
       
-      if (append) {
-        // Infinite Scroll: Füge Requests zu bestehenden hinzu
-        // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
-        const MAX_ITEMS_IN_STATE = 100;
-        setRequests(prevRequests => {
-          const newRequests = [...prevRequests, ...requestsWithAttachments];
-          // Wenn mehr als MAX_ITEMS_IN_STATE: Älteste entfernen (behalte neueste)
-          if (newRequests.length > MAX_ITEMS_IN_STATE) {
-            return newRequests.slice(-MAX_ITEMS_IN_STATE);
-          }
-          return newRequests;
-        });
-        // Prüfe ob es weitere Requests gibt
-        setRequestsHasMore(requestsWithAttachments.length === REQUESTS_PER_PAGE);
-        setRequestsPage(page);
-        console.log('📋 Weitere Requests geladen:', requestsWithAttachments.length, 'Requests (Seite', page, ')');
-      } else {
-        // Initiales Laden: Ersetze Requests
-        setRequests(requestsWithAttachments);
-        // ✅ PERFORMANCE: hasMore basierend auf tatsächlicher Anzahl (nicht nur REQUESTS_PER_PAGE)
-        setRequestsHasMore(requestsWithAttachments.length >= REQUESTS_PER_PAGE);
-        setRequestsPage(1);
-      }
+      // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
+      const MAX_ITEMS_IN_STATE = 100;
+      const requestsToStore = requestsWithAttachments.length > MAX_ITEMS_IN_STATE
+        ? requestsWithAttachments.slice(-MAX_ITEMS_IN_STATE)
+        : requestsWithAttachments;
+      
+      // Initiales Laden: Ersetze Requests (ALLE werden geladen)
+      setRequests(requestsToStore);
+      // ✅ Initial displayLimit setzen (abhängig von viewMode)
+      setRequestsDisplayLimit(viewMode === 'cards' ? 10 : 20);
+      
       setError(null);
     } catch (err) {
       console.error('Request Error:', err);
       // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
-      if (!background && !append) {
+      if (!background) {
         if (axiosError.code === 'ERR_NETWORK') {
           setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
         } else {
@@ -453,42 +431,13 @@ const Requests: React.FC = () => {
         }
       }
     } finally {
-      if (!background && !append) {
+      if (!background) {
         setLoading(false);
       }
-      if (append) {
-        setRequestsLoadingMore(false);
-      }
     }
-  }, [filterLogicalOperators]);
+  }, [filterLogicalOperators, viewMode]);
   
-  // Funktion zum Laden weiterer Requests (Infinite Scroll)
-  // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
-  const filterConditionsRef = useRef(filterConditions);
-  useEffect(() => {
-    filterConditionsRef.current = filterConditions;
-  }, [filterConditions]);
-
-  // ✅ PERFORMANCE: loadMoreRequests als useCallback (stabile Referenz für useEffect)
-  // ✅ FIX: fetchRequests aus Dependencies entfernt, stattdessen useRef verwenden
-  const fetchRequestsRef = useRef(fetchRequests);
-  useEffect(() => {
-    fetchRequestsRef.current = fetchRequests;
-  }, [fetchRequests]);
-  
-  const loadMoreRequests = useCallback(async () => {
-    if (requestsLoadingMore || !requestsHasMore) return;
-    
-    const nextPage = requestsPage + 1;
-    // ✅ PERFORMANCE: Verwende filterConditionsRef.current (wird im Scroll-Handler verwendet)
-    await fetchRequestsRef.current(
-      selectedFilterId || undefined,
-      filterConditionsRef.current.length > 0 ? filterConditionsRef.current : undefined,
-      false,
-      nextPage,
-      true // append = true
-    );
-  }, [requestsLoadingMore, requestsHasMore, requestsPage, selectedFilterId]);
+  // ❌ loadMoreRequests entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
   // Standard-Filter erstellen und speichern
   useEffect(() => {
@@ -589,22 +538,20 @@ const Requests: React.FC = () => {
   }, [filterConditions]);
 
   // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
-  // ✅ FIX: loadMoreRequests aus Dependencies entfernt, stattdessen useRef verwenden
-  const loadMoreRequestsRef = useRef(loadMoreRequests);
-  useEffect(() => {
-    loadMoreRequestsRef.current = loadMoreRequests;
-  }, [loadMoreRequests]);
-  
+  // ✅ Infinite Scroll für Anzeige (nicht für Laden)
+  // Hinweis: filteredAndSortedRequests wird später deklariert, daher verwenden wir requests.length als Näherung
   const scrollHandlerRef = useRef<() => void>();
   useEffect(() => {
     scrollHandlerRef.current = () => {
       // Prüfe ob User nahe am Ende der Seite ist
+      // Verwende requests.length als Näherung (filteredAndSortedRequests wird später deklariert)
       if (
         window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000 &&
-        !requestsLoadingMore &&
-        requestsHasMore
+        requestsDisplayLimit < requests.length
       ) {
-        loadMoreRequestsRef.current();
+        // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
+        const increment = viewMode === 'cards' ? 10 : 20;
+        setRequestsDisplayLimit(prev => prev + increment);
       }
     };
     
@@ -614,7 +561,7 @@ const Requests: React.FC = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [requestsLoadingMore, requestsHasMore]);
+  }, [requestsDisplayLimit, viewMode, requests.length]);
 
   // ✅ FIX: fetchFirst5Requests entfernt - Initial mit normalem fetchRequests laden (20 Requests)
   // Initial Requests laden (ohne Filter - SavedFilterTags wendet Default-Filter an)
@@ -767,14 +714,13 @@ const Requests: React.FC = () => {
     // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
     setSortConfig({ key: 'dueDate', direction: 'asc' });
     
-    // Pagination zurücksetzen bei Filter-Wechsel
-    setRequestsPage(1);
-    setRequestsHasMore(true);
+    // ✅ Filter zurücksetzen bei Filter-Wechsel
+    setRequestsDisplayLimit(viewMode === 'cards' ? 10 : 20);
     
     // Wenn Filter-ID vorhanden (Standardfilter): Server-seitig laden
     // Sonst: Client-seitig filtern (komplexe Filter)
     if (id) {
-      await fetchRequests(id, undefined, false, 1, false); // Reset auf Seite 1, nicht append
+      await fetchRequests(id, undefined, false); // ❌ KEINE Pagination mehr
     }
     // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedRequests angewendet
   };
@@ -1434,7 +1380,7 @@ const Requests: React.FC = () => {
                 </tr>
               ) : (
                 <>
-                  {filteredAndSortedRequests.map(request => {
+                  {filteredAndSortedRequests.slice(0, requestsDisplayLimit).map(request => {
                     const expiryStatus = getExpiryStatus(request.dueDate, 'request');
                     const expiryColors = getExpiryColorClasses(expiryStatus);
                     
@@ -1660,7 +1606,7 @@ const Requests: React.FC = () => {
               </div>
             ) : (
               <CardGrid>
-                {filteredAndSortedRequests.map(request => {
+                {filteredAndSortedRequests.slice(0, requestsDisplayLimit).map(request => {
                   // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
                   const metadata: MetadataItem[] = [];
                   
@@ -1908,15 +1854,7 @@ const Requests: React.FC = () => {
           </div>
         )}
         
-        {/* Loading Indicator für Infinite Scroll - Requests */}
-        {requestsLoadingMore && (
-          <div className="mt-4 flex justify-center items-center py-4">
-            <CircularProgress size={24} />
-            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-              {t('common.loadingMoreRequests', 'Lädt weitere Requests...')}
-            </span>
-          </div>
-        )}
+        {/* ❌ Loading Indicator entfernt - Infinite Scroll lädt keine Daten mehr, nur Anzeige */}
     </>
   );
 };
