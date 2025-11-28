@@ -140,13 +140,50 @@ Gespeicherte Filter können später über ein Dropdown-Menü wieder geladen werd
 - **Filter-Export/Import**: Möglichkeit, Filter zwischen Benutzern zu teilen
 - **Erweiterte Filtervisualisierung**: Visuelle Darstellung komplexer Filterbedingungen
 
-## Ergebnisbegrenzung und Pagination
+## Infinite Scroll (Anzeige) - KEINE Pagination beim Laden
 
-Um die Performance zu verbessern und große Datensätze besser handhabbar zu machen, implementieren alle Tabellen eine Ergebnisbegrenzung:
+**⚠️ WICHTIG:** Alle Tabellen verwenden Infinite Scroll für die Anzeige, aber KEINE Pagination beim Laden.
 
-1. **Initiale Anzeige**: Standardmäßig werden nur die ersten 10 Einträge angezeigt
-2. **"Mehr anzeigen" Button**: Erscheint unter der Tabelle, wenn mehr als 10 Einträge verfügbar sind
-3. **Inkrementelle Ladung**: Bei Klick werden jeweils 10 weitere Einträge geladen
-4. **Verbleibende Anzeige**: Der Button zeigt an, wie viele Einträge noch verbleiben
+### Grundprinzipien
 
-Diese Funktion sorgt für schnellere Ladezeiten und eine bessere Benutzerfreundlichkeit bei großen Datensätzen. 
+1. **KEINE Pagination beim Laden:**
+   - ❌ **STRENG VERBOTEN:** `limit`/`offset` Parameter im Backend
+   - ❌ **STRENG VERBOTEN:** Pagination beim Laden der Daten
+   - ✅ **ERFORDERLICH:** Immer ALLE Ergebnisse laden (mit Filter wenn gesetzt)
+
+2. **Infinite Scroll nur für Anzeige:**
+   - ✅ **ERFORDERLICH:** Alle Daten werden geladen (Backend gibt alle zurück)
+   - ✅ **ERFORDERLICH:** Infinite Scroll nur für die Anzeige (nicht für das Laden)
+   - ✅ **ERFORDERLICH:** Initial: Nur erste 20 Items anzeigen
+   - ✅ **ERFORDERLICH:** Beim Scrollen: Weitere 20 Items anzeigen
+   - ✅ **ERFORDERLICH:** Automatisch beim Scrollen (kein "Mehr anzeigen" Button)
+
+3. **Filter: ALLE Ergebnisse müssen geladen werden:**
+   - ✅ **ERFORDERLICH:** Wenn Filter gesetzt: Backend filtert und gibt ALLE gefilterten Ergebnisse zurück
+   - ❌ **STRENG VERBOTEN:** Nur 20 Ergebnisse laden, dann weitere 20 beim Scrollen
+   - ❌ **STRENG VERBOTEN:** Client-seitige Filterung nach Pagination
+   - ✅ **ERFORDERLICH:** Filter wird server-seitig angewendet, dann ALLE gefilterten Ergebnisse geladen
+
+### Implementierung
+
+**Backend:**
+- Keine `limit`/`offset` Parameter
+- Filter werden server-seitig angewendet
+- Alle gefilterten Ergebnisse werden zurückgegeben
+
+**Frontend:**
+- Alle Daten werden geladen (kein `limit`/`offset`)
+- `displayLimit` State für Anzeige (initial: 20)
+- Infinite Scroll Handler erhöht `displayLimit` beim Scrollen
+- Anzeige: `items.slice(0, displayLimit)`
+
+### Betroffene Tabellen
+
+- ✅ Requests
+- ✅ ToDo's (Tasks)
+- ✅ Reservations
+- ✅ Tours (falls vorhanden)
+- ✅ TourBookings (falls vorhanden)
+- ✅ Alle anderen Tabellen
+
+**Detaillierte Implementierung:** Siehe `docs/implementation_plans/INFINITE_SCROLL_VOLLSTAENDIGER_PLAN.md` 

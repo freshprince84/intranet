@@ -1,5 +1,6 @@
 import { prisma } from '../utils/prisma';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
+import { LobbyPmsService } from './lobbyPmsService';
 
 /**
  * WhatsApp Function Handlers
@@ -505,6 +506,127 @@ export class WhatsAppFunctionHandlers {
       };
     } catch (error: any) {
       console.error('[WhatsApp Function Handlers] get_user_info Fehler:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Prüft Zimmerverfügbarkeit für einen Zeitraum
+   */
+  static async check_room_availability(
+    args: {
+      startDate: string; // Format: YYYY-MM-DD
+      endDate?: string; // Format: YYYY-MM-DD (optional, falls nicht angegeben: startDate + 1 Tag)
+      roomType?: 'compartida' | 'privada'; // Optional: Filter nach Zimmerart
+      branchId?: number; // Optional: Branch ID (verwendet branchId aus Context wenn nicht angegeben)
+    },
+    userId: number | null,
+    roleId: number | null,
+    branchId: number
+  ): Promise<any> {
+    try {
+      // 1. Parse Datum
+      const startDate = new Date(args.startDate);
+      if (isNaN(startDate.getTime())) {
+        throw new Error(`Ungültiges Startdatum: ${args.startDate}. Format: YYYY-MM-DD`);
+      }
+
+      let endDate: Date;
+      if (args.endDate) {
+        endDate = new Date(args.endDate);
+        if (isNaN(endDate.getTime())) {
+          throw new Error(`Ungültiges Enddatum: ${args.endDate}. Format: YYYY-MM-DD`);
+        }
+      } else {
+        // Falls nicht angegeben: startDate + 1 Tag
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
+      }
+
+      // 2. Prüfe Datum-Logik
+      if (endDate <= startDate) {
+        throw new Error('Enddatum muss nach Startdatum liegen');
+      }
+
+      // 3. Verwende branchId aus args oder Context
+      const targetBranchId = args.branchId || branchId;
+
+      // 4. Erstelle LobbyPMS Service
+      const service = await LobbyPmsService.createForBranch(targetBranchId);
+
+      // 5. Rufe Verfügbarkeits-API auf
+      const availability = await service.checkAvailability(startDate, endDate);
+
+      // 6. Filtere nach roomType falls angegeben
+      let filteredAvailability = availability;
+      if (args.roomType) {
+        filteredAvailability = availability.filter(item => item.roomType === args.roomType);
+      }
+
+      // 7. Gruppiere nach Zimmer (über alle Daten hinweg)
+      const roomMap = new Map<number, {
+        categoryId: number;
+        roomName: string;
+        roomType: 'compartida' | 'privada';
+        minAvailableRooms: number;
+        maxAvailableRooms: number;
+        pricePerNight: number;
+        currency: string;
+        prices: Array<{ people: number; value: number }>;
+        dates: Array<{ date: string; availableRooms: number }>;
+      }>();
+
+      for (const item of filteredAvailability) {
+        if (!roomMap.has(item.categoryId)) {
+          roomMap.set(item.categoryId, {
+            categoryId: item.categoryId,
+            roomName: item.roomName,
+            roomType: item.roomType,
+            minAvailableRooms: item.availableRooms,
+            maxAvailableRooms: item.availableRooms,
+            pricePerNight: item.pricePerNight,
+            currency: item.currency,
+            prices: item.prices,
+            dates: []
+          });
+        }
+
+        const room = roomMap.get(item.categoryId)!;
+        room.minAvailableRooms = Math.min(room.minAvailableRooms, item.availableRooms);
+        room.maxAvailableRooms = Math.max(room.maxAvailableRooms, item.availableRooms);
+        room.dates.push({
+          date: item.date,
+          availableRooms: item.availableRooms
+        });
+      }
+
+      // 8. Formatiere für KI
+      const rooms = Array.from(roomMap.values()).map(room => ({
+        categoryId: room.categoryId,
+        name: room.roomName,
+        type: room.roomType,
+        availableRooms: room.minAvailableRooms, // Minimum über alle Daten
+        pricePerNight: room.pricePerNight,
+        currency: room.currency,
+        prices: room.prices.map(p => ({
+          people: p.people,
+          price: p.value
+        })),
+        availability: room.dates.map(d => ({
+          date: d.date,
+          availableRooms: d.availableRooms
+        }))
+      }));
+
+      return {
+        startDate: args.startDate,
+        endDate: endDate.toISOString().split('T')[0],
+        roomType: args.roomType || 'all',
+        totalRooms: rooms.length,
+        rooms: rooms
+      };
+    } catch (error: any) {
+      console.error('[WhatsApp Function Handlers] check_room_availability Fehler:', error);
       throw error;
     }
   }

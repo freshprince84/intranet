@@ -24,15 +24,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const { hasPermission, canViewOrganization, isProfileComplete, loading } = usePermissions();
     const location = useLocation();
     
-    // Kombinierter Loading-Check (Auth + Permissions)
-    if (isLoading || loading) {
-        return <LoadingScreen />;
+    // ✅ PERFORMANCE: Nur blockieren wenn User NICHT vorhanden (Sicherheit)
+    // Layout wird sofort gerendert, auch wenn Daten noch laden
+    if (!user && isLoading) {
+        return <LoadingScreen />; // ✅ Nur bei fehlender Authentifizierung blockieren
     }
     
-    // Authentifizierung prüfen
+    // Authentifizierung prüfen (wichtig für Sicherheit)
     if (!user) {
         return <Navigate to="/login" replace state={{ from: location }} />;
     }
+    
+    // ✅ PERFORMANCE: Berechtigungen werden asynchron geprüft (nicht blockierend)
+    // Wenn Berechtigungen noch laden, rendere Seite trotzdem (Buttons werden deaktiviert)
     
     // Profilvollständigkeit prüfen (Ausnahme: Profil-Seite selbst)
     // WICHTIG: Nur prüfen, wenn User Mitglied einer Organisation ist
@@ -65,8 +69,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         );
     }
     
-    // Spezielle Berechtigungsprüfung (falls entity angegeben)
-    if (entity && !hasPermission(entity, accessLevel, entityType)) {
+    // ✅ PERFORMANCE: Spezielle Berechtigungsprüfung (falls entity angegeben)
+    // Wenn Berechtigungen noch laden, rendere Seite trotzdem (Buttons werden deaktiviert)
+    // Berechtigungen werden asynchron geprüft, Zugriff wird blockiert wenn keine Berechtigung
+    if (entity && !loading && !hasPermission(entity, accessLevel, entityType)) {
         return (
             <div className="p-4 text-red-600 dark:text-red-400">
                 Keine Berechtigung für diese Seite.

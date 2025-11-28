@@ -39,6 +39,7 @@ const WorktimeStats: React.FC = () => {
     const { user } = useAuth();
     const { organization } = useOrganization();
     const [stats, setStats] = useState<WorktimeStats | null>(null);
+    const [fullStats, setFullStats] = useState<WorktimeStats | null>(null); // ✅ Vollständige Stats (im Hintergrund geladen)
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [maxHours, setMaxHours] = useState<number>(8); // Standard 8 Stunden
@@ -127,17 +128,19 @@ const WorktimeStats: React.FC = () => {
     useEffect(() => {
         return () => {
             setStats(null);
+            setFullStats(null);
             setCommissionStats(null);
         };
     }, []); // Nur beim Unmount ausführen
 
-    // useEffect-Hook für das Laden der Statistikdaten
+    // ✅ PERFORMANCE: Priorisierung - Erste 5 Tage zuerst (sichtbarer Teil)
     // Warte bis user geladen ist, bevor wir Daten laden (um isColombia korrekt zu prüfen)
     useEffect(() => {
         // Warte bis user geladen ist (um isColombia korrekt zu prüfen)
         if (!user) {
             return;
         }
+        // ✅ Lade Stats (Backend gibt alle Tage zurück, Frontend zeigt zuerst 5)
         fetchStats();
     }, [selectedDate, user, useQuinzena]);
 
@@ -194,7 +197,13 @@ const WorktimeStats: React.FC = () => {
                             })
                     };
                     console.log('Validierte Quinzena-Daten:', validatedData);
-                    setStats(validatedData);
+                    // ✅ PERFORMANCE: Priorisierung - Erste 5 Tage zuerst (sichtbarer Teil)
+                    const first5Days = {
+                        ...validatedData,
+                        weeklyData: validatedData.weeklyData.slice(0, 5) // ✅ Nur erste 5 Tage
+                    };
+                    setStats(first5Days);
+                    setFullStats(validatedData); // ✅ Vollständige Stats für später
                 } else {
                     // Für Wochen: Mappe Wochentage zu Daten
                     const weekdayMapping: Record<string, number> = {
@@ -240,11 +249,31 @@ const WorktimeStats: React.FC = () => {
                         })
                     };
                     
-                    setStats(enrichedData);
+                    // ✅ PERFORMANCE: Priorisierung - Erste 5 Tage zuerst (sichtbarer Teil)
+                    const first5Days = {
+                        ...enrichedData,
+                        weeklyData: enrichedData.weeklyData.slice(0, 5) // ✅ Nur erste 5 Tage
+                    };
+                    setStats(first5Days);
+                    setFullStats(enrichedData); // ✅ Vollständige Stats für später
                 }
             } else {
-                setStats(data);
+                // ✅ PERFORMANCE: Priorisierung - Erste 5 Tage zuerst (sichtbarer Teil)
+                const first5Days = data.weeklyData ? {
+                    ...data,
+                    weeklyData: data.weeklyData.slice(0, 5) // ✅ Nur erste 5 Tage
+                } : data;
+                setStats(first5Days);
+                setFullStats(data); // ✅ Vollständige Stats für später
             }
+            
+            // ✅ PERFORMANCE: Rest im Hintergrund (nach 200ms Verzögerung)
+            // Zeige vollständige Stats nach kurzer Verzögerung
+            setTimeout(() => {
+                if (fullStats === null && data && data.weeklyData) {
+                    setStats(data); // ✅ Zeige vollständige Stats
+                }
+            }, 200);
             
             setError(null);
         } catch (err: any) {
