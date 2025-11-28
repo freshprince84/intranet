@@ -123,6 +123,14 @@ const WorktimeStats: React.FC = () => {
     const [showWorkTimeModal, setShowWorkTimeModal] = useState(false);
     const [selectedDateForModal, setSelectedDateForModal] = useState<string>('');
 
+    // ✅ MEMORY: Cleanup - Stats beim Unmount löschen
+    useEffect(() => {
+        return () => {
+            setStats(null);
+            setCommissionStats(null);
+        };
+    }, []); // Nur beim Unmount ausführen
+
     // useEffect-Hook für das Laden der Statistikdaten
     // Warte bis user geladen ist, bevor wir Daten laden (um isColombia korrekt zu prüfen)
     useEffect(() => {

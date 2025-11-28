@@ -417,6 +417,36 @@ const Worktracker: React.FC = () => {
         };
     }, []); // Nur beim Unmount ausführen
 
+    // ✅ MEMORY: allTasks automatisch nach 5 Minuten löschen (verhindert Memory-Leak)
+    useEffect(() => {
+        if (allTasks.length === 0) return;
+        
+        const timeoutId = setTimeout(() => {
+            if (process.env.NODE_ENV === 'development') {
+                console.log('🧹 allTasks automatisch gelöscht (5 Minuten)');
+            }
+            setAllTasks([]);
+        }, 5 * 60 * 1000); // 5 Minuten
+        
+        return () => clearTimeout(timeoutId);
+    }, [allTasks.length]);
+
+    // Note: allTours existiert nicht - nur tours (wird direkt geladen, kein Hintergrund-Laden)
+
+    // ✅ MEMORY: allTourBookings automatisch nach 5 Minuten löschen (verhindert Memory-Leak)
+    useEffect(() => {
+        if (allTourBookings.length === 0) return;
+        
+        const timeoutId = setTimeout(() => {
+            if (process.env.NODE_ENV === 'development') {
+                console.log('🧹 allTourBookings automatisch gelöscht (5 Minuten)');
+            }
+            setAllTourBookings([]);
+        }, 5 * 60 * 1000); // 5 Minuten
+        
+        return () => clearTimeout(timeoutId);
+    }, [allTourBookings.length]);
+
     // Tabellen-Einstellungen laden - Tasks
     const {
         settings: tasksSettings,
@@ -607,7 +637,9 @@ const Worktracker: React.FC = () => {
             
             if (background) {
                 // Hintergrund-Laden: Speichere in allTasks
-                console.log('📋 Alle Tasks im Hintergrund geladen:', tasksWithAttachments.length, 'Tasks');
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('📋 Alle Tasks im Hintergrund geladen:', tasksWithAttachments.length, 'Tasks');
+                }
                 setAllTasks(tasksWithAttachments);
             } else if (append) {
                 // Infinite Scroll: Füge Tasks zu bestehenden hinzu
@@ -624,10 +656,14 @@ const Worktracker: React.FC = () => {
                 // Prüfe ob es weitere Tasks gibt
                 setTasksHasMore(tasksWithAttachments.length === TASKS_PER_PAGE);
                 setTasksPage(page);
-                console.log('📋 Weitere Tasks geladen:', tasksWithAttachments.length, 'Tasks (Seite', page, ')');
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('📋 Weitere Tasks geladen:', tasksWithAttachments.length, 'Tasks (Seite', page, ')');
+                }
             } else {
                 // Initiales Laden: Ersetze Tasks
-                console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks');
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks');
+                }
                 setTasks(tasksWithAttachments);
                 setTasksHasMore(tasksWithAttachments.length === TASKS_PER_PAGE);
                 setTasksPage(1);
@@ -687,7 +723,9 @@ const Worktracker: React.FC = () => {
             setReservationsError(null);
             const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE);
             const reservationsData = response.data?.data || response.data || [];
-            console.log('📋 Reservations geladen:', reservationsData.length, 'Reservations');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('📋 Reservations geladen:', reservationsData.length, 'Reservations');
+            }
             setReservations(reservationsData);
         } catch (err: any) {
             console.error('Fehler beim Laden der Reservations:', err);
@@ -713,8 +751,10 @@ const Worktracker: React.FC = () => {
         filterConditionsRef.current = filterConditions;
     }, [filterConditions]);
     
+    // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
+    const scrollHandlerRef = useRef<() => void>();
     useEffect(() => {
-        const handleScroll = () => {
+        scrollHandlerRef.current = () => {
             // Prüfe ob User nahe am Ende der Seite ist
             if (
                 window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000 &&
@@ -727,11 +767,13 @@ const Worktracker: React.FC = () => {
             }
         };
         
+        const handleScroll = () => scrollHandlerRef.current?.();
+        
         window.addEventListener('scroll', handleScroll);
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
-    }, [tasksLoadingMore, tasksHasMore, activeTab, selectedFilterId, loadMoreTasks]);
+    }, [tasksLoadingMore, tasksHasMore, activeTab, loadMoreTasks]);
     
     // Funktion zum Laden der Tour-Buchungen
     const loadTourBookings = async () => {
@@ -740,7 +782,9 @@ const Worktracker: React.FC = () => {
             setTourBookingsError(null);
             const response = await axiosInstance.get(API_ENDPOINTS.TOUR_BOOKINGS.BASE);
             const bookingsData = response.data?.data || response.data || [];
-            console.log('📋 Tour-Buchungen geladen:', bookingsData.length, 'Buchungen');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('📋 Tour-Buchungen geladen:', bookingsData.length, 'Buchungen');
+            }
             setTourBookings(bookingsData);
             setAllTourBookings(bookingsData);
         } catch (err: any) {
@@ -1171,9 +1215,11 @@ const Worktracker: React.FC = () => {
         // Sonst verwende tasks (bereits server-seitig gefiltert)
         const tasksToFilter = (allTasks.length > 0 && !selectedFilterId) ? allTasks : tasks;
         
-        console.log('🔄 Filtere Tasks:', tasksToFilter.length, 'Tasks vorhanden');
-        console.log('🔄 Filterbedingungen:', filterConditions);
-        console.log('🔄 Verwende:', allTasks.length > 0 && !selectedFilterId ? 'allTasks (client-seitig)' : 'tasks (server-seitig gefiltert)');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Filtere Tasks:', tasksToFilter.length, 'Tasks vorhanden');
+            console.log('🔄 Filterbedingungen:', filterConditions);
+            console.log('🔄 Verwende:', allTasks.length > 0 && !selectedFilterId ? 'allTasks (client-seitig)' : 'tasks (server-seitig gefiltert)');
+        }
         
         // Sicherstellen, dass keine undefined/null Werte im Array sind
         const validTasks = tasksToFilter.filter(task => task != null);
@@ -1320,7 +1366,9 @@ const Worktracker: React.FC = () => {
                 return true;
             });
         
-        console.log('✅ Gefilterte Tasks:', filtered.length, 'von', tasks.length);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Gefilterte Tasks:', filtered.length, 'von', tasks.length);
+        }
         
         // Hilfsfunktion zum Extrahieren von Werten für Sortierung
         const getSortValue = (task: Task, columnId: string): any => {
@@ -1452,13 +1500,17 @@ const Worktracker: React.FC = () => {
             return a.title.localeCompare(b.title);
         });
         
-        console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
+        }
         return sorted;
     }, [tasks, allTasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]);
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {
-        console.log('🔄 Filtere Reservations:', reservations.length, 'Reservations vorhanden');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Filtere Reservations:', reservations.length, 'Reservations vorhanden');
+        }
         const validReservations = reservations.filter(reservation => reservation != null);
         
         let filtered = validReservations.filter(reservation => {
@@ -1743,7 +1795,9 @@ const Worktracker: React.FC = () => {
             return new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime();
         });
         
-        console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
+        if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
+        }
         return sorted;
     }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterConditions, reservationFilterLogicalOperators, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
     
@@ -1845,21 +1899,29 @@ const Worktracker: React.FC = () => {
 
     const handleDeleteTask = async (taskId: number) => {
         if (window.confirm(t('worktime.messages.taskDeleteConfirm'))) {
-            console.log('🗑️ Starte Löschung von Task:', taskId);
-            console.log('📋 Aktuelle Tasks vor Löschung:', tasks.length);
+            if (process.env.NODE_ENV === 'development') {
+                console.log('🗑️ Starte Löschung von Task:', taskId);
+                console.log('📋 Aktuelle Tasks vor Löschung:', tasks.length);
+            }
             
             // Optimistisches Update: Task sofort aus Liste entfernen für sofortiges Feedback
             // Sicherstellen, dass keine undefined/null Werte im Array bleiben
             setTasks(prevTasks => {
                 const filtered = prevTasks.filter(task => task != null && task.id !== taskId);
-                console.log('📋 Tasks nach Filterung:', filtered.length, 'von', prevTasks.length);
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('📋 Tasks nach Filterung:', filtered.length, 'von', prevTasks.length);
+                }
                 return filtered;
             });
 
             try {
-                console.log('📡 Sende Delete-Request...');
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('📡 Sende Delete-Request...');
+                }
                 await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(taskId));
-                console.log('✅ Delete erfolgreich');
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('✅ Delete erfolgreich');
+                }
                 // Erfolgs-Rückmeldung anzeigen
                 toast.success(t('worktime.messages.taskDeleted'));
             } catch (error) {

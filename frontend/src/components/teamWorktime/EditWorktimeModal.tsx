@@ -267,43 +267,39 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
           <table className="w-full divide-y divide-gray-200 dark:divide-gray-700" style={{ tableLayout: 'auto' }}>
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ width: '60px' }}>{t('teamWorktime.modal.editWorktimes.columns.number')}</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ minWidth: '220px' }}>{t('teamWorktime.modal.editWorktimes.columns.startTime')}</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ minWidth: '220px' }}>{t('teamWorktime.modal.editWorktimes.columns.endTime')}</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ minWidth: '250px' }}>{t('teamWorktime.modal.editWorktimes.columns.startTime')}</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ minWidth: '250px' }}>{t('teamWorktime.modal.editWorktimes.columns.endTime')}</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ width: '80px' }}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {editedEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                  <td colSpan={3} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                     {t('teamWorktime.modal.editWorktimes.noEntries')}
                   </td>
                 </tr>
               ) : (
                 editedEntries.map((entry, index) => (
                   <tr key={entry.id} className={entry.isDeleted ? 'bg-red-50 dark:bg-red-900' : ''}>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 py-3" style={{ minWidth: '220px' }}>
+                    <td className="px-4 py-3" style={{ minWidth: '250px' }}>
                       <input
                         type="datetime-local"
                         className={`w-full px-3 py-2 border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                         value={entry.startDateTime}
                         onChange={(e) => handleStartDateTimeChange(index, e.target.value)}
                         disabled={entry.isDeleted}
-                        style={{ minWidth: '200px' }}
+                        style={{ minWidth: '230px' }}
                       />
                     </td>
-                    <td className="px-4 py-3" style={{ minWidth: '220px' }}>
+                    <td className="px-4 py-3" style={{ minWidth: '250px' }}>
                       <input
                         type="datetime-local"
                         className={`w-full px-3 py-2 border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                         value={entry.endDateTime || ''}
                         onChange={(e) => handleEndDateTimeChange(index, e.target.value || null)}
                         disabled={entry.isDeleted}
-                        style={{ minWidth: '200px' }}
+                        style={{ minWidth: '230px' }}
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
@@ -399,7 +395,7 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
       
       {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
       <div 
-        className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-16 bottom-0 right-0 max-w-lg w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         style={{
           transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           pointerEvents: isOpen ? 'auto' : 'none'

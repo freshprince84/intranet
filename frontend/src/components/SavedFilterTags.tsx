@@ -255,6 +255,14 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     fetchData();
   }, [tableId]);
 
+  // ✅ MEMORY: Cleanup - Filter Arrays beim Unmount löschen
+  useEffect(() => {
+    return () => {
+      setSavedFilters([]);
+      setFilterGroups([]);
+    };
+  }, []); // Nur beim Unmount ausführen
+
   // Expose refresh function für Parent-Komponenten
   useEffect(() => {
     // Erstelle eine globale Referenz für externe Updates

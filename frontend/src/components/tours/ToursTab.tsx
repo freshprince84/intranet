@@ -221,6 +221,15 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
         }
     }, [tourFilterLogicalOperators, t, showMessage]);
     
+    // ✅ MEMORY: Cleanup - Alle großen Arrays beim Unmount löschen
+    useEffect(() => {
+        return () => {
+            setTours([]);
+            setAllTours([]);
+            setTourFilterConditions([]);
+        };
+    }, []); // Nur beim Unmount ausführen
+    
     // Lade Tours beim Mount
     useEffect(() => {
         if (hasPermission('tours', 'read', 'table')) {
