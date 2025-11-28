@@ -2,7 +2,7 @@
 
 **Datum:** 2025-01-22  
 **Status:** Plan - NICHTS UMSETZEN  
-**Ziel:** Bot soll bei Pincode-Anfrage NUR den TTLock Passcode zurückgeben
+**Ziel:** Bot soll bei Pincode-Anfrage NUR den TTLock Passcode (doorPin/ttlLockPassword) zurückgeben
 
 ---
 
@@ -11,12 +11,13 @@
 **Use Case:** Gäste, die am Eingang stehen und ihren Pincode vergessen haben, sollen per WhatsApp nach ihrem Pincode fragen können.
 
 **Anforderung:**
-- Bot erkennt Anfrage nach Pincode
+- Bot erkennt Anfrage nach Pincode ("pin", "pincode", etc.)
 - Bot prüft, ob anfragende Person eine bestehende Reservation hat:
   1. **Primär:** Prüfung via Telefonnummer
   2. **Sekundär:** Falls nicht gefunden, Abfrage von Vorname & Name
-  3. Bei Übereinstimmung beider (case-insensitive): TTLock Passcode der Reservation als Antwort geben
-- Bot gibt NUR den TTLock Passcode zurück (nicht lobbyReservationId oder doorPin)
+  3. Bei Übereinstimmung: TTLock Passcode (doorPin oder ttlLockPassword) der Reservation als Antwort geben
+- Bot gibt NUR den TTLock Passcode zurück (doorPin/ttlLockPassword)
+- KEINE lobbyReservationId, KEINE anderen Codes, NUR der TTLock Passcode
 
 ---
 
@@ -29,24 +30,26 @@
    - `WhatsAppGuestService.findReservationsByDetails()` - Identifiziert via Name, Land, Geburtsdatum
    - `continueGuestIdentification()` - Mehrstufige Abfrage (Vorname, Nachname, Land, Geburtsdatum)
 
-2. **Code-Versand:**
-   - `handleGuestCodeRequest()` - Verarbeitet Code-Anfragen
-   - `buildStatusMessage()` - Erstellt Nachricht mit Code + Links
-   - `getReservationCode()` - Findet Code mit Priorität: lobbyReservationId → doorPin → ttlLockPassword
+2. **Code-Versand (PROBLEM):**
+   - `handleGuestCodeRequest()` - Verarbeitet Code-Anfragen (Zeile 1130)
+   - `buildStatusMessage()` - Erstellt Nachricht mit Code + Links (Zeile 232)
+   - `getReservationCode()` - Findet Code mit Priorität: lobbyReservationId → doorPin → ttlLockPassword (Zeile 198)
+   - **PROBLEM:** Wenn lobbyReservationId vorhanden ist, wird dieser zurückgegeben, nicht der TTLock Passcode!
 
 3. **Keywords:**
-   - Aktuell: "code", "código", "codigo", "pin", "password", "verloren", "lost", "perdido", "acceso"
-   - Diese senden ALLE Codes (mit Priorität)
+   - Aktuell: "code", "código", "codigo", "pin", "password", "verloren", "lost", "perdido", "acceso" (Zeile 213)
+   - Diese rufen `handleGuestCodeRequest()` auf, der `buildStatusMessage()` verwendet
+   - `buildStatusMessage()` verwendet `getReservationCode()` mit Priorität → FALSCH für Pincode!
 
 ### ❌ Was fehlt:
 
-1. **Spezifische Pincode-Abfrage:**
-   - Kein separater Handler für "pincode" (nur "pin" existiert, sendet aber alle Codes)
-   - Keine Funktion, die NUR den TTLock Passcode zurückgibt
+1. **Funktion, die NUR TTLock Passcode zurückgibt:**
+   - `getReservationCode()` hat Priorität und gibt lobbyReservationId zurück, wenn vorhanden
+   - Benötigt: Funktion, die direkt `doorPin` oder `ttlLockPassword` zurückgibt (sind dasselbe)
 
-2. **Unterscheidung:**
-   - Aktuell: "pin" sendet Code mit Priorität (kann lobbyReservationId oder doorPin sein)
-   - Neu: "pincode" soll NUR ttlLockPassword zurückgeben
+2. **Anpassung für "pin"/"pincode":**
+   - Aktuell: "pin" verwendet `buildStatusMessage()` → gibt falschen Code zurück
+   - Neu: "pin"/"pincode" soll NUR TTLock Passcode zurückgeben
 
 ---
 
@@ -56,16 +59,38 @@
 
 **Datei:** `backend/src/services/whatsappGuestService.ts`
 
+**Neue Funktion:** `getTTLockPasscode()`
+- Parameter: `reservation`
+- Rückgabe: `string | null` - TTLock Passcode (doorPin oder ttlLockPassword)
+- Verhalten:
+  - Prüft `reservation.doorPin` ODER `reservation.ttlLockPassword` (sind dasselbe)
+  - Gibt den Wert zurück, falls vorhanden
+  - Gibt `null` zurück, falls nicht vorhanden
+  - **IGNORIERT lobbyReservationId komplett!**
+
 **Neue Funktion:** `buildPincodeMessage()`
 - Parameter: `reservation`, `language`
 - Rückgabe: String mit NUR dem TTLock Passcode
 - Verhalten:
-  - Prüft, ob `reservation.ttlLockPassword` vorhanden ist
+  - Ruft `getTTLockPasscode(reservation)` auf
   - Falls vorhanden: Gibt Nachricht mit TTLock Passcode zurück
   - Falls nicht vorhanden: Gibt Fehlermeldung zurück (kein Pincode verfügbar)
+  - **KEINE Payment Links, KEINE Check-in Links, NUR der Pincode!**
 
 **Code-Struktur:**
 ```typescript
+/**
+ * Gibt TTLock Passcode zurück (doorPin oder ttlLockPassword)
+ * IGNORIERT lobbyReservationId komplett!
+ */
+static getTTLockPasscode(reservation: any): string | null {
+  // doorPin und ttlLockPassword sind dasselbe (TTLock Passcode)
+  return reservation.doorPin || reservation.ttlLockPassword || null;
+}
+
+/**
+ * Erstellt Nachricht mit NUR dem TTLock Passcode
+ */
 static buildPincodeMessage(
   reservation: any,
   language: string = 'es'
@@ -94,8 +119,9 @@ static buildPincodeMessage(
   const t = translations[language] || translations.es;
   let message = t.greeting(reservation.guestName) + '\n\n';
 
-  if (reservation.ttlLockPassword) {
-    message += `${t.pincode} ${reservation.ttlLockPassword}\n\n`;
+  const pincode = this.getTTLockPasscode(reservation);
+  if (pincode) {
+    message += `${t.pincode} ${pincode}\n\n`;
     message += t.seeYou;
   } else {
     message += t.noPincode;
@@ -107,19 +133,22 @@ static buildPincodeMessage(
 
 ---
 
-### Phase 2: Neuer Handler für Pincode-Anfrage
+### Phase 2: Handler anpassen für "pin"/"pincode"
 
 **Datei:** `backend/src/services/whatsappMessageHandler.ts`
 
-**Neue Funktion:** `handleGuestPincodeRequest()`
-- Parameter: `phoneNumber`, `branchId`, `conversation`
-- Verhalten:
-  1. Versuche zuerst via Telefonnummer zu identifizieren
-  2. Falls gefunden: Sende TTLock Passcode via `buildPincodeMessage()`
-  3. Falls nicht gefunden: Starte mehrstufige Identifikation (wie bei `handleGuestCodeRequest()`)
-  4. Nach erfolgreicher Identifikation: Sende TTLock Passcode
+**Option A: Handler anpassen (EINFACHER)**
+- `handleGuestCodeRequest()` prüft, ob Keyword "pin" oder "pincode" ist
+- Falls ja: Verwende `buildPincodeMessage()` statt `buildStatusMessage()`
+- Falls nein: Verwende weiterhin `buildStatusMessage()`
 
-**Code-Struktur:**
+**Option B: Neuer Handler (SAUBERER)**
+- Neue Funktion `handleGuestPincodeRequest()` erstellen
+- Verwendet `buildPincodeMessage()` statt `buildStatusMessage()`
+- Keywords "pin", "pincode" rufen diesen Handler auf
+- Keywords "code", "código" rufen weiterhin `handleGuestCodeRequest()` auf
+
+**Code-Struktur (Option B - Neuer Handler):**
 ```typescript
 private static async handleGuestPincodeRequest(
   phoneNumber: string,
@@ -131,7 +160,7 @@ private static async handleGuestPincodeRequest(
     const reservation = await WhatsAppGuestService.identifyGuestByPhone(phoneNumber, branchId);
     
     if (reservation) {
-      // Gast gefunden via Telefonnummer - sende TTLock Passcode
+      // Gast gefunden via Telefonnummer - sende NUR TTLock Passcode
       const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
       return WhatsAppGuestService.buildPincodeMessage(reservation, language);
     }
@@ -164,56 +193,120 @@ private static async handleGuestPincodeRequest(
 }
 ```
 
+**Code-Struktur (Option A - Handler anpassen):**
+```typescript
+// In handleGuestCodeRequest(), Zeile 1130:
+private static async handleGuestCodeRequest(
+  phoneNumber: string,
+  branchId: number,
+  conversation: any,
+  isPincodeRequest: boolean = false // NEU: Parameter hinzufügen
+): Promise<string> {
+  try {
+    const reservation = await WhatsAppGuestService.identifyGuestByPhone(phoneNumber, branchId);
+    
+    if (reservation) {
+      const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+      
+      // NEU: Wenn Pincode-Anfrage, verwende buildPincodeMessage()
+      if (isPincodeRequest) {
+        return WhatsAppGuestService.buildPincodeMessage(reservation, language);
+      }
+      
+      // Sonst: Normale Code-Anfrage mit buildStatusMessage()
+      return await WhatsAppGuestService.buildStatusMessage(reservation, language);
+    }
+    
+    // ... Rest bleibt gleich
+  }
+}
+
+// In handleIncomingMessage(), Zeile 213:
+// Keyword: "pin" / "pincode" - NUR TTLock Passcode
+const pincodeKeywords = ['pin', 'pincode', 'pin code', 'código pin', 'codigo pin'];
+if (pincodeKeywords.includes(normalizedText) && conversation.state === 'idle') {
+  return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation, true); // true = Pincode-Anfrage
+}
+
+// Keyword: "code" / "código" / "password" - Alle Codes + Links
+const codeKeywords = ['code', 'código', 'codigo', 'password', 'verloren', 'lost', 'perdido', 'acceso'];
+if (codeKeywords.includes(normalizedText) && conversation.state === 'idle') {
+  return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation, false); // false = Normale Anfrage
+}
+```
+
 ---
 
 ### Phase 3: Conversation State für Pincode-Identifikation erweitern
 
 **Datei:** `backend/src/services/whatsappMessageHandler.ts`
 
-**Erweiterung:** `continueGuestIdentification()`
+**Erweiterung:** `continueGuestIdentification()` (Zeile 1174)
 - Prüfe `context.requestType === 'pincode'`
 - Falls Pincode-Anfrage: Verwende `buildPincodeMessage()` statt `buildStatusMessage()`
 - States: `guest_pincode_identification_name`, `guest_pincode_identification_lastname`, `guest_pincode_identification_nationality`, `guest_pincode_identification_birthdate`
+- **WICHTIG:** States müssen unterschiedlich sein zu `guest_identification_*`, damit beide Flows parallel funktionieren können
 
 **Code-Struktur:**
 ```typescript
-// In continueGuestIdentification(), nach erfolgreicher Identifikation:
+// In continueGuestIdentification(), Zeile 1287 und 1397:
+// Nach erfolgreicher Identifikation (1 Reservation gefunden):
 if (context.requestType === 'pincode') {
   // Sende NUR TTLock Passcode
   return WhatsAppGuestService.buildPincodeMessage(reservations[0], language);
 } else {
-  // Normale Code-Anfrage - sende alle Codes
+  // Normale Code-Anfrage - sende alle Codes + Links
   return await WhatsAppGuestService.buildStatusMessage(reservations[0], language);
+}
+```
+
+**Auch in handleIncomingMessage(), Zeile 218-225:**
+```typescript
+// Prüfe Conversation State (für mehrstufige Interaktionen)
+if (conversation.state !== 'idle') {
+  // Prüfe ob es Gast-Identifikation ist (normale ODER Pincode)
+  if (conversation.state.startsWith('guest_identification') || 
+      conversation.state.startsWith('guest_pincode_identification')) {
+    return await this.continueGuestIdentification(normalizedPhone, messageText, conversation, branchId);
+  }
+  // ... Rest
 }
 ```
 
 ---
 
-### Phase 4: Keyword-Erkennung erweitern
+### Phase 4: Keyword-Erkennung anpassen
 
 **Datei:** `backend/src/services/whatsappMessageHandler.ts`
 
-**Erweiterung:** Keyword-Liste
-- Neue Keywords: "pincode", "pin code", "código pin", "codigo pin"
-- Handler: `handleGuestPincodeRequest()` statt `handleGuestCodeRequest()`
-
-**Code-Struktur:**
+**Aktuell (Zeile 212-216):**
 ```typescript
-// In handleIncomingMessage(), nach Zeile 213:
-// Keyword: "pincode" / "pin code" / "código pin" - TTLock Passcode NUR
-const pincodeKeywords = ['pincode', 'pin code', 'código pin', 'codigo pin'];
-if (pincodeKeywords.includes(normalizedText) && conversation.state === 'idle') {
-  return await this.handleGuestPincodeRequest(normalizedPhone, branchId, conversation);
-}
-
-// Keyword: "code" / "código" / "pin" / "password" - Gast-Code-Versand (ALLE Codes)
+// Keyword: "code" / "código" / "pin" / "password" - Gast-Code-Versand
 const codeKeywords = ['code', 'código', 'codigo', 'pin', 'password', 'verloren', 'lost', 'perdido', 'acceso'];
 if (codeKeywords.includes(normalizedText) && conversation.state === 'idle') {
   return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation);
 }
 ```
 
-**WICHTIG:** "pincode" muss VOR "pin" geprüft werden, da "pin" auch in "pincode" enthalten ist!
+**Neu:**
+```typescript
+// Keyword: "pin" / "pincode" / "pin code" / "código pin" - NUR TTLock Passcode
+const pincodeKeywords = ['pin', 'pincode', 'pin code', 'código pin', 'codigo pin'];
+if (pincodeKeywords.includes(normalizedText) && conversation.state === 'idle') {
+  // Option A: Neuer Handler
+  return await this.handleGuestPincodeRequest(normalizedPhone, branchId, conversation);
+  // ODER Option B: Bestehender Handler mit Parameter
+  return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation, true);
+}
+
+// Keyword: "code" / "código" / "password" - Alle Codes + Links (OHNE "pin"!)
+const codeKeywords = ['code', 'código', 'codigo', 'password', 'verloren', 'lost', 'perdido', 'acceso'];
+if (codeKeywords.includes(normalizedText) && conversation.state === 'idle') {
+  return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation, false);
+}
+```
+
+**WICHTIG:** "pin" wird aus `codeKeywords` entfernt und zu `pincodeKeywords` verschoben!
 
 ---
 
