@@ -1040,19 +1040,21 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                 }}
             />
             
-            <EditTourModal
-                isOpen={isEditTourModalOpen}
-                onClose={() => {
-                    setIsEditTourModalOpen(false);
-                    setSelectedTour(null);
-                }}
-                onTourUpdated={async () => {
-                    await loadTours();
-                    setIsEditTourModalOpen(false);
-                    setSelectedTour(null);
-                }}
-                tour={selectedTour}
-            />
+            {selectedTour && (
+                <EditTourModal
+                    isOpen={isEditTourModalOpen}
+                    onClose={() => {
+                        setIsEditTourModalOpen(false);
+                        setSelectedTour(null);
+                    }}
+                    onTourUpdated={async () => {
+                        await loadTours();
+                        setIsEditTourModalOpen(false);
+                        setSelectedTour(null);
+                    }}
+                    tour={selectedTour}
+                />
+            )}
             
             {selectedTourId && (
                 <TourDetailsModal

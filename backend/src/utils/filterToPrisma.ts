@@ -21,14 +21,14 @@ export interface FilterCondition {
  * 
  * @param conditions - Array von Filter-Bedingungen
  * @param operators - Array von logischen Operatoren ('AND' | 'OR')
- * @param entityType - Entity-Typ ('request' | 'task') für spezielle Logik
+ * @param entityType - Entity-Typ ('request' | 'task' | 'tour' | 'tour_booking' | 'reservation') für spezielle Logik
  * @returns Prisma Where-Klausel
  */
 export function convertFilterConditionsToPrismaWhere(
   conditions: FilterCondition[],
   operators: ('AND' | 'OR')[],
-  entityType: 'request' | 'task' | 'tour' | 'tour_booking'
-): Prisma.RequestWhereInput | Prisma.TaskWhereInput | Prisma.TourWhereInput | Prisma.TourBookingWhereInput | {} {
+  entityType: 'request' | 'task' | 'tour' | 'tour_booking' | 'reservation'
+): Prisma.RequestWhereInput | Prisma.TaskWhereInput | Prisma.TourWhereInput | Prisma.TourBookingWhereInput | Prisma.ReservationWhereInput | {} {
   if (conditions.length === 0) {
     return {};
   }
@@ -85,7 +85,7 @@ export function convertFilterConditionsToPrismaWhere(
  */
 function convertSingleCondition(
   condition: FilterCondition,
-  entityType: 'request' | 'task' | 'tour' | 'tour_booking'
+  entityType: 'request' | 'task' | 'tour' | 'tour_booking' | 'reservation'
 ): any {
   const { column, operator, value } = condition;
 
@@ -197,7 +197,7 @@ function convertDateCondition(value: any, operator: string): any {
 function convertUserRoleCondition(
   value: any,
   operator: string,
-  entityType: 'request' | 'task' | 'tour' | 'tour_booking',
+  entityType: 'request' | 'task' | 'tour' | 'tour_booking' | 'reservation',
   field: 'responsible' | 'qualityControl' | 'requestedBy' | 'createdBy' | 'bookedBy'
 ): any {
   if (typeof value !== 'string') {

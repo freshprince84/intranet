@@ -216,9 +216,9 @@ const CreateTourBookingModal = ({ isOpen, onClose, onBookingCreated, tour: prese
                                 disabled={loading || loadingData || !!preselectedTour}
                             >
                                 <option value="">{t('common.select', { defaultValue: 'Bitte wählen' })}</option>
-                                {tours.filter(t => t.isActive).map(tour => (
+                                {tours.filter(t => t.isActive && t.title).map(tour => (
                                     <option key={tour.id} value={tour.id}>
-                                        {tour.title}
+                                        {tour.title || '-'}
                                     </option>
                                 ))}
                             </select>
