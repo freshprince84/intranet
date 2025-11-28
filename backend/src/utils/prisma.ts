@@ -37,7 +37,7 @@ const createPrismaClient = (poolId: number) => {
     },
     log: enableQueryLogging ? ['query', 'error', 'warn'] : ['error'],
   });
-
+  
   // Prisma reconnect bei geschlossenen Verbindungen
   client.$connect().catch((error) => {
     console.error(`[Prisma Pool ${poolId}] Initial connection error:`, error);
@@ -55,9 +55,9 @@ if (!globalForPrisma.prismaPools) {
   for (let i = 1; i <= NUM_POOLS; i++) {
     prismaPools.push(createPrismaClient(i));
   }
-  if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production') {
     globalForPrisma.prismaPools = prismaPools;
-  }
+}
 } else {
   prismaPools = globalForPrisma.prismaPools;
 }

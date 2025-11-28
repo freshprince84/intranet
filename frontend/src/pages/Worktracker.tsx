@@ -446,6 +446,31 @@ const Worktracker: React.FC = () => {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [copiedTask, setCopiedTask] = useState<Task | null>(null);
 
+    // ✅ MEMORY: Cleanup - Alle großen Arrays beim Unmount löschen
+    useEffect(() => {
+        return () => {
+            // Tasks
+            setTasks([]);
+            setAllTasks([]);
+            
+            // Reservations
+            setReservations([]);
+            
+            // Tours
+            setTours([]);
+            setAllTours([]);
+            
+            // Tour Bookings
+            setTourBookings([]);
+            setAllTourBookings([]);
+            
+            // Filter States (können auch groß sein)
+            setFilterConditions([]);
+            setReservationFilterConditions([]);
+            setTourFilterConditions([]);
+        };
+    }, []); // Nur beim Unmount ausführen
+
     // Tabellen-Einstellungen laden - Tasks
     const {
         settings: tasksSettings,
@@ -5630,6 +5655,5 @@ const Worktracker: React.FC = () => {
             )}
         </div>
     );
-};
 
 export default Worktracker; 

@@ -409,26 +409,26 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
         
         // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
         const user = await prisma.user.findUnique({
-            where: { id: userId },
-            include: {
-                roles: {
-                    include: {
-                        role: {
-                            include: {
-                                permissions: true,
-                                organization: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        displayName: true,
-                                        logo: true
+                where: { id: userId },
+                include: {
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: true,
+                                    organization: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            displayName: true,
+                                            logo: true
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
         });
 
         if (!user) {

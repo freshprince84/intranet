@@ -592,6 +592,14 @@ const Requests: React.FC = () => {
     fetchRequests();
   }, []);
 
+  // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
+  useEffect(() => {
+    return () => {
+      setRequests([]);
+      setFilterConditions([]);
+    };
+  }, []); // Nur beim Unmount ausführen
+
   // getStatusText wird jetzt direkt von statusUtils verwendet (siehe getStatusLabel oben)
 
   // Status-Workflow: vorheriger/nächster Status für Shift-Buttons
