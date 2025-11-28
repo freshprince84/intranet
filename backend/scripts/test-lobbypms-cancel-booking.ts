@@ -15,9 +15,10 @@ async function testCancelBookingApi() {
   console.log('=' .repeat(80));
   
   try {
-    // Hole ersten Branch mit LobbyPMS Settings
-    const branch = await prisma.branch.findFirst({
+    // Hole nur Branches die in LobbyPMS existieren: Manila (ID: 3) und Parque Poblado (ID: 4)
+    const branches = await prisma.branch.findMany({
       where: {
+        id: { in: [3, 4] }, // Nur Manila und Parque Poblado
         lobbyPmsSettings: {
           not: null
         }
@@ -28,12 +29,18 @@ async function testCancelBookingApi() {
       }
     });
 
-    if (!branch) {
-      console.error('❌ Kein Branch mit LobbyPMS Settings gefunden!');
+    if (branches.length === 0) {
+      console.error('❌ Kein Branch mit LobbyPMS Settings gefunden! (Erwartet: Manila oder Parque Poblado)');
       process.exit(1);
     }
 
-    console.log(`✅ Branch gefunden: ${branch.name} (ID: ${branch.id})\n`);
+    // Verwende ersten gefundenen Branch
+    const branch = branches[0];
+    console.log(`✅ Branch gefunden: ${branch.name} (ID: ${branch.id})`);
+    if (branches.length > 1) {
+      console.log(`   (Verfügbar: ${branches.map(b => b.name).join(', ')})`);
+    }
+    console.log('');
 
     // Erstelle Service
     const service = await LobbyPmsService.createForBranch(branch.id);

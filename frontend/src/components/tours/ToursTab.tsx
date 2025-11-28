@@ -187,7 +187,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
             
             const response = await axiosInstance.get(API_ENDPOINTS.TOURS.BASE, { params });
             if (response.data.success) {
-                const toursData = response.data.data || [];
+                const toursData = (response.data.data || []).filter((tour: Tour | null) => tour != null && tour.title != null);
                 setAllTours(toursData);
                 if (!background) {
                     setTours(toursData);
@@ -307,7 +307,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
     
     // Filter- und Sortierlogik für Tours
     const filteredAndSortedTours = useMemo(() => {
-        const validTours = tours.filter(tour => tour != null);
+        const validTours = tours.filter(tour => tour != null && tour.title != null);
         
         let filtered = validTours.filter(tour => {
             // Such-Filter
@@ -328,6 +328,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
         if (tourFilterConditions.length > 0) {
             const columnEvaluators: any = {
                 'title': (tour: Tour, cond: FilterCondition) => {
+                    if (!tour || !tour.title) return false;
                     const value = (cond.value as string || '').toLowerCase();
                     const title = (tour.title || '').toLowerCase();
                     if (cond.operator === 'equals') return tour.title === cond.value;
@@ -337,6 +338,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                     return null;
                 },
                 'type': (tour: Tour, cond: FilterCondition) => {
+                    if (!tour || !tour.type) return false;
                     if (cond.operator === 'equals') return tour.type === cond.value;
                     if (cond.operator === 'notEquals') return tour.type !== cond.value;
                     return null;
@@ -385,7 +387,8 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                 }
             };
 
-            const getFieldValue = (tour: Tour, columnId: string): any => {
+            const getFieldValue = (tour: Tour | null, columnId: string): any => {
+                if (!tour) return '';
                 switch (columnId) {
                     case 'title': return tour.title || '';
                     case 'type': return tour.type || '';
@@ -409,12 +412,13 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
         }
         
         // Hilfsfunktion zum Extrahieren von Werten für Sortierung
-        const getTourSortValue = (tour: Tour, columnId: string): any => {
+        const getTourSortValue = (tour: Tour | null, columnId: string): any => {
+            if (!tour) return '';
             switch (columnId) {
                 case 'title':
                     return (tour.title || '').toLowerCase();
                 case 'type':
-                    return tour.type.toLowerCase();
+                    return (tour.type || '').toLowerCase();
                 case 'price':
                     return typeof tour.price === 'string' ? parseFloat(tour.price) : (tour.price || 0);
                 case 'location':
@@ -503,8 +507,8 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
             }
             
             // 4. Fallback: Titel (alphabetisch)
-            const titleA = (a.title || '').toLowerCase();
-            const titleB = (b.title || '').toLowerCase();
+            const titleA = (a?.title || '').toLowerCase();
+            const titleB = (b?.title || '').toLowerCase();
             return titleA.localeCompare(titleB);
         });
         
@@ -742,7 +746,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                                                         return (
                                                             <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4">
                                                                 <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
-                                                                    {tour.title}
+                                                                    {tour?.title || '-'}
                                                                 </div>
                                                             </td>
                                                         );
@@ -911,7 +915,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                                 className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 hover:shadow-md transition-shadow"
                             >
                                 <div className="flex items-start justify-between mb-2">
-                                    <h4 className="text-lg font-semibold dark:text-white">{tour.title}</h4>
+                                    <h4 className="text-lg font-semibold dark:text-white">{tour?.title || '-'}</h4>
                                     {hasPermission('tour_edit', 'write', 'button') ? (
                                         <button
                                             onClick={async () => {
