@@ -86,13 +86,15 @@ if (!globalForPrisma.prismaPools) {
 
 // Round-Robin-Verteilung für Lastverteilung
 let currentPoolIndex = 0;
+let poolUsageCount = 0; // Zähler für Pool-Nutzung
 const getPrismaPool = (): PrismaClient => {
   const pool = prismaPools[currentPoolIndex];
   const poolId = currentPoolIndex + 1;
   currentPoolIndex = (currentPoolIndex + 1) % prismaPools.length;
-  // Logging nur bei jedem 100. Zugriff, um Logs nicht zu überfluten
-  if (Math.random() < 0.01) {
-    console.log(`[Prisma] Round-Robin: Nutze Pool ${poolId}/${prismaPools.length}`);
+  poolUsageCount++;
+  // Logging bei jedem 100. Zugriff, um zu sehen welche Pools genutzt werden
+  if (poolUsageCount % 100 === 0) {
+    console.log(`[Prisma] Round-Robin: Nutze Pool ${poolId}/${prismaPools.length} (Zugriff #${poolUsageCount})`);
   }
   return pool;
 };
