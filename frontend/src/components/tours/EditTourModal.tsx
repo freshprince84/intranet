@@ -17,7 +17,7 @@ interface EditTourModalProps {
     isOpen: boolean;
     onClose: () => void;
     onTourUpdated: (updatedTour: Tour) => void;
-    tour: Tour;
+    tour: Tour | null;
 }
 
 const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalProps) => {
@@ -25,36 +25,31 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
     const { user } = useAuth();
     const { showMessage } = useMessage();
     
-    // Sicherstellen, dass tour nicht null ist
-    if (!tour) {
-        return null;
-    }
-    
-    const [title, setTitle] = useState(tour.title || '');
-    const [description, setDescription] = useState(tour.description || '');
-    const [type, setType] = useState<TourType>(tour.type || TourType.OWN);
-    const [isActive, setIsActive] = useState(tour.isActive ?? true);
-    const [duration, setDuration] = useState<number | ''>(tour.duration || '');
-    const [maxParticipants, setMaxParticipants] = useState<number | ''>(tour.maxParticipants || '');
-    const [minParticipants, setMinParticipants] = useState<number | ''>(tour.minParticipants || '');
-    const [price, setPrice] = useState<number | ''>(tour.price ? (typeof tour.price === 'string' ? parseFloat(tour.price) : tour.price) : '');
-    const [currency, setCurrency] = useState(tour.currency || 'COP');
-    const [location, setLocation] = useState(tour.location || '');
-    const [meetingPoint, setMeetingPoint] = useState(tour.meetingPoint || '');
-    const [includes, setIncludes] = useState(tour.includes || '');
-    const [excludes, setExcludes] = useState(tour.excludes || '');
-    const [requirements, setRequirements] = useState(tour.requirements || '');
-    const [totalCommission, setTotalCommission] = useState<number | ''>(tour.totalCommission ? (typeof tour.totalCommission === 'string' ? parseFloat(tour.totalCommission) : tour.totalCommission) : '');
-    const [totalCommissionPercent, setTotalCommissionPercent] = useState<number | ''>(tour.totalCommissionPercent ? (typeof tour.totalCommissionPercent === 'string' ? parseFloat(tour.totalCommissionPercent) : tour.totalCommissionPercent) : '');
-    const [sellerCommissionPercent, setSellerCommissionPercent] = useState<number | ''>(tour.sellerCommissionPercent ? (typeof tour.sellerCommissionPercent === 'string' ? parseFloat(tour.sellerCommissionPercent) : tour.sellerCommissionPercent) : '');
-    const [sellerCommissionFixed, setSellerCommissionFixed] = useState<number | ''>(tour.sellerCommissionFixed ? (typeof tour.sellerCommissionFixed === 'string' ? parseFloat(tour.sellerCommissionFixed) : tour.sellerCommissionFixed) : '');
-    const [externalProviderId, setExternalProviderId] = useState<number | ''>(tour.externalProviderId || '');
-    const [externalBookingUrl, setExternalBookingUrl] = useState(tour.externalBookingUrl || '');
-    const [branchId, setBranchId] = useState<number | ''>(tour.branchId || '');
+    const [title, setTitle] = useState(tour?.title || '');
+    const [description, setDescription] = useState(tour?.description || '');
+    const [type, setType] = useState<TourType>(tour?.type || TourType.OWN);
+    const [isActive, setIsActive] = useState(tour?.isActive ?? true);
+    const [duration, setDuration] = useState<number | ''>(tour?.duration || '');
+    const [maxParticipants, setMaxParticipants] = useState<number | ''>(tour?.maxParticipants || '');
+    const [minParticipants, setMinParticipants] = useState<number | ''>(tour?.minParticipants || '');
+    const [price, setPrice] = useState<number | ''>(tour?.price ? (typeof tour.price === 'string' ? parseFloat(tour.price) : tour.price) : '');
+    const [currency, setCurrency] = useState(tour?.currency || 'COP');
+    const [location, setLocation] = useState(tour?.location || '');
+    const [meetingPoint, setMeetingPoint] = useState(tour?.meetingPoint || '');
+    const [includes, setIncludes] = useState(tour?.includes || '');
+    const [excludes, setExcludes] = useState(tour?.excludes || '');
+    const [requirements, setRequirements] = useState(tour?.requirements || '');
+    const [totalCommission, setTotalCommission] = useState<number | ''>(tour?.totalCommission ? (typeof tour.totalCommission === 'string' ? parseFloat(tour.totalCommission) : tour.totalCommission) : '');
+    const [totalCommissionPercent, setTotalCommissionPercent] = useState<number | ''>(tour?.totalCommissionPercent ? (typeof tour.totalCommissionPercent === 'string' ? parseFloat(tour.totalCommissionPercent) : tour.totalCommissionPercent) : '');
+    const [sellerCommissionPercent, setSellerCommissionPercent] = useState<number | ''>(tour?.sellerCommissionPercent ? (typeof tour.sellerCommissionPercent === 'string' ? parseFloat(tour.sellerCommissionPercent) : tour.sellerCommissionPercent) : '');
+    const [sellerCommissionFixed, setSellerCommissionFixed] = useState<number | ''>(tour?.sellerCommissionFixed ? (typeof tour.sellerCommissionFixed === 'string' ? parseFloat(tour.sellerCommissionFixed) : tour.sellerCommissionFixed) : '');
+    const [externalProviderId, setExternalProviderId] = useState<number | ''>(tour?.externalProviderId || '');
+    const [externalBookingUrl, setExternalBookingUrl] = useState(tour?.externalBookingUrl || '');
+    const [branchId, setBranchId] = useState<number | ''>(tour?.branchId || '');
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(tour.imageUrl ? `${API_BASE_URL || ''}${tour.imageUrl}` : null);
+    const [imagePreview, setImagePreview] = useState<string | null>(tour?.imageUrl ? `${API_BASE_URL || ''}${tour.imageUrl}` : null);
     const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
-    const [galleryPreviews, setGalleryPreviews] = useState<string[]>(tour.galleryUrls?.map(url => `${API_BASE_URL || ''}${url}`) || []);
+    const [galleryPreviews, setGalleryPreviews] = useState<string[]>(tour?.galleryUrls?.map(url => `${API_BASE_URL || ''}${url}`) || []);
     const [uploadingImage, setUploadingImage] = useState(false);
     
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -286,7 +281,7 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
         }
     };
 
-    if (!isOpen) return null;
+    if (!isOpen || !tour) return null;
 
     return (
         <Dialog open={isOpen} onClose={onClose} className="relative z-50">
