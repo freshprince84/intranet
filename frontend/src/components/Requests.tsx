@@ -574,9 +574,16 @@ const Requests: React.FC = () => {
   }, []);
 
   // Infinite Scroll Handler für Requests
-  // ✅ PERFORMANCE: Scroll-Handler ohne filterConditions Dependency (verhindert Re-Render-Loops)
+  // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
+  const filterConditionsRef = useRef(filterConditions);
   useEffect(() => {
-    const handleScroll = () => {
+    filterConditionsRef.current = filterConditions;
+  }, [filterConditions]);
+
+  // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
+  const scrollHandlerRef = useRef<() => void>();
+  useEffect(() => {
+    scrollHandlerRef.current = () => {
       // Prüfe ob User nahe am Ende der Seite ist
       if (
         window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000 &&
@@ -587,11 +594,13 @@ const Requests: React.FC = () => {
       }
     };
     
+    const handleScroll = () => scrollHandlerRef.current?.();
+    
     window.addEventListener('scroll', handleScroll);
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [requestsLoadingMore, requestsHasMore, selectedFilterId, requestsPage]);
+  }, [requestsLoadingMore, requestsHasMore, loadMoreRequests]);
 
   // Initial Requests laden (ohne Filter - SavedFilterTags wendet Default-Filter an)
   useEffect(() => {
