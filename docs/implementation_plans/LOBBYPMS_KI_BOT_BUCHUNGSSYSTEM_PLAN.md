@@ -1748,8 +1748,275 @@ paymentDeadline.setHours(paymentDeadline.getHours() + paymentDeadlineHours);
 ---
 
 **Erstellt:** 2025-01-26  
-**Status:** ✅ ANALYSE ABGESCHLOSSEN - Plan erstellt, Test-Scripts erstellt  
-**Nächster Schritt:** API-Endpunkte testen (siehe Befehle unten)
+**Status:** ⚠️ PROBLEME IDENTIFIZIERT - Plan muss aktualisiert werden  
+**Letzte Aktualisierung:** 2025-01-26 (Probleme aus User-Feedback)
+
+---
+
+## 🚨 AKTUELLE PROBLEME (2025-01-26)
+
+### Problem 1: Sprache nur teilweise korrekt
+**Status:** ⚠️ Teilweise behoben, aber noch nicht vollständig
+
+**Ursache:**
+- Deutsche Indikatoren wurden erweitert, aber funktionieren noch nicht zuverlässig
+- "Haben wir Zimmer frei heute?" wird nicht als Deutsch erkannt
+
+**Bereits implementiert:**
+- ✅ Deutsche Indikatoren erweitert: "haben", "wir", "heute", "frei", "zimmer", etc.
+- ✅ Function Definition unterstützt "today"/"heute"/"hoy"
+
+**Noch zu prüfen:**
+- ❓ Warum wird Deutsch immer noch nicht erkannt?
+- ❓ Ist die Spracherkennung-Logik korrekt?
+- ❓ Werden die neuen Indikatoren überhaupt verwendet?
+
+### Problem 2: "primo deportista" fehlt weiterhin
+**Status:** ❌ NICHT BEHOBEN
+
+**Mögliche Ursachen:**
+1. **API gibt es nicht zurück:**
+   - Muss getestet werden mit `test-check-all-categories.ts`
+   - Prüfen ob "primo deportista" in API-Response enthalten ist
+
+2. **Filterung filtert es aus:**
+   - `roomType`-Bestimmung: "primo deportista" wird als "privada" klassifiziert (Zeile 368-372 in `lobbyPmsService.ts`)
+   - Hardcoded `category_id`-Checks: Nur 34280 und 34281 sind als "compartida" markiert
+   - "primo deportista" hat möglicherweise eine andere `category_id`
+
+3. **KI zeigt es nicht an:**
+   - System Prompt sagt "zeige ALLE Zimmer", aber KI ignoriert es
+   - Function-Ergebnis enthält es, aber KI filtert es in der Antwort
+
+**Zu prüfen:**
+- ❓ Gibt die API "primo deportista" zurück? (Test-Script ausführen)
+- ❓ Welche `category_id` hat "primo deportista"?
+- ❓ Wird es in der Function-Response zurückgegeben?
+- ❓ Wird es in den Logs geloggt?
+
+### Problem 3: Zimmer kann nicht gebucht werden
+**Status:** ❌ NICHT IMPLEMENTIERT
+
+**Ursache:**
+- ❌ Es gibt KEINE Function `create_reservation` oder `book_room` für Zimmer!
+- ✅ Es gibt nur `book_tour` für Touren
+- ✅ Plan existiert in Dokumentation (Phase 2), aber nicht implementiert
+
+**Was fehlt:**
+1. **Function Definition:** `create_reservation` oder `book_room` in `whatsappAiService.ts`
+2. **Function Handler:** `create_reservation` oder `book_room` in `whatsappFunctionHandlers.ts`
+3. **Mehrstufige Konversation:** Ähnlich wie `startRequestCreation()` für Requests
+4. **LobbyPMS API Integration:** Reservierung in LobbyPMS erstellen (falls API funktioniert)
+5. **Payment Link & Check-in Link:** Automatisch generieren und senden
+
+**Bereits vorhanden (wiederverwendbar):**
+- ✅ `ReservationNotificationService.sendReservationInvitation()` - Payment-Link + Check-in-Link + WhatsApp
+- ✅ `BoldPaymentService.createPaymentLink()` - Zahlungslink erstellen
+- ✅ `generateLobbyPmsCheckInLink()` - Check-in-Link erstellen
+- ✅ `prisma.reservation.create()` - Reservierung in DB erstellen
+
+**Was implementiert werden muss:**
+- ❌ Function Definition für `create_reservation` oder `book_room`
+- ❌ Function Handler für `create_reservation` oder `book_room`
+- ❌ Mehrstufige Konversation (Check-in, Check-out, Name, Zimmerart, Bestätigung)
+- ❌ LobbyPMS API Integration (falls API funktioniert)
+- ❌ Automatischer Payment-Deadline (1 Stunde)
+
+### Problem 4: Vermischung von Themen (Zimmer vs. Touren)
+**Status:** ❌ NICHT BEHOBEN
+
+**Ursache:**
+- Bot verwechselt Zimmer-Reservationen mit Touren
+- Beispiel: User fragt nach "El primo aventurero" (Zimmer) → Bot antwortet mit Tour-Informationen
+
+**Mögliche Ursachen:**
+1. **System Prompt zu unklar:**
+   - Keine klare Unterscheidung zwischen "Zimmer" und "Tour"
+   - KI kann nicht richtig zwischen beiden unterscheiden
+
+2. **Function Names zu ähnlich:**
+   - `check_room_availability` vs. `get_tours`
+   - `book_tour` vs. (fehlende) `create_reservation`
+
+3. **Kontext fehlt:**
+   - Wenn User "El primo aventurero" sagt, weiß KI nicht ob es ein Zimmer oder eine Tour ist
+   - Keine Unterscheidung im System Prompt
+
+**Zu prüfen:**
+- ❓ Wie unterscheidet die KI zwischen Zimmern und Touren?
+- ❓ Gibt es Keywords die helfen könnten?
+- ❓ Sollte der System Prompt expliziter sein?
+
+**Fix nötig:**
+- System Prompt erweitern: Klare Unterscheidung zwischen "Zimmer/Reservation" und "Tour"
+- Beispiele hinzufügen: "El primo aventurero" = Zimmer, nicht Tour
+- Function Descriptions erweitern: Explizit sagen wann welche Function verwendet werden soll
+
+---
+
+## 📋 UPDATED IMPLEMENTIERUNGSPLAN
+
+### Priorität 1: "primo deportista" Problem lösen
+
+#### Schritt 1.1: Test-Script ausführen
+**Befehl:**
+```bash
+cd /var/www/intranet/backend
+npx ts-node scripts/test-check-all-categories.ts 3 2025-11-28 2025-11-29
+```
+
+**Zu prüfen:**
+- Gibt die API "primo deportista" zurück?
+- Welche `category_id` hat es?
+- Welche `roomType` wird zugewiesen?
+- Wird es in den Logs geloggt?
+
+#### Schritt 1.2: Logs prüfen
+**Befehl:**
+```bash
+pm2 logs intranet-backend --lines 200 --nostream | grep "check_room_availability\|primo deportista"
+```
+
+**Zu prüfen:**
+- Wird "primo deportista" in den Logs geloggt?
+- Wird es in der Function-Response zurückgegeben?
+- Wird es an die KI übergeben?
+
+#### Schritt 1.3: Fix implementieren (nach Analyse)
+**Mögliche Fixes:**
+1. **Wenn API es nicht zurückgibt:**
+   - API-Parameter prüfen
+   - Property-ID prüfen
+   - Datum prüfen
+
+2. **Wenn Filterung es ausschließt:**
+   - `roomType`-Bestimmung anpassen
+   - Hardcoded `category_id`-Checks erweitern
+   - Filterung entfernen/anpassen
+
+3. **Wenn KI es nicht anzeigt:**
+   - System Prompt noch expliziter machen
+   - Function-Response-Format prüfen
+   - KI-Response prüfen
+
+### Priorität 2: Zimmer-Buchung implementieren
+
+#### Schritt 2.1: Function Definition hinzufügen
+**Datei:** `backend/src/services/whatsappAiService.ts`
+
+**Neue Function:**
+```typescript
+{
+  type: 'function',
+  function: {
+    name: 'create_room_reservation',
+    description: 'Erstellt eine Zimmer-Reservation. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! Benötigt: checkInDate, checkOutDate, guestName, roomType (compartida/privada), guestPhone (optional), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link.',
+    parameters: {
+      type: 'object',
+      properties: {
+        checkInDate: { type: 'string', description: 'Check-in Datum (YYYY-MM-DD oder "today")' },
+        checkOutDate: { type: 'string', description: 'Check-out Datum (YYYY-MM-DD)' },
+        guestName: { type: 'string', description: 'Name des Gastes' },
+        roomType: { type: 'string', enum: ['compartida', 'privada'], description: 'Zimmerart' },
+        categoryId: { type: 'number', description: 'Category ID des Zimmers (optional, aus check_room_availability)' },
+        guestPhone: { type: 'string', description: 'Telefonnummer (optional)' },
+        guestEmail: { type: 'string', description: 'E-Mail (optional)' }
+      },
+      required: ['checkInDate', 'checkOutDate', 'guestName', 'roomType']
+    }
+  }
+}
+```
+
+#### Schritt 2.2: Function Handler implementieren
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts`
+
+**Neue Function:**
+```typescript
+static async create_room_reservation(
+  args: {
+    checkInDate: string;
+    checkOutDate: string;
+    guestName: string;
+    roomType: 'compartida' | 'privada';
+    categoryId?: number;
+    guestPhone?: string;
+    guestEmail?: string;
+  },
+  userId: number | null,
+  roleId: number | null,
+  branchId: number
+): Promise<any> {
+  // 1. Parse Datum
+  // 2. Hole Branch für organizationId
+  // 3. Erstelle Reservierung in DB
+  // 4. Erstelle Payment Link (wenn Telefonnummer vorhanden)
+  // 5. Erstelle Check-in Link
+  // 6. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
+  // 7. Setze Payment-Deadline (1 Stunde)
+  // 8. Return Ergebnis
+}
+```
+
+#### Schritt 2.3: System Prompt erweitern
+**Datei:** `backend/src/services/whatsappAiService.ts`
+
+**Erweiterungen:**
+- Klare Unterscheidung: "Zimmer/Reservation" vs. "Tour"
+- Beispiele: "El primo aventurero" = Zimmer, nicht Tour
+- Anweisung: `create_room_reservation` für Zimmer, `book_tour` für Touren
+
+### Priorität 3: Sprache vollständig beheben
+
+#### Schritt 3.1: Spracherkennung prüfen
+**Datei:** `backend/src/services/whatsappAiService.ts`
+
+**Zu prüfen:**
+- Werden die neuen deutschen Indikatoren verwendet?
+- Funktioniert `detectLanguageFromMessage()` korrekt?
+- Wird `finalLanguage` korrekt gesetzt?
+
+#### Schritt 3.2: Weitere deutsche Indikatoren hinzufügen
+**Falls nötig:**
+- Weitere deutsche Wörter hinzufügen
+- Regex-Patterns erweitern
+- Fallback-Logik verbessern
+
+### Priorität 4: Vermischung von Themen beheben
+
+#### Schritt 4.1: System Prompt erweitern
+**Datei:** `backend/src/services/whatsappAiService.ts`
+
+**Erweiterungen:**
+- Explizite Unterscheidung: "Zimmer" vs. "Tour"
+- Beispiele für Zimmer-Namen: "El primo aventurero", "El abuelo viajero", "primo deportista"
+- Anweisung: Wenn User Zimmer-Namen sagt → `check_room_availability` oder `create_room_reservation`
+- Anweisung: Wenn User Tour-Namen sagt → `get_tours` oder `book_tour`
+
+---
+
+## ❓ OFFENE FRAGEN
+
+1. **"primo deportista":**
+   - ❓ Gibt die API es zurück? (Muss getestet werden)
+   - ❓ Welche `category_id` hat es?
+   - ❓ Wird es in den Logs geloggt?
+
+2. **Zimmer-Buchung:**
+   - ❓ Soll es eine mehrstufige Konversation sein (wie geplant)?
+   - ❓ Oder soll die KI direkt `create_room_reservation` aufrufen können?
+   - ❓ Welche Informationen sind erforderlich? (Check-in, Check-out, Name, Zimmerart, Category ID?)
+
+3. **LobbyPMS API:**
+   - ❓ Funktioniert die Reservierungserstellung-API? (Muss getestet werden)
+   - ❓ Welche Parameter sind erforderlich?
+   - ❓ Oder soll nur lokal erstellt werden?
+
+---
+
+**Erstellt:** 2025-01-26  
+**Status:** ⚠️ PROBLEME IDENTIFIZIERT - Plan aktualisiert  
+**Nächster Schritt:** Test-Script ausführen, Logs prüfen, dann Fixes implementieren
 
 ---
 
