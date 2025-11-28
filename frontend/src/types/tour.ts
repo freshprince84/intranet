@@ -89,6 +89,9 @@ export interface TourBooking {
   amountPaid?: number | string | null;
   amountPending?: number | string | null;
   paymentLink?: string | null;
+  paymentDeadline?: string | null;
+  autoCancelEnabled?: boolean;
+  reservedUntil?: string | null;
   bookedById?: number | null;
   bookedBy?: { id: number; firstName: string; lastName: string } | null;
   commissionAmount?: number | string | null;

@@ -565,15 +565,66 @@ export class BoldPaymentService {
         return;
       }
 
+      // Prüfe ob es eine TourBooking gibt, die mit diesem Payment Link verknüpft ist
+      // (Dummy-Reservation für TourBooking)
+      const paymentLink = data.payment_link || payload.payment_link;
+      let tourBooking = null;
+      if (paymentLink) {
+        tourBooking = await prisma.tourBooking.findFirst({
+          where: {
+            paymentLink: paymentLink
+          },
+          include: {
+            tour: {
+              select: {
+                id: true,
+                title: true,
+                organizationId: true
+              }
+            }
+          }
+        });
+      }
+
       // Aktualisiere Payment Status basierend auf Event
       switch (event) {
         case 'payment.paid':
         case 'payment.completed':
-          // Aktualisiere Payment Status
+          // Aktualisiere Payment Status der Reservation
           await prisma.reservation.update({
             where: { id: reservation.id },
             data: { paymentStatus: 'paid' as any }
           });
+
+          // Wenn es eine TourBooking gibt, aktualisiere auch diese
+          if (tourBooking) {
+            const paidAmount = data.amount?.value ? Number(data.amount.value) : tourBooking.totalPrice;
+            await prisma.tourBooking.update({
+              where: { id: tourBooking.id },
+              data: {
+                paymentStatus: 'paid',
+                amountPaid: paidAmount,
+                amountPending: 0
+              }
+            });
+
+            console.log(`[Bold Payment Webhook] ✅ TourBooking ${tourBooking.id} als bezahlt markiert`);
+
+            // Sende Bestätigung via WhatsApp
+            if (tourBooking.customerPhone && tourBooking.tour) {
+              try {
+                const { TourWhatsAppService } = await import('./tourWhatsAppService');
+                await TourWhatsAppService.sendConfirmationToCustomer(
+                  tourBooking.id,
+                  tourBooking.tour.organizationId,
+                  tourBooking.branchId || null
+                );
+                console.log(`[Bold Payment Webhook] ✅ Bestätigung an Kunden gesendet für TourBooking ${tourBooking.id}`);
+              } catch (whatsappError) {
+                console.error(`[Bold Payment Webhook] Fehler beim Senden der Bestätigung für TourBooking ${tourBooking.id}:`, whatsappError);
+              }
+            }
+          }
           
           // Prüfe ob Gast bereits eingecheckt ist
           const isAlreadyCheckedIn = reservation.status === 'checked_in';

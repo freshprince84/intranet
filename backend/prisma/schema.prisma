@@ -1582,6 +1582,7 @@ model TourBooking {
   @@index([bookingDate])
   @@index([tourDate])
   @@index([paymentStatus])
+  @@index([paymentDeadline]) // Index für effiziente Queries bei automatischer Stornierung
 }
 
 model TourReservation {

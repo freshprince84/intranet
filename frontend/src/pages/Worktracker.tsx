@@ -496,6 +496,19 @@ const Worktracker: React.FC = () => {
     // View-Mode aus Settings laden
     const viewMode = settings.viewMode || 'cards';
 
+    // CSS-Klasse für Container-Box setzen (für CSS-basierte Schattierungs-Entfernung)
+    // ✅ FIX: Nach viewMode-Deklaration verschoben (verhindert "Cannot access 'fr' before initialization")
+    useEffect(() => {
+        const wrappers = document.querySelectorAll('.dashboard-tasks-wrapper');
+        wrappers.forEach(wrapper => {
+            if (viewMode === 'cards') {
+                wrapper.classList.add('cards-mode');
+            } else {
+                wrapper.classList.remove('cards-mode');
+            }
+        });
+    }, [viewMode]);
+
     // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
     // Card-Metadaten-Reihenfolge aus columnOrder ableiten
     const cardMetadataOrder = useMemo(() => {
@@ -559,18 +572,6 @@ const Worktracker: React.FC = () => {
             return newSet;
         });
     };
-
-    // CSS-Klasse für Container-Box setzen (für CSS-basierte Schattierungs-Entfernung)
-    useEffect(() => {
-        const wrappers = document.querySelectorAll('.dashboard-tasks-wrapper');
-        wrappers.forEach(wrapper => {
-            if (viewMode === 'cards') {
-                wrapper.classList.add('cards-mode');
-            } else {
-                wrapper.classList.remove('cards-mode');
-            }
-        });
-    }, [viewMode]);
 
     // Ref um sicherzustellen, dass loadTasks nur einmal beim Mount aufgerufen wird
     // (auch bei React.StrictMode doppelter Ausführung)

@@ -252,6 +252,141 @@ export class WhatsAppService {
   }
 
   /**
+   * Sendet ein Bild via WhatsApp
+   */
+  async sendImage(to: string, imageUrl: string, caption?: string): Promise<boolean> {
+    try {
+      console.log(`[WhatsApp Service] sendImage aufgerufen für: ${to}, Bild: ${imageUrl}`);
+      await this.loadSettings();
+
+      if (!this.axiosInstance) {
+        console.error('[WhatsApp Service] Axios-Instanz nicht initialisiert');
+        throw new Error('WhatsApp Service nicht initialisiert');
+      }
+
+      if (!this.apiKey) {
+        console.error('[WhatsApp Service] API Key nicht gesetzt');
+        throw new Error('WhatsApp API Key nicht gesetzt');
+      }
+
+      console.log(`[WhatsApp Service] Sende Bild via ${this.provider}...`);
+
+      // Normalisiere Telefonnummer
+      const normalizedPhone = this.normalizePhoneNumber(to);
+
+      if (this.provider === 'twilio') {
+        // Twilio unterstützt Media Messages
+        return await this.sendImageViaTwilio(normalizedPhone, imageUrl, caption);
+      } else if (this.provider === 'whatsapp-business-api') {
+        return await this.sendImageViaWhatsAppBusiness(normalizedPhone, imageUrl, caption);
+      } else {
+        throw new Error(`Unbekannter Provider: ${this.provider}`);
+      }
+    } catch (error) {
+      console.error('[WhatsApp] Fehler beim Versenden des Bildes:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sendet Bild über Twilio
+   */
+  private async sendImageViaTwilio(to: string, imageUrl: string, caption?: string): Promise<boolean> {
+    if (!this.axiosInstance) {
+      throw new Error('Twilio Service nicht initialisiert');
+    }
+
+    const accountSid = this.apiKey;
+    const fromNumber = this.phoneNumberId || process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+
+    try {
+      const params: any = {
+        From: fromNumber,
+        To: `whatsapp:${to}`,
+        MediaUrl: imageUrl
+      };
+
+      if (caption) {
+        params.Body = caption;
+      }
+
+      const response = await this.axiosInstance.post(
+        `/Accounts/${accountSid}/Messages.json`,
+        new URLSearchParams(params),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        }
+      );
+
+      return response.status === 201;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError;
+        console.error('[WhatsApp Twilio] API Fehler:', axiosError.response?.data);
+        throw new Error(`Twilio API Fehler: ${JSON.stringify(axiosError.response?.data)}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Sendet Bild über WhatsApp Business API
+   */
+  private async sendImageViaWhatsAppBusiness(to: string, imageUrl: string, caption?: string): Promise<boolean> {
+    if (!this.axiosInstance) {
+      throw new Error('WhatsApp Business Service nicht initialisiert');
+    }
+
+    if (!this.phoneNumberId) {
+      console.error('[WhatsApp Business] Phone Number ID fehlt!');
+      throw new Error('WhatsApp Phone Number ID ist nicht konfiguriert');
+    }
+
+    try {
+      // WhatsApp Business API unterstützt Media Messages via URL
+      // Die URL muss öffentlich erreichbar sein (HTTPS)
+      const payload: any = {
+        messaging_product: 'whatsapp',
+        to: to,
+        type: 'image',
+        image: {
+          link: imageUrl // URL muss HTTPS sein und öffentlich erreichbar
+        }
+      };
+
+      if (caption) {
+        payload.image.caption = caption;
+      }
+
+      console.log(`[WhatsApp Business] Sende Bild an ${to} via Phone Number ID ${this.phoneNumberId}`);
+      console.log(`[WhatsApp Business] Payload:`, JSON.stringify(payload, null, 2));
+
+      const response = await this.axiosInstance.post('/messages', payload);
+
+      console.log(`[WhatsApp Business] Response Status: ${response.status}`);
+      console.log(`[WhatsApp Business] Response Data:`, JSON.stringify(response.data, null, 2));
+
+      if (response.data?.error) {
+        const errorData = response.data.error;
+        console.error(`[WhatsApp Business] ⚠️ Fehler in Response-Daten:`, errorData);
+        throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify(errorData)}`);
+      }
+
+      const returnedMessageId = response.data?.messages?.[0]?.id;
+      if (returnedMessageId) {
+        console.log(`[WhatsApp Business] ✅ Bild gesendet, Message-ID: ${returnedMessageId}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[WhatsApp Business] Fehler beim Senden des Bildes:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Sendet Nachricht über Twilio
    */
   private async sendViaTwilio(to: string, message: string): Promise<boolean> {
