@@ -150,17 +150,17 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
         }));
     };
     
-    const viewMode = settings.viewMode || 'cards';
+    const viewMode = settings?.viewMode || 'cards';
     
     // Card-Metadaten-Reihenfolge aus columnOrder ableiten
     const cardMetadataOrder = useMemo(() => {
-        return getTourCardMetadataFromColumnOrder(settings.columnOrder || defaultTourColumnOrder);
-    }, [settings.columnOrder]);
+        return getTourCardMetadataFromColumnOrder(settings?.columnOrder || defaultTourColumnOrder);
+    }, [settings?.columnOrder]);
     
     // Versteckte Card-Metadaten aus hiddenColumns ableiten
     const hiddenCardMetadata = useMemo(() => {
-        return getTourHiddenCardMetadata(settings.hiddenColumns || []);
-    }, [settings.hiddenColumns]);
+        return getTourHiddenCardMetadata(settings?.hiddenColumns || []);
+    }, [settings?.hiddenColumns]);
     
     // Sichtbare Card-Metadaten
     const visibleCardMetadata = useMemo(() => {
@@ -187,7 +187,15 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
             
             const response = await axiosInstance.get(API_ENDPOINTS.TOURS.BASE, { params });
             if (response.data.success) {
-                const toursData = (response.data.data || []).filter((tour: Tour | null) => tour != null && tour.title != null);
+                const rawData = response.data.data || [];
+                const toursData = Array.isArray(rawData) 
+                    ? rawData.filter((tour: Tour | null) => 
+                        tour != null && 
+                        typeof tour === 'object' && 
+                        tour.title != null && 
+                        typeof tour.title === 'string'
+                    )
+                    : [];
                 setAllTours(toursData);
                 if (!background) {
                     setTours(toursData);
@@ -270,12 +278,13 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
     
     const handleDrop = (e: React.DragEvent, columnId: string) => {
         e.preventDefault();
-        if (draggedColumn && draggedColumn !== columnId) {
-            const dragIndex = settings.columnOrder.indexOf(draggedColumn);
-            const hoverIndex = settings.columnOrder.indexOf(columnId);
-            
-            if (dragIndex > -1 && hoverIndex > -1) {
-                const newColumnOrder = [...settings.columnOrder];
+            if (draggedColumn && draggedColumn !== columnId) {
+                const columnOrder = settings?.columnOrder || defaultTourColumnOrder;
+                const dragIndex = columnOrder.indexOf(draggedColumn);
+                const hoverIndex = columnOrder.indexOf(columnId);
+
+                if (dragIndex > -1 && hoverIndex > -1) {
+                    const newColumnOrder = [...columnOrder];
                 const draggedColumn_ = newColumnOrder[dragIndex];
                 newColumnOrder.splice(dragIndex, 1);
                 newColumnOrder.splice(hoverIndex, 0, draggedColumn_);
@@ -293,11 +302,11 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
     
     // Filtern und sortieren der Spalten gemäß den Benutzereinstellungen
     const completeColumnOrder = useMemo(() => {
-        const currentOrder = settings.columnOrder || [];
+        const currentOrder = settings?.columnOrder || [];
         const validOrder = currentOrder.filter(id => id != null && typeof id === 'string');
         const missingColumns = defaultTourColumnOrder.filter(id => !validOrder.includes(id));
         return [...validOrder, ...missingColumns];
-    }, [settings.columnOrder]);
+    }, [settings?.columnOrder]);
     
     const visibleColumnIds = completeColumnOrder.filter(id => id != null && typeof id === 'string' && isColumnVisible(id));
     
@@ -307,7 +316,12 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
     
     // Filter- und Sortierlogik für Tours
     const filteredAndSortedTours = useMemo(() => {
-        const validTours = tours.filter(tour => tour != null && tour.title != null);
+        // Sicherstellen, dass tours ein Array ist
+        if (!Array.isArray(tours)) {
+            return [];
+        }
+        
+        const validTours = tours.filter(tour => tour != null && tour.title != null && typeof tour.title === 'string');
         
         let filtered = validTours.filter(tour => {
             // Such-Filter
@@ -438,6 +452,13 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
         
         // Sortierung basierend auf Prioritäten
         const sorted = filtered.sort((a, b) => {
+            // Null-Check für a und b
+            if (!a || !b) {
+                if (!a && !b) return 0;
+                if (!a) return 1;
+                if (!b) return -1;
+            }
+            
             // 1. Priorität: Filter-Sortierung (höchste Priorität)
             if (tourFilterSortDirections.length > 0) {
                 for (const sortDir of tourFilterSortDirections.sort((x, y) => x.priority - y.priority)) {
@@ -735,7 +756,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                                 </tr>
                             ) : (
                                 <>
-                                    {filteredAndSortedTours.slice(0, displayLimit).map(tour => (
+                                    {filteredAndSortedTours.slice(0, displayLimit).filter(tour => tour != null && tour.title != null).map(tour => (
                                         <tr 
                                             key={tour.id} 
                                             className="hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -909,7 +930,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                             {t('tours.noTours')}
                         </div>
                     ) : (
-                        filteredAndSortedTours.slice(0, displayLimit).map((tour) => (
+                        filteredAndSortedTours.slice(0, displayLimit).filter(tour => tour != null && tour.title != null).map((tour) => (
                             <div
                                 key={tour.id}
                                 className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 hover:shadow-md transition-shadow"

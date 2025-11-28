@@ -65,6 +65,14 @@ const CerebroLayout: React.FC = () => {
     { id: 'isPublished', label: t('cerebro.filters.isPublished', 'Veröffentlicht') }
   ], [t]);
   
+  // ✅ MEMORY: Cleanup - Filter States beim Unmount löschen
+  useEffect(() => {
+    return () => {
+      setFilterConditions([]);
+      setFilterLogicalOperators([]);
+    };
+  }, []); // Nur beim Unmount ausführen
+
   useEffect(() => {
     const handleResize = () => {
       const newIsMobile = window.innerWidth < 768;

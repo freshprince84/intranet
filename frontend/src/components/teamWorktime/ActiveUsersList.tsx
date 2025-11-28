@@ -198,6 +198,15 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     loadUserTodos();
   }, [showTodos, selectedDate]);
 
+  // ✅ MEMORY: Cleanup - Alle großen Arrays/Objekte beim Unmount löschen
+  useEffect(() => {
+    return () => {
+      setUserTodos({});
+      setUserRequests({});
+      setExpandedUsers(new Set());
+    };
+  }, []); // Nur beim Unmount ausführen
+
   // Lade Requests für User (wenn showRequests aktiv)
   useEffect(() => {
     const loadUserRequests = async () => {

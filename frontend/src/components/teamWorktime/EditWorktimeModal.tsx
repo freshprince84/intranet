@@ -263,14 +263,14 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
       )}
 
       <div>
-        <div className="overflow-hidden border dark:border-gray-700 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="overflow-x-auto border dark:border-gray-700 rounded-lg">
+          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700" style={{ tableLayout: 'auto' }}>
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.number')}</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.startTime')}</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.endTime')}</th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.actions')}</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ width: '60px' }}>{t('teamWorktime.modal.editWorktimes.columns.number')}</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ minWidth: '220px' }}>{t('teamWorktime.modal.editWorktimes.columns.startTime')}</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ minWidth: '220px' }}>{t('teamWorktime.modal.editWorktimes.columns.endTime')}</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style={{ width: '80px' }}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -286,22 +286,24 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {index + 1}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" style={{ minWidth: '220px' }}>
                       <input
                         type="datetime-local"
                         className={`w-full px-3 py-2 border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                         value={entry.startDateTime}
                         onChange={(e) => handleStartDateTimeChange(index, e.target.value)}
                         disabled={entry.isDeleted}
+                        style={{ minWidth: '200px' }}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" style={{ minWidth: '220px' }}>
                       <input
                         type="datetime-local"
                         className={`w-full px-3 py-2 border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                         value={entry.endDateTime || ''}
                         onChange={(e) => handleEndDateTimeChange(index, e.target.value || null)}
                         disabled={entry.isDeleted}
+                        style={{ minWidth: '200px' }}
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
