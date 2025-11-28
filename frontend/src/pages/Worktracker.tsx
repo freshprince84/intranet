@@ -335,11 +335,8 @@ const Worktracker: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    // Pagination State für Tasks Infinite Scroll
-    const [tasksPage, setTasksPage] = useState(1); // Aktuelle Seite für Tasks
-    const [tasksHasMore, setTasksHasMore] = useState(true); // Gibt es weitere Tasks?
-    const [tasksLoadingMore, setTasksLoadingMore] = useState(false); // Lädt weitere Tasks?
-    const TASKS_PER_PAGE = 20; // Tasks pro Seite
+    // ✅ Infinite Scroll für Anzeige (KEINE Pagination beim Laden)
+    const [tasksDisplayLimit, setTasksDisplayLimit] = useState<number>(20); // Initial: 20 Items (wird basierend auf viewMode gesetzt)
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
     
@@ -491,7 +488,7 @@ const Worktracker: React.FC = () => {
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-    const [displayLimit, setDisplayLimit] = useState<number>(10);
+    const [reservationsDisplayLimit, setReservationsDisplayLimit] = useState<number>(10); // Für Reservations (wird zu displayLimit)
 
     // Expand/Collapse States für Reservations (analog zu MonthlyReports)
     const [expandedReservationRows, setExpandedReservationRows] = useState<Set<number>>(new Set());
@@ -579,28 +576,20 @@ const Worktracker: React.FC = () => {
     // (auch bei React.StrictMode doppelter Ausführung)
     const hasLoadedRef = useRef(false);
 
-    // Funktion zum Neu Laden der Tasks
-    const loadTasks = async (
+    // ✅ PERFORMANCE: loadTasks als useCallback (stabile Referenz für useEffect)
+    // ❌ KEINE Pagination mehr - immer ALLE Ergebnisse laden
+    const loadTasks = useCallback(async (
         filterId?: number, 
         filterConditions?: any[], 
-        background = false,
-        page: number = 1, // Neue Parameter für Pagination
-        append: boolean = false // Neue Parameter: Sollen Tasks angehängt werden?
+        background = false
     ) => {
         try {
-            if (!background && !append) {
+            if (!background) {
                 setLoading(true);
             }
-            if (append) {
-                setTasksLoadingMore(true);
-            }
             
-            // Baue Query-Parameter
-            const offset = (page - 1) * TASKS_PER_PAGE; // Offset für Pagination berechnen
-            const params: any = {
-                limit: TASKS_PER_PAGE, // Immer Limit für initiales Laden
-                offset: offset, // Offset für Pagination
-            };
+            // Baue Query-Parameter (❌ KEINE limit/offset Parameter mehr)
+            const params: any = {};
             if (filterId) {
                 params.filterId = filterId;
             } else if (filterConditions && filterConditions.length > 0) {
@@ -613,6 +602,7 @@ const Worktracker: React.FC = () => {
             const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE, { params });
             const tasksData = response.data;
             
+            // ✅ ALLE Tasks werden geladen (kein limit/offset)
             // Attachments sind bereits in der Response enthalten
             // URL-Generierung für Attachments hinzufügen
             // Sicherstellen, dass keine undefined/null Werte im Array sind
@@ -637,71 +627,62 @@ const Worktracker: React.FC = () => {
                     };
                 });
             
+            // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
+            const MAX_ITEMS_IN_STATE = 100;
+            const tasksToStore = tasksWithAttachments.length > MAX_ITEMS_IN_STATE
+                ? tasksWithAttachments.slice(-MAX_ITEMS_IN_STATE)
+                : tasksWithAttachments;
+            
             if (background) {
                 // Hintergrund-Laden: Speichere in allTasks
                 if (process.env.NODE_ENV === 'development') {
                     console.log('📋 Alle Tasks im Hintergrund geladen:', tasksWithAttachments.length, 'Tasks');
                 }
-                setAllTasks(tasksWithAttachments);
-            } else if (append) {
-                // Infinite Scroll: Füge Tasks zu bestehenden hinzu
-                // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
-                const MAX_ITEMS_IN_STATE = 100;
-                setTasks(prevTasks => {
-                    const newTasks = [...prevTasks, ...tasksWithAttachments];
-                    // Wenn mehr als MAX_ITEMS_IN_STATE: Älteste entfernen (behalte neueste)
-                    if (newTasks.length > MAX_ITEMS_IN_STATE) {
-                        return newTasks.slice(-MAX_ITEMS_IN_STATE);
-                    }
-                    return newTasks;
-                });
-                // Prüfe ob es weitere Tasks gibt
-                setTasksHasMore(tasksWithAttachments.length === TASKS_PER_PAGE);
-                setTasksPage(page);
-                if (process.env.NODE_ENV === 'development') {
-                    console.log('📋 Weitere Tasks geladen:', tasksWithAttachments.length, 'Tasks (Seite', page, ')');
-                }
+                setAllTasks(tasksToStore);
             } else {
-                // Initiales Laden: Ersetze Tasks
+                // Initiales Laden: Ersetze Tasks (ALLE werden geladen)
                 if (process.env.NODE_ENV === 'development') {
-                    console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks');
+                    console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks (alle)');
                 }
-                setTasks(tasksWithAttachments);
-                setTasksHasMore(tasksWithAttachments.length === TASKS_PER_PAGE);
-                setTasksPage(1);
+                setTasks(tasksToStore);
+                // ✅ Initial displayLimit setzen (abhängig von viewMode)
+                setTasksDisplayLimit(viewMode === 'cards' ? 10 : 20);
             }
             setError(null);
         } catch (error) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('Fehler beim Laden der Tasks:', error);
             }
-            if (!background && !append) {
+            if (!background) {
                 setError(t('worktime.messages.tasksLoadError'));
             }
         } finally {
-            if (!background && !append) {
+            if (!background) {
                 setLoading(false);
             }
-            if (append) {
-                setTasksLoadingMore(false);
-            }
         }
-    };
+    }, [filterLogicalOperators, t, viewMode]);
     
     // ✅ PERFORMANCE: loadMoreTasks als useCallback (stabile Referenz für useEffect)
+    // ✅ FIX: loadTasks aus Dependencies entfernt, stattdessen useRef verwenden
+    const loadTasksRef = useRef(loadTasks);
+    useEffect(() => {
+        loadTasksRef.current = loadTasks;
+    }, [loadTasks]);
+    
     const loadMoreTasks = useCallback(async () => {
         if (tasksLoadingMore || !tasksHasMore) return;
         
         const nextPage = tasksPage + 1;
         // ✅ PERFORMANCE: Verwende filterConditionsRef.current (wird im Scroll-Handler verwendet)
-        await loadTasks(
+        await loadTasksRef.current(
             selectedFilterId || undefined,
             filterConditionsRef.current.length > 0 ? filterConditionsRef.current : undefined,
             false,
             nextPage,
             true // append = true
         );
-    }, [tasksLoadingMore, tasksHasMore, tasksPage, selectedFilterId, loadTasks]);
+    }, [tasksLoadingMore, tasksHasMore, tasksPage, selectedFilterId]);
 
     const handleGeneratePinAndSend = async (reservationId: number) => {
         try {
@@ -760,6 +741,12 @@ const Worktracker: React.FC = () => {
     }, [filterConditions]);
     
     // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
+    // ✅ FIX: loadMoreTasks aus Dependencies entfernt, stattdessen useRef verwenden
+    const loadMoreTasksRef = useRef(loadMoreTasks);
+    useEffect(() => {
+        loadMoreTasksRef.current = loadMoreTasks;
+    }, [loadMoreTasks]);
+    
     const scrollHandlerRef = useRef<() => void>();
     useEffect(() => {
         scrollHandlerRef.current = () => {
@@ -771,7 +758,7 @@ const Worktracker: React.FC = () => {
                 activeTab === 'todos'
             ) {
                 // ✅ PERFORMANCE: Verwende loadMoreTasks (nutzt filterConditionsRef.current)
-                loadMoreTasks();
+                loadMoreTasksRef.current();
             }
         };
         
@@ -781,7 +768,7 @@ const Worktracker: React.FC = () => {
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
-    }, [tasksLoadingMore, tasksHasMore, activeTab, loadMoreTasks]);
+    }, [tasksLoadingMore, tasksHasMore, activeTab]);
     
     // Funktion zum Laden der Tour-Buchungen
     const loadTourBookings = async () => {
@@ -815,13 +802,13 @@ const Worktracker: React.FC = () => {
     }, [activeTab]);
     
 
-    // Lade Tasks beim ersten Render (nur einmal, auch bei React.StrictMode)
+    // ✅ FIX: Duplikate entfernt - Initial Tasks laden (nur einmal, auch bei React.StrictMode)
     useEffect(() => {
         if (!hasLoadedRef.current) {
             hasLoadedRef.current = true;
             loadTasks();
         }
-    }, []);
+    }, [loadTasks]);
 
     // URL-Parameter für editTask verarbeiten
     useEffect(() => {
@@ -841,14 +828,6 @@ const Worktracker: React.FC = () => {
             }
         }
     }, [tasks, location.search]);
-
-    // Initial Tasks laden (ohne Filter - SavedFilterTags wendet Default-Filter an)
-    useEffect(() => {
-        if (!hasLoadedRef.current) {
-            hasLoadedRef.current = true;
-            loadTasks();
-                }
-    }, []);
 
     // Standard-Filter erstellen und speichern
     useEffect(() => {

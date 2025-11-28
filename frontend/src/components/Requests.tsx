@@ -364,7 +364,8 @@ const Requests: React.FC = () => {
     }
   }, [viewMode]);
 
-  const fetchRequests = async (
+  // ✅ PERFORMANCE: fetchRequests als useCallback (stabile Referenz für useEffect)
+  const fetchRequests = useCallback(async (
     filterId?: number, 
     filterConditions?: any[], 
     background = false,
@@ -459,7 +460,7 @@ const Requests: React.FC = () => {
         setRequestsLoadingMore(false);
       }
     }
-  };
+  }, [filterLogicalOperators]);
   
   // Funktion zum Laden weiterer Requests (Infinite Scroll)
   // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
@@ -469,19 +470,25 @@ const Requests: React.FC = () => {
   }, [filterConditions]);
 
   // ✅ PERFORMANCE: loadMoreRequests als useCallback (stabile Referenz für useEffect)
+  // ✅ FIX: fetchRequests aus Dependencies entfernt, stattdessen useRef verwenden
+  const fetchRequestsRef = useRef(fetchRequests);
+  useEffect(() => {
+    fetchRequestsRef.current = fetchRequests;
+  }, [fetchRequests]);
+  
   const loadMoreRequests = useCallback(async () => {
     if (requestsLoadingMore || !requestsHasMore) return;
     
     const nextPage = requestsPage + 1;
     // ✅ PERFORMANCE: Verwende filterConditionsRef.current (wird im Scroll-Handler verwendet)
-    await fetchRequests(
+    await fetchRequestsRef.current(
       selectedFilterId || undefined,
       filterConditionsRef.current.length > 0 ? filterConditionsRef.current : undefined,
       false,
       nextPage,
       true // append = true
     );
-  }, [requestsLoadingMore, requestsHasMore, requestsPage, selectedFilterId, fetchRequests]);
+  }, [requestsLoadingMore, requestsHasMore, requestsPage, selectedFilterId]);
 
   // Standard-Filter erstellen und speichern
   useEffect(() => {
@@ -582,6 +589,12 @@ const Requests: React.FC = () => {
   }, [filterConditions]);
 
   // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
+  // ✅ FIX: loadMoreRequests aus Dependencies entfernt, stattdessen useRef verwenden
+  const loadMoreRequestsRef = useRef(loadMoreRequests);
+  useEffect(() => {
+    loadMoreRequestsRef.current = loadMoreRequests;
+  }, [loadMoreRequests]);
+  
   const scrollHandlerRef = useRef<() => void>();
   useEffect(() => {
     scrollHandlerRef.current = () => {
@@ -591,7 +604,7 @@ const Requests: React.FC = () => {
         !requestsLoadingMore &&
         requestsHasMore
       ) {
-        loadMoreRequests();
+        loadMoreRequestsRef.current();
       }
     };
     
@@ -601,69 +614,13 @@ const Requests: React.FC = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [requestsLoadingMore, requestsHasMore, loadMoreRequests]);
+  }, [requestsLoadingMore, requestsHasMore]);
 
-  // ✅ PERFORMANCE: Priorisierung - Erste 5 Requests zuerst (sichtbarer Teil)
+  // ✅ FIX: fetchFirst5Requests entfernt - Initial mit normalem fetchRequests laden (20 Requests)
+  // Initial Requests laden (ohne Filter - SavedFilterTags wendet Default-Filter an)
   useEffect(() => {
-    // Erste 5 Requests zuerst (sichtbarer Teil)
-    // Erstelle temporäre fetchRequests-Variante mit limit=5
-    const fetchFirst5Requests = async () => {
-      try {
-        setLoading(true);
-        const params: any = {
-          limit: 5, // ✅ Nur erste 5 Requests
-          offset: 0
-        };
-        
-        const response = await axiosInstance.get('/requests', { params });
-        const requestsData = response.data;
-        const requestsWithAttachments = requestsData.map((request: Request) => {
-          const attachments = (request.attachments || []).map((att: any) => ({
-            id: att.id,
-            fileName: att.fileName,
-            fileType: att.fileType,
-            fileSize: att.fileSize,
-            filePath: att.filePath,
-            uploadedAt: att.uploadedAt,
-            url: getRequestAttachmentUrl(request.id, att.id)
-          }));
-          return {
-            ...request,
-            attachments: attachments
-          };
-        });
-        setRequests(requestsWithAttachments);
-        setRequestsHasMore(requestsWithAttachments.length === 5);
-        setRequestsPage(1);
-        setError(null);
-      } catch (err) {
-        console.error('Request Error:', err);
-        const axiosError = err as any;
-        if (axiosError.code === 'ERR_NETWORK') {
-          setError('Verbindung zum Server konnte nicht hergestellt werden.');
-        } else {
-          setError(`Fehler beim Laden der Requests: ${axiosError.response?.data?.message || axiosError.message}`);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchFirst5Requests();
+    fetchRequests();
   }, []);
-
-  // ✅ PERFORMANCE: Rest im Hintergrund (nach 500ms Verzögerung)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // Lade Rest (Requests 6-20) im Hintergrund
-      if (requests.length === 5 && !loading) {
-        // Lade weitere Requests (6-20) im Hintergrund
-        // Verwende fetchRequests mit page=2 (Requests 6-20)
-        fetchRequests(undefined, undefined, true, 2, true); // background = true, page = 2, append = true
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [requests.length, loading]);
 
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {

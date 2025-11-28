@@ -8,6 +8,8 @@ import { ReservationNotificationService } from '../services/reservationNotificat
 import { reservationQueue, updateGuestContactQueue, checkQueueHealth } from '../services/queueService';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
+import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
+import { filterCache } from '../services/filterCache';
 
 /**
  * Utility: Erkennt ob ein String eine Telefonnummer oder Email ist
@@ -576,6 +578,12 @@ export const getAllReservations = async (req: Request, res: Response) => {
       });
     }
 
+    // Filter-Parameter aus Query lesen
+    const filterId = req.query.filterId as string | undefined;
+    const filterConditions = req.query.filterConditions 
+        ? JSON.parse(req.query.filterConditions as string) 
+        : undefined;
+
     // Baue Where-Clause auf
     const whereClause: any = {
       organizationId: req.organizationId
@@ -619,8 +627,41 @@ export const getAllReservations = async (req: Request, res: Response) => {
     }
     // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
 
+    // Filter-Bedingungen konvertieren (falls vorhanden)
+    let filterWhereClause: any = {};
+    if (filterId) {
+        // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
+        const filterData = await filterCache.get(parseInt(filterId, 10));
+        if (filterData) {
+            const conditions = JSON.parse(filterData.conditions);
+            const operators = JSON.parse(filterData.operators);
+            filterWhereClause = convertFilterConditionsToPrismaWhere(
+                conditions,
+                operators,
+                'reservation'
+            );
+        }
+    } else if (filterConditions) {
+        // Direkte Filter-Bedingungen
+        filterWhereClause = convertFilterConditionsToPrismaWhere(
+            filterConditions.conditions || filterConditions,
+            filterConditions.operators || [],
+            'reservation'
+        );
+    }
+
+    // Kombiniere alle Filter-Bedingungen
+    const baseWhereConditions: any[] = [whereClause];
+    if (Object.keys(filterWhereClause).length > 0) {
+        baseWhereConditions.push(filterWhereClause);
+    }
+    
+    const finalWhereClause = baseWhereConditions.length === 1
+        ? baseWhereConditions[0]
+        : { AND: baseWhereConditions };
+
     const reservations = await prisma.reservation.findMany({
-      where: whereClause,
+      where: finalWhereClause,
       include: {
         organization: {
           select: {
