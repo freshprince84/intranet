@@ -31,6 +31,14 @@ const TeamWorktimeControl: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
+  // ✅ MEMORY: Cleanup - Alle großen Arrays beim Unmount löschen
+  useEffect(() => {
+    return () => {
+      setActiveUsers([]);
+      setAllWorktimes([]);
+    };
+  }, []); // Nur beim Unmount ausführen
+  
   // Funktion zum Abrufen der aktiven Benutzer
   const fetchActiveUsers = useCallback(async () => {
     try {
