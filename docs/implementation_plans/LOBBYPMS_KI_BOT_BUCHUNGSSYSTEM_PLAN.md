@@ -10,6 +10,11 @@
 
 1. **Verfügbarkeitsprüfung:** Bot soll angeben können, ob Zimmer/Betten frei sind & zu welchem Preis
 2. **Reservierung erstellen:** Bot soll auf Wunsch eine Reservierung erstellen können
+   - **WICHTIG:** Bot muss ALLE notwendigen Informationen abfragen:
+     - Von wann bis wann (Check-in/Check-out Datum)
+     - Name des Gastes
+     - Art des Zimmers (private oder dorm)
+   - Mehrstufige Konversation (ähnlich wie Request/Task-Erstellung)
 3. **Zahlungslink & Check-in-Link:** Bot soll auf Wunsch Zahlungslink & Check-in-Link erstellen & senden können
 4. **Automatische Stornierung:** Wenn Zahlung nicht innerhalb einer bestimmten Frist (z.B. 1h) gezahlt ist, soll die Reservierung automatisch storniert werden
 
@@ -17,6 +22,7 @@
 - Entweder direkt LobbyPMS API verwenden, oder über die Website buchen
 - Wir haben keine LobbyPMS API-Dokumentation, nur die Befehle die umgesetzt sind & funktionieren
 - Von bestehenden Implementierungen ableiten
+- **WICHTIG:** Alles zuerst testen, auch APIs. Keine Vermutungen!
 
 ---
 
@@ -235,22 +241,62 @@ async checkAvailability(startDate: Date, endDate: Date): Promise<AvailabilityRes
 
 ### Phase 1: Verfügbarkeitsprüfung implementieren
 
-#### Schritt 1.1: API-Endpunkt testen
+#### Schritt 1.1: API-Endpunkt testen (KRITISCH - KEINE VERMUTUNGEN!)
 
 **Ziel:** Herausfinden, welche Parameter `/api/v2/available-rooms` akzeptiert und welche Daten zurückgegeben werden
 
+**WICHTIG:** Alles muss getestet werden, keine Vermutungen!
+
 **Vorgehen:**
 1. Test-Script erstellen: `backend/scripts/test-lobbypms-availability.ts`
-2. Verschiedene Parameter-Kombinationen testen:
-   - `start_date` (erforderlich)
-   - `end_date` (optional?)
-   - `property_id` (optional?)
-   - `category_id` (optional?)
-   - `room_type` (optional?)
-3. Response-Struktur dokumentieren
-4. Fehlerbehandlung testen
+2. **Systematisch alle Parameter-Kombinationen testen:**
+   - `start_date` (erforderlich - bekannt aus Status 422)
+   - `end_date` (testen ob optional oder erforderlich)
+   - `property_id` (testen ob optional oder erforderlich)
+   - `category_id` (testen ob unterstützt)
+   - `room_type` (testen ob unterstützt: "compartida", "privada")
+   - `adults` / `guests` (testen ob Anzahl Gäste unterstützt wird)
+   - Verschiedene Datumsformate testen (YYYY-MM-DD, DD/MM/YYYY, etc.)
+3. **Response-Struktur vollständig dokumentieren:**
+   - Welche Felder werden zurückgegeben?
+   - Welche Datentypen?
+   - Welche Werte für room_type?
+   - Wie werden Preise formatiert?
+4. **Fehlerbehandlung testen:**
+   - Was passiert bei ungültigen Datumsformaten?
+   - Was passiert bei Datum in der Vergangenheit?
+   - Was passiert bei fehlenden Parametern?
+5. **Ergebnisse dokumentieren:**
+   - Erstelle `docs/technical/LOBBYPMS_AVAILABILITY_API_TEST_ERGEBNISSE.md`
+   - Dokumentiere ALLE getesteten Parameter-Kombinationen
+   - Dokumentiere Response-Struktur mit Beispielen
+   - Dokumentiere Fehlerfälle
 
-**Erwartete Response (zu verifizieren):**
+**Test-Script Struktur:**
+```typescript
+// backend/scripts/test-lobbypms-availability.ts
+async function testAvailabilityApi() {
+  const service = await LobbyPmsService.createForBranch(1); // Branch ID 1
+  
+  // Test 1: Nur start_date (erforderlich)
+  console.log('Test 1: Nur start_date');
+  try {
+    const result = await service.axiosInstance.get('/api/v2/available-rooms', {
+      params: { start_date: '2025-02-01' }
+    });
+    console.log('✅ Erfolg:', JSON.stringify(result.data, null, 2));
+  } catch (error) {
+    console.log('❌ Fehler:', error.response?.data || error.message);
+  }
+  
+  // Test 2: start_date + end_date
+  // Test 3: start_date + property_id
+  // Test 4: start_date + room_type
+  // ... alle Kombinationen testen
+}
+```
+
+**Erwartete Response (MUSS GETESTET WERDEN - KEINE VERMUTUNG!):**
 ```json
 {
   "data": [
@@ -266,23 +312,28 @@ async checkAvailability(startDate: Date, endDate: Date): Promise<AvailabilityRes
   ]
 }
 ```
+**⚠️ WICHTIG:** Diese Struktur ist nur eine Vermutung! Muss getestet werden!
 
-#### Schritt 1.2: Service-Methode implementieren
+#### Schritt 1.2: Service-Methode implementieren (NACH Tests!)
+
+**WICHTIG:** Implementierung erst NACH vollständigen Tests! Response-Struktur muss bekannt sein!
 
 **Datei:** `backend/src/services/lobbyPmsService.ts`
 
-**Neue Methode:**
+**Neue Methode (Struktur basierend auf Test-Ergebnissen):**
 ```typescript
 /**
  * Prüft Verfügbarkeit von Zimmern/Betten für einen Zeitraum
  * 
  * @param startDate - Check-in Datum
  * @param endDate - Check-out Datum
+ * @param roomType - Optional: Filter nach Zimmerart ("compartida" | "privada")
  * @returns Array von verfügbaren Zimmern/Betten mit Preisen
  */
 async checkAvailability(
   startDate: Date, 
-  endDate: Date
+  endDate: Date,
+  roomType?: 'compartida' | 'privada'
 ): Promise<AvailabilityResult[]> {
   // Lade Settings falls noch nicht geladen
   if (!this.apiKey) {
@@ -290,13 +341,18 @@ async checkAvailability(
   }
 
   try {
+    // Parameter basierend auf Test-Ergebnissen
     const params: any = {
-      start_date: this.formatDate(startDate), // Format: "YYYY-MM-DD"
+      start_date: this.formatDate(startDate), // Format muss aus Tests bekannt sein
       end_date: this.formatDate(endDate)
     };
 
     if (this.propertyId) {
-      params.property_id = this.propertyId;
+      params.property_id = this.propertyId; // Nur wenn in Tests funktioniert
+    }
+
+    if (roomType) {
+      params.room_type = roomType; // Nur wenn in Tests unterstützt
     }
 
     const response = await this.axiosInstance.get<any>(
@@ -304,21 +360,30 @@ async checkAvailability(
       { params }
     );
 
-    // Response-Struktur muss getestet werden
-    // Annahme: { data: [...] } oder direkt Array
+    // Response-Struktur basierend auf Test-Ergebnissen
+    // WICHTIG: Muss aus Tests bekannt sein, keine Vermutungen!
     const availabilityData = response.data.data || response.data || [];
     
+    // Mapping basierend auf tatsächlicher Response-Struktur
     return availabilityData.map((item: any) => ({
-      roomId: item.room_id,
+      roomId: item.room_id || item.id,
       roomName: item.room_name || item.name,
       roomType: item.room_type || item.type,
-      availableBeds: item.available_beds || item.available,
-      totalBeds: item.total_beds || item.total,
-      pricePerNight: item.price_per_night || item.price,
+      availableBeds: item.available_beds || item.available || 0,
+      totalBeds: item.total_beds || item.total || 0,
+      pricePerNight: item.price_per_night || item.price || 0,
       currency: item.currency || 'COP'
     }));
   } catch (error) {
-    // Fehlerbehandlung
+    // Fehlerbehandlung basierend auf Test-Ergebnissen
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(
+        axiosError.response?.data?.error ||
+        axiosError.response?.data?.message ||
+        `LobbyPMS API Fehler: ${axiosError.message}`
+      );
+    }
     throw error;
   }
 }
@@ -333,6 +398,11 @@ interface AvailabilityResult {
   currency: string;
 }
 ```
+
+**WICHTIG:** 
+- Alle Feldnamen müssen aus Test-Ergebnissen übernommen werden
+- Keine Vermutungen über Response-Struktur
+- Fehlerbehandlung basierend auf tatsächlichen Fehlermeldungen
 
 #### Schritt 1.3: WhatsApp Function hinzufügen
 
@@ -416,59 +486,511 @@ export async function check_room_availability(
 
 ### Phase 2: Reservierungserstellung via Bot
 
-#### Schritt 2.1: WhatsApp Function hinzufügen
+#### Schritt 2.1: Mehrstufige Konversation implementieren
 
-**Datei:** `backend/src/services/whatsappAiService.ts`
+**WICHTIG:** Bot muss ALLE Informationen abfragen:
+- Von wann bis wann (Check-in/Check-out Datum)
+- Name des Gastes
+- Art des Zimmers (private oder dorm)
 
-**Neue Function Definition:**
+**Vorgehen:** Ähnlich wie `startRequestCreation()` und `continueConversation()` für Requests/Tasks
+
+**Datei:** `backend/src/services/whatsappMessageHandler.ts`
+
+**Neue Methoden:**
+
+1. **Keyword-Erkennung für Reservierungserstellung:**
 ```typescript
-{
-  type: 'function',
-  function: {
-    name: 'create_reservation',
-    description: 'Erstellt eine neue Reservierung. Benötigt Gästename, Check-in/Check-out Datum, Kontaktinformationen und Betrag.',
-    parameters: {
-      type: 'object',
-      properties: {
-        guestName: {
-          type: 'string',
-          description: 'Name des Gastes (Vor- und Nachname)'
-        },
-        checkInDate: {
-          type: 'string',
-          description: 'Check-in Datum im Format YYYY-MM-DD'
-        },
-        checkOutDate: {
-          type: 'string',
-          description: 'Check-out Datum im Format YYYY-MM-DD'
-        },
-        guestPhone: {
-          type: 'string',
-          description: 'Telefonnummer des Gastes (optional, aber empfohlen für WhatsApp-Versand)'
-        },
-        guestEmail: {
-          type: 'string',
-          description: 'E-Mail-Adresse des Gastes (optional)'
-        },
-        amount: {
-          type: 'number',
-          description: 'Betrag der Reservierung'
-        },
-        currency: {
-          type: 'string',
-          description: 'Währung (Standard: COP)',
-          default: 'COP'
-        },
-        branchId: {
-          type: 'number',
-          description: 'Branch ID (optional, verwendet aktuellen Branch wenn nicht angegeben)'
-        }
-      },
-      required: ['guestName', 'checkInDate', 'checkOutDate', 'amount']
-    }
+// In handleIncomingMessage(), nach anderen Keywords
+const reservationKeywords = ['reservierung', 'reservation', 'buchung', 'booking', 'quiero reservar', 'quiero una habitación'];
+if (reservationKeywords.some(keyword => normalizedText.includes(keyword)) && conversation.state === 'idle') {
+  return await this.startReservationCreation(normalizedPhone, branchId, conversation);
+}
+```
+
+2. **Start der Reservierungserstellung:**
+```typescript
+/**
+ * Startet Reservierungserstellung (mehrstufige Konversation)
+ */
+private static async startReservationCreation(
+  phoneNumber: string,
+  branchId: number,
+  conversation: any
+): Promise<string> {
+  try {
+    // Setze State auf "reservation_creation"
+    await prisma.whatsAppConversation.update({
+      where: { id: conversation.id },
+      data: {
+        state: 'reservation_creation',
+        context: { step: 'waiting_for_check_in_date' }
+      }
+    });
+
+    const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+    
+    const translations: Record<string, string> = {
+      es: '¡Perfecto! Te ayudo a crear una reservación.\n\n¿Cuándo quieres hacer el check-in? (Por ejemplo: 15/02/2025 o mañana)',
+      de: 'Perfekt! Ich helfe dir bei der Reservierung.\n\nWann möchtest du einchecken? (Zum Beispiel: 15.02.2025 oder morgen)',
+      en: 'Perfect! I\'ll help you create a reservation.\n\nWhen do you want to check in? (For example: 02/15/2025 or tomorrow)'
+    };
+
+    return translations[language] || translations.es;
+  } catch (error) {
+    console.error('[WhatsApp Message Handler] Fehler beim Starten der Reservierungserstellung:', error);
+    return await this.getLanguageResponse(branchId, phoneNumber, 'error');
   }
 }
 ```
+
+3. **Fortsetzung der Konversation:**
+```typescript
+// In continueConversation(), nach request_creation und task_creation
+if (conversation.state === 'reservation_creation') {
+  return await this.continueReservationCreation(phoneNumber, branchId, messageText, conversation);
+}
+```
+
+4. **Fortsetzung der Reservierungserstellung:**
+```typescript
+/**
+ * Setzt Reservierungserstellung fort
+ */
+private static async continueReservationCreation(
+  phoneNumber: string,
+  branchId: number,
+  messageText: string,
+  conversation: any
+): Promise<string> {
+  try {
+    const context = conversation.context as any || {};
+    const step = context.step || '';
+    const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+
+    // Schritt 1: Check-in Datum
+    if (step === 'waiting_for_check_in_date') {
+      const checkInDate = this.parseDateFromMessage(messageText, language);
+      
+      if (!checkInDate) {
+        const translations: Record<string, string> = {
+          es: 'No pude entender la fecha. Por favor, escribe la fecha de check-in en formato DD/MM/YYYY (por ejemplo: 15/02/2025) o di "mañana", "pasado mañana", etc.',
+          de: 'Ich konnte das Datum nicht verstehen. Bitte schreibe das Check-in Datum im Format TT.MM.JJJJ (z.B. 15.02.2025) oder sage "morgen", "übermorgen", etc.',
+          en: 'I couldn\'t understand the date. Please write the check-in date in format MM/DD/YYYY (e.g. 02/15/2025) or say "tomorrow", "day after tomorrow", etc.'
+        };
+        return translations[language] || translations.es;
+      }
+
+      // Update Context
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          context: {
+            ...context,
+            step: 'waiting_for_check_out_date',
+            checkInDate: checkInDate.toISOString()
+          }
+        }
+      });
+
+      const translations: Record<string, string> = {
+        es: `Check-in: ${this.formatDate(checkInDate, language)}\n\n¿Cuándo quieres hacer el check-out? (Por ejemplo: 18/02/2025 o en 3 días)`,
+        de: `Check-in: ${this.formatDate(checkInDate, language)}\n\nWann möchtest du auschecken? (Zum Beispiel: 18.02.2025 oder in 3 Tagen)`,
+        en: `Check-in: ${this.formatDate(checkInDate, language)}\n\nWhen do you want to check out? (For example: 02/18/2025 or in 3 days)`
+      };
+      return translations[language] || translations.es;
+    }
+
+    // Schritt 2: Check-out Datum
+    if (step === 'waiting_for_check_out_date') {
+      const checkInDate = new Date(context.checkInDate);
+      const checkOutDate = this.parseDateFromMessage(messageText, language, checkInDate);
+      
+      if (!checkOutDate) {
+        const translations: Record<string, string> = {
+          es: 'No pude entender la fecha. Por favor, escribe la fecha de check-out en formato DD/MM/YYYY (por ejemplo: 18/02/2025) o di "en 3 días", etc.',
+          de: 'Ich konnte das Datum nicht verstehen. Bitte schreibe das Check-out Datum im Format TT.MM.JJJJ (z.B. 18.02.2025) oder sage "in 3 Tagen", etc.',
+          en: 'I couldn\'t understand the date. Please write the check-out date in format MM/DD/YYYY (e.g. 02/18/2025) or say "in 3 days", etc.'
+        };
+        return translations[language] || translations.es;
+      }
+
+      // Validierung: Check-out muss nach Check-in liegen
+      if (checkOutDate <= checkInDate) {
+        const translations: Record<string, string> = {
+          es: 'El check-out debe ser después del check-in. Por favor, escribe una fecha posterior.',
+          de: 'Das Check-out muss nach dem Check-in sein. Bitte schreibe ein späteres Datum.',
+          en: 'Check-out must be after check-in. Please write a later date.'
+        };
+        return translations[language] || translations.es;
+      }
+
+      // Update Context
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          context: {
+            ...context,
+            step: 'waiting_for_guest_name',
+            checkOutDate: checkOutDate.toISOString()
+          }
+        }
+      });
+
+      const translations: Record<string, string> = {
+        es: `Check-out: ${this.formatDate(checkOutDate, language)}\n\n¿Cuál es el nombre del huésped? (Nombre completo)`,
+        de: `Check-out: ${this.formatDate(checkOutDate, language)}\n\nWie lautet der Name des Gastes? (Vollständiger Name)`,
+        en: `Check-out: ${this.formatDate(checkOutDate, language)}\n\nWhat is the guest's name? (Full name)`
+      };
+      return translations[language] || translations.es;
+    }
+
+    // Schritt 3: Gästename
+    if (step === 'waiting_for_guest_name') {
+      const guestName = messageText.trim();
+      
+      if (guestName.length < 2) {
+        const translations: Record<string, string> = {
+          es: 'El nombre parece muy corto. Por favor, escribe el nombre completo del huésped.',
+          de: 'Der Name scheint zu kurz zu sein. Bitte schreibe den vollständigen Namen des Gastes.',
+          en: 'The name seems too short. Please write the full name of the guest.'
+        };
+        return translations[language] || translations.es;
+      }
+
+      // Update Context
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          context: {
+            ...context,
+            step: 'waiting_for_room_type',
+            guestName: guestName
+          }
+        }
+      });
+
+      const translations: Record<string, string> = {
+        es: `Huésped: ${guestName}\n\n¿Qué tipo de habitación prefieres?\n- Privada (habitación privada)\n- Dorm (cama en habitación compartida)\n\nEscribe "privada" o "dorm"`,
+        de: `Gast: ${guestName}\n\nWelche Art von Zimmer bevorzugst du?\n- Privat (privates Zimmer)\n- Dorm (Bett im Mehrbettzimmer)\n\nSchreibe "privat" oder "dorm"`,
+        en: `Guest: ${guestName}\n\nWhat type of room do you prefer?\n- Private (private room)\n- Dorm (bed in shared room)\n\nWrite "private" or "dorm"`
+      };
+      return translations[language] || translations.es;
+    }
+
+    // Schritt 4: Zimmerart
+    if (step === 'waiting_for_room_type') {
+      const normalizedText = messageText.toLowerCase().trim();
+      let roomType: 'compartida' | 'privada' | null = null;
+      
+      // Erkenne Zimmerart
+      if (normalizedText.includes('privada') || normalizedText.includes('private') || normalizedText.includes('privat')) {
+        roomType = 'privada';
+      } else if (normalizedText.includes('dorm') || normalizedText.includes('compartida') || normalizedText.includes('shared')) {
+        roomType = 'compartida';
+      }
+      
+      if (!roomType) {
+        const translations: Record<string, string> = {
+          es: 'No pude entender el tipo de habitación. Por favor, escribe "privada" o "dorm".',
+          de: 'Ich konnte die Zimmerart nicht verstehen. Bitte schreibe "privat" oder "dorm".',
+          en: 'I couldn\'t understand the room type. Please write "private" or "dorm".'
+        };
+        return translations[language] || translations.es;
+      }
+
+      // Update Context
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          context: {
+            ...context,
+            step: 'waiting_for_confirmation',
+            roomType: roomType
+          }
+        }
+      });
+
+      // Prüfe Verfügbarkeit
+      const checkInDate = new Date(context.checkInDate);
+      const checkOutDate = new Date(context.checkOutDate);
+      
+      try {
+        const service = await LobbyPmsService.createForBranch(branchId);
+        const availability = await service.checkAvailability(checkInDate, checkOutDate, roomType);
+        
+        // Filtere nach Zimmerart
+        const filteredAvailability = availability.filter(item => item.roomType === roomType);
+        
+        if (filteredAvailability.length === 0) {
+          const translations: Record<string, string> = {
+            es: `Lo siento, no hay ${roomType === 'privada' ? 'habitaciones privadas' : 'camas en dorms'} disponibles para estas fechas.`,
+            de: `Entschuldigung, es sind keine ${roomType === 'privada' ? 'Privatzimmer' : 'Betten in Dorms'} für diese Daten verfügbar.`,
+            en: `Sorry, there are no ${roomType === 'privada' ? 'private rooms' : 'beds in dorms'} available for these dates.`
+          };
+          return translations[language] || translations.es;
+        }
+
+        // Zeige verfügbare Optionen
+        let availabilityText = '';
+        filteredAvailability.forEach(item => {
+          availabilityText += `- ${item.roomName}: ${item.availableBeds} ${roomType === 'privada' ? 'disponible' : 'camas disponibles'} - ${item.pricePerNight} ${item.currency}/noche\n`;
+        });
+
+        const translations: Record<string, string> = {
+          es: `Resumen de la reservación:\n\nCheck-in: ${this.formatDate(checkInDate, language)}\nCheck-out: ${this.formatDate(checkOutDate, language)}\nHuésped: ${context.guestName}\nTipo: ${roomType === 'privada' ? 'Privada' : 'Dorm'}\n\nDisponibilidad:\n${availabilityText}\n\n¿Confirmas esta reservación? (Escribe "sí" o "confirmar")`,
+          de: `Zusammenfassung der Reservierung:\n\nCheck-in: ${this.formatDate(checkInDate, language)}\nCheck-out: ${this.formatDate(checkOutDate, language)}\nGast: ${context.guestName}\nTyp: ${roomType === 'privada' ? 'Privat' : 'Dorm'}\n\nVerfügbarkeit:\n${availabilityText}\n\nBestätigst du diese Reservierung? (Schreibe "ja" oder "bestätigen")`,
+          en: `Reservation summary:\n\nCheck-in: ${this.formatDate(checkInDate, language)}\nCheck-out: ${this.formatDate(checkOutDate, language)}\nGuest: ${context.guestName}\nType: ${roomType === 'privada' ? 'Private' : 'Dorm'}\n\nAvailability:\n${availabilityText}\n\nDo you confirm this reservation? (Write "yes" or "confirm")`
+        };
+        return translations[language] || translations.es;
+      } catch (error) {
+        console.error('[WhatsApp Message Handler] Fehler bei Verfügbarkeitsprüfung:', error);
+        const translations: Record<string, string> = {
+          es: 'Hubo un error al verificar la disponibilidad. Por favor, intenta de nuevo más tarde.',
+          de: 'Es gab einen Fehler bei der Verfügbarkeitsprüfung. Bitte versuche es später erneut.',
+          en: 'There was an error checking availability. Please try again later.'
+        };
+        return translations[language] || translations.es;
+      }
+    }
+
+    // Schritt 5: Bestätigung
+    if (step === 'waiting_for_confirmation') {
+      const normalizedText = messageText.toLowerCase().trim();
+      const isConfirmed = normalizedText.includes('sí') || normalizedText.includes('si') || 
+                         normalizedText.includes('yes') || normalizedText.includes('ja') ||
+                         normalizedText.includes('confirmar') || normalizedText.includes('confirm') ||
+                         normalizedText.includes('bestätigen');
+      
+      if (!isConfirmed) {
+        // Zurück zu Schritt 1
+        await prisma.whatsAppConversation.update({
+          where: { id: conversation.id },
+          data: {
+            state: 'idle',
+            context: {}
+          }
+        });
+        
+        const translations: Record<string, string> = {
+          es: 'Reservación cancelada. Si necesitas algo más, solo escríbeme.',
+          de: 'Reservierung abgebrochen. Wenn du etwas anderes brauchst, schreibe mir einfach.',
+          en: 'Reservation cancelled. If you need anything else, just write to me.'
+        };
+        return translations[language] || translations.es;
+      }
+
+      // Erstelle Reservierung
+      try {
+        const checkInDate = new Date(context.checkInDate);
+        const checkOutDate = new Date(context.checkOutDate);
+        const guestName = context.guestName;
+        const roomType = context.roomType;
+
+        // Hole Branch für organizationId
+        const branch = await prisma.branch.findUnique({
+          where: { id: branchId },
+          select: { organizationId: true }
+        });
+
+        // Berechne Betrag (vereinfacht - sollte aus Verfügbarkeit kommen)
+        // TODO: Preis aus Verfügbarkeitsprüfung übernehmen
+        const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+        const estimatedAmount = nights * 50000; // Platzhalter - sollte aus Verfügbarkeit kommen
+
+        // Erstelle Reservierung
+        const reservation = await prisma.reservation.create({
+          data: {
+            guestName: guestName,
+            checkInDate: checkInDate,
+            checkOutDate: checkOutDate,
+            status: ReservationStatus.confirmed,
+            paymentStatus: PaymentStatus.pending,
+            amount: estimatedAmount,
+            currency: 'COP',
+            organizationId: branch?.organizationId || 1,
+            branchId: branchId,
+            paymentDeadline: new Date(Date.now() + 60 * 60 * 1000), // 1 Stunde
+            autoCancelEnabled: true
+          }
+        });
+
+        // Setze State zurück
+        await prisma.whatsAppConversation.update({
+          where: { id: conversation.id },
+          data: {
+            state: 'idle',
+            context: {}
+          }
+        });
+
+        // Versende Links (wenn Telefonnummer vorhanden)
+        if (phoneNumber) {
+          try {
+            await ReservationNotificationService.sendReservationInvitation(
+              reservation.id,
+              {
+                guestPhone: phoneNumber,
+                amount: estimatedAmount,
+                currency: 'COP'
+              }
+            );
+          } catch (error) {
+            console.error('[WhatsApp Message Handler] Fehler beim Versand der Links:', error);
+          }
+        }
+
+        const translations: Record<string, string> = {
+          es: `✅ Reservación creada exitosamente!\n\nID: ${reservation.id}\nHuésped: ${guestName}\nCheck-in: ${this.formatDate(checkInDate, language)}\nCheck-out: ${this.formatDate(checkOutDate, language)}\n\n${phoneNumber ? 'Se han enviado los enlaces de pago y check-in por WhatsApp.' : 'Por favor, envía los enlaces de pago y check-in manualmente.'}`,
+          de: `✅ Reservierung erfolgreich erstellt!\n\nID: ${reservation.id}\nGast: ${guestName}\nCheck-in: ${this.formatDate(checkInDate, language)}\nCheck-out: ${this.formatDate(checkOutDate, language)}\n\n${phoneNumber ? 'Zahlungs- und Check-in-Links wurden per WhatsApp gesendet.' : 'Bitte sende die Zahlungs- und Check-in-Links manuell.'}`,
+          en: `✅ Reservation created successfully!\n\nID: ${reservation.id}\nGuest: ${guestName}\nCheck-in: ${this.formatDate(checkInDate, language)}\nCheck-out: ${this.formatDate(checkOutDate, language)}\n\n${phoneNumber ? 'Payment and check-in links have been sent via WhatsApp.' : 'Please send the payment and check-in links manually.'}`
+        };
+        return translations[language] || translations.es;
+      } catch (error) {
+        console.error('[WhatsApp Message Handler] Fehler beim Erstellen der Reservierung:', error);
+        const translations: Record<string, string> = {
+          es: 'Hubo un error al crear la reservación. Por favor, intenta de nuevo más tarde.',
+          de: 'Es gab einen Fehler beim Erstellen der Reservierung. Bitte versuche es später erneut.',
+          en: 'There was an error creating the reservation. Please try again later.'
+        };
+        return translations[language] || translations.es;
+      }
+    }
+
+    return await this.getLanguageResponse(branchId, phoneNumber, 'error');
+  } catch (error) {
+    console.error('[WhatsApp Message Handler] Fehler bei Reservierungserstellung:', error);
+    return await this.getLanguageResponse(branchId, phoneNumber, 'error');
+  }
+}
+
+/**
+ * Parst Datum aus Nachricht (unterstützt verschiedene Formate)
+ */
+private static parseDateFromMessage(
+  message: string, 
+  language: string,
+  referenceDate?: Date
+): Date | null {
+  // Implementierung: Parse verschiedene Datumsformate
+  // "15/02/2025", "15.02.2025", "02/15/2025", "mañana", "tomorrow", "in 3 days", etc.
+  // TODO: Implementieren
+  return null;
+}
+
+/**
+ * Formatiert Datum für Anzeige
+ */
+private static formatDate(date: Date, language: string): string {
+  // Implementierung: Format basierend auf Sprache
+  // TODO: Implementieren
+  return date.toLocaleDateString();
+}
+```
+
+#### Schritt 2.2: Datum-Parsing implementieren
+
+**Datei:** `backend/src/services/whatsappMessageHandler.ts`
+
+**Neue Hilfsmethoden:**
+```typescript
+/**
+ * Parst Datum aus Nachricht (unterstützt verschiedene Formate)
+ */
+private static parseDateFromMessage(
+  message: string, 
+  language: string,
+  referenceDate: Date = new Date()
+): Date | null {
+  const normalizedMessage = message.toLowerCase().trim();
+  
+  // Relative Daten
+  if (normalizedMessage.includes('mañana') || normalizedMessage.includes('tomorrow') || normalizedMessage.includes('morgen')) {
+    const date = new Date(referenceDate);
+    date.setDate(date.getDate() + 1);
+    return date;
+  }
+  
+  if (normalizedMessage.includes('pasado mañana') || normalizedMessage.includes('day after tomorrow') || normalizedMessage.includes('übermorgen')) {
+    const date = new Date(referenceDate);
+    date.setDate(date.getDate() + 2);
+    return date;
+  }
+  
+  // "in X days"
+  const inDaysMatch = normalizedMessage.match(/in (\d+) (day|días|tagen)/i);
+  if (inDaysMatch) {
+    const days = parseInt(inDaysMatch[1], 10);
+    const date = new Date(referenceDate);
+    date.setDate(date.getDate() + days);
+    return date;
+  }
+  
+  // Datumsformate: DD/MM/YYYY, DD.MM.YYYY, MM/DD/YYYY, YYYY-MM-DD
+  const dateFormats = [
+    /(\d{1,2})\/(\d{1,2})\/(\d{4})/, // DD/MM/YYYY oder MM/DD/YYYY
+    /(\d{1,2})\.(\d{1,2})\.(\d{4})/, // DD.MM.YYYY
+    /(\d{4})-(\d{1,2})-(\d{1,2})/     // YYYY-MM-DD
+  ];
+  
+  for (const format of dateFormats) {
+    const match = normalizedMessage.match(format);
+    if (match) {
+      let day: number, month: number, year: number;
+      
+      if (format === dateFormats[2]) {
+        // YYYY-MM-DD
+        year = parseInt(match[1], 10);
+        month = parseInt(match[2], 10);
+        day = parseInt(match[3], 10);
+      } else {
+        // DD/MM/YYYY oder DD.MM.YYYY
+        day = parseInt(match[1], 10);
+        month = parseInt(match[2], 10);
+        year = parseInt(match[3], 10);
+        
+        // Heuristik: Wenn Tag > 12, dann ist es sicher DD/MM/YYYY
+        // Sonst: Abhängig von Sprache (DE/ES: DD/MM, EN: MM/DD)
+        if (day <= 12 && month <= 12) {
+          if (language === 'en') {
+            // EN: MM/DD/YYYY
+            [day, month] = [month, day];
+          }
+          // DE/ES: DD/MM/YYYY (bleibt wie ist)
+        }
+      }
+      
+      const date = new Date(year, month - 1, day);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+  }
+  
+  return null;
+}
+```
+
+#### Schritt 2.3: API-Endpunkt für Reservierungserstellung testen
+
+**WICHTIG:** Muss getestet werden, ob LobbyPMS API-Endpunkt für Reservierungserstellung existiert!
+
+**Test-Script:** `backend/scripts/test-lobbypms-create-booking.ts`
+
+```typescript
+// Test verschiedene Endpunkte:
+// - POST /api/v1/bookings
+// - POST /api/v2/bookings
+// - POST /api/v1/reservations
+// - POST /api/v2/reservations
+
+// Test verschiedene Payload-Strukturen
+// Dokumentiere welche funktionieren
+```
+
+**Falls API nicht existiert:**
+- Alternative: Reservierung nur lokal erstellen (ohne LobbyPMS)
+- Oder: Website-Scraping (nur als letzter Ausweg)
 
 **Datei:** `backend/src/services/whatsappFunctionHandlers.ts`
 
@@ -994,56 +1516,226 @@ paymentDeadline.setHours(paymentDeadline.getHours() + paymentDeadlineHours);
 
 ## 🚀 Implementierungsreihenfolge
 
-### Schritt 1: Verfügbarkeitsprüfung (Priorität: HOCH)
-1. Test-Script erstellen und ausführen
-2. API-Endpunkt dokumentieren
-3. Service-Methode implementieren
-4. WhatsApp Function hinzufügen
-5. Testen
+### Schritt 1: API-Endpunkte testen (Priorität: KRITISCH - ZUERST!)
 
-### Schritt 2: Reservierungserstellung via Bot (Priorität: HOCH)
-1. WhatsApp Function hinzufügen
-2. Payment-Deadline bei Erstellung setzen
+**WICHTIG:** Alles muss getestet werden, keine Vermutungen!
+
+1. **Verfügbarkeits-API testen:**
+   - Test-Script erstellen: `backend/scripts/test-lobbypms-availability.ts`
+   - Alle Parameter-Kombinationen testen
+   - Response-Struktur vollständig dokumentieren
+   - Ergebnisse in `docs/technical/LOBBYPMS_AVAILABILITY_API_TEST_ERGEBNISSE.md` dokumentieren
+
+2. **Reservierungserstellungs-API testen:**
+   - Test-Script erstellen: `backend/scripts/test-lobbypms-create-booking.ts`
+   - Alle möglichen Endpunkte testen
+   - Payload-Strukturen testen
+   - Ergebnisse dokumentieren
+
+3. **Stornierungs-API testen:**
+   - Test ob `updateReservationStatus(reservationId, 'cancelled')` funktioniert
+   - Oder separater Stornierungs-Endpunkt
+   - Ergebnisse dokumentieren
+
+### Schritt 2: Verfügbarkeitsprüfung implementieren (Priorität: HOCH)
+1. Service-Methode `checkAvailability()` implementieren (basierend auf Test-Ergebnissen)
+2. WhatsApp Function `check_room_availability` hinzufügen
 3. Testen
 
-### Schritt 3: Automatische Stornierung (Priorität: MITTEL)
+### Schritt 3: Reservierungserstellung via Bot (Priorität: HOCH)
+1. Mehrstufige Konversation implementieren:
+   - Keyword-Erkennung
+   - `startReservationCreation()` Methode
+   - `continueReservationCreation()` Methode
+   - Datum-Parsing implementieren
+2. Payment-Deadline bei Erstellung setzen
+3. Testen (komplette Konversation durchspielen)
+
+### Schritt 4: Automatische Stornierung (Priorität: MITTEL)
 1. Datenbank-Migration erstellen
 2. Scheduler implementieren
 3. Scheduler in Server starten
 4. Testen
 
-### Schritt 4: Optional - Manueller Link-Versand (Priorität: NIEDRIG)
+### Schritt 5: Optional - Manueller Link-Versand (Priorität: NIEDRIG)
 1. Separate Function `send_reservation_links` hinzufügen
 2. Testen
 
 ---
 
-## ⚠️ Offene Fragen / Zu klären
+## ⚠️ Offene Fragen / Zu klären (MÜSSEN GETESTET WERDEN!)
 
-1. **LobbyPMS API `/api/v2/available-rooms`:**
-   - Welche Parameter werden akzeptiert?
-   - Welche Daten werden zurückgegeben?
-   - Funktioniert der Endpunkt zuverlässig?
+**WICHTIG:** Alle Fragen müssen durch Tests beantwortet werden, keine Vermutungen!
 
-2. **Reservierungserstellung in LobbyPMS:**
-   - Gibt es einen API-Endpunkt zum Erstellen von Reservierungen?
-   - Oder müssen Reservierungen über die Website erstellt werden?
-   - Falls Website: Wie funktioniert der Buchungsprozess?
+1. **LobbyPMS API `/api/v2/available-rooms` (MUSS GETESTET WERDEN):**
+   - ❓ Welche Parameter werden akzeptiert? (start_date, end_date, property_id, room_type, etc.)
+   - ❓ Welche Daten werden zurückgegeben? (Feldnamen, Datentypen, Struktur)
+   - ❓ Funktioniert der Endpunkt zuverlässig?
+   - ❓ Welche Fehlermeldungen gibt es bei ungültigen Parametern?
+   - ❓ Wie werden Preise formatiert?
+   - ❓ Wie wird Verfügbarkeit angezeigt? (Anzahl Betten, Zimmer, etc.)
 
-3. **Stornierung in LobbyPMS:**
-   - Funktioniert `updateReservationStatus(reservationId, 'cancelled')`?
-   - Oder gibt es einen separaten Stornierungs-Endpunkt?
+2. **Reservierungserstellung in LobbyPMS (MUSS GETESTET WERDEN):**
+   - ❓ Gibt es einen API-Endpunkt zum Erstellen von Reservierungen?
+   - ❓ Welcher Endpunkt? (POST /api/v1/bookings, POST /api/v2/bookings, etc.)
+   - ❓ Welche Payload-Struktur wird erwartet?
+   - ❓ Welche Felder sind erforderlich?
+   - ❓ Oder müssen Reservierungen über die Website erstellt werden?
+   - ❓ Falls Website: Wie funktioniert der Buchungsprozess? (nur als letzter Ausweg)
+
+3. **Stornierung in LobbyPMS (MUSS GETESTET WERDEN):**
+   - ❓ Funktioniert `updateReservationStatus(reservationId, 'cancelled')`?
+   - ❓ Oder gibt es einen separaten Stornierungs-Endpunkt?
+   - ❓ Welche Parameter werden benötigt?
+   - ❓ Welche Response wird zurückgegeben?
 
 4. **Payment-Deadline:**
-   - Soll die Frist konfigurierbar pro Branch/Organisation sein?
-   - Oder global für alle Reservierungen?
+   - ❓ Soll die Frist konfigurierbar pro Branch/Organisation sein?
+   - ❓ Oder global für alle Reservierungen?
+   - ❓ Standard-Frist: 1 Stunde? (zu klären)
 
 5. **Benachrichtigung bei Stornierung:**
-   - Soll der Gast bei automatischer Stornierung benachrichtigt werden?
-   - Per WhatsApp oder E-Mail?
+   - ❓ Soll der Gast bei automatischer Stornierung benachrichtigt werden?
+   - ❓ Per WhatsApp oder E-Mail?
+   - ❓ Welche Nachricht soll gesendet werden?
+
+6. **Datum-Parsing:**
+   - ❓ Welche Datumsformate sollen unterstützt werden?
+   - ❓ Wie mit verschiedenen Sprachen umgehen? (DD/MM/YYYY vs MM/DD/YYYY)
+   - ❓ Relative Daten ("morgen", "in 3 Tagen") in verschiedenen Sprachen
+
+7. **Preisberechnung:**
+   - ❓ Wie wird der Preis für die Reservierung berechnet?
+   - ❓ Soll Preis aus Verfügbarkeitsprüfung übernommen werden?
+   - ❓ Oder manuell eingeben?
+
+---
+
+---
+
+## 🎯 WICHTIGSTE PUNKTE - ZUSAMMENFASSUNG
+
+### ⚠️ KRITISCH: Tests zuerst!
+
+**NICHTS implementieren ohne vorherige Tests!**
+
+1. **API-Endpunkte testen:**
+   - `/api/v2/available-rooms` - Alle Parameter-Kombinationen testen
+   - Reservierungserstellungs-Endpunkt - Existiert er? Welche Struktur?
+   - Stornierungs-Endpunkt - Funktioniert `updateReservationStatus`?
+
+2. **Ergebnisse dokumentieren:**
+   - Alle Test-Ergebnisse in separaten Dokumenten festhalten
+   - Response-Strukturen vollständig dokumentieren
+   - Fehlerfälle dokumentieren
+
+### 📋 Mehrstufige Konversation
+
+**Bot muss ALLE Informationen abfragen:**
+1. Check-in Datum
+2. Check-out Datum
+3. Gästename
+4. Zimmerart (private oder dorm)
+5. Bestätigung
+
+**Implementierung:**
+- Ähnlich wie `startRequestCreation()` und `continueConversation()`
+- Conversation State: `reservation_creation`
+- Context speichert alle Schritte
+- Datum-Parsing für verschiedene Formate und Sprachen
+
+### 🔍 Verfügbarkeitsprüfung
+
+**Vor Implementierung:**
+- API-Endpunkt vollständig testen
+- Response-Struktur dokumentieren
+- Parameter-Kombinationen testen
+
+**Nach Tests:**
+- Service-Methode basierend auf tatsächlichen Ergebnissen implementieren
+- Keine Vermutungen über Feldnamen oder Struktur
+
+### 💰 Preisberechnung
+
+**Zu klären:**
+- Soll Preis aus Verfügbarkeitsprüfung übernommen werden?
+- Oder manuell eingeben?
+- Wie mit verschiedenen Zimmerarten umgehen?
+
+### ⏰ Automatische Stornierung
+
+**Implementierung:**
+- Scheduler alle 5 Minuten
+- Prüft Reservierungen mit überschrittener Payment-Deadline
+- Storniert in LobbyPMS (wenn API funktioniert)
+- Aktualisiert lokale Reservierung
+
+**Zu klären:**
+- Soll Gast benachrichtigt werden?
+- Welche Nachricht?
 
 ---
 
 **Erstellt:** 2025-01-26  
-**Status:** ✅ ANALYSE ABGESCHLOSSEN - Plan erstellt, NICHTS UMSETZEN
+**Status:** ✅ ANALYSE ABGESCHLOSSEN - Plan erstellt, Test-Scripts erstellt  
+**Nächster Schritt:** API-Endpunkte testen (siehe Befehle unten)
+
+---
+
+## 🧪 TEST-SCRIPTS ERSTELLT
+
+### Verfügbare Test-Scripts:
+
+1. **`backend/scripts/test-lobbypms-availability.ts`**
+   - Testet `/api/v2/available-rooms` Endpunkt
+   - Verschiedene Parameter-Kombinationen
+   - Speichert Ergebnisse in `lobbypms-availability-test-results.json`
+
+2. **`backend/scripts/test-lobbypms-create-booking.ts`**
+   - Testet verschiedene Endpunkte zum Erstellen von Reservierungen
+   - Verschiedene Payload-Strukturen
+   - Speichert Ergebnisse in `lobbypms-create-booking-test-results.json`
+
+3. **`backend/scripts/test-lobbypms-cancel-booking.ts`**
+   - Testet Stornierungs-Endpunkte
+   - Testet `updateReservationStatus()` mit 'cancelled'
+   - Verwendung: `npx ts-node backend/scripts/test-lobbypms-cancel-booking.ts [booking_id]`
+
+### Server-Befehle zum Ausführen:
+
+**WICHTIG:** Diese Befehle auf dem Server ausführen!
+
+```bash
+# 1. Verfügbarkeits-API testen
+cd /path/to/intranet/backend
+npx ts-node scripts/test-lobbypms-availability.ts
+
+# 2. Reservierungserstellungs-API testen
+npx ts-node scripts/test-lobbypms-create-booking.ts
+
+# 3. Stornierungs-API testen (mit booking_id)
+npx ts-node scripts/test-lobbypms-cancel-booking.ts [booking_id]
+
+# Oder ohne booking_id (verwendet erste Reservierung aus DB)
+npx ts-node scripts/test-lobbypms-cancel-booking.ts
+```
+
+**Ergebnisse:**
+- Verfügbarkeit: `backend/lobbypms-availability-test-results.json`
+- Booking Creation: `backend/lobbypms-create-booking-test-results.json`
+- Cancel: Wird in Console ausgegeben
+
+---
+
+## 📋 WIEDERVERWENDBARE KOMPONENTEN
+
+Siehe: `docs/implementation_plans/LOBBYPMS_KI_BOT_WIEDERVERWENDUNG.md`
+
+**Zusammenfassung:**
+- ✅ `ReservationNotificationService.sendReservationInvitation()` - Komplett: Payment-Link + Check-in-Link + WhatsApp
+- ✅ `BoldPaymentService.createPaymentLink()` - Zahlungslink erstellen
+- ✅ `generateLobbyPmsCheckInLink()` - Check-in-Link erstellen
+- ✅ `WhatsAppService.sendMessageWithFallback()` - WhatsApp-Nachricht senden
+- ✅ Conversation State Management Pattern
+- ✅ Reservierungserstellung (prisma.reservation.create)
 
