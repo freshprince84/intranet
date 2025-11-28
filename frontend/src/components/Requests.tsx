@@ -541,29 +541,9 @@ const Requests: React.FC = () => {
 
   // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
   // ✅ Infinite Scroll für Anzeige (nicht für Laden)
-  // Hinweis: filteredAndSortedRequests wird später deklariert, daher verwenden wir requests.length als Näherung
+  // Hinweis: filteredAndSortedRequests wird später deklariert, daher verwenden wir einen Ref
   const scrollHandlerRef = useRef<() => void>();
-  useEffect(() => {
-    scrollHandlerRef.current = () => {
-      // Prüfe ob User nahe am Ende der Seite ist
-      // Verwende requests.length als Näherung (filteredAndSortedRequests wird später deklariert)
-      if (
-        window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000 &&
-        requestsDisplayLimit < requests.length
-      ) {
-        // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
-        const increment = viewMode === 'cards' ? 10 : 20;
-        setRequestsDisplayLimit(prev => prev + increment);
-      }
-    };
-    
-    const handleScroll = () => scrollHandlerRef.current?.();
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [requestsDisplayLimit, viewMode, requests.length]);
+  const filteredAndSortedRequestsRef = useRef<Request[]>([]);
 
   // ✅ FIX: fetchFirst5Requests entfernt - Initial mit normalem fetchRequests laden (20 Requests)
   // Initial Requests laden (ohne Filter - SavedFilterTags wendet Default-Filter an)
@@ -732,12 +712,14 @@ const Requests: React.FC = () => {
   };
 
   const filteredAndSortedRequests = useMemo(() => {
-    // Verwende requests (bereits server-seitig gefiltert)
+    // ✅ FAKT: Wenn selectedFilterId gesetzt ist, wurden Requests bereits server-seitig gefiltert
+    // ✅ FAKT: Wenn filterConditions gesetzt sind (ohne selectedFilterId), wurden Requests bereits server-seitig gefiltert
+    // ✅ NUR searchTerm wird client-seitig gefiltert (nicht server-seitig)
     const requestsToFilter = requests;
     
     return requestsToFilter
       .filter(request => {
-        // Globale Suchfunktion
+        // ✅ NUR Globale Suchfunktion (searchTerm) wird client-seitig angewendet
         if (searchTerm) {
           const searchLower = searchTerm.toLowerCase();
           const matchesSearch = 
@@ -749,87 +731,8 @@ const Requests: React.FC = () => {
           if (!matchesSearch) return false;
         }
         
-        // Wenn erweiterte Filterbedingungen definiert sind, wende diese an
-        // WICHTIG: Verwende zentrale Filter-Logik - Funktionalität bleibt identisch!
-        if (filterConditions.length > 0) {
-          // Column-Evaluatoren für Requests (exakt gleiche Logik wie vorher)
-          const columnEvaluators: any = {
-            'title': (req: Request, cond: FilterCondition) => {
-              const value = (cond.value as string || '').toLowerCase();
-              const title = req.title.toLowerCase();
-              if (cond.operator === 'equals') return req.title === cond.value;
-              if (cond.operator === 'contains') return title.includes(value);
-              if (cond.operator === 'startsWith') return title.startsWith(value);
-              if (cond.operator === 'endsWith') return title.endsWith(value);
-              return null;
-            },
-            'status': (req: Request, cond: FilterCondition) => {
-              if (cond.operator === 'equals') return req.status === cond.value;
-              if (cond.operator === 'notEquals') return req.status !== cond.value;
-              return null;
-            },
-            'type': (req: Request, cond: FilterCondition) => {
-              const requestType = req.type || 'other';
-              if (cond.operator === 'equals') return requestType === cond.value;
-              if (cond.operator === 'notEquals') return requestType !== cond.value;
-              return null;
-            },
-            'requestedBy': (req: Request, cond: FilterCondition) => {
-              // Unterstützt user-{id} Format und Text-Fallback
-              const requestedByName = `${req.requestedBy.firstName} ${req.requestedBy.lastName}`;
-              return evaluateUserRoleCondition(
-                req.requestedBy.id,
-                null, // Requests haben keine Rollen
-                cond,
-                requestedByName
-              );
-            },
-            'responsible': (req: Request, cond: FilterCondition) => {
-              // Unterstützt user-{id} Format und Text-Fallback
-              const responsibleName = `${req.responsible.firstName} ${req.responsible.lastName}`;
-              return evaluateUserRoleCondition(
-                req.responsible.id,
-                null, // Requests haben keine Rollen
-                cond,
-                responsibleName
-              );
-            },
-            'branch': (req: Request, cond: FilterCondition) => {
-              const branchName = req.branch.name.toLowerCase();
-              const value = (cond.value as string || '').toLowerCase();
-              if (cond.operator === 'contains') return branchName.includes(value);
-              if (cond.operator === 'equals') return branchName === value;
-              return null;
-            },
-            'dueDate': (req: Request, cond: FilterCondition) => {
-              return evaluateDateCondition(req.dueDate, cond);
-            }
-          };
-
-          const getFieldValue = (req: Request, columnId: string): any => {
-            switch (columnId) {
-              case 'title': return req.title;
-              case 'status': return req.status;
-              case 'type': return req.type || 'other';
-              case 'requestedBy': return `${req.requestedBy.firstName} ${req.requestedBy.lastName}`;
-              case 'responsible': return `${req.responsible.firstName} ${req.responsible.lastName}`;
-              case 'branch': return req.branch.name;
-              case 'dueDate': return req.dueDate;
-              default: return (req as any)[columnId];
-            }
-          };
-
-          // Wende Filter mit zentraler Logik an (nur für dieses einzelne Item)
-          const filtered = applyFilters(
-            [request],
-            filterConditions,
-            filterLogicalOperators,
-            getFieldValue,
-            columnEvaluators
-          );
-          
-          if (filtered.length === 0) return false;
-        }
+        // ❌ ENTFERNEN: Client-seitige Filterung wenn selectedFilterId oder filterConditions gesetzt sind
+        // ✅ Server hat bereits gefiltert, keine doppelte Filterung mehr
         
         return true;
       })
@@ -890,7 +793,7 @@ const Requests: React.FC = () => {
         }
         
         // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
-        if (filterSortDirections.length > 0 && filterConditions.length > 0) {
+        if (filterSortDirections.length > 0 && (selectedFilterId !== null || filterConditions.length > 0)) {
           // Sortiere nach Priorität (1, 2, 3, ...)
           const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
           
@@ -917,7 +820,7 @@ const Requests: React.FC = () => {
         }
         
         // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
-        if (viewMode === 'cards' && filterConditions.length === 0) {
+        if (viewMode === 'cards' && selectedFilterId === null && filterConditions.length === 0) {
           const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
           
           for (const columnId of sortableColumns) {
@@ -944,7 +847,7 @@ const Requests: React.FC = () => {
         }
         
         // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
-        if (viewMode === 'table' && filterConditions.length === 0 && sortConfig.key) {
+        if (viewMode === 'table' && selectedFilterId === null && filterConditions.length === 0 && sortConfig.key) {
           let aValue: any = a[sortConfig.key as keyof Request];
           let bValue: any = b[sortConfig.key as keyof Request];
 
@@ -978,7 +881,30 @@ const Requests: React.FC = () => {
         // 5. Fallback: Standardsortierung
         return 0;
       });
-  }, [requests, selectedFilterId, searchTerm, sortConfig, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+  }, [requests, selectedFilterId, searchTerm, sortConfig, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+
+  // ✅ Infinite Scroll Handler (nach filteredAndSortedRequests deklariert)
+  useEffect(() => {
+    scrollHandlerRef.current = () => {
+      // Prüfe ob User nahe am Ende der Seite ist
+      // ✅ Prüfe filteredAndSortedRequests.length (tatsächlich angezeigte Anzahl)
+      if (
+        window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000 &&
+        requestsDisplayLimit < filteredAndSortedRequests.length
+      ) {
+        // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
+        const increment = viewMode === 'cards' ? 10 : 20;
+        setRequestsDisplayLimit(prev => prev + increment);
+      }
+    };
+    
+    const handleScroll = () => scrollHandlerRef.current?.();
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [requestsDisplayLimit, viewMode, filteredAndSortedRequests.length]);
 
   // Funktion zum Kopieren eines Requests
   const handleCopyRequest = async (request) => {

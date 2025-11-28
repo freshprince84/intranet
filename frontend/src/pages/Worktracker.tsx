@@ -783,7 +783,7 @@ const Worktracker: React.FC = () => {
             if (
                 activeTab === 'todos' &&
                 isNearBottom &&
-                tasksDisplayLimit < tasks.length
+                tasksDisplayLimit < filteredAndSortedTasks.length
             ) {
                 // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
                 const increment = viewMode === 'cards' ? 10 : 20;
@@ -794,7 +794,7 @@ const Worktracker: React.FC = () => {
             if (
                 activeTab === 'reservations' &&
                 isNearBottom &&
-                reservationsDisplayLimit < reservations.length
+                reservationsDisplayLimit < filteredAndSortedReservations.length
             ) {
                 // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
                 const increment = viewMode === 'cards' ? 10 : 20;
@@ -808,7 +808,7 @@ const Worktracker: React.FC = () => {
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
-    }, [activeTab, tasksDisplayLimit, tasks.length, reservationsDisplayLimit, reservations.length, viewMode]);
+    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks.length, reservationsDisplayLimit, filteredAndSortedReservations.length, viewMode]);
     
     // Funktion zum Laden der Tour-Buchungen
     const loadTourBookings = async () => {
@@ -1257,21 +1257,22 @@ const Worktracker: React.FC = () => {
     };
 
     const filteredAndSortedTasks = useMemo(() => {
-        // Verwende allTasks, wenn verfügbar und kein Standardfilter aktiv (für komplexe Filter)
-        // Sonst verwende tasks (bereits server-seitig gefiltert)
-        const tasksToFilter = (allTasks.length > 0 && !selectedFilterId) ? allTasks : tasks;
+        // ✅ FAKT: Wenn selectedFilterId gesetzt ist, wurden Tasks bereits server-seitig gefiltert
+        // ✅ FAKT: Wenn filterConditions gesetzt sind (ohne selectedFilterId), wurden Tasks bereits server-seitig gefiltert
+        // ✅ NUR searchTerm wird client-seitig gefiltert (nicht server-seitig)
+        // ✅ allTasks wird nur verwendet wenn kein Filter gesetzt ist (für komplexe client-seitige Filter)
+        const tasksToFilter = (allTasks.length > 0 && !selectedFilterId && filterConditions.length === 0) ? allTasks : tasks;
         
         if (process.env.NODE_ENV === 'development') {
             console.log('🔄 Filtere Tasks:', tasksToFilter.length, 'Tasks vorhanden');
-            console.log('🔄 Filterbedingungen:', filterConditions);
-            console.log('🔄 Verwende:', allTasks.length > 0 && !selectedFilterId ? 'allTasks (client-seitig)' : 'tasks (server-seitig gefiltert)');
+            console.log('🔄 Verwende:', allTasks.length > 0 && !selectedFilterId && filterConditions.length === 0 ? 'allTasks (client-seitig)' : 'tasks (server-seitig gefiltert)');
         }
         
         // Sicherstellen, dass keine undefined/null Werte im Array sind
         const validTasks = tasksToFilter.filter(task => task != null);
         const filtered = validTasks
             .filter(task => {
-                // Globale Suchfunktion
+                // ✅ NUR Globale Suchfunktion (searchTerm) wird client-seitig angewendet
                 if (searchTerm) {
                     const searchLower = searchTerm.toLowerCase();
                     const matchesSearch = 
@@ -1285,133 +1286,11 @@ const Worktracker: React.FC = () => {
                     if (!matchesSearch) return false;
                 }
                 
-                // Wenn erweiterte Filterbedingungen definiert sind, wende diese an
-                if (filterConditions.length > 0) {
-                    // Column-Evaluatoren für Tasks mit korrekter User/Role-Logik
-                    const columnEvaluators: any = {
-                        'title': (task: Task, cond: FilterCondition) => {
-                            const value = (cond.value as string || '').toLowerCase();
-                            if (!task.title || typeof task.title !== 'string') {
-                                if (process.env.NODE_ENV === 'development') {
-                                    console.error('title evaluator: task.title ist undefined oder kein String', { task, cond });
-                                }
-                                return null;
-                            }
-                            const title = task.title.toLowerCase();
-                            if (!title || typeof title !== 'string') {
-                                if (process.env.NODE_ENV === 'development') {
-                                    console.error('title evaluator: title nach toLowerCase() ist undefined oder kein String', { task, cond, title });
-                                }
-                                return null;
-                            }
-                            if (cond.operator === 'equals') return task.title === cond.value;
-                            if (cond.operator === 'contains') return title.includes(value);
-                            if (cond.operator === 'startsWith') return title.startsWith(value);
-                            if (cond.operator === 'endsWith') {
-                                if (title === undefined || title === null) {
-                                    console.error('title evaluator: title ist undefined/null vor endsWith', { task, cond, title, value });
-                                    return false;
-                                }
-                                return title.endsWith(value);
-                            }
-                            return null;
-                        },
-                        'status': (task: Task, cond: FilterCondition) => {
-                            if (cond.operator === 'equals') return task.status === cond.value;
-                            if (cond.operator === 'notEquals') return task.status !== cond.value;
-                            return null;
-                        },
-                        'responsible': (task: Task, cond: FilterCondition) => {
-                            // Unterstützt user-{id} und role-{id} Format
-                            const responsibleName = task.responsible
-                                ? `${task.responsible.firstName} ${task.responsible.lastName}`
-                                : task.role
-                                    ? task.role.name
-                                    : '';
-                            return evaluateUserRoleCondition(
-                                task.responsible?.id || null,
-                                task.role?.id || null,
-                                cond,
-                                responsibleName
-                            );
-                        },
-                        'qualityControl': (task: Task, cond: FilterCondition) => {
-                            // Unterstützt nur user-{id} Format (keine Rollen)
-                            const qualityControlName = task.qualityControl
-                                ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`
-                                : '';
-                            return evaluateUserRoleCondition(
-                                task.qualityControl?.id || null,
-                                null, // QualityControl hat keine Rollen
-                                cond,
-                                qualityControlName
-                            );
-                        },
-                        'responsibleAndQualityControl': (task: Task, cond: FilterCondition) => {
-                            // Unterstützt user-{id} und role-{id} Format für beide Felder
-                            const responsibleName = task.responsible
-                                ? `${task.responsible.firstName} ${task.responsible.lastName}`
-                                : task.role
-                                    ? task.role.name
-                                    : '';
-                            const qualityControlName = task.qualityControl
-                                ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`
-                                : '';
-                            return evaluateResponsibleAndQualityControl(
-                                task.responsible?.id || null,
-                                task.role?.id || null,
-                                task.qualityControl?.id || null,
-                                cond,
-                                responsibleName,
-                                qualityControlName
-                            );
-                        },
-                        'branch': (task: Task, cond: FilterCondition) => {
-                            const branchName = task.branch.name.toLowerCase();
-                            const value = (cond.value as string || '').toLowerCase();
-                            if (cond.operator === 'equals') return branchName === value;
-                            if (cond.operator === 'contains') return branchName.includes(value);
-                            return null;
-                        },
-                        'dueDate': (task: Task, cond: FilterCondition) => {
-                            return evaluateDateCondition(task.dueDate, cond);
-                        }
-                    };
-
-                    const getFieldValue = (task: Task, columnId: string): any => {
-                        switch (columnId) {
-                            case 'title': return task.title;
-                            case 'status': return task.status;
-                            case 'responsible': return task.responsible
-                                ? `${task.responsible.firstName} ${task.responsible.lastName}`
-                                : task.role
-                                    ? task.role.name
-                                    : '';
-                            case 'qualityControl': return task.qualityControl
-                                ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`
-                                : '';
-                            case 'responsibleAndQualityControl': return task.responsible
-                                ? `${task.responsible.firstName} ${task.responsible.lastName}`
-                                : task.role
-                                    ? task.role.name
-                                    : '';
-                            case 'branch': return task.branch.name;
-                            case 'dueDate': return task.dueDate;
-                            default: return (task as any)[columnId];
-                        }
-                    };
-
-                    // Wende Filter mit zentraler Logik an (nur für dieses einzelne Item)
-                    const filtered = applyFilters(
-                        [task],
-                        filterConditions,
-                        filterLogicalOperators,
-                        getFieldValue,
-                        columnEvaluators
-                    );
-                    
-                    if (filtered.length === 0) return false;
-                }
+                // ❌ ENTFERNEN: Client-seitige Filterung wenn selectedFilterId oder filterConditions gesetzt sind
+                // ✅ Server hat bereits gefiltert, keine doppelte Filterung mehr
+                // ✅ Nur wenn allTasks verwendet wird UND kein Filter gesetzt ist, wird client-seitig gefiltert
+                // ABER: filterConditions werden immer an Server gesendet (Zeile 599-602), daher wird nie allTasks mit Filter verwendet
+                // → Keine client-seitige Filterung mehr nötig
                 
                 return true;
             });
@@ -1462,7 +1341,7 @@ const Worktracker: React.FC = () => {
             }
             
             // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
-            if (filterSortDirections.length > 0 && filterConditions.length > 0) {
+            if (filterSortDirections.length > 0 && (selectedFilterId !== null || filterConditions.length > 0)) {
                 // Sortiere nach Priorität (1, 2, 3, ...)
                 const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
                 
@@ -1489,7 +1368,7 @@ const Worktracker: React.FC = () => {
             }
             
             // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
-            if (viewMode === 'cards' && filterConditions.length === 0) {
+            if (viewMode === 'cards' && selectedFilterId === null && filterConditions.length === 0) {
                 const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
                 
                 for (const columnId of sortableColumns) {
@@ -1516,7 +1395,7 @@ const Worktracker: React.FC = () => {
             }
             
             // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
-            if (viewMode === 'table' && filterConditions.length === 0 && tableSortConfig.key) {
+            if (viewMode === 'table' && selectedFilterId === null && filterConditions.length === 0 && tableSortConfig.key) {
                 const valueA = getSortValue(a, tableSortConfig.key);
                 const valueB = getSortValue(b, tableSortConfig.key);
                 
@@ -1554,27 +1433,27 @@ const Worktracker: React.FC = () => {
             console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         }
         return sorted;
-    }, [tasks, allTasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]);
+    }, [tasks, allTasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]);
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {
-        if (process.env.NODE_ENV === 'development') {
-            console.log('🔄 Filtere Reservations:', reservations.length, 'Reservations vorhanden');
-        }
+        // ✅ FAKT: Wenn reservationSelectedFilterId gesetzt ist, wurden Reservierungen bereits server-seitig gefiltert
+        // ✅ FAKT: Wenn reservationFilterConditions gesetzt sind (ohne reservationSelectedFilterId), wurden Reservierungen bereits server-seitig gefiltert
+        // ✅ NUR reservationSearchTerm, reservationFilterStatus, reservationFilterPaymentStatus werden client-seitig gefiltert
         const validReservations = reservations.filter(reservation => reservation != null);
         
         let filtered = validReservations.filter(reservation => {
-            // Status-Filter
+            // ✅ Status-Filter (client-seitig, nicht server-seitig)
             if (reservationFilterStatus !== 'all' && reservation.status !== reservationFilterStatus) {
                 return false;
             }
             
-            // Payment-Status-Filter
+            // ✅ Payment-Status-Filter (client-seitig, nicht server-seitig)
             if (reservationFilterPaymentStatus !== 'all' && reservation.paymentStatus !== reservationFilterPaymentStatus) {
                 return false;
             }
             
-            // Such-Filter
+            // ✅ Such-Filter (client-seitig, nicht server-seitig)
             if (reservationSearchTerm) {
                 const searchLower = reservationSearchTerm.toLowerCase();
                 const matchesSearch = 
@@ -1590,8 +1469,9 @@ const Worktracker: React.FC = () => {
             return true;
         });
 
-        // Erweiterte Filterbedingungen anwenden
-        if (reservationFilterConditions.length > 0) {
+        // ❌ ENTFERNEN: Erweiterte Filterbedingungen (reservationFilterConditions) werden NICHT mehr client-seitig angewendet
+        // ✅ Server hat bereits gefiltert, keine doppelte Filterung mehr
+        if (false && reservationFilterConditions.length > 0) {
             // Column-Evaluatoren für Reservations (analog zu Tasks)
             const columnEvaluators: any = {
                 'guestName': (reservation: Reservation, cond: FilterCondition) => {
@@ -1771,7 +1651,7 @@ const Worktracker: React.FC = () => {
             }
             
             // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
-            if (reservationFilterSortDirections.length > 0 && reservationFilterConditions.length > 0) {
+            if (reservationFilterSortDirections.length > 0 && (reservationSelectedFilterId !== null || reservationFilterConditions.length > 0)) {
                 // Sortiere nach Priorität (1, 2, 3, ...)
                 const sortedByPriority = [...reservationFilterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
                 
@@ -1798,7 +1678,7 @@ const Worktracker: React.FC = () => {
             }
             
             // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
-            if (viewMode === 'cards' && reservationFilterConditions.length === 0) {
+            if (viewMode === 'cards' && reservationSelectedFilterId === null && reservationFilterConditions.length === 0) {
                 const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
                 
                 for (const columnId of sortableColumns) {
@@ -1825,7 +1705,7 @@ const Worktracker: React.FC = () => {
             }
             
             // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
-            if (viewMode === 'table' && reservationFilterConditions.length === 0 && reservationTableSortConfig.key) {
+            if (viewMode === 'table' && reservationSelectedFilterId === null && reservationFilterConditions.length === 0 && reservationTableSortConfig.key) {
                 const valueA = getReservationSortValue(a, reservationTableSortConfig.key);
                 const valueB = getReservationSortValue(b, reservationTableSortConfig.key);
                 
@@ -1849,7 +1729,7 @@ const Worktracker: React.FC = () => {
             console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
         }
         return sorted;
-    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterConditions, reservationFilterLogicalOperators, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
+    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
     
 
     // Handler für das Verschieben von Spalten per Drag & Drop
