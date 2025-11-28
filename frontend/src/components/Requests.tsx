@@ -259,9 +259,6 @@ const Requests: React.FC = () => {
 
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-
-  // State für Paginierung
-  const [displayLimit, setDisplayLimit] = useState<number>(10);
   
   // Ref um zu verfolgen, ob wir die hiddenColumns selbst ändern (verhindert Endlosschleife)
   const isUpdatingHiddenColumnsRef = useRef(false);
@@ -421,7 +418,16 @@ const Requests: React.FC = () => {
       
       if (append) {
         // Infinite Scroll: Füge Requests zu bestehenden hinzu
-        setRequests(prevRequests => [...prevRequests, ...requestsWithAttachments]);
+        // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
+        const MAX_ITEMS_IN_STATE = 100;
+        setRequests(prevRequests => {
+          const newRequests = [...prevRequests, ...requestsWithAttachments];
+          // Wenn mehr als MAX_ITEMS_IN_STATE: Älteste entfernen (behalte neueste)
+          if (newRequests.length > MAX_ITEMS_IN_STATE) {
+            return newRequests.slice(-MAX_ITEMS_IN_STATE);
+          }
+          return newRequests;
+        });
         // Prüfe ob es weitere Requests gibt
         setRequestsHasMore(requestsWithAttachments.length === REQUESTS_PER_PAGE);
         setRequestsPage(page);
@@ -1630,7 +1636,7 @@ const Requests: React.FC = () => {
               </div>
             ) : (
               <CardGrid>
-                {filteredAndSortedRequests.slice(0, displayLimit).map(request => {
+                {filteredAndSortedRequests.map(request => {
                   // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
                   const metadata: MetadataItem[] = [];
                   

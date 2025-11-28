@@ -1101,7 +1101,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       {/* Tabelle oder Cards */}
       {viewMode === 'table' ? (
         /* Tabellen-Ansicht */
-        <div className="dashboard-workcenter-wrapper border-0 rounded-lg overflow-hidden -mx-3 sm:-mx-4 md:-mx-6">
+        <div className="dashboard-workcenter-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden -mx-3 sm:-mx-4 md:-mx-6">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
@@ -1337,8 +1337,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         </table>
       </div>
       ) : (
-        /* Card-Ansicht */
-        <div className="dashboard-workcenter-wrapper -mx-3 sm:-mx-4 md:-mx-6">
+        /* Card-Ansicht - ohne Box-Schattierung, Cards auf voller Breite */
+        <div className="dashboard-workcenter-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 -mx-3 sm:-mx-4 md:-mx-6">
           {filteredAndSortedUsers.length === 0 ? (
             <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
               Keine Zeiterfassungen gefunden
