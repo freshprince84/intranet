@@ -366,8 +366,9 @@ export class LobbyPmsService {
           // Heuristik: Namen mit "Dorm", "Compartida" = compartida, sonst privada
           const name = category.name?.toLowerCase() || '';
           let roomType: 'compartida' | 'privada' = 'privada';
+          // Compartida: category_id 34280 (El primo aventurero), 34281 (La tia artista), 34282 (El abuelo viajero)
           if (name.includes('dorm') || name.includes('compartida') || 
-              category.category_id === 34280 || category.category_id === 34281) {
+              category.category_id === 34280 || category.category_id === 34281 || category.category_id === 34282) {
             roomType = 'compartida';
           }
           
