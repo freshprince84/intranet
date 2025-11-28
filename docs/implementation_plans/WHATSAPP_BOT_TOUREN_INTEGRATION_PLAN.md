@@ -981,3 +981,4 @@ if (tourBooking) {
 **WICHTIG:** Dieser Plan ist nur eine VORBEREITUNG. NICHTS wird umgesetzt, bis der User diesen Plan ausdrücklich bestätigt hat!
 
 
+

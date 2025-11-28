@@ -1537,6 +1537,11 @@ model TourBooking {
   amountPending Decimal?      @db.Decimal(10, 2)
   paymentLink   String?
 
+  // Automatische Stornierung
+  paymentDeadline   DateTime? // Frist für Zahlung (z.B. jetzt + 1h)
+  autoCancelEnabled Boolean   @default(false) // Automatische Stornierung aktiviert?
+  reservedUntil     DateTime? // Bis wann ist die Reservation reserviert (für Anzeige)
+
   // Mitarbeiter-Kommission
   bookedById             Int?
   bookedBy               User?     @relation("TourBooker", fields: [bookedById], references: [id])

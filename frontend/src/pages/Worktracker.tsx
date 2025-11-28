@@ -589,7 +589,9 @@ const Worktracker: React.FC = () => {
             }
             
             // Baue Query-Parameter (❌ KEINE limit/offset Parameter mehr)
-            const params: any = {};
+            const params: any = {
+                includeAttachments: 'false' // ✅ PERFORMANCE: Attachments optional - nur laden wenn benötigt
+            };
             if (filterId) {
                 params.filterId = filterId;
             } else if (filterConditions && filterConditions.length > 0) {
@@ -769,18 +771,33 @@ const Worktracker: React.FC = () => {
     
     // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
     // ✅ Infinite Scroll für Anzeige (nicht für Laden)
+    // ✅ FIX: Verwende tasks.length und reservations.length statt filteredAndSortedTasks.length (wird später deklariert)
     const scrollHandlerRef = useRef<() => void>();
     useEffect(() => {
         scrollHandlerRef.current = () => {
             // Prüfe ob User nahe am Ende der Seite ist
+            const isNearBottom = window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000;
+            
+            // ✅ Infinite Scroll für Tasks
             if (
                 activeTab === 'todos' &&
-                window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000 &&
-                tasksDisplayLimit < filteredAndSortedTasks.length
+                isNearBottom &&
+                tasksDisplayLimit < tasks.length
             ) {
                 // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
                 const increment = viewMode === 'cards' ? 10 : 20;
                 setTasksDisplayLimit(prev => prev + increment);
+            }
+            
+            // ✅ Infinite Scroll für Reservations
+            if (
+                activeTab === 'reservations' &&
+                isNearBottom &&
+                reservationsDisplayLimit < reservations.length
+            ) {
+                // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
+                const increment = viewMode === 'cards' ? 10 : 20;
+                setReservationsDisplayLimit(prev => prev + increment);
             }
         };
         
@@ -790,7 +807,7 @@ const Worktracker: React.FC = () => {
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
-    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks.length, reservationsDisplayLimit, filteredAndSortedReservations.length, viewMode]);
+    }, [activeTab, tasksDisplayLimit, tasks.length, reservationsDisplayLimit, reservations.length, viewMode]);
     
     // Funktion zum Laden der Tour-Buchungen
     const loadTourBookings = async () => {

@@ -374,7 +374,9 @@ const Requests: React.FC = () => {
       }
       
       // Baue Query-Parameter (❌ KEINE limit/offset Parameter mehr)
-      const params: any = {};
+      const params: any = {
+        includeAttachments: 'false' // ✅ PERFORMANCE: Attachments optional - nur laden wenn benötigt
+      };
       if (filterId) {
         params.filterId = filterId;
       } else if (filterConditions && filterConditions.length > 0) {
@@ -407,8 +409,8 @@ const Requests: React.FC = () => {
         };
       });
       
-      // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
-      const MAX_ITEMS_IN_STATE = 100;
+        // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
+        const MAX_ITEMS_IN_STATE = 100;
       const requestsToStore = requestsWithAttachments.length > MAX_ITEMS_IN_STATE
         ? requestsWithAttachments.slice(-MAX_ITEMS_IN_STATE)
         : requestsWithAttachments;
@@ -436,7 +438,7 @@ const Requests: React.FC = () => {
       }
     }
   }, [filterLogicalOperators, viewMode]);
-  
+
   // ❌ loadMoreRequests entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
   // Standard-Filter erstellen und speichern
