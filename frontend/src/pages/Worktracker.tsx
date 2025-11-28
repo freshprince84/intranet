@@ -772,43 +772,8 @@ const Worktracker: React.FC = () => {
     
     // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
     // ✅ Infinite Scroll für Anzeige (nicht für Laden)
-    // ✅ FIX: Verwende tasks.length und reservations.length statt filteredAndSortedTasks.length (wird später deklariert)
+    // Hinweis: Handler wird nach filteredAndSortedTasks und filteredAndSortedReservations deklariert
     const scrollHandlerRef = useRef<() => void>();
-    useEffect(() => {
-        scrollHandlerRef.current = () => {
-            // Prüfe ob User nahe am Ende der Seite ist
-            const isNearBottom = window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000;
-            
-            // ✅ Infinite Scroll für Tasks
-            if (
-                activeTab === 'todos' &&
-                isNearBottom &&
-                tasksDisplayLimit < filteredAndSortedTasks.length
-            ) {
-                // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
-                const increment = viewMode === 'cards' ? 10 : 20;
-                setTasksDisplayLimit(prev => prev + increment);
-            }
-            
-            // ✅ Infinite Scroll für Reservations
-            if (
-                activeTab === 'reservations' &&
-                isNearBottom &&
-                reservationsDisplayLimit < filteredAndSortedReservations.length
-            ) {
-                // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
-                const increment = viewMode === 'cards' ? 10 : 20;
-                setReservationsDisplayLimit(prev => prev + increment);
-            }
-        };
-        
-        const handleScroll = () => scrollHandlerRef.current?.();
-        
-        window.addEventListener('scroll', handleScroll);
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-        };
-    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks.length, reservationsDisplayLimit, filteredAndSortedReservations.length, viewMode]);
     
     // Funktion zum Laden der Tour-Buchungen
     const loadTourBookings = async () => {
@@ -1731,6 +1696,42 @@ const Worktracker: React.FC = () => {
         return sorted;
     }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
     
+    // ✅ Infinite Scroll Handler (nach filteredAndSortedTasks und filteredAndSortedReservations deklariert)
+    useEffect(() => {
+        scrollHandlerRef.current = () => {
+            // Prüfe ob User nahe am Ende der Seite ist
+            const isNearBottom = window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000;
+            
+            // ✅ Infinite Scroll für Tasks
+            if (
+                activeTab === 'todos' &&
+                isNearBottom &&
+                tasksDisplayLimit < filteredAndSortedTasks.length
+            ) {
+                // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
+                const increment = viewMode === 'cards' ? 10 : 20;
+                setTasksDisplayLimit(prev => prev + increment);
+            }
+            
+            // ✅ Infinite Scroll für Reservations
+            if (
+                activeTab === 'reservations' &&
+                isNearBottom &&
+                reservationsDisplayLimit < filteredAndSortedReservations.length
+            ) {
+                // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
+                const increment = viewMode === 'cards' ? 10 : 20;
+                setReservationsDisplayLimit(prev => prev + increment);
+            }
+        };
+        
+        const handleScroll = () => scrollHandlerRef.current?.();
+        
+        window.addEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks.length, reservationsDisplayLimit, filteredAndSortedReservations.length, viewMode]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
