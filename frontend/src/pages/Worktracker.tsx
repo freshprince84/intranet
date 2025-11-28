@@ -663,26 +663,7 @@ const Worktracker: React.FC = () => {
         }
     }, [filterLogicalOperators, t, viewMode]);
     
-    // ✅ PERFORMANCE: loadMoreTasks als useCallback (stabile Referenz für useEffect)
-    // ✅ FIX: loadTasks aus Dependencies entfernt, stattdessen useRef verwenden
-    const loadTasksRef = useRef(loadTasks);
-    useEffect(() => {
-        loadTasksRef.current = loadTasks;
-    }, [loadTasks]);
-    
-    const loadMoreTasks = useCallback(async () => {
-        if (tasksLoadingMore || !tasksHasMore) return;
-        
-        const nextPage = tasksPage + 1;
-        // ✅ PERFORMANCE: Verwende filterConditionsRef.current (wird im Scroll-Handler verwendet)
-        await loadTasksRef.current(
-            selectedFilterId || undefined,
-            filterConditionsRef.current.length > 0 ? filterConditionsRef.current : undefined,
-            false,
-            nextPage,
-            true // append = true
-        );
-    }, [tasksLoadingMore, tasksHasMore, tasksPage, selectedFilterId]);
+    // ❌ loadMoreTasks entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
     const handleGeneratePinAndSend = async (reservationId: number) => {
         try {
@@ -741,24 +722,19 @@ const Worktracker: React.FC = () => {
     }, [filterConditions]);
     
     // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
-    // ✅ FIX: loadMoreTasks aus Dependencies entfernt, stattdessen useRef verwenden
-    const loadMoreTasksRef = useRef(loadMoreTasks);
-    useEffect(() => {
-        loadMoreTasksRef.current = loadMoreTasks;
-    }, [loadMoreTasks]);
-    
+    // ✅ Infinite Scroll für Anzeige (nicht für Laden)
     const scrollHandlerRef = useRef<() => void>();
     useEffect(() => {
         scrollHandlerRef.current = () => {
             // Prüfe ob User nahe am Ende der Seite ist
             if (
+                activeTab === 'todos' &&
                 window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000 &&
-                !tasksLoadingMore &&
-                tasksHasMore &&
-                activeTab === 'todos'
+                tasksDisplayLimit < filteredAndSortedTasks.length
             ) {
-                // ✅ PERFORMANCE: Verwende loadMoreTasks (nutzt filterConditionsRef.current)
-                loadMoreTasksRef.current();
+                // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
+                const increment = viewMode === 'cards' ? 10 : 20;
+                setTasksDisplayLimit(prev => prev + increment);
             }
         };
         
@@ -768,7 +744,7 @@ const Worktracker: React.FC = () => {
         return () => {
             window.removeEventListener('scroll', handleScroll);
         };
-    }, [tasksLoadingMore, tasksHasMore, activeTab]);
+    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks.length, viewMode]);
     
     // Funktion zum Laden der Tour-Buchungen
     const loadTourBookings = async () => {
@@ -1134,14 +1110,13 @@ const Worktracker: React.FC = () => {
             // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
             setTableSortConfig({ key: 'dueDate', direction: 'asc' });
             
-            // Pagination zurücksetzen bei Filter-Wechsel
-            setTasksPage(1);
-            setTasksHasMore(true);
+            // ✅ Filter zurücksetzen bei Filter-Wechsel
+            setTasksDisplayLimit(viewMode === 'cards' ? 10 : 20);
             
             // Wenn Filter-ID vorhanden (Standardfilter): Server-seitig laden
             // Sonst: Client-seitig filtern (komplexe Filter)
             if (id) {
-                await loadTasks(id, undefined, false, 1, false); // Reset auf Seite 1, nicht append
+                await loadTasks(id, undefined, false); // ❌ KEINE Pagination mehr
             }
             // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedTasks angewendet
         } else if (activeTab === 'reservations') {
@@ -2338,7 +2313,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         ) : (
                                             <>
-                                            {filteredAndSortedTasks.map(task => {
+                                            {filteredAndSortedTasks.slice(0, tasksDisplayLimit).map(task => {
                                             const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                             const expiryColors = getExpiryColorClasses(expiryStatus);
                                             
@@ -2519,7 +2494,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedTasks.map(task => {
+                                            {filteredAndSortedTasks.slice(0, tasksDisplayLimit).map(task => {
                                                 const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                                 
                                                 // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
@@ -2651,15 +2626,7 @@ const Worktracker: React.FC = () => {
                                 </div>
                             ) : null}
                             
-                            {/* Loading Indicator für Infinite Scroll - Mobil - Tasks */}
-                            {activeTab === 'todos' && tasksLoadingMore && (
-                                <div className="mt-4 flex justify-center items-center py-4">
-                                    <CircularProgress size={24} />
-                                    <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-                                        {t('common.loadingMore', 'Lädt weitere Tasks...')}
-                                    </span>
-                                </div>
-                            )}
+                            {/* ❌ Loading Indicator entfernt - Infinite Scroll lädt keine Daten mehr, nur Anzeige */}
                             
                             {/* Reservations Rendering - Cards */}
                             {activeTab === 'reservations' && viewMode === 'cards' && (
@@ -3634,7 +3601,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         ) : (
                                             <>
-                                            {filteredAndSortedTasks.map(task => {
+                                            {filteredAndSortedTasks.slice(0, tasksDisplayLimit).map(task => {
                                             const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                             const expiryColors = getExpiryColorClasses(expiryStatus);
                                             
@@ -3815,7 +3782,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedTasks.map(task => {
+                                            {filteredAndSortedTasks.slice(0, tasksDisplayLimit).map(task => {
                                                 const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                                 
                                                 // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
@@ -3947,15 +3914,7 @@ const Worktracker: React.FC = () => {
                                 </div>
                             ) : null}
                             
-                            {/* Loading Indicator für Infinite Scroll - Desktop - Tasks */}
-                            {activeTab === 'todos' && tasksLoadingMore && (
-                                <div className="mt-4 flex justify-center items-center py-4">
-                                    <CircularProgress size={24} />
-                                    <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-                                        {t('common.loadingMore', 'Lädt weitere Tasks...')}
-                                    </span>
-                                </div>
-                            )}
+                            {/* ❌ Loading Indicator entfernt - Infinite Scroll lädt keine Daten mehr, nur Anzeige */}
                             
                             {/* Reservations Rendering - Desktop - Cards */}
                             {activeTab === 'reservations' && viewMode === 'cards' && (

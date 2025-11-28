@@ -413,11 +413,11 @@ export class WhatsAppAiService {
             properties: {
               startDate: {
                 type: 'string',
-                description: 'Check-in Datum im Format YYYY-MM-DD (erforderlich)'
+                description: 'Check-in Datum im Format YYYY-MM-DD oder "today"/"heute"/"hoy" für heute (erforderlich). Verwende IMMER "today" wenn der User "heute" sagt!'
               },
               endDate: {
                 type: 'string',
-                description: 'Check-out Datum im Format YYYY-MM-DD (optional, falls nicht angegeben: startDate + 1 Tag)'
+                description: 'Check-out Datum im Format YYYY-MM-DD oder "today"/"heute"/"hoy" für heute (optional, falls nicht angegeben: startDate + 1 Tag)'
               },
               roomType: {
                 type: 'string',
@@ -550,6 +550,8 @@ export class WhatsAppAiService {
     // Deutsche Wörter/Zeichen
     const germanIndicators = [
       /\b(hallo|guten tag|guten morgen|guten abend|danke|bitte|ja|nein|wie|wo|wann|warum|auf wiedersehen|tschüss)\b/i,
+      /\b(haben|wir|heute|frei|zimmer|sind|gibt|gibt es|verfügbar|verfügbarkeit|buchung|reservierung|reservieren|buchen)\b/i,
+      /\b(habt|hast|hat|seid|bist|ist|sind|werden|wird|kann|können|möchte|möchten|will|wollen)\b/i,
       /[äöüß]/,
       /\b(der|die|das|ein|eine|von|in|mit|für|ist|sind|sind)\b/i
     ];
