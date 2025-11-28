@@ -11,7 +11,12 @@
 
 **Fehler:** `400 Request Header Or Cookie Too Large`
 
-**Ursache:** Der Authorization Header ist zu groß (nginx-Limit überschritten)
+**WICHTIG:** Die API wird direkt aufgerufen (nicht über nginx), daher ist nginx wahrscheinlich NICHT das Problem!
+
+**Mögliche Ursachen:**
+1. **LobbyPMS API selbst hat ein Limit** - Die API-Server von LobbyPMS könnten ein Header-Limit haben
+2. **API-Key ist extrem lang** - Der API-Key könnte mehrere KB lang sein
+3. **Proxy/Reverse-Proxy** - Falls ein Proxy zwischen Server und LobbyPMS API ist
 
 **Betroffene Tests:**
 - ❌ Verfügbarkeits-API (`/api/v2/available-rooms`) - Alle 7 Tests fehlgeschlagen
@@ -30,97 +35,188 @@
 
 ## 🔍 ANALYSE: Request Header zu groß
 
-### Mögliche Ursachen:
+### WICHTIG: nginx ist wahrscheinlich NICHT das Problem!
 
-1. **API-Key zu lang:**
-   - LobbyPMS API-Key könnte sehr lang sein
-   - nginx hat Standard-Limit für Header-Größe (meist 4KB oder 8KB)
+**Grund:** Die API wird direkt aufgerufen:
+```typescript
+// In lobbyPmsService.ts
+const instance = axios.create({
+  baseURL: this.apiUrl, // z.B. 'https://api.lobbypms.com'
+  headers: {
+    'Authorization': `Bearer ${this.apiKey}`
+  }
+});
+```
 
-2. **Verschlüsselte Settings:**
-   - WhatsApp Token Debug zeigt verschlüsselte Daten
-   - Könnte sein, dass verschlüsselte Settings im Header landen (sollte aber nicht)
+**Das bedeutet:**
+- Request geht direkt zu `https://api.lobbypms.com`
+- NICHT über nginx auf dem Server
+- nginx-Limit sollte also nicht greifen
 
-3. **Mehrfache Headers:**
-   - Möglicherweise werden Headers mehrfach hinzugefügt
+### Mögliche echte Ursachen:
 
-### Was zu prüfen ist:
+1. **LobbyPMS API-Server hat ein Limit:**
+   - Die API-Server von LobbyPMS könnten selbst ein Header-Limit haben
+   - Oder sie verwenden nginx/Proxy mit Limit
 
-1. **API-Key Länge prüfen:**
-   ```bash
-   # Auf Server: Prüfe Länge des API-Keys
-   # (muss in Settings nachgeschaut werden)
-   ```
+2. **API-Key ist extrem lang:**
+   - Prüfe Länge des API-Keys
+   - Falls > 4KB, könnte das Problem sein
 
-2. **nginx Konfiguration prüfen:**
-   ```bash
-   # Prüfe nginx client_header_buffer_size und large_client_header_buffers
-   # Standard: client_header_buffer_size 1k; large_client_header_buffers 4 8k;
-   ```
-
-3. **Authorization Header prüfen:**
-   - Sollte nur `Authorization: Bearer {apiKey}` sein
-   - Prüfe ob zusätzliche Daten im Header landen
+3. **Verschlüsselte Daten im Header:**
+   - Unwahrscheinlich, aber prüfen ob versehentlich verschlüsselte Settings im Header landen
 
 ---
 
-## 💡 LÖSUNGSVORSCHLÄGE
+## 💡 LÖSUNGSVORSCHLÄGE (OHNE nginx-Anpassung)
 
-### Lösung 1: nginx Konfiguration anpassen (Server-Admin)
+### Lösung 1: API-Key Länge prüfen (ZUERST!)
 
-**nginx Config erweitern:**
-```nginx
-http {
-    # Erhöhe Header-Buffer-Größe
-    client_header_buffer_size 4k;
-    large_client_header_buffers 4 16k;
-    
-    # Oder spezifisch für LobbyPMS API
-    location /api/lobbypms/ {
-        client_header_buffer_size 8k;
-        large_client_header_buffers 4 32k;
-    }
-}
-```
-
-**Nach Änderung:**
+**Test-Script erstellen:**
 ```bash
-sudo nginx -t  # Test Konfiguration
-sudo systemctl reload nginx  # Reload nginx
+# Auf Server: Prüfe API-Key Länge
+cd /var/www/intranet/backend
+npx ts-node -e "
+import { prisma } from './src/utils/prisma';
+import { decryptBranchApiSettings } from './src/utils/encryption';
+
+async function checkApiKeyLength() {
+  const branch = await prisma.branch.findFirst({
+    where: { id: { in: [3, 4] } },
+    select: { id: true, name: true, lobbyPmsSettings: true }
+  });
+  
+  if (!branch?.lobbyPmsSettings) {
+    console.log('Keine Settings gefunden');
+    return;
+  }
+  
+  const settings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+  const apiKey = settings?.lobbyPms?.apiKey || settings?.apiKey;
+  
+  if (apiKey) {
+    console.log(\`Branch: \${branch.name}\`);
+    console.log(\`API-Key Länge: \${apiKey.length} Zeichen\`);
+    console.log(\`API-Key Länge: \${(apiKey.length / 1024).toFixed(2)} KB\`);
+    console.log(\`Authorization Header: \${('Bearer ' + apiKey).length} Zeichen\`);
+  }
+  
+  await prisma.\$disconnect();
+}
+
+checkApiKeyLength();
+"
 ```
 
-### Lösung 2: API-Key kürzen (falls möglich)
+**Wenn API-Key > 4KB:**
+- Problem identifiziert
+- Lösung: Siehe unten
 
-- Prüfe ob LobbyPMS kürzere API-Keys unterstützt
-- Oder API-Key in Datenbank speichern, nur ID im Header senden
+### Lösung 2: Alternative Authentifizierung prüfen
 
-### Lösung 3: Alternative Authentifizierung
+**LobbyPMS könnte unterstützen:**
+- API-Key als Query-Parameter: `?api_key=...`
+- API-Key als Cookie
+- OAuth Token (kürzer)
 
-- Prüfe ob LobbyPMS andere Auth-Methoden unterstützt
-- OAuth, API-Key als Query-Parameter, etc.
+**Test:**
+```typescript
+// Statt Header:
+headers: { 'Authorization': `Bearer ${apiKey}` }
+
+// Versuche Query-Parameter:
+params: { api_key: apiKey }
+```
+
+### Lösung 3: API direkt testen (ohne unser System)
+
+**Mit curl testen:**
+```bash
+# Auf Server:
+curl -X GET "https://api.lobbypms.com/api/v2/available-rooms?start_date=2025-02-01" \
+  -H "Authorization: Bearer {API_KEY}" \
+  -H "Content-Type: application/json" \
+  -v
+```
+
+**Wenn curl auch "400 Request Header Or Cookie Too Large" gibt:**
+- Problem liegt bei LobbyPMS API selbst
+- Nicht unser System
+
+**Wenn curl funktioniert:**
+- Problem liegt in unserem Code
+- Prüfe ob zusätzliche Headers hinzugefügt werden
+
+### Lösung 4: API-Key kürzen (falls möglich)
+
+- Prüfe ob LobbyPMS kürzere API-Keys generieren kann
+- Oder API-Key in Session speichern, nur Session-ID senden
 
 ---
 
-## 🧪 NÄCHSTE SCHRITTE
+## ⚖️ VOR- UND NACHTEILE: nginx-Anpassung
 
-1. **nginx Konfiguration prüfen:**
-   ```bash
-   # Auf Server:
-   cat /etc/nginx/nginx.conf | grep -A 5 "client_header"
-   ```
+### ❌ Warum nginx-Anpassung NICHT nötig ist:
 
-2. **API-Key Länge prüfen:**
-   - In Datenbank nachschauen
-   - Oder in Settings
+1. **API wird direkt aufgerufen:**
+   - Request geht direkt zu `https://api.lobbypms.com`
+   - NICHT über nginx auf unserem Server
+   - nginx-Limit sollte nicht greifen
 
-3. **Test erneut ausführen:**
-   ```bash
-   cd /var/www/intranet/backend
-   npx ts-node scripts/test-lobbypms-availability.ts
-   ```
+2. **Problem liegt wahrscheinlich bei LobbyPMS:**
+   - Die API-Server von LobbyPMS haben vermutlich selbst ein Limit
+   - nginx-Anpassung auf unserem Server hilft nicht
 
-4. **Falls nginx-Problem:**
-   - nginx Config anpassen (siehe Lösung 1)
-   - Oder Server-Admin kontaktieren
+### ✅ Falls doch nginx-Anpassung nötig (nur wenn Proxy verwendet wird):
+
+**Vorteile:**
+- Löst Problem, wenn ein Proxy zwischen Server und API ist
+- Erlaubt größere Header für zukünftige APIs
+
+**Nachteile:**
+- Server-Konfiguration ändern (Wartungsaufwand)
+- Könnte andere Probleme verursachen
+- Sicherheitsrisiko wenn zu groß (DoS-Angriffe mit großen Headers)
+- Muss bei jedem Server-Update geprüft werden
+
+**Empfehlung:** Nur wenn wirklich nötig (z.B. wenn Proxy verwendet wird)
+
+---
+
+## 🧪 NÄCHSTE SCHRITTE (OHNE nginx-Anpassung)
+
+### Schritt 1: API-Key Länge prüfen
+
+```bash
+# Auf Server:
+cd /var/www/intranet/backend
+npx ts-node scripts/check-api-key-length.ts
+```
+
+### Schritt 2: API direkt mit curl testen
+
+```bash
+# Hole API-Key aus DB (siehe Script oben)
+# Dann:
+curl -X GET "https://api.lobbypms.com/api/v2/available-rooms?start_date=2025-02-01" \
+  -H "Authorization: Bearer {API_KEY_HIER_EINFÜGEN}" \
+  -H "Content-Type: application/json" \
+  -v
+```
+
+### Schritt 3: Alternative Auth-Methoden testen
+
+Falls API-Key zu lang:
+- Query-Parameter testen
+- Cookie testen
+- OAuth prüfen
+
+### Schritt 4: LobbyPMS Support kontaktieren
+
+Falls Problem bei LobbyPMS API liegt:
+- Support kontaktieren
+- Nach Header-Limit fragen
+- Nach alternativen Auth-Methoden fragen
 
 ---
 
@@ -138,5 +234,4 @@ sudo systemctl reload nginx  # Reload nginx
 ---
 
 **Erstellt:** 2025-01-26  
-**Status:** ⚠️ WARTET AUF nginx KONFIGURATION ODER ALTERNATIVE LÖSUNG
-
+**Status:** ⚠️ PROBLEM ANALYSIEREN - nginx-Anpassung wahrscheinlich NICHT nötig
