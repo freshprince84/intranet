@@ -6,6 +6,7 @@ import UserManagementTab from '../components/UserManagementTab.tsx';
 import RoleManagementTab from '../components/RoleManagementTab.tsx';
 import BranchManagementTab from '../components/BranchManagementTab.tsx';
 import TourProvidersTab from '../components/tours/TourProvidersTab.tsx';
+import ToursTab from '../components/tours/ToursTab.tsx';
 import useMessage from '../hooks/useMessage.ts';
 import OrganizationSettings from '../components/organization/OrganizationSettings.tsx';
 import JoinRequestsList from '../components/organization/JoinRequestsList.tsx';
@@ -33,6 +34,7 @@ const Organisation: React.FC = () => {
   const canViewOrg = canViewOrganization();
 
   const [activeTabState, setActiveTabState] = useState<'users' | 'roles' | 'branches' | 'providers' | 'organization'>('users');
+  const [providersViewMode, setProvidersViewMode] = useState<'tours' | 'providers'>('tours');
   const isInitialized = useRef(false);
 
   // Tab beim ersten Laden basierend auf Berechtigungen setzen (nur wenn Berechtigungen geladen sind)
@@ -269,7 +271,40 @@ const Organisation: React.FC = () => {
               )
             ) : activeTabState === 'providers' ? (
               canViewProviders ? (
-                <TourProvidersTab onError={handleError} />
+                <div className="space-y-4">
+                  {/* Switch für Tours/Providers */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setProvidersViewMode('tours')}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        providersViewMode === 'tours'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {t('tours.title', 'Touren')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProvidersViewMode('providers')}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        providersViewMode === 'providers'
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {t('organisation.tabs.providers', { defaultValue: 'Proveedores' })}
+                    </button>
+                  </div>
+                  
+                  {/* Bedingtes Rendering */}
+                  {providersViewMode === 'tours' ? (
+                    <ToursTab onError={handleError} />
+                  ) : (
+                    <TourProvidersTab onError={handleError} />
+                  )}
+                </div>
               ) : (
                 <div className="p-8 text-center">
                   <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
