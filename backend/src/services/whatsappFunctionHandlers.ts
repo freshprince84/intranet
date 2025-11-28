@@ -515,8 +515,8 @@ export class WhatsAppFunctionHandlers {
    */
   static async check_room_availability(
     args: {
-      startDate: string; // Format: YYYY-MM-DD
-      endDate?: string; // Format: YYYY-MM-DD (optional, falls nicht angegeben: startDate + 1 Tag)
+      startDate: string; // Format: YYYY-MM-DD oder "today"/"heute"
+      endDate?: string; // Format: YYYY-MM-DD oder "today"/"heute" (optional, falls nicht angegeben: startDate + 1 Tag)
       roomType?: 'compartida' | 'privada'; // Optional: Filter nach Zimmerart
       branchId?: number; // Optional: Branch ID (verwendet branchId aus Context wenn nicht angegeben)
     },
@@ -525,17 +525,30 @@ export class WhatsAppFunctionHandlers {
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Parse Datum
-      const startDate = new Date(args.startDate);
-      if (isNaN(startDate.getTime())) {
-        throw new Error(`Ungültiges Startdatum: ${args.startDate}. Format: YYYY-MM-DD`);
+      // 1. Parse Datum (unterstützt "today"/"heute")
+      let startDate: Date;
+      const startDateStr = args.startDate.toLowerCase().trim();
+      if (startDateStr === 'today' || startDateStr === 'heute' || startDateStr === 'hoy') {
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0); // Setze auf Mitternacht
+      } else {
+        startDate = new Date(args.startDate);
+        if (isNaN(startDate.getTime())) {
+          throw new Error(`Ungültiges Startdatum: ${args.startDate}. Format: YYYY-MM-DD oder "today"/"heute"`);
+        }
       }
 
       let endDate: Date;
       if (args.endDate) {
-        endDate = new Date(args.endDate);
-        if (isNaN(endDate.getTime())) {
-          throw new Error(`Ungültiges Enddatum: ${args.endDate}. Format: YYYY-MM-DD`);
+        const endDateStr = args.endDate.toLowerCase().trim();
+        if (endDateStr === 'today' || endDateStr === 'heute' || endDateStr === 'hoy') {
+          endDate = new Date();
+          endDate.setHours(23, 59, 59, 999); // Setze auf Ende des Tages
+        } else {
+          endDate = new Date(args.endDate);
+          if (isNaN(endDate.getTime())) {
+            throw new Error(`Ungültiges Enddatum: ${args.endDate}. Format: YYYY-MM-DD oder "today"/"heute"`);
+          }
         }
       } else {
         // Falls nicht angegeben: startDate + 1 Tag
@@ -546,6 +559,12 @@ export class WhatsAppFunctionHandlers {
       // 2. Prüfe Datum-Logik
       if (endDate <= startDate) {
         throw new Error('Enddatum muss nach Startdatum liegen');
+      }
+
+      // 3. Performance: Prüfe Zeitraum-Limit (max. 30 Tage)
+      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff > 30) {
+        throw new Error(`Zeitraum zu lang: ${daysDiff} Tage. Maximum: 30 Tage.`);
       }
 
       // 3. Verwende branchId aus args oder Context
