@@ -66,13 +66,19 @@ const TourDetailsModal = ({ isOpen, onClose, tourId, onTourUpdated }: TourDetail
                         </Dialog.Title>
                         <div className="flex items-center gap-3">
                             {hasPermission('tour_bookings', 'write', 'table') && tour && tour.isActive && (
-                                <button
-                                    onClick={() => setIsCreateBookingModalOpen(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                                >
-                                    <PlusIcon className="h-5 w-5" />
-                                    {t('tourBookings.create', 'Buchung erstellen')}
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        onClick={() => setIsCreateBookingModalOpen(true)}
+                                        className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                        style={{ width: '30.19px', height: '30.19px' }}
+                                        aria-label={t('tourBookings.create', 'Buchung erstellen')}
+                                    >
+                                        <PlusIcon className="h-4 w-4" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('tourBookings.create', 'Buchung erstellen')}
+                                    </div>
+                                </div>
                             )}
                             <button
                                 onClick={onClose}

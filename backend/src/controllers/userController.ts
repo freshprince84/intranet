@@ -226,53 +226,53 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
 
         // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
         const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                id: true,
-                username: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                birthday: true,
-                bankDetails: true,
-                contract: true,
-                salary: true,
-                normalWorkingHours: true,
-                gender: true,
-                phoneNumber: true,
-                country: true,
-                language: true,
-                profileComplete: true,
-                identificationNumber: true,
-                // ✅ PERFORMANCE: Settings nur laden wenn benötigt
-                ...(includeSettings ? { settings: true } : {}),
-                // ✅ PERFORMANCE: InvoiceSettings nur laden wenn benötigt
-                ...(includeInvoiceSettings ? { invoiceSettings: true } : {}),
-                // ✅ PERFORMANCE: Documents nur laden wenn benötigt
-                ...(includeDocuments ? {
-                    identificationDocuments: {
-                        orderBy: { createdAt: 'desc' },
-                        take: 1 // Neuestes Dokument
-                    }
-                } : {}),
-                roles: {
-                    include: {
-                        role: {
-                            include: {
-                                permissions: true,
-                                organization: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        displayName: true,
-                                        logo: true
+                where: { id: userId },
+                select: {
+                    id: true,
+                    username: true,
+                    email: true,
+                    firstName: true,
+                    lastName: true,
+                    birthday: true,
+                    bankDetails: true,
+                    contract: true,
+                    salary: true,
+                    normalWorkingHours: true,
+                    gender: true,
+                    phoneNumber: true,
+                    country: true,
+                    language: true,
+                    profileComplete: true,
+                    identificationNumber: true,
+                    // ✅ PERFORMANCE: Settings nur laden wenn benötigt
+                    ...(includeSettings ? { settings: true } : {}),
+                    // ✅ PERFORMANCE: InvoiceSettings nur laden wenn benötigt
+                    ...(includeInvoiceSettings ? { invoiceSettings: true } : {}),
+                    // ✅ PERFORMANCE: Documents nur laden wenn benötigt
+                    ...(includeDocuments ? {
+                        identificationDocuments: {
+                            orderBy: { createdAt: 'desc' },
+                            take: 1 // Neuestes Dokument
+                        }
+                    } : {}),
+                    roles: {
+                        include: {
+                            role: {
+                                include: {
+                                    permissions: true,
+                                    organization: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            displayName: true,
+                                            logo: true
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
         });
         
         if (!user) {

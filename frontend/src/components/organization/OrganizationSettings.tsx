@@ -102,6 +102,12 @@ const OrganizationSettings: React.FC = () => {
       setLoading(false);
       hasInitialLoadRef.current = true;
     }
+    
+    // ✅ MEMORY: Cleanup - Settings aus State entfernen beim Unmount
+    return () => {
+      setOrganization(null);
+      setStats(null);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionsLoading]);
 
@@ -110,6 +116,18 @@ const OrganizationSettings: React.FC = () => {
     fetchOrganization(true);
     // Aktualisiere auch den OrganizationContext
     refreshOrganization();
+  };
+
+  // ✅ MEMORY: Settings beim Schließen des Modals löschen
+  const handleEditModalClose = () => {
+    setIsEditModalOpen(false);
+    // Settings aus State entfernen (nur Settings, nicht die gesamte Organization)
+    if (organization?.settings) {
+      setOrganization({
+        ...organization,
+        settings: undefined
+      });
+    }
   };
 
   if (permissionsLoading) {
@@ -398,7 +416,7 @@ const OrganizationSettings: React.FC = () => {
 
       <EditOrganizationModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={handleEditModalClose}
         onSuccess={handleEditSuccess}
         organization={organization}
       />
