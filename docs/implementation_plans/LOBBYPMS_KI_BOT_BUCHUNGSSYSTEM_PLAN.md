@@ -241,11 +241,52 @@ async checkAvailability(startDate: Date, endDate: Date): Promise<AvailabilityRes
 
 ### Phase 1: Verfügbarkeitsprüfung implementieren
 
-#### Schritt 1.1: API-Endpunkt testen (KRITISCH - KEINE VERMUTUNGEN!)
+#### Schritt 1.1: API-Endpunkt testen ✅ ABGESCHLOSSEN
 
-**Ziel:** Herausfinden, welche Parameter `/api/v2/available-rooms` akzeptiert und welche Daten zurückgegeben werden
+**Status:** ✅ **GETESTET UND DOKUMENTIERT**
 
-**WICHTIG:** Alles muss getestet werden, keine Vermutungen!
+**Ergebnisse:**
+- ✅ Endpunkt funktioniert: `GET /api/v2/available-rooms`
+- ✅ Erforderliche Parameter: `start_date` (YYYY-MM-DD), `end_date` (YYYY-MM-DD)
+- ✅ Response-Struktur bekannt (siehe `docs/technical/LOBBYPMS_API_TEST_ERGEBNISSE_2025-01-26.md`)
+
+**Response-Struktur (GETESTET):**
+```json
+{
+  "data": [
+    {
+      "date": "2025-11-29",
+      "categories": [
+        {
+          "category_id": 34280,
+          "name": "El primo aventurero",
+          "available_rooms": 7,
+          "plans": [
+            {
+              "id": null,
+              "name": "STANDARD_RATE",
+              "prices": [
+                {
+                  "people": 1,
+                  "value": 60000
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Wichtige Erkenntnisse:**
+- `category_id` = Zimmerkategorie-ID
+- `name` = Zimmername
+- `available_rooms` = Anzahl verfügbarer Zimmer
+- `plans[0].prices[0].value` = Preis pro Person
+- `plans[0].prices[0].people` = Anzahl Personen
+- ⚠️ `room_type` Parameter wird ignoriert (alle Zimmerarten werden zurückgegeben)
 
 **Vorgehen:**
 1. Test-Script erstellen: `backend/scripts/test-lobbypms-availability.ts`
@@ -314,9 +355,9 @@ async function testAvailabilityApi() {
 ```
 **⚠️ WICHTIG:** Diese Struktur ist nur eine Vermutung! Muss getestet werden!
 
-#### Schritt 1.2: Service-Methode implementieren (NACH Tests!)
+#### Schritt 1.2: Service-Methode implementieren ✅ BEREIT
 
-**WICHTIG:** Implementierung erst NACH vollständigen Tests! Response-Struktur muss bekannt sein!
+**Status:** ✅ Tests abgeschlossen, Response-Struktur bekannt
 
 **Datei:** `backend/src/services/lobbyPmsService.ts`
 
@@ -332,8 +373,7 @@ async function testAvailabilityApi() {
  */
 async checkAvailability(
   startDate: Date, 
-  endDate: Date,
-  roomType?: 'compartida' | 'privada'
+  endDate: Date
 ): Promise<AvailabilityResult[]> {
   // Lade Settings falls noch nicht geladen
   if (!this.apiKey) {
@@ -342,18 +382,18 @@ async checkAvailability(
 
   try {
     // Parameter basierend auf Test-Ergebnissen
+    // WICHTIG: start_date UND end_date sind ERFORDERLICH!
     const params: any = {
-      start_date: this.formatDate(startDate), // Format muss aus Tests bekannt sein
-      end_date: this.formatDate(endDate)
+      start_date: this.formatDate(startDate), // Format: "YYYY-MM-DD"
+      end_date: this.formatDate(endDate) // Format: "YYYY-MM-DD"
     };
 
     if (this.propertyId) {
-      params.property_id = this.propertyId; // Nur wenn in Tests funktioniert
+      params.property_id = this.propertyId; // Optional
     }
 
-    if (roomType) {
-      params.room_type = roomType; // Nur wenn in Tests unterstützt
-    }
+    // WICHTIG: room_type Parameter wird ignoriert (aus Tests bekannt)
+    // Stattdessen: Filtere nach category_id oder name
 
     const response = await this.axiosInstance.get<any>(
       '/api/v2/available-rooms',
@@ -361,19 +401,44 @@ async checkAvailability(
     );
 
     // Response-Struktur basierend auf Test-Ergebnissen
-    // WICHTIG: Muss aus Tests bekannt sein, keine Vermutungen!
-    const availabilityData = response.data.data || response.data || [];
+    // Struktur: { data: [{ date: "...", categories: [...] }] }
+    const responseData = response.data.data || [];
     
-    // Mapping basierend auf tatsächlicher Response-Struktur
-    return availabilityData.map((item: any) => ({
-      roomId: item.room_id || item.id,
-      roomName: item.room_name || item.name,
-      roomType: item.room_type || item.type,
-      availableBeds: item.available_beds || item.available || 0,
-      totalBeds: item.total_beds || item.total || 0,
-      pricePerNight: item.price_per_night || item.price || 0,
-      currency: item.currency || 'COP'
-    }));
+    // Flache alle Kategorien für alle Daten
+    const allCategories: AvailabilityResult[] = [];
+    
+    for (const dateEntry of responseData) {
+      const date = dateEntry.date;
+      const categories = dateEntry.categories || [];
+      
+      for (const category of categories) {
+        // Hole Preis für 1 Person (Standard)
+        const priceForOnePerson = category.plans?.[0]?.prices?.find((p: any) => p.people === 1);
+        const price = priceForOnePerson?.value || 0;
+        
+        // Bestimme room_type aus Namen oder category_id
+        // Heuristik: Namen mit "Dorm", "Compartida" = compartida, sonst privada
+        const name = category.name?.toLowerCase() || '';
+        let roomType: 'compartida' | 'privada' = 'privada';
+        if (name.includes('dorm') || name.includes('compartida') || 
+            category.category_id === 34280 || category.category_id === 34281) {
+          roomType = 'compartida';
+        }
+        
+        allCategories.push({
+          categoryId: category.category_id,
+          roomName: category.name,
+          roomType: roomType,
+          availableRooms: category.available_rooms || 0,
+          pricePerNight: price,
+          currency: 'COP', // Standard aus Tests
+          date: date,
+          prices: category.plans?.[0]?.prices || [] // Alle Preise (verschiedene Personenanzahl)
+        });
+      }
+    }
+    
+    return allCategories;
   } catch (error) {
     // Fehlerbehandlung basierend auf Test-Ergebnissen
     if (axios.isAxiosError(error)) {
@@ -388,14 +453,25 @@ async checkAvailability(
   }
 }
 
+/**
+ * Formatiert Datum als YYYY-MM-DD
+ */
+private formatDate(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
 interface AvailabilityResult {
-  roomId: number;
-  roomName: string;
-  roomType: 'compartida' | 'privada';
-  availableBeds: number;
-  totalBeds: number;
-  pricePerNight: number;
-  currency: string;
+  categoryId: number; // LobbyPMS category_id
+  roomName: string; // Name der Zimmerkategorie
+  roomType: 'compartida' | 'privada'; // Abgeleitet aus Name/category_id
+  availableRooms: number; // Anzahl verfügbarer Zimmer
+  pricePerNight: number; // Preis pro Nacht (für 1 Person)
+  currency: string; // Währung (Standard: COP)
+  date: string; // Datum (YYYY-MM-DD)
+  prices: Array<{ // Alle Preise (verschiedene Personenanzahl)
+    people: number;
+    value: number;
+  }>;
 }
 ```
 
@@ -971,24 +1047,22 @@ private static parseDateFromMessage(
 }
 ```
 
-#### Schritt 2.3: API-Endpunkt für Reservierungserstellung testen
+#### Schritt 2.3: API-Endpunkt für Reservierungserstellung testen ✅ TEILWEISE
 
-**WICHTIG:** Muss getestet werden, ob LobbyPMS API-Endpunkt für Reservierungserstellung existiert!
+**Status:** ✅ Endpunkt existiert, benötigt `category_id`
 
-**Test-Script:** `backend/scripts/test-lobbypms-create-booking.ts`
+**Ergebnisse aus Tests:**
+- ✅ Endpunkt `/api/v1/bookings` existiert (Status 422, nicht 404)
+- ❌ Endpunkte `/api/v2/bookings`, `/api/v1/reservations`, `/api/v2/reservations` existieren nicht (404)
+- ✅ Erforderliche Felder: `category_id` (mindestens)
 
-```typescript
-// Test verschiedene Endpunkte:
-// - POST /api/v1/bookings
-// - POST /api/v2/bookings
-// - POST /api/v1/reservations
-// - POST /api/v2/reservations
+**Nächste Schritte:**
+- Test mit `category_id` durchführen (siehe `test-lobbypms-create-booking-with-category.ts`)
+- Weitere erforderliche Felder identifizieren
 
-// Test verschiedene Payload-Strukturen
-// Dokumentiere welche funktionieren
-```
+**Test-Script:** `backend/scripts/test-lobbypms-create-booking-with-category.ts`
 
-**Falls API nicht existiert:**
+**Falls API nicht vollständig funktioniert:**
 - Alternative: Reservierung nur lokal erstellen (ohne LobbyPMS)
 - Oder: Website-Scraping (nur als letzter Ausweg)
 
@@ -1516,26 +1590,23 @@ paymentDeadline.setHours(paymentDeadline.getHours() + paymentDeadlineHours);
 
 ## 🚀 Implementierungsreihenfolge
 
-### Schritt 1: API-Endpunkte testen (Priorität: KRITISCH - ZUERST!)
+### Schritt 1: API-Endpunkte testen ✅ TEILWEISE ABGESCHLOSSEN
 
-**WICHTIG:** Alles muss getestet werden, keine Vermutungen!
+**Status:**
+1. ✅ **Verfügbarkeits-API getestet** - Funktioniert! Response-Struktur bekannt
+2. ⚠️ **Reservierungserstellungs-API getestet** - Endpunkt existiert, benötigt `category_id`
+3. ❌ **Stornierungs-API** - Noch nicht getestet
 
-1. **Verfügbarkeits-API testen:**
-   - Test-Script erstellen: `backend/scripts/test-lobbypms-availability.ts`
-   - Alle Parameter-Kombinationen testen
-   - Response-Struktur vollständig dokumentieren
-   - Ergebnisse in `docs/technical/LOBBYPMS_AVAILABILITY_API_TEST_ERGEBNISSE.md` dokumentieren
+**Nächste Tests:**
+1. Reservierungserstellung mit `category_id` testen:
+   ```bash
+   npx ts-node scripts/test-lobbypms-create-booking-with-category.ts
+   ```
 
-2. **Reservierungserstellungs-API testen:**
-   - Test-Script erstellen: `backend/scripts/test-lobbypms-create-booking.ts`
-   - Alle möglichen Endpunkte testen
-   - Payload-Strukturen testen
-   - Ergebnisse dokumentieren
-
-3. **Stornierungs-API testen:**
-   - Test ob `updateReservationStatus(reservationId, 'cancelled')` funktioniert
-   - Oder separater Stornierungs-Endpunkt
-   - Ergebnisse dokumentieren
+2. Stornierungs-API testen:
+   ```bash
+   npx ts-node scripts/test-lobbypms-cancel-booking.ts [booking_id]
+   ```
 
 ### Schritt 2: Verfügbarkeitsprüfung implementieren (Priorität: HOCH)
 1. Service-Methode `checkAvailability()` implementieren (basierend auf Test-Ergebnissen)

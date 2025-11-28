@@ -438,8 +438,6 @@ const Worktracker: React.FC = () => {
         }
     }, [selectedFilterId, activeTab, allTasks.length]);
 
-    // Note: allTours existiert nicht - nur tours (wird direkt geladen, kein Hintergrund-Laden)
-
     // ✅ MEMORY: allTourBookings intelligent löschen (nur wenn nicht mehr benötigt - Best Practice)
     // Löscht wenn: Tab gewechselt wird
     useEffect(() => {
@@ -674,7 +672,9 @@ const Worktracker: React.FC = () => {
             }
             setError(null);
         } catch (error) {
-            console.error('Fehler beim Laden der Tasks:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Fehler beim Laden der Tasks:', error);
+            }
             if (!background && !append) {
                 setError(t('worktime.messages.tasksLoadError'));
             }
@@ -710,7 +710,9 @@ const Worktracker: React.FC = () => {
             showMessage(t('reservations.pinGeneratedAndSent', 'PIN-Code generiert und Mitteilung versendet'), 'success');
             await loadReservations(); // Aktualisiere Liste
         } catch (error: any) {
-            console.error('Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
+            }
             showMessage(
                 error.response?.data?.message || t('reservations.pinGenerateError', 'Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung'),
                 'error'
@@ -732,7 +734,9 @@ const Worktracker: React.FC = () => {
             }
             setReservations(reservationsData);
         } catch (err: any) {
-            console.error('Fehler beim Laden der Reservations:', err);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Fehler beim Laden der Reservations:', err);
+            }
             const errorMessage = err.response?.data?.message || t('reservations.loadError', 'Fehler beim Laden der Reservations');
             setReservationsError(errorMessage);
             showMessage(errorMessage, 'error');
@@ -792,7 +796,9 @@ const Worktracker: React.FC = () => {
             setTourBookings(bookingsData);
             setAllTourBookings(bookingsData);
         } catch (err: any) {
-            console.error('Fehler beim Laden der Tour-Buchungen:', err);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Fehler beim Laden der Tour-Buchungen:', err);
+            }
             const errorMessage = err.response?.data?.message || t('tourBookings.loadError', 'Fehler beim Laden der Tour-Buchungen');
             setTourBookingsError(errorMessage);
             showMessage(errorMessage, 'error');
@@ -851,7 +857,9 @@ const Worktracker: React.FC = () => {
                 const token = localStorage.getItem('token');
                 
                 if (!token) {
-                    console.error('Nicht authentifiziert');
+                    if (process.env.NODE_ENV === 'development') {
+                        console.error('Nicht authentifiziert');
+                    }
                     return;
                 }
 
@@ -913,7 +921,9 @@ const Worktracker: React.FC = () => {
                     );
                 }
             } catch (error) {
-                console.error('Fehler beim Erstellen der Standard-Filter:', error);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('Fehler beim Erstellen der Standard-Filter:', error);
+                }
             }
         };
 
@@ -936,7 +946,9 @@ const Worktracker: React.FC = () => {
             toast.success(t('worktime.messages.taskUpdated'));
         } catch (error) {
             // Rollback bei Fehler: Vollständiges Reload
-            console.error('Fehler beim Aktualisieren des Status:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Fehler beim Aktualisieren des Status:', error);
+            }
             loadTasks();
                 toast.error(t('worktime.messages.taskUpdatedError'));
         }
@@ -1250,12 +1262,16 @@ const Worktracker: React.FC = () => {
                         'title': (task: Task, cond: FilterCondition) => {
                             const value = (cond.value as string || '').toLowerCase();
                             if (!task.title || typeof task.title !== 'string') {
-                                console.error('title evaluator: task.title ist undefined oder kein String', { task, cond });
+                                if (process.env.NODE_ENV === 'development') {
+                                    console.error('title evaluator: task.title ist undefined oder kein String', { task, cond });
+                                }
                                 return null;
                             }
                             const title = task.title.toLowerCase();
                             if (!title || typeof title !== 'string') {
-                                console.error('title evaluator: title nach toLowerCase() ist undefined oder kein String', { task, cond, title });
+                                if (process.env.NODE_ENV === 'development') {
+                                    console.error('title evaluator: title nach toLowerCase() ist undefined oder kein String', { task, cond, title });
+                                }
                                 return null;
                             }
                             if (cond.operator === 'equals') return task.title === cond.value;
@@ -1894,7 +1910,9 @@ const Worktracker: React.FC = () => {
             setIsEditModalOpen(true);
             
         } catch (err) {
-            console.error('Fehler beim Kopieren des Tasks:', err);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Fehler beim Kopieren des Tasks:', err);
+            }
             // Einfachere Fehlerbehandlung ohne axios-Import
             const axiosError = err as any;
             setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
@@ -1930,7 +1948,9 @@ const Worktracker: React.FC = () => {
                 toast.success(t('worktime.messages.taskDeleted'));
             } catch (error) {
                 // Rollback bei Fehler: Vollständiges Reload
-                console.error('❌ Fehler beim Löschen der Aufgabe:', error);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('❌ Fehler beim Löschen der Aufgabe:', error);
+                }
                 loadTasks();
                 toast.error(t('worktime.messages.taskDeletedError'));
             }
@@ -1946,8 +1966,10 @@ const Worktracker: React.FC = () => {
             setSelectedTask(null);
             toast.success(t('worktime.messages.taskUpdated'));
         } catch (error) {
-            console.error('Fehler beim Speichern der Aufgabe:', error);
-                toast.error(t('worktime.messages.taskSaveError'));
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Fehler beim Speichern der Aufgabe:', error);
+            }
+            toast.error(t('worktime.messages.taskSaveError'));
         }
     };
 
@@ -2050,7 +2072,9 @@ const Worktracker: React.FC = () => {
                                                         showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
                                                         await loadReservations();
                                                     } catch (err: any) {
-                                                        console.error('Fehler beim Synchronisieren:', err);
+                                                        if (process.env.NODE_ENV === 'development') {
+                                                            console.error('Fehler beim Synchronisieren:', err);
+                                                        }
                                                         showMessage(
                                                             err.response?.data?.message || t('reservations.syncError', 'Fehler beim Synchronisieren'),
                                                             'error'
@@ -3327,7 +3351,9 @@ const Worktracker: React.FC = () => {
                                                         showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
                                                         await loadReservations();
                                                     } catch (err: any) {
-                                                        console.error('Fehler beim Synchronisieren:', err);
+                                                        if (process.env.NODE_ENV === 'development') {
+                                                            console.error('Fehler beim Synchronisieren:', err);
+                                                        }
                                                         showMessage(
                                                             err.response?.data?.message || t('reservations.syncError', 'Fehler beim Synchronisieren'),
                                                             'error'

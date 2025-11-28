@@ -224,3 +224,4 @@ useEffect(() => {
 **Status:** ✅ IMPLEMENTIERT  
 **Nächster Schritt:** Auf Server testen und Memory-Verbrauch messen
 
+

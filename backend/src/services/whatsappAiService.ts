@@ -112,9 +112,11 @@ export class WhatsAppAiService {
     // 3. Baue System Prompt
     const systemPrompt = this.buildSystemPrompt(aiConfig, language, conversationContext);
 
-    // 4. Prüfe ob Function Calling aktiviert werden soll (nur für Mitarbeiter, nicht für Gäste)
+    // 4. Prüfe ob Function Calling aktiviert werden soll
+    // WICHTIG: check_room_availability sollte auch für Gäste verfügbar sein!
     const isEmployee = !!conversationContext?.userId;
-    const functionDefinitions = isEmployee ? this.getFunctionDefinitions() : [];
+    // Für Zimmerverfügbarkeit: Function auch für Gäste aktivieren
+    const functionDefinitions = this.getFunctionDefinitions();
 
     // 5. Rufe OpenAI API auf
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -178,10 +180,11 @@ export class WhatsAppAiService {
           
           try {
             // Führe Function aus
+            // WICHTIG: check_room_availability kann auch ohne userId aufgerufen werden
             const result = await (WhatsAppFunctionHandlers as any)[functionName](
               functionArgs,
-              conversationContext.userId,
-              conversationContext.roleId,
+              conversationContext?.userId || null,
+              conversationContext?.roleId || null,
               branchId
             );
             
@@ -399,6 +402,36 @@ export class WhatsAppAiService {
             }
           }
         }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'check_room_availability',
+          description: 'Prüft Zimmerverfügbarkeit für einen Zeitraum. Zeigt verfügbare Zimmer, Preise und Anzahl verfügbarer Zimmer pro Datum. Unterstützt Filter nach Zimmerart (compartida/privada).',
+          parameters: {
+            type: 'object',
+            properties: {
+              startDate: {
+                type: 'string',
+                description: 'Check-in Datum im Format YYYY-MM-DD (erforderlich)'
+              },
+              endDate: {
+                type: 'string',
+                description: 'Check-out Datum im Format YYYY-MM-DD (optional, falls nicht angegeben: startDate + 1 Tag)'
+              },
+              roomType: {
+                type: 'string',
+                enum: ['compartida', 'privada'],
+                description: 'Zimmerart (optional): "compartida" für Dorm-Zimmer, "privada" für private Zimmer'
+              },
+              branchId: {
+                type: 'number',
+                description: 'Branch ID (optional, verwendet Branch aus Context wenn nicht angegeben)'
+              }
+            },
+            required: ['startDate']
+          }
+        }
       }
     ];
   }
@@ -465,19 +498,34 @@ export class WhatsAppAiService {
       prompt += `\n\nKontext der Konversation: ${JSON.stringify(conversationContext, null, 2)}`;
     }
 
-    // Füge Informationen zu verfügbaren Funktionen hinzu (nur für Mitarbeiter)
+    // Füge Informationen zu verfügbaren Funktionen hinzu
+    // WICHTIG: check_room_availability ist für ALLE verfügbar (auch Gäste)!
+    prompt += '\n\nVerfügbare Funktionen:\n';
+    
+    // Zimmerverfügbarkeit - IMMER verfügbar
+    prompt += '- check_room_availability: Prüfe Zimmerverfügbarkeit für einen Zeitraum (startDate, endDate, roomType)\n';
+    prompt += '  WICHTIG: Verwende IMMER diese Function wenn der User nach Zimmerverfügbarkeit fragt!\n';
+    prompt += '  Beispiele:\n';
+    prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "2025-01-26" })\n';
+    prompt += '    - "Haben wir Zimmer frei vom 1.2. bis 3.2.?" → check_room_availability({ startDate: "2025-02-01", endDate: "2025-02-03" })\n';
+    prompt += '    - "gibt es Dorm-Zimmer frei?" → check_room_availability({ startDate: "2025-02-01", roomType: "compartida" })\n';
+    prompt += '    - "¿tienen habitaciones privadas disponibles?" → check_room_availability({ startDate: "2025-02-01", roomType: "privada" })\n';
+    
+    // Andere Funktionen - nur für Mitarbeiter
     if (conversationContext?.userId) {
-      prompt += '\n\nVerfügbare Funktionen:\n';
-      prompt += '- get_requests: Hole Requests basierend auf Filtern (status, dueDate)\n';
-      prompt += '- get_todos: Hole Todos/Tasks basierend auf Filtern (status, dueDate)\n';
-      prompt += '- get_worktime: Hole Arbeitszeiten für einen User (date, startDate, endDate)\n';
-      prompt += '- get_cerebro_articles: Hole Cerebro-Artikel basierend auf Suchbegriffen oder Tags\n';
-      prompt += '- get_user_info: Hole User-Informationen (Name, Email, Rollen)\n';
-      prompt += '\nVerwende diese Funktionen, wenn der User nach spezifischen Daten fragt.';
-      prompt += '\nBeispiel: "solicitudes abiertas de hoy" → get_requests({ status: "approval", dueDate: "today" })';
-      prompt += '\nBeispiel: "wie lange habe ich heute gearbeitet" → get_worktime({ date: "today" })';
-      prompt += '\nBeispiel: "welche cerebro artikel gibt es zu notfällen" → get_cerebro_articles({ tags: ["notfall"] })';
+      prompt += '- get_requests: Hole Requests basierend auf Filtern (status, dueDate) - NUR für Mitarbeiter\n';
+      prompt += '- get_todos: Hole Todos/Tasks basierend auf Filtern (status, dueDate) - NUR für Mitarbeiter\n';
+      prompt += '- get_worktime: Hole Arbeitszeiten für einen User (date, startDate, endDate) - NUR für Mitarbeiter\n';
+      prompt += '- get_cerebro_articles: Hole Cerebro-Artikel basierend auf Suchbegriffen oder Tags - NUR für Mitarbeiter\n';
+      prompt += '- get_user_info: Hole User-Informationen (Name, Email, Rollen) - NUR für Mitarbeiter\n';
+      prompt += '\nBeispiele für Mitarbeiter-Funktionen:';
+      prompt += '\n  - "solicitudes abiertas de hoy" → get_requests({ status: "approval", dueDate: "today" })';
+      prompt += '\n  - "wie lange habe ich heute gearbeitet" → get_worktime({ date: "today" })';
+      prompt += '\n  - "welche cerebro artikel gibt es zu notfällen" → get_cerebro_articles({ tags: ["notfall"] })';
     }
+    
+    prompt += '\n\nWICHTIG: Wenn der User nach Zimmerverfügbarkeit fragt, verwende IMMER check_room_availability!';
+    prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
 
     return prompt;
   }

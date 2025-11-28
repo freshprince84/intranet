@@ -1,237 +1,173 @@
 # LobbyPMS API Test-Ergebnisse (2025-01-26)
 
 **Datum:** 2025-01-26  
-**Status:** ⚠️ Problem: "400 Request Header Or Cookie Too Large"
+**Status:** ✅ Verfügbarkeits-API funktioniert! Reservierungserstellung benötigt category_id
 
 ---
 
 ## 📊 TEST-ERGEBNISSE
 
-### Problem identifiziert
+### ✅ Verfügbarkeits-API (`/api/v2/available-rooms`) - FUNKTIONIERT!
 
-**Fehler:** `400 Request Header Or Cookie Too Large`
+**Erfolgreiche Tests:**
+- ✅ Test 2: `start_date + end_date` - Status 200
+- ✅ Test 6: Alle Parameter kombiniert - Status 200
 
-**WICHTIG:** Die API wird direkt aufgerufen (nicht über nginx), daher ist nginx wahrscheinlich NICHT das Problem!
+**Erforderliche Parameter:**
+- ✅ `start_date` (erforderlich) - Format: "YYYY-MM-DD"
+- ✅ `end_date` (erforderlich) - Format: "YYYY-MM-DD"
+- ⚠️ `property_id` (optional)
+- ⚠️ `room_type` (optional) - Unterstützung unklar (wird ignoriert?)
 
-**Mögliche Ursachen:**
-1. **LobbyPMS API selbst hat ein Limit** - Die API-Server von LobbyPMS könnten ein Header-Limit haben
-2. **API-Key ist extrem lang** - Der API-Key könnte mehrere KB lang sein
-3. **Proxy/Reverse-Proxy** - Falls ein Proxy zwischen Server und LobbyPMS API ist
-
-**Betroffene Tests:**
-- ❌ Verfügbarkeits-API (`/api/v2/available-rooms`) - Alle 7 Tests fehlgeschlagen
-- ❌ Reservierungserstellungs-API - Alle 16 Tests fehlgeschlagen
-- ⚠️ Stornierungs-API - Nicht getestet (keine Reservierung mit lobbyReservationId gefunden)
-
-### Branch-Problem behoben
-
-**Problem:** Test verwendete "Alianza Paisa" (ID: 17), existiert nicht in LobbyPMS
-
-**Lösung:** Test-Scripts angepasst, verwenden jetzt nur:
-- Manila (ID: 3)
-- Parque Poblado (ID: 4)
-
----
-
-## 🔍 ANALYSE: Request Header zu groß
-
-### WICHTIG: nginx ist wahrscheinlich NICHT das Problem!
-
-**Grund:** Die API wird direkt aufgerufen:
-```typescript
-// In lobbyPmsService.ts
-const instance = axios.create({
-  baseURL: this.apiUrl, // z.B. 'https://api.lobbypms.com'
-  headers: {
-    'Authorization': `Bearer ${this.apiKey}`
+**Response-Struktur (GETESTET):**
+```json
+{
+  "data": [
+    {
+      "date": "2025-11-29",
+      "categories": [
+        {
+          "category_id": 34280,
+          "name": "El primo aventurero",
+          "available_rooms": 7,
+          "plans": [
+            {
+              "id": null,
+              "name": "STANDARD_RATE",
+              "prices": [
+                {
+                  "people": 1,
+                  "value": 60000
+                }
+              ]
+            }
+          ],
+          "restrictions": {
+            "min_stay": 0,
+            "max_stay": 0,
+            "lead_days": 0
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "total_records": 2,
+    "current_page": 1,
+    "records_per_page": 100,
+    "total_pages": 1
   }
-});
-```
-
-**Das bedeutet:**
-- Request geht direkt zu `https://api.lobbypms.com`
-- NICHT über nginx auf dem Server
-- nginx-Limit sollte also nicht greifen
-
-### Mögliche echte Ursachen:
-
-1. **LobbyPMS API-Server hat ein Limit:**
-   - Die API-Server von LobbyPMS könnten selbst ein Header-Limit haben
-   - Oder sie verwenden nginx/Proxy mit Limit
-
-2. **API-Key ist extrem lang:**
-   - Prüfe Länge des API-Keys
-   - Falls > 4KB, könnte das Problem sein
-
-3. **Verschlüsselte Daten im Header:**
-   - Unwahrscheinlich, aber prüfen ob versehentlich verschlüsselte Settings im Header landen
-
----
-
-## 💡 LÖSUNGSVORSCHLÄGE (OHNE nginx-Anpassung)
-
-### Lösung 1: API-Key Länge prüfen (ZUERST!)
-
-**Test-Script erstellen:**
-```bash
-# Auf Server: Prüfe API-Key Länge
-cd /var/www/intranet/backend
-npx ts-node -e "
-import { prisma } from './src/utils/prisma';
-import { decryptBranchApiSettings } from './src/utils/encryption';
-
-async function checkApiKeyLength() {
-  const branch = await prisma.branch.findFirst({
-    where: { id: { in: [3, 4] } },
-    select: { id: true, name: true, lobbyPmsSettings: true }
-  });
-  
-  if (!branch?.lobbyPmsSettings) {
-    console.log('Keine Settings gefunden');
-    return;
-  }
-  
-  const settings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
-  const apiKey = settings?.lobbyPms?.apiKey || settings?.apiKey;
-  
-  if (apiKey) {
-    console.log(\`Branch: \${branch.name}\`);
-    console.log(\`API-Key Länge: \${apiKey.length} Zeichen\`);
-    console.log(\`API-Key Länge: \${(apiKey.length / 1024).toFixed(2)} KB\`);
-    console.log(\`Authorization Header: \${('Bearer ' + apiKey).length} Zeichen\`);
-  }
-  
-  await prisma.\$disconnect();
 }
-
-checkApiKeyLength();
-"
 ```
 
-**Wenn API-Key > 4KB:**
-- Problem identifiziert
-- Lösung: Siehe unten
+**Wichtige Erkenntnisse:**
+- ✅ API funktioniert mit `start_date` + `end_date`
+- ✅ Response enthält Verfügbarkeit pro Datum und Kategorie
+- ✅ Preise sind pro Person (`people`, `value`)
+- ✅ `available_rooms` = Anzahl verfügbarer Zimmer
+- ✅ `category_id` = ID der Zimmerkategorie
+- ✅ `name` = Name der Zimmerkategorie (z.B. "La tia artista", "El primo aventurero")
+- ⚠️ `room_type` Parameter wird ignoriert (alle Zimmerarten werden zurückgegeben)
 
-### Lösung 2: Alternative Authentifizierung prüfen
+**Beispiel-Daten aus Test:**
+- "El primo aventurero" (category_id: 34280) - 7 Zimmer verfügbar, 60.000 COP/Person
+- "La tia artista" (category_id: 34281) - 3 Zimmer verfügbar, 50.000 COP/Person
+- "El abuelo viajero" (category_id: 34282) - 6 Zimmer verfügbar, 65.000 COP/Person
+- "Doble básica" (category_id: 34312) - 1 Zimmer verfügbar, 100.000 COP/Person (1 Person), 120.000 COP (2 Personen)
+- "Apartamento doble" (category_id: 34284) - 0 Zimmer verfügbar, 200.000-260.000 COP (1-4 Personen)
 
-**LobbyPMS könnte unterstützen:**
-- API-Key als Query-Parameter: `?api_key=...`
-- API-Key als Cookie
-- OAuth Token (kürzer)
+### ⚠️ Reservierungserstellungs-API (`/api/v1/bookings`) - TEILWEISE
 
-**Test:**
-```typescript
-// Statt Header:
-headers: { 'Authorization': `Bearer ${apiKey}` }
+**Status:** Endpunkt existiert, benötigt `category_id`
 
-// Versuche Query-Parameter:
-params: { api_key: apiKey }
+**Erfolgreiche Tests:** 0 von 16
+
+**Fehlermeldung:**
+```json
+{
+  "error_code": "INPUT_PARAMETERS",
+  "error": "The category id field is required."
+}
 ```
 
-### Lösung 3: API direkt testen (ohne unser System)
+**Erkenntnisse:**
+- ✅ Endpunkt `/api/v1/bookings` existiert (Status 422, nicht 404)
+- ❌ Endpunkte `/api/v2/bookings`, `/api/v1/reservations`, `/api/v2/reservations` existieren nicht (404)
+- ✅ Erforderliche Felder: `category_id` (mindestens)
+- ❓ Weitere erforderliche Felder müssen getestet werden
 
-**Mit curl testen:**
-```bash
-# Auf Server:
-curl -X GET "https://api.lobbypms.com/api/v2/available-rooms?start_date=2025-02-01" \
-  -H "Authorization: Bearer {API_KEY}" \
-  -H "Content-Type: application/json" \
-  -v
-```
+**Nächste Schritte:**
+- Test mit `category_id` durchführen
+- Weitere erforderliche Felder identifizieren
 
-**Wenn curl auch "400 Request Header Or Cookie Too Large" gibt:**
-- Problem liegt bei LobbyPMS API selbst
-- Nicht unser System
+### ❓ Stornierungs-API
 
-**Wenn curl funktioniert:**
-- Problem liegt in unserem Code
-- Prüfe ob zusätzliche Headers hinzugefügt werden
+**Status:** Nicht getestet (keine Reservierung mit lobbyReservationId gefunden)
 
-### Lösung 4: API-Key kürzen (falls möglich)
-
-- Prüfe ob LobbyPMS kürzere API-Keys generieren kann
-- Oder API-Key in Session speichern, nur Session-ID senden
+**Nächste Schritte:**
+- Test mit vorhandener booking_id durchführen
 
 ---
 
-## ⚖️ VOR- UND NACHTEILE: nginx-Anpassung
+## 🎯 WICHTIGE ERKENNTNISSE
 
-### ❌ Warum nginx-Anpassung NICHT nötig ist:
+### 1. Verfügbarkeitsprüfung
 
-1. **API wird direkt aufgerufen:**
-   - Request geht direkt zu `https://api.lobbypms.com`
-   - NICHT über nginx auf unserem Server
-   - nginx-Limit sollte nicht greifen
+**Funktioniert:**
+- ✅ Endpunkt: `GET /api/v2/available-rooms`
+- ✅ Parameter: `start_date` (erforderlich), `end_date` (erforderlich)
+- ✅ Response-Struktur bekannt
 
-2. **Problem liegt wahrscheinlich bei LobbyPMS:**
-   - Die API-Server von LobbyPMS haben vermutlich selbst ein Limit
-   - nginx-Anpassung auf unserem Server hilft nicht
+**Response-Mapping:**
+- `category_id` → Zimmerkategorie-ID
+- `name` → Zimmername (z.B. "La tia artista")
+- `available_rooms` → Anzahl verfügbarer Zimmer
+- `plans[0].prices[0].value` → Preis pro Person
+- `plans[0].prices[0].people` → Anzahl Personen
 
-### ✅ Falls doch nginx-Anpassung nötig (nur wenn Proxy verwendet wird):
+**Zimmerart-Erkennung:**
+- Muss aus `name` oder `category_id` abgeleitet werden
+- Oder: Mapping-Tabelle erstellen (category_id → room_type)
 
-**Vorteile:**
-- Löst Problem, wenn ein Proxy zwischen Server und API ist
-- Erlaubt größere Header für zukünftige APIs
+### 2. Reservierungserstellung
 
-**Nachteile:**
-- Server-Konfiguration ändern (Wartungsaufwand)
-- Könnte andere Probleme verursachen
-- Sicherheitsrisiko wenn zu groß (DoS-Angriffe mit großen Headers)
-- Muss bei jedem Server-Update geprüft werden
+**Status:** Endpunkt existiert, benötigt `category_id`
 
-**Empfehlung:** Nur wenn wirklich nötig (z.B. wenn Proxy verwendet wird)
+**Erforderliche Felder (bekannt):**
+- ✅ `category_id` (erforderlich)
 
----
+**Zu testen:**
+- Welche weiteren Felder sind erforderlich?
+- Format der Payload
+- Response-Struktur
 
-## 🧪 NÄCHSTE SCHRITTE (OHNE nginx-Anpassung)
+### 3. Stornierung
 
-### Schritt 1: API-Key Länge prüfen
-
-```bash
-# Auf Server:
-cd /var/www/intranet/backend
-npx ts-node scripts/check-api-key-length.ts
-```
-
-### Schritt 2: API direkt mit curl testen
-
-```bash
-# Hole API-Key aus DB (siehe Script oben)
-# Dann:
-curl -X GET "https://api.lobbypms.com/api/v2/available-rooms?start_date=2025-02-01" \
-  -H "Authorization: Bearer {API_KEY_HIER_EINFÜGEN}" \
-  -H "Content-Type: application/json" \
-  -v
-```
-
-### Schritt 3: Alternative Auth-Methoden testen
-
-Falls API-Key zu lang:
-- Query-Parameter testen
-- Cookie testen
-- OAuth prüfen
-
-### Schritt 4: LobbyPMS Support kontaktieren
-
-Falls Problem bei LobbyPMS API liegt:
-- Support kontaktieren
-- Nach Header-Limit fragen
-- Nach alternativen Auth-Methoden fragen
+**Status:** Noch nicht getestet
 
 ---
 
-## 📝 TEST-SCRIPTS KORRIGIERT
+## 📝 NÄCHSTE SCHRITTE
 
-**Änderungen:**
-- ✅ Nur Branches Manila (ID: 3) und Parque Poblado (ID: 4) verwenden
-- ✅ Bessere Fehlermeldungen
+### Schritt 1: Reservierungserstellung mit category_id testen
 
-**Dateien:**
-- `backend/scripts/test-lobbypms-availability.ts`
-- `backend/scripts/test-lobbypms-create-booking.ts`
-- `backend/scripts/test-lobbypms-cancel-booking.ts`
+**Test-Script erweitern:**
+- Payload mit `category_id` testen
+- Weitere Felder schrittweise hinzufügen
+
+### Schritt 2: Mapping category_id → room_type erstellen
+
+**Problem:** Response enthält keine `room_type` (compartida/privada)
+
+**Lösung:**
+- Mapping-Tabelle erstellen
+- Oder: Aus Namen ableiten (z.B. "Dorm" = compartida, "Apartamento" = privada)
+
+### Schritt 3: Stornierungs-API testen
+
+- Test mit vorhandener booking_id durchführen
 
 ---
 
 **Erstellt:** 2025-01-26  
-**Status:** ⚠️ PROBLEM ANALYSIEREN - nginx-Anpassung wahrscheinlich NICHT nötig
+**Status:** ✅ VERFÜGBARKEITS-API GETESTET - Response-Struktur bekannt

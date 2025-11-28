@@ -81,7 +81,6 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
     
     // Tour-States
     const [tours, setTours] = useState<Tour[]>([]);
-    const [allTours, setAllTours] = useState<Tour[]>([]);
     const [toursLoading, setToursLoading] = useState(false);
     const [toursError, setToursError] = useState<string | null>(null);
     const [tourSearchTerm, setTourSearchTerm] = useState('');
@@ -196,7 +195,6 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                         typeof tour.title === 'string'
                     )
                     : [];
-                setAllTours(toursData);
                 if (!background) {
                     setTours(toursData);
                 }
@@ -225,7 +223,6 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
     useEffect(() => {
         return () => {
             setTours([]);
-            setAllTours([]);
             setTourFilterConditions([]);
         };
     }, []); // Nur beim Unmount ausführen

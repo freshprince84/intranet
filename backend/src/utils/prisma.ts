@@ -9,13 +9,14 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // ✅ PERFORMANCE: Mehrere Prisma-Instanzen für bessere Lastverteilung
-// 20 Instanzen × 5 Verbindungen = 100 Verbindungen (optimal für PostgreSQL-Limit)
-const CONNECTION_LIMIT_PER_POOL = 5; // 5 Verbindungen pro Pool
-const POOL_TIMEOUT = 20;
-const NUM_POOLS = 20; // 20 Instanzen für bessere Lastverteilung
-
 const createPrismaClient = (poolId: number) => {
   const enableQueryLogging = process.env.ENABLE_QUERY_LOGGING === 'true' || process.env.NODE_ENV === 'development';
+  
+  // Connection Pool pro Instanz: 10 Verbindungen
+  // Gesamt: 10 Pools × 10 = 100 Verbindungen (optimal für PostgreSQL-Limit)
+  // PostgreSQL begrenzt auf 100 Verbindungen (default)
+  const connectionLimit = 10; // 10 Verbindungen pro Pool
+  const poolTimeout = 20;
   
   // DATABASE_URL mit connection_limit für diese Instanz
   const databaseUrl = process.env.DATABASE_URL;
@@ -32,16 +33,16 @@ const createPrismaClient = (poolId: number) => {
     url.searchParams.delete('connection_limit');
     url.searchParams.delete('pool_timeout');
     // Setze neue Werte
-    url.searchParams.set('connection_limit', CONNECTION_LIMIT_PER_POOL.toString());
-    url.searchParams.set('pool_timeout', POOL_TIMEOUT.toString());
+    url.searchParams.set('connection_limit', connectionLimit.toString());
+    url.searchParams.set('pool_timeout', poolTimeout.toString());
     urlWithPool = url.toString().replace(/^http:/, 'postgresql:');
   } catch {
     // Fallback: Einfache String-Ersetzung wenn URL-Parsing fehlschlägt
     urlWithPool = databaseUrl.includes('connection_limit=')
       ? databaseUrl.replace(/[?&]connection_limit=\d+/, '').replace(/connection_limit=\d+[&?]/, '')
         .replace(/[?&]pool_timeout=\d+/, '').replace(/pool_timeout=\d+[&?]/, '')
-        + (databaseUrl.includes('?') ? '&' : '?') + `connection_limit=${CONNECTION_LIMIT_PER_POOL}&pool_timeout=${POOL_TIMEOUT}`
-      : `${databaseUrl}${databaseUrl.includes('?') ? '&' : '?'}connection_limit=${CONNECTION_LIMIT_PER_POOL}&pool_timeout=${POOL_TIMEOUT}`;
+        + (databaseUrl.includes('?') ? '&' : '?') + `connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`
+      : `${databaseUrl}${databaseUrl.includes('?') ? '&' : '?'}connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`;
   }
   
   const client = new PrismaClient({
@@ -61,6 +62,9 @@ const createPrismaClient = (poolId: number) => {
   return client;
 };
 
+// 10 Prisma-Instanzen erstellen für bessere Lastverteilung
+// 10 × 10 = 100 Verbindungen (optimal für PostgreSQL max_connections = 100)
+const NUM_POOLS = 10;
 let prismaPools: PrismaClient[] = [];
 
 // Singleton-Pattern: Nur einmal erstellen (Development Hot Reload)
@@ -69,7 +73,7 @@ if (!globalForPrisma.prismaPools) {
   for (let i = 1; i <= NUM_POOLS; i++) {
     prismaPools.push(createPrismaClient(i));
   }
-  console.log(`[Prisma] ✅ ${NUM_POOLS} Prisma-Instanzen erstellt (${NUM_POOLS} × ${CONNECTION_LIMIT_PER_POOL} = ${NUM_POOLS * CONNECTION_LIMIT_PER_POOL} Verbindungen)`);
+  console.log(`[Prisma] ✅ ${NUM_POOLS} Prisma-Instanzen erstellt (${NUM_POOLS} × 12 = ${NUM_POOLS * 12} Verbindungen)`);
   if (process.env.NODE_ENV !== 'production') {
     globalForPrisma.prismaPools = prismaPools;
   } else {

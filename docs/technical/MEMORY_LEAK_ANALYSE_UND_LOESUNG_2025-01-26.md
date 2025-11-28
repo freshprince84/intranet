@@ -366,3 +366,4 @@ useEffect(() => {
 **Status:** 📋 PLAN ERSTELLT  
 **Nächster Schritt:** Implementierung starten
 
+

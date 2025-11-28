@@ -435,7 +435,8 @@ const Requests: React.FC = () => {
       } else {
         // Initiales Laden: Ersetze Requests
         setRequests(requestsWithAttachments);
-        setRequestsHasMore(requestsWithAttachments.length === REQUESTS_PER_PAGE);
+        // ✅ PERFORMANCE: hasMore basierend auf tatsächlicher Anzahl (nicht nur REQUESTS_PER_PAGE)
+        setRequestsHasMore(requestsWithAttachments.length >= REQUESTS_PER_PAGE);
         setRequestsPage(1);
       }
       setError(null);
@@ -573,6 +574,13 @@ const Requests: React.FC = () => {
     createStandardFilters();
   }, []);
 
+  // Infinite Scroll Handler für Requests
+  // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
+  const filterConditionsRef = useRef(filterConditions);
+  useEffect(() => {
+    filterConditionsRef.current = filterConditions;
+  }, [filterConditions]);
+
   // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
   const scrollHandlerRef = useRef<() => void>();
   useEffect(() => {
@@ -595,10 +603,67 @@ const Requests: React.FC = () => {
     };
   }, [requestsLoadingMore, requestsHasMore, loadMoreRequests]);
 
-  // Initial Requests laden (ohne Filter - SavedFilterTags wendet Default-Filter an)
+  // ✅ PERFORMANCE: Priorisierung - Erste 5 Requests zuerst (sichtbarer Teil)
   useEffect(() => {
-    fetchRequests();
+    // Erste 5 Requests zuerst (sichtbarer Teil)
+    // Erstelle temporäre fetchRequests-Variante mit limit=5
+    const fetchFirst5Requests = async () => {
+      try {
+        setLoading(true);
+        const params: any = {
+          limit: 5, // ✅ Nur erste 5 Requests
+          offset: 0
+        };
+        
+        const response = await axiosInstance.get('/requests', { params });
+        const requestsData = response.data;
+        const requestsWithAttachments = requestsData.map((request: Request) => {
+          const attachments = (request.attachments || []).map((att: any) => ({
+            id: att.id,
+            fileName: att.fileName,
+            fileType: att.fileType,
+            fileSize: att.fileSize,
+            filePath: att.filePath,
+            uploadedAt: att.uploadedAt,
+            url: getRequestAttachmentUrl(request.id, att.id)
+          }));
+          return {
+            ...request,
+            attachments: attachments
+          };
+        });
+        setRequests(requestsWithAttachments);
+        setRequestsHasMore(requestsWithAttachments.length === 5);
+        setRequestsPage(1);
+        setError(null);
+      } catch (err) {
+        console.error('Request Error:', err);
+        const axiosError = err as any;
+        if (axiosError.code === 'ERR_NETWORK') {
+          setError('Verbindung zum Server konnte nicht hergestellt werden.');
+        } else {
+          setError(`Fehler beim Laden der Requests: ${axiosError.response?.data?.message || axiosError.message}`);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchFirst5Requests();
   }, []);
+
+  // ✅ PERFORMANCE: Rest im Hintergrund (nach 500ms Verzögerung)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Lade Rest (Requests 6-20) im Hintergrund
+      if (requests.length === 5 && !loading) {
+        // Lade weitere Requests (6-20) im Hintergrund
+        // Verwende fetchRequests mit page=2 (Requests 6-20)
+        fetchRequests(undefined, undefined, true, 2, true); // background = true, page = 2, append = true
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [requests.length, loading]);
 
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {

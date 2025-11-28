@@ -158,6 +158,19 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   onlyAttachments = false,
   attachmentMetadata = []
 }) => {
+  // ✅ MEMORY: Track alle erstellten Blob-URLs für Cleanup
+  const blobUrlsRef = React.useRef<Set<string>>(new Set());
+  
+  // ✅ MEMORY: Cleanup Blob-URLs beim Unmount
+  React.useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+      blobUrlsRef.current.clear();
+    };
+  }, []);
+  
   // Extrahiere alle Anhänge aus dem Markdown
   const extractAttachments = () => {
     const imageMatches = Array.from(content.matchAll(/!\[(.*?)\]\((.*?)\)/g)).map(match => ({
@@ -249,10 +262,13 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   };
   
   // Erstellt temporäre URLs für Dateien
+  // ✅ MEMORY: Track Blob-URLs für Cleanup
   const getTemporaryFileUrl = (filename: string): string | null => {
     const attachment = temporaryAttachments.find(att => att.fileName === filename);
     if (attachment?.file) {
-      return URL.createObjectURL(attachment.file);
+      const blobUrl = URL.createObjectURL(attachment.file);
+      blobUrlsRef.current.add(blobUrl);
+      return blobUrl;
     }
     return null;
   };
