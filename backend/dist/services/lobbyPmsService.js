@@ -247,6 +247,86 @@ class LobbyPmsService {
         return instance;
     }
     /**
+     * Formatiert Datum als YYYY-MM-DD
+     */
+    formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+    /**
+     * Prüft Zimmerverfügbarkeit für einen Zeitraum
+     *
+     * @param startDate - Check-in Datum (inklusive)
+     * @param endDate - Check-out Datum (inklusive)
+     * @returns Array von verfügbaren Zimmern mit Preisen
+     */
+    checkAvailability(startDate, endDate) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+            // Lade Settings falls noch nicht geladen
+            if (!this.apiKey) {
+                yield this.loadSettings();
+            }
+            try {
+                // Parameter basierend auf Test-Ergebnissen
+                // WICHTIG: start_date UND end_date sind ERFORDERLICH!
+                const params = {
+                    start_date: this.formatDate(startDate), // Format: "YYYY-MM-DD"
+                    end_date: this.formatDate(endDate) // Format: "YYYY-MM-DD"
+                };
+                if (this.propertyId) {
+                    params.property_id = this.propertyId; // Optional
+                }
+                // WICHTIG: room_type Parameter wird ignoriert (aus Tests bekannt)
+                // Stattdessen: Filtere nach category_id oder name
+                const response = yield this.axiosInstance.get('/api/v2/available-rooms', { params });
+                // Response-Struktur basierend auf Test-Ergebnissen
+                // Struktur: { data: [{ date: "...", categories: [...] }] }
+                const responseData = response.data.data || [];
+                // Flache alle Kategorien für alle Daten
+                const allCategories = [];
+                for (const dateEntry of responseData) {
+                    const date = dateEntry.date;
+                    const categories = dateEntry.categories || [];
+                    for (const category of categories) {
+                        // Hole Preis für 1 Person (Standard)
+                        const priceForOnePerson = (_c = (_b = (_a = category.plans) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.prices) === null || _c === void 0 ? void 0 : _c.find((p) => p.people === 1);
+                        const price = (priceForOnePerson === null || priceForOnePerson === void 0 ? void 0 : priceForOnePerson.value) || 0;
+                        // Bestimme room_type aus Namen oder category_id
+                        // Heuristik: Namen mit "Dorm", "Compartida" = compartida, sonst privada
+                        const name = ((_d = category.name) === null || _d === void 0 ? void 0 : _d.toLowerCase()) || '';
+                        let roomType = 'privada';
+                        // Compartida: category_id 34280 (El primo aventurero), 34281 (La tia artista), 34282 (El abuelo viajero)
+                        if (name.includes('dorm') || name.includes('compartida') ||
+                            category.category_id === 34280 || category.category_id === 34281 || category.category_id === 34282) {
+                            roomType = 'compartida';
+                        }
+                        allCategories.push({
+                            categoryId: category.category_id,
+                            roomName: category.name,
+                            roomType: roomType,
+                            availableRooms: category.available_rooms || 0,
+                            pricePerNight: price,
+                            currency: 'COP', // Standard aus Tests
+                            date: date,
+                            prices: ((_f = (_e = category.plans) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.prices) || [] // Alle Preise (verschiedene Personenanzahl)
+                        });
+                    }
+                }
+                return allCategories;
+            }
+            catch (error) {
+                // Fehlerbehandlung basierend auf Test-Ergebnissen
+                if (axios_1.default.isAxiosError(error)) {
+                    const axiosError = error;
+                    throw new Error(((_h = (_g = axiosError.response) === null || _g === void 0 ? void 0 : _g.data) === null || _h === void 0 ? void 0 : _h.error) ||
+                        ((_k = (_j = axiosError.response) === null || _j === void 0 ? void 0 : _j.data) === null || _k === void 0 ? void 0 : _k.message) ||
+                        `LobbyPMS API Fehler: ${axiosError.message}`);
+                }
+                throw error;
+            }
+        });
+    }
+    /**
      * Ruft alle Reservierungen für einen Zeitraum ab
      *
      * @param startDate - Startdatum (inklusive)

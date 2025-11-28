@@ -13,7 +13,7 @@ exports.convertFilterConditionsToPrismaWhere = convertFilterConditionsToPrismaWh
  *
  * @param conditions - Array von Filter-Bedingungen
  * @param operators - Array von logischen Operatoren ('AND' | 'OR')
- * @param entityType - Entity-Typ ('request' | 'task') für spezielle Logik
+ * @param entityType - Entity-Typ ('request' | 'task' | 'tour' | 'tour_booking' | 'reservation') für spezielle Logik
  * @returns Prisma Where-Klausel
  */
 function convertFilterConditionsToPrismaWhere(conditions, operators, entityType) {

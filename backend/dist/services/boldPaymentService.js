@@ -474,7 +474,7 @@ class BoldPaymentService {
      */
     handleWebhook(payload) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a, _b, _c;
             try {
                 const { event, data } = payload;
                 console.log(`[Bold Payment Webhook] Event: ${event}`, data);
@@ -502,15 +502,59 @@ class BoldPaymentService {
                     console.warn(`[Bold Payment Webhook] Reservierung ${reservationId} nicht gefunden`);
                     return;
                 }
+                // Prüfe ob es eine TourBooking gibt, die mit diesem Payment Link verknüpft ist
+                // (Dummy-Reservation für TourBooking)
+                const paymentLink = data.payment_link || payload.payment_link;
+                let tourBooking = null;
+                if (paymentLink) {
+                    tourBooking = yield prisma_1.prisma.tourBooking.findFirst({
+                        where: {
+                            paymentLink: paymentLink
+                        },
+                        include: {
+                            tour: {
+                                select: {
+                                    id: true,
+                                    title: true,
+                                    organizationId: true
+                                }
+                            }
+                        }
+                    });
+                }
                 // Aktualisiere Payment Status basierend auf Event
                 switch (event) {
                     case 'payment.paid':
                     case 'payment.completed':
-                        // Aktualisiere Payment Status
+                        // Aktualisiere Payment Status der Reservation
                         yield prisma_1.prisma.reservation.update({
                             where: { id: reservation.id },
                             data: { paymentStatus: 'paid' }
                         });
+                        // Wenn es eine TourBooking gibt, aktualisiere auch diese
+                        if (tourBooking) {
+                            const paidAmount = ((_b = data.amount) === null || _b === void 0 ? void 0 : _b.value) ? Number(data.amount.value) : tourBooking.totalPrice;
+                            yield prisma_1.prisma.tourBooking.update({
+                                where: { id: tourBooking.id },
+                                data: {
+                                    paymentStatus: 'paid',
+                                    amountPaid: paidAmount,
+                                    amountPending: 0
+                                }
+                            });
+                            console.log(`[Bold Payment Webhook] ✅ TourBooking ${tourBooking.id} als bezahlt markiert`);
+                            // Sende Bestätigung via WhatsApp
+                            if (tourBooking.customerPhone && tourBooking.tour) {
+                                try {
+                                    const { TourWhatsAppService } = yield Promise.resolve().then(() => __importStar(require('./tourWhatsAppService')));
+                                    yield TourWhatsAppService.sendConfirmationToCustomer(tourBooking.id, tourBooking.tour.organizationId, tourBooking.branchId || null);
+                                    console.log(`[Bold Payment Webhook] ✅ Bestätigung an Kunden gesendet für TourBooking ${tourBooking.id}`);
+                                }
+                                catch (whatsappError) {
+                                    console.error(`[Bold Payment Webhook] Fehler beim Senden der Bestätigung für TourBooking ${tourBooking.id}:`, whatsappError);
+                                }
+                            }
+                        }
                         // Prüfe ob Gast bereits eingecheckt ist
                         const isAlreadyCheckedIn = reservation.status === 'checked_in';
                         // Wenn bereits eingecheckt, aktualisiere Status nicht erneut
@@ -551,7 +595,7 @@ class BoldPaymentService {
                                         : new ttlockService_1.TTLockService(updatedReservation.organizationId);
                                     // Lade Settings aus Branch oder Organisation (WICHTIG: Entschlüsseln!)
                                     let doorSystemSettings = null;
-                                    if (updatedReservation.branchId && ((_b = updatedReservation.branch) === null || _b === void 0 ? void 0 : _b.doorSystemSettings)) {
+                                    if (updatedReservation.branchId && ((_c = updatedReservation.branch) === null || _c === void 0 ? void 0 : _c.doorSystemSettings)) {
                                         const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
                                         const branchSettings = decryptBranchApiSettings(updatedReservation.branch.doorSystemSettings);
                                         doorSystemSettings = (branchSettings === null || branchSettings === void 0 ? void 0 : branchSettings.doorSystem) || branchSettings;

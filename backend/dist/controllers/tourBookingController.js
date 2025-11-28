@@ -347,7 +347,11 @@ const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 organizationId,
                 branchId: branchId || null,
                 isExternal: tour.type === 'external',
-                amountPending: totalPrice
+                amountPending: totalPrice,
+                // Automatische Stornierung
+                paymentDeadline: new Date(Date.now() + 60 * 60 * 1000), // 1 Stunde
+                autoCancelEnabled: true,
+                reservedUntil: new Date(Date.now() + 60 * 60 * 1000) // 1 Stunde
             },
             include: {
                 tour: {

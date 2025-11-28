@@ -51,20 +51,37 @@ const globalForPrisma = globalThis;
 // ✅ PERFORMANCE: Mehrere Prisma-Instanzen für bessere Lastverteilung
 const createPrismaClient = (poolId) => {
     const enableQueryLogging = process.env.ENABLE_QUERY_LOGGING === 'true' || process.env.NODE_ENV === 'development';
-    // Connection Pool pro Instanz: 10-15 Verbindungen
-    // Gesamt: 5 Pools × 12 = 60 Verbindungen
-    // ABER: PostgreSQL begrenzt auf 100 Verbindungen (default)
-    const connectionLimit = 12; // 12 Verbindungen pro Pool
+    // Connection Pool pro Instanz: 10 Verbindungen
+    // Gesamt: 10 Pools × 10 = 100 Verbindungen (optimal für PostgreSQL-Limit)
+    // PostgreSQL begrenzt auf 100 Verbindungen (default)
+    const connectionLimit = 10; // 10 Verbindungen pro Pool
     const poolTimeout = 20;
     // DATABASE_URL mit connection_limit für diese Instanz
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {
         throw new Error('DATABASE_URL environment variable is not set');
     }
-    // Erstelle URL mit connection_limit für diese Instanz
-    const urlWithPool = databaseUrl.includes('connection_limit=')
-        ? databaseUrl.replace(/connection_limit=\d+/, `connection_limit=${connectionLimit}`)
-        : `${databaseUrl}${databaseUrl.includes('?') ? '&' : '?'}connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`;
+    // ✅ PERFORMANCE: Erstelle URL mit connection_limit für diese Instanz
+    // WICHTIG: Entferne ALLE connection_limit Parameter aus DATABASE_URL und setze neu
+    let urlWithPool;
+    try {
+        const url = new URL(databaseUrl.replace(/^postgresql:/, 'http:'));
+        // Entferne connection_limit und pool_timeout falls vorhanden
+        url.searchParams.delete('connection_limit');
+        url.searchParams.delete('pool_timeout');
+        // Setze neue Werte
+        url.searchParams.set('connection_limit', connectionLimit.toString());
+        url.searchParams.set('pool_timeout', poolTimeout.toString());
+        urlWithPool = url.toString().replace(/^http:/, 'postgresql:');
+    }
+    catch (_a) {
+        // Fallback: Einfache String-Ersetzung wenn URL-Parsing fehlschlägt
+        urlWithPool = databaseUrl.includes('connection_limit=')
+            ? databaseUrl.replace(/[?&]connection_limit=\d+/, '').replace(/connection_limit=\d+[&?]/, '')
+                .replace(/[?&]pool_timeout=\d+/, '').replace(/pool_timeout=\d+[&?]/, '')
+                + (databaseUrl.includes('?') ? '&' : '?') + `connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`
+            : `${databaseUrl}${databaseUrl.includes('?') ? '&' : '?'}connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`;
+    }
     const client = new client_1.PrismaClient({
         datasources: {
             db: {
@@ -79,31 +96,56 @@ const createPrismaClient = (poolId) => {
     });
     return client;
 };
-// 5 Prisma-Instanzen erstellen für bessere Lastverteilung
-const NUM_POOLS = 5;
+// 10 Prisma-Instanzen erstellen für bessere Lastverteilung
+// 10 × 10 = 100 Verbindungen (optimal für PostgreSQL max_connections = 100)
+const NUM_POOLS = 10;
 let prismaPools = [];
 // Singleton-Pattern: Nur einmal erstellen (Development Hot Reload)
 if (!globalForPrisma.prismaPools) {
+    console.log(`[Prisma] Erstelle ${NUM_POOLS} Prisma-Instanzen für Round-Robin-Verteilung...`);
     for (let i = 1; i <= NUM_POOLS; i++) {
         prismaPools.push(createPrismaClient(i));
     }
+    console.log(`[Prisma] ✅ ${NUM_POOLS} Prisma-Instanzen erstellt (${NUM_POOLS} × 12 = ${NUM_POOLS * 12} Verbindungen)`);
     if (process.env.NODE_ENV !== 'production') {
+        globalForPrisma.prismaPools = prismaPools;
+    }
+    else {
+        // In Production auch speichern, damit Pools nicht bei jedem Import neu erstellt werden
         globalForPrisma.prismaPools = prismaPools;
     }
 }
 else {
+    console.log(`[Prisma] Verwende existierende Prisma-Instanzen (${globalForPrisma.prismaPools.length} Pools)`);
     prismaPools = globalForPrisma.prismaPools;
 }
 // Round-Robin-Verteilung für Lastverteilung
 let currentPoolIndex = 0;
+let poolUsageCount = 0; // Zähler für Pool-Nutzung
 const getPrismaPool = () => {
     const pool = prismaPools[currentPoolIndex];
+    const poolId = currentPoolIndex + 1;
     currentPoolIndex = (currentPoolIndex + 1) % prismaPools.length;
+    poolUsageCount++;
+    // Logging bei jedem 100. Zugriff, um zu sehen welche Pools genutzt werden
+    if (poolUsageCount % 100 === 0) {
+        console.log(`[Prisma] Round-Robin: Nutze Pool ${poolId}/${prismaPools.length} (Zugriff #${poolUsageCount})`);
+    }
     return pool;
 };
-// Export: Haupt-Instanz (für Rückwärtskompatibilität)
-exports.prisma = prismaPools[0];
-// Export: Pool-Getter (für Lastverteilung - optional)
+// ✅ PERFORMANCE: prisma export nutzt automatisch Round-Robin für Lastverteilung
+// Jeder Zugriff auf prisma.* nutzt einen anderen Pool
+// WICHTIG: Proxy leitet alle Property-Zugriffe (prisma.user, prisma.task, etc.) an Round-Robin weiter
+const prismaProxy = new Proxy({}, {
+    get(target, prop) {
+        // Für jeden Property-Zugriff: Nutze Round-Robin
+        const pool = getPrismaPool();
+        return pool[prop];
+    }
+});
+// Export: Round-Robin Proxy (automatische Lastverteilung)
+exports.prisma = prismaProxy;
+// Export: Pool-Getter (für explizite Nutzung - optional)
 const getPrisma = () => getPrismaPool();
 exports.getPrisma = getPrisma;
 // Export: Alle Pools (für Graceful Shutdown)

@@ -197,6 +197,58 @@ class TourWhatsAppService {
     /**
      * Sendet Stornierungs-Benachrichtigung an Kunde
      */
+    /**
+     * Sendet Bestätigung an Kunden nach erfolgreicher Zahlung
+     */
+    static sendConfirmationToCustomer(bookingId, organizationId, branchId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const booking = yield prisma_1.prisma.tourBooking.findUnique({
+                    where: { id: bookingId },
+                    include: {
+                        tour: true
+                    }
+                });
+                if (!booking || !booking.customerPhone) {
+                    return false;
+                }
+                const whatsappService = branchId
+                    ? new whatsappService_1.WhatsAppService(undefined, branchId)
+                    : new whatsappService_1.WhatsAppService(organizationId);
+                const tourDate = new Date(booking.tourDate).toLocaleDateString('de-DE', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                const message = `✅ Ihre Tour-Buchung wurde bestätigt!\n\n` +
+                    `Tour: ${((_a = booking.tour) === null || _a === void 0 ? void 0 : _a.title) || 'Tour'}\n` +
+                    `Datum: ${tourDate}\n` +
+                    `Teilnehmer: ${booking.numberOfParticipants}\n` +
+                    `Preis: ${Number(booking.totalPrice).toLocaleString()} ${booking.currency}\n\n` +
+                    `Vielen Dank für Ihre Buchung! Wir freuen uns auf Sie.`;
+                const success = yield whatsappService.sendMessage(booking.customerPhone, message);
+                if (success) {
+                    yield prisma_1.prisma.tourWhatsAppMessage.create({
+                        data: {
+                            bookingId,
+                            direction: 'outgoing',
+                            status: 'sent',
+                            phoneNumber: booking.customerPhone || '',
+                            message
+                        }
+                    });
+                    console.log(`[TourWhatsApp] ✅ Bestätigung gesendet an Kunden für Buchung ${bookingId}`);
+                }
+                return success;
+            }
+            catch (error) {
+                console.error('[TourWhatsApp] Fehler beim Senden der Bestätigung:', error);
+                return false;
+            }
+        });
+    }
     static sendCancellationToCustomer(bookingId, organizationId, branchId, reason) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;

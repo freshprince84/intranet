@@ -15,9 +15,10 @@
 - Bot prüft, ob anfragende Person eine bestehende Reservation hat:
   1. **Primär:** Prüfung via Telefonnummer
   2. **Sekundär:** Falls nicht gefunden, Abfrage von Vorname & Name
-  3. Bei Übereinstimmung: TTLock Passcode (doorPin oder ttlLockPassword) der Reservation als Antwort geben
+  3. Bei Übereinstimmung: **BEREITS GENERIERTEN** TTLock Passcode (doorPin oder ttlLockPassword) der Reservation als Antwort geben
 - Bot gibt NUR den TTLock Passcode zurück (doorPin/ttlLockPassword)
 - KEINE lobbyReservationId, KEINE anderen Codes, NUR der TTLock Passcode
+- **WICHTIG:** Code wird NICHT generiert, nur abgerufen! (Code muss bereits per Button in Reservation Card generiert worden sein)
 
 ---
 
@@ -25,31 +26,40 @@
 
 ### ✅ Bereits vorhanden:
 
-1. **Gast-Identifikation:**
+1. **TTLock Passcode Generierung (Frontend):**
+   - Button (Key-Icon) in Reservation Card öffnet `SendPasscodeSidepane`
+   - `SendPasscodeSidepane` erlaubt Generierung und Versand des TTLock Passcodes
+   - API: `POST /api/reservations/:id/send-passcode`
+   - Service: `ReservationNotificationService.sendPasscodeNotification()`
+   - **WICHTIG:** Generiert den Code (wenn noch nicht vorhanden) und speichert ihn in `reservation.doorPin` und `reservation.ttlLockPassword`
+
+2. **Gast-Identifikation (WhatsApp):**
    - `WhatsAppGuestService.identifyGuestByPhone()` - Identifiziert via Telefonnummer
    - `WhatsAppGuestService.findReservationsByDetails()` - Identifiziert via Name, Land, Geburtsdatum
    - `continueGuestIdentification()` - Mehrstufige Abfrage (Vorname, Nachname, Land, Geburtsdatum)
 
-2. **Code-Versand (PROBLEM):**
+3. **Code-Versand (WhatsApp - PROBLEM):**
    - `handleGuestCodeRequest()` - Verarbeitet Code-Anfragen (Zeile 1130)
    - `buildStatusMessage()` - Erstellt Nachricht mit Code + Links (Zeile 232)
    - `getReservationCode()` - Findet Code mit Priorität: lobbyReservationId → doorPin → ttlLockPassword (Zeile 198)
    - **PROBLEM:** Wenn lobbyReservationId vorhanden ist, wird dieser zurückgegeben, nicht der TTLock Passcode!
 
-3. **Keywords:**
+4. **Keywords:**
    - Aktuell: "code", "código", "codigo", "pin", "password", "verloren", "lost", "perdido", "acceso" (Zeile 213)
    - Diese rufen `handleGuestCodeRequest()` auf, der `buildStatusMessage()` verwendet
    - `buildStatusMessage()` verwendet `getReservationCode()` mit Priorität → FALSCH für Pincode!
 
 ### ❌ Was fehlt:
 
-1. **Funktion, die NUR TTLock Passcode zurückgibt:**
+1. **Funktion, die BEREITS GENERIERTEN TTLock Passcode abruft:**
    - `getReservationCode()` hat Priorität und gibt lobbyReservationId zurück, wenn vorhanden
    - Benötigt: Funktion, die direkt `doorPin` oder `ttlLockPassword` zurückgibt (sind dasselbe)
+   - **WICHTIG:** Code wird NICHT generiert, nur abgerufen! (Code muss bereits existieren)
 
 2. **Anpassung für "pin"/"pincode":**
    - Aktuell: "pin" verwendet `buildStatusMessage()` → gibt falschen Code zurück
-   - Neu: "pin"/"pincode" soll NUR TTLock Passcode zurückgeben
+   - Neu: "pin"/"pincode" soll NUR den bereits generierten TTLock Passcode zurückgeben
+   - Falls kein Code vorhanden: Fehlermeldung (Code muss erst generiert werden)
 
 ---
 
@@ -67,6 +77,7 @@
   - Gibt den Wert zurück, falls vorhanden
   - Gibt `null` zurück, falls nicht vorhanden
   - **IGNORIERT lobbyReservationId komplett!**
+  - **WICHTIG:** Code wird NICHT generiert, nur abgerufen! (Code muss bereits existieren)
 
 **Neue Funktion:** `buildPincodeMessage()`
 - Parameter: `reservation`, `language`
@@ -74,8 +85,9 @@
 - Verhalten:
   - Ruft `getTTLockPasscode(reservation)` auf
   - Falls vorhanden: Gibt Nachricht mit TTLock Passcode zurück
-  - Falls nicht vorhanden: Gibt Fehlermeldung zurück (kein Pincode verfügbar)
+  - Falls nicht vorhanden: Gibt Fehlermeldung zurück (Code muss erst generiert werden)
   - **KEINE Payment Links, KEINE Check-in Links, NUR der Pincode!**
+  - **KEINE Code-Generierung!** (Code muss bereits in DB vorhanden sein)
 
 **Code-Struktur:**
 ```typescript
@@ -124,7 +136,10 @@ static buildPincodeMessage(
     message += `${t.pincode} ${pincode}\n\n`;
     message += t.seeYou;
   } else {
+    // Code wurde noch nicht generiert - Fehlermeldung
     message += t.noPincode;
+    // Optional: Hinweis, dass Code erst generiert werden muss
+    // message += '\n\n' + t.pincodeNotGenerated;
   }
 
   return message;
