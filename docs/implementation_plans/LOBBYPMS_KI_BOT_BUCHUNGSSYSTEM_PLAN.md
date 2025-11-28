@@ -1910,17 +1910,39 @@ pm2 logs intranet-backend --lines 200 --nostream | grep "check_room_availability
   type: 'function',
   function: {
     name: 'create_room_reservation',
-    description: 'Erstellt eine Zimmer-Reservation. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! Benötigt: checkInDate, checkOutDate, guestName, roomType (compartida/privada), guestPhone (optional), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link.',
+    description: 'Erstellt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! Benötigt: checkInDate, checkOutDate, guestName, roomType (compartida/privada), categoryId (optional, aus check_room_availability), guestPhone (optional), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
     parameters: {
       type: 'object',
       properties: {
-        checkInDate: { type: 'string', description: 'Check-in Datum (YYYY-MM-DD oder "today")' },
-        checkOutDate: { type: 'string', description: 'Check-out Datum (YYYY-MM-DD)' },
-        guestName: { type: 'string', description: 'Name des Gastes' },
-        roomType: { type: 'string', enum: ['compartida', 'privada'], description: 'Zimmerart' },
-        categoryId: { type: 'number', description: 'Category ID des Zimmers (optional, aus check_room_availability)' },
-        guestPhone: { type: 'string', description: 'Telefonnummer (optional)' },
-        guestEmail: { type: 'string', description: 'E-Mail (optional)' }
+        checkInDate: { 
+          type: 'string', 
+          description: 'Check-in Datum (YYYY-MM-DD oder "today"/"heute"/"hoy"). Verwende IMMER "today" wenn der User "heute" sagt!' 
+        },
+        checkOutDate: { 
+          type: 'string', 
+          description: 'Check-out Datum (YYYY-MM-DD oder "today"/"heute"/"hoy")' 
+        },
+        guestName: { 
+          type: 'string', 
+          description: 'Name des Gastes (vollständiger Name)' 
+        },
+        roomType: { 
+          type: 'string', 
+          enum: ['compartida', 'privada'], 
+          description: 'Zimmerart: "compartida" für Dorm-Zimmer, "privada" für private Zimmer' 
+        },
+        categoryId: { 
+          type: 'number', 
+          description: 'Category ID des Zimmers (optional, aus check_room_availability Ergebnis). Wenn User eine Nummer wählt (z.B. "2."), verwende die categoryId des entsprechenden Zimmers aus der Liste.' 
+        },
+        guestPhone: { 
+          type: 'string', 
+          description: 'Telefonnummer des Gastes (optional, wird aus WhatsApp-Kontext verwendet wenn nicht angegeben)' 
+        },
+        guestEmail: { 
+          type: 'string', 
+          description: 'E-Mail des Gastes (optional)' 
+        }
       },
       required: ['checkInDate', 'checkOutDate', 'guestName', 'roomType']
     }
@@ -1928,11 +1950,20 @@ pm2 logs intranet-backend --lines 200 --nostream | grep "check_room_availability
 }
 ```
 
+**WICHTIG:**
+- Function verwendet IMMER `branchId` aus Context (wird automatisch übergeben)
+- Reservierung wird IMMER für den aktuellen Branch erstellt
+- Keine `branchId` als Parameter nötig (wird aus Context verwendet)
+
 #### Schritt 2.2: Function Handler implementieren
 **Datei:** `backend/src/services/whatsappFunctionHandlers.ts`
 
-**Neue Function:**
+**Neue Function (VOLLSTÄNDIG):**
 ```typescript
+/**
+ * Erstellt eine Zimmer-Reservation für den aktuellen Branch
+ * WICHTIG: Nur für ZIMMER, nicht für Touren!
+ */
 static async create_room_reservation(
   args: {
     checkInDate: string;
@@ -1945,53 +1976,276 @@ static async create_room_reservation(
   },
   userId: number | null,
   roleId: number | null,
-  branchId: number
+  branchId: number // WICHTIG: Wird automatisch aus Context übergeben
 ): Promise<any> {
-  // 1. Parse Datum
-  // 2. Hole Branch für organizationId
-  // 3. Erstelle Reservierung in DB
-  // 4. Erstelle Payment Link (wenn Telefonnummer vorhanden)
-  // 5. Erstelle Check-in Link
-  // 6. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
-  // 7. Setze Payment-Deadline (1 Stunde)
-  // 8. Return Ergebnis
+  try {
+    // 1. Parse Datum (unterstützt "today"/"heute"/"hoy")
+    let checkInDate: Date;
+    const checkInDateStr = args.checkInDate.toLowerCase().trim();
+    if (checkInDateStr === 'today' || checkInDateStr === 'heute' || checkInDateStr === 'hoy') {
+      checkInDate = new Date();
+      checkInDate.setHours(0, 0, 0, 0);
+    } else {
+      checkInDate = new Date(args.checkInDate);
+      if (isNaN(checkInDate.getTime())) {
+        throw new Error(`Ungültiges Check-in Datum: ${args.checkInDate}`);
+      }
+    }
+
+    let checkOutDate: Date;
+    const checkOutDateStr = args.checkOutDate.toLowerCase().trim();
+    if (checkOutDateStr === 'today' || checkOutDateStr === 'heute' || checkOutDateStr === 'hoy') {
+      checkOutDate = new Date();
+      checkOutDate.setHours(23, 59, 59, 999);
+    } else {
+      checkOutDate = new Date(args.checkOutDate);
+      if (isNaN(checkOutDate.getTime())) {
+        throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}`);
+      }
+    }
+
+    // 2. Validierung: Check-out muss nach Check-in liegen
+    if (checkOutDate <= checkInDate) {
+      throw new Error('Check-out Datum muss nach Check-in Datum liegen');
+    }
+
+    // 3. Hole Branch für organizationId (WICHTIG: branchId aus Context verwenden!)
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+      select: { 
+        id: true,
+        name: true,
+        organizationId: true 
+      }
+    });
+
+    if (!branch) {
+      throw new Error(`Branch ${branchId} nicht gefunden`);
+    }
+
+    // 4. Berechne Betrag (vereinfacht - sollte aus Verfügbarkeitsprüfung kommen)
+    // TODO: Preis aus categoryId/Verfügbarkeitsprüfung übernehmen
+    const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+    const estimatedAmount = nights * 50000; // Platzhalter - sollte aus Verfügbarkeit kommen
+
+    // 5. Erstelle Reservierung in DB (WICHTIG: branchId setzen!)
+    const reservation = await prisma.reservation.create({
+      data: {
+        guestName: args.guestName.trim(),
+        guestPhone: args.guestPhone?.trim() || null,
+        guestEmail: args.guestEmail?.trim() || null,
+        checkInDate: checkInDate,
+        checkOutDate: checkOutDate,
+        status: ReservationStatus.confirmed,
+        paymentStatus: PaymentStatus.pending,
+        amount: estimatedAmount,
+        currency: 'COP',
+        organizationId: branch.organizationId,
+        branchId: branchId, // WICHTIG: Branch-spezifisch!
+        paymentDeadline: new Date(Date.now() + 60 * 60 * 1000), // 1 Stunde
+        autoCancelEnabled: true
+      }
+    });
+
+    // 6. Erstelle Payment Link (wenn Telefonnummer vorhanden)
+    let paymentLink: string | null = null;
+    if (args.guestPhone || reservation.guestPhone) {
+      try {
+        const boldPaymentService = await BoldPaymentService.createForBranch(branchId);
+        paymentLink = await boldPaymentService.createPaymentLink(
+          reservation,
+          estimatedAmount,
+          'COP',
+          `Zahlung für Reservierung ${reservation.guestName}`
+        );
+        
+        // Aktualisiere Reservierung mit Payment Link
+        await prisma.reservation.update({
+          where: { id: reservation.id },
+          data: { paymentLink }
+        });
+      } catch (error) {
+        console.error('[create_room_reservation] Fehler beim Erstellen des Payment-Links:', error);
+        // Nicht abbrechen, nur loggen
+      }
+    }
+
+    // 7. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
+    let linksSent = false;
+    if (args.guestPhone || reservation.guestPhone) {
+      try {
+        await ReservationNotificationService.sendReservationInvitation(
+          reservation.id,
+          {
+            guestPhone: args.guestPhone || reservation.guestPhone || undefined,
+            amount: estimatedAmount,
+            currency: 'COP'
+          }
+        );
+        linksSent = true;
+      } catch (error) {
+        console.error('[create_room_reservation] Fehler beim Versand der Links:', error);
+        // Nicht abbrechen, nur loggen
+      }
+    }
+
+    // 8. Return Ergebnis
+    return {
+      success: true,
+      reservationId: reservation.id,
+      branchId: branchId, // WICHTIG: Branch-ID zurückgeben
+      branchName: branch.name,
+      guestName: reservation.guestName,
+      checkInDate: checkInDate.toISOString().split('T')[0],
+      checkOutDate: checkOutDate.toISOString().split('T')[0],
+      roomType: args.roomType,
+      categoryId: args.categoryId || null,
+      amount: estimatedAmount,
+      currency: 'COP',
+      paymentLink: paymentLink,
+      paymentDeadline: reservation.paymentDeadline?.toISOString() || null,
+      linksSent: linksSent,
+      message: linksSent 
+        ? 'Reservierung erstellt. Zahlungslink und Check-in-Link wurden per WhatsApp gesendet. Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Reservierung automatisch storniert.'
+        : 'Reservierung erstellt. Bitte Zahlungslink und Check-in-Link manuell senden. Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Reservierung automatisch storniert.'
+    };
+  } catch (error: any) {
+    console.error('[WhatsApp Function Handlers] create_room_reservation Fehler:', error);
+    throw error;
+  }
 }
 ```
+
+**WICHTIG:**
+- ✅ `branchId` wird IMMER aus Context verwendet (Parameter, nicht aus args)
+- ✅ Reservierung wird IMMER für den aktuellen Branch erstellt
+- ✅ Payment Link wird mit `BoldPaymentService.createForBranch(branchId)` erstellt
+- ✅ Check-in Link wird automatisch generiert (via `ReservationNotificationService`)
+- ✅ Payment-Deadline wird auf 1 Stunde gesetzt
+- ✅ Auto-Cancel ist aktiviert
 
 #### Schritt 2.3: System Prompt erweitern
 **Datei:** `backend/src/services/whatsappAiService.ts`
 
 **Erweiterungen:**
 - Klare Unterscheidung: "Zimmer/Reservation" vs. "Tour"
-- Beispiele: "El primo aventurero" = Zimmer, nicht Tour
+- Beispiele für Zimmer-Namen: "El primo aventurero", "El abuelo viajero", "primo deportista", "La tia artista"
 - Anweisung: `create_room_reservation` für Zimmer, `book_tour` für Touren
+- Anweisung: Wenn User eine Nummer wählt (z.B. "2."), verwende die `categoryId` des entsprechenden Zimmers
+- Anweisung: Wenn User sagt "reserviere mir das" oder "buchen", verwende `create_room_reservation`
+- WICHTIG: Alle Reservierungen sind Branch-spezifisch (Bot ist pro Branch)
 
-### Priorität 3: Sprache vollständig beheben
+### Priorität 3: Sprache vollständig beheben (DE/ES/EN)
 
-#### Schritt 3.1: Spracherkennung prüfen
+#### Schritt 3.1: Sprach-Erkennung aus Telefonnummer korrigieren
+**Datei:** `backend/src/services/languageDetectionService.ts`
+
+**Problem identifiziert:**
+- Zeile 18: Deutschland (49) → 'en' (sollte 'de' sein!)
+- Zeile 19: Schweiz (41) → 'es' (sollte 'de' sein!)
+
+**Fix:**
+```typescript
+const countryCodeMap: Record<string, string> = {
+  '57': 'es', // Kolumbien
+  '49': 'de', // Deutschland → DEUTSCH (korrigiert!)
+  '41': 'de', // Schweiz → DEUTSCH (korrigiert!)
+  '1': 'en',  // USA/Kanada
+  '34': 'es', // Spanien
+  '33': 'fr', // Frankreich → Französisch (optional)
+  '39': 'it', // Italien → Italienisch (optional)
+  '44': 'en', // UK
+  '52': 'es', // Mexiko
+  '54': 'es', // Argentinien
+  '55': 'pt', // Brasilien → Portugiesisch (optional)
+  // ... weitere
+};
+```
+
+#### Schritt 3.2: Sprach-Erkennung aus Nachricht verbessern
 **Datei:** `backend/src/services/whatsappAiService.ts`
+
+**Bereits vorhanden:**
+- ✅ Deutsche Indikatoren erweitert: "haben", "wir", "heute", "frei", "zimmer", etc.
+- ✅ Spanische Indikatoren vorhanden
+- ✅ Englische Indikatoren vorhanden
 
 **Zu prüfen:**
 - Werden die neuen deutschen Indikatoren verwendet?
 - Funktioniert `detectLanguageFromMessage()` korrekt?
 - Wird `finalLanguage` korrekt gesetzt?
 
-#### Schritt 3.2: Weitere deutsche Indikatoren hinzufügen
-**Falls nötig:**
-- Weitere deutsche Wörter hinzufügen
-- Regex-Patterns erweitern
-- Fallback-Logik verbessern
+**Mögliche Verbesserungen:**
+- Weitere deutsche Wörter hinzufügen: "reservieren", "buchen", "zimmer", "bett", "preis", "kosten", "nacht", "tage"
+- Weitere spanische Wörter: "reservar", "habitación", "cama", "precio", "noche", "días"
+- Weitere englische Wörter: "reserve", "book", "room", "bed", "price", "night", "days"
 
-### Priorität 4: Vermischung von Themen beheben
+#### Schritt 3.3: Sprach-Konsistenz sicherstellen
+**Datei:** `backend/src/services/whatsappAiService.ts`
+
+**Problem:**
+- Bot antwortet manchmal in falscher Sprache (z.B. Deutsch → Spanisch)
+
+**Fix:**
+- System Prompt erweitern: "Antworte IMMER in derselben Sprache wie der User!"
+- Language Instruction am Anfang des Prompts (bereits vorhanden, aber prüfen ob funktioniert)
+- Fallback: Wenn Sprache nicht erkannt wird, verwende Telefonnummer-Sprache (aber korrigiert!)
+
+**WICHTIG:**
+- ✅ DE/ES/EN müssen mindestens funktionieren
+- ✅ Bot muss in derselben Sprache antworten wie User schreibt
+- ✅ Language Instruction hat höchste Priorität im System Prompt
+
+### Priorität 4: Vermischung von Themen beheben (Zimmer vs. Touren)
 
 #### Schritt 4.1: System Prompt erweitern
 **Datei:** `backend/src/services/whatsappAiService.ts`
 
 **Erweiterungen:**
-- Explizite Unterscheidung: "Zimmer" vs. "Tour"
-- Beispiele für Zimmer-Namen: "El primo aventurero", "El abuelo viajero", "primo deportista"
+- Explizite Unterscheidung: "Zimmer/Reservation" vs. "Tour"
+- Beispiele für Zimmer-Namen: "El primo aventurero", "El abuelo viajero", "primo deportista", "La tia artista"
 - Anweisung: Wenn User Zimmer-Namen sagt → `check_room_availability` oder `create_room_reservation`
 - Anweisung: Wenn User Tour-Namen sagt → `get_tours` oder `book_tour`
+- Anweisung: Wenn User "reserviere", "buchen", "reservar", "book" sagt → Prüfe Kontext:
+  - Wenn vorher Zimmer-Verfügbarkeit gezeigt wurde → `create_room_reservation`
+  - Wenn vorher Touren gezeigt wurden → `book_tour`
+  - Wenn unklar → Frage nach, aber NICHT "Möchtest du ein Zimmer buchen oder handelt es sich um eine Tour?" (zu verwirrend!)
+
+**WICHTIG:**
+- Bot ist pro Branch → Alle Reservierungen sind Branch-spezifisch
+- Zimmer-Namen sind Branch-spezifisch (z.B. "El primo aventurero" existiert nur in bestimmten Branches)
+- Tour-Namen sind Branch-spezifisch (oder global, je nach Konfiguration)
+
+---
+
+## 🔍 BRANCH-SPEZIFITÄT - WICHTIG!
+
+### Aktueller Status:
+- ✅ `check_room_availability` verwendet bereits `branchId` aus Context (Zeile 572, 575)
+- ✅ `LobbyPmsService.createForBranch(branchId)` wird verwendet
+- ✅ Reservierungen haben `branchId` Feld im Schema
+- ✅ `ReservationNotificationService` verwendet `branchId` für Payment Links
+
+### Was sichergestellt werden muss:
+
+1. **create_room_reservation:**
+   - ✅ `branchId` wird aus Context übergeben (Parameter, nicht aus args)
+   - ✅ Reservierung wird IMMER für den aktuellen Branch erstellt
+   - ✅ Payment Link wird mit `BoldPaymentService.createForBranch(branchId)` erstellt
+   - ✅ Check-in Link wird automatisch generiert (Branch-spezifisch)
+
+2. **System Prompt:**
+   - Anweisung: "Alle Reservierungen sind Branch-spezifisch. Verwende IMMER den Branch aus dem Kontext."
+   - Anweisung: "Zeige nur Zimmer/Touren des aktuellen Branches an."
+
+3. **Verfügbarkeitsprüfung:**
+   - ✅ Bereits implementiert: `LobbyPmsService.createForBranch(branchId)`
+   - ✅ API verwendet Branch-spezifische Settings (propertyId, apiKey)
+
+4. **Reservierungen:**
+   - ✅ Schema hat `branchId` Feld
+   - ✅ Alle Reservierungen müssen `branchId` haben
+   - ✅ Filterung nach Branch in Queries (bereits vorhanden in `reservationController.ts`)
 
 ---
 
@@ -2001,16 +2255,46 @@ static async create_room_reservation(
    - ❓ Gibt die API es zurück? (Muss getestet werden)
    - ❓ Welche `category_id` hat es?
    - ❓ Wird es in den Logs geloggt?
+   - ❓ Ist es Branch-spezifisch? (Welcher Branch hat "primo deportista"?)
 
 2. **Zimmer-Buchung:**
-   - ❓ Soll es eine mehrstufige Konversation sein (wie geplant)?
-   - ❓ Oder soll die KI direkt `create_room_reservation` aufrufen können?
-   - ❓ Welche Informationen sind erforderlich? (Check-in, Check-out, Name, Zimmerart, Category ID?)
+   - ✅ Entscheidung: KI kann direkt `create_room_reservation` aufrufen (keine mehrstufige Konversation nötig)
+   - ✅ Informationen: Check-in, Check-out, Name, Zimmerart, Category ID (optional)
+   - ✅ Kontext-Erkennung: KI soll Informationen aus vorherigen Nachrichten ableiten können
+   - ❓ Soll LobbyPMS API verwendet werden? (Muss getestet werden)
+   - ❓ Oder nur lokal erstellen? (Wahrscheinlich nur lokal, da API-Tests noch ausstehen)
 
 3. **LobbyPMS API:**
    - ❓ Funktioniert die Reservierungserstellung-API? (Muss getestet werden)
    - ❓ Welche Parameter sind erforderlich?
-   - ❓ Oder soll nur lokal erstellt werden?
+   - ❓ Oder soll nur lokal erstellt werden? (Wahrscheinlich nur lokal für jetzt)
+
+4. **Preisberechnung:**
+   - ❓ Soll Preis aus `check_room_availability` übernommen werden?
+   - ❓ Oder manuell berechnet? (Aktuell: Platzhalter 50.000 COP/Nacht)
+   - ❓ Wie mit verschiedenen Personenanzahl umgehen?
+
+5. **Auswahl-Verarbeitung:**
+   - ❓ Wenn User "2." wählt, wie wird die `categoryId` zugeordnet?
+   - ❓ Soll die KI die `categoryId` aus der vorherigen `check_room_availability` Response verwenden?
+   - ❓ Oder soll der User explizit die `categoryId` angeben?
+
+---
+
+## ✅ ZUSAMMENFASSUNG DER ANFORDERUNGEN
+
+### Muss funktionieren:
+1. ✅ **Sprache:** DE/ES/EN müssen mindestens funktionieren
+2. ✅ **Branch-Spezifität:** Bot ist pro Branch → Alle Reservierungen sind Branch-spezifisch
+3. ✅ **Zimmer-Buchung:** `create_room_reservation` Function implementieren
+4. ✅ **Vermischung:** Klare Unterscheidung zwischen Zimmer und Touren
+5. ✅ **"primo deportista":** Problem lösen (Test-Script ausführen)
+
+### Implementierungsreihenfolge:
+1. **Priorität 1:** "primo deportista" Problem lösen (Test-Script)
+2. **Priorität 2:** `create_room_reservation` implementieren (mit Branch-Spezifität)
+3. **Priorität 3:** Sprache korrigieren (DE/ES/EN)
+4. **Priorität 4:** Vermischung beheben (System Prompt)
 
 ---
 

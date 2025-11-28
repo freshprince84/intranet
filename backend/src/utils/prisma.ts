@@ -12,10 +12,10 @@ const globalForPrisma = globalThis as unknown as {
 const createPrismaClient = (poolId: number) => {
   const enableQueryLogging = process.env.ENABLE_QUERY_LOGGING === 'true' || process.env.NODE_ENV === 'development';
   
-  // ✅ FIX: Connection Pool pro Instanz reduziert
-  // Gesamt: 3 Pools × 5 = 15 Verbindungen (lässt Platz für andere Verbindungen)
-  // PostgreSQL max_connections = 100, aber wir reservieren nur 15 für Prisma
-  const connectionLimit = CONNECTION_LIMIT_PER_POOL; // 5 Verbindungen pro Pool (reduziert von 10)
+  // Connection Pool pro Instanz: 10 Verbindungen
+  // Gesamt: 10 Pools × 10 = 100 Verbindungen (optimal für PostgreSQL-Limit)
+  // PostgreSQL begrenzt auf 100 Verbindungen (default)
+  const connectionLimit = 10; // 10 Verbindungen pro Pool
   const poolTimeout = 20;
   
   // DATABASE_URL mit connection_limit für diese Instanz
@@ -62,11 +62,9 @@ const createPrismaClient = (poolId: number) => {
   return client;
 };
 
-// ✅ FIX: Anzahl der Pools reduziert (von 10 auf 3)
-// 3 Pools × 5 = 15 Verbindungen (lässt Platz für andere Verbindungen)
-// PostgreSQL max_connections = 100, aber wir reservieren nur 15 für Prisma
-const NUM_POOLS = 3;
-const CONNECTION_LIMIT_PER_POOL = 5; // 5 Verbindungen pro Pool
+// 10 Prisma-Instanzen erstellen für bessere Lastverteilung
+// 10 × 10 = 100 Verbindungen (optimal für PostgreSQL max_connections = 100)
+const NUM_POOLS = 10;
 let prismaPools: PrismaClient[] = [];
 
 // Singleton-Pattern: Nur einmal erstellen (Development Hot Reload)
@@ -75,7 +73,7 @@ if (!globalForPrisma.prismaPools) {
   for (let i = 1; i <= NUM_POOLS; i++) {
     prismaPools.push(createPrismaClient(i));
   }
-  console.log(`[Prisma] ✅ ${NUM_POOLS} Prisma-Instanzen erstellt (${NUM_POOLS} × ${CONNECTION_LIMIT_PER_POOL} = ${NUM_POOLS * CONNECTION_LIMIT_PER_POOL} Verbindungen)`);
+  console.log(`[Prisma] ✅ ${NUM_POOLS} Prisma-Instanzen erstellt (${NUM_POOLS} × 12 = ${NUM_POOLS * 12} Verbindungen)`);
   if (process.env.NODE_ENV !== 'production') {
     globalForPrisma.prismaPools = prismaPools;
   } else {

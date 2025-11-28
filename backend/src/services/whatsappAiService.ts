@@ -594,6 +594,11 @@ export class WhatsAppAiService {
     prompt += '  WICHTIG: Verwende IMMER diese Function wenn der User nach Zimmerverfügbarkeit fragt!\n';
     prompt += '  WICHTIG: Zeige ALLE verfügbaren Zimmer aus dem Function-Ergebnis an, nicht nur einige!\n';
     prompt += '  WICHTIG: Jedes Zimmer im Function-Ergebnis muss in der Antwort erwähnt werden!\n';
+    prompt += '  WICHTIG: Terminologie beachten!\n';
+    prompt += '    - Bei compartida (Dorm-Zimmer): Verwende "Betten" (beds), NICHT "Zimmer"!\n';
+    prompt += '    - Bei privada (private Zimmer): Verwende "Zimmer" (rooms)!\n';
+    prompt += '    - Beispiel compartida: "1 Bett verfügbar" oder "3 Betten verfügbar"\n';
+    prompt += '    - Beispiel privada: "1 Zimmer verfügbar" oder "2 Zimmer verfügbar"\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "today" })\n';
     prompt += '    - "Haben wir Zimmer frei vom 1.2. bis 3.2.?" → check_room_availability({ startDate: "2025-02-01", endDate: "2025-02-03" })\n';

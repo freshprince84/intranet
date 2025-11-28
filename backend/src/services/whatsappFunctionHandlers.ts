@@ -628,22 +628,28 @@ export class WhatsAppFunctionHandlers {
       }
 
       // 8. Formatiere für KI
-      const rooms = Array.from(roomMap.values()).map(room => ({
-        categoryId: room.categoryId,
-        name: room.roomName,
-        type: room.roomType,
-        availableRooms: room.minAvailableRooms, // Minimum über alle Daten
-        pricePerNight: room.pricePerNight,
-        currency: room.currency,
-        prices: room.prices.map(p => ({
-          people: p.people,
-          price: p.value
-        })),
-        availability: room.dates.map(d => ({
-          date: d.date,
-          availableRooms: d.availableRooms
-        }))
-      }));
+      // WICHTIG: Zeige Zimmer auch wenn minAvailableRooms = 0, aber maxAvailableRooms > 0 (verfügbar an mindestens einem Tag)
+      const rooms = Array.from(roomMap.values())
+        .filter(room => room.maxAvailableRooms > 0) // Filtere nur wenn mindestens an einem Tag verfügbar
+        .map(room => ({
+          categoryId: room.categoryId,
+          name: room.roomName,
+          type: room.roomType,
+          availableRooms: room.minAvailableRooms, // Minimum über alle Daten
+          maxAvailableRooms: room.maxAvailableRooms, // Maximum über alle Daten (für Info)
+          pricePerNight: room.pricePerNight,
+          currency: room.currency,
+          // WICHTIG: Terminologie - compartida = Betten, privada = Zimmer
+          unit: room.roomType === 'compartida' ? 'beds' : 'rooms', // Für KI: "beds" bei compartida, "rooms" bei privada
+          prices: room.prices.map(p => ({
+            people: p.people,
+            price: p.value
+          })),
+          availability: room.dates.map(d => ({
+            date: d.date,
+            availableRooms: d.availableRooms
+          }))
+        }));
 
       // Debug: Logge alle formatierten Zimmer
       console.log(`[WhatsApp Function Handlers] check_room_availability: ${rooms.length} Zimmer formatiert`);
@@ -656,7 +662,13 @@ export class WhatsAppFunctionHandlers {
         endDate: endDate.toISOString().split('T')[0],
         roomType: args.roomType || 'all',
         totalRooms: rooms.length,
-        rooms: rooms
+        rooms: rooms.map(room => ({
+          ...room,
+          // WICHTIG: Füge explizite Terminologie-Hinweise hinzu für KI
+          description: room.type === 'compartida' 
+            ? `${room.name}: ${room.availableRooms} ${room.availableRooms === 1 ? 'Bett' : 'Betten'} verfügbar (Dorm-Zimmer)`
+            : `${room.name}: ${room.availableRooms} ${room.availableRooms === 1 ? 'Zimmer' : 'Zimmer'} verfügbar (privates Zimmer)`
+        }))
       };
     } catch (error: any) {
       console.error('[WhatsApp Function Handlers] check_room_availability Fehler:', error);
