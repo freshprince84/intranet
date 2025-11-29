@@ -1573,32 +1573,37 @@ async function main() {
 
         for (const table of tables) {
           // Erstelle oder hole Filter-Gruppen
-          let rolesGroup = await prisma.filterGroup.findFirst({
-            where: {
-              userId,
-              tableId: table.id,
-              name: groupNames.roles
-            }
-          });
-
-          if (!rolesGroup) {
-            // Finde die höchste order-Nummer für diese Tabelle
-            const maxOrder = await prisma.filterGroup.findFirst({
-              where: { userId, tableId: table.id },
-              orderBy: { order: 'desc' },
-              select: { order: true }
-            });
-            const newOrder = maxOrder ? maxOrder.order + 1 : 0;
-
-            rolesGroup = await prisma.filterGroup.create({
-              data: {
+          // WICHTIG: Roles-Gruppe wird nur erstellt wenn auch Rollen-Filter erstellt werden (nicht bei Requests)
+          let rolesGroup: any = null;
+          if (table.id === 'worktracker-todos') {
+            // Nur für Tasks: Roles-Gruppe erstellen
+            rolesGroup = await prisma.filterGroup.findFirst({
+              where: {
                 userId,
                 tableId: table.id,
-                name: groupNames.roles,
-                order: newOrder
+                name: groupNames.roles
               }
             });
-            console.log(`  ✅ Filter-Gruppe "${groupNames.roles}" für ${table.name} erstellt`);
+
+            if (!rolesGroup) {
+              // Finde die höchste order-Nummer für diese Tabelle
+              const maxOrder = await prisma.filterGroup.findFirst({
+                where: { userId, tableId: table.id },
+                orderBy: { order: 'desc' },
+                select: { order: true }
+              });
+              const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+
+              rolesGroup = await prisma.filterGroup.create({
+                data: {
+                  userId,
+                  tableId: table.id,
+                  name: groupNames.roles,
+                  order: newOrder
+                }
+              });
+              console.log(`  ✅ Filter-Gruppe "${groupNames.roles}" für ${table.name} erstellt`);
+            }
           }
 
           let usersGroup = await prisma.filterGroup.findFirst({
@@ -1628,61 +1633,53 @@ async function main() {
             console.log(`  ✅ Filter-Gruppe "${groupNames.users}" für ${table.name} erstellt`);
           }
 
-          // Erstelle Filter für jede Rolle
-          for (const role of roles) {
-            const filterName = role.name;
-            
-            // Prüfe ob Filter bereits existiert
-            const existingFilter = await prisma.savedFilter.findFirst({
-              where: {
-                userId,
-                tableId: table.id,
-                name: filterName,
-                groupId: rolesGroup.id
-              }
-            });
-
-            if (!existingFilter) {
-              let conditions: any[] = [];
-              let operators: string[] = [];
-
-              if (table.id === 'requests-table') {
-                // Requests: requestedBy = role ODER responsible = role
-                conditions = [
-                  { column: 'requestedBy', operator: 'equals', value: `role-${role.id}` },
-                  { column: 'responsible', operator: 'equals', value: `role-${role.id}` }
-                ];
-                operators = ['OR'];
-              } else if (table.id === 'worktracker-todos') {
-                // ToDos: responsible = role
-                conditions = [
-                  { column: 'responsible', operator: 'equals', value: `role-${role.id}` }
-                ];
-                operators = [];
-              }
-
-              // Finde die höchste order-Nummer in der Gruppe
-              const maxOrder = await prisma.savedFilter.findFirst({
-                where: { groupId: rolesGroup.id },
-                orderBy: { order: 'desc' },
-                select: { order: true }
-              });
-              const newOrder = maxOrder ? maxOrder.order + 1 : 0;
-
-              await prisma.savedFilter.create({
-                data: {
+          // Erstelle Filter für jede Rolle (nur für Tasks, nicht für Requests)
+          if (table.id === 'worktracker-todos' && rolesGroup) {
+            for (const role of roles) {
+              const filterName = role.name;
+              
+              // Prüfe ob Filter bereits existiert
+              const existingFilter = await prisma.savedFilter.findFirst({
+                where: {
                   userId,
                   tableId: table.id,
                   name: filterName,
-                  conditions: JSON.stringify(conditions),
-                  operators: JSON.stringify(operators),
-                  groupId: rolesGroup.id,
-                  order: newOrder
+                  groupId: rolesGroup.id
                 }
               });
-              console.log(`    ✅ Filter "${filterName}" (Rolle) für ${table.name} erstellt`);
+
+              if (!existingFilter) {
+                // ToDos: responsible = role
+                const conditions = [
+                  { column: 'responsible', operator: 'equals', value: `role-${role.id}` }
+                ];
+                const operators: string[] = [];
+
+                // Finde die höchste order-Nummer in der Gruppe
+                const maxOrder = await prisma.savedFilter.findFirst({
+                  where: { groupId: rolesGroup.id },
+                  orderBy: { order: 'desc' },
+                  select: { order: true }
+                });
+                const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+
+                await prisma.savedFilter.create({
+                  data: {
+                    userId,
+                    tableId: table.id,
+                    name: filterName,
+                    conditions: JSON.stringify(conditions),
+                    operators: JSON.stringify(operators),
+                    groupId: rolesGroup.id,
+                    order: newOrder
+                  }
+                });
+                console.log(`    ✅ Filter "${filterName}" (Rolle) für ${table.name} erstellt`);
+              }
             }
           }
+          // Requests: KEINE Rollen-Filter (Requests unterstützen keine Rollen)
+          // Nur User-Filter werden erstellt (siehe Zeile 1705-1711)
 
           // Erstelle Filter für jeden Benutzer
           for (const user of users) {
