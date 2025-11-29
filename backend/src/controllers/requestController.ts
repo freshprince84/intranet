@@ -207,6 +207,15 @@ export const getAllRequests = async (req: Request, res: Response) => {
         }
 
         // Formatiere die Daten für die Frontend-Nutzung
+        // ✅ Sicherstellen, dass requests ein Array ist
+        if (!Array.isArray(requests)) {
+            console.error('[getAllRequests] ❌ FEHLER: requests ist kein Array!', {
+                requests,
+                type: typeof requests
+            });
+            throw new Error('requests ist kein Array');
+        }
+        
         const formattedRequests = requests.map(request => ({
             id: request.id,
             title: request.title,
@@ -235,13 +244,31 @@ export const getAllRequests = async (req: Request, res: Response) => {
         }));
 
         // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
-        res.json({
+        // ✅ Sicherstellen, dass formattedRequests ein Array ist
+        if (!Array.isArray(formattedRequests)) {
+            console.error('[getAllRequests] ❌ FEHLER: formattedRequests ist kein Array!', {
+                formattedRequests,
+                type: typeof formattedRequests
+            });
+            throw new Error('formattedRequests ist kein Array');
+        }
+        
+        const response = {
             data: formattedRequests,
             totalCount: totalCount,
             limit: limit,
             offset: offset,
             hasMore: offset + formattedRequests.length < totalCount
+        };
+        
+        console.log('[getAllRequests] ✅ Response vorbereitet:', {
+            dataLength: response.data.length,
+            totalCount: response.totalCount,
+            hasMore: response.hasMore,
+            dataIsArray: Array.isArray(response.data)
         });
+        
+        res.json(response);
     } catch (error) {
         console.error('[getAllRequests] Error fetching requests:', error);
         console.error('[getAllRequests] Error details:', {
