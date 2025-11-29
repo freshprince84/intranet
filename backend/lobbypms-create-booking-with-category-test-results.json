@@ -1,0 +1,82 @@
+[
+  {
+    "testName": "Minimal mit category_id",
+    "endpoint": "/api/v1/bookings",
+    "payload": {
+      "category_id": 34280,
+      "start_date": "2025-11-30",
+      "end_date": "2025-12-01"
+    },
+    "success": false,
+    "status": 403,
+    "data": [
+      "the 185.216.73.8 trying to access the API is not set as a valid ip"
+    ]
+  },
+  {
+    "testName": "Mit Gästename",
+    "endpoint": "/api/v1/bookings",
+    "payload": {
+      "category_id": 34280,
+      "start_date": "2025-11-30",
+      "end_date": "2025-12-01",
+      "guest_name": "Test Gast"
+    },
+    "success": false,
+    "status": 403,
+    "data": [
+      "the 185.216.73.8 trying to access the API is not set as a valid ip"
+    ]
+  },
+  {
+    "testName": "Mit Kontakt",
+    "endpoint": "/api/v1/bookings",
+    "payload": {
+      "category_id": 34280,
+      "start_date": "2025-11-30",
+      "end_date": "2025-12-01",
+      "guest_name": "Test Gast",
+      "guest_email": "test@example.com",
+      "guest_phone": "+573001234567"
+    },
+    "success": false,
+    "status": 403,
+    "data": [
+      "the 185.216.73.8 trying to access the API is not set as a valid ip"
+    ]
+  },
+  {
+    "testName": "Mit Anzahl Personen",
+    "endpoint": "/api/v1/bookings",
+    "payload": {
+      "category_id": 34280,
+      "start_date": "2025-11-30",
+      "end_date": "2025-12-01",
+      "guest_name": "Test Gast",
+      "guests": 1
+    },
+    "success": false,
+    "status": 403,
+    "data": [
+      "the 185.216.73.8 trying to access the API is not set as a valid ip"
+    ]
+  },
+  {
+    "testName": "Vollständig",
+    "endpoint": "/api/v1/bookings",
+    "payload": {
+      "category_id": 34280,
+      "start_date": "2025-11-30",
+      "end_date": "2025-12-01",
+      "guest_name": "Test Gast",
+      "guest_email": "test@example.com",
+      "guest_phone": "+573001234567",
+      "guests": 1
+    },
+    "success": false,
+    "status": 403,
+    "data": [
+      "the 185.216.73.8 trying to access the API is not set as a valid ip"
+    ]
+  }
+]
