@@ -45,7 +45,13 @@ export const getAllTasks = async (req: Request, res: Response) => {
         const filterConditions = req.query.filterConditions 
             ? JSON.parse(req.query.filterConditions as string) 
             : undefined;
-        // ❌ KEINE limit/offset Parameter mehr - immer ALLE Ergebnisse zurückgeben
+        // ✅ PAGINATION: limit/offset Parameter wieder einführen
+        const limit = req.query.limit 
+            ? parseInt(req.query.limit as string, 10) 
+            : 20; // Standard: 20 Items
+        const offset = req.query.offset 
+            ? parseInt(req.query.offset as string, 10) 
+            : 0; // Standard: 0
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         
         // Filter-Bedingungen konvertieren (falls vorhanden)
@@ -130,10 +136,17 @@ export const getAllTasks = async (req: Request, res: Response) => {
             ? baseWhereConditions[0]
             : { AND: baseWhereConditions };
         
+        // ✅ PAGINATION: totalCount für Infinite Scroll
+        const totalCount = await prisma.task.count({
+            where: whereClause
+        });
+        
         const queryStartTime = Date.now();
         const tasks = await prisma.task.findMany({
             where: whereClause,
-            // ❌ KEIN take/skip mehr - immer ALLE Ergebnisse
+            // ✅ PAGINATION: Nur limit Items laden, offset überspringen
+            take: limit,
+            skip: offset,
             orderBy: { createdAt: 'desc' }, // Neueste Tasks zuerst
             include: {
                 responsible: {
@@ -159,9 +172,16 @@ export const getAllTasks = async (req: Request, res: Response) => {
             }
         });
         const queryDuration = Date.now() - queryStartTime;
-        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks in ${queryDuration}ms`);
+        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
         
-        res.json(tasks);
+        // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
+        res.json({
+            data: tasks,
+            totalCount: totalCount,
+            limit: limit,
+            offset: offset,
+            hasMore: offset + tasks.length < totalCount
+        });
     } catch (error) {
         console.error('Fehler beim Abrufen der Tasks:', error);
         res.status(500).json({ 

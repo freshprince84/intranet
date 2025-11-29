@@ -33,9 +33,13 @@ export const getAllTourBookings = async (req: Request, res: Response) => {
     const filterConditions = req.query.filterConditions 
       ? JSON.parse(req.query.filterConditions as string) 
       : undefined;
+    // ✅ PAGINATION: limit/offset Parameter wieder einführen
     const limit = req.query.limit 
       ? parseInt(req.query.limit as string, 10) 
-      : undefined; // Kein Limit wenn nicht angegeben - alle TourBookings werden zurückgegeben
+      : 20; // Standard: 20 Items
+    const offset = req.query.offset 
+      ? parseInt(req.query.offset as string, 10) 
+      : 0; // Standard: 0
     const tourId = req.query.tourId 
       ? parseInt(req.query.tourId as string, 10) 
       : undefined;
@@ -130,9 +134,16 @@ export const getAllTourBookings = async (req: Request, res: Response) => {
       ? baseWhereConditions[0]
       : { AND: baseWhereConditions };
 
+    // ✅ PAGINATION: totalCount für Infinite Scroll
+    const totalCount = await prisma.tourBooking.count({
+        where: whereClause
+    });
+
     const bookings = await prisma.tourBooking.findMany({
       where: whereClause,
-      ...(limit ? { take: limit } : {}), // Nur Limit wenn angegeben
+      // ✅ PAGINATION: Nur limit Items laden, offset überspringen
+      take: limit,
+      skip: offset,
       include: {
         tour: {
           select: {
@@ -156,9 +167,14 @@ export const getAllTourBookings = async (req: Request, res: Response) => {
       }
     });
 
+    // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
     res.json({
       success: true,
-      data: bookings
+      data: bookings,
+      totalCount: totalCount,
+      limit: limit,
+      offset: offset,
+      hasMore: offset + bookings.length < totalCount
     });
   } catch (error) {
     console.error('[getAllTourBookings] Fehler:', error);
