@@ -7,6 +7,31 @@
 - Problem tritt auf dem Produktivserver auf
 - Benutzer erwartet, dass alle Reservierungen für Manila mit Check-in-Datum heute angezeigt werden
 
+## ⚠️ WICHTIG: Seit wann besteht das Problem?
+
+**Antwort: Seit der Einführung des server-seitigen Filterings (ca. 20.11.2025)**
+
+**Git-Historie:**
+- **Commit `8f60399`** (20.11.2025): "Performance: Server-seitiges Filtering implementiert"
+  - `filterToPrisma.ts` wurde erstellt
+  - Zu diesem Zeitpunkt wurde nur `dueDate` unterstützt (für Tasks/Requests)
+  - `checkInDate`/`checkOutDate` wurden **NIE** hinzugefügt
+
+**Vorher (vor server-seitigem Filtering):**
+- ✅ Filter wurden nur **client-seitig** angewendet
+- ✅ Frontend hatte `columnEvaluators` für `checkInDate`/`checkOutDate` (laut RESERVATION_FILTER_ANALYSE_2025-01-22.md)
+- ✅ **Das funktionierte!** - Frontend filterte korrekt nach Datum
+
+**Nachher (mit server-seitigem Filtering):**
+- ❌ Filter werden jetzt **server-seitig** angewendet
+- ❌ Backend ignoriert `checkInDate`/`checkOutDate` Filter (weil nicht in `filterToPrisma.ts` implementiert)
+- ❌ **Das funktioniert NICHT!** - Backend gibt alle Reservierungen zurück
+
+**Warum wurde es nicht sofort bemerkt?**
+- Möglicherweise wurde der "Aktuell"-Filter erst später erstellt
+- Oder es wurde nicht sofort getestet
+- Oder es gab andere Probleme, die wichtiger waren
+
 ## Analyse-Ergebnisse
 
 ### 1. ❌ KRITISCH: Backend filterToPrisma.ts behandelt checkInDate/checkOutDate NICHT

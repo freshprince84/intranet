@@ -44,3 +44,9 @@ prisma/.env
 # Android
 IntranetMobileApp/android/app/release.keystore  .env.backup.*
 backend/.env.backup.*
+
+# Dokumentation mit sensiblen Keys (ENCRYPTION_KEY)
+BEHEBUNGSPLAN_AUSFUEHRUNG.md
+ANALYSE_API_AUSFAELLE_2025-11-25.md
+SYSTEMATISCHE_ANALYSE_API_AUSFAELLE.md
+docs/implementation_plans/LOBBYPMS_SETUP_ANLEITUNG.md

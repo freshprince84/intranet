@@ -519,6 +519,48 @@ export class WhatsAppAiService {
             required: ['tourId', 'tourDate', 'numberOfParticipants', 'customerName']
           }
         }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'create_room_reservation',
+          description: 'Erstellt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! Wenn der User "reservar", "buchen", "reservar" sagt oder eine Nummer wählt (z.B. "2."), verwende diese Function. Benötigt: checkInDate, checkOutDate, guestName, roomType (compartida/privada), categoryId (optional, aus check_room_availability), guestPhone (optional), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
+          parameters: {
+            type: 'object',
+            properties: {
+              checkInDate: {
+                type: 'string',
+                description: 'Check-in Datum (YYYY-MM-DD oder "today"/"heute"/"hoy"). Verwende IMMER "today" wenn der User "heute" sagt!'
+              },
+              checkOutDate: {
+                type: 'string',
+                description: 'Check-out Datum (YYYY-MM-DD oder "today"/"heute"/"hoy")'
+              },
+              guestName: {
+                type: 'string',
+                description: 'Name des Gastes (vollständiger Name). Wenn nicht angegeben, verwende den Namen aus dem WhatsApp-Kontext oder frage nach.'
+              },
+              roomType: {
+                type: 'string',
+                enum: ['compartida', 'privada'],
+                description: 'Zimmerart: "compartida" für Dorm-Zimmer, "privada" für private Zimmer'
+              },
+              categoryId: {
+                type: 'number',
+                description: 'Category ID des Zimmers (optional, aus check_room_availability Ergebnis). Wenn User eine Nummer wählt (z.B. "2."), verwende die categoryId des entsprechenden Zimmers aus der Liste.'
+              },
+              guestPhone: {
+                type: 'string',
+                description: 'Telefonnummer des Gastes (optional, wird aus WhatsApp-Kontext verwendet wenn nicht angegeben)'
+              },
+              guestEmail: {
+                type: 'string',
+                description: 'E-Mail des Gastes (optional)'
+              }
+            },
+            required: ['checkInDate', 'checkOutDate', 'guestName', 'roomType']
+          }
+        }
       }
     ];
   }
@@ -624,6 +666,19 @@ export class WhatsAppAiService {
     prompt += '    - "ich möchte tour 1 für morgen buchen" → book_tour({ tourId: 1, tourDate: "2025-01-27T10:00:00Z", numberOfParticipants: 2, customerName: "Max Mustermann", customerPhone: "+573001234567" })\n';
     prompt += '    - "reservar tour 3 para mañana" → book_tour({ tourId: 3, tourDate: "2025-01-27", numberOfParticipants: 1, customerName: "Juan Pérez", customerEmail: "juan@example.com" })\n';
     
+    // Zimmer-Buchung - IMMER verfügbar (auch für Gäste)
+    prompt += '\n- create_room_reservation: Erstelle eine Zimmer-Reservation (checkInDate, checkOutDate, guestName, roomType, categoryId optional)\n';
+    prompt += '  WICHTIG: Verwende diese Function wenn der User ein ZIMMER buchen möchte (NICHT für Touren)!\n';
+    prompt += '  WICHTIG: Unterscheide klar zwischen ZIMMER (create_room_reservation) und TOUREN (book_tour)!\n';
+    prompt += '  WICHTIG: Wenn der User "reservar", "buchen", "reservar", "reservame" sagt → create_room_reservation!\n';
+    prompt += '  WICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige → create_room_reservation mit categoryId!\n';
+    prompt += '  WICHTIG: Generiert automatisch Payment Link und Check-in-Link, setzt Zahlungsfrist (1 Stunde)\n';
+    prompt += '  WICHTIG: Alle Reservierungen sind Branch-spezifisch (Branch wird automatisch aus Context verwendet)\n';
+    prompt += '  Beispiele:\n';
+    prompt += '    - "reservame 1 cama en el primo aventurero" → create_room_reservation({ checkInDate: "today", checkOutDate: "2025-11-29", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34280 })\n';
+    prompt += '    - "ich möchte das Zimmer 2 buchen" → create_room_reservation({ checkInDate: "today", checkOutDate: "2025-11-29", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34281 })\n';
+    prompt += '    - "reservar habitación privada" → create_room_reservation({ checkInDate: "today", checkOutDate: "2025-11-29", guestName: "Juan Pérez", roomType: "privada" })\n';
+    
     // Andere Funktionen - nur für Mitarbeiter
     if (conversationContext?.userId) {
       prompt += '- get_requests: Hole Requests basierend auf Filtern (status, dueDate) - NUR für Mitarbeiter\n';
@@ -640,6 +695,10 @@ export class WhatsAppAiService {
     prompt += '\n\nWICHTIG: Wenn der User nach Zimmerverfügbarkeit fragt, verwende IMMER check_room_availability!';
     prompt += '\nWICHTIG: Wenn der User nach Touren fragt, verwende IMMER get_tours oder get_tour_details!';
     prompt += '\nWICHTIG: Wenn der User eine Tour buchen möchte, verwende IMMER book_tour!';
+    prompt += '\nWICHTIG: Wenn der User ein ZIMMER buchen möchte (z.B. "reservar", "buchen", "reservar", "reservame", "ich möchte buchen"), verwende IMMER create_room_reservation!';
+    prompt += '\nWICHTIG: Unterscheide klar zwischen ZIMMER (create_room_reservation) und TOUREN (book_tour)!';
+    prompt += '\nWICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige, verwende create_room_reservation mit der categoryId des entsprechenden Zimmers!';
+    prompt += '\nWICHTIG: Wenn der User sagt "reservame 1 cama" oder ähnlich, verwende create_room_reservation mit den Informationen aus dem Kontext!';
     prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
     prompt += '\nWICHTIG: Wenn check_room_availability mehrere Zimmer zurückgibt, zeige ALLE Zimmer in der Antwort an!';
     prompt += '\nWICHTIG: Jedes Zimmer im Function-Ergebnis (rooms Array) muss in der Antwort erwähnt werden!';

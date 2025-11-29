@@ -209,16 +209,17 @@ export class WhatsAppMessageHandler {
         return await this.startTaskCreation(normalizedPhone, branchId, conversation);
       }
 
-      // Keyword: "code" / "código" / "pin" / "password" - Gast-Code-Versand
-      const codeKeywords = ['code', 'código', 'codigo', 'pin', 'password', 'verloren', 'lost', 'perdido', 'acceso'];
-      if (codeKeywords.includes(normalizedText) && conversation.state === 'idle') {
-        return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation);
+      // Keyword: "pin" / "code" / "pincode" / "código" / etc. - NUR TTLock Passcode (aus DB)
+      const pincodeKeywords = ['pin', 'pincode', 'pin code', 'código pin', 'codigo pin', 'code', 'código', 'codigo', 'password', 'verloren', 'lost', 'perdido', 'acceso'];
+      if (pincodeKeywords.includes(normalizedText) && conversation.state === 'idle') {
+        // Alle Code-Keywords geben jetzt NUR TTLock Passcode zurück (aus DB, nicht generiert!)
+        return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation, true); // true = Pincode-Anfrage
       }
 
       // 5. Prüfe Conversation State (für mehrstufige Interaktionen)
       if (conversation.state !== 'idle') {
-        // Prüfe ob es Gast-Identifikation ist
-        if (conversation.state.startsWith('guest_identification')) {
+        // Prüfe ob es Gast-Identifikation ist (normale ODER Pincode)
+        if (conversation.state.startsWith('guest_identification') || conversation.state.startsWith('guest_pincode_identification')) {
           return await this.continueGuestIdentification(normalizedPhone, messageText, conversation, branchId);
         }
         return await this.continueConversation(normalizedPhone, branchId, messageText, mediaUrl, conversation, user);
@@ -1130,35 +1131,50 @@ export class WhatsAppMessageHandler {
   private static async handleGuestCodeRequest(
     phoneNumber: string,
     branchId: number,
-    conversation: any
+    conversation: any,
+    isPincodeRequest: boolean = false
   ): Promise<string> {
     try {
       // Versuche zuerst via Telefonnummer zu identifizieren
       const reservation = await WhatsAppGuestService.identifyGuestByPhone(phoneNumber, branchId);
       
       if (reservation) {
-        // Gast gefunden via Telefonnummer - sende Code + Links
         const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+        
+        // NEU: Wenn Pincode-Anfrage, verwende buildPincodeMessage()
+        if (isPincodeRequest) {
+          return WhatsAppGuestService.buildPincodeMessage(reservation, language);
+        }
+        
+        // Sonst: Normale Code-Anfrage mit buildStatusMessage()
         return await WhatsAppGuestService.buildStatusMessage(reservation, language);
       }
 
       // Keine Telefonnummer vorhanden - starte mehrstufige Identifikation
+      const statePrefix = isPincodeRequest ? 'guest_pincode_identification' : 'guest_identification';
       await prisma.whatsAppConversation.update({
         where: { id: conversation.id },
         data: {
-          state: 'guest_identification_name',
+          state: `${statePrefix}_name`,
           context: {
             step: 'name',
-            collectedData: {}
+            collectedData: {},
+            requestType: isPincodeRequest ? 'pincode' : 'code'
           }
         }
       });
 
       const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
       const translations: Record<string, string> = {
-        es: 'No encontré tu reservación con tu número de teléfono. Por favor, proporciona los siguientes datos:\n\n¿Cuál es tu nombre?',
-        de: 'Ich habe deine Reservierung mit deiner Telefonnummer nicht gefunden. Bitte gib die folgenden Daten an:\n\nWie lautet dein Vorname?',
-        en: 'I could not find your reservation with your phone number. Please provide the following information:\n\nWhat is your first name?'
+        es: isPincodeRequest
+          ? 'No encontré tu reservación con tu número de teléfono. Para enviarte tu código PIN, necesito algunos datos:\n\n¿Cuál es tu nombre?'
+          : 'No encontré tu reservación con tu número de teléfono. Por favor, proporciona los siguientes datos:\n\n¿Cuál es tu nombre?',
+        de: isPincodeRequest
+          ? 'Ich habe deine Reservierung mit deiner Telefonnummer nicht gefunden. Um dir deinen PIN-Code zu senden, benötige ich einige Daten:\n\nWie lautet dein Vorname?'
+          : 'Ich habe deine Reservierung mit deiner Telefonnummer nicht gefunden. Bitte gib die folgenden Daten an:\n\nWie lautet dein Vorname?',
+        en: isPincodeRequest
+          ? 'I could not find your reservation with your phone number. To send you your PIN code, I need some information:\n\nWhat is your first name?'
+          : 'I could not find your reservation with your phone number. Please provide the following information:\n\nWhat is your first name?'
       };
 
       return translations[language] || translations.es;
@@ -1183,8 +1199,8 @@ export class WhatsAppMessageHandler {
       const collectedData = context.collectedData || {};
       const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
 
-      // Schritt 1: Vorname
-      if (step === 'guest_identification_name' || step === 'name') {
+      // Schritt 1: Vorname (normale ODER Pincode-Identifikation)
+      if (step === 'guest_identification_name' || step === 'guest_pincode_identification_name' || step === 'name') {
         const firstName = messageText.trim();
         if (!firstName || firstName.length < 2) {
           const translations: Record<string, string> = {
@@ -1195,16 +1211,18 @@ export class WhatsAppMessageHandler {
           return translations[language] || translations.es;
         }
 
+        const statePrefix = conversation.state.startsWith('guest_pincode_identification') ? 'guest_pincode_identification' : 'guest_identification';
         await prisma.whatsAppConversation.update({
           where: { id: conversation.id },
           data: {
-            state: 'guest_identification_lastname',
+            state: `${statePrefix}_lastname`,
             context: {
               step: 'lastname',
               collectedData: {
                 ...collectedData,
                 firstName: firstName
-              }
+              },
+              requestType: context.requestType || 'code'
             }
           }
         });
@@ -1217,8 +1235,8 @@ export class WhatsAppMessageHandler {
         return translations[language] || translations.es;
       }
 
-      // Schritt 2: Nachname
-      if (step === 'guest_identification_lastname' || step === 'lastname') {
+      // Schritt 2: Nachname (normale ODER Pincode-Identifikation)
+      if (step === 'guest_identification_lastname' || step === 'guest_pincode_identification_lastname' || step === 'lastname') {
         const lastName = messageText.trim();
         if (!lastName || lastName.length < 2) {
           const translations: Record<string, string> = {
@@ -1229,16 +1247,18 @@ export class WhatsAppMessageHandler {
           return translations[language] || translations.es;
         }
 
+        const statePrefix = conversation.state.startsWith('guest_pincode_identification') ? 'guest_pincode_identification' : 'guest_identification';
         await prisma.whatsAppConversation.update({
           where: { id: conversation.id },
           data: {
-            state: 'guest_identification_nationality',
+            state: `${statePrefix}_nationality`,
             context: {
               step: 'nationality',
               collectedData: {
                 ...collectedData,
                 lastName: lastName
-              }
+              },
+              requestType: context.requestType || 'code'
             }
           }
         });
@@ -1251,8 +1271,8 @@ export class WhatsAppMessageHandler {
         return translations[language] || translations.es;
       }
 
-      // Schritt 3: Land
-      if (step === 'guest_identification_nationality' || step === 'nationality') {
+      // Schritt 3: Land (normale ODER Pincode-Identifikation)
+      if (step === 'guest_identification_nationality' || step === 'guest_pincode_identification_nationality' || step === 'nationality') {
         const nationality = messageText.trim();
         if (!nationality || nationality.length < 2) {
           const translations: Record<string, string> = {
@@ -1285,7 +1305,7 @@ export class WhatsAppMessageHandler {
         }
 
         if (reservations.length === 1) {
-          // Genau eine Reservation gefunden - sende Code + Links
+          // Genau eine Reservation gefunden
           await prisma.whatsAppConversation.update({
             where: { id: conversation.id },
             data: {
@@ -1293,20 +1313,28 @@ export class WhatsAppMessageHandler {
               context: null
             }
           });
-          return await WhatsAppGuestService.buildStatusMessage(reservations[0], language);
+          
+          // Prüfe ob Pincode-Anfrage oder normale Code-Anfrage
+          if (context.requestType === 'pincode') {
+            return WhatsAppGuestService.buildPincodeMessage(reservations[0], language);
+          } else {
+            return await WhatsAppGuestService.buildStatusMessage(reservations[0], language);
+          }
         }
 
         // Mehrere Reservationen gefunden - frage nach Geburtsdatum
+        const statePrefix = conversation.state.startsWith('guest_pincode_identification') ? 'guest_pincode_identification' : 'guest_identification';
         await prisma.whatsAppConversation.update({
           where: { id: conversation.id },
           data: {
-            state: 'guest_identification_birthdate',
+            state: `${statePrefix}_birthdate`,
             context: {
               step: 'birthdate',
               collectedData: {
                 ...collectedData,
                 nationality: nationality
               },
+              requestType: context.requestType || 'code',
               candidateReservations: reservations.map((r: any) => ({
                 id: r.id,
                 checkInDate: r.checkInDate,
@@ -1324,8 +1352,8 @@ export class WhatsAppMessageHandler {
         return translations[language] || translations.es;
       }
 
-      // Schritt 4: Geburtsdatum (optional)
-      if (step === 'guest_identification_birthdate' || step === 'birthdate') {
+      // Schritt 4: Geburtsdatum (optional) (normale ODER Pincode-Identifikation)
+      if (step === 'guest_identification_birthdate' || step === 'guest_pincode_identification_birthdate' || step === 'birthdate') {
         let birthDate: Date | null = null;
         const messageLower = messageText.toLowerCase().trim();
         
@@ -1394,7 +1422,13 @@ export class WhatsAppMessageHandler {
               context: null
             }
           });
-          return await WhatsAppGuestService.buildStatusMessage(reservations[0], language);
+          
+          // Prüfe ob Pincode-Anfrage oder normale Code-Anfrage
+          if (context.requestType === 'pincode') {
+            return WhatsAppGuestService.buildPincodeMessage(reservations[0], language);
+          } else {
+            return await WhatsAppGuestService.buildStatusMessage(reservations[0], language);
+          }
         }
 
         // Immer noch mehrere - zeige Liste
