@@ -47,6 +47,9 @@ const prisma_1 = require("../utils/prisma");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const lobbyPmsService_1 = require("./lobbyPmsService");
 const boldPaymentService_1 = require("./boldPaymentService");
+const client_1 = require("@prisma/client");
+const reservationNotificationService_1 = require("./reservationNotificationService");
+const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
 /**
  * WhatsApp Function Handlers
  *
@@ -578,25 +581,31 @@ class WhatsAppFunctionHandlers {
                 // WICHTIG: Zeige Zimmer auch wenn minAvailableRooms = 0, aber maxAvailableRooms > 0 (verfügbar an mindestens einem Tag)
                 const rooms = Array.from(roomMap.values())
                     .filter(room => room.maxAvailableRooms > 0) // Filtere nur wenn mindestens an einem Tag verfügbar
-                    .map(room => ({
-                    categoryId: room.categoryId,
-                    name: room.roomName,
-                    type: room.roomType,
-                    availableRooms: room.minAvailableRooms, // Minimum über alle Daten
-                    maxAvailableRooms: room.maxAvailableRooms, // Maximum über alle Daten (für Info)
-                    pricePerNight: room.pricePerNight,
-                    currency: room.currency,
-                    // WICHTIG: Terminologie - compartida = Betten, privada = Zimmer
-                    unit: room.roomType === 'compartida' ? 'beds' : 'rooms', // Für KI: "beds" bei compartida, "rooms" bei privada
-                    prices: room.prices.map(p => ({
-                        people: p.people,
-                        price: p.value
-                    })),
-                    availability: room.dates.map(d => ({
-                        date: d.date,
-                        availableRooms: d.availableRooms
-                    }))
-                }));
+                    .map(room => {
+                    // WICHTIG: Wenn minAvailableRooms = 0 aber maxAvailableRooms > 0, verwende maxAvailableRooms für Anzeige
+                    // (Zimmer ist an mindestens einem Tag verfügbar)
+                    const availableRooms = room.minAvailableRooms > 0 ? room.minAvailableRooms : room.maxAvailableRooms;
+                    return {
+                        categoryId: room.categoryId,
+                        name: room.roomName,
+                        type: room.roomType,
+                        availableRooms: availableRooms, // Zeige maxAvailableRooms wenn minAvailableRooms = 0
+                        minAvailableRooms: room.minAvailableRooms, // Für Info: Minimum über alle Daten
+                        maxAvailableRooms: room.maxAvailableRooms, // Für Info: Maximum über alle Daten
+                        pricePerNight: room.pricePerNight,
+                        currency: room.currency,
+                        // WICHTIG: Terminologie - compartida = Betten, privada = Zimmer
+                        unit: room.roomType === 'compartida' ? 'beds' : 'rooms', // Für KI: "beds" bei compartida, "rooms" bei privada
+                        prices: room.prices.map(p => ({
+                            people: p.people,
+                            price: p.value
+                        })),
+                        availability: room.dates.map(d => ({
+                            date: d.date,
+                            availableRooms: d.availableRooms
+                        }))
+                    };
+                });
                 // Debug: Logge alle formatierten Zimmer
                 console.log(`[WhatsApp Function Handlers] check_room_availability: ${rooms.length} Zimmer formatiert`);
                 for (const room of rooms) {
@@ -607,11 +616,15 @@ class WhatsAppFunctionHandlers {
                     endDate: endDate.toISOString().split('T')[0],
                     roomType: args.roomType || 'all',
                     totalRooms: rooms.length,
-                    rooms: rooms.map(room => (Object.assign(Object.assign({}, room), { 
-                        // WICHTIG: Füge explizite Terminologie-Hinweise hinzu für KI
-                        description: room.type === 'compartida'
-                            ? `${room.name}: ${room.availableRooms} ${room.availableRooms === 1 ? 'Bett' : 'Betten'} verfügbar (Dorm-Zimmer)`
-                            : `${room.name}: ${room.availableRooms} ${room.availableRooms === 1 ? 'Zimmer' : 'Zimmer'} verfügbar (privates Zimmer)` })))
+                    rooms: rooms.map(room => {
+                        // WICHTIG: Verwende availableRooms (bereits korrigiert: maxAvailableRooms wenn minAvailableRooms = 0)
+                        const availableCount = room.availableRooms;
+                        return Object.assign(Object.assign({}, room), { 
+                            // WICHTIG: Füge explizite Terminologie-Hinweise hinzu für KI
+                            description: room.type === 'compartida'
+                                ? `${room.name}: ${availableCount} ${availableCount === 1 ? 'Bett' : 'Betten'} verfügbar (Dorm-Zimmer)`
+                                : `${room.name}: ${availableCount} ${availableCount === 1 ? 'Zimmer' : 'Zimmer'} verfügbar (privates Zimmer)` });
+                    })
                 };
             }
             catch (error) {
@@ -918,6 +931,152 @@ class WhatsAppFunctionHandlers {
             }
             catch (error) {
                 console.error('[WhatsApp Function Handlers] book_tour Fehler:', error);
+                throw error;
+            }
+        });
+    }
+    /**
+     * Erstellt eine Zimmer-Reservation für den aktuellen Branch
+     * WICHTIG: Nur für ZIMMER, nicht für Touren!
+     */
+    static create_room_reservation(args, userId, roleId, branchId // WICHTIG: Wird automatisch aus Context übergeben
+    ) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            try {
+                // 1. Parse Datum (unterstützt "today"/"heute"/"hoy")
+                let checkInDate;
+                const checkInDateStr = args.checkInDate.toLowerCase().trim();
+                if (checkInDateStr === 'today' || checkInDateStr === 'heute' || checkInDateStr === 'hoy') {
+                    checkInDate = new Date();
+                    checkInDate.setHours(0, 0, 0, 0);
+                }
+                else {
+                    checkInDate = new Date(args.checkInDate);
+                    if (isNaN(checkInDate.getTime())) {
+                        throw new Error(`Ungültiges Check-in Datum: ${args.checkInDate}`);
+                    }
+                }
+                let checkOutDate;
+                const checkOutDateStr = args.checkOutDate.toLowerCase().trim();
+                if (checkOutDateStr === 'today' || checkOutDateStr === 'heute' || checkOutDateStr === 'hoy') {
+                    checkOutDate = new Date();
+                    checkOutDate.setHours(23, 59, 59, 999);
+                }
+                else {
+                    checkOutDate = new Date(args.checkOutDate);
+                    if (isNaN(checkOutDate.getTime())) {
+                        throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}`);
+                    }
+                }
+                // 2. Validierung: Check-out muss nach Check-in liegen
+                if (checkOutDate <= checkInDate) {
+                    throw new Error('Check-out Datum muss nach Check-in Datum liegen');
+                }
+                // 3. Hole Branch für organizationId (WICHTIG: branchId aus Context verwenden!)
+                const branch = yield prisma_1.prisma.branch.findUnique({
+                    where: { id: branchId },
+                    select: {
+                        id: true,
+                        name: true,
+                        organizationId: true
+                    }
+                });
+                if (!branch) {
+                    throw new Error(`Branch ${branchId} nicht gefunden`);
+                }
+                // 4. Berechne Betrag (vereinfacht - sollte aus Verfügbarkeitsprüfung kommen)
+                // TODO: Preis aus categoryId/Verfügbarkeitsprüfung übernehmen
+                const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+                const estimatedAmount = nights * 50000; // Platzhalter - sollte aus Verfügbarkeit kommen
+                // 5. Erstelle Reservierung in DB (WICHTIG: branchId setzen!)
+                const reservation = yield prisma_1.prisma.reservation.create({
+                    data: {
+                        guestName: args.guestName.trim(),
+                        guestPhone: ((_a = args.guestPhone) === null || _a === void 0 ? void 0 : _a.trim()) || null,
+                        guestEmail: ((_b = args.guestEmail) === null || _b === void 0 ? void 0 : _b.trim()) || null,
+                        checkInDate: checkInDate,
+                        checkOutDate: checkOutDate,
+                        status: client_1.ReservationStatus.confirmed,
+                        paymentStatus: client_1.PaymentStatus.pending,
+                        amount: estimatedAmount,
+                        currency: 'COP',
+                        organizationId: branch.organizationId,
+                        branchId: branchId // WICHTIG: Branch-spezifisch!
+                        // TODO: paymentDeadline und autoCancelEnabled werden später hinzugefügt (Migration erforderlich)
+                    }
+                });
+                // 6. Erstelle Payment Link (wenn Telefonnummer vorhanden)
+                let paymentLink = null;
+                if (args.guestPhone || reservation.guestPhone) {
+                    try {
+                        const boldPaymentService = yield boldPaymentService_1.BoldPaymentService.createForBranch(branchId);
+                        paymentLink = yield boldPaymentService.createPaymentLink(reservation, estimatedAmount, 'COP', `Zahlung für Reservierung ${reservation.guestName}`);
+                        // Aktualisiere Reservierung mit Payment Link
+                        yield prisma_1.prisma.reservation.update({
+                            where: { id: reservation.id },
+                            data: { paymentLink }
+                        });
+                    }
+                    catch (error) {
+                        console.error('[create_room_reservation] Fehler beim Erstellen des Payment-Links:', error);
+                        // Nicht abbrechen, nur loggen
+                    }
+                }
+                // 7. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
+                let linksSent = false;
+                if (args.guestPhone || reservation.guestPhone) {
+                    try {
+                        yield reservationNotificationService_1.ReservationNotificationService.sendReservationInvitation(reservation.id, {
+                            guestPhone: args.guestPhone || reservation.guestPhone || undefined,
+                            amount: estimatedAmount,
+                            currency: 'COP'
+                        });
+                        linksSent = true;
+                    }
+                    catch (error) {
+                        console.error('[create_room_reservation] Fehler beim Versand der Links:', error);
+                        // Nicht abbrechen, nur loggen
+                    }
+                }
+                // 8. Generiere Check-in Link (falls Email vorhanden)
+                let checkInLink = null;
+                if (reservation.guestEmail && reservation.lobbyReservationId) {
+                    try {
+                        checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)({
+                            id: reservation.id,
+                            lobbyReservationId: reservation.lobbyReservationId,
+                            guestEmail: reservation.guestEmail
+                        });
+                    }
+                    catch (error) {
+                        console.error('[create_room_reservation] Fehler beim Generieren des Check-in-Links:', error);
+                    }
+                }
+                // 9. Return Ergebnis
+                return {
+                    success: true,
+                    reservationId: reservation.id,
+                    branchId: branchId, // WICHTIG: Branch-ID zurückgeben
+                    branchName: branch.name,
+                    guestName: reservation.guestName,
+                    checkInDate: checkInDate.toISOString().split('T')[0],
+                    checkOutDate: checkOutDate.toISOString().split('T')[0],
+                    roomType: args.roomType,
+                    categoryId: args.categoryId || null,
+                    amount: estimatedAmount,
+                    currency: 'COP',
+                    paymentLink: paymentLink,
+                    checkInLink: checkInLink,
+                    // TODO: paymentDeadline wird später hinzugefügt (Migration erforderlich)
+                    linksSent: linksSent,
+                    message: linksSent
+                        ? 'Reservierung erstellt. Zahlungslink und Check-in-Link wurden per WhatsApp gesendet. Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Reservierung automatisch storniert.'
+                        : 'Reservierung erstellt. Bitte Zahlungslink und Check-in-Link manuell senden. Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Reservierung automatisch storniert.'
+                };
+            }
+            catch (error) {
+                console.error('[WhatsApp Function Handlers] create_room_reservation Fehler:', error);
                 throw error;
             }
         });

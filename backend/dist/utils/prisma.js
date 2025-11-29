@@ -106,7 +106,7 @@ if (!globalForPrisma.prismaPools) {
     for (let i = 1; i <= NUM_POOLS; i++) {
         prismaPools.push(createPrismaClient(i));
     }
-    console.log(`[Prisma] ✅ ${NUM_POOLS} Prisma-Instanzen erstellt (${NUM_POOLS} × 12 = ${NUM_POOLS * 12} Verbindungen)`);
+    console.log(`[Prisma] ✅ ${NUM_POOLS} Prisma-Instanzen erstellt (${NUM_POOLS} × 10 = ${NUM_POOLS * 10} Verbindungen)`);
     if (process.env.NODE_ENV !== 'production') {
         globalForPrisma.prismaPools = prismaPools;
     }
