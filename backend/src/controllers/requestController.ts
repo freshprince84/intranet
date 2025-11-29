@@ -8,7 +8,7 @@ import { prisma, executeWithRetry } from '../utils/prisma';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getRequestNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
-import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
+import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } from '../utils/filterToPrisma';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import { filterCache } from '../services/filterCache';
 import path from 'path';
@@ -91,6 +91,8 @@ export const getAllRequests = async (req: Request, res: Response) => {
                     operators,
                     'request'
                 );
+                // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'request');
                 } else {
                     console.warn(`[getAllRequests] Filter ${filterId} nicht gefunden`);
                 }
@@ -105,36 +107,74 @@ export const getAllRequests = async (req: Request, res: Response) => {
                 filterConditions.operators || [],
                 'request'
             );
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'request');
         }
         
         // OPTIMIERUNG: Vereinfachte WHERE-Klausel für bessere Performance
         // Kombiniere organizationId direkt in OR-Bedingung statt verschachtelter AND/OR
         const baseWhereConditions: any[] = [];
         
-        // Isolation-Filter: organizationId (wenn vorhanden)
-        // ✅ PERFORMANCE: Flachere OR-Struktur für bessere Index-Nutzung
+        // ✅ ROLLEN-ISOLATION: Isolation-Filter basierend auf Rolle
         if (organizationId) {
-            baseWhereConditions.push({
-                OR: [
-                    // Öffentliche Requests (isPrivate = false) innerhalb der Organisation
-                    {
-                        isPrivate: false,
-                        organizationId: organizationId
-                    },
-                    // Private Requests: Nur wenn User Ersteller ist
-                    {
-                        isPrivate: true,
-                        organizationId: organizationId,
-                        requesterId: userId
-                    },
-                    // Private Requests: Nur wenn User Verantwortlicher ist
-                    {
-                        isPrivate: true,
-                        organizationId: organizationId,
-                        responsibleId: userId
-                    }
-                ]
-            });
+            if (isAdminOrOwner(req)) {
+                // Admin/Owner: Alle Requests der Organisation (inkl. private, ohne Einschränkung)
+                baseWhereConditions.push({
+                    OR: [
+                        // Öffentliche Requests
+                        {
+                            isPrivate: false,
+                            organizationId: organizationId
+                        },
+                        // Private Requests: Alle (ohne requesterId/responsibleId Einschränkung)
+                        {
+                            isPrivate: true,
+                            organizationId: organizationId
+                        }
+                    ]
+                });
+            } else {
+                // User/Andere Rollen: Nur Requests der eigenen Branch
+                const branchId = (req as any).branchId;
+                if (branchId) {
+                    baseWhereConditions.push({
+                        AND: [
+                            {
+                                OR: [
+                                    // Öffentliche Requests der eigenen Branch
+                                    {
+                                        isPrivate: false,
+                                        organizationId: organizationId,
+                                        branchId: branchId
+                                    },
+                                    // Private Requests: Nur wenn User Ersteller ist
+                                    {
+                                        isPrivate: true,
+                                        organizationId: organizationId,
+                                        branchId: branchId,
+                                        requesterId: userId
+                                    },
+                                    // Private Requests: Nur wenn User Verantwortlicher ist
+                                    {
+                                        isPrivate: true,
+                                        organizationId: organizationId,
+                                        branchId: branchId,
+                                        responsibleId: userId
+                                    }
+                                ]
+                            }
+                        ]
+                    });
+                } else {
+                    // Fallback: Nur eigene Requests (wenn keine Branch)
+                    baseWhereConditions.push({
+                        OR: [
+                            { requesterId: userId },
+                            { responsibleId: userId }
+                        ]
+                    });
+                }
+            }
         } else {
             // Standalone User: Nur eigene Requests
             baseWhereConditions.push({

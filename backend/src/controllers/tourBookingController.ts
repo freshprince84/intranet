@@ -3,9 +3,10 @@ import { Prisma, PaymentStatus, TourBookingStatus } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { BoldPaymentService } from '../services/boldPaymentService';
 import { calculateCommission } from '../services/commissionService';
-import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
+import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } from '../utils/filterToPrisma';
 import { filterCache } from '../services/filterCache';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
+import { isAdminOrOwner } from '../middleware/organization';
 // TourWhatsAppService wird dynamisch importiert wenn benötigt
 // NotificationService wird dynamisch importiert wenn benötigt
 
@@ -67,6 +68,8 @@ export const getAllTourBookings = async (req: Request, res: Response) => {
             operators,
             'tour_booking'
           );
+          // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+          filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'tour_booking');
         }
       } catch (filterError) {
         console.error(`[getAllTourBookings] Fehler beim Laden von Filter ${filterId}:`, filterError);
@@ -77,16 +80,46 @@ export const getAllTourBookings = async (req: Request, res: Response) => {
         filterConditions.operators || [],
         'tour_booking'
       );
+      // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+      filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'tour_booking');
     }
 
-    // Basis-WHERE-Bedingungen
+    // ✅ ROLLEN-ISOLATION: Basis-WHERE-Bedingungen basierend auf Rolle
     const baseWhereConditions: any[] = [];
 
     if (organizationId) {
-      baseWhereConditions.push({ organizationId });
+      if (isAdminOrOwner(req)) {
+        // Admin/Owner: Alle Tour Bookings der Organisation
+        baseWhereConditions.push({ organizationId });
+      } else {
+        // User/Andere Rollen: Nur Tour Bookings der eigenen Branch
+        const userBranchId = (req as any).branchId;
+        if (userBranchId) {
+          baseWhereConditions.push({ organizationId, branchId: userBranchId });
+        } else {
+          // Fallback: Keine Tour Bookings (wenn keine Branch)
+          return res.json({
+            success: true,
+            data: [],
+            totalCount: 0,
+            hasMore: false
+          });
+        }
+      }
     }
+    // branchId aus Query-Parameter: Nur für Admin/Owner oder wenn es die eigene Branch ist
     if (branchId) {
-      baseWhereConditions.push({ branchId });
+      if (isAdminOrOwner(req)) {
+        // Admin kann nach beliebiger Branch filtern
+        baseWhereConditions.push({ branchId });
+      } else {
+        // User: Nur wenn es die eigene Branch ist
+        const userBranchId = (req as any).branchId;
+        if (branchId === userBranchId) {
+          baseWhereConditions.push({ branchId });
+        }
+        // Sonst ignorieren (Sicherheit - wird bereits oben durch userBranchId gefiltert)
+      }
     }
     if (tourId) {
       baseWhereConditions.push({ tourId });

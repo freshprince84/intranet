@@ -8,7 +8,8 @@ import { ReservationNotificationService } from '../services/reservationNotificat
 import { reservationQueue, updateGuestContactQueue, checkQueueHealth } from '../services/queueService';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
-import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
+import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } from '../utils/filterToPrisma';
+import { isAdminOrOwner } from '../middleware/organization';
 import { filterCache } from '../services/filterCache';
 
 /**
@@ -591,48 +592,68 @@ export const getAllReservations = async (req: Request, res: Response) => {
         ? parseInt(req.query.offset as string, 10) 
         : 0; // Standard: 0
 
-    // Baue Where-Clause auf
+    // ✅ ROLLEN-ISOLATION: Baue Where-Clause basierend auf Rolle
     const whereClause: any = {
       organizationId: req.organizationId
     };
 
-    // OPTIMIERUNG: Verwende branchId aus Request-Kontext statt zusätzlicher Query
-    // Wenn nur "own_branch" Berechtigung: Filtere nach Branch
-    if (hasOwnBranchPermission && !hasAllBranchesPermission) {
-      // Hole branchId aus Request-Kontext (wird in organization-Middleware gesetzt)
-      const branchId = (req as any).branchId;
-      
-      if (branchId) {
-        whereClause.branchId = branchId;
-        console.log(`[Reservation] Filtere nach Branch ${branchId} (own_branch Berechtigung)`);
-      } else {
-        // Fallback: Hole branchId aus UsersBranches (falls nicht im Request-Kontext)
-        const userBranch = await prisma.usersBranches.findFirst({
-          where: {
-            userId: userId,
-            branch: {
-              organizationId: req.organizationId
-            }
-          },
-          select: {
-            branchId: true
-          }
-        });
-
-        if (userBranch?.branchId) {
-          whereClause.branchId = userBranch.branchId;
-          console.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung, aus DB)`);
+    // Admin/Owner: Alle Reservations der Organisation (kein Branch-Filter)
+    if (isAdminOrOwner(req)) {
+      // Kein Branch-Filter für Admin/Owner
+      console.log(`[Reservation] Admin/Owner: Zeige alle Reservations der Organisation`);
+    } else {
+      // User/Andere Rollen: Nur Reservations der eigenen Branch
+      // OPTIMIERUNG: Verwende branchId aus Request-Kontext statt zusätzlicher Query
+      // Wenn nur "own_branch" Berechtigung: Filtere nach Branch
+      if (hasOwnBranchPermission && !hasAllBranchesPermission) {
+        // Hole branchId aus Request-Kontext (wird in organization-Middleware gesetzt)
+        const branchId = (req as any).branchId;
+        
+        if (branchId) {
+          whereClause.branchId = branchId;
+          console.log(`[Reservation] Filtere nach Branch ${branchId} (own_branch Berechtigung)`);
         } else {
-          // User hat keine aktive Branch → keine Reservierungen
-          console.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
-          return res.json({
-            success: true,
-            data: []
+          // Fallback: Hole branchId aus UsersBranches (falls nicht im Request-Kontext)
+          const userBranch = await prisma.usersBranches.findFirst({
+            where: {
+              userId: userId,
+              branch: {
+                organizationId: req.organizationId
+              }
+            },
+            select: {
+              branchId: true
+            }
           });
+
+          if (userBranch?.branchId) {
+            whereClause.branchId = userBranch.branchId;
+            console.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung, aus DB)`);
+          } else {
+            // User hat keine aktive Branch → keine Reservierungen
+            console.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
+            return res.json({
+              success: true,
+              data: [],
+              totalCount: 0,
+              hasMore: false
+            });
+          }
         }
+      } else if (hasAllBranchesPermission) {
+        // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
+        console.log(`[Reservation] User hat all_branches Berechtigung, zeige alle Reservations`);
+      } else {
+        // Keine Berechtigung → keine Reservierungen
+        console.log(`[Reservation] User hat keine Berechtigung, gebe leeres Array zurück`);
+        return res.json({
+          success: true,
+          data: [],
+          totalCount: 0,
+          hasMore: false
+        });
       }
     }
-    // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
 
     // Filter-Bedingungen konvertieren (falls vorhanden)
     let filterWhereClause: any = {};
@@ -647,6 +668,8 @@ export const getAllReservations = async (req: Request, res: Response) => {
                 operators,
                 'reservation'
             );
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'reservation');
         }
     } else if (filterConditions) {
         // Direkte Filter-Bedingungen
@@ -655,6 +678,8 @@ export const getAllReservations = async (req: Request, res: Response) => {
             filterConditions.operators || [],
             'reservation'
         );
+        // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+        filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'reservation');
     }
 
     // Kombiniere alle Filter-Bedingungen

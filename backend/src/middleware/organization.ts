@@ -246,6 +246,34 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
   }
 };
 
+// ✅ ROLLEN-ISOLATION: Hilfsfunktionen für Rollen-Prüfung
+/**
+ * Prüft, ob der User eine Admin-Rolle hat
+ */
+export const isAdminRole = (req: Request): boolean => {
+  const roleName = req.userRole?.role?.name;
+  if (!roleName) return false;
+  const roleNameLower = roleName.toLowerCase();
+  return roleNameLower === 'admin' || roleNameLower.includes('administrator');
+};
+
+/**
+ * Prüft, ob der User eine Owner-Rolle hat
+ */
+export const isOwnerRole = (req: Request): boolean => {
+  const roleName = req.userRole?.role?.name;
+  if (!roleName) return false;
+  const roleNameLower = roleName.toLowerCase();
+  return roleNameLower === 'owner';
+};
+
+/**
+ * Prüft, ob der User Admin oder Owner ist
+ */
+export const isAdminOrOwner = (req: Request): boolean => {
+  return isAdminRole(req) || isOwnerRole(req);
+};
+
 // Hilfsfunktion zum Prüfen, ob eine Ressource zur Organisation des Users gehört
 export const belongsToOrganization = async (
   req: Request,
