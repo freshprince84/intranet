@@ -372,3 +372,4 @@ const [loading, setLoading] = useState(false); // ✅ Nicht blockieren
 **Status:** 📋 PLANUNG - Aktualisiert nach Analyse  
 **Nächster Schritt:** Requests Priorisierung neu implementieren (displayLimit-basiert)
 
+

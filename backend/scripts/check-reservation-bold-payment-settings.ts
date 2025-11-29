@@ -217,3 +217,4 @@ checkReservationBoldPaymentSettings(reservationId)
 
 
 
+
