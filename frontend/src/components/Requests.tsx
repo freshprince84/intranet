@@ -455,7 +455,17 @@ const Requests: React.FC = () => {
         if (axiosError.code === 'ERR_NETWORK') {
           setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
         } else {
-          setError(`Fehler beim Laden der Requests: ${axiosError.response?.data?.message || axiosError.message}`);
+          // Zeige detaillierte Fehlermeldung
+          const errorMessage = axiosError.response?.data?.message 
+            || axiosError.response?.data?.error 
+            || axiosError.message 
+            || 'Unbekannter Fehler';
+          console.error('Request Error Details:', {
+            message: errorMessage,
+            status: axiosError.response?.status,
+            data: axiosError.response?.data
+          });
+          setError(`Fehler beim Laden der Requests: ${errorMessage}`);
         }
       }
     } finally {
