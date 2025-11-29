@@ -1385,7 +1385,7 @@ const Worktracker: React.FC = () => {
             });
         
         if (process.env.NODE_ENV === 'development') {
-            console.log('✅ Gefilterte Tasks:', filtered.length, 'von', tasks.length);
+            console.log('✅ Gefilterte Tasks:', filtered.length, 'von', tasks.length, 'Tasks');
         }
         
         // Hilfsfunktion zum Extrahieren von Werten für Sortierung
