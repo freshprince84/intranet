@@ -121,7 +121,9 @@ function convertSingleCondition(
     case 'dueDate':
     case 'tourDate':
     case 'bookingDate':
-      return convertDateCondition(value, operator);
+    case 'checkInDate':
+    case 'checkOutDate':
+      return convertDateCondition(value, operator, column);
 
     case 'responsible':
       return convertUserRoleCondition(value, operator, entityType, 'responsible');
@@ -161,8 +163,11 @@ function convertSingleCondition(
 
 /**
  * Konvertiert Datum-Bedingungen
+ * @param value - Der Datumswert (Date, string oder '__TODAY__')
+ * @param operator - Der Operator ('equals', 'before', 'after')
+ * @param fieldName - Der Name des Feldes ('dueDate', 'checkInDate', 'checkOutDate', etc.)
  */
-function convertDateCondition(value: any, operator: string): any {
+function convertDateCondition(value: any, operator: string, fieldName: string = 'dueDate'): any {
   // Handle __TODAY__ dynamic date
   let dateValue: Date;
   if (value === '__TODAY__') {
@@ -181,11 +186,11 @@ function convertDateCondition(value: any, operator: string): any {
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(dateValue);
     endOfDay.setHours(23, 59, 59, 999);
-    return { dueDate: { gte: startOfDay, lte: endOfDay } };
+    return { [fieldName]: { gte: startOfDay, lte: endOfDay } };
   } else if (operator === 'before') {
-    return { dueDate: { lt: dateValue } };
+    return { [fieldName]: { lt: dateValue } };
   } else if (operator === 'after') {
-    return { dueDate: { gt: dateValue } };
+    return { [fieldName]: { gt: dateValue } };
   }
 
   return {};

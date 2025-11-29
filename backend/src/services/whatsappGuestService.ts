@@ -302,5 +302,59 @@ export class WhatsAppGuestService {
 
     return message;
   }
+
+  /**
+   * Gibt BEREITS GENERIERTEN TTLock Passcode zurück (aus DB)
+   * IGNORIERT lobbyReservationId komplett!
+   * Code wird NICHT generiert, nur gelesen!
+   */
+  static getTTLockPasscode(reservation: any): string | null {
+    // doorPin ist das Feld, das verwendet wird
+    return reservation.doorPin || null;
+  }
+
+  /**
+   * Erstellt Nachricht mit NUR dem BEREITS GENERIERTEN TTLock Passcode
+   * Code wird NICHT generiert, nur aus DB gelesen!
+   */
+  static buildPincodeMessage(
+    reservation: any,
+    language: string = 'es'
+  ): string {
+    const translations: Record<string, any> = {
+      es: {
+        greeting: (name: string) => `Hola ${name}!`,
+        pincode: 'Tu código PIN:',
+        noPincode: 'No hay código PIN disponible para esta reservación. Por favor, contacta con el personal.',
+        seeYou: '¡Te esperamos!'
+      },
+      de: {
+        greeting: (name: string) => `Hallo ${name}!`,
+        pincode: 'Dein PIN-Code:',
+        noPincode: 'Kein PIN-Code für diese Reservierung verfügbar. Bitte kontaktiere das Personal.',
+        seeYou: 'Wir freuen uns auf dich!'
+      },
+      en: {
+        greeting: (name: string) => `Hello ${name}!`,
+        pincode: 'Your PIN code:',
+        noPincode: 'No PIN code available for this reservation. Please contact the staff.',
+        seeYou: 'We look forward to seeing you!'
+      }
+    };
+
+    const t = translations[language] || translations.es;
+    let message = t.greeting(reservation.guestName) + '\n\n';
+
+    const pincode = this.getTTLockPasscode(reservation);
+    if (pincode) {
+      message += `${t.pincode} ${pincode}\n\n`;
+      message += t.seeYou;
+    } else {
+      // Code wurde noch nicht generiert - Fehlermeldung
+      message += t.noPincode;
+    }
+
+    return message;
+  }
 }
 
