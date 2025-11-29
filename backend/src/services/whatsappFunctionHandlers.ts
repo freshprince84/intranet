@@ -1076,7 +1076,12 @@ export class WhatsAppFunctionHandlers {
         throw new Error('Check-out Datum muss nach Check-in Datum liegen');
       }
 
-      // 3. Hole Branch für organizationId (WICHTIG: branchId aus Context verwenden!)
+      // 3. Validierung: categoryId ist erforderlich für LobbyPMS Buchung
+      if (!args.categoryId) {
+        throw new Error('categoryId ist erforderlich für die Reservierung. Bitte zuerst Verfügbarkeit prüfen und ein Zimmer auswählen.');
+      }
+
+      // 4. Hole Branch für organizationId (WICHTIG: branchId aus Context verwenden!)
       const branch = await prisma.branch.findUnique({
         where: { id: branchId },
         select: { 
@@ -1090,12 +1095,31 @@ export class WhatsAppFunctionHandlers {
         throw new Error(`Branch ${branchId} nicht gefunden`);
       }
 
-      // 4. Berechne Betrag (vereinfacht - sollte aus Verfügbarkeitsprüfung kommen)
+      // 5. Erstelle Reservierung in LobbyPMS (WICHTIG: ZUERST in LobbyPMS, dann lokal!)
+      let lobbyReservationId: string | null = null;
+      try {
+        const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+        lobbyReservationId = await lobbyPmsService.createBooking(
+          args.categoryId,
+          checkInDate,
+          checkOutDate,
+          args.guestName.trim(),
+          args.guestEmail?.trim(),
+          args.guestPhone?.trim(),
+          1 // Anzahl Personen (default: 1, kann später erweitert werden)
+        );
+        console.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
+      } catch (lobbyError: any) {
+        console.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
+        throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
+      }
+
+      // 6. Berechne Betrag (vereinfacht - sollte aus Verfügbarkeitsprüfung kommen)
       // TODO: Preis aus categoryId/Verfügbarkeitsprüfung übernehmen
       const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
       const estimatedAmount = nights * 50000; // Platzhalter - sollte aus Verfügbarkeit kommen
 
-      // 5. Erstelle Reservierung in DB (WICHTIG: branchId setzen!)
+      // 7. Erstelle Reservierung in DB (WICHTIG: branchId und lobbyReservationId setzen!)
       const reservation = await prisma.reservation.create({
         data: {
           guestName: args.guestName.trim(),
@@ -1108,12 +1132,15 @@ export class WhatsAppFunctionHandlers {
           amount: estimatedAmount,
           currency: 'COP',
           organizationId: branch.organizationId,
-          branchId: branchId // WICHTIG: Branch-spezifisch!
+          branchId: branchId, // WICHTIG: Branch-spezifisch!
+          lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
+          roomType: args.roomType,
+          categoryId: args.categoryId
           // TODO: paymentDeadline und autoCancelEnabled werden später hinzugefügt (Migration erforderlich)
         }
       });
 
-      // 6. Erstelle Payment Link (wenn Telefonnummer vorhanden)
+      // 8. Erstelle Payment Link (wenn Telefonnummer vorhanden)
       let paymentLink: string | null = null;
       if (args.guestPhone || reservation.guestPhone) {
         try {
@@ -1136,7 +1163,7 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 7. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
+      // 9. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
       let linksSent = false;
       if (args.guestPhone || reservation.guestPhone) {
         try {
@@ -1155,7 +1182,8 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 8. Generiere Check-in Link (falls Email vorhanden)
+      // 10. Generiere Check-in Link (falls Email vorhanden)
+      // WICHTIG: Check-in Link kann erst nach erfolgreicher LobbyPMS-Buchung erstellt werden!
       let checkInLink: string | null = null;
       if (reservation.guestEmail && reservation.lobbyReservationId) {
         try {
@@ -1169,17 +1197,18 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 9. Return Ergebnis
+      // 11. Return Ergebnis
       return {
         success: true,
         reservationId: reservation.id,
+        lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID
         branchId: branchId, // WICHTIG: Branch-ID zurückgeben
         branchName: branch.name,
         guestName: reservation.guestName,
         checkInDate: checkInDate.toISOString().split('T')[0],
         checkOutDate: checkOutDate.toISOString().split('T')[0],
         roomType: args.roomType,
-        categoryId: args.categoryId || null,
+        categoryId: args.categoryId,
         amount: estimatedAmount,
         currency: 'COP',
         paymentLink: paymentLink,
