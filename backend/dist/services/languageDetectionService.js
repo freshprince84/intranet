@@ -17,8 +17,8 @@ class LanguageDetectionService {
         // Regel: Alle spanischsprachigen Länder → 'es', alle anderen → 'en'
         const countryCodeMap = {
             '57': 'es', // Kolumbien
-            '49': 'en', // Deutschland → Englisch
-            '41': 'es', // Schweiz → Spanisch (da hauptsächlich spanischsprachige Gäste)
+            '49': 'de', // Deutschland → Deutsch
+            '41': 'de', // Schweiz → Deutsch
             '1': 'en', // USA/Kanada
             '34': 'es', // Spanien
             '33': 'en', // Frankreich → Englisch

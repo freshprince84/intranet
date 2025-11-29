@@ -551,6 +551,27 @@ const Requests: React.FC = () => {
     fetchRequests();
   }, []);
 
+  // ✅ PERFORMANCE: Priorisierung - Erste 5 Requests zuerst (sichtbarer Teil)
+  // Kompatibel mit Filter-Fix: Alle Requests werden geladen, aber nur erste 5 angezeigt
+  useEffect(() => {
+    if (requests.length > 0 && !loading) {
+      // Setze initial displayLimit auf 5 für schnelle erste Anzeige
+      const initialLimit = 5;
+      const finalLimit = viewMode === 'cards' ? 10 : 20;
+      
+      // Nur setzen wenn noch nicht gesetzt (verhindert Re-Render-Loop)
+      if (requestsDisplayLimit === finalLimit) {
+        setRequestsDisplayLimit(initialLimit);
+        
+        // Rest im Hintergrund (nach 500ms Verzögerung)
+        const timer = setTimeout(() => {
+          setRequestsDisplayLimit(finalLimit); // Zeige alle geladenen Requests
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [requests.length, loading, viewMode, requestsDisplayLimit]);
+
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {
     return () => {
