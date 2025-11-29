@@ -7,10 +7,10 @@ import { Prisma, TaskStatus, NotificationType } from '@prisma/client';
 import { prisma, executeWithRetry } from '../utils/prisma';
 import { validateTask, TaskData } from '../validation/taskValidation';
 import { createNotificationIfEnabled } from './notificationController';
-import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
+import { getDataIsolationFilter, getUserOrganizationFilter, isAdminOrOwner } from '../middleware/organization';
 import { LifecycleService } from '../services/lifecycleService';
 import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
-import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
+import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } from '../utils/filterToPrisma';
 import { filterCache } from '../services/filterCache';
 
 const userSelect = {
@@ -67,6 +67,8 @@ export const getAllTasks = async (req: Request, res: Response) => {
                     operators,
                     'task'
                 );
+                // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'task');
             }
         } else if (filterConditions) {
             // Direkte Filter-Bedingungen
@@ -75,46 +77,47 @@ export const getAllTasks = async (req: Request, res: Response) => {
                 filterConditions.operators || [],
                 'task'
             );
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'task');
         }
         
         // ✅ PERFORMANCE: Vereinfachte WHERE-Klausel für bessere Performance
         // ✅ PERFORMANCE: Flachere OR-Struktur für bessere Index-Nutzung
         const baseWhereConditions: any[] = [];
         
-        // Isolation-Filter: organizationId (wenn vorhanden)
+        // ✅ ROLLEN-ISOLATION: Isolation-Filter basierend auf Rolle
         if (organizationId) {
-            // ✅ PERFORMANCE: Flachere OR-Struktur - organizationId in jeder OR-Bedingung
-            if (userRoleId) {
+            if (isAdminOrOwner(req)) {
+                // Admin/Owner: Alle Tasks der Organisation
                 baseWhereConditions.push({
-                    OR: [
-                        {
-                            organizationId: organizationId,
-                            responsibleId: userId
-                        },
-                        {
-                            organizationId: organizationId,
-                            qualityControlId: userId
-                        },
-                        {
-                            organizationId: organizationId,
-                            roleId: userRoleId
-                        }
-                    ]
+                    organizationId: organizationId
                 });
             } else {
-                // Fallback: Nur eigene Tasks
-                baseWhereConditions.push({
-                    OR: [
-                        {
-                            organizationId: organizationId,
-                            responsibleId: userId
-                        },
-                        {
-                            organizationId: organizationId,
-                            qualityControlId: userId
-                        }
-                    ]
-                });
+                // User/Andere Rollen: Nur Tasks der eigenen Rolle + eigene Tasks, innerhalb der eigenen Branch
+                const branchId = (req as any).branchId;
+                const taskFilter: any = {
+                    organizationId: organizationId
+                };
+                
+                if (branchId) {
+                    taskFilter.branchId = branchId;
+                }
+                
+                if (userRoleId) {
+                    taskFilter.OR = [
+                        { responsibleId: userId },
+                        { qualityControlId: userId },
+                        { roleId: userRoleId }
+                    ];
+                } else {
+                    // Fallback: Nur eigene Tasks
+                    taskFilter.OR = [
+                        { responsibleId: userId },
+                        { qualityControlId: userId }
+                    ];
+                }
+                
+                baseWhereConditions.push(taskFilter);
             }
         } else {
             // Standalone User: Nur eigene Tasks

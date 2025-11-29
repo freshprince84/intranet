@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Prisma, TourType } from '@prisma/client';
 import { prisma } from '../utils/prisma';
-import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
+import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } from '../utils/filterToPrisma';
 import { filterCache } from '../services/filterCache';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import multer from 'multer';
@@ -91,6 +91,8 @@ export const getAllTours = async (req: Request, res: Response) => {
             operators,
             'tour'
           );
+          // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+          filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'tour');
         }
       } catch (filterError) {
         console.error(`[getAllTours] Fehler beim Laden von Filter ${filterId}:`, filterError);
@@ -101,6 +103,8 @@ export const getAllTours = async (req: Request, res: Response) => {
         filterConditions.operators || [],
         'tour'
       );
+      // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+      filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'tour');
     }
 
     // Basis-WHERE-Bedingungen
