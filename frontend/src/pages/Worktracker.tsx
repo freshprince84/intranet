@@ -816,15 +816,16 @@ const Worktracker: React.FC = () => {
                 const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(RESERVATIONS_TABLE_ID));
                 const filters = response.data;
                 
-                const aktuellFilter = filters.find((filter: any) => filter.name === t('reservations.filters.current', 'Aktuell'));
-                if (aktuellFilter) {
-                    setReservationActiveFilterName(t('reservations.filters.current', 'Aktuell'));
-                    setReservationSelectedFilterId(aktuellFilter.id);
-                    applyReservationFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
-                    // ✅ Lade Reservierungen mit Filter
-                    await loadReservations(aktuellFilter.id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                // ✅ Suche nach "hoy" Filter (Standardfilter für heute)
+                const hoyFilter = filters.find((filter: any) => filter.name === 'hoy');
+                if (hoyFilter) {
+                    setReservationActiveFilterName('hoy');
+                    setReservationSelectedFilterId(hoyFilter.id);
+                    applyReservationFilterConditions(hoyFilter.conditions, hoyFilter.operators);
+                    // ✅ Lade Reservierungen mit Filter (nur heute)
+                    await loadReservations(hoyFilter.id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                 } else {
-                    // Kein Filter: Lade alle Reservierungen
+                    // Fallback: Lade alle Reservierungen (sollte nicht passieren, wenn Filter erstellt wurde)
                     await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                 }
             } catch (error) {
@@ -1042,6 +1043,70 @@ const Worktracker: React.FC = () => {
         };
 
         createStandardFilters();
+    }, []);
+
+    // Standard-Filter für Reservations erstellen und speichern
+    useEffect(() => {
+        const createReservationStandardFilters = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                
+                if (!token) {
+                    if (process.env.NODE_ENV === 'development') {
+                        console.error('Nicht authentifiziert');
+                    }
+                    return;
+                }
+
+                // Prüfen, ob die Standard-Filter bereits existieren
+                const existingFiltersResponse = await axiosInstance.get(
+                    `${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(RESERVATIONS_TABLE_ID)}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+
+                const existingFilters = existingFiltersResponse.data || [];
+                const hoyFilterExists = existingFilters.some(filter => filter.name === 'hoy');
+
+                // Erstelle "hoy"-Filter, wenn er noch nicht existiert
+                if (!hoyFilterExists) {
+                    // Aktuelles Datum im Format YYYY-MM-DD
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    const hoyFilter = {
+                        tableId: RESERVATIONS_TABLE_ID,
+                        name: 'hoy', // Spanisch für "heute"
+                        conditions: [
+                            { 
+                                column: 'checkInDate', 
+                                operator: 'equals', 
+                                value: today // YYYY-MM-DD Format
+                            }
+                        ],
+                        operators: []
+                    };
+
+                    await axiosInstance.post(
+                        `${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+                        hoyFilter,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            }
+                        }
+                    );
+                }
+            } catch (error) {
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('Fehler beim Erstellen der Standard-Filter für Reservations:', error);
+                }
+            }
+        };
+
+        createReservationStandardFilters();
     }, []);
 
     // getStatusColor und getStatusText werden jetzt von statusUtils verwendet (siehe getStatusLabel oben)
@@ -2764,15 +2829,6 @@ const Worktracker: React.FC = () => {
                                 </div>
                             ) : null}
                             
-                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Reservations */}
-                            {activeTab === 'reservations' && reservationsHasMore && (
-                                <div ref={reservationsLoadMoreRef} className="flex justify-center py-4">
-                                    {reservationsLoadingMore && (
-                                        <CircularProgress size={24} />
-                                    )}
-                                </div>
-                            )}
-                            
                             {/* Reservations Rendering - Cards */}
                             {activeTab === 'reservations' && viewMode === 'cards' && (
                                 <div className="-mx-3 sm:-mx-4 md:-mx-6">
@@ -3055,6 +3111,15 @@ const Worktracker: React.FC = () => {
                                                 );
                                             })}
                                         </CardGrid>
+                                    )}
+                                </div>
+                            )}
+                            
+                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Reservations */}
+                            {activeTab === 'reservations' && reservationsHasMore && (
+                                <div ref={reservationsLoadMoreRef} className="flex justify-center py-4">
+                                    {reservationsLoadingMore && (
+                                        <CircularProgress size={24} />
                                     )}
                                 </div>
                             )}
@@ -4065,15 +4130,6 @@ const Worktracker: React.FC = () => {
                                 </div>
                             ) : null}
                             
-                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Reservations */}
-                            {activeTab === 'reservations' && reservationsHasMore && (
-                                <div ref={reservationsLoadMoreRef} className="flex justify-center py-4">
-                                    {reservationsLoadingMore && (
-                                        <CircularProgress size={24} />
-                                    )}
-                                </div>
-                            )}
-                            
                             {/* Reservations Rendering - Desktop - Cards */}
                             {activeTab === 'reservations' && viewMode === 'cards' && (
                                 <div className="-mx-3 sm:-mx-4 md:-mx-6">
@@ -4345,6 +4401,15 @@ const Worktracker: React.FC = () => {
                                                 );
                                             })}
                                         </CardGrid>
+                                    )}
+                                </div>
+                            )}
+                            
+                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Reservations (Desktop) */}
+                            {activeTab === 'reservations' && reservationsHasMore && (
+                                <div ref={reservationsLoadMoreRef} className="flex justify-center py-4">
+                                    {reservationsLoadingMore && (
+                                        <CircularProgress size={24} />
                                     )}
                                 </div>
                             )}
