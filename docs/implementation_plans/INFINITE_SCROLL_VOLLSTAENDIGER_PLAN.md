@@ -926,3 +926,4 @@ useEffect(() => {
 **Status:** 🔴 KRITISCH - Muss umgesetzt werden  
 **Nächster Schritt:** Phase 1 umsetzen (Backend - Pagination entfernen)
 
+

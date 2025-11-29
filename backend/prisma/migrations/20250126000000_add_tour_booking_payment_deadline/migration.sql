@@ -6,3 +6,4 @@ ADD COLUMN "reservedUntil" TIMESTAMP(3);
 -- CreateIndex
 CREATE INDEX "TourBooking_paymentDeadline_idx" ON "TourBooking"("paymentDeadline");
 
+

@@ -271,3 +271,4 @@ description: room.type === 'compartida'
 **Erstellt:** 2025-01-26  
 **Status:** Alle Probleme identifiziert, Fixes geplant
 
+

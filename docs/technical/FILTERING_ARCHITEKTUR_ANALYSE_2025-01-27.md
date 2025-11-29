@@ -373,3 +373,4 @@ setEntities(response.data?.data || response.data || []);
 **Autor:** Claude (Auto)  
 **Status:** ✅ Analyse abgeschlossen
 
+

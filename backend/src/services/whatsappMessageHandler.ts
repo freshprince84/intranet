@@ -211,9 +211,9 @@ export class WhatsAppMessageHandler {
 
       // Keyword: "pin" / "code" / "pincode" / "código" / etc. - NUR TTLock Passcode (aus DB)
       const pincodeKeywords = ['pin', 'pincode', 'pin code', 'código pin', 'codigo pin', 'code', 'código', 'codigo', 'password', 'verloren', 'lost', 'perdido', 'acceso'];
-      if (pincodeKeywords.includes(normalizedText) && conversation.state === 'idle') {
+      if (pincodeKeywords.some(keyword => normalizedText.includes(keyword)) && conversation.state === 'idle') {
         // Alle Code-Keywords geben jetzt NUR TTLock Passcode zurück (aus DB, nicht generiert!)
-        return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation, true); // true = Pincode-Anfrage
+        return await this.handleGuestCodeRequest(normalizedPhone, branchId, conversation, true, messageText); // true = Pincode-Anfrage
       }
 
       // 5. Prüfe Conversation State (für mehrstufige Interaktionen)
@@ -1132,21 +1132,21 @@ export class WhatsAppMessageHandler {
     phoneNumber: string,
     branchId: number,
     conversation: any,
-    isPincodeRequest: boolean = false
+    isPincodeRequest: boolean = false,
+    messageText?: string | null
   ): Promise<string> {
     try {
       // Versuche zuerst via Telefonnummer zu identifizieren
       const reservation = await WhatsAppGuestService.identifyGuestByPhone(phoneNumber, branchId);
       
       if (reservation) {
-        const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
-        
-        // NEU: Wenn Pincode-Anfrage, verwende buildPincodeMessage()
+        // NEU: Wenn Pincode-Anfrage, verwende buildPincodeMessage() mit Sprache-Erkennung aus Nachricht
         if (isPincodeRequest) {
-          return WhatsAppGuestService.buildPincodeMessage(reservation, language);
+          return WhatsAppGuestService.buildPincodeMessage(reservation, undefined, messageText);
         }
         
         // Sonst: Normale Code-Anfrage mit buildStatusMessage()
+        const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
         return await WhatsAppGuestService.buildStatusMessage(reservation, language);
       }
 
@@ -1159,7 +1159,8 @@ export class WhatsAppMessageHandler {
           context: {
             step: 'name',
             collectedData: {},
-            requestType: isPincodeRequest ? 'pincode' : 'code'
+            requestType: isPincodeRequest ? 'pincode' : 'code',
+            originalMessage: messageText || null // Speichere ursprüngliche Nachricht für Sprache-Erkennung
           }
         }
       });
@@ -1316,7 +1317,9 @@ export class WhatsAppMessageHandler {
           
           // Prüfe ob Pincode-Anfrage oder normale Code-Anfrage
           if (context.requestType === 'pincode') {
-            return WhatsAppGuestService.buildPincodeMessage(reservations[0], language);
+            // Verwende ursprüngliche Nachricht für Sprache-Erkennung, falls vorhanden
+            const originalMessage = context.originalMessage || messageText;
+            return WhatsAppGuestService.buildPincodeMessage(reservations[0], undefined, originalMessage);
           } else {
             return await WhatsAppGuestService.buildStatusMessage(reservations[0], language);
           }
@@ -1425,7 +1428,9 @@ export class WhatsAppMessageHandler {
           
           // Prüfe ob Pincode-Anfrage oder normale Code-Anfrage
           if (context.requestType === 'pincode') {
-            return WhatsAppGuestService.buildPincodeMessage(reservations[0], language);
+            // Verwende ursprüngliche Nachricht für Sprache-Erkennung, falls vorhanden
+            const originalMessage = context.originalMessage || messageText;
+            return WhatsAppGuestService.buildPincodeMessage(reservations[0], undefined, originalMessage);
           } else {
             return await WhatsAppGuestService.buildStatusMessage(reservations[0], language);
           }
