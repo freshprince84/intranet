@@ -156,9 +156,16 @@ export const getAllRequests = async (req: Request, res: Response) => {
             : { AND: baseWhereConditions };
         
         // ✅ PAGINATION: totalCount für Infinite Scroll
-        const totalCount = await prisma.request.count({
-            where: whereClause
-        });
+        let totalCount = 0;
+        try {
+            totalCount = await prisma.request.count({
+                where: whereClause
+            });
+        } catch (countError) {
+            console.error('[getAllRequests] Fehler beim Zählen der Requests:', countError);
+            // Fallback: Verwende 0, wird später durch tatsächliche Anzahl ersetzt
+            totalCount = 0;
+        }
         
         const queryStartTime = Date.now();
         const requests = await prisma.request.findMany({
@@ -190,7 +197,14 @@ export const getAllRequests = async (req: Request, res: Response) => {
             }
         });
         const queryDuration = Date.now() - queryStartTime;
-        console.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests in ${queryDuration}ms`);
+        console.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests (${offset}-${offset + requests.length} von ${totalCount}) in ${queryDuration}ms`);
+        
+        // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
+        if (totalCount === 0 && requests.length > 0) {
+            // Fallback: Wenn wir Items haben, aber totalCount fehlt, schätze basierend auf offset + length
+            // Dies ist nur ein Fallback, normalerweise sollte totalCount korrekt sein
+            totalCount = offset + requests.length;
+        }
 
         // Formatiere die Daten für die Frontend-Nutzung
         const formattedRequests = requests.map(request => ({
