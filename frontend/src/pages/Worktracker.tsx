@@ -403,14 +403,12 @@ const Worktracker: React.FC = () => {
         return () => {
             // Tasks
             setTasks([]);
-            setAllTasks([]);
             
             // Reservations
             setReservations([]);
             
             // Tour Bookings
             setTourBookings([]);
-            setAllTourBookings([]);
             
             // Filter States (können auch groß sein)
             setFilterConditions([]);
@@ -418,37 +416,9 @@ const Worktracker: React.FC = () => {
         };
     }, []); // Nur beim Unmount ausführen
 
-    // ✅ MEMORY: allTasks intelligent löschen (nur wenn nicht mehr benötigt - Best Practice)
-    // Löscht wenn: Standardfilter aktiviert wird ODER Tab gewechselt wird
-    useEffect(() => {
-        // Löschen wenn Standardfilter aktiviert wird (allTasks nicht mehr benötigt)
-        if (selectedFilterId && allTasks.length > 0) {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('🧹 allTasks gelöscht (Standardfilter aktiviert)');
-            }
-            setAllTasks([]);
-            return;
-        }
-        
-        // Löschen wenn Tab gewechselt wird (allTasks nicht mehr benötigt)
-        if (activeTab !== 'todos' && allTasks.length > 0) {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('🧹 allTasks gelöscht (Tab gewechselt)');
-            }
-            setAllTasks([]);
-        }
-    }, [selectedFilterId, activeTab, allTasks.length]);
+    // ❌ ENTFERNEN: allTasks wird nicht mehr benötigt (Pagination lädt nur benötigte Items)
 
-    // ✅ MEMORY: allTourBookings intelligent löschen (nur wenn nicht mehr benötigt - Best Practice)
-    // Löscht wenn: Tab gewechselt wird
-    useEffect(() => {
-        if (activeTab !== 'tourBookings' && allTourBookings.length > 0) {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('🧹 allTourBookings gelöscht (Tab gewechselt)');
-            }
-            setAllTourBookings([]);
-        }
-    }, [activeTab, allTourBookings.length]);
+    // ❌ ENTFERNEN: allTourBookings wird nicht mehr benötigt (Pagination lädt nur benötigte Items)
 
     // Tabellen-Einstellungen laden - Tasks
     const {
@@ -1381,12 +1351,12 @@ const Worktracker: React.FC = () => {
         // ✅ FAKT: Wenn selectedFilterId gesetzt ist, wurden Tasks bereits server-seitig gefiltert
         // ✅ FAKT: Wenn filterConditions gesetzt sind (ohne selectedFilterId), wurden Tasks bereits server-seitig gefiltert
         // ✅ NUR searchTerm wird client-seitig gefiltert (nicht server-seitig)
-        // ✅ allTasks wird nur verwendet wenn kein Filter gesetzt ist (für komplexe client-seitige Filter)
-        const tasksToFilter = (allTasks.length > 0 && !selectedFilterId && filterConditions.length === 0) ? allTasks : tasks;
+        // ✅ PAGINATION: Verwende tasks (bereits server-seitig gefiltert und paginiert)
+        const tasksToFilter = tasks;
         
         if (process.env.NODE_ENV === 'development') {
             console.log('🔄 Filtere Tasks:', tasksToFilter.length, 'Tasks vorhanden');
-            console.log('🔄 Verwende:', allTasks.length > 0 && !selectedFilterId && filterConditions.length === 0 ? 'allTasks (client-seitig)' : 'tasks (server-seitig gefiltert)');
+            // ✅ PAGINATION: tasks werden server-seitig gefiltert und paginiert
         }
         
         // Sicherstellen, dass keine undefined/null Werte im Array sind
@@ -1409,9 +1379,7 @@ const Worktracker: React.FC = () => {
                 
                 // ❌ ENTFERNEN: Client-seitige Filterung wenn selectedFilterId oder filterConditions gesetzt sind
                 // ✅ Server hat bereits gefiltert, keine doppelte Filterung mehr
-                // ✅ Nur wenn allTasks verwendet wird UND kein Filter gesetzt ist, wird client-seitig gefiltert
-                // ABER: filterConditions werden immer an Server gesendet (Zeile 599-602), daher wird nie allTasks mit Filter verwendet
-                // → Keine client-seitige Filterung mehr nötig
+                // ✅ PAGINATION: Server hat bereits gefiltert, keine client-seitige Filterung mehr nötig
                 
                 return true;
             });
@@ -1554,7 +1522,7 @@ const Worktracker: React.FC = () => {
             console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         }
         return sorted;
-    }, [tasks, allTasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]);
+    }, [tasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]);
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {
