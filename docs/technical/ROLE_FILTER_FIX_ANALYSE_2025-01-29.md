@@ -1,7 +1,7 @@
 # Rollen-Filter Fix - Detaillierte Analyse und Fix-Plan
 
 **Datum:** 2025-01-29  
-**Status:** 📋 ANALYSE ABGESCHLOSSEN - Wartet auf Zustimmung  
+**Status:** ✅ IMPLEMENTIERT  
 **Priorität:** 🔴 KRITISCH  
 **Performance-Ziel:** ⚡ Alle Änderungen müssen Performance-optimiert sein
 
@@ -606,6 +606,30 @@ if (table.id === 'requests-table') {
 ---
 
 **Erstellt:** 2025-01-29  
-**Status:** 📋 ANALYSE ABGESCHLOSSEN - Wartet auf Zustimmung  
-**Nächster Schritt:** Zustimmung einholen, dann Phase 1 umsetzen
+**Status:** ✅ IMPLEMENTIERT  
+**Umsetzung abgeschlossen:** 2025-01-29
+
+## ✅ IMPLEMENTIERTE ÄNDERUNGEN
+
+### Phase 1: FilterRow.tsx ✅
+1. ✅ Rollen laden - Nur bei Tasks (Zeile 144-155)
+   - Tabellen-Typ-Erkennung implementiert
+   - Rollen werden nur geladen wenn `responsible` oder `responsibleAndQualityControl` UND Tasks-Tabelle
+
+2. ✅ Rollen-Dropdown rendern - Nur bei Tasks (Zeile 253-290)
+   - `showRoles` Variable bestimmt ob Rollen angezeigt werden
+   - Rollen werden nur bei Tasks angezeigt, nicht bei Requests
+
+### Phase 2: Seed.ts ✅
+1. ✅ Rollen-Filter bei Requests entfernen (Zeile 1649-1682)
+   - Roles-Gruppe wird nur für Tasks erstellt, nicht für Requests
+   - Rollen-Filter werden nur für Tasks erstellt
+   - Requests: Nur User-Filter werden erstellt
+
+### Performance-Optimierungen ✅
+- ✅ Rollen werden nur geladen wenn nötig (nicht bei Requests)
+- ✅ Weniger API-Calls (`/roles` nur bei Tasks)
+- ✅ Weniger DOM-Elemente (nur relevante Optionen)
+- ✅ Filter-Caching bleibt erhalten (5 Minuten TTL)
+- ✅ Server-seitiges Filtering bleibt erhalten (keine doppelte Filterung)
 

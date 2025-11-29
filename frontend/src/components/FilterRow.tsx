@@ -141,8 +141,15 @@ const FilterRow: React.FC<FilterRowProps> = ({
           setLoadingUsers(false);
         }
         
-        // Rollen laden für requestedBy, responsible und responsibleAndQualityControl (nicht für qualityControl)
-        if (condition.column === 'requestedBy' || condition.column === 'responsible' || condition.column === 'responsibleAndQualityControl') {
+        // Tabellen-Typ erkennen (wie bei Status-Dropdown)
+        const isRequestTable = columns.some(col => col.id === 'requestedBy' || col.id === 'createTodo');
+        const isTaskTable = columns.some(col => col.id === 'responsible' || col.id === 'qualityControl');
+        
+        // Rollen laden NUR für Tasks, NICHT für Requests
+        // requestedBy: NUR bei Tasks (aber Tasks haben kein requestedBy, also nie)
+        // responsible: NUR bei Tasks
+        // responsibleAndQualityControl: NUR bei Tasks
+        if ((condition.column === 'responsible' || condition.column === 'responsibleAndQualityControl') && isTaskTable) {
           setLoadingRoles(true);
           try {
             const response = await axiosInstance.get('/roles');
@@ -253,12 +260,22 @@ const FilterRow: React.FC<FilterRowProps> = ({
     // Für requestedBy, responsible und responsibleAndQualityControl ein Dropdown mit Benutzern und Rollen rendern
     // WICHTIG: Diese Spalten müssen IMMER Dropdowns verwenden, keine Text-Eingabe
     if (columnId === 'requestedBy' || columnId === 'responsible' || columnId === 'responsibleAndQualityControl') {
+      // Tabellen-Typ erkennen (wie bei Status-Dropdown)
+      const isRequestTable = columns.some(col => col.id === 'requestedBy' || col.id === 'createTodo');
+      const isTaskTable = columns.some(col => col.id === 'responsible' || col.id === 'qualityControl');
+      
+      // Bestimme ob Rollen angezeigt werden sollen
+      // requestedBy: Nur Users (bei Requests, keine Rollen)
+      // responsible: Users + Roles (bei Tasks), nur Users (bei Requests)
+      // responsibleAndQualityControl: Users + Roles (bei Tasks)
+      const showRoles = (columnId === 'responsible' || columnId === 'responsibleAndQualityControl') && isTaskTable;
+      
       return (
         <select
           className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           value={value as string || ''}
           onChange={(e) => onChange(e.target.value)}
-          disabled={loadingUsers || loadingRoles}
+          disabled={loadingUsers || (showRoles && loadingRoles)}
         >
             <option value="">{t('filter.row.pleaseSelect')}</option>
           
@@ -272,7 +289,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
             </optgroup>
           )}
           
-          {roles.length > 0 && (
+          {showRoles && roles.length > 0 && (
             <optgroup label={t('filter.row.groups.roles')}>
               {roles.map(role => (
                 <option key={`role-${role.id}`} value={`role-${role.id}`}>
@@ -282,7 +299,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
             </optgroup>
           )}
           
-          {(loadingUsers || loadingRoles) && (
+          {(loadingUsers || (showRoles && loadingRoles)) && (
             <option value="" disabled>{t('filter.row.loadingData')}</option>
           )}
         </select>
