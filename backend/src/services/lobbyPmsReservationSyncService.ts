@@ -66,20 +66,16 @@ export class LobbyPmsReservationSyncService {
         return 0;
       }
 
-      // OPTIMIERUNG: Verwende lastSyncAt wenn vorhanden, sonst letzte 24h
+      // WICHTIG: Immer die letzten 24 Stunden prüfen (Erstellungsdatum)
       let syncStartDate: Date;
       if (startDate) {
         // Explizites startDate übergeben (z.B. manueller Sync)
         syncStartDate = startDate;
         console.log(`[LobbyPmsSync] Branch ${branchId}: Verwende explizites startDate: ${syncStartDate.toISOString()}`);
-      } else if (branch.lobbyPmsLastSyncAt) {
-        // Verwende letzte Sync-Zeit (z.B. vor 10 Minuten)
-        syncStartDate = branch.lobbyPmsLastSyncAt;
-        console.log(`[LobbyPmsSync] Branch ${branchId}: Verwende letzte Sync-Zeit: ${syncStartDate.toISOString()}`);
       } else {
-        // Erster Sync: letzte 24 Stunden
+        // Immer letzte 24 Stunden (Erstellungsdatum)
         syncStartDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        console.log(`[LobbyPmsSync] Branch ${branchId}: Erster Sync, verwende letzte 24 Stunden`);
+        console.log(`[LobbyPmsSync] Branch ${branchId}: Prüfe Reservierungen mit Erstellungsdatum in den letzten 24 Stunden`);
       }
 
       // Erstelle LobbyPMS Service für Branch

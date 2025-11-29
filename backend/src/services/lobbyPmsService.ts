@@ -921,33 +921,41 @@ export class LobbyPmsService {
       branchId: branchId,
     };
 
-    // Upsert: Erstelle oder aktualisiere Reservierung
-    const reservation = await prisma.reservation.upsert({
+    // Prüfe ob Reservation schon existiert - wenn ja, überspringen
+    const existingReservation = await prisma.reservation.findUnique({
       where: {
         lobbyReservationId: bookingId
-      },
-      create: reservationData,
-      update: reservationData
+      }
     });
 
-      // Erstelle Sync-History-Eintrag
-      await prisma.reservationSyncHistory.create({
-        data: {
-          reservationId: reservation.id,
-          syncType: 'updated',
-          syncData: lobbyReservation as any,
-        }
-      });
+    if (existingReservation) {
+      // Reservation bereits in DB - weglassen
+      return existingReservation;
+    }
 
-      // Erstelle automatisch Task wenn aktiviert
-      try {
-        await TaskAutomationService.createReservationTask(reservation, this.organizationId);
-      } catch (error) {
-        console.error(`[LobbyPMS] Fehler beim Erstellen des Tasks für Reservierung ${reservation.id}:`, error);
-        // Fehler nicht weiterwerfen, da Task-Erstellung optional ist
+    // Erstelle neue Reservierung
+    const reservation = await prisma.reservation.create({
+      data: reservationData
+    });
+
+    // Erstelle Sync-History-Eintrag (nur für neue Reservierungen)
+    await prisma.reservationSyncHistory.create({
+      data: {
+        reservationId: reservation.id,
+        syncType: 'created',
+        syncData: lobbyReservation as any,
       }
+    });
 
-      return reservation;
+    // Erstelle automatisch Task wenn aktiviert (nur für neue Reservierungen)
+    try {
+      await TaskAutomationService.createReservationTask(reservation, this.organizationId);
+    } catch (error) {
+      console.error(`[LobbyPMS] Fehler beim Erstellen des Tasks für Reservierung ${reservation.id}:`, error);
+      // Fehler nicht weiterwerfen, da Task-Erstellung optional ist
+    }
+
+    return reservation;
   }
 
   /**
@@ -969,8 +977,23 @@ export class LobbyPmsService {
 
     for (const lobbyReservation of lobbyReservations) {
       try {
-        await this.syncReservation(lobbyReservation);
-        syncedCount++;
+        const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id || 'unknown');
+        
+        // Prüfe ob Reservation schon existiert - wenn ja, überspringen
+        const existingReservation = await prisma.reservation.findUnique({
+          where: { lobbyReservationId: bookingId }
+        });
+        
+        if (existingReservation) {
+          // Reservation bereits in DB - weglassen
+          continue;
+        }
+        
+        // Importiere nur neue Reservierungen
+        const reservation = await this.syncReservation(lobbyReservation);
+        if (reservation) {
+          syncedCount++;
+        }
       } catch (error) {
         const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id || 'unknown');
         console.error(`[LobbyPMS] Fehler beim Synchronisieren der Reservierung ${bookingId}:`, error);
