@@ -396,6 +396,16 @@ const Requests: React.FC = () => {
       const response = await axiosInstance.get('/requests', { params });
       const responseData = response.data;
       
+      // ✅ DEBUG: Log Response-Struktur
+      console.log('[Requests] Response-Struktur:', {
+        isObject: typeof responseData === 'object',
+        hasData: responseData?.data !== undefined,
+        dataIsArray: Array.isArray(responseData?.data),
+        responseDataIsArray: Array.isArray(responseData),
+        keys: responseData ? Object.keys(responseData) : [],
+        dataType: responseData?.data ? typeof responseData.data : 'undefined'
+      });
+      
       // ✅ PAGINATION: Response-Struktur mit totalCount
       // Sicherstellen, dass requestsData immer ein Array ist
       let requestsData: Request[] = [];
@@ -415,7 +425,31 @@ const Requests: React.FC = () => {
           requestsData = responseData;
           totalCount = requestsData.length;
           hasMore = false;
+        } else {
+          // ❌ FEHLER: responseData ist ein Objekt, aber data ist kein Array
+          console.error('[Requests] ❌ FEHLER: responseData.data ist kein Array!', {
+            responseData,
+            data: responseData.data,
+            dataType: typeof responseData.data
+          });
+          throw new Error(`Ungültige Response-Struktur: responseData.data ist kein Array (Typ: ${typeof responseData.data})`);
         }
+      } else {
+        // ❌ FEHLER: responseData ist kein Objekt
+        console.error('[Requests] ❌ FEHLER: responseData ist kein Objekt!', {
+          responseData,
+          type: typeof responseData
+        });
+        throw new Error(`Ungültige Response-Struktur: responseData ist kein Objekt (Typ: ${typeof responseData})`);
+      }
+      
+      // ✅ Sicherheitsprüfung: requestsData muss ein Array sein
+      if (!Array.isArray(requestsData)) {
+        console.error('[Requests] ❌ FEHLER: requestsData ist kein Array!', {
+          requestsData,
+          type: typeof requestsData
+        });
+        throw new Error(`Ungültige Response-Struktur: requestsData ist kein Array (Typ: ${typeof requestsData})`);
       }
       
       // Attachments sind bereits in der Response enthalten

@@ -613,6 +613,16 @@ const Worktracker: React.FC = () => {
             const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE, { params });
             const responseData = response.data;
             
+            // ✅ DEBUG: Log Response-Struktur
+            console.log('[Worktracker Tasks] Response-Struktur:', {
+                isObject: typeof responseData === 'object',
+                hasData: responseData?.data !== undefined,
+                dataIsArray: Array.isArray(responseData?.data),
+                responseDataIsArray: Array.isArray(responseData),
+                keys: responseData ? Object.keys(responseData) : [],
+                dataType: responseData?.data ? typeof responseData.data : 'undefined'
+            });
+            
             // ✅ PAGINATION: Response-Struktur mit totalCount
             // Sicherstellen, dass tasksData immer ein Array ist
             let tasksData: Task[] = [];
@@ -632,7 +642,31 @@ const Worktracker: React.FC = () => {
                     tasksData = responseData;
                     totalCount = tasksData.length;
                     hasMore = false;
+                } else {
+                    // ❌ FEHLER: responseData ist ein Objekt, aber data ist kein Array
+                    console.error('[Worktracker Tasks] ❌ FEHLER: responseData.data ist kein Array!', {
+                        responseData,
+                        data: responseData.data,
+                        dataType: typeof responseData.data
+                    });
+                    throw new Error(`Ungültige Response-Struktur: responseData.data ist kein Array (Typ: ${typeof responseData.data})`);
                 }
+            } else {
+                // ❌ FEHLER: responseData ist kein Objekt
+                console.error('[Worktracker Tasks] ❌ FEHLER: responseData ist kein Objekt!', {
+                    responseData,
+                    type: typeof responseData
+                });
+                throw new Error(`Ungültige Response-Struktur: responseData ist kein Objekt (Typ: ${typeof responseData})`);
+            }
+            
+            // ✅ Sicherheitsprüfung: tasksData muss ein Array sein
+            if (!Array.isArray(tasksData)) {
+                console.error('[Worktracker Tasks] ❌ FEHLER: tasksData ist kein Array!', {
+                    tasksData,
+                    type: typeof tasksData
+                });
+                throw new Error(`Ungültige Response-Struktur: tasksData ist kein Array (Typ: ${typeof tasksData})`);
             }
             
             // Attachments sind bereits in der Response enthalten
@@ -670,11 +704,20 @@ const Worktracker: React.FC = () => {
             setTasksHasMore(hasMore);
             setError(null);
         } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
-                console.error('Fehler beim Laden der Tasks:', error);
-            }
+            console.error('[Worktracker Tasks] Fehler beim Laden:', error);
+            const axiosError = error as any;
             if (!append) {
-                setError(t('worktime.messages.tasksLoadError'));
+                // Zeige detaillierte Fehlermeldung
+                const errorMessage = axiosError.response?.data?.message 
+                    || axiosError.response?.data?.error 
+                    || axiosError.message 
+                    || t('worktime.messages.tasksLoadError');
+                console.error('[Worktracker Tasks] Error Details:', {
+                    message: errorMessage,
+                    status: axiosError.response?.status,
+                    data: axiosError.response?.data
+                });
+                setError(errorMessage);
             }
         } finally {
             if (!append) {

@@ -137,9 +137,16 @@ export const getAllTasks = async (req: Request, res: Response) => {
             : { AND: baseWhereConditions };
         
         // ✅ PAGINATION: totalCount für Infinite Scroll
-        const totalCount = await prisma.task.count({
-            where: whereClause
-        });
+        let totalCount = 0;
+        try {
+            totalCount = await prisma.task.count({
+                where: whereClause
+            });
+        } catch (countError) {
+            console.error('[getAllTasks] Fehler beim Zählen der Tasks:', countError);
+            // Fallback: Verwende 0, wird später durch tatsächliche Anzahl ersetzt
+            totalCount = 0;
+        }
         
         const queryStartTime = Date.now();
         const tasks = await prisma.task.findMany({
@@ -174,14 +181,38 @@ export const getAllTasks = async (req: Request, res: Response) => {
         const queryDuration = Date.now() - queryStartTime;
         console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
         
+        // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
+        if (totalCount === 0 && tasks.length > 0) {
+            // Fallback: Wenn wir Items haben, aber totalCount fehlt, schätze basierend auf offset + length
+            totalCount = offset + tasks.length;
+        }
+        
+        // ✅ Sicherstellen, dass tasks ein Array ist
+        if (!Array.isArray(tasks)) {
+            console.error('[getAllTasks] ❌ FEHLER: tasks ist kein Array!', {
+                tasks,
+                type: typeof tasks
+            });
+            throw new Error('tasks ist kein Array');
+        }
+        
         // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
-        res.json({
+        const response = {
             data: tasks,
             totalCount: totalCount,
             limit: limit,
             offset: offset,
             hasMore: offset + tasks.length < totalCount
+        };
+        
+        console.log('[getAllTasks] ✅ Response vorbereitet:', {
+            dataLength: response.data.length,
+            totalCount: response.totalCount,
+            hasMore: response.hasMore,
+            dataIsArray: Array.isArray(response.data)
         });
+        
+        res.json(response);
     } catch (error) {
         console.error('Fehler beim Abrufen der Tasks:', error);
         res.status(500).json({ 
