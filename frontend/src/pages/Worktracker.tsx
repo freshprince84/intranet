@@ -331,17 +331,19 @@ const Worktracker: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'todos' | 'reservations' | 'tourBookings'>('todos');
     
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [allTasks, setAllTasks] = useState<Task[]>([]); // Alle Tasks (für Hintergrund-Laden und Filter-Wechsel)
+    const [tasksTotalCount, setTasksTotalCount] = useState<number>(0); // ✅ PAGINATION: Gesamtanzahl
+    const [tasksHasMore, setTasksHasMore] = useState<boolean>(true); // ✅ PAGINATION: Gibt es noch weitere Items?
+    const [tasksLoadingMore, setTasksLoadingMore] = useState<boolean>(false); // ✅ PAGINATION: Lädt weitere Items
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
-    // ✅ Infinite Scroll für Anzeige (KEINE Pagination beim Laden)
-    const [tasksDisplayLimit, setTasksDisplayLimit] = useState<number>(20); // Initial: 20 Items (wird basierend auf viewMode gesetzt)
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
     
     // Reservations-States
     const [reservations, setReservations] = useState<Reservation[]>([]);
+    const [reservationsTotalCount, setReservationsTotalCount] = useState<number>(0); // ✅ PAGINATION: Gesamtanzahl
+    const [reservationsHasMore, setReservationsHasMore] = useState<boolean>(true); // ✅ PAGINATION: Gibt es noch weitere Items?
+    const [reservationsLoadingMore, setReservationsLoadingMore] = useState<boolean>(false); // ✅ PAGINATION: Lädt weitere Items
     const [reservationsLoading, setReservationsLoading] = useState(false);
     const [reservationsError, setReservationsError] = useState<string | null>(null);
     const [reservationSearchTerm, setReservationSearchTerm] = useState('');
@@ -358,7 +360,9 @@ const Worktracker: React.FC = () => {
     
     // Tour-Bookings States
     const [tourBookings, setTourBookings] = useState<TourBooking[]>([]);
-    const [allTourBookings, setAllTourBookings] = useState<TourBooking[]>([]);
+    const [tourBookingsTotalCount, setTourBookingsTotalCount] = useState<number>(0); // ✅ PAGINATION: Gesamtanzahl
+    const [tourBookingsHasMore, setTourBookingsHasMore] = useState<boolean>(true); // ✅ PAGINATION: Gibt es noch weitere Items?
+    const [tourBookingsLoadingMore, setTourBookingsLoadingMore] = useState<boolean>(false); // ✅ PAGINATION: Lädt weitere Items
     const [tourBookingsLoading, setTourBookingsLoading] = useState(false);
     const [tourBookingsError, setTourBookingsError] = useState<string | null>(null);
     const [tourBookingsSearchTerm, setTourBookingsSearchTerm] = useState('');
@@ -488,7 +492,6 @@ const Worktracker: React.FC = () => {
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-    const [reservationsDisplayLimit, setReservationsDisplayLimit] = useState<number>(10); // Für Reservations (wird zu displayLimit)
 
     // Expand/Collapse States für Reservations (analog zu MonthlyReports)
     const [expandedReservationRows, setExpandedReservationRows] = useState<Set<number>>(new Set());
@@ -577,20 +580,25 @@ const Worktracker: React.FC = () => {
     // (auch bei React.StrictMode doppelter Ausführung)
     const hasLoadedRef = useRef(false);
 
-    // ✅ PERFORMANCE: loadTasks als useCallback (stabile Referenz für useEffect)
-    // ❌ KEINE Pagination mehr - immer ALLE Ergebnisse laden
+    // ✅ PAGINATION: loadTasks mit Pagination
     const loadTasks = useCallback(async (
         filterId?: number, 
         filterConditions?: any[], 
-        background = false
+        append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
+        limit = 20,
+        offset = 0
     ) => {
         try {
-            if (!background) {
+            if (!append) {
                 setLoading(true);
+            } else {
+                setTasksLoadingMore(true);
             }
             
-            // Baue Query-Parameter (❌ KEINE limit/offset Parameter mehr)
+            // ✅ PAGINATION: limit/offset Parameter
             const params: any = {
+                limit: limit,
+                offset: offset,
                 includeAttachments: 'false' // ✅ PERFORMANCE: Attachments optional - nur laden wenn benötigt
             };
             if (filterId) {
@@ -603,12 +611,32 @@ const Worktracker: React.FC = () => {
             }
             
             const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE, { params });
-            const tasksData = response.data;
+            const responseData = response.data;
             
-            // ✅ ALLE Tasks werden geladen (kein limit/offset)
+            // ✅ PAGINATION: Response-Struktur mit totalCount
+            // Sicherstellen, dass tasksData immer ein Array ist
+            let tasksData: Task[] = [];
+            let totalCount = 0;
+            let hasMore = false;
+            
+            if (responseData && typeof responseData === 'object') {
+                // Neue Response-Struktur: { data: [...], totalCount: ..., hasMore: ... }
+                if (Array.isArray(responseData.data)) {
+                    tasksData = responseData.data;
+                    totalCount = responseData.totalCount || tasksData.length;
+                    hasMore = responseData.hasMore !== undefined 
+                        ? responseData.hasMore 
+                        : (offset + tasksData.length < totalCount);
+                } else if (Array.isArray(responseData)) {
+                    // Fallback: Alte Response-Struktur (direktes Array)
+                    tasksData = responseData;
+                    totalCount = tasksData.length;
+                    hasMore = false;
+                }
+            }
+            
             // Attachments sind bereits in der Response enthalten
             // URL-Generierung für Attachments hinzufügen
-            // Sicherstellen, dass keine undefined/null Werte im Array sind
             const tasksWithAttachments = tasksData
                 .filter((task: Task) => task != null)
                 .map((task: Task) => {
@@ -630,41 +658,32 @@ const Worktracker: React.FC = () => {
                     };
                 });
             
-            // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
-            const MAX_ITEMS_IN_STATE = 100;
-            const tasksToStore = tasksWithAttachments.length > MAX_ITEMS_IN_STATE
-                ? tasksWithAttachments.slice(-MAX_ITEMS_IN_STATE)
-                : tasksWithAttachments;
-            
-            if (background) {
-                // Hintergrund-Laden: Speichere in allTasks
-                if (process.env.NODE_ENV === 'development') {
-                    console.log('📋 Alle Tasks im Hintergrund geladen:', tasksWithAttachments.length, 'Tasks');
-                }
-                setAllTasks(tasksToStore);
+            if (append) {
+                // ✅ PAGINATION: Items anhängen (Infinite Scroll)
+                setTasks(prev => [...prev, ...tasksWithAttachments]);
             } else {
-                // Initiales Laden: Ersetze Tasks (ALLE werden geladen)
-                if (process.env.NODE_ENV === 'development') {
-                    console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks (alle)');
-                }
-                setTasks(tasksToStore);
-                // ✅ Initial displayLimit setzen (abhängig von viewMode)
-                setTasksDisplayLimit(viewMode === 'cards' ? 10 : 20);
+                // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
+                setTasks(tasksWithAttachments);
             }
+            
+            setTasksTotalCount(totalCount);
+            setTasksHasMore(hasMore);
             setError(null);
         } catch (error) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('Fehler beim Laden der Tasks:', error);
             }
-            if (!background) {
+            if (!append) {
                 setError(t('worktime.messages.tasksLoadError'));
             }
         } finally {
-            if (!background) {
+            if (!append) {
                 setLoading(false);
+            } else {
+                setTasksLoadingMore(false);
             }
         }
-    }, [filterLogicalOperators, t, viewMode]);
+    }, [filterLogicalOperators, t]);
     
     // ❌ loadMoreTasks entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
@@ -673,7 +692,7 @@ const Worktracker: React.FC = () => {
             setGeneratingPinForReservation(reservationId);
             await reservationService.generatePinAndSend(reservationId);
             showMessage(t('reservations.pinGeneratedAndSent', 'PIN-Code generiert und Mitteilung versendet'), 'success');
-            await loadReservations(); // Aktualisiere Liste
+            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Aktualisiere Liste
         } catch (error: any) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
@@ -687,14 +706,27 @@ const Worktracker: React.FC = () => {
         }
     };
 
-    // Funktion zum Laden der Reservations (mit Filter-Parameter)
-    const loadReservations = async (filterId?: number, filterConditions?: any[]) => {
+    // ✅ PAGINATION: loadReservations mit Pagination
+    const loadReservations = async (
+        filterId?: number, 
+        filterConditions?: any[],
+        append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
+        limit = 20,
+        offset = 0
+    ) => {
         try {
-            setReservationsLoading(true);
+            if (!append) {
+                setReservationsLoading(true);
+            } else {
+                setReservationsLoadingMore(true);
+            }
             setReservationsError(null);
             
-            // Baue Query-Parameter (Filter server-seitig)
-            const params: any = {};
+            // ✅ PAGINATION: limit/offset Parameter
+            const params: any = {
+                limit: limit,
+                offset: offset
+            };
             if (filterId) {
                 params.filterId = filterId;
             } else if (filterConditions && filterConditions.length > 0) {
@@ -705,31 +737,62 @@ const Worktracker: React.FC = () => {
             }
             
             const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE, { params });
-            const reservationsData = response.data?.data || response.data || [];
+            const responseData = response.data;
             
-            // ✅ ALLE gefilterten Reservierungen werden geladen (server-seitig gefiltert)
-            if (process.env.NODE_ENV === 'development') {
-                console.log('📋 Reservations geladen:', reservationsData.length, 'Reservations (alle, gefiltert)');
+            // ✅ PAGINATION: Response-Struktur mit totalCount
+            // Sicherstellen, dass reservationsData immer ein Array ist
+            let reservationsData: Reservation[] = [];
+            let totalCount = 0;
+            let hasMore = false;
+            
+            if (responseData && typeof responseData === 'object') {
+                // Neue Response-Struktur: { success: true, data: [...], totalCount: ..., hasMore: ... }
+                if (responseData.success && Array.isArray(responseData.data)) {
+                    reservationsData = responseData.data;
+                    totalCount = responseData.totalCount || reservationsData.length;
+                    hasMore = responseData.hasMore !== undefined 
+                        ? responseData.hasMore 
+                        : (offset + reservationsData.length < totalCount);
+                } else if (Array.isArray(responseData.data)) {
+                    // Fallback: { data: [...] } ohne success
+                    reservationsData = responseData.data;
+                    totalCount = responseData.totalCount || reservationsData.length;
+                    hasMore = responseData.hasMore !== undefined 
+                        ? responseData.hasMore 
+                        : (offset + reservationsData.length < totalCount);
+                } else if (Array.isArray(responseData)) {
+                    // Fallback: Alte Response-Struktur (direktes Array)
+                    reservationsData = responseData;
+                    totalCount = reservationsData.length;
+                    hasMore = false;
+                }
             }
             
-            // ✅ MEMORY: Nur max 100 Items im State behalten (alte Items automatisch entfernen)
-            const MAX_ITEMS_IN_STATE = 100;
-            const reservationsToStore = reservationsData.length > MAX_ITEMS_IN_STATE
-                ? reservationsData.slice(-MAX_ITEMS_IN_STATE)
-                : reservationsData;
+            if (append) {
+                // ✅ PAGINATION: Items anhängen (Infinite Scroll)
+                setReservations(prev => [...prev, ...reservationsData]);
+            } else {
+                // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
+                setReservations(reservationsData);
+            }
             
-            setReservations(reservationsToStore);
-            // ✅ Initial displayLimit setzen (abhängig von viewMode)
-            setReservationsDisplayLimit(viewMode === 'cards' ? 10 : 20);
+            setReservationsTotalCount(totalCount);
+            setReservationsHasMore(hasMore);
         } catch (err: any) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('Fehler beim Laden der Reservations:', err);
             }
             const errorMessage = err.response?.data?.message || t('reservations.loadError', 'Fehler beim Laden der Reservations');
-            setReservationsError(errorMessage);
-            showMessage(errorMessage, 'error');
+            if (!append) {
+                setReservationsError(errorMessage);
+                showMessage(errorMessage, 'error');
+            }
         } finally {
-            setReservationsLoading(false);
+            if (!append) {
+                setReservationsLoading(false);
+            } else {
+                setReservationsLoadingMore(false);
+            }
         }
     };
 
@@ -746,15 +809,15 @@ const Worktracker: React.FC = () => {
                     setReservationSelectedFilterId(aktuellFilter.id);
                     applyReservationFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
                     // ✅ Lade Reservierungen mit Filter
-                    await loadReservations(aktuellFilter.id);
+                    await loadReservations(aktuellFilter.id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                 } else {
                     // Kein Filter: Lade alle Reservierungen
-                    await loadReservations();
+                    await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                 }
             } catch (error) {
                 console.error('Fehler beim Setzen des initialen Filters:', error);
                 // Fallback: Lade alle Reservierungen
-                await loadReservations();
+                await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             }
         };
         
@@ -770,50 +833,104 @@ const Worktracker: React.FC = () => {
         filterConditionsRef.current = filterConditions;
     }, [filterConditions]);
     
-    // ✅ MEMORY: Event Listener mit useRef (nur einmal registrieren, verhindert Memory-Leak)
-    // ✅ Infinite Scroll für Anzeige (nicht für Laden)
-    // Hinweis: Handler wird nach filteredAndSortedTasks und filteredAndSortedReservations deklariert
-    const scrollHandlerRef = useRef<() => void>();
+    // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
+    const tasksLoadMoreRef = useRef<HTMLDivElement>(null);
+    const reservationsLoadMoreRef = useRef<HTMLDivElement>(null);
+    const tourBookingsLoadMoreRef = useRef<HTMLDivElement>(null);
     
     // Funktion zum Laden der Tour-Buchungen
-    const loadTourBookings = async () => {
+    // ✅ PAGINATION: loadTourBookings mit Pagination
+    const loadTourBookings = async (
+        append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
+        limit = 20,
+        offset = 0
+    ) => {
         try {
-            setTourBookingsLoading(true);
-            setTourBookingsError(null);
-            const response = await axiosInstance.get(API_ENDPOINTS.TOUR_BOOKINGS.BASE);
-            const bookingsData = response.data?.data || response.data || [];
-            if (process.env.NODE_ENV === 'development') {
-                console.log('📋 Tour-Buchungen geladen:', bookingsData.length, 'Buchungen');
+            if (!append) {
+                setTourBookingsLoading(true);
+            } else {
+                setTourBookingsLoadingMore(true);
             }
-            setTourBookings(bookingsData);
-            setAllTourBookings(bookingsData);
+            setTourBookingsError(null);
+            
+            // ✅ PAGINATION: limit/offset Parameter
+            const params: any = {
+                limit: limit,
+                offset: offset
+            };
+            
+            const response = await axiosInstance.get(API_ENDPOINTS.TOUR_BOOKINGS.BASE, { params });
+            const responseData = response.data;
+            
+            // ✅ PAGINATION: Response-Struktur mit totalCount
+            // Sicherstellen, dass bookingsData immer ein Array ist
+            let bookingsData: TourBooking[] = [];
+            let totalCount = 0;
+            let hasMore = false;
+            
+            if (responseData && typeof responseData === 'object') {
+                // Neue Response-Struktur: { success: true, data: [...], totalCount: ..., hasMore: ... }
+                if (responseData.success && Array.isArray(responseData.data)) {
+                    bookingsData = responseData.data;
+                    totalCount = responseData.totalCount || bookingsData.length;
+                    hasMore = responseData.hasMore !== undefined 
+                        ? responseData.hasMore 
+                        : (offset + bookingsData.length < totalCount);
+                } else if (Array.isArray(responseData.data)) {
+                    // Fallback: { data: [...] } ohne success
+                    bookingsData = responseData.data;
+                    totalCount = responseData.totalCount || bookingsData.length;
+                    hasMore = responseData.hasMore !== undefined 
+                        ? responseData.hasMore 
+                        : (offset + bookingsData.length < totalCount);
+                } else if (Array.isArray(responseData)) {
+                    // Fallback: Alte Response-Struktur (direktes Array)
+                    bookingsData = responseData;
+                    totalCount = bookingsData.length;
+                    hasMore = false;
+                }
+            }
+            
+            if (append) {
+                // ✅ PAGINATION: Items anhängen (Infinite Scroll)
+                setTourBookings(prev => [...prev, ...bookingsData]);
+            } else {
+                // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
+                setTourBookings(bookingsData);
+            }
+            
+            setTourBookingsTotalCount(totalCount);
+            setTourBookingsHasMore(hasMore);
         } catch (err: any) {
             if (process.env.NODE_ENV === 'development') {
                 console.error('Fehler beim Laden der Tour-Buchungen:', err);
             }
             const errorMessage = err.response?.data?.message || t('tourBookings.loadError', 'Fehler beim Laden der Tour-Buchungen');
-            setTourBookingsError(errorMessage);
-            showMessage(errorMessage, 'error');
+            if (!append) {
+                setTourBookingsError(errorMessage);
+                showMessage(errorMessage, 'error');
+            }
         } finally {
-            setTourBookingsLoading(false);
+            if (!append) {
+                setTourBookingsLoading(false);
+            } else {
+                setTourBookingsLoadingMore(false);
+            }
         }
     };
     
-    // Lade Tour-Buchungen, wenn Tab aktiv ist
+    // ✅ PAGINATION: Initial Load - nur wenn Tab aktiv ist
     useEffect(() => {
-        if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
-            loadTourBookings();
+        if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table')) {
+            loadTasks(undefined, undefined, false, 20, 0);
         }
     }, [activeTab]);
     
-
-    // ✅ FIX: Duplikate entfernt - Initial Tasks laden (nur einmal, auch bei React.StrictMode)
     useEffect(() => {
-        if (!hasLoadedRef.current) {
-            hasLoadedRef.current = true;
-            loadTasks();
+        if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
+            loadTourBookings(false, 20, 0);
         }
-    }, [loadTasks]);
+    }, [activeTab]);
 
     // URL-Parameter für editTask verarbeiten
     useEffect(() => {
@@ -1139,15 +1256,14 @@ const Worktracker: React.FC = () => {
             // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
             setTableSortConfig({ key: 'dueDate', direction: 'asc' });
             
-            // ✅ Filter zurücksetzen bei Filter-Wechsel
-            setTasksDisplayLimit(viewMode === 'cards' ? 10 : 20);
-            
-            // Wenn Filter-ID vorhanden (Standardfilter): Server-seitig laden
-            // Sonst: Client-seitig filtern (komplexe Filter)
+            // ✅ PAGINATION: Filter zurücksetzen - lade erste 20 Items
             if (id) {
-                await loadTasks(id, undefined, false); // ❌ KEINE Pagination mehr
+                await loadTasks(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+            } else if (conditions.length > 0) {
+                await loadTasks(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+            } else {
+                await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             }
-            // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedTasks angewendet
         } else if (activeTab === 'reservations') {
             setReservationActiveFilterName(name);
             setReservationSelectedFilterId(id);
@@ -1163,16 +1279,13 @@ const Worktracker: React.FC = () => {
         applyReservationFilterConditions(conditions, operators, sortDirections);
         setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
         
-        // ✅ Filter zurücksetzen bei Filter-Wechsel
-        setReservationsDisplayLimit(viewMode === 'cards' ? 10 : 20);
-        
-        // ✅ Lade Reservierungen mit Filter (server-seitig)
+        // ✅ PAGINATION: Filter zurücksetzen - lade erste 20 Items
         if (id) {
-            await loadReservations(id);
+            await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
         } else if (conditions.length > 0) {
-            await loadReservations(undefined, conditions);
+            await loadReservations(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
         } else {
-            await loadReservations(); // Kein Filter
+            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
         }
     };
 
@@ -1696,42 +1809,99 @@ const Worktracker: React.FC = () => {
         return sorted;
     }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
     
-    // ✅ Infinite Scroll Handler (nach filteredAndSortedTasks und filteredAndSortedReservations deklariert)
+    // ✅ PAGINATION: Infinite Scroll für Tasks mit Intersection Observer
     useEffect(() => {
-        scrollHandlerRef.current = () => {
-            // Prüfe ob User nahe am Ende der Seite ist
-            const isNearBottom = window.innerHeight + window.scrollY >= document.documentElement.offsetHeight - 1000;
-            
-            // ✅ Infinite Scroll für Tasks
-            if (
-                activeTab === 'todos' &&
-                isNearBottom &&
-                tasksDisplayLimit < filteredAndSortedTasks.length
-            ) {
-                // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
-                const increment = viewMode === 'cards' ? 10 : 20;
-                setTasksDisplayLimit(prev => prev + increment);
-            }
-            
-            // ✅ Infinite Scroll für Reservations
-            if (
-                activeTab === 'reservations' &&
-                isNearBottom &&
-                reservationsDisplayLimit < filteredAndSortedReservations.length
-            ) {
-                // ✅ Infinite Scroll für Anzeige: Zeige weitere Items
-                const increment = viewMode === 'cards' ? 10 : 20;
-                setReservationsDisplayLimit(prev => prev + increment);
-            }
-        };
+        if (activeTab !== 'todos') return;
         
-        const handleScroll = () => scrollHandlerRef.current?.();
-        
-        window.addEventListener('scroll', handleScroll);
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const firstEntry = entries[0];
+                if (firstEntry.isIntersecting && tasksHasMore && !tasksLoadingMore && !loading) {
+                    const nextOffset = tasks.length;
+                    loadTasks(
+                        selectedFilterId || undefined,
+                        filterConditions.length > 0 ? filterConditions : undefined,
+                        true, // append = true
+                        20, // limit
+                        nextOffset // offset
+                    );
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (tasksLoadMoreRef.current) {
+            observer.observe(tasksLoadMoreRef.current);
+        }
+
         return () => {
-            window.removeEventListener('scroll', handleScroll);
+            if (tasksLoadMoreRef.current) {
+                observer.unobserve(tasksLoadMoreRef.current);
+            }
         };
-    }, [activeTab, tasksDisplayLimit, filteredAndSortedTasks, reservationsDisplayLimit, filteredAndSortedReservations, viewMode]);
+    }, [activeTab, tasksHasMore, tasksLoadingMore, loading, tasks.length, selectedFilterId, filterConditions, loadTasks]);
+    
+    // ✅ PAGINATION: Infinite Scroll für Reservations mit Intersection Observer
+    useEffect(() => {
+        if (activeTab !== 'reservations') return;
+        
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const firstEntry = entries[0];
+                if (firstEntry.isIntersecting && reservationsHasMore && !reservationsLoadingMore && !reservationsLoading) {
+                    const nextOffset = reservations.length;
+                    loadReservations(
+                        reservationSelectedFilterId || undefined,
+                        reservationFilterConditions.length > 0 ? reservationFilterConditions : undefined,
+                        true, // append = true
+                        20, // limit
+                        nextOffset // offset
+                    );
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (reservationsLoadMoreRef.current) {
+            observer.observe(reservationsLoadMoreRef.current);
+        }
+
+        return () => {
+            if (reservationsLoadMoreRef.current) {
+                observer.unobserve(reservationsLoadMoreRef.current);
+            }
+        };
+    }, [activeTab, reservationsHasMore, reservationsLoadingMore, reservationsLoading, reservations.length, reservationSelectedFilterId, reservationFilterConditions]);
+    
+    // ✅ PAGINATION: Infinite Scroll für Tour Bookings mit Intersection Observer
+    useEffect(() => {
+        if (activeTab !== 'tourBookings') return;
+        
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const firstEntry = entries[0];
+                if (firstEntry.isIntersecting && tourBookingsHasMore && !tourBookingsLoadingMore && !tourBookingsLoading) {
+                    const nextOffset = tourBookings.length;
+                    loadTourBookings(
+                        true, // append = true
+                        20, // limit
+                        nextOffset // offset
+                    );
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (tourBookingsLoadMoreRef.current) {
+            observer.observe(tourBookingsLoadMoreRef.current);
+        }
+
+        return () => {
+            if (tourBookingsLoadMoreRef.current) {
+                observer.unobserve(tourBookingsLoadMoreRef.current);
+            }
+        };
+    }, [activeTab, tourBookingsHasMore, tourBookingsLoadingMore, tourBookingsLoading, tourBookings.length]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
@@ -1981,7 +2151,7 @@ const Worktracker: React.FC = () => {
                                                         setSyncingReservations(true);
                                                         await axiosInstance.post(API_ENDPOINTS.RESERVATIONS.SYNC);
                                                         showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
-                                                        await loadReservations();
+                                                        await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                                                     } catch (err: any) {
                                                         if (process.env.NODE_ENV === 'development') {
                                                             console.error('Fehler beim Synchronisieren:', err);
@@ -2270,7 +2440,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         ) : (
                                             <>
-                                            {filteredAndSortedTasks.slice(0, tasksDisplayLimit).map(task => {
+                                            {filteredAndSortedTasks.map(task => {
                                             const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                             const expiryColors = getExpiryColorClasses(expiryStatus);
                                             
@@ -2451,7 +2621,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedTasks.slice(0, tasksDisplayLimit).map(task => {
+                                            {filteredAndSortedTasks.map(task => {
                                                 const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                                 
                                                 // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
@@ -2583,7 +2753,14 @@ const Worktracker: React.FC = () => {
                                 </div>
                             ) : null}
                             
-                            {/* ❌ Loading Indicator entfernt - Infinite Scroll lädt keine Daten mehr, nur Anzeige */}
+                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Reservations */}
+                            {activeTab === 'reservations' && reservationsHasMore && (
+                                <div ref={reservationsLoadMoreRef} className="flex justify-center py-4">
+                                    {reservationsLoadingMore && (
+                                        <CircularProgress size={24} />
+                                    )}
+                                </div>
+                            )}
                             
                             {/* Reservations Rendering - Cards */}
                             {activeTab === 'reservations' && viewMode === 'cards' && (
@@ -2607,7 +2784,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedReservations.slice(0, reservationsDisplayLimit).map(reservation => {
+                                            {filteredAndSortedReservations.map(reservation => {
                                                 const formatDate = (dateString: string) => {
                                                     try {
                                                         // Extrahiere nur den Datumsteil (YYYY-MM-DD) und parse als lokales Datum
@@ -2938,7 +3115,7 @@ const Worktracker: React.FC = () => {
                                                 </tr>
                                             ) : (
                                                 <>
-                                                    {filteredAndSortedReservations.slice(0, reservationsDisplayLimit).map(reservation => {
+                                                    {filteredAndSortedReservations.map(reservation => {
                                                         const formatDate = (dateString: string) => {
                                                             try {
                                                                 return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
@@ -3120,7 +3297,23 @@ const Worktracker: React.FC = () => {
                                 </div>
                             )}
                             
-                            {/* ❌ "Mehr anzeigen" Button entfernt - Infinite Scroll macht das automatisch */}
+                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Tasks */}
+                            {activeTab === 'todos' && tasksHasMore && (
+                                <div ref={tasksLoadMoreRef} className="flex justify-center py-4">
+                                    {tasksLoadingMore && (
+                                        <CircularProgress size={24} />
+                                    )}
+                                </div>
+                            )}
+                            
+                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Tour Bookings */}
+                            {activeTab === 'tourBookings' && tourBookingsHasMore && (
+                                <div ref={tourBookingsLoadMoreRef} className="flex justify-center py-4">
+                                    {tourBookingsLoadingMore && (
+                                        <CircularProgress size={24} />
+                                    )}
+                                </div>
+                            )}
                         </div>
                         
                         {/* Zeiterfassung - auf Mobilgeräten fixiert über dem Footermenü */}
@@ -3242,7 +3435,7 @@ const Worktracker: React.FC = () => {
                                                         setSyncingReservations(true);
                                                         await axiosInstance.post(API_ENDPOINTS.RESERVATIONS.SYNC);
                                                         showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
-                                                        await loadReservations();
+                                                        await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                                                     } catch (err: any) {
                                                         if (process.env.NODE_ENV === 'development') {
                                                             console.error('Fehler beim Synchronisieren:', err);
@@ -3548,7 +3741,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         ) : (
                                             <>
-                                            {filteredAndSortedTasks.slice(0, tasksDisplayLimit).map(task => {
+                                            {filteredAndSortedTasks.map(task => {
                                             const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                             const expiryColors = getExpiryColorClasses(expiryStatus);
                                             
@@ -3729,7 +3922,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedTasks.slice(0, tasksDisplayLimit).map(task => {
+                                            {filteredAndSortedTasks.map(task => {
                                                 const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                                 
                                                 // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
@@ -3861,7 +4054,14 @@ const Worktracker: React.FC = () => {
                                 </div>
                             ) : null}
                             
-                            {/* ❌ Loading Indicator entfernt - Infinite Scroll lädt keine Daten mehr, nur Anzeige */}
+                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Reservations */}
+                            {activeTab === 'reservations' && reservationsHasMore && (
+                                <div ref={reservationsLoadMoreRef} className="flex justify-center py-4">
+                                    {reservationsLoadingMore && (
+                                        <CircularProgress size={24} />
+                                    )}
+                                </div>
+                            )}
                             
                             {/* Reservations Rendering - Desktop - Cards */}
                             {activeTab === 'reservations' && viewMode === 'cards' && (
@@ -3885,7 +4085,7 @@ const Worktracker: React.FC = () => {
                                         </div>
                                     ) : (
                                         <CardGrid>
-                                            {filteredAndSortedReservations.slice(0, reservationsDisplayLimit).map(reservation => {
+                                            {filteredAndSortedReservations.map(reservation => {
                                                 const formatDate = (dateString: string) => {
                                                     try {
                                                         // Extrahiere nur den Datumsteil (YYYY-MM-DD) und parse als lokales Datum
@@ -4205,7 +4405,7 @@ const Worktracker: React.FC = () => {
                                                 </tr>
                                             ) : (
                                                 <>
-                                                    {filteredAndSortedReservations.slice(0, reservationsDisplayLimit).map(reservation => {
+                                                    {filteredAndSortedReservations.map(reservation => {
                                                         const formatDate = (dateString: string) => {
                                                             try {
                                                                 return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
@@ -4387,7 +4587,23 @@ const Worktracker: React.FC = () => {
                                 </div>
                             )}
                             
-                            {/* ❌ "Mehr anzeigen" Button entfernt - Infinite Scroll macht das automatisch */}
+                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Tasks */}
+                            {activeTab === 'todos' && tasksHasMore && (
+                                <div ref={tasksLoadMoreRef} className="flex justify-center py-4">
+                                    {tasksLoadingMore && (
+                                        <CircularProgress size={24} />
+                                    )}
+                                </div>
+                            )}
+                            
+                            {/* ✅ PAGINATION: Infinite Scroll Trigger für Tour Bookings */}
+                            {activeTab === 'tourBookings' && tourBookingsHasMore && (
+                                <div ref={tourBookingsLoadMoreRef} className="flex justify-center py-4">
+                                    {tourBookingsLoadingMore && (
+                                        <CircularProgress size={24} />
+                                    )}
+                                </div>
+                            )}
                             
                             
                         </div>
@@ -4446,7 +4662,7 @@ const Worktracker: React.FC = () => {
                     // Wechsle zum Reservations-Tab
                     setActiveTab('reservations');
                     // Lade Reservations neu, um den aktualisierten Status zu erhalten
-                    await loadReservations();
+                    await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                 }}
             />
             
@@ -4461,7 +4677,7 @@ const Worktracker: React.FC = () => {
                     reservation={selectedReservationForInvitation}
                     onSuccess={async () => {
                         // Lade Reservations neu, um den aktualisierten Status zu erhalten
-                        await loadReservations();
+                        await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                     }}
                 />
             )}
@@ -4477,7 +4693,7 @@ const Worktracker: React.FC = () => {
                     reservation={selectedReservationForPasscode}
                     onSuccess={async () => {
                         // Lade Reservations neu, um den aktualisierten Status zu erhalten
-                        await loadReservations();
+                        await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                     }}
                 />
             )}

@@ -397,11 +397,26 @@ const Requests: React.FC = () => {
       const responseData = response.data;
       
       // ✅ PAGINATION: Response-Struktur mit totalCount
-      const requestsData = responseData.data || responseData;
-      const totalCount = responseData.totalCount || requestsData.length;
-      const hasMore = responseData.hasMore !== undefined 
-        ? responseData.hasMore 
-        : (offset + requestsData.length < totalCount);
+      // Sicherstellen, dass requestsData immer ein Array ist
+      let requestsData: Request[] = [];
+      let totalCount = 0;
+      let hasMore = false;
+      
+      if (responseData && typeof responseData === 'object') {
+        // Neue Response-Struktur: { data: [...], totalCount: ..., hasMore: ... }
+        if (Array.isArray(responseData.data)) {
+          requestsData = responseData.data;
+          totalCount = responseData.totalCount || requestsData.length;
+          hasMore = responseData.hasMore !== undefined 
+            ? responseData.hasMore 
+            : (offset + requestsData.length < totalCount);
+        } else if (Array.isArray(responseData)) {
+          // Fallback: Alte Response-Struktur (direktes Array)
+          requestsData = responseData;
+          totalCount = requestsData.length;
+          hasMore = false;
+        }
+      }
       
       // Attachments sind bereits in der Response enthalten
       // URL-Generierung für Attachments hinzufügen
