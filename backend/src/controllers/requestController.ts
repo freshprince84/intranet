@@ -7,7 +7,7 @@ import { Prisma, RequestStatus, RequestType, NotificationType } from '@prisma/cl
 import { prisma, executeWithRetry } from '../utils/prisma';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getRequestNotificationText } from '../utils/translations';
-import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
+import { getDataIsolationFilter, getUserOrganizationFilter, isAdminOrOwner } from '../middleware/organization';
 import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } from '../utils/filterToPrisma';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import { filterCache } from '../services/filterCache';
