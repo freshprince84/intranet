@@ -1134,7 +1134,8 @@ export class WhatsAppFunctionHandlers {
           organizationId: branch.organizationId,
           branchId: branchId, // WICHTIG: Branch-spezifisch!
           lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
-          // roomType und categoryId werden nur für LobbyPMS verwendet, nicht in DB gespeichert
+          roomType: args.roomType,
+          categoryId: args.categoryId
           // TODO: paymentDeadline und autoCancelEnabled werden später hinzugefügt (Migration erforderlich)
         }
       });

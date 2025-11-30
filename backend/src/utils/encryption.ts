@@ -126,40 +126,83 @@ export const encryptApiSettings = (settings: any): any => {
 
   // LobbyPMS API Key
   if (encrypted.lobbyPms?.apiKey) {
-    encrypted.lobbyPms = {
-      ...encrypted.lobbyPms,
-      apiKey: encryptSecret(encrypted.lobbyPms.apiKey)
-    };
+    // ✅ PERFORMANCE: Prüfe ob bereits verschlüsselt (Format: iv:authTag:encrypted)
+    // Verhindert mehrfache Verschlüsselung (die zu 63 MB führen kann!)
+    const apiKey = encrypted.lobbyPms.apiKey;
+    const isAlreadyEncrypted = typeof apiKey === 'string' && 
+                                apiKey.includes(':') && 
+                                apiKey.split(':').length >= 3;
+    
+    if (!isAlreadyEncrypted) {
+      // Nur verschlüsseln wenn noch nicht verschlüsselt
+      encrypted.lobbyPms = {
+        ...encrypted.lobbyPms,
+        apiKey: encryptSecret(apiKey)
+      };
+    }
+    // Wenn bereits verschlüsselt: unverändert lassen
   }
 
   // TTLock Client Secret
   if (encrypted.doorSystem?.clientSecret) {
-    encrypted.doorSystem = {
-      ...encrypted.doorSystem,
-      clientSecret: encryptSecret(encrypted.doorSystem.clientSecret)
-    };
+    // ✅ PERFORMANCE: Prüfe ob bereits verschlüsselt
+    const clientSecret = encrypted.doorSystem.clientSecret;
+    const isAlreadyEncrypted = typeof clientSecret === 'string' && 
+                               clientSecret.includes(':') && 
+                               clientSecret.split(':').length >= 3;
+    
+    if (!isAlreadyEncrypted) {
+      encrypted.doorSystem = {
+        ...encrypted.doorSystem,
+        clientSecret: encryptSecret(clientSecret)
+      };
+    }
   }
 
   // Bold Payment API Key
   if (encrypted.boldPayment?.apiKey) {
-    encrypted.boldPayment = {
-      ...encrypted.boldPayment,
-      apiKey: encryptSecret(encrypted.boldPayment.apiKey)
-    };
+    // ✅ PERFORMANCE: Prüfe ob bereits verschlüsselt
+    const apiKey = encrypted.boldPayment.apiKey;
+    const isAlreadyEncrypted = typeof apiKey === 'string' && 
+                               apiKey.includes(':') && 
+                               apiKey.split(':').length >= 3;
+    
+    if (!isAlreadyEncrypted) {
+      encrypted.boldPayment = {
+        ...encrypted.boldPayment,
+        apiKey: encryptSecret(apiKey)
+      };
+    }
   }
 
   // WhatsApp API Key & Secret
   if (encrypted.whatsapp?.apiKey) {
-    encrypted.whatsapp = {
-      ...encrypted.whatsapp,
-      apiKey: encryptSecret(encrypted.whatsapp.apiKey)
-    };
+    // ✅ PERFORMANCE: Prüfe ob bereits verschlüsselt
+    const apiKey = encrypted.whatsapp.apiKey;
+    const isAlreadyEncrypted = typeof apiKey === 'string' && 
+                               apiKey.includes(':') && 
+                               apiKey.split(':').length >= 3;
+    
+    if (!isAlreadyEncrypted) {
+      encrypted.whatsapp = {
+        ...encrypted.whatsapp,
+        apiKey: encryptSecret(apiKey)
+      };
+    }
   }
   if (encrypted.whatsapp?.apiSecret) {
-    encrypted.whatsapp = {
-      ...encrypted.whatsapp,
-      apiSecret: encryptSecret(encrypted.whatsapp.apiSecret)
-    };
+    // ✅ PERFORMANCE: Prüfe ob bereits verschlüsselt
+    const apiSecret = encrypted.whatsapp.apiSecret;
+    const isAlreadyEncrypted = typeof apiSecret === 'string' && 
+                               apiSecret.includes(':') && 
+                               apiSecret.split(':').length >= 3;
+    
+    if (!isAlreadyEncrypted) {
+      encrypted.whatsapp = {
+        ...encrypted.whatsapp,
+        apiSecret: encryptSecret(apiSecret)
+      };
+    }
   }
 
   return encrypted;

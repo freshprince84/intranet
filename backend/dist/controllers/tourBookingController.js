@@ -49,6 +49,7 @@ const commissionService_1 = require("../services/commissionService");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
 const filterCache_1 = require("../services/filterCache");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
+const organization_1 = require("../middleware/organization");
 const userSelect = {
     id: true,
     username: true,
@@ -66,9 +67,13 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const filterConditions = req.query.filterConditions
             ? JSON.parse(req.query.filterConditions)
             : undefined;
+        // ✅ PAGINATION: limit/offset Parameter wieder einführen
         const limit = req.query.limit
             ? parseInt(req.query.limit, 10)
-            : undefined; // Kein Limit wenn nicht angegeben - alle TourBookings werden zurückgegeben
+            : 20; // Standard: 20 Items
+        const offset = req.query.offset
+            ? parseInt(req.query.offset, 10)
+            : 0; // Standard: 0
         const tourId = req.query.tourId
             ? parseInt(req.query.tourId, 10)
             : undefined;
@@ -91,6 +96,8 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     const conditions = JSON.parse(filterData.conditions);
                     const operators = JSON.parse(filterData.operators);
                     filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'tour_booking');
+                    // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                    filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'tour_booking');
                 }
             }
             catch (filterError) {
@@ -99,14 +106,47 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         else if (filterConditions) {
             filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'tour_booking');
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'tour_booking');
         }
-        // Basis-WHERE-Bedingungen
+        // ✅ ROLLEN-ISOLATION: Basis-WHERE-Bedingungen basierend auf Rolle
         const baseWhereConditions = [];
         if (organizationId) {
-            baseWhereConditions.push({ organizationId });
+            if ((0, organization_1.isAdminOrOwner)(req)) {
+                // Admin/Owner: Alle Tour Bookings der Organisation
+                baseWhereConditions.push({ organizationId });
+            }
+            else {
+                // User/Andere Rollen: Nur Tour Bookings der eigenen Branch
+                const userBranchId = req.branchId;
+                if (userBranchId) {
+                    baseWhereConditions.push({ organizationId, branchId: userBranchId });
+                }
+                else {
+                    // Fallback: Keine Tour Bookings (wenn keine Branch)
+                    return res.json({
+                        success: true,
+                        data: [],
+                        totalCount: 0,
+                        hasMore: false
+                    });
+                }
+            }
         }
+        // branchId aus Query-Parameter: Nur für Admin/Owner oder wenn es die eigene Branch ist
         if (branchId) {
-            baseWhereConditions.push({ branchId });
+            if ((0, organization_1.isAdminOrOwner)(req)) {
+                // Admin kann nach beliebiger Branch filtern
+                baseWhereConditions.push({ branchId });
+            }
+            else {
+                // User: Nur wenn es die eigene Branch ist
+                const userBranchId = req.branchId;
+                if (branchId === userBranchId) {
+                    baseWhereConditions.push({ branchId });
+                }
+                // Sonst ignorieren (Sicherheit - wird bereits oben durch userBranchId gefiltert)
+            }
         }
         if (tourId) {
             baseWhereConditions.push({ tourId });
@@ -145,7 +185,16 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const whereClause = baseWhereConditions.length === 1
             ? baseWhereConditions[0]
             : { AND: baseWhereConditions };
-        const bookings = yield prisma_1.prisma.tourBooking.findMany(Object.assign(Object.assign({ where: whereClause }, (limit ? { take: limit } : {})), { include: {
+        // ✅ PAGINATION: totalCount für Infinite Scroll
+        const totalCount = yield prisma_1.prisma.tourBooking.count({
+            where: whereClause
+        });
+        const bookings = yield prisma_1.prisma.tourBooking.findMany({
+            where: whereClause,
+            // ✅ PAGINATION: Nur limit Items laden, offset überspringen
+            take: limit,
+            skip: offset,
+            include: {
                 tour: {
                     select: {
                         id: true,
@@ -162,12 +211,19 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         name: true
                     }
                 }
-            }, orderBy: {
+            },
+            orderBy: {
                 bookingDate: 'desc'
-            } }));
+            }
+        });
+        // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
         res.json({
             success: true,
-            data: bookings
+            data: bookings,
+            totalCount: totalCount,
+            limit: limit,
+            offset: offset,
+            hasMore: offset + bookings.length < totalCount
         });
     }
     catch (error) {

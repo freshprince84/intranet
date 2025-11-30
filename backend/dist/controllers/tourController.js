@@ -87,6 +87,8 @@ const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                     const conditions = JSON.parse(filterData.conditions);
                     const operators = JSON.parse(filterData.operators);
                     filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'tour');
+                    // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                    filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'tour');
                 }
             }
             catch (filterError) {
@@ -95,6 +97,8 @@ const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         else if (filterConditions) {
             filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'tour');
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'tour');
         }
         // Basis-WHERE-Bedingungen
         const baseWhereConditions = [];

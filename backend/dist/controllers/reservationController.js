@@ -53,6 +53,7 @@ const queueService_1 = require("../services/queueService");
 const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
+const organization_1 = require("../middleware/organization");
 const filterCache_1 = require("../services/filterCache");
 /**
  * Utility: Erkennt ob ein String eine Telefonnummer oder Email ist
@@ -531,47 +532,77 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const filterConditions = req.query.filterConditions
             ? JSON.parse(req.query.filterConditions)
             : undefined;
-        // Baue Where-Clause auf
+        // ✅ PAGINATION: limit/offset Parameter wieder einführen
+        const limit = req.query.limit
+            ? parseInt(req.query.limit, 10)
+            : 20; // Standard: 20 Items
+        const offset = req.query.offset
+            ? parseInt(req.query.offset, 10)
+            : 0; // Standard: 0
+        // ✅ ROLLEN-ISOLATION: Baue Where-Clause basierend auf Rolle
         const whereClause = {
             organizationId: req.organizationId
         };
-        // OPTIMIERUNG: Verwende branchId aus Request-Kontext statt zusätzlicher Query
-        // Wenn nur "own_branch" Berechtigung: Filtere nach Branch
-        if (hasOwnBranchPermission && !hasAllBranchesPermission) {
-            // Hole branchId aus Request-Kontext (wird in organization-Middleware gesetzt)
-            const branchId = req.branchId;
-            if (branchId) {
-                whereClause.branchId = branchId;
-                console.log(`[Reservation] Filtere nach Branch ${branchId} (own_branch Berechtigung)`);
-            }
-            else {
-                // Fallback: Hole branchId aus UsersBranches (falls nicht im Request-Kontext)
-                const userBranch = yield prisma_1.prisma.usersBranches.findFirst({
-                    where: {
-                        userId: userId,
-                        branch: {
-                            organizationId: req.organizationId
-                        }
-                    },
-                    select: {
-                        branchId: true
-                    }
-                });
-                if (userBranch === null || userBranch === void 0 ? void 0 : userBranch.branchId) {
-                    whereClause.branchId = userBranch.branchId;
-                    console.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung, aus DB)`);
+        // Admin/Owner: Alle Reservations der Organisation (kein Branch-Filter)
+        if ((0, organization_1.isAdminOrOwner)(req)) {
+            // Kein Branch-Filter für Admin/Owner
+            console.log(`[Reservation] Admin/Owner: Zeige alle Reservations der Organisation`);
+        }
+        else {
+            // User/Andere Rollen: Nur Reservations der eigenen Branch
+            // OPTIMIERUNG: Verwende branchId aus Request-Kontext statt zusätzlicher Query
+            // Wenn nur "own_branch" Berechtigung: Filtere nach Branch
+            if (hasOwnBranchPermission && !hasAllBranchesPermission) {
+                // Hole branchId aus Request-Kontext (wird in organization-Middleware gesetzt)
+                const branchId = req.branchId;
+                if (branchId) {
+                    whereClause.branchId = branchId;
+                    console.log(`[Reservation] Filtere nach Branch ${branchId} (own_branch Berechtigung)`);
                 }
                 else {
-                    // User hat keine aktive Branch → keine Reservierungen
-                    console.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
-                    return res.json({
-                        success: true,
-                        data: []
+                    // Fallback: Hole branchId aus UsersBranches (falls nicht im Request-Kontext)
+                    const userBranch = yield prisma_1.prisma.usersBranches.findFirst({
+                        where: {
+                            userId: userId,
+                            branch: {
+                                organizationId: req.organizationId
+                            }
+                        },
+                        select: {
+                            branchId: true
+                        }
                     });
+                    if (userBranch === null || userBranch === void 0 ? void 0 : userBranch.branchId) {
+                        whereClause.branchId = userBranch.branchId;
+                        console.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung, aus DB)`);
+                    }
+                    else {
+                        // User hat keine aktive Branch → keine Reservierungen
+                        console.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
+                        return res.json({
+                            success: true,
+                            data: [],
+                            totalCount: 0,
+                            hasMore: false
+                        });
+                    }
                 }
             }
+            else if (hasAllBranchesPermission) {
+                // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
+                console.log(`[Reservation] User hat all_branches Berechtigung, zeige alle Reservations`);
+            }
+            else {
+                // Keine Berechtigung → keine Reservierungen
+                console.log(`[Reservation] User hat keine Berechtigung, gebe leeres Array zurück`);
+                return res.json({
+                    success: true,
+                    data: [],
+                    totalCount: 0,
+                    hasMore: false
+                });
+            }
         }
-        // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause = {};
         if (filterId) {
@@ -581,11 +612,15 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 const conditions = JSON.parse(filterData.conditions);
                 const operators = JSON.parse(filterData.operators);
                 filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'reservation');
+                // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'reservation');
             }
         }
         else if (filterConditions) {
             // Direkte Filter-Bedingungen
             filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'reservation');
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'reservation');
         }
         // Kombiniere alle Filter-Bedingungen
         const baseWhereConditions = [whereClause];
@@ -595,8 +630,15 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const finalWhereClause = baseWhereConditions.length === 1
             ? baseWhereConditions[0]
             : { AND: baseWhereConditions };
+        // ✅ PAGINATION: totalCount für Infinite Scroll
+        const totalCount = yield prisma_1.prisma.reservation.count({
+            where: finalWhereClause
+        });
         const reservations = yield prisma_1.prisma.reservation.findMany({
             where: finalWhereClause,
+            // ✅ PAGINATION: Nur limit Items laden, offset überspringen
+            take: limit,
+            skip: offset,
             include: {
                 organization: {
                     select: {
@@ -617,9 +659,14 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 createdAt: 'desc'
             }
         });
+        // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
         res.json({
             success: true,
-            data: reservations
+            data: reservations,
+            totalCount: totalCount,
+            limit: limit,
+            offset: offset,
+            hasMore: offset + reservations.length < totalCount
         });
     }
     catch (error) {

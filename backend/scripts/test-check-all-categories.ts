@@ -109,4 +109,3 @@ async function testAllCategories() {
 
 testAllCategories();
 
-
