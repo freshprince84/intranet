@@ -1512,10 +1512,177 @@ async function main() {
     }
 
     // ========================================
-    // 12. STANDARDFILTER FÜR ROLLEN UND BENUTZER ERSTELLEN
+    // 12. STANDARDFILTER ERSTELLEN
     // ========================================
     // WICHTIG: Diese Funktion wird in einem try-catch ausgeführt, damit sie auch bei Fehlern in anderen Seed-Bereichen ausgeführt wird
     try {
+      console.log('🔍 Erstelle Standardfilter...');
+      
+      /**
+       * Erstellt Standard-Filter für alle Tabellen
+       * @param userId - ID des Benutzers, für den die Filter erstellt werden
+       */
+      async function createStandardFilters(userId: number) {
+        try {
+          // Standard-Filter für To-Do's (worktracker-todos)
+          const todosTableId = 'worktracker-todos';
+          
+          // "Aktuell" Filter
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: todosTableId,
+                name: 'Aktuell'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'notEquals', value: 'done' }
+              ]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: todosTableId,
+              name: 'Aktuell',
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'notEquals', value: 'done' }
+              ]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // "Archiv" Filter
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: todosTableId,
+                name: 'Archiv'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'equals', value: 'done' }
+              ]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: todosTableId,
+              name: 'Archiv',
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'equals', value: 'done' }
+              ]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // Standard-Filter für Requests (requests-table)
+          const requestsTableId = 'requests-table';
+          
+          // "Aktuell" Filter
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: requestsTableId,
+                name: 'Aktuell'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'notEquals', value: 'approved' },
+                { column: 'status', operator: 'notEquals', value: 'denied' }
+              ]),
+              operators: JSON.stringify(['AND'])
+            },
+            create: {
+              userId,
+              tableId: requestsTableId,
+              name: 'Aktuell',
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'notEquals', value: 'approved' },
+                { column: 'status', operator: 'notEquals', value: 'denied' }
+              ]),
+              operators: JSON.stringify(['AND'])
+            }
+          });
+          
+          // "Archiv" Filter
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: requestsTableId,
+                name: 'Archiv'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'equals', value: 'approved' },
+                { column: 'status', operator: 'equals', value: 'denied' }
+              ]),
+              operators: JSON.stringify(['OR'])
+            },
+            create: {
+              userId,
+              tableId: requestsTableId,
+              name: 'Archiv',
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'equals', value: 'approved' },
+                { column: 'status', operator: 'equals', value: 'denied' }
+              ]),
+              operators: JSON.stringify(['OR'])
+            }
+          });
+          
+          // Standard-Filter für Reservations (worktracker-reservations)
+          const reservationsTableId = 'worktracker-reservations';
+          
+          // "Hoy" Filter (mit __TODAY__)
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: reservationsTableId,
+                name: 'Hoy'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'checkInDate', operator: 'equals', value: '__TODAY__' }
+              ]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: reservationsTableId,
+              name: 'Hoy',
+              conditions: JSON.stringify([
+                { column: 'checkInDate', operator: 'equals', value: '__TODAY__' }
+              ]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+        } catch (error) {
+          console.error(`  ❌ Fehler beim Erstellen der Standard-Filter für User ${userId}:`, error);
+        }
+      }
+      
+      // Erstelle Standard-Filter für alle Benutzer
+      const allUsers = await prisma.user.findMany();
+      for (const user of allUsers) {
+        await createStandardFilters(user.id);
+      }
+      
+      console.log('✅ Standard-Filter erstellt');
+      
+      // ========================================
+      // 13. STANDARDFILTER FÜR ROLLEN UND BENUTZER ERSTELLEN
+      // ========================================
       console.log('🔍 Erstelle Standardfilter für Rollen und Benutzer...');
     
     /**

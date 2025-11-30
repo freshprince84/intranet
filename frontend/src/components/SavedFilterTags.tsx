@@ -353,7 +353,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const isStandardFilter = (filterName: string) => {
     // Erkenne auch Übersetzungsschlüssel
     const standardFilterNames = [
-      'Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Woche',
+      'Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Woche', 'Hoy',
       'tasks.filters.archive', 'tasks.filters.current',
       'requests.filters.archiv', 'requests.filters.aktuell'
     ];
