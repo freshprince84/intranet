@@ -15,6 +15,34 @@ import { BoldPaymentService } from '../services/boldPaymentService';
  */
 export const handleWebhook = async (req: Request, res: Response) => {
   try {
+    // GET-Request für Webhook-Validierung (wie WhatsApp)
+    // Bold Payment könnte einen GET-Request senden beim Erstellen des Webhooks
+    if (req.method === 'GET') {
+      console.log('[Bold Payment Webhook] GET Request - Validierung:', {
+        query: req.query,
+        headers: {
+          'user-agent': req.headers['user-agent'],
+          'content-type': req.headers['content-type']
+        }
+      });
+
+      // Challenge-Response (falls Bold Payment einen Challenge sendet)
+      const challenge = req.query.challenge || req.query.challenge_token || req.query.token;
+      
+      if (challenge) {
+        console.log('[Bold Payment Webhook] Challenge-Response:', challenge);
+        return res.status(200).send(String(challenge));
+      }
+
+      // Fallback: Einfache Bestätigung
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Webhook endpoint is active',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // POST-Request: Normale Webhook-Verarbeitung
     const payload = req.body;
 
     // Validiere Webhook-Secret (falls konfiguriert)
@@ -24,7 +52,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
     //   return res.status(401).json({ success: false, message: 'Ungültiges Webhook-Secret' });
     // }
 
-    console.log('[Bold Payment Webhook] Empfangen:', payload);
+    console.log('[Bold Payment Webhook] POST Request - Empfangen:', payload);
 
     // Extrahiere Organisation aus Webhook-Daten
     // Bold Payment sollte organization_id oder reservation_id im Metadata haben
@@ -57,9 +85,13 @@ export const handleWebhook = async (req: Request, res: Response) => {
         }
       }
 
-      return res.status(400).json({
-        success: false,
-        message: 'Organisation-ID oder Reservierungs-ID fehlt im Webhook'
+      // Bei fehlenden Daten: 200 statt 400 (für Validierung)
+      // Bold Payment könnte einen Test-Request ohne vollständige Daten senden
+      console.warn('[Bold Payment Webhook] Organisation-ID oder Reservierungs-ID fehlt im Webhook');
+      return res.status(200).json({
+        success: true,
+        message: 'Webhook endpoint is active',
+        note: 'Missing organization_id or reservation_id in payload'
       });
     }
 
