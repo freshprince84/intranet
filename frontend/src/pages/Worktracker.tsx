@@ -816,10 +816,10 @@ const Worktracker: React.FC = () => {
                 const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(RESERVATIONS_TABLE_ID));
                 const filters = response.data;
                 
-                // ✅ Suche nach "hoy" Filter (Standardfilter für heute)
-                const hoyFilter = filters.find((filter: any) => filter.name === 'hoy');
+                // ✅ Suche nach "Hoy" Filter (Standardfilter für heute)
+                const hoyFilter = filters.find((filter: any) => filter.name === 'Hoy');
                 if (hoyFilter) {
-                    setReservationActiveFilterName('hoy');
+                    setReservationActiveFilterName('Hoy');
                     setReservationSelectedFilterId(hoyFilter.id);
                     applyReservationFilterConditions(hoyFilter.conditions, hoyFilter.operators);
                     // ✅ Lade Reservierungen mit Filter (nur heute)
@@ -933,12 +933,36 @@ const Worktracker: React.FC = () => {
         }
     };
     
-    // ✅ PAGINATION: Initial Load - nur wenn Tab aktiv ist
+    // ✅ Initialer Filter-Load für Todos (wie bei Reservations)
     useEffect(() => {
+        const setInitialTodoFilter = async () => {
+            try {
+                const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TODOS_TABLE_ID));
+                const filters = response.data;
+                
+                // ✅ Suche nach "Aktuell" Filter (Standardfilter)
+                const aktuellFilter = filters.find((filter: any) => filter.name === 'Aktuell');
+                if (aktuellFilter) {
+                    setActiveFilterName('Aktuell');
+                    setSelectedFilterId(aktuellFilter.id);
+                    applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
+                    // ✅ Lade Todos mit Filter
+                    await loadTasks(aktuellFilter.id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                } else {
+                    // Fallback: Lade alle Todos (sollte nicht passieren, wenn Filter erstellt wurde)
+                    await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                }
+            } catch (error) {
+                console.error('Fehler beim Setzen des initialen Filters:', error);
+                // Fallback: Lade alle Todos
+                await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+            }
+        };
+        
         if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table')) {
-            loadTasks(undefined, undefined, false, 20, 0);
+            setInitialTodoFilter();
         }
-    }, [activeTab, hasPermission, loadTasks]); // ✅ FIX: Dependencies hinzufügen
+    }, [activeTab, hasPermission]);
     
     useEffect(() => {
         if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
@@ -1069,21 +1093,18 @@ const Worktracker: React.FC = () => {
                 );
 
                 const existingFilters = existingFiltersResponse.data || [];
-                const hoyFilterExists = existingFilters.some(filter => filter.name === 'hoy');
+                const hoyFilterExists = existingFilters.some(filter => filter.name === 'Hoy');
 
-                // Erstelle "hoy"-Filter, wenn er noch nicht existiert
+                // Erstelle "Hoy"-Filter, wenn er noch nicht existiert
                 if (!hoyFilterExists) {
-                    // Aktuelles Datum im Format YYYY-MM-DD
-                    const today = new Date().toISOString().split('T')[0];
-                    
                     const hoyFilter = {
                         tableId: RESERVATIONS_TABLE_ID,
-                        name: 'hoy', // Spanisch für "heute"
+                        name: 'Hoy', // Spanisch für "heute"
                         conditions: [
                             { 
                                 column: 'checkInDate', 
                                 operator: 'equals', 
-                                value: today // YYYY-MM-DD Format
+                                value: '__TODAY__' // Dynamischer Wert für aktuellen Tag
                             }
                         ],
                         operators: []

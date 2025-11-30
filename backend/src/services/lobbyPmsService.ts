@@ -657,11 +657,13 @@ export class LobbyPmsService {
 
     try {
       // Payload basierend auf Test-Ergebnissen
+      // WICHTIG: total_adults ist ERFORDERLICH (nicht optional)!
       const payload: any = {
         category_id: categoryId,
         start_date: this.formatDate(checkInDate), // Format: "YYYY-MM-DD"
         end_date: this.formatDate(checkOutDate), // Format: "YYYY-MM-DD"
-        guest_name: guestName.trim()
+        guest_name: guestName.trim(),
+        total_adults: guests > 0 ? guests : 1 // ERFORDERLICH: Standard 1, falls nicht angegeben
       };
 
       // Optionale Felder
@@ -670,9 +672,6 @@ export class LobbyPmsService {
       }
       if (guestPhone) {
         payload.guest_phone = guestPhone.trim();
-      }
-      if (guests && guests > 0) {
-        payload.guests = guests;
       }
 
       console.log(`[LobbyPMS] Erstelle Reservierung: category_id=${categoryId}, checkIn=${this.formatDate(checkInDate)}, checkOut=${this.formatDate(checkOutDate)}, guest=${guestName}`);

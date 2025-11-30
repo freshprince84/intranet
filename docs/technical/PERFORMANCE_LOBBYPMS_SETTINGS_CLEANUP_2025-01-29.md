@@ -1,8 +1,20 @@
 # Performance-Fix: LobbyPMS Settings Cleanup (2025-01-29)
 
 **Datum:** 2025-01-29  
-**Status:** 🔴 KRITISCH - 63 MB Settings blockieren Performance  
-**Priorität:** 🔴🔴🔴 SOFORT
+**Status:** ✅ GELÖST - System läuft wieder deutlich schneller  
+**Priorität:** 🔴🔴🔴 KRITISCH (war)
+
+## ✅ PROBLEM GELÖST
+
+**Das Hauptproblem wurde identifiziert und behoben:**
+- **Problem:** Organization Settings waren 63 MB groß (sollten < 10 KB sein)
+- **Ursache:** Mehrfache Verschlüsselung von `lobbyPms.apiKey` (jedes Speichern = erneute Verschlüsselung)
+- **Lösung:** Verschlüsselungs-Check implementiert - prüft ob bereits verschlüsselt
+- **Ergebnis:** System läuft wieder deutlich schneller (5.5 Sekunden → 50ms)
+
+**Siehe:** `docs/technical/PERFORMANCE_PROBLEM_GELOEST_2025-01-29.md` für vollständige Dokumentation.
+
+---
 
 ---
 
