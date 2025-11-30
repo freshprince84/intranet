@@ -67,7 +67,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     if (name === 'Aktuell' || name === 'tasks.filters.current' || name === 'requests.filters.aktuell') {
       return tableId === 'worktracker-todos' ? t('tasks.filters.current') : t('requests.filters.aktuell');
     }
-    if (name === 'Heute') return t('common.today', 'Heute');
+    if (name === 'Heute' || name === 'Hoy') return t('common.today', 'Heute');
     if (name === 'Woche') return t('common.week', 'Woche');
     if (name === 'Aktive') return t('common.active', 'Aktive');
     if (name === 'Alle') return t('common.all', 'Alle');
