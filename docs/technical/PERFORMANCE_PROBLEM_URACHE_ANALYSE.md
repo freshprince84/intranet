@@ -1,5 +1,17 @@
 # Performance-Problem: Ursache-Analyse (Stand: 2025-11-22 05:15 UTC)
 
+## ⚠️ WICHTIG: HAUPTPROBLEM GELÖST (2025-01-29)
+
+**✅ Das Hauptproblem wurde identifiziert und behoben:**
+- **Problem:** Organization Settings waren 63 MB groß (sollten < 10 KB sein)
+- **Ursache:** Mehrfache Verschlüsselung von `lobbyPms.apiKey` (jedes Speichern = erneute Verschlüsselung)
+- **Lösung:** Verschlüsselungs-Check implementiert - prüft ob bereits verschlüsselt
+- **Ergebnis:** System läuft wieder deutlich schneller (5.5 Sekunden → 50ms)
+
+**Siehe:** `docs/technical/PERFORMANCE_PROBLEM_GELOEST_2025-01-29.md` für vollständige Dokumentation.
+
+---
+
 ## 🔴 IDENTIFIZIERTE URSACHE
 
 **Commit:** `af104a8` - "Performance: Optimiere /api/organizations/current und Prisma reconnect-Logik"  

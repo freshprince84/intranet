@@ -64,13 +64,15 @@ async function testCreateBookingWithCategory() {
     const categoryIds = [34280, 34281, 34282, 34312]; // Bekannte category_ids aus Test
 
     // Test verschiedene Payload-Strukturen mit category_id
+    // WICHTIG: total_adults ist ERFORDERLICH!
     const testPayloads = [
       {
         name: 'Minimal mit category_id',
         payload: {
           category_id: categoryIds[0],
           start_date: formatDate(tomorrow),
-          end_date: formatDate(dayAfterTomorrow)
+          end_date: formatDate(dayAfterTomorrow),
+          total_adults: 1
         }
       },
       {
@@ -79,7 +81,8 @@ async function testCreateBookingWithCategory() {
           category_id: categoryIds[0],
           start_date: formatDate(tomorrow),
           end_date: formatDate(dayAfterTomorrow),
-          guest_name: 'Test Gast'
+          guest_name: 'Test Gast',
+          total_adults: 1
         }
       },
       {
@@ -90,7 +93,8 @@ async function testCreateBookingWithCategory() {
           end_date: formatDate(dayAfterTomorrow),
           guest_name: 'Test Gast',
           guest_email: 'test@example.com',
-          guest_phone: '+573001234567'
+          guest_phone: '+573001234567',
+          total_adults: 1
         }
       },
       {
@@ -100,7 +104,7 @@ async function testCreateBookingWithCategory() {
           start_date: formatDate(tomorrow),
           end_date: formatDate(dayAfterTomorrow),
           guest_name: 'Test Gast',
-          guests: 1
+          total_adults: 1
         }
       },
       {
@@ -112,7 +116,7 @@ async function testCreateBookingWithCategory() {
           guest_name: 'Test Gast',
           guest_email: 'test@example.com',
           guest_phone: '+573001234567',
-          guests: 1
+          total_adults: 1
         }
       }
     ];
