@@ -78,8 +78,11 @@ class WhatsAppGuestService {
                             contains: searchName,
                             mode: 'insensitive'
                         }, 
-                        // Exakte Übereinstimmung für Nationalität
-                        guestNationality: nationality }), (birthDate ? {
+                        // Case-insensitive Übereinstimmung für Nationalität
+                        guestNationality: {
+                            equals: nationality,
+                            mode: 'insensitive'
+                        } }), (birthDate ? {
                         guestBirthDate: {
                             equals: birthDate
                         }
@@ -272,10 +275,32 @@ class WhatsAppGuestService {
         return reservation.doorPin || null;
     }
     /**
+     * Erkennt Sprache für Gast-Nachricht
+     * Priorität: 1. Nachricht, 2. Telefonnummer, 3. Spanisch (Fallback)
+     */
+    static detectLanguage(messageText, phoneNumber) {
+        // Priorität 1: Sprache aus Nachricht
+        if (messageText) {
+            const { WhatsAppAiService } = require('./whatsappAiService');
+            const detectedLang = WhatsAppAiService.detectLanguageFromMessage(messageText);
+            if (detectedLang) {
+                return detectedLang;
+            }
+        }
+        // Priorität 2: Sprache aus Telefonnummer
+        const { LanguageDetectionService } = require('./languageDetectionService');
+        return LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+    }
+    /**
      * Erstellt Nachricht mit NUR dem BEREITS GENERIERTEN TTLock Passcode
      * Code wird NICHT generiert, nur aus DB gelesen!
      */
-    static buildPincodeMessage(reservation, language = 'es') {
+    static buildPincodeMessage(reservation, language, messageText) {
+        // Erkenne Sprache falls nicht übergeben
+        if (!language && reservation.guestPhone) {
+            language = this.detectLanguage(messageText || null, reservation.guestPhone);
+        }
+        language = language || 'es'; // Fallback
         const translations = {
             es: {
                 greeting: (name) => `Hola ${name}!`,

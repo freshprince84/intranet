@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.convertFilterConditionsToPrismaWhere = convertFilterConditionsToPrismaWhere;
+exports.validateFilterAgainstIsolation = validateFilterAgainstIsolation;
+const organization_1 = require("../middleware/organization");
 /**
  * Konvertiert Filter-Bedingungen in Prisma Where-Klauseln
  *
@@ -243,5 +245,72 @@ function convertBranchCondition(value, operator) {
         }
     }
     return {};
+}
+/**
+ * ✅ SICHERHEIT: Validiert Filter gegen Datenisolation
+ * Entfernt Branch- und Organization-Filter für Nicht-Admin-User
+ *
+ * @param filterWhereClause - Die konvertierte Prisma Where-Klausel
+ * @param req - Request-Objekt für Rollen-Prüfung
+ * @param entityType - Entity-Typ für spezielle Logik
+ * @returns Bereinigte Prisma Where-Klausel
+ */
+function validateFilterAgainstIsolation(filterWhereClause, req, entityType) {
+    // Admin/Owner: Keine Validierung nötig - sehen alles
+    if ((0, organization_1.isAdminOrOwner)(req)) {
+        return filterWhereClause;
+    }
+    // Wenn kein Filter vorhanden, nichts zu validieren
+    if (!filterWhereClause || Object.keys(filterWhereClause).length === 0) {
+        return filterWhereClause;
+    }
+    // Rekursive Funktion zum Entfernen von Branch/Organization-Filtern
+    const removeIsolationFilters = (clause) => {
+        if (!clause || typeof clause !== 'object') {
+            return clause;
+        }
+        // Neues Objekt für bereinigte Klausel
+        const cleaned = {};
+        for (const [key, value] of Object.entries(clause)) {
+            // Ignoriere branchId und organizationId direkt
+            if (key === 'branchId' || key === 'organizationId') {
+                // Entferne diese Filter für Nicht-Admin
+                continue;
+            }
+            // Ignoriere branch-Relation (enthält branchId)
+            if (key === 'branch') {
+                // Entferne Branch-Filter komplett
+                continue;
+            }
+            // Handle AND/OR Arrays
+            if (key === 'AND' || key === 'OR') {
+                if (Array.isArray(value)) {
+                    const cleanedArray = value
+                        .map(item => removeIsolationFilters(item))
+                        .filter(item => item !== null && item !== undefined && Object.keys(item).length > 0);
+                    if (cleanedArray.length > 0) {
+                        cleaned[key] = cleanedArray.length === 1 ? cleanedArray[0] : cleanedArray;
+                    }
+                }
+                else {
+                    cleaned[key] = removeIsolationFilters(value);
+                }
+                continue;
+            }
+            // Rekursiv für verschachtelte Objekte
+            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                const cleanedValue = removeIsolationFilters(value);
+                if (cleanedValue && Object.keys(cleanedValue).length > 0) {
+                    cleaned[key] = cleanedValue;
+                }
+            }
+            else {
+                // Einfache Werte beibehalten
+                cleaned[key] = value;
+            }
+        }
+        return Object.keys(cleaned).length > 0 ? cleaned : {};
+    };
+    return removeIsolationFilters(filterWhereClause);
 }
 //# sourceMappingURL=filterToPrisma.js.map

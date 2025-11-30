@@ -710,7 +710,7 @@ export class WhatsAppAiService {
   /**
    * Erkennt Sprache aus Nachrichtentext (einfache Heuristik)
    */
-  public static detectLanguageFromMessage(message: string): string | null {
+  private static detectLanguageFromMessage(message: string): string | null {
     if (!message || message.trim().length === 0) {
       return null;
     }

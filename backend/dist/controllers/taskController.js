@@ -47,7 +47,13 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         const filterConditions = req.query.filterConditions
             ? JSON.parse(req.query.filterConditions)
             : undefined;
-        // ❌ KEINE limit/offset Parameter mehr - immer ALLE Ergebnisse zurückgeben
+        // ✅ PAGINATION: limit/offset Parameter wieder einführen
+        const limit = req.query.limit
+            ? parseInt(req.query.limit, 10)
+            : 20; // Standard: 20 Items
+        const offset = req.query.offset
+            ? parseInt(req.query.offset, 10)
+            : 0; // Standard: 0
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause = {};
@@ -58,50 +64,51 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 const conditions = JSON.parse(filterData.conditions);
                 const operators = JSON.parse(filterData.operators);
                 filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'task');
+                // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'task');
             }
         }
         else if (filterConditions) {
             // Direkte Filter-Bedingungen
             filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'task');
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'task');
         }
         // ✅ PERFORMANCE: Vereinfachte WHERE-Klausel für bessere Performance
         // ✅ PERFORMANCE: Flachere OR-Struktur für bessere Index-Nutzung
         const baseWhereConditions = [];
-        // Isolation-Filter: organizationId (wenn vorhanden)
+        // ✅ ROLLEN-ISOLATION: Isolation-Filter basierend auf Rolle
         if (organizationId) {
-            // ✅ PERFORMANCE: Flachere OR-Struktur - organizationId in jeder OR-Bedingung
-            if (userRoleId) {
+            if ((0, organization_1.isAdminOrOwner)(req)) {
+                // Admin/Owner: Alle Tasks der Organisation
                 baseWhereConditions.push({
-                    OR: [
-                        {
-                            organizationId: organizationId,
-                            responsibleId: userId
-                        },
-                        {
-                            organizationId: organizationId,
-                            qualityControlId: userId
-                        },
-                        {
-                            organizationId: organizationId,
-                            roleId: userRoleId
-                        }
-                    ]
+                    organizationId: organizationId
                 });
             }
             else {
-                // Fallback: Nur eigene Tasks
-                baseWhereConditions.push({
-                    OR: [
-                        {
-                            organizationId: organizationId,
-                            responsibleId: userId
-                        },
-                        {
-                            organizationId: organizationId,
-                            qualityControlId: userId
-                        }
-                    ]
-                });
+                // User/Andere Rollen: Nur Tasks der eigenen Rolle + eigene Tasks, innerhalb der eigenen Branch
+                const branchId = req.branchId;
+                const taskFilter = {
+                    organizationId: organizationId
+                };
+                if (branchId) {
+                    taskFilter.branchId = branchId;
+                }
+                if (userRoleId) {
+                    taskFilter.OR = [
+                        { responsibleId: userId },
+                        { qualityControlId: userId },
+                        { roleId: userRoleId }
+                    ];
+                }
+                else {
+                    // Fallback: Nur eigene Tasks
+                    taskFilter.OR = [
+                        { responsibleId: userId },
+                        { qualityControlId: userId }
+                    ];
+                }
+                baseWhereConditions.push(taskFilter);
             }
         }
         else {
@@ -121,10 +128,24 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         const whereClause = baseWhereConditions.length === 1
             ? baseWhereConditions[0]
             : { AND: baseWhereConditions };
+        // ✅ PAGINATION: totalCount für Infinite Scroll
+        let totalCount = 0;
+        try {
+            totalCount = yield prisma_1.prisma.task.count({
+                where: whereClause
+            });
+        }
+        catch (countError) {
+            console.error('[getAllTasks] Fehler beim Zählen der Tasks:', countError);
+            // Fallback: Verwende 0, wird später durch tatsächliche Anzahl ersetzt
+            totalCount = 0;
+        }
         const queryStartTime = Date.now();
         const tasks = yield prisma_1.prisma.task.findMany({
             where: whereClause,
-            // ❌ KEIN take/skip mehr - immer ALLE Ergebnisse
+            // ✅ PAGINATION: Nur limit Items laden, offset überspringen
+            take: limit,
+            skip: offset,
             orderBy: { createdAt: 'desc' }, // Neueste Tasks zuerst
             include: Object.assign({ responsible: {
                     select: userSelect
@@ -143,8 +164,35 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             } : {}))
         });
         const queryDuration = Date.now() - queryStartTime;
-        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks in ${queryDuration}ms`);
-        res.json(tasks);
+        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
+        // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
+        if (totalCount === 0 && tasks.length > 0) {
+            // Fallback: Wenn wir Items haben, aber totalCount fehlt, schätze basierend auf offset + length
+            totalCount = offset + tasks.length;
+        }
+        // ✅ Sicherstellen, dass tasks ein Array ist
+        if (!Array.isArray(tasks)) {
+            console.error('[getAllTasks] ❌ FEHLER: tasks ist kein Array!', {
+                tasks,
+                type: typeof tasks
+            });
+            throw new Error('tasks ist kein Array');
+        }
+        // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
+        const response = {
+            data: tasks,
+            totalCount: totalCount,
+            limit: limit,
+            offset: offset,
+            hasMore: offset + tasks.length < totalCount
+        };
+        console.log('[getAllTasks] ✅ Response vorbereitet:', {
+            dataLength: response.data.length,
+            totalCount: response.totalCount,
+            hasMore: response.hasMore,
+            dataIsArray: Array.isArray(response.data)
+        });
+        res.json(response);
     }
     catch (error) {
         console.error('Fehler beim Abrufen der Tasks:', error);

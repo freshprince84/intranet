@@ -538,6 +538,85 @@ class LobbyPmsService {
         });
     }
     /**
+     * Erstellt eine neue Reservierung in LobbyPMS
+     *
+     * @param categoryId - Category ID des Zimmers (erforderlich)
+     * @param checkInDate - Check-in Datum
+     * @param checkOutDate - Check-out Datum
+     * @param guestName - Name des Gastes
+     * @param guestEmail - E-Mail des Gastes (optional)
+     * @param guestPhone - Telefonnummer des Gastes (optional)
+     * @param guests - Anzahl Personen (optional, default: 1)
+     * @returns LobbyPMS Booking ID
+     */
+    createBooking(categoryId_1, checkInDate_1, checkOutDate_1, guestName_1, guestEmail_1, guestPhone_1) {
+        return __awaiter(this, arguments, void 0, function* (categoryId, checkInDate, checkOutDate, guestName, guestEmail, guestPhone, guests = 1) {
+            var _a, _b, _c, _d, _e, _f;
+            // Lade Settings falls noch nicht geladen
+            if (!this.apiKey) {
+                yield this.loadSettings();
+            }
+            try {
+                // Payload basierend auf Test-Ergebnissen
+                const payload = {
+                    category_id: categoryId,
+                    start_date: this.formatDate(checkInDate), // Format: "YYYY-MM-DD"
+                    end_date: this.formatDate(checkOutDate), // Format: "YYYY-MM-DD"
+                    guest_name: guestName.trim()
+                };
+                // Optionale Felder
+                if (guestEmail) {
+                    payload.guest_email = guestEmail.trim();
+                }
+                if (guestPhone) {
+                    payload.guest_phone = guestPhone.trim();
+                }
+                if (guests && guests > 0) {
+                    payload.guests = guests;
+                }
+                console.log(`[LobbyPMS] Erstelle Reservierung: category_id=${categoryId}, checkIn=${this.formatDate(checkInDate)}, checkOut=${this.formatDate(checkOutDate)}, guest=${guestName}`);
+                const response = yield this.axiosInstance.post('/api/v1/bookings', payload);
+                // Response-Struktur: { success: true, data: { booking_id: "...", ... } }
+                // Oder direkt: { booking_id: "...", ... }
+                let bookingId;
+                if (response.data.success && response.data.data) {
+                    // Standard Response-Format
+                    bookingId = response.data.data.booking_id || response.data.data.id;
+                }
+                else if (response.data.booking_id) {
+                    // Direktes Objekt mit booking_id
+                    bookingId = response.data.booking_id;
+                }
+                else if (response.data.id) {
+                    // Direktes Objekt mit id
+                    bookingId = response.data.id;
+                }
+                else if (response.data.data && typeof response.data.data === 'object') {
+                    // Fallback: Suche in data-Objekt
+                    bookingId = response.data.data.booking_id || response.data.data.id;
+                }
+                if (!bookingId) {
+                    console.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(response.data, null, 2));
+                    throw new Error('LobbyPMS API hat keine booking_id zurückgegeben');
+                }
+                console.log(`[LobbyPMS] Reservierung erfolgreich erstellt: booking_id=${bookingId}`);
+                return String(bookingId);
+            }
+            catch (error) {
+                if (axios_1.default.isAxiosError(error)) {
+                    const axiosError = error;
+                    const errorMessage = ((_b = (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.error) ||
+                        (Array.isArray((_c = axiosError.response) === null || _c === void 0 ? void 0 : _c.data) ? ((_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.data).join(', ') : undefined) ||
+                        ((_f = (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.data) === null || _f === void 0 ? void 0 : _f.message) ||
+                        `LobbyPMS API Fehler: ${axiosError.message}`;
+                    console.error('[LobbyPMS] Fehler beim Erstellen der Reservierung:', errorMessage);
+                    throw new Error(errorMessage);
+                }
+                throw error;
+            }
+        });
+    }
+    /**
      * Aktualisiert den Check-in-Status einer Reservierung in LobbyPMS
      *
      * @param reservationId - LobbyPMS Reservierungs-ID

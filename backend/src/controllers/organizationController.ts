@@ -1285,8 +1285,17 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
       }
 
       // ✅ VERSCHLÜSSELUNG: Verschlüssele alle API-Keys vor dem Speichern
+      // ✅ PERFORMANCE: encryptApiSettings prüft jetzt ob bereits verschlüsselt (verhindert mehrfache Verschlüsselung)
       try {
         const encryptedSettings = encryptApiSettings(newSettings);
+        
+        // ✅ PERFORMANCE: Validiere Settings-Größe (Warnung bei > 1 MB)
+        const settingsSize = JSON.stringify(encryptedSettings).length;
+        if (settingsSize > 1024 * 1024) { // > 1 MB
+          console.warn(`[updateCurrentOrganization] ⚠️ Settings sind sehr groß: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
+          console.warn(`[updateCurrentOrganization] ⚠️ Möglicherweise mehrfach verschlüsselte API-Keys vorhanden!`);
+        }
+        
         updateData.settings = encryptedSettings;
       } catch (encryptionError) {
         console.error('Error encrypting API settings:', encryptionError);

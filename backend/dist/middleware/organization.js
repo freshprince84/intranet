@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.belongsToOrganization = exports.getDataIsolationFilter = exports.getUserOrganizationFilter = exports.getOrganizationFilter = exports.organizationMiddleware = void 0;
+exports.belongsToOrganization = exports.isAdminOrOwner = exports.isOwnerRole = exports.isAdminRole = exports.getDataIsolationFilter = exports.getUserOrganizationFilter = exports.getOrganizationFilter = exports.organizationMiddleware = void 0;
 const organizationCache_1 = require("../utils/organizationCache");
 const prisma_1 = require("../utils/prisma");
 const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -215,6 +215,38 @@ const getDataIsolationFilter = (req, entity) => {
     }
 };
 exports.getDataIsolationFilter = getDataIsolationFilter;
+// ✅ ROLLEN-ISOLATION: Hilfsfunktionen für Rollen-Prüfung
+/**
+ * Prüft, ob der User eine Admin-Rolle hat
+ */
+const isAdminRole = (req) => {
+    var _a, _b;
+    const roleName = (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.name;
+    if (!roleName)
+        return false;
+    const roleNameLower = roleName.toLowerCase();
+    return roleNameLower === 'admin' || roleNameLower.includes('administrator');
+};
+exports.isAdminRole = isAdminRole;
+/**
+ * Prüft, ob der User eine Owner-Rolle hat
+ */
+const isOwnerRole = (req) => {
+    var _a, _b;
+    const roleName = (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.name;
+    if (!roleName)
+        return false;
+    const roleNameLower = roleName.toLowerCase();
+    return roleNameLower === 'owner';
+};
+exports.isOwnerRole = isOwnerRole;
+/**
+ * Prüft, ob der User Admin oder Owner ist
+ */
+const isAdminOrOwner = (req) => {
+    return (0, exports.isAdminRole)(req) || (0, exports.isOwnerRole)(req);
+};
+exports.isAdminOrOwner = isAdminOrOwner;
 // Hilfsfunktion zum Prüfen, ob eine Ressource zur Organisation des Users gehört
 const belongsToOrganization = (req, entity, resourceId) => __awaiter(void 0, void 0, void 0, function* () {
     try {

@@ -46,7 +46,13 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const filterConditions = req.query.filterConditions
             ? JSON.parse(req.query.filterConditions)
             : undefined;
-        // ❌ KEINE limit/offset Parameter mehr - immer ALLE Ergebnisse zurückgeben
+        // ✅ PAGINATION: limit/offset Parameter wieder einführen
+        const limit = req.query.limit
+            ? parseInt(req.query.limit, 10)
+            : 20; // Standard: 20 Items
+        const offset = req.query.offset
+            ? parseInt(req.query.offset, 10)
+            : 0; // Standard: 0
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause = {};
@@ -58,6 +64,8 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     const conditions = JSON.parse(filterData.conditions);
                     const operators = JSON.parse(filterData.operators);
                     filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'request');
+                    // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                    filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'request');
                 }
                 else {
                     console.warn(`[getAllRequests] Filter ${filterId} nicht gefunden`);
@@ -71,34 +79,74 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         else if (filterConditions) {
             // Direkte Filter-Bedingungen
             filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'request');
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'request');
         }
         // OPTIMIERUNG: Vereinfachte WHERE-Klausel für bessere Performance
         // Kombiniere organizationId direkt in OR-Bedingung statt verschachtelter AND/OR
         const baseWhereConditions = [];
-        // Isolation-Filter: organizationId (wenn vorhanden)
-        // ✅ PERFORMANCE: Flachere OR-Struktur für bessere Index-Nutzung
+        // ✅ ROLLEN-ISOLATION: Isolation-Filter basierend auf Rolle
         if (organizationId) {
-            baseWhereConditions.push({
-                OR: [
-                    // Öffentliche Requests (isPrivate = false) innerhalb der Organisation
-                    {
-                        isPrivate: false,
-                        organizationId: organizationId
-                    },
-                    // Private Requests: Nur wenn User Ersteller ist
-                    {
-                        isPrivate: true,
-                        organizationId: organizationId,
-                        requesterId: userId
-                    },
-                    // Private Requests: Nur wenn User Verantwortlicher ist
-                    {
-                        isPrivate: true,
-                        organizationId: organizationId,
-                        responsibleId: userId
-                    }
-                ]
-            });
+            if ((0, organization_1.isAdminOrOwner)(req)) {
+                // Admin/Owner: Alle Requests der Organisation (inkl. private, ohne Einschränkung)
+                baseWhereConditions.push({
+                    OR: [
+                        // Öffentliche Requests
+                        {
+                            isPrivate: false,
+                            organizationId: organizationId
+                        },
+                        // Private Requests: Alle (ohne requesterId/responsibleId Einschränkung)
+                        {
+                            isPrivate: true,
+                            organizationId: organizationId
+                        }
+                    ]
+                });
+            }
+            else {
+                // User/Andere Rollen: Nur Requests der eigenen Branch
+                const branchId = req.branchId;
+                if (branchId) {
+                    baseWhereConditions.push({
+                        AND: [
+                            {
+                                OR: [
+                                    // Öffentliche Requests der eigenen Branch
+                                    {
+                                        isPrivate: false,
+                                        organizationId: organizationId,
+                                        branchId: branchId
+                                    },
+                                    // Private Requests: Nur wenn User Ersteller ist
+                                    {
+                                        isPrivate: true,
+                                        organizationId: organizationId,
+                                        branchId: branchId,
+                                        requesterId: userId
+                                    },
+                                    // Private Requests: Nur wenn User Verantwortlicher ist
+                                    {
+                                        isPrivate: true,
+                                        organizationId: organizationId,
+                                        branchId: branchId,
+                                        responsibleId: userId
+                                    }
+                                ]
+                            }
+                        ]
+                    });
+                }
+                else {
+                    // Fallback: Nur eigene Requests (wenn keine Branch)
+                    baseWhereConditions.push({
+                        OR: [
+                            { requesterId: userId },
+                            { responsibleId: userId }
+                        ]
+                    });
+                }
+            }
         }
         else {
             // Standalone User: Nur eigene Requests
@@ -117,10 +165,24 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const whereClause = baseWhereConditions.length === 1
             ? baseWhereConditions[0]
             : { AND: baseWhereConditions };
+        // ✅ PAGINATION: totalCount für Infinite Scroll
+        let totalCount = 0;
+        try {
+            totalCount = yield prisma_1.prisma.request.count({
+                where: whereClause
+            });
+        }
+        catch (countError) {
+            console.error('[getAllRequests] Fehler beim Zählen der Requests:', countError);
+            // Fallback: Verwende 0, wird später durch tatsächliche Anzahl ersetzt
+            totalCount = 0;
+        }
         const queryStartTime = Date.now();
         const requests = yield prisma_1.prisma.request.findMany({
             where: whereClause,
-            // ❌ KEIN take/skip mehr - immer ALLE Ergebnisse
+            // ✅ PAGINATION: Nur limit Items laden, offset überspringen
+            take: limit,
+            skip: offset,
             include: Object.assign({ requester: {
                     select: userSelect
                 }, responsible: {
@@ -139,8 +201,22 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             }
         });
         const queryDuration = Date.now() - queryStartTime;
-        console.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests in ${queryDuration}ms`);
+        console.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests (${offset}-${offset + requests.length} von ${totalCount}) in ${queryDuration}ms`);
+        // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
+        if (totalCount === 0 && requests.length > 0) {
+            // Fallback: Wenn wir Items haben, aber totalCount fehlt, schätze basierend auf offset + length
+            // Dies ist nur ein Fallback, normalerweise sollte totalCount korrekt sein
+            totalCount = offset + requests.length;
+        }
         // Formatiere die Daten für die Frontend-Nutzung
+        // ✅ Sicherstellen, dass requests ein Array ist
+        if (!Array.isArray(requests)) {
+            console.error('[getAllRequests] ❌ FEHLER: requests ist kein Array!', {
+                requests,
+                type: typeof requests
+            });
+            throw new Error('requests ist kein Array');
+        }
         const formattedRequests = requests.map(request => ({
             id: request.id,
             title: request.title,
@@ -167,7 +243,29 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 }))
                 : []
         }));
-        res.json(formattedRequests);
+        // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
+        // ✅ Sicherstellen, dass formattedRequests ein Array ist
+        if (!Array.isArray(formattedRequests)) {
+            console.error('[getAllRequests] ❌ FEHLER: formattedRequests ist kein Array!', {
+                formattedRequests,
+                type: typeof formattedRequests
+            });
+            throw new Error('formattedRequests ist kein Array');
+        }
+        const response = {
+            data: formattedRequests,
+            totalCount: totalCount,
+            limit: limit,
+            offset: offset,
+            hasMore: offset + formattedRequests.length < totalCount
+        };
+        console.log('[getAllRequests] ✅ Response vorbereitet:', {
+            dataLength: response.data.length,
+            totalCount: response.totalCount,
+            hasMore: response.hasMore,
+            dataIsArray: Array.isArray(response.data)
+        });
+        res.json(response);
     }
     catch (error) {
         console.error('[getAllRequests] Error fetching requests:', error);
