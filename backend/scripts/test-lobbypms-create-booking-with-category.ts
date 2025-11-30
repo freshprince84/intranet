@@ -117,7 +117,6 @@ async function testCreateBookingWithCategory() {
           guest_email: 'test@example.com',
           guest_phone: '+573001234567',
           total_adults: 1
-<<<<<<< HEAD
         }
       },
       {
@@ -128,8 +127,6 @@ async function testCreateBookingWithCategory() {
           end_date: formatDate(dayAfterTomorrow),
           guest_name: 'Test Gast',
           totalAdults: 1
-=======
->>>>>>> 0996e17a48e9bad6683f0656519c1faae03412e5
         }
       }
     ];
