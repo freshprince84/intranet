@@ -15,6 +15,30 @@ import { BoldPaymentService } from '../services/boldPaymentService';
  */
 export const handleWebhook = async (req: Request, res: Response) => {
   try {
+    // Logge ALLE Requests für Debugging
+    console.log('[Bold Payment Webhook] Request erhalten:', {
+      method: req.method,
+      url: req.url,
+      path: req.path,
+      headers: {
+        'user-agent': req.headers['user-agent'],
+        'content-type': req.headers['content-type'],
+        'origin': req.headers['origin'],
+        'x-bold-signature': req.headers['x-bold-signature'] ? 'present' : 'missing'
+      },
+      query: req.query,
+      body: req.method === 'POST' ? JSON.stringify(req.body).substring(0, 200) : 'N/A'
+    });
+
+    // OPTIONS-Request für CORS Preflight
+    if (req.method === 'OPTIONS') {
+      console.log('[Bold Payment Webhook] OPTIONS Request - CORS Preflight');
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, x-bold-signature');
+      return res.status(200).end();
+    }
+
     // GET-Request für Webhook-Validierung (wie WhatsApp)
     // Bold Payment könnte einen GET-Request senden beim Erstellen des Webhooks
     if (req.method === 'GET') {
