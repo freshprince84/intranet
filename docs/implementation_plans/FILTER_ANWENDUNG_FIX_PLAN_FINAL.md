@@ -261,10 +261,12 @@ const handleApplyFilters = async () => {
 - ✅ **FAKT:** `selectedFilterId` und `activeFilterName` müssen synchron sein
 - ✅ **FAKT:** Lösung setzt beide auf `null` bzw. `''`
 
-### ✅ Risiko 4: Dokumentation veraltet
+### ✅ Risiko 4: Dokumentation vs. Code
 **Status:** Geklärt
-- ✅ **FAKT:** Dokumentation sagt "KEINE Pagination", Code verwendet Pagination
-- ✅ **FAKT:** Dokumentation muss aktualisiert werden
+- ✅ **FAKT:** Dokumentation beschreibt SOLL-Konzept (Infinite Scroll für Anzeige, keine Pagination beim Laden)
+- ✅ **FAKT:** Code verwendet aktuell Pagination beim Laden (IST-Zustand)
+- ✅ **FAKT:** Dokumentation ist korrekt, beschreibt das gewünschte Verhalten
+- ✅ **FAKT:** Code entspricht noch nicht dem SOLL-Konzept (siehe INFINITE_SCROLL_VOLLSTAENDIGER_PLAN.md)
 
 ## Dokumentation aktualisieren
 

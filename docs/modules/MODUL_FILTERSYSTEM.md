@@ -140,34 +140,18 @@ Gespeicherte Filter können später über ein Dropdown-Menü wieder geladen werd
 - **Filter-Export/Import**: Möglichkeit, Filter zwischen Benutzern zu teilen
 - **Erweiterte Filtervisualisierung**: Visuelle Darstellung komplexer Filterbedingungen
 
-## Infinite Scroll (Anzeige) - ⚠️ VERALTET: Code verwendet Pagination
+## Infinite Scroll (Anzeige) - KEINE Pagination beim Laden
 
-**⚠️ WICHTIG:** Diese Dokumentation ist veraltet (Stand: 2025-01-26). Der aktuelle Code verwendet Pagination beim Laden.
+**⚠️ WICHTIG:** Alle Tabellen verwenden Infinite Scroll für die Anzeige, aber KEINE Pagination beim Laden.
 
-### Aktueller Code-Zustand (2025-01-26)
+**⚠️ HINWEIS (2025-01-26):** Der aktuelle Code verwendet noch Pagination beim Laden (`limit`/`offset`), was nicht dem SOLL-Konzept entspricht. Siehe `docs/implementation_plans/INFINITE_SCROLL_VOLLSTAENDIGER_PLAN.md` für Details.
 
-**Backend:**
-- ✅ Unterstützt `limit` und `offset` Parameter (z.B. `requestController.ts` Zeile 71-77)
-- ✅ Filter werden server-seitig angewendet
-- ✅ Nur `limit` Ergebnisse werden zurückgegeben (nicht alle)
-
-**Frontend:**
-- ✅ Lädt mit `limit=20, offset=0` Parameter (z.B. `Requests.tsx` Zeile 366-384)
-- ✅ Infinite Scroll lädt weitere Seiten (offset erhöht sich)
-- ✅ Bei Filter: Nur erste 20 gefilterten Ergebnisse, dann weitere 20 beim Scrollen
-
-**Betroffene Tabellen:**
-- ✅ Requests
-- ✅ ToDo's (Tasks)
-- ✅ Reservations
-- ✅ Tours (falls vorhanden)
-- ✅ TourBookings (falls vorhanden)
-
-### Veraltete Dokumentation (nicht mehr gültig)
+### Grundprinzipien (SOLL-Konzept)
 
 1. **KEINE Pagination beim Laden:**
-   - ❌ **VERALTET:** Dokumentation sagte "KEINE Pagination", Code verwendet Pagination
-   - ❌ **VERALTET:** Dokumentation sagte "Immer ALLE Ergebnisse laden", Code lädt nur `limit` Ergebnisse
+   - ❌ **STRENG VERBOTEN:** `limit`/`offset` Parameter im Backend
+   - ❌ **STRENG VERBOTEN:** Pagination beim Laden der Daten
+   - ✅ **ERFORDERLICH:** Immer ALLE Ergebnisse laden (mit Filter wenn gesetzt)
 
 2. **Infinite Scroll nur für Anzeige:**
    - ✅ **ERFORDERLICH:** Alle Daten werden geladen (Backend gibt alle zurück)
@@ -182,7 +166,7 @@ Gespeicherte Filter können später über ein Dropdown-Menü wieder geladen werd
    - ❌ **STRENG VERBOTEN:** Client-seitige Filterung nach Pagination
    - ✅ **ERFORDERLICH:** Filter wird server-seitig angewendet, dann ALLE gefilterten Ergebnisse geladen
 
-### Implementierung
+### Implementierung (SOLL-Konzept)
 
 **Backend:**
 - Keine `limit`/`offset` Parameter
@@ -194,6 +178,22 @@ Gespeicherte Filter können später über ein Dropdown-Menü wieder geladen werd
 - `displayLimit` State für Anzeige (initial: 20)
 - Infinite Scroll Handler erhöht `displayLimit` beim Scrollen
 - Anzeige: `items.slice(0, displayLimit)`
+
+### Aktueller Code-Zustand (IST-Zustand, 2025-01-26)
+
+**⚠️ HINWEIS:** Der Code entspricht noch nicht dem SOLL-Konzept. Aktuell wird Pagination beim Laden verwendet:
+
+**Backend:**
+- ⚠️ Unterstützt `limit` und `offset` Parameter (z.B. `requestController.ts` Zeile 71-77)
+- ✅ Filter werden server-seitig angewendet
+- ⚠️ Nur `limit` Ergebnisse werden zurückgegeben (nicht alle - entspricht nicht SOLL)
+
+**Frontend:**
+- ⚠️ Lädt mit `limit=20, offset=0` Parameter (z.B. `Requests.tsx` Zeile 366-384)
+- ⚠️ Infinite Scroll lädt weitere Seiten (offset erhöht sich - entspricht nicht SOLL)
+- ⚠️ Bei Filter: Nur erste 20 gefilterten Ergebnisse, dann weitere 20 beim Scrollen (entspricht nicht SOLL)
+
+**Siehe:** `docs/implementation_plans/INFINITE_SCROLL_VOLLSTAENDIGER_PLAN.md` für vollständige Analyse und Migrationsplan
 
 ### Betroffene Tabellen
 
