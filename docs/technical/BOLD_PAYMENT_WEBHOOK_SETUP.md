@@ -20,7 +20,7 @@ Dieses Dokument erklärt, wie der Bold Payment Webhook im Bold Payment Dashboard
 
 ### Webhook-Endpunkt
 
-**URL:** `https://65.109.228.106.nip.io/api/bold-payment/webhook`
+**URL:** `https://newintranet.lafamilia-hostel.com/api/bold-payment/webhook`
 
 **Route:** `POST /api/bold-payment/webhook`
 
@@ -57,7 +57,7 @@ grep APP_URL .env
 
 **URL des Webhook-Endpunkts:**
 ```
-https://65.109.228.106.nip.io/api/bold-payment/webhook
+https://newintranet.lafamilia-hostel.com/api/bold-payment/webhook
 ```
 
 **Wichtig:**
@@ -98,7 +98,7 @@ https://65.109.228.106.nip.io/api/bold-payment/webhook
 
 **Von Server aus:**
 ```bash
-curl -X POST https://65.109.228.106.nip.io/api/bold-payment/webhook \
+curl -X POST https://newintranet.lafamilia-hostel.com/api/bold-payment/webhook \
   -H "Content-Type: application/json" \
   -d '{
     "event": "payment.paid",
@@ -182,7 +182,7 @@ pm2 logs intranet-backend | grep -i "bold.*payment.*webhook"
 2. Prüfe ob URL korrekt ist (HTTPS, keine Tippfehler)
 3. Prüfe ob Server erreichbar ist:
    ```bash
-   curl https://65.109.228.106.nip.io/api/bold-payment/webhook
+   curl https://newintranet.lafamilia-hostel.com/api/bold-payment/webhook
    ```
 4. Prüfe Firewall/Ports (Port 443 muss offen sein)
 
@@ -261,7 +261,7 @@ Falls das Dashboard es unterstützt:
 ## Checkliste
 
 - [ ] Webhook im Bold Payment Dashboard konfiguriert
-- [ ] URL korrekt: `https://65.109.228.106.nip.io/api/bold-payment/webhook`
+- [ ] URL korrekt: `https://newintranet.lafamilia-hostel.com/api/bold-payment/webhook`
 - [ ] Event "Venta aprobada" ausgewählt
 - [ ] `APP_URL` in `.env` gesetzt
 - [ ] Server erreichbar (HTTPS, Port 443)
@@ -301,7 +301,7 @@ Falls das Dashboard es unterstützt:
 ## Beispiel-Konfiguration
 
 ### Bold Payment Dashboard
-- **URL:** `https://65.109.228.106.nip.io/api/bold-payment/webhook`
+- **URL:** `https://newintranet.lafamilia-hostel.com/api/bold-payment/webhook`
 - **Events:** 
   - ✅ Venta aprobada
   - ✅ Venta rechazada
