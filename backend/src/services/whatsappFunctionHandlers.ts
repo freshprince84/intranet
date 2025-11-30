@@ -1133,10 +1133,10 @@ export class WhatsAppFunctionHandlers {
           currency: 'COP',
           organizationId: branch.organizationId,
           branchId: branchId, // WICHTIG: Branch-spezifisch!
-          lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
-          roomType: args.roomType,
-          categoryId: args.categoryId
+          lobbyReservationId: lobbyReservationId // WICHTIG: LobbyPMS Booking ID!
           // TODO: paymentDeadline und autoCancelEnabled werden später hinzugefügt (Migration erforderlich)
+          // HINWEIS: roomType und categoryId werden NICHT in der DB gespeichert, da sie nicht im Schema existieren.
+          // Diese Informationen sind in LobbyPMS über lobbyReservationId verfügbar.
         }
       });
 
