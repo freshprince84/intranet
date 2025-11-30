@@ -657,12 +657,12 @@ export class LobbyPmsService {
 
     try {
       // Payload basierend auf Test-Ergebnissen
-      // WICHTIG: total_adults ist ERFORDERLICH (nicht optional)!
+      // WICHTIG: total_adults und holder_name sind ERFORDERLICH!
       const payload: any = {
         category_id: categoryId,
         start_date: this.formatDate(checkInDate), // Format: "YYYY-MM-DD"
         end_date: this.formatDate(checkOutDate), // Format: "YYYY-MM-DD"
-        guest_name: guestName.trim(),
+        holder_name: guestName.trim(), // ERFORDERLICH: holder_name (nicht guest_name!)
         total_adults: guests > 0 ? guests : 1 // ERFORDERLICH: Standard 1, falls nicht angegeben
       };
 

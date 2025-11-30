@@ -1673,8 +1673,8 @@ async function main() {
       }
       
       // Erstelle Standard-Filter für alle Benutzer
-      const allUsers = await prisma.user.findMany();
-      for (const user of allUsers) {
+      const allUsersForStandardFilters = await prisma.user.findMany();
+      for (const user of allUsersForStandardFilters) {
         await createStandardFilters(user.id);
       }
       

@@ -67,53 +67,54 @@ async function testCreateBookingWithCategory() {
     // WICHTIG: total_adults ist ERFORDERLICH!
     const testPayloads = [
       {
-        name: 'Minimal mit category_id',
+        name: 'Minimal mit category_id + holder_name',
         payload: {
           category_id: categoryIds[0],
           start_date: formatDate(tomorrow),
           end_date: formatDate(dayAfterTomorrow),
+          total_adults: 1,
+          holder_name: 'Test Gast'
+        }
+      },
+      {
+        name: 'Mit holder_name (statt guest_name)',
+        payload: {
+          category_id: categoryIds[0],
+          start_date: formatDate(tomorrow),
+          end_date: formatDate(dayAfterTomorrow),
+          holder_name: 'Test Gast',
           total_adults: 1
         }
       },
       {
-        name: 'Mit Gästename',
+        name: 'Mit Kontakt (holder_name + guest_email/phone)',
         payload: {
           category_id: categoryIds[0],
           start_date: formatDate(tomorrow),
           end_date: formatDate(dayAfterTomorrow),
-          guest_name: 'Test Gast',
-          total_adults: 1
-        }
-      },
-      {
-        name: 'Mit Kontakt',
-        payload: {
-          category_id: categoryIds[0],
-          start_date: formatDate(tomorrow),
-          end_date: formatDate(dayAfterTomorrow),
-          guest_name: 'Test Gast',
+          holder_name: 'Test Gast',
           guest_email: 'test@example.com',
           guest_phone: '+573001234567',
           total_adults: 1
         }
       },
       {
-        name: 'Mit Anzahl Personen',
+        name: 'Mit customer_document (statt holder_name)',
         payload: {
           category_id: categoryIds[0],
           start_date: formatDate(tomorrow),
           end_date: formatDate(dayAfterTomorrow),
-          guest_name: 'Test Gast',
+          customer_document: '1234567890',
           total_adults: 1
         }
       },
       {
-        name: 'Vollständig',
+        name: 'Vollständig (holder_name + Kontakt)',
         payload: {
           category_id: categoryIds[0],
           start_date: formatDate(tomorrow),
           end_date: formatDate(dayAfterTomorrow),
-          guest_name: 'Test Gast',
+          holder_name: 'Test Gast',
           guest_email: 'test@example.com',
           guest_phone: '+573001234567',
           total_adults: 1
