@@ -45,68 +45,79 @@ export const handleWebhook = async (req: Request, res: Response) => {
     // POST-Request: Normale Webhook-Verarbeitung
     const payload = req.body;
 
-    // Validiere Webhook-Secret (falls konfiguriert)
-    // TODO: Implementiere Webhook-Secret-Validierung
-    // const webhookSecret = req.headers['x-bold-webhook-secret'];
-    // if (webhookSecret !== process.env.BOLD_PAYMENT_WEBHOOK_SECRET) {
-    //   return res.status(401).json({ success: false, message: 'Ungültiges Webhook-Secret' });
-    // }
+    // WICHTIG: Bold Payment erfordert Antwort innerhalb von 2 Sekunden!
+    // Deshalb: Sofort mit 200 antworten, Verarbeitung asynchron machen
+    console.log('[Bold Payment Webhook] POST Request - Empfangen:', JSON.stringify(payload).substring(0, 200));
 
-    console.log('[Bold Payment Webhook] POST Request - Empfangen:', payload);
+    // Sofortige Antwort (innerhalb von 2 Sekunden erforderlich)
+    res.status(200).json({ success: true, message: 'Webhook received' });
 
-    // Extrahiere Organisation aus Webhook-Daten
-    // Bold Payment sollte organization_id oder reservation_id im Metadata haben
-    const organizationId = payload.metadata?.organization_id || 
-                          payload.data?.metadata?.organization_id;
+    // Verarbeitung asynchron (ohne auf Antwort zu warten)
+    // Verwende setImmediate, damit die Response zuerst gesendet wird
+    setImmediate(async () => {
+      try {
+        // Validiere Webhook-Secret (falls konfiguriert)
+        // TODO: Implementiere Webhook-Secret-Validierung
+        // const webhookSecret = req.headers['x-bold-webhook-secret'];
+        // if (webhookSecret !== process.env.BOLD_PAYMENT_WEBHOOK_SECRET) {
+        //   console.error('[Bold Payment Webhook] Ungültiges Webhook-Secret');
+        //   return;
+        // }
 
-    if (!organizationId) {
-      console.warn('[Bold Payment Webhook] Organisation-ID nicht gefunden im Webhook');
-      // Versuche über Reservation-ID zu finden
-      const reservationId = payload.metadata?.reservation_id || 
-                          payload.data?.metadata?.reservation_id ||
-                          (payload.reference ? parseInt(payload.reference.replace('RES-', '')) : null);
+        // Extrahiere Organisation aus Webhook-Daten
+        // Bold Payment sollte organization_id oder reservation_id im Metadata haben
+        const organizationId = payload.metadata?.organization_id || 
+                              payload.data?.metadata?.organization_id;
 
-      if (reservationId) {
-        // Finde Organisation über Reservierung
-        const { prisma } = await import('../utils/prisma');
-        
-        const reservation = await prisma.reservation.findUnique({
-          where: { id: reservationId },
-          select: { organizationId: true, branchId: true }
-        });
+        if (!organizationId) {
+          console.warn('[Bold Payment Webhook] Organisation-ID nicht gefunden im Webhook');
+          // Versuche über Reservation-ID zu finden
+          const reservationId = payload.metadata?.reservation_id || 
+                              payload.data?.metadata?.reservation_id ||
+                              (payload.reference ? parseInt(payload.reference.replace('RES-', '')) : null);
 
-        if (reservation) {
-          const boldPaymentService = reservation.branchId
-            ? await BoldPaymentService.createForBranch(reservation.branchId)
-            : new BoldPaymentService(reservation.organizationId);
-          await boldPaymentService.handleWebhook(payload);
-          
-          return res.json({ success: true, message: 'Webhook verarbeitet' });
+          if (reservationId) {
+            // Finde Organisation über Reservierung
+            const { prisma } = await import('../utils/prisma');
+            
+            const reservation = await prisma.reservation.findUnique({
+              where: { id: reservationId },
+              select: { organizationId: true, branchId: true }
+            });
+
+            if (reservation) {
+              const boldPaymentService = reservation.branchId
+                ? await BoldPaymentService.createForBranch(reservation.branchId)
+                : new BoldPaymentService(reservation.organizationId);
+              await boldPaymentService.handleWebhook(payload);
+              console.log('[Bold Payment Webhook] ✅ Webhook verarbeitet (via Reservation-ID)');
+              return;
+            }
+          }
+
+          // Bei fehlenden Daten: Loggen, aber nicht fehlschlagen
+          console.warn('[Bold Payment Webhook] Organisation-ID oder Reservierungs-ID fehlt im Webhook');
+          return;
         }
-      }
 
-      // Bei fehlenden Daten: 200 statt 400 (für Validierung)
-      // Bold Payment könnte einen Test-Request ohne vollständige Daten senden
-      console.warn('[Bold Payment Webhook] Organisation-ID oder Reservierungs-ID fehlt im Webhook');
-      return res.status(200).json({
-        success: true,
-        message: 'Webhook endpoint is active',
-        note: 'Missing organization_id or reservation_id in payload'
+        // Verarbeite Webhook
+        const boldPaymentService = new BoldPaymentService(parseInt(organizationId));
+        await boldPaymentService.handleWebhook(payload);
+        console.log('[Bold Payment Webhook] ✅ Webhook verarbeitet');
+      } catch (error) {
+        console.error('[Bold Payment Webhook] Fehler beim Verarbeiten (asynchron):', error);
+        // Fehler wird geloggt, aber Response wurde bereits gesendet
+      }
+    });
+  } catch (error) {
+    // Nur für Fehler beim Senden der Response
+    console.error('[Bold Payment Webhook] Fehler beim Senden der Response:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Fehler beim Verarbeiten des Webhooks'
       });
     }
-
-    // Verarbeite Webhook
-    const boldPaymentService = new BoldPaymentService(parseInt(organizationId));
-    await boldPaymentService.handleWebhook(payload);
-
-    // Bestätige Webhook-Empfang
-    res.json({ success: true, message: 'Webhook verarbeitet' });
-  } catch (error) {
-    console.error('[Bold Payment Webhook] Fehler beim Verarbeiten:', error);
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Fehler beim Verarbeiten des Webhooks'
-    });
   }
 };
 
