@@ -1,7 +1,8 @@
 # LobbyPMS KI-Bot Buchungssystem - Analyse und Implementierungsplan
 
 **Datum:** 2025-01-26  
-**Status:** Analyse & Plan - NICHTS UMSETZEN  
+**Letzte Aktualisierung:** 2025-01-29  
+**Status:** ✅ **TEILWEISE IMPLEMENTIERT** - Verfügbarkeitsprüfung & Reservierungserstellung funktionieren  
 **Ziel:** KI-Bot soll Zugang zum Buchungssystem haben und Reservierungen erstellen, Zahlungs- und Check-in-Links senden können, sowie automatische Stornierung bei nicht bezahlten Reservierungen
 
 ---
@@ -2249,35 +2250,33 @@ const countryCodeMap: Record<string, string> = {
 
 ---
 
-## ❓ OFFENE FRAGEN
+## ✅ BEANTWORTETE FRAGEN
 
 1. **"primo deportista":**
-   - ❓ Gibt die API es zurück? (Muss getestet werden)
-   - ❓ Welche `category_id` hat es?
-   - ❓ Wird es in den Logs geloggt?
-   - ❓ Ist es Branch-spezifisch? (Welcher Branch hat "primo deportista"?)
+   - ✅ Problem behoben: Filterung angepasst, zeigt jetzt alle verfügbaren Zimmer
+   - ✅ Wird in Logs geloggt
+   - ✅ Branch-spezifisch (abhängig von Branch-Konfiguration)
 
 2. **Zimmer-Buchung:**
    - ✅ Entscheidung: KI kann direkt `create_room_reservation` aufrufen (keine mehrstufige Konversation nötig)
    - ✅ Informationen: Check-in, Check-out, Name, Zimmerart, Category ID (optional)
-   - ✅ Kontext-Erkennung: KI soll Informationen aus vorherigen Nachrichten ableiten können
-   - ❓ Soll LobbyPMS API verwendet werden? (Muss getestet werden)
-   - ❓ Oder nur lokal erstellen? (Wahrscheinlich nur lokal, da API-Tests noch ausstehen)
+   - ✅ Kontext-Erkennung: KI kann Informationen aus vorherigen Nachrichten ableiten
+   - ✅ **LobbyPMS API wird verwendet!** (getestet und funktioniert)
 
 3. **LobbyPMS API:**
-   - ❓ Funktioniert die Reservierungserstellung-API? (Muss getestet werden)
-   - ❓ Welche Parameter sind erforderlich?
-   - ❓ Oder soll nur lokal erstellt werden? (Wahrscheinlich nur lokal für jetzt)
+   - ✅ **Reservierungserstellung-API funktioniert!** (Status 201, getestet 2025-01-29)
+   - ✅ **Erforderliche Parameter:** `category_id`, `start_date`, `end_date`, `holder_name`, `total_adults`
+   - ✅ **Response-Struktur:** `{ booking: { booking_id: ..., room_id: ... } }`
+   - ✅ **Integration implementiert:** `createBooking()` in `lobbyPmsService.ts`
 
 4. **Preisberechnung:**
-   - ❓ Soll Preis aus `check_room_availability` übernommen werden?
-   - ❓ Oder manuell berechnet? (Aktuell: Platzhalter 50.000 COP/Nacht)
-   - ❓ Wie mit verschiedenen Personenanzahl umgehen?
+   - ⚠️ **TODO:** Preis aus `check_room_availability` übernehmen (aktuell: Platzhalter 50.000 COP/Nacht)
+   - ⚠️ **TODO:** Verschiedene Personenanzahl berücksichtigen
 
 5. **Auswahl-Verarbeitung:**
-   - ❓ Wenn User "2." wählt, wie wird die `categoryId` zugeordnet?
-   - ❓ Soll die KI die `categoryId` aus der vorherigen `check_room_availability` Response verwenden?
-   - ❓ Oder soll der User explizit die `categoryId` angeben?
+   - ✅ KI verwendet `categoryId` aus vorheriger `check_room_availability` Response
+   - ✅ Wenn User "2." wählt, verwendet KI die `categoryId` des entsprechenden Zimmers
+   - ✅ System Prompt instruiert KI entsprechend
 
 ---
 
@@ -2299,8 +2298,9 @@ const countryCodeMap: Record<string, string> = {
 ---
 
 **Erstellt:** 2025-01-26  
-**Status:** ⚠️ PROBLEME IDENTIFIZIERT - Plan aktualisiert  
-**Nächster Schritt:** Test-Script ausführen, Logs prüfen, dann Fixes implementieren
+**Letzte Aktualisierung:** 2025-01-29  
+**Status:** ✅ **TEILWEISE IMPLEMENTIERT** - Verfügbarkeitsprüfung & Reservierungserstellung funktionieren  
+**Nächster Schritt:** Preisberechnung implementieren, automatische Stornierung implementieren
 
 ---
 
