@@ -1166,6 +1166,11 @@ const Worktracker: React.FC = () => {
     // ✅ KRITISCH: useCallback für Stabilität - verhindert Endlosschleife in SavedFilterTags
     const handleFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
         if (activeTab === 'todos') {
+            // ✅ KRITISCH: Verhindere mehrfaches Anwenden des gleichen Filters (Endlosschleife)
+            if (id === selectedFilterId && name === activeFilterName) {
+                return; // Filter bereits aktiv, keine erneute Anwendung
+            }
+            
             setActiveFilterName(name);
             setSelectedFilterId(id);
             applyFilterConditions(conditions, operators, sortDirections);
@@ -1181,6 +1186,11 @@ const Worktracker: React.FC = () => {
                 await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             }
         } else if (activeTab === 'reservations') {
+            // ✅ KRITISCH: Verhindere mehrfaches Anwenden des gleichen Filters (Endlosschleife)
+            if (id === reservationSelectedFilterId && name === reservationActiveFilterName) {
+                return; // Filter bereits aktiv, keine erneute Anwendung
+            }
+            
             setReservationActiveFilterName(name);
             setReservationSelectedFilterId(id);
             applyReservationFilterConditions(conditions, operators, sortDirections);
@@ -1196,7 +1206,7 @@ const Worktracker: React.FC = () => {
                 await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             }
         }
-    }, [activeTab, applyFilterConditions, loadTasks, loadReservations]);
+    }, [activeTab, applyFilterConditions, loadTasks, loadReservations, selectedFilterId, activeFilterName, reservationSelectedFilterId, reservationActiveFilterName, applyReservationFilterConditions]);
     
     // ✅ KRITISCH: useCallback für Stabilität - verhindert Endlosschleife in SavedFilterTags
     const handleReservationFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
@@ -2300,7 +2310,7 @@ const Worktracker: React.FC = () => {
                                     activeFilterName={activeTab === 'todos' ? activeFilterName : reservationActiveFilterName}
                                     selectedFilterId={activeTab === 'todos' ? selectedFilterId : reservationSelectedFilterId}
                                     onFilterChange={activeTab === 'todos' ? handleFilterChange : handleReservationFilterChange}
-                                    defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : 'Hoy'}
+                                    defaultFilterName={activeTab === 'todos' ? 'Aktuell' : 'Hoy'}
                                 />
                                 </div>
                             )}

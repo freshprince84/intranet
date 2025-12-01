@@ -239,7 +239,18 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
         // ✅ ZUSÄTZLICH: Prüfe selectedFilterId, um zu verhindern, dass Filter erneut angewendet wird
         if (defaultFilterName && !activeFilterName && !selectedFilterId && !defaultFilterAppliedRef.current) {
-          const defaultFilter = filters.find((filter: SavedFilter) => filter != null && filter.name === defaultFilterName);
+          // ✅ Suche nach Filter mit exaktem Namen oder alternativen Namen (für Migration)
+          const defaultFilter = filters.find((filter: SavedFilter) => {
+            if (!filter || !filter.name) return false;
+            // Exakte Übereinstimmung
+            if (filter.name === defaultFilterName) return true;
+            // Alternative Namen für "Aktuell"
+            if (defaultFilterName === 'Aktuell' && (filter.name === 'tasks.filters.current' || filter.name === 'requests.filters.aktuell')) return true;
+            // Alternative Namen für "Hoy"
+            if (defaultFilterName === 'Hoy' && (filter.name === 'Heute' || filter.name === 'common.today')) return true;
+            return false;
+          });
+          
           if (defaultFilter) {
             // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
             defaultFilterAppliedRef.current = true;
@@ -253,6 +264,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               // Uncontrolled Mode: Verwende onSelectFilter
               onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
             }
+          } else if (defaultFilterName && process.env.NODE_ENV === 'development') {
+            // ✅ Debug: Log wenn Filter nicht gefunden wird
+            console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, filters.map(f => f?.name));
           }
         }
       } catch (err) {
