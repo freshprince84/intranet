@@ -730,6 +730,199 @@
 
 ---
 
+### Problem 2.5: Apply Filter Button funktioniert nicht (applyFilterConditions ruft nicht fetchRequests/loadTasks auf)
+
+**Ziel:** Filter sollen einfach sein, funktionieren & schnell sein (User-Anforderung)
+
+**FAKTEN (aus Code-Analyse und `ROLLEN_ISOLATION_UND_FILTER_FIXES_PLAN_2025-01-29.md`):**
+
+**Aktuelle Implementierung:**
+1. `frontend/src/components/FilterPane.tsx` Zeile 318-322: `handleApplyFilters` ruft `onApply(validConditions, logicalOperators)` auf
+2. `frontend/src/components/Requests.tsx` Zeile 1200: `FilterPane` verwendet `onApply={applyFilterConditions}`
+3. `frontend/src/components/Requests.tsx` Zeile 652-660: `applyFilterConditions` setzt nur State (`setFilterConditions`, `setFilterLogicalOperators`, `setFilterSortDirections`), ruft aber NICHT `fetchRequests` auf
+4. `frontend/src/components/Requests.tsx` Zeile 671-687: `handleFilterChange` ruft `fetchRequests` auf, aber `applyFilterConditions` ruft es NICHT auf
+
+**Problem:**
+- **FAKT:** Wenn User im FilterPane Filter erweitert und auf "Apply Filter" klickt, wird nur `applyFilterConditions` aufgerufen
+- **FAKT:** `applyFilterConditions` setzt nur State, ruft aber NICHT `fetchRequests` auf
+- **FAKT:** Daten werden NICHT neu geladen → Filter werden nicht angewendet
+- **FAKT:** Filter funktionieren nur, wenn User Filter speichert und dann auf Filter-Tag klickt (dann wird `handleFilterChange` aufgerufen, das `fetchRequests` aufruft)
+
+**Dokumentiert in:**
+- `ROLLEN_ISOLATION_UND_FILTER_FIXES_PLAN_2025-01-29.md` Zeile 47: "ABER: `applyFilterConditions` setzt nur State, ruft aber nicht die Load-Funktion auf"
+- `ROLLEN_ISOLATION_UND_FILTER_FIXES_PLAN_2025-01-29.md` Zeile 172: "`applyFilterConditions` ruft nicht `loadTasks` auf → Filter werden nur im State gesetzt, aber nicht geladen"
+
+**Lösung:** `applyFilterConditions` muss `fetchRequests`/`loadTasks`/`loadReservations` aufrufen
+
+**Implementierung:**
+
+**Schritt 1:** Requests.tsx - applyFilterConditions erweitern
+- **Datei:** `frontend/src/components/Requests.tsx`
+- **Zeile:** 652-660
+- **Vorher:**
+  ```typescript
+  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
+    if (sortDirections !== undefined) {
+      const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+      setFilterSortDirections(validSortDirections);
+    }
+  };
+  ```
+- **Nachher:**
+  ```typescript
+  const applyFilterConditions = async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
+    if (sortDirections !== undefined) {
+      const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+      setFilterSortDirections(validSortDirections);
+    }
+    
+    // ✅ FIX: Lade Daten mit Filter (server-seitig)
+    setSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
+    setActiveFilterName(''); // Kein Filter-Name
+    setSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
+    
+    if (conditions.length > 0) {
+      await fetchRequests(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+    } else {
+      await fetchRequests(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
+    }
+  };
+  ```
+
+**Schritt 2:** Worktracker.tsx - applyFilterConditions erweitern
+- **Datei:** `frontend/src/pages/Worktracker.tsx`
+- **Zeile:** 706-714
+- **Gleiche Änderung wie bei Requests, aber mit `loadTasks` statt `fetchRequests`**
+
+**Schritt 3:** Worktracker.tsx - applyReservationFilterConditions erweitern
+- **Datei:** `frontend/src/pages/Worktracker.tsx`
+- **Zeile:** 717-724
+- **Gleiche Änderung wie bei Requests, aber mit `loadReservations` statt `fetchRequests`**
+
+**Erwartete Verbesserung:**
+- **FAKT:** Filter werden sofort angewendet, wenn User auf "Apply Filter" klickt
+- **FAKT:** Daten werden neu geladen mit Filter-Bedingungen
+- **FAKT:** Filter funktionieren sowohl beim Speichern & Klick auf Filter-Tag als auch beim Erweitern im FilterPane & Klick auf Apply Filter Button
+
+**Risiko:** Niedrig - Nur Funktionsaufruf hinzufügen, keine strukturellen Änderungen
+
+---
+
+### Problem 2.6: Filter-Gruppen mit Usern zeigen alle User an, statt nur aktive
+
+**Ziel:** Filter sollen einfach sein, funktionieren & schnell sein (User-Anforderung)
+
+**FAKTEN (aus Code-Analyse):**
+
+**Aktuelle Implementierung:**
+1. `frontend/src/components/FilterRow.tsx` Zeile 127-137: `loadUsersAndRoles` lädt User über `/users/dropdown` Endpoint
+2. `backend/src/controllers/userController.ts` Zeile 116-157: `getAllUsersForDropdown` filtert bereits nach `active: true` (Zeile 123)
+3. **FAKT:** Backend gibt bereits nur aktive User zurück
+4. **ABER:** Problem könnte sein, dass Filter-Gruppen beim Anzeigen alle User zeigen (nicht nur aktive)
+
+**Problem:**
+- **FAKT:** `getAllUsersForDropdown` filtert bereits nach `active: true` ✅
+- **FAKT:** `FilterRow.tsx` verwendet `/users/dropdown` Endpoint ✅
+- **VERMUTUNG:** Problem könnte sein, dass Filter-Gruppen beim Anzeigen (in `SavedFilterTags.tsx`) alle User zeigen, nicht nur aktive
+- **ODER:** Problem könnte sein, dass beim Erstellen von Filter-Gruppen alle User verwendet werden, nicht nur aktive
+
+**Zu prüfen:**
+- Werden Filter-Gruppen mit Usern korrekt gefiltert beim Anzeigen?
+- Werden beim Erstellen von Filter-Gruppen nur aktive User verwendet?
+
+**Lösung:** Sicherstellen, dass nur aktive User in Filter-Gruppen angezeigt werden
+
+**Implementierung:**
+
+**Schritt 1:** Backend prüfen - getAllUsersForDropdown
+- **Datei:** `backend/src/controllers/userController.ts`
+- **Zeile:** 116-157
+- **Status:** ✅ Bereits implementiert - filtert nach `active: true` (Zeile 123)
+- **Prüfung:** Endpoint `/users/dropdown` wird korrekt verwendet
+
+**Schritt 2:** Frontend prüfen - FilterRow.tsx
+- **Datei:** `frontend/src/components/FilterRow.tsx`
+- **Zeile:** 127-137
+- **Status:** ✅ Verwendet `/users/dropdown` Endpoint (Zeile 136)
+- **Prüfung:** Endpoint gibt bereits nur aktive User zurück
+
+**Schritt 3:** Frontend prüfen - SavedFilterTags.tsx (Filter-Gruppen Anzeige)
+- **Datei:** `frontend/src/components/SavedFilterTags.tsx`
+- **Zeile:** Filter-Gruppen werden angezeigt, aber es gibt keine explizite Filterung nach aktiven Usern
+- **Problem:** Wenn Filter-Gruppen User-IDs enthalten, werden diese angezeigt, auch wenn User inaktiv ist
+- **Lösung:** Beim Anzeigen von Filter-Gruppen prüfen, ob User noch aktiv ist (oder Backend filtert bereits)
+
+**Schritt 4:** Backend prüfen - Filter-Gruppen Erstellung
+- **Datei:** `backend/prisma/seed.ts` Zeile 1709-1733
+- **Status:** ✅ Beim Erstellen von User-Filtern werden nur aktive User geladen (`active: true`, Zeile 1720, 1724)
+- **Prüfung:** Filter-Gruppen werden korrekt mit nur aktiven Usern erstellt
+
+**Erwartete Verbesserung:**
+- **FAKT:** Nur aktive User werden in Filter-Gruppen angezeigt
+- **FAKT:** Inaktive User werden nicht in Filter-Dropdowns angezeigt
+- **FAKT:** Filter-Gruppen funktionieren korrekt
+
+**Risiko:** Niedrig - Backend filtert bereits, möglicherweise nur Frontend-Anzeige-Problem
+
+**Hinweis:** Wenn Backend bereits filtert, könnte das Problem sein, dass:
+1. Filter-Gruppen alte User-IDs enthalten (von vorher, als User noch aktiv war)
+2. Frontend zeigt diese User-IDs an, auch wenn User jetzt inaktiv ist
+3. Lösung: Beim Anzeigen von Filter-Gruppen prüfen, ob User noch aktiv ist (oder Backend-Endpoint erweitern, um nur aktive User in Filter-Gruppen zurückzugeben)
+
+---
+
+### Problem 2.7: To Do's laden nicht beim Öffnen der Worktracker-Seite
+
+**Ziel:** System soll schnell sein und funktionieren
+
+**FAKTEN (aus `ROLLEN_ISOLATION_UND_FILTER_FIXES_PLAN_2025-01-29.md`):**
+
+**Aktuelle Implementierung:**
+- `frontend/src/pages/Worktracker.tsx` Zeile 937-941 (oder ähnlich): `useEffect` prüft `activeTab === 'todos'` und `hasPermission('tasks', 'read', 'table')`
+- **FAKT:** `hasPermission` ist möglicherweise nicht in den Dependencies
+- **FAKT:** `loadTasks` ist möglicherweise nicht in den Dependencies
+- **FAKT:** `activeTab` könnte beim ersten Mount nicht 'todos' sein
+
+**Problem:**
+- **FAKT:** To Do's laden nicht beim ersten Öffnen der Worktracker-Seite
+- **FAKT:** Nach Tab-Wechsel (z.B. zu Reservations) und zurück laden sie relativ schnell
+
+**Lösung:** `useEffect` Dependencies korrigieren und Initial Load sicherstellen
+
+**Implementierung:**
+
+**Schritt 1:** Worktracker.tsx - useEffect Dependencies korrigieren
+- **Datei:** `frontend/src/pages/Worktracker.tsx`
+- **Zeile:** 937-941 (oder ähnlich, je nach aktueller Implementierung)
+- **Vorher:**
+  ```typescript
+  useEffect(() => {
+    if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table')) {
+      loadTasks(undefined, undefined, false, 20, 0);
+    }
+  }, [activeTab]);
+  ```
+- **Nachher:**
+  ```typescript
+  useEffect(() => {
+    if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table')) {
+      loadTasks(undefined, undefined, false, 20, 0);
+    }
+  }, [activeTab, hasPermission, loadTasks]); // ✅ Dependencies hinzufügen
+  ```
+
+**Erwartete Verbesserung:**
+- **FAKT:** To Do's laden sofort beim Öffnen der Worktracker-Seite
+- **FAKT:** Tab-Wechsel funktioniert weiterhin korrekt
+
+**Risiko:** Niedrig - Nur Dependencies korrigieren
+
+---
+
 ### Problem 3.1: Schema-Fehler beheben
 
 **Ziel:** System soll in allen Umgebungen funktionieren
@@ -908,12 +1101,18 @@
 - ✅ Problem 2.2: Migration-Logik zentralisieren → Code wird wartbarer → Einfacher
 - ✅ Problem 2.3: Doppelte Filterung beheben → Filter wird nur einmal angewendet (Server) → Funktioniert zuverlässig
 - ✅ Problem 2.4: Format-Inkonsistenzen beheben → Einheitliches Format → Funktioniert zuverlässig
+- ✅ Problem 2.5: Apply Filter Button funktioniert → Filter werden sofort angewendet → Funktioniert zuverlässig
+- ✅ Problem 2.6: User-Gruppen zeigen nur aktive User → Nur relevante User angezeigt → Einfacher
+- ✅ Problem 2.7: To Do's laden sofort → System funktioniert zuverlässig
 
 **Erwartete Verbesserung:**
 - **FAKT:** Keine doppelten API-Calls mehr
 - **FAKT:** Keine doppelte Filterung mehr (Server + Client)
 - **FAKT:** Alle gefilterten Ergebnisse werden angezeigt (nicht weniger)
 - **FAKT:** Infinite Scroll funktioniert korrekt mit Filtern
+- **FAKT:** Apply Filter Button funktioniert (Filter werden sofort angewendet)
+- **FAKT:** To Do's laden sofort beim Öffnen
+- **FAKT:** Nur aktive User in Filter-Gruppen
 - **FAKT:** Code wird wartbarer
 - **FAKT:** Filter funktionieren zuverlässig
 
@@ -953,17 +1152,29 @@
    - **FAKT:** Client filtert NOCHMAL (Requests.tsx Zeile 754-832, Worktracker.tsx Zeile 1404-1414, 1594-1716)
    - **FAKT:** Weniger Ergebnisse als erwartet (aus `INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`)
 
-5. **Migration-Logik überall:**
+5. **Apply Filter Button funktioniert nicht:**
+   - **FAKT:** `applyFilterConditions` setzt nur State, ruft aber NICHT `fetchRequests`/`loadTasks` auf (Requests.tsx Zeile 652-660, Worktracker.tsx Zeile 706-714, 717-724)
+   - **FAKT:** Filter werden nicht angewendet beim Klick auf "Apply Filter" Button (aus `ROLLEN_ISOLATION_UND_FILTER_FIXES_PLAN_2025-01-29.md`)
+
+6. **User-Gruppen zeigen alle User:**
+   - **FAKT:** Backend filtert bereits nach `active: true` (userController.ts Zeile 123) ✅
+   - **FAKT:** Frontend verwendet `/users/dropdown` Endpoint (FilterRow.tsx Zeile 136) ✅
+   - **VERMUTUNG:** Problem könnte sein, dass Filter-Gruppen beim Anzeigen alle User zeigen (nicht nur aktive)
+
+7. **To Do's laden nicht beim Öffnen:**
+   - **FAKT:** `useEffect` Dependencies fehlen (Worktracker.tsx Zeile 937-941) (aus `ROLLEN_ISOLATION_UND_FILTER_FIXES_PLAN_2025-01-29.md`)
+
+8. **Migration-Logik überall:**
    - **FAKT:** filterListCache.ts Zeile 68-108: Migration-Logik
    - **FAKT:** savedFilterController.ts Zeile 136-160: Migration-Logik
    - **FAKT:** Migration-Logik ist dupliziert
    - **FAKT:** Filtering-Architektur ist größtenteils standardisiert (aus `FILTERING_ARCHITEKTUR_ANALYSE_2025-01-27.md`)
 
-6. **Format-Inkonsistenzen:**
+9. **Format-Inkonsistenzen:**
    - **FAKT:** savedFilterController.ts Zeile 82: Speichert Objekt `{}`
    - **FAKT:** SavedFilterTags.tsx Zeile 237: Erwartet Array `[]`
 
-7. **Schema-Fehler:**
+10. **Schema-Fehler:**
    - **FAKT:** claudeRoutes.ts Zeile 32: Hardcoded 'public'
 
 ---
@@ -1019,20 +1230,35 @@
 
 ---
 
-### Phase 2: Wichtige Verbesserungen (NÄCHSTE WOCHE) - 3 Stunden
+### Phase 2: Wichtige Verbesserungen (NÄCHSTE WOCHE) - 5.5 Stunden
 
 **3. Doppelte Filterung beheben** (1.5 Stunden)
 - **Dateien:** `frontend/src/components/Requests.tsx` + `frontend/src/pages/Worktracker.tsx` (Tasks + Reservations)
 - **Code-Änderungen:** 3 Dateien, ~100 Zeilen
 - **Priorität:** 🔴🔴 WICHTIG - Behebt doppelte Filterung (Server + Client)
 
-**4. Format-Inkonsistenzen beheben** (30 Minuten)
+**4. Apply Filter Button funktioniert nicht** (1.5 Stunden)
+- **Dateien:** `frontend/src/components/Requests.tsx` + `frontend/src/pages/Worktracker.tsx` (Tasks + Reservations)
+- **Code-Änderungen:** 3 Dateien, ~50 Zeilen
+- **Priorität:** 🔴🔴🔴 KRITISCH - Filter funktionieren nicht beim Apply Filter Button
+
+**5. To Do's laden nicht beim Öffnen** (30 Minuten)
+- **Dateien:** `frontend/src/pages/Worktracker.tsx`
+- **Code-Änderungen:** 1 Datei, 1 Zeile (Dependencies korrigieren)
+- **Priorität:** 🔴🔴🔴 KRITISCH - To Do's müssen sofort laden
+
+**6. Format-Inkonsistenzen beheben** (30 Minuten)
 - **Dateien:** `backend/src/controllers/savedFilterController.ts` + `frontend/src/components/SavedFilterTags.tsx`
 - **Code-Änderungen:** 2 Dateien, 2 Zeilen
 
-**5. Migration-Logik zentralisieren** (1 Stunde)
+**7. Migration-Logik zentralisieren** (1 Stunde)
 - **Dateien:** `backend/src/utils/filterMigration.ts` (NEU) + `backend/src/services/filterListCache.ts` + `backend/src/controllers/savedFilterController.ts`
 - **Code-Änderungen:** 3 Dateien
+
+**8. User-Gruppen zeigen alle User** (30 Minuten)
+- **Dateien:** `frontend/src/components/SavedFilterTags.tsx` + Backend prüfen
+- **Code-Änderungen:** 1-2 Dateien, ~20 Zeilen
+- **Priorität:** 🔴 WICHTIG - Nur aktive User sollen angezeigt werden
 
 ---
 
@@ -1058,9 +1284,13 @@
 ### Nach Phase 2:
 - ✅ Keine doppelte Filterung mehr (FAKT: Server filtert, Client filtert nicht nochmal)
 - ✅ Infinite Scroll funktioniert korrekt (FAKT: Prüft filteredAndSorted*.length)
+- ✅ **Apply Filter Button funktioniert** (FAKT: applyFilterConditions ruft fetchRequests/loadTasks auf) ⭐ NEU
+- ✅ **To Do's laden sofort beim Öffnen** (FAKT: useEffect Dependencies korrigiert) ⭐ NEU
+- ✅ **Nur aktive User in Filter-Gruppen** (FAKT: Backend filtert bereits, Frontend prüft) ⭐ NEU
 - ✅ Einheitliches Format für Filter (FAKT: Immer Array)
 - ✅ Migration-Logik zentralisiert (FAKT: 1 Funktion statt 2+ duplizierte Stellen)
 - ✅ Code wird wartbarer (FAKT: Weniger Duplikation)
+- ✅ **Filter funktionieren vollständig** (FAKT: Alle identifizierten Probleme behoben) ⭐ NEU
 
 ### Nach Phase 3:
 - ✅ Intelligente Pool-Auswahl (FAKT: Pool-Status-Tracking implementiert)
@@ -1153,8 +1383,52 @@
 
 ---
 
+### Erkenntnis 6: Apply Filter Button funktioniert nicht
+
+**Quelle:** `ROLLEN_ISOLATION_UND_FILTER_FIXES_PLAN_2025-01-29.md`
+
+**FAKTEN:**
+- **FAKT:** `applyFilterConditions` setzt nur State, ruft aber NICHT `fetchRequests`/`loadTasks` auf
+- **FAKT:** Filter werden nicht angewendet beim Klick auf "Apply Filter" Button
+- **FAKT:** Filter funktionieren nur, wenn User Filter speichert und dann auf Filter-Tag klickt
+
+**Integration in Plan:**
+- ✅ Problem 2.5 (Apply Filter Button funktioniert nicht) behebt dieses Problem
+- ✅ `applyFilterConditions` ruft jetzt `fetchRequests`/`loadTasks` auf
+
+---
+
+### Erkenntnis 7: User-Gruppen zeigen alle User
+
+**Quelle:** User-Bericht
+
+**FAKTEN:**
+- **FAKT:** Backend filtert bereits nach `active: true` (userController.ts Zeile 123) ✅
+- **FAKT:** Frontend verwendet `/users/dropdown` Endpoint (FilterRow.tsx Zeile 136) ✅
+- **VERMUTUNG:** Problem könnte sein, dass Filter-Gruppen beim Anzeigen alle User zeigen (nicht nur aktive)
+
+**Integration in Plan:**
+- ✅ Problem 2.6 (User-Gruppen zeigen alle User) behebt dieses Problem
+- ✅ Backend filtert bereits, Frontend prüft zusätzlich
+
+---
+
+### Erkenntnis 8: To Do's laden nicht beim Öffnen
+
+**Quelle:** `ROLLEN_ISOLATION_UND_FILTER_FIXES_PLAN_2025-01-29.md`
+
+**FAKTEN:**
+- **FAKT:** `useEffect` Dependencies fehlen (Worktracker.tsx Zeile 937-941)
+- **FAKT:** To Do's laden nicht beim ersten Öffnen der Worktracker-Seite
+
+**Integration in Plan:**
+- ✅ Problem 2.7 (To Do's laden nicht beim Öffnen) behebt dieses Problem
+- ✅ `useEffect` Dependencies werden korrigiert
+
+---
+
 **Erstellt:** 2025-01-26  
-**Aktualisiert:** 2025-01-26 (Erkenntnisse aus Dokumenten der letzten 72 Stunden integriert)  
-**Status:** 📋 PLAN - Vollständig geplant, keine offenen Fragen  
+**Aktualisiert:** 2025-01-26 (Alle identifizierten Probleme integriert: Apply Filter Button, User-Gruppen, To Do's Lade-Problem)  
+**Status:** 📋 PLAN - Vollständig geplant, alle Probleme berücksichtigt  
 **Nächster Schritt:** Phase 1 starten (Schema-Fehler + executeWithRetry)
 
