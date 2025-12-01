@@ -927,3 +927,4 @@ useEffect(() => {
 **Nächster Schritt:** Phase 1 umsetzen (Backend - Pagination entfernen)
 
 
+

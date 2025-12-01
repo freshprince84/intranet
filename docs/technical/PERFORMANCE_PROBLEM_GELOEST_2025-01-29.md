@@ -160,3 +160,4 @@ ORDER BY length(value::text) DESC;
 **Status:** ✅ GELÖST  
 **System:** ✅ Läuft wieder deutlich schneller
 
+

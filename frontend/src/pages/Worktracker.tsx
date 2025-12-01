@@ -336,6 +336,7 @@ const Worktracker: React.FC = () => {
     const [tasksLoadingMore, setTasksLoadingMore] = useState<boolean>(false); // ✅ PAGINATION: Lädt weitere Items
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [initialFilterLoading, setInitialFilterLoading] = useState<boolean>(false); // ✅ KRITISCH: Verhindert Endlosschleife beim initialen Filter-Load
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
     
@@ -934,9 +935,16 @@ const Worktracker: React.FC = () => {
     };
     
     // ✅ Initialer Filter-Load für Todos (wie bei Reservations)
+    // ✅ KRITISCH: Loading-State verhindert Endlosschleife bei Timeout-Fehlern
     useEffect(() => {
         const setInitialTodoFilter = async () => {
+            // ✅ Verhindere doppelte Requests
+            if (initialFilterLoading) {
+                return;
+            }
+            
             try {
+                setInitialFilterLoading(true);
                 const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TODOS_TABLE_ID));
                 const filters = response.data;
                 
@@ -952,17 +960,29 @@ const Worktracker: React.FC = () => {
                     // Fallback: Lade alle Todos (sollte nicht passieren, wenn Filter erstellt wurde)
                     await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Fehler beim Setzen des initialen Filters:', error);
-                // Fallback: Lade alle Todos
-                await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                // ✅ Bei Timeout-Fehlern nicht erneut laden (verhindert Endlosschleife)
+                if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+                    console.error('⛔ Timeout beim Laden des initialen Filters - verhindere erneutes Laden');
+                    setError('Timeout beim Laden der Filter. Bitte Seite neu laden.');
+                    return; // ✅ WICHTIG: Nicht erneut laden bei Timeout
+                }
+                // Fallback: Lade alle Todos (nur bei anderen Fehlern)
+                try {
+                    await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                } catch (loadError) {
+                    console.error('Fehler beim Fallback-Laden der Todos:', loadError);
+                }
+            } finally {
+                setInitialFilterLoading(false);
             }
         };
         
-        if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table')) {
+        if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table') && !initialFilterLoading) {
             setInitialTodoFilter();
         }
-    }, [activeTab, hasPermission]);
+    }, [activeTab, hasPermission, loadTasks, applyFilterConditions, initialFilterLoading]);
     
     useEffect(() => {
         if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
@@ -1171,7 +1191,8 @@ const Worktracker: React.FC = () => {
         return 0;
     };
 
-    const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    // ✅ KRITISCH: useCallback für Stabilität in useEffect Dependencies
+    const applyFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
         setFilterConditions(conditions);
         setFilterLogicalOperators(operators);
         if (sortDirections !== undefined) {
@@ -1179,7 +1200,7 @@ const Worktracker: React.FC = () => {
             const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
             setFilterSortDirections(validSortDirections);
         }
-    };
+    }, []); // ✅ Keine Dependencies nötig - nur State-Setter
     
     const resetFilterConditions = () => {
         setFilterConditions([]);
