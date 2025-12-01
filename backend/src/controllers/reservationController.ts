@@ -643,6 +643,9 @@ export const getAllReservations = async (req: Request, res: Response) => {
       } else if (hasAllBranchesPermission) {
         // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
         console.log(`[Reservation] User hat all_branches Berechtigung, zeige alle Reservations`);
+      } else if (hasReservationsPermission) {
+        // ✅ FIX: Alte "reservations" Berechtigung → Zeige alle Reservierungen der Organisation
+        console.log(`[Reservation] User hat alte 'reservations' Berechtigung, zeige alle Reservations der Organisation`);
       } else {
         // Keine Berechtigung → keine Reservierungen
         console.log(`[Reservation] User hat keine Berechtigung, gebe leeres Array zurück`);
