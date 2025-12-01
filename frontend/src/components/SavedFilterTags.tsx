@@ -255,13 +255,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }
   }, [loading, savedFilters, defaultFilterName, activeFilterName, selectedFilterId, onFilterChange, onSelectFilter]);
 
-  // ✅ MEMORY: Cleanup - Filter Arrays beim Unmount löschen
-  useEffect(() => {
-    return () => {
-      setSavedFilters([]);
-      setFilterGroups([]);
-    };
-  }, []); // Nur beim Unmount ausführen
+  // ✅ PERFORMANCE: Cleanup nicht mehr nötig - FilterContext verwaltet State zentral
+  // Filter werden automatisch vom FilterContext verwaltet
 
   // Expose refresh function für Parent-Komponenten
   useEffect(() => {
@@ -323,13 +318,14 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       const token = localStorage.getItem('token');
       
       if (!token) {
-        setError('Nicht authentifiziert');
+        showMessage(t('filter.notAuthenticated', { defaultValue: 'Nicht authentifiziert' }), 'error');
         return;
       }
       
       await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(filterId));
       
-      setSavedFilters(savedFilters.filter(filter => filter.id !== filterId));
+      // ✅ PERFORMANCE: Aktualisiere Filter über Filter-Context
+      await filterContext.refreshFilters(tableId);
       
       // Wenn der aktuell ausgewählte Filter gelöscht wurde
       if (selectedFilterId === filterId || (!onFilterChange && filterId)) {
