@@ -255,8 +255,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
             defaultFilterAppliedRef.current = true;
             
-            // Sicherstellen, dass sortDirections ein Array ist
-            const validSortDirections = Array.isArray(defaultFilter.sortDirections) ? defaultFilter.sortDirections : undefined;
+            // ✅ FIX: Einheitliches Format - immer Array (nicht undefined)
+            const validSortDirections = Array.isArray(defaultFilter.sortDirections) ? defaultFilter.sortDirections : [];
             if (onFilterChange) {
               // Controlled Mode: Verwende onFilterChange
               onFilterChange(defaultFilter.name, defaultFilter.id, defaultFilter.conditions, defaultFilter.operators, validSortDirections);
@@ -327,8 +327,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       hasOnFilterChange: !!onFilterChange
     });
     
-    // Sicherstellen, dass sortDirections ein Array ist (oder undefined)
-    const validSortDirections = Array.isArray(filter.sortDirections) ? filter.sortDirections : undefined;
+    // ✅ FIX: Einheitliches Format - immer Array (nicht undefined)
+    const validSortDirections = Array.isArray(filter.sortDirections) ? filter.sortDirections : [];
     
     if (onFilterChange) {
       // Controlled component
