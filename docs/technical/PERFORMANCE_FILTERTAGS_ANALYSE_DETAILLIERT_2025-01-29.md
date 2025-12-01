@@ -180,3 +180,4 @@ pm2 logs intranet-backend --lines 1000 --nostream | grep -i "saved-filter\|Filte
 **Status:** 🔍 ANALYSE - DB-Query ist schnell, Problem liegt im Frontend/Network  
 **Nächster Schritt:** Browser Network-Tab prüfen (wenn Online)
 
+

@@ -180,3 +180,4 @@ pm2 logs intranet-backend --lines 2000 --nostream | grep -E "Cache-Miss|Query ab
 **Status:** ✅ KORRIGIERT  
 **Nächster Schritt:** Korrigierte Befehle ausführen
 
+

@@ -374,3 +374,4 @@ setEntities(response.data?.data || response.data || []);
 **Status:** ✅ Analyse abgeschlossen
 
 
+

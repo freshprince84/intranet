@@ -357,3 +357,4 @@ sudo -u postgres psql -d intranet -c "SELECT id, name, CASE WHEN whatsappSetting
 **Status:** 🔍 BEFEHLE BEREIT  
 **Nächster Schritt:** Befehle auf Server ausführen
 
+

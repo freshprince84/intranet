@@ -164,3 +164,4 @@ pm2 logs intranet-backend --lines 5000 --nostream | grep -E "saved-filters|getUs
 **Status:** 🔍 ANALYSE - Network-Tab zeigt keine saved-filters Requests  
 **Nächster Schritt:** Console-Fehler prüfen und Filter entfernen
 
+
