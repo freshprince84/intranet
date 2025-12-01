@@ -210,10 +210,12 @@ function convertSingleCondition(
 
     case 'onlineCheckInCompleted':
       if (entityType === 'reservation') {
+        // ✅ Konvertiere Wert zu Boolean
+        const boolValue = value === true || value === 'true' || value === 1 || value === '1';
         if (operator === 'equals') {
-          return { onlineCheckInCompleted: value === true || value === 'true' || value === 1 };
+          return { onlineCheckInCompleted: boolValue };
         } else if (operator === 'notEquals') {
-          return { onlineCheckInCompleted: { not: (value === true || value === 'true' || value === 1) } };
+          return { onlineCheckInCompleted: { not: boolValue } };
         }
       }
       return {};
