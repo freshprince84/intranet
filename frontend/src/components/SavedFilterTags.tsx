@@ -237,7 +237,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         setFilterGroups(groups);
 
         // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
-        if (defaultFilterName && !activeFilterName && !defaultFilterAppliedRef.current) {
+        // ✅ ZUSÄTZLICH: Prüfe selectedFilterId, um zu verhindern, dass Filter erneut angewendet wird
+        if (defaultFilterName && !activeFilterName && !selectedFilterId && !defaultFilterAppliedRef.current) {
           const defaultFilter = filters.find((filter: SavedFilter) => filter != null && filter.name === defaultFilterName);
           if (defaultFilter) {
             // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
