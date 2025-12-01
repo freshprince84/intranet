@@ -332,6 +332,8 @@
 - ✅ Filter-Daten werden aus Context geladen (keine API-Call)
 - ✅ Nur Daten werden neu geladen (mit Filter-Parametern)
 - ✅ Filter-Context bleibt unverändert (Filter werden nicht neu geladen)
+- ✅ **WICHTIG:** Server filtert bereits → Client filtert NICHT nochmal (keine doppelte Filterung)
+- ✅ **WICHTIG:** Alle gefilterten Ergebnisse werden angezeigt (nicht weniger)
 
 ---
 
@@ -374,8 +376,22 @@
 - ✅ **Ergebnis:** Filter werden nur einmal geladen (keine Duplikate)
 
 **Beispiel aus Szenario 1:**
-- ❌ **Vorher:** Requests.tsx lädt Filter + SavedFilterTags lädt Filter → 2 API-Calls
-- ✅ **Nachher:** Filter-Context lädt Filter einmalig → 1 API-Call
+- ❌ **Vorher:** Requests.tsx lädt Filter + SavedFilterTags lädt Filter → 2 API-Calls → 2-3 Sekunden
+- ✅ **Nachher:** Filter-Context lädt Filter einmalig → 1 API-Call → 0.5-1 Sekunde
+- **Zusätzlich:** DB-Query ist sehr schnell (0.379ms) - Problem lag bei doppelten Requests (aus `PERFORMANCE_ANALYSE_ERGEBNISSE_2025-01-29.md`)
+
+### Problem 2.3: Doppelte Filterung beheben (Server + Client)
+
+**Wie der Plan dies sicherstellt:**
+- ✅ **FAKT:** Server filtert bereits (mit `filterId` oder `filterConditions`)
+- ✅ **FAKT:** Client filtert NICHT nochmal (nur `searchTerm` bleibt client-seitig)
+- ✅ **Ergebnis:** Alle gefilterten Ergebnisse werden angezeigt (nicht weniger)
+- ✅ **Ergebnis:** Infinite Scroll funktioniert korrekt (prüft `filteredAndSorted*.length`)
+
+**Beispiel aus Szenario 4:**
+- ❌ **Vorher:** Server filtert + Client filtert NOCHMAL → Weniger Ergebnisse als erwartet
+- ✅ **Nachher:** Server filtert → Client filtert NICHT nochmal → Alle gefilterten Ergebnisse werden angezeigt
+- **Zusätzlich:** Infinite Scroll prüft jetzt `filteredAndSorted*.length` statt `*.length` (aus `INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`)
 
 **Beispiel aus Szenario 2:**
 - ❌ **Vorher:** Worktracker lädt Filter + SavedFilterTags lädt Filter → 2 API-Calls
@@ -471,7 +487,46 @@
 
 ---
 
+---
+
+## 📚 ZUSÄTZLICHE ERKENNTNISSE AUS DOKUMENTEN (2025-01-29)
+
+### Erkenntnis 1: FilterTags dauern 2-3 Sekunden trotz Cache
+
+**Quelle:** `PERFORMANCE_ANALYSE_ERGEBNISSE_2025-01-29.md`
+
+**FAKTEN:**
+- **FAKT:** DB-Query ist sehr schnell (0.379ms) - Problem liegt NICHT bei der Datenbank
+- **FAKT:** Filter-Größe ist OK (< 500 bytes) - das ist nicht das Problem
+- **FAKT:** Cache funktioniert (viele Cache-Hits)
+- **FAKT:** Mögliche Ursachen: Network-Latenz, doppelte Requests (Frontend), React Re-Renders
+
+**Integration in gewünschte Lade-Reihenfolge:**
+- ✅ Problem 2.1 (Doppelte Filter-Ladung) behebt doppelte Requests → Reduziert Network-Latenz
+- ✅ Filter-Context verwendet bereits Cache → Keine zusätzliche Optimierung nötig
+- ✅ **Erwartete Verbesserung:** 2-3 Sekunden → 0.5-1 Sekunde
+
+---
+
+### Erkenntnis 2: Doppelte Filterung (Server + Client)
+
+**Quelle:** `INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`
+
+**FAKTEN:**
+- **FAKT:** Server filtert bereits (mit `filterId` oder `filterConditions`)
+- **FAKT:** Client filtert NOCHMAL → Weniger Ergebnisse als erwartet
+- **FAKT:** Beispiel: Filter "heute" → Server liefert 50 Reservierungen → Client filtert NOCHMAL → könnte weniger werden
+- **FAKT:** Infinite Scroll prüft falsche Länge (`requests.length` statt `filteredAndSortedRequests.length`)
+
+**Integration in gewünschte Lade-Reihenfolge:**
+- ✅ Problem 2.3 (Doppelte Filterung) behebt dieses Problem
+- ✅ Infinite Scroll wird korrigiert (prüft `filteredAndSorted*.length`)
+- ✅ **Erwartete Verbesserung:** Alle gefilterten Ergebnisse werden angezeigt (nicht weniger)
+
+---
+
 **Erstellt:** 2025-01-26  
+**Aktualisiert:** 2025-01-26 (Erkenntnisse aus Dokumenten der letzten 72 Stunden integriert)  
 **Status:** 📋 SPEZIFIKATION - Vollständig beschrieben  
 **Nächster Schritt:** Implementierung starten (Phase 1)
 
