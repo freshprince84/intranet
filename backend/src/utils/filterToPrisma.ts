@@ -127,6 +127,107 @@ function convertSingleCondition(
     case 'checkOutDate':
       return convertDateCondition(value, operator, column);
 
+    case 'Deadline':
+    case 'deadline':
+      // ✅ FIX: Deadline → paymentDeadline (korrekter Feldname im Schema)
+      if (entityType === 'reservation') {
+        return convertDateCondition(value, operator, 'paymentDeadline');
+      }
+      return {};
+
+    // ✅ Reservations-spezifische Felder
+    case 'guestName':
+      if (entityType === 'reservation') {
+        if (operator === 'equals') {
+          return { guestName: { equals: value, mode: 'insensitive' } };
+        } else if (operator === 'contains') {
+          return { guestName: { contains: value as string, mode: 'insensitive' } };
+        } else if (operator === 'startsWith') {
+          return { guestName: { startsWith: value as string, mode: 'insensitive' } };
+        } else if (operator === 'endsWith') {
+          return { guestName: { endsWith: value as string, mode: 'insensitive' } };
+        }
+      }
+      return {};
+
+    case 'paymentStatus':
+      if (entityType === 'reservation') {
+        if (operator === 'equals') {
+          return { paymentStatus: value };
+        } else if (operator === 'notEquals') {
+          return { paymentStatus: { not: value } };
+        }
+      }
+      return {};
+
+    case 'roomNumber':
+      if (entityType === 'reservation') {
+        if (operator === 'equals') {
+          return { roomNumber: { equals: value, mode: 'insensitive' } };
+        } else if (operator === 'contains') {
+          return { roomNumber: { contains: value as string, mode: 'insensitive' } };
+        }
+      }
+      return {};
+
+    case 'guestEmail':
+      if (entityType === 'reservation') {
+        if (operator === 'equals') {
+          return { guestEmail: { equals: value, mode: 'insensitive' } };
+        } else if (operator === 'contains') {
+          return { guestEmail: { contains: value as string, mode: 'insensitive' } };
+        }
+      }
+      return {};
+
+    case 'guestPhone':
+      if (entityType === 'reservation') {
+        if (operator === 'equals') {
+          return { guestPhone: { equals: value, mode: 'insensitive' } };
+        } else if (operator === 'contains') {
+          return { guestPhone: { contains: value as string, mode: 'insensitive' } };
+        }
+      }
+      return {};
+
+    case 'amount':
+      if (entityType === 'reservation') {
+        if (operator === 'equals') {
+          return { amount: value };
+        } else if (operator === 'greaterThan') {
+          return { amount: { gt: value } };
+        } else if (operator === 'lessThan') {
+          return { amount: { lt: value } };
+        }
+      }
+      return {};
+
+    case 'arrivalTime':
+      if (entityType === 'reservation') {
+        return convertDateCondition(value, operator, 'arrivalTime');
+      }
+      return {};
+
+    case 'onlineCheckInCompleted':
+      if (entityType === 'reservation') {
+        if (operator === 'equals') {
+          return { onlineCheckInCompleted: value === true || value === 'true' || value === 1 };
+        } else if (operator === 'notEquals') {
+          return { onlineCheckInCompleted: { not: (value === true || value === 'true' || value === 1) } };
+        }
+      }
+      return {};
+
+    case 'doorPin':
+      if (entityType === 'reservation') {
+        if (operator === 'equals') {
+          return { doorPin: { equals: value, mode: 'insensitive' } };
+        } else if (operator === 'contains') {
+          return { doorPin: { contains: value as string, mode: 'insensitive' } };
+        }
+      }
+      return {};
+
     case 'responsible':
       return convertUserRoleCondition(value, operator, entityType, 'responsible');
 
