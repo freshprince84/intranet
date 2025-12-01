@@ -21,6 +21,9 @@ router.use(claudeAuth);
 // Tabellen-Übersicht
 router.get('/tables', async (req: Request, res: Response) => {
   try {
+    // ✅ Schema-Name aus Umgebungsvariable lesen (Fallback: 'public')
+    const schemaName = process.env.DATABASE_SCHEMA || 'public';
+    
     const tables = await prisma.$queryRaw`
       SELECT 
         table_name,
@@ -29,7 +32,7 @@ router.get('/tables', async (req: Request, res: Response) => {
         is_nullable,
         column_default
       FROM information_schema.columns 
-      WHERE table_schema = 'public'
+      WHERE table_schema = ${schemaName}
       ORDER BY table_name, ordinal_position
     `;
     res.json(tables);
