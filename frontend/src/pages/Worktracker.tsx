@@ -726,47 +726,8 @@ const Worktracker: React.FC = () => {
         }
     }, [loadTasks]); // ✅ loadTasks als Dependency
 
-    // ✅ KRITISCH: useCallback für Stabilität - MUSS VOR useEffect sein, der es verwendet
-    const applyReservationFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
-        setReservationFilterConditions(conditions);
-        setReservationFilterLogicalOperators(operators);
-        if (sortDirections !== undefined) {
-            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-            setReservationFilterSortDirections(validSortDirections);
-        }
-        
-        // ✅ FIX: Lade Daten mit Filter (server-seitig)
-        setReservationSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
-        setReservationActiveFilterName(''); // Kein Filter-Name
-        setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' }); // Reset Sortierung
-        
-        if (conditions.length > 0) {
-            await loadReservations(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-        } else {
-            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
-        }
-    }, [loadReservations]); // ✅ loadReservations als Dependency
-
-    const handleGeneratePinAndSend = async (reservationId: number) => {
-        try {
-            setGeneratingPinForReservation(reservationId);
-            await reservationService.generatePinAndSend(reservationId);
-            showMessage(t('reservations.pinGeneratedAndSent', 'PIN-Code generiert und Mitteilung versendet'), 'success');
-            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Aktualisiere Liste
-        } catch (error: any) {
-            if (process.env.NODE_ENV === 'development') {
-            console.error('Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
-            }
-            showMessage(
-                error.response?.data?.message || t('reservations.pinGenerateError', 'Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung'),
-                'error'
-            );
-        } finally {
-            setGeneratingPinForReservation(null);
-        }
-    };
-
     // ✅ PAGINATION: loadReservations mit Pagination - useCallback für Stabilität
+    // ✅ KRITISCH: MUSS VOR applyReservationFilterConditions definiert werden (wird dort verwendet)
     const loadReservations = useCallback(async (
         filterId?: number, 
         filterConditions?: any[],
@@ -855,6 +816,46 @@ const Worktracker: React.FC = () => {
             }
         }
     }, [reservationFilterLogicalOperators, t]);
+
+    // ✅ KRITISCH: useCallback für Stabilität - MUSS VOR useEffect sein, der es verwendet
+    const applyReservationFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        setReservationFilterConditions(conditions);
+        setReservationFilterLogicalOperators(operators);
+        if (sortDirections !== undefined) {
+            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+            setReservationFilterSortDirections(validSortDirections);
+        }
+        
+        // ✅ FIX: Lade Daten mit Filter (server-seitig)
+        setReservationSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
+        setReservationActiveFilterName(''); // Kein Filter-Name
+        setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' }); // Reset Sortierung
+        
+        if (conditions.length > 0) {
+            await loadReservations(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+        } else {
+            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
+        }
+    }, [loadReservations]); // ✅ loadReservations als Dependency
+
+    const handleGeneratePinAndSend = async (reservationId: number) => {
+        try {
+            setGeneratingPinForReservation(reservationId);
+            await reservationService.generatePinAndSend(reservationId);
+            showMessage(t('reservations.pinGeneratedAndSent', 'PIN-Code generiert und Mitteilung versendet'), 'success');
+            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Aktualisiere Liste
+        } catch (error: any) {
+            if (process.env.NODE_ENV === 'development') {
+            console.error('Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
+            }
+            showMessage(
+                error.response?.data?.message || t('reservations.pinGenerateError', 'Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung'),
+                'error'
+            );
+        } finally {
+            setGeneratingPinForReservation(null);
+        }
+    };
 
     // ✅ Initialer Filter-Load für Reservations - DEAKTIVIERT, da SavedFilterTags den Default-Filter bereits anwendet
     // ✅ SavedFilterTags wendet den Default-Filter automatisch an, daher ist dieser useEffect nicht nötig
@@ -1240,18 +1241,24 @@ const Worktracker: React.FC = () => {
         // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
         setReservationActiveFilterName(name);
         setReservationSelectedFilterId(id);
-        applyReservationFilterConditions(conditions, operators, sortDirections);
         setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
         
-        // ✅ PAGINATION: Filter zurücksetzen - lade erste 20 Items
+        // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
+        // ✅ Sonst: Setze nur State (applyReservationFilterConditions würde doppelt laden)
         if (id) {
+            // Gespeicherter Filter: Setze State und lade mit id
+            setReservationFilterConditions(conditions);
+            setReservationFilterLogicalOperators(operators);
+            if (sortDirections !== undefined) {
+                const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+                setReservationFilterSortDirections(validSortDirections);
+            }
             await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-        } else if (conditions.length > 0) {
-            await loadReservations(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
         } else {
-            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+            // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
+            await applyReservationFilterConditions(conditions, operators, sortDirections);
         }
-    }, [applyReservationFilterConditions, loadReservations]);
+    }, [activeTab, applyReservationFilterConditions, loadReservations]);
 
     const getStatusPriority = (status: Task['status']): number => {
         switch (status) {
