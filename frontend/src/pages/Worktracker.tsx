@@ -838,6 +838,80 @@ const Worktracker: React.FC = () => {
         }
     }, [loadReservations]); // ✅ loadReservations als Dependency
 
+    // ✅ KRITISCH: handleFilterChange MUSS NACH applyReservationFilterConditions definiert werden
+    const handleFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        if (activeTab === 'todos') {
+            // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
+            // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
+            setActiveFilterName(name);
+            setSelectedFilterId(id);
+            setTableSortConfig({ key: 'dueDate', direction: 'asc' });
+            
+            // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
+            // ✅ Sonst: Setze nur State (applyFilterConditions würde doppelt laden)
+            if (id) {
+                // Gespeicherter Filter: Setze State und lade mit id
+                setFilterConditions(conditions);
+                setFilterLogicalOperators(operators);
+                if (sortDirections !== undefined) {
+                    const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+                    setFilterSortDirections(validSortDirections);
+                }
+                await loadTasks(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+            } else {
+                // Direkte Bedingungen: applyFilterConditions lädt bereits
+                await applyFilterConditions(conditions, operators, sortDirections);
+            }
+        } else if (activeTab === 'reservations') {
+            // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
+            // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
+            setReservationActiveFilterName(name);
+            setReservationSelectedFilterId(id);
+            setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
+            
+            // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
+            // ✅ Sonst: Setze nur State (applyReservationFilterConditions würde doppelt laden)
+            if (id) {
+                // Gespeicherter Filter: Setze State und lade mit id
+                setReservationFilterConditions(conditions);
+                setReservationFilterLogicalOperators(operators);
+                if (sortDirections !== undefined) {
+                    const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+                    setReservationFilterSortDirections(validSortDirections);
+                }
+                await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+            } else {
+                // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
+                await applyReservationFilterConditions(conditions, operators, sortDirections);
+            }
+        }
+    }, [activeTab, applyFilterConditions, loadTasks, loadReservations, applyReservationFilterConditions]);
+
+    // ✅ KRITISCH: handleReservationFilterChange MUSS NACH applyReservationFilterConditions definiert werden
+    const handleReservationFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
+        // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
+        setReservationActiveFilterName(name);
+        setReservationSelectedFilterId(id);
+        setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
+        
+        // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
+        // ✅ Sonst: Setze nur State (applyReservationFilterConditions würde doppelt laden)
+        if (id) {
+            // Gespeicherter Filter: Setze State und lade mit id
+            setReservationFilterConditions(conditions);
+            setReservationFilterLogicalOperators(operators);
+            if (sortDirections !== undefined) {
+                const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+                setReservationFilterSortDirections(validSortDirections);
+            }
+            await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+        } else {
+            // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
+            await applyReservationFilterConditions(conditions, operators, sortDirections);
+        }
+    }, [applyReservationFilterConditions, loadReservations]);
+
     const handleGeneratePinAndSend = async (reservationId: number) => {
         try {
             setGeneratingPinForReservation(reservationId);
@@ -1185,80 +1259,6 @@ const Worktracker: React.FC = () => {
         setReservationSelectedFilterId(null);
     };
     
-    // Filter Change Handler (Controlled Mode)
-    // ✅ KRITISCH: useCallback für Stabilität - verhindert Endlosschleife in SavedFilterTags
-    const handleFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
-        if (activeTab === 'todos') {
-            // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
-            // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
-            setActiveFilterName(name);
-            setSelectedFilterId(id);
-            setTableSortConfig({ key: 'dueDate', direction: 'asc' });
-            
-            // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
-            // ✅ Sonst: Setze nur State (applyFilterConditions würde doppelt laden)
-            if (id) {
-                // Gespeicherter Filter: Setze State und lade mit id
-                setFilterConditions(conditions);
-                setFilterLogicalOperators(operators);
-                if (sortDirections !== undefined) {
-                    const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-                    setFilterSortDirections(validSortDirections);
-                }
-                await loadTasks(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-            } else {
-                // Direkte Bedingungen: applyFilterConditions lädt bereits
-                await applyFilterConditions(conditions, operators, sortDirections);
-            }
-        } else if (activeTab === 'reservations') {
-            // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
-            // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
-            setReservationActiveFilterName(name);
-            setReservationSelectedFilterId(id);
-            setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
-            
-            // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
-            // ✅ Sonst: Setze nur State (applyReservationFilterConditions würde doppelt laden)
-            if (id) {
-                // Gespeicherter Filter: Setze State und lade mit id
-                setReservationFilterConditions(conditions);
-                setReservationFilterLogicalOperators(operators);
-                if (sortDirections !== undefined) {
-                    const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-                    setReservationFilterSortDirections(validSortDirections);
-                }
-                await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-            } else {
-                // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
-                await applyReservationFilterConditions(conditions, operators, sortDirections);
-            }
-        }
-    }, [activeTab, applyFilterConditions, loadTasks, loadReservations, applyReservationFilterConditions]);
-    
-    // ✅ KRITISCH: useCallback für Stabilität - verhindert Endlosschleife in SavedFilterTags
-    const handleReservationFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
-        // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
-        // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
-        setReservationActiveFilterName(name);
-        setReservationSelectedFilterId(id);
-        setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
-        
-        // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
-        // ✅ Sonst: Setze nur State (applyReservationFilterConditions würde doppelt laden)
-        if (id) {
-            // Gespeicherter Filter: Setze State und lade mit id
-            setReservationFilterConditions(conditions);
-            setReservationFilterLogicalOperators(operators);
-            if (sortDirections !== undefined) {
-                const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-                setReservationFilterSortDirections(validSortDirections);
-            }
-            await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-        } else {
-            // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
-            await applyReservationFilterConditions(conditions, operators, sortDirections);
-        }
-    }, [activeTab, applyReservationFilterConditions, loadReservations]);
 
     const getStatusPriority = (status: Task['status']): number => {
         switch (status) {
