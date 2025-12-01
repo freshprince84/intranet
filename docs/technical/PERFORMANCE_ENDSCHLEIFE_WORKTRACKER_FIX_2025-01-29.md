@@ -1,8 +1,8 @@
 # Performance: Endlosschleife in Worktracker.tsx behoben (2025-01-29)
 
 **Datum:** 2025-01-29  
-**Status:** ✅ BEHOBEN  
-**Kritikalität:** 🔴 KRITISCH - System wurde unbrauchbar (1GB+ RAM, PC auf Hochtouren)
+**Status:** ✅ BEHOBEN (Phase 2 - Vollständig)  
+**Kritikalität:** 🔴 KRITISCH - System wurde unbrauchbar (1GB+ RAM, PC auf Hochtouren, tausende Log-Einträge pro Sekunde)
 
 ---
 
@@ -176,6 +176,75 @@ if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table') && !initial
 
 ---
 
+## ✅ PHASE 2: VOLLSTÄNDIGE BEHEBUNG
+
+### Problem 2: Endlosschleife durch fehlende useCallback in handleFilterChange
+
+**Symptome:**
+- **Tausende Log-Einträge pro Sekunde**
+- **System lädt "wie wild" und hört nicht auf**
+- **RAM wird voll, PC stürzt ab**
+
+**Root Cause:**
+
+1. **`handleFilterChange` war NICHT als `useCallback` definiert:**
+   - Wurde bei jedem Render neu erstellt
+   - Neue Referenz → `SavedFilterTags` sieht Änderung → `useEffect` läuft erneut
+
+2. **`SavedFilterTags` useEffect verwendete `onFilterChange` ohne korrekte Dependencies:**
+   - `useEffect` (Zeile 208-256) verwendete `onFilterChange`, `onSelectFilter`, `defaultFilterName`, `activeFilterName`
+   - Aber nur `[tableId]` war in den Dependencies
+   - Wenn `onFilterChange` aufgerufen wurde → State wurde gesetzt → Re-Render → `handleFilterChange` wurde neu erstellt → `useEffect` lief erneut → Endlosschleife
+
+**Lösung:**
+
+1. **`handleFilterChange` als `useCallback` definiert:**
+   ```typescript
+   const handleFilterChange = useCallback(async (name: string, id: number | null, ...) => {
+       // ...
+   }, [activeTab, applyFilterConditions, loadTasks, loadReservations]);
+   ```
+
+2. **`handleReservationFilterChange` als `useCallback` definiert:**
+   ```typescript
+   const handleReservationFilterChange = useCallback(async (name: string, id: number | null, ...) => {
+       // ...
+   }, [applyReservationFilterConditions, loadReservations]);
+   ```
+
+3. **`applyReservationFilterConditions` als `useCallback` definiert:**
+   ```typescript
+   const applyReservationFilterConditions = useCallback((conditions: FilterCondition[], ...) => {
+       // ...
+   }, []); // Keine Dependencies nötig - nur State-Setter
+   ```
+
+4. **`SavedFilterTags` useEffect korrigiert - Ref verhindert mehrfache Anwendung:**
+   ```typescript
+   // ✅ KRITISCH: Ref verhindert mehrfache Anwendung des Default-Filters
+   const defaultFilterAppliedRef = useRef<boolean>(false);
+   
+   useEffect(() => {
+       // ✅ Reset Ref wenn tableId sich ändert
+       defaultFilterAppliedRef.current = false;
+       
+       // ...
+       
+       // ✅ Default-Filter nur EINMAL anwenden
+       if (defaultFilterName && !activeFilterName && !defaultFilterAppliedRef.current) {
+           defaultFilterAppliedRef.current = true; // ✅ BEVOR onFilterChange aufgerufen wird
+           onFilterChange(...);
+       }
+   }, [tableId, defaultFilterName, activeFilterName, onFilterChange, onSelectFilter]);
+   ```
+
+**Warum wichtig:**
+- **Stabile Referenzen** → `useEffect` wird nicht bei jedem Render erneut ausgelöst
+- **Ref verhindert mehrfache Anwendung** → Default-Filter wird nur EINMAL angewendet, auch wenn `useEffect` erneut läuft
+- **Korrekte Dependencies** → React-Warnungen vermieden, aber Ref verhindert Endlosschleife
+
+---
+
 ## 🔍 VERWANDTE PROBLEME
 
 ### Doppelte Requests (nicht behoben, aber dokumentiert):
@@ -222,8 +291,15 @@ if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table') && !initial
 
 1. **`frontend/src/pages/Worktracker.tsx`**
    - Zeile 337: `initialFilterLoading` State hinzugefügt
-   - Zeile 937-965: `useEffect` korrigiert (Dependencies + Loading-State + Fehlerbehandlung)
+   - Zeile 937-985: `useEffect` korrigiert (Dependencies + Loading-State + Fehlerbehandlung)
    - Zeile 1194-1202: `applyFilterConditions` als `useCallback` definiert
+   - Zeile 1214-1221: `applyReservationFilterConditions` als `useCallback` definiert
+   - Zeile 1232-1264: `handleFilterChange` als `useCallback` definiert
+   - Zeile 1266-1280: `handleReservationFilterChange` als `useCallback` definiert
+
+2. **`frontend/src/components/SavedFilterTags.tsx`**
+   - Zeile 96: `defaultFilterAppliedRef` Ref hinzugefügt
+   - Zeile 208-256: `useEffect` korrigiert (Ref + korrekte Dependencies)
 
 ---
 
