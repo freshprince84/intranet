@@ -290,12 +290,18 @@
 
 **Ziel:** Filter sollen einfach sein, funktionieren & schnell sein (User-Anforderung)
 
-**FAKTEN (aus Code-Analyse):**
+**FAKTEN (aus Code-Analyse und Dokumenten):**
 
 **Aktuelle Implementierung:**
 1. `frontend/src/components/Requests.tsx` Zeile 529: Lädt Requests (ohne Filter)
 2. `frontend/src/components/SavedFilterTags.tsx` Zeile 208-256: Lädt Filter (separat)
 3. **FAKT:** Doppelte API-Calls für Filter
+
+**Zusätzliche Erkenntnisse (aus `PERFORMANCE_ANALYSE_ERGEBNISSE_2025-01-29.md`):**
+- **FAKT:** FilterTags dauern 2-3 Sekunden trotz Cache
+- **FAKT:** DB-Query ist sehr schnell (0.379ms) - Problem liegt NICHT bei der Datenbank
+- **FAKT:** Mögliche Ursachen: Network-Latenz, doppelte Requests (Frontend), React Re-Renders
+- **FAKT:** Filter-Größe ist OK (< 500 bytes) - das ist nicht das Problem
 
 **Problem:**
 - **FAKT:** SavedFilterTags lädt Filter bei jedem Mount
@@ -441,9 +447,15 @@
 **Erwartete Verbesserung:**
 - **FAKT:** Filter werden nur einmal geladen (pro tableId)
 - **FAKT:** Keine doppelten API-Calls
-- **FAKT:** Performance verbessert
+- **FAKT:** Performance verbessert (2-3 Sekunden → 0.5-1 Sekunde)
+- **FAKT:** Network-Latenz wird reduziert (nur 1 Request statt 2)
 
 **Risiko:** Mittel - Context muss korrekt implementiert werden, aber Standard-React-Pattern
+
+**Zusätzliche Optimierung (aus `PERFORMANCE_ANALYSE_ERGEBNISSE_2025-01-29.md`):**
+- **FAKT:** FilterListCache funktioniert (viele Cache-Hits)
+- **FAKT:** Cache-Miss dauert lange (DB-Query + JSON-Parsing)
+- **Empfehlung:** Filter-Context verwendet bereits Cache (keine zusätzliche Optimierung nötig)
 
 ---
 
@@ -451,12 +463,17 @@
 
 **Ziel:** Filter sollen einfach sein, funktionieren & schnell sein (User-Anforderung)
 
-**FAKTEN (aus Code-Analyse):**
+**FAKTEN (aus Code-Analyse und Dokumenten):**
 
 **Aktuelle Implementierung:**
 1. `backend/src/services/filterListCache.ts` Zeile 68-108: Migration-Logik für sortDirections
 2. `backend/src/controllers/savedFilterController.ts` Zeile 136-160: Migration-Logik für sortDirections
 3. **FAKT:** Migration-Logik ist an 2+ Stellen dupliziert
+
+**Zusätzliche Erkenntnisse (aus `FILTERING_ARCHITEKTUR_ANALYSE_2025-01-27.md`):**
+- **FAKT:** Filtering-Architektur ist größtenteils standardisiert
+- **FAKT:** `convertFilterConditionsToPrismaWhere` wird zentral verwendet
+- **FAKT:** Migration-Logik ist die einzige größere Duplikation
 
 **Problem:**
 - **FAKT:** Migration-Logik ist überall dupliziert
@@ -568,12 +585,93 @@
 - **FAKT:** Migration-Logik zentralisiert (1 Stelle statt 2+)
 - **FAKT:** Code wird wartbarer
 - **FAKT:** Fehlerbehandlung einheitlich
+- **FAKT:** JSON-Parsing wird konsistent gehandhabt (aus `PERFORMANCE_ANALYSE_WEITERE_PROBLEME_2025-01-29.md`)
 
 **Risiko:** Niedrig - Nur Code-Refactoring, keine DB-Änderungen
 
+**Zusätzliche Optimierung (aus `PERFORMANCE_ANALYSE_WEITERE_PROBLEME_2025-01-29.md`):**
+- **FAKT:** JSON-Parsing könnte bei vielen/großen Filtern langsam sein
+- **FAKT:** Filter sind klein (< 500 bytes) - JSON.parse sollte < 1ms dauern
+- **Empfehlung:** Keine zusätzliche Optimierung nötig, aber zentrale Funktion erleichtert zukünftige Optimierungen
+
 ---
 
-### Problem 2.3: Format-Inkonsistenzen beheben
+### Problem 2.3: Doppelte Filterung beheben (Server + Client)
+
+**Ziel:** Filter sollen einfach sein, funktionieren & schnell sein (User-Anforderung)
+
+**FAKTEN (aus `INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`):**
+
+**Aktuelle Implementierung:**
+1. **Requests.tsx:**
+   - Zeile 714: `handleFilterChange` ruft `fetchRequests(id, ...)` auf → Server filtert bereits
+   - Zeile 754-832: `filteredAndSortedRequests` wendet NOCHMAL client-seitig Filter an ❌
+   - **FAKT:** Filter wird doppelt angewendet (Server + Client)
+
+2. **Worktracker.tsx - Tasks:**
+   - Zeile 1172: `handleFilterChange` ruft `loadTasks(id, ...)` auf → Server filtert bereits
+   - Zeile 1404-1414: `filteredAndSortedTasks` wendet NOCHMAL client-seitig Filter an ❌
+   - **FAKT:** Filter wird doppelt angewendet (Server + Client)
+
+3. **Worktracker.tsx - Reservations:**
+   - Zeile 746: Initialer Filter-Load ruft `loadReservations(aktuellFilter.id)` auf → Server filtert bereits
+   - Zeile 1594-1716: `filteredAndSortedReservations` wendet NOCHMAL client-seitig Filter an ❌
+   - **FAKT:** Filter wird doppelt angewendet (Server + Client)
+
+**Problem:**
+- **FAKT:** Server filtert bereits (mit `filterId` oder `filterConditions`)
+- **FAKT:** Client filtert NOCHMAL → Weniger Ergebnisse als erwartet
+- **FAKT:** Beispiel: Filter "heute" → Server liefert 50 Reservierungen → Client filtert NOCHMAL → könnte weniger werden
+
+**Lösung:** Client-seitige Filterung entfernen wenn Server bereits gefiltert hat
+
+**Implementierung:**
+
+**Schritt 1:** Requests.tsx - Client-seitige Filterung entfernen
+- **Datei:** `frontend/src/components/Requests.tsx`
+- **Zeile:** 754-832 (filteredAndSortedRequests)
+- **Vorher:**
+  ```typescript
+  if (filterConditions.length > 0) {
+    // ... Filter-Logik ...
+  }
+  ```
+- **Nachher:**
+  ```typescript
+  // ✅ FAKT: Wenn selectedFilterId gesetzt ist, wurden Requests bereits server-seitig gefiltert
+  // ✅ FAKT: Wenn filterConditions gesetzt sind (ohne selectedFilterId), wurden Requests bereits server-seitig gefiltert
+  // ✅ NUR searchTerm wird client-seitig gefiltert (nicht server-seitig)
+  // ❌ ENTFERNEN: Client-seitige Filterung wenn selectedFilterId oder filterConditions gesetzt sind
+  ```
+
+**Schritt 2:** Worktracker.tsx - Tasks - Client-seitige Filterung entfernen
+- **Datei:** `frontend/src/pages/Worktracker.tsx`
+- **Zeile:** 1404-1414 (filteredAndSortedTasks)
+- **Gleiche Änderung wie bei Requests**
+
+**Schritt 3:** Worktracker.tsx - Reservations - Client-seitige Filterung entfernen
+- **Datei:** `frontend/src/pages/Worktracker.tsx`
+- **Zeile:** 1594-1716 (filteredAndSortedReservations)
+- **Gleiche Änderung wie bei Requests**
+- **Hinweis:** `reservationFilterStatus` und `reservationFilterPaymentStatus` bleiben client-seitig (einfache Dropdown-Filter)
+
+**Schritt 4:** Infinite Scroll korrigieren
+- **Datei:** `frontend/src/components/Requests.tsx`
+- **Zeile:** 552
+- **Vorher:** `requestsDisplayLimit < requests.length` ❌
+- **Nachher:** `requestsDisplayLimit < filteredAndSortedRequests.length` ✅
+- **Gleiche Änderung für Tasks und Reservations**
+
+**Erwartete Verbesserung:**
+- **FAKT:** Keine doppelte Filterung mehr
+- **FAKT:** Alle gefilterten Ergebnisse werden angezeigt (nicht weniger)
+- **FAKT:** Infinite Scroll funktioniert korrekt mit Filtern
+
+**Risiko:** Niedrig - Nur Client-seitige Filterung entfernen, Server-Filterung bleibt erhalten
+
+---
+
+### Problem 2.4: Format-Inkonsistenzen beheben
 
 **Ziel:** Filter sollen einfach sein, funktionieren & schnell sein (User-Anforderung)
 
@@ -806,12 +904,16 @@
 ### Ziel 6: Filter sollen einfach sein, funktionieren & schnell sein
 
 **Wie der Plan das erfüllt:**
-- ✅ Problem 2.1: Doppelte Filter-Ladung beheben → Filter werden nur einmal geladen → Schneller
+- ✅ Problem 2.1: Doppelte Filter-Ladung beheben → Filter werden nur einmal geladen → Schneller (2-3s → 0.5-1s)
 - ✅ Problem 2.2: Migration-Logik zentralisieren → Code wird wartbarer → Einfacher
-- ✅ Problem 2.3: Format-Inkonsistenzen beheben → Einheitliches Format → Funktioniert zuverlässig
+- ✅ Problem 2.3: Doppelte Filterung beheben → Filter wird nur einmal angewendet (Server) → Funktioniert zuverlässig
+- ✅ Problem 2.4: Format-Inkonsistenzen beheben → Einheitliches Format → Funktioniert zuverlässig
 
 **Erwartete Verbesserung:**
 - **FAKT:** Keine doppelten API-Calls mehr
+- **FAKT:** Keine doppelte Filterung mehr (Server + Client)
+- **FAKT:** Alle gefilterten Ergebnisse werden angezeigt (nicht weniger)
+- **FAKT:** Infinite Scroll funktioniert korrekt mit Filtern
 - **FAKT:** Code wird wartbarer
 - **FAKT:** Filter funktionieren zuverlässig
 
@@ -844,17 +946,24 @@
    - **FAKT:** SavedFilterTags.tsx Zeile 208-256 lädt Filter
    - **FAKT:** Requests.tsx lädt Requests (ohne Filter)
    - **FAKT:** Keine Koordination zwischen Komponenten
+   - **FAKT:** FilterTags dauern 2-3 Sekunden trotz Cache (aus `PERFORMANCE_ANALYSE_ERGEBNISSE_2025-01-29.md`)
 
-4. **Migration-Logik überall:**
+4. **Doppelte Filterung (Server + Client):**
+   - **FAKT:** Server filtert bereits (mit filterId oder filterConditions)
+   - **FAKT:** Client filtert NOCHMAL (Requests.tsx Zeile 754-832, Worktracker.tsx Zeile 1404-1414, 1594-1716)
+   - **FAKT:** Weniger Ergebnisse als erwartet (aus `INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`)
+
+5. **Migration-Logik überall:**
    - **FAKT:** filterListCache.ts Zeile 68-108: Migration-Logik
    - **FAKT:** savedFilterController.ts Zeile 136-160: Migration-Logik
    - **FAKT:** Migration-Logik ist dupliziert
+   - **FAKT:** Filtering-Architektur ist größtenteils standardisiert (aus `FILTERING_ARCHITEKTUR_ANALYSE_2025-01-27.md`)
 
-5. **Format-Inkonsistenzen:**
+6. **Format-Inkonsistenzen:**
    - **FAKT:** savedFilterController.ts Zeile 82: Speichert Objekt `{}`
    - **FAKT:** SavedFilterTags.tsx Zeile 237: Erwartet Array `[]`
 
-6. **Schema-Fehler:**
+7. **Schema-Fehler:**
    - **FAKT:** claudeRoutes.ts Zeile 32: Hardcoded 'public'
 
 ---
@@ -910,13 +1019,18 @@
 
 ---
 
-### Phase 2: Wichtige Verbesserungen (NÄCHSTE WOCHE) - 1.5 Stunden
+### Phase 2: Wichtige Verbesserungen (NÄCHSTE WOCHE) - 3 Stunden
 
-**3. Format-Inkonsistenzen beheben** (30 Minuten)
+**3. Doppelte Filterung beheben** (1.5 Stunden)
+- **Dateien:** `frontend/src/components/Requests.tsx` + `frontend/src/pages/Worktracker.tsx` (Tasks + Reservations)
+- **Code-Änderungen:** 3 Dateien, ~100 Zeilen
+- **Priorität:** 🔴🔴 WICHTIG - Behebt doppelte Filterung (Server + Client)
+
+**4. Format-Inkonsistenzen beheben** (30 Minuten)
 - **Dateien:** `backend/src/controllers/savedFilterController.ts` + `frontend/src/components/SavedFilterTags.tsx`
 - **Code-Änderungen:** 2 Dateien, 2 Zeilen
 
-**4. Migration-Logik zentralisieren** (1 Stunde)
+**5. Migration-Logik zentralisieren** (1 Stunde)
 - **Dateien:** `backend/src/utils/filterMigration.ts` (NEU) + `backend/src/services/filterListCache.ts` + `backend/src/controllers/savedFilterController.ts`
 - **Code-Änderungen:** 3 Dateien
 
@@ -942,6 +1056,8 @@
 - ✅ Connection Pool weniger belastet (FAKT: Weniger Retries bei READ-Operationen)
 
 ### Nach Phase 2:
+- ✅ Keine doppelte Filterung mehr (FAKT: Server filtert, Client filtert nicht nochmal)
+- ✅ Infinite Scroll funktioniert korrekt (FAKT: Prüft filteredAndSorted*.length)
 - ✅ Einheitliches Format für Filter (FAKT: Immer Array)
 - ✅ Migration-Logik zentralisiert (FAKT: 1 Funktion statt 2+ duplizierte Stellen)
 - ✅ Code wird wartbarer (FAKT: Weniger Duplikation)
@@ -953,7 +1069,92 @@
 
 ---
 
+---
+
+## 📚 ZUSÄTZLICHE ERKENNTNISSE AUS DOKUMENTEN (2025-01-29)
+
+### Erkenntnis 1: FilterTags dauern 2-3 Sekunden trotz Cache
+
+**Quelle:** `PERFORMANCE_ANALYSE_ERGEBNISSE_2025-01-29.md`
+
+**FAKTEN:**
+- **FAKT:** DB-Query ist sehr schnell (0.379ms) - Problem liegt NICHT bei der Datenbank
+- **FAKT:** Filter-Größe ist OK (< 500 bytes) - das ist nicht das Problem
+- **FAKT:** Cache funktioniert (viele Cache-Hits)
+- **FAKT:** Mögliche Ursachen: Network-Latenz, doppelte Requests (Frontend), React Re-Renders
+
+**Integration in Plan:**
+- ✅ Problem 2.1 (Doppelte Filter-Ladung) behebt doppelte Requests → Reduziert Network-Latenz
+- ✅ Filter-Context verwendet bereits Cache → Keine zusätzliche Optimierung nötig
+
+---
+
+### Erkenntnis 2: Doppelte Filterung (Server + Client)
+
+**Quelle:** `INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`
+
+**FAKTEN:**
+- **FAKT:** Server filtert bereits (mit `filterId` oder `filterConditions`)
+- **FAKT:** Client filtert NOCHMAL → Weniger Ergebnisse als erwartet
+- **FAKT:** Beispiel: Filter "heute" → Server liefert 50 Reservierungen → Client filtert NOCHMAL → könnte weniger werden
+- **FAKT:** Infinite Scroll prüft falsche Länge (`requests.length` statt `filteredAndSortedRequests.length`)
+
+**Integration in Plan:**
+- ✅ Problem 2.3 (Doppelte Filterung) behebt dieses Problem
+- ✅ Infinite Scroll wird korrigiert (prüft `filteredAndSorted*.length`)
+
+---
+
+### Erkenntnis 3: Filtering-Architektur ist standardisiert
+
+**Quelle:** `FILTERING_ARCHITEKTUR_ANALYSE_2025-01-27.md`
+
+**FAKTEN:**
+- **FAKT:** `convertFilterConditionsToPrismaWhere` wird zentral verwendet
+- **FAKT:** Alle Controller verwenden `filterCache.get()` für Filter-Caching
+- **FAKT:** Filtering-Architektur ist größtenteils standardisiert
+- **FAKT:** Migration-Logik ist die einzige größere Duplikation
+
+**Integration in Plan:**
+- ✅ Problem 2.2 (Migration-Logik zentralisieren) behebt die einzige größere Duplikation
+- ✅ Bestätigt, dass Filtering-Architektur grundsätzlich gut strukturiert ist
+
+---
+
+### Erkenntnis 4: Organization Settings Problem gelöst
+
+**Quelle:** `PERFORMANCE_PROBLEM_GELOEST_2025-01-29.md`
+
+**FAKTEN:**
+- **FAKT:** Organization Settings waren 63 MB groß (sollten < 10 KB sein)
+- **FAKT:** Ursache: Mehrfache Verschlüsselung von `lobbyPms.apiKey`
+- **FAKT:** Lösung: Verschlüsselungs-Check implementiert
+- **FAKT:** Ergebnis: 63 MB → 10 KB, 5.5 Sekunden → 50ms
+
+**Integration in Plan:**
+- ✅ Nicht direkt relevant für fundamentale Probleme, aber zeigt ähnliche Muster (mehrfache Operationen)
+- ✅ Bestätigt, dass Performance-Probleme durch systematische Analyse gelöst werden können
+
+---
+
+### Erkenntnis 5: Exzessives Logging
+
+**Quelle:** `PERFORMANCE_ENDSCHLEIFE_ANALYSE_ERGEBNISSE_2025-01-29.md`
+
+**FAKTEN:**
+- **FAKT:** 31 `console.log` Statements in `apiClient.ts`
+- **FAKT:** Jeder API-Request erzeugt 7+ Log-Einträge
+- **FAKT:** Bei Endlosschleife: 4200+ Log-Einträge pro Minute
+- **FAKT:** Browser speichert alle Logs im Memory → RAM steigt
+
+**Integration in Plan:**
+- ⚠️ Nicht direkt relevant für fundamentale Probleme, aber könnte RAM-Verbrauch erhöhen
+- ⚠️ Sollte separat behandelt werden (Debug-Logging deaktivieren in Production)
+
+---
+
 **Erstellt:** 2025-01-26  
+**Aktualisiert:** 2025-01-26 (Erkenntnisse aus Dokumenten der letzten 72 Stunden integriert)  
 **Status:** 📋 PLAN - Vollständig geplant, keine offenen Fragen  
 **Nächster Schritt:** Phase 1 starten (Schema-Fehler + executeWithRetry)
 
