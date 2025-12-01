@@ -79,7 +79,10 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
     // Konvertiere Arrays in JSON-Strings für die Datenbank
     const conditionsJson = JSON.stringify(conditions || []);
     const operatorsJson = JSON.stringify(operators || []);
-    const sortDirectionsJson = JSON.stringify(sortDirections || {});
+    // ✅ FIX: Einheitliches Format - immer Array (nicht Objekt)
+    const sortDirectionsJson = JSON.stringify(
+      Array.isArray(sortDirections) ? sortDirections : []
+    );
 
     // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
     try {
@@ -132,32 +135,9 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
         filterListCache.invalidate(userId, tableId);
       }
 
-      // Parse die JSON-Strings zurück in Arrays für die Antwort
-      let sortDirections: SortDirection[] = [];
-      if (filter.sortDirections) {
-        try {
-          // Prüfe, ob es ein "null" String ist
-          if (filter.sortDirections.trim() === 'null' || filter.sortDirections.trim() === '') {
-            sortDirections = [];
-          } else {
-            const parsed = JSON.parse(filter.sortDirections);
-            // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
-            if (Array.isArray(parsed)) {
-              sortDirections = parsed;
-            } else if (typeof parsed === 'object' && parsed !== null) {
-              // Altes Format: { "status": "asc", "branch": "desc" }
-              sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                column,
-                direction: direction as 'asc' | 'desc',
-                priority: index + 1
-              }));
-            }
-          }
-        } catch (e) {
-          console.error('Fehler beim Parsen von sortDirections:', e);
-          sortDirections = [];
-        }
-      }
+      // ✅ FIX: Verwende zentrale Migration-Funktion
+      const { migrateSortDirections } = require('../utils/filterMigration');
+      const sortDirections = migrateSortDirections(filter.sortDirections);
       
       const parsedFilter = {
         id: filter.id,

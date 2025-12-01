@@ -649,13 +649,24 @@ const Requests: React.FC = () => {
     setDragOverColumn(null);
   };
 
-  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+  const applyFilterConditions = async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
     if (sortDirections !== undefined) {
       // Sicherstellen, dass sortDirections ein Array ist
       const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
       setFilterSortDirections(validSortDirections);
+    }
+    
+    // ✅ FIX: Lade Daten mit Filter (server-seitig)
+    setSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
+    setActiveFilterName(''); // Kein Filter-Name
+    setSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
+    
+    if (conditions.length > 0) {
+      await fetchRequests(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+    } else {
+      await fetchRequests(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
     }
   };
   

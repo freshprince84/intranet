@@ -705,7 +705,7 @@ const Worktracker: React.FC = () => {
     // ❌ loadMoreTasks entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
     // ✅ KRITISCH: useCallback für Stabilität in useEffect Dependencies - MUSS VOR useEffect sein, der es verwendet
-    const applyFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    const applyFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
         setFilterConditions(conditions);
         setFilterLogicalOperators(operators);
         if (sortDirections !== undefined) {
@@ -713,17 +713,39 @@ const Worktracker: React.FC = () => {
             const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
             setFilterSortDirections(validSortDirections);
         }
-    }, []); // ✅ Keine Dependencies nötig - nur State-Setter
+        
+        // ✅ FIX: Lade Daten mit Filter (server-seitig)
+        setSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
+        setActiveFilterName(''); // Kein Filter-Name
+        setTableSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
+        
+        if (conditions.length > 0) {
+            await loadTasks(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+        } else {
+            await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
+        }
+    }, [loadTasks]); // ✅ loadTasks als Dependency
 
     // ✅ KRITISCH: useCallback für Stabilität - MUSS VOR useEffect sein, der es verwendet
-    const applyReservationFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    const applyReservationFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
         setReservationFilterConditions(conditions);
         setReservationFilterLogicalOperators(operators);
         if (sortDirections !== undefined) {
             const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
             setReservationFilterSortDirections(validSortDirections);
         }
-    }, []); // ✅ Keine Dependencies nötig - nur State-Setter
+        
+        // ✅ FIX: Lade Daten mit Filter (server-seitig)
+        setReservationSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
+        setReservationActiveFilterName(''); // Kein Filter-Name
+        setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' }); // Reset Sortierung
+        
+        if (conditions.length > 0) {
+            await loadReservations(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+        } else {
+            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
+        }
+    }, [loadReservations]); // ✅ loadReservations als Dependency
 
     const handleGeneratePinAndSend = async (reservationId: number) => {
         try {
@@ -1170,34 +1192,44 @@ const Worktracker: React.FC = () => {
             // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
             setActiveFilterName(name);
             setSelectedFilterId(id);
-            applyFilterConditions(conditions, operators, sortDirections);
-            // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
             setTableSortConfig({ key: 'dueDate', direction: 'asc' });
             
-            // ✅ PAGINATION: Filter zurücksetzen - lade erste 20 Items
+            // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
+            // ✅ Sonst: Setze nur State (applyFilterConditions würde doppelt laden)
             if (id) {
+                // Gespeicherter Filter: Setze State und lade mit id
+                setFilterConditions(conditions);
+                setFilterLogicalOperators(operators);
+                if (sortDirections !== undefined) {
+                    const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+                    setFilterSortDirections(validSortDirections);
+                }
                 await loadTasks(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-            } else if (conditions.length > 0) {
-                await loadTasks(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             } else {
-                await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                // Direkte Bedingungen: applyFilterConditions lädt bereits
+                await applyFilterConditions(conditions, operators, sortDirections);
             }
         } else if (activeTab === 'reservations') {
             // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
             // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
             setReservationActiveFilterName(name);
             setReservationSelectedFilterId(id);
-            applyReservationFilterConditions(conditions, operators, sortDirections);
-            // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
             setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
             
-            // ✅ FIX: loadReservations aufrufen (analog zu Tasks)
+            // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
+            // ✅ Sonst: Setze nur State (applyReservationFilterConditions würde doppelt laden)
             if (id) {
+                // Gespeicherter Filter: Setze State und lade mit id
+                setReservationFilterConditions(conditions);
+                setReservationFilterLogicalOperators(operators);
+                if (sortDirections !== undefined) {
+                    const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+                    setReservationFilterSortDirections(validSortDirections);
+                }
                 await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-            } else if (conditions.length > 0) {
-                await loadReservations(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             } else {
-                await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
+                await applyReservationFilterConditions(conditions, operators, sortDirections);
             }
         }
     }, [activeTab, applyFilterConditions, loadTasks, loadReservations, applyReservationFilterConditions]);
