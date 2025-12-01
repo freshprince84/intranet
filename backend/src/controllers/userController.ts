@@ -1477,21 +1477,7 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
 
-        // Prüfen, ob die Rolle dem Benutzer zugewiesen ist
-        const userRole = await prisma.userRole.findFirst({
-            where: {
-                userId,
-                roleId
-            }
-        });
-
-        if (!userRole) {
-            return res.status(404).json({
-                message: 'Diese Rolle ist dem Benutzer nicht zugewiesen'
-            });
-        }
-
-        // Prüfe, ob die Rolle für die aktive Branch verfügbar ist
+        // Prüfe, ob die Rolle für die aktive Branch verfügbar ist (VOR der Transaktion)
         const activeBranch = await prisma.usersBranches.findFirst({
             where: {
                 userId,
@@ -1514,8 +1500,20 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             }
         }
         
-        // Transaktion starten
+        // Transaktion starten - alle Prisma-Operationen innerhalb der Transaktion
         await prisma.$transaction(async (tx) => {
+            // Prüfen, ob die Rolle dem Benutzer zugewiesen ist (INNERHALB der Transaktion)
+            const userRole = await tx.userRole.findFirst({
+                where: {
+                    userId,
+                    roleId
+                }
+            });
+
+            if (!userRole) {
+                throw new Error('Diese Rolle ist dem Benutzer nicht zugewiesen');
+            }
+
             // Alle Rollen des Benutzers auf lastUsed=false setzen
             await tx.userRole.updateMany({
                 where: { userId },
@@ -1562,6 +1560,14 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
         return res.json(updatedUser);
     } catch (error) {
         console.error('Error in switchUserRole:', error);
+        
+        // Spezielle Behandlung für "Rolle nicht zugewiesen" Fehler
+        if (error instanceof Error && error.message === 'Diese Rolle ist dem Benutzer nicht zugewiesen') {
+            return res.status(404).json({
+                message: error.message
+            });
+        }
+        
         res.status(500).json({ 
             message: 'Fehler beim Wechseln der Benutzerrolle', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
