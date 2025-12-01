@@ -529,16 +529,20 @@ export class WhatsAppFunctionHandlers {
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Parse Datum (unterstützt "today"/"heute")
+      // 1. Parse Datum (unterstützt "today"/"heute"/"hoy"/"morgen"/"tomorrow"/"mañana")
       let startDate: Date;
       const startDateStr = args.startDate.toLowerCase().trim();
       if (startDateStr === 'today' || startDateStr === 'heute' || startDateStr === 'hoy') {
         startDate = new Date();
         startDate.setHours(0, 0, 0, 0); // Setze auf Mitternacht
+      } else if (startDateStr === 'tomorrow' || startDateStr === 'morgen' || startDateStr === 'mañana') {
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() + 1);
+        startDate.setHours(0, 0, 0, 0);
       } else {
         startDate = new Date(args.startDate);
         if (isNaN(startDate.getTime())) {
-          throw new Error(`Ungültiges Startdatum: ${args.startDate}. Format: YYYY-MM-DD oder "today"/"heute"`);
+          throw new Error(`Ungültiges Startdatum: ${args.startDate}. Format: YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
         }
       }
 
@@ -548,21 +552,39 @@ export class WhatsAppFunctionHandlers {
         if (endDateStr === 'today' || endDateStr === 'heute' || endDateStr === 'hoy') {
           endDate = new Date();
           endDate.setHours(23, 59, 59, 999); // Setze auf Ende des Tages
+        } else if (endDateStr === 'tomorrow' || endDateStr === 'morgen' || endDateStr === 'mañana') {
+          endDate = new Date();
+          endDate.setDate(endDate.getDate() + 1);
+          endDate.setHours(23, 59, 59, 999);
         } else {
           endDate = new Date(args.endDate);
           if (isNaN(endDate.getTime())) {
-            throw new Error(`Ungültiges Enddatum: ${args.endDate}. Format: YYYY-MM-DD oder "today"/"heute"`);
+            throw new Error(`Ungültiges Enddatum: ${args.endDate}. Format: YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
           }
         }
       } else {
-        // Falls nicht angegeben: startDate + 1 Tag
-        endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 1);
+        // WICHTIG: Wenn User nur "heute" sagt, zeige nur heute (nicht heute + morgen)
+        // Wenn User "morgen" sagt, zeige nur morgen
+        // Nur wenn User ein konkretes Datum angibt, füge +1 Tag hinzu
+        if (startDateStr === 'today' || startDateStr === 'heute' || startDateStr === 'hoy') {
+          // User fragt nur nach "heute" → zeige nur heute
+          endDate = new Date(startDate);
+          endDate.setHours(23, 59, 59, 999);
+        } else if (startDateStr === 'tomorrow' || startDateStr === 'morgen' || startDateStr === 'mañana') {
+          // User fragt nur nach "morgen" → zeige nur morgen
+          endDate = new Date(startDate);
+          endDate.setHours(23, 59, 59, 999);
+        } else {
+          // User gibt konkretes Datum an → füge +1 Tag hinzu (für Check-out)
+          endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 1);
+        }
       }
 
       // 2. Prüfe Datum-Logik
-      if (endDate <= startDate) {
-        throw new Error('Enddatum muss nach Startdatum liegen');
+      // WICHTIG: Erlaube endDate = startDate (gleicher Tag, z.B. "heute")
+      if (endDate < startDate) {
+        throw new Error('Enddatum muss nach oder gleich Startdatum liegen');
       }
 
       // 3. Performance: Prüfe Zeitraum-Limit (max. 30 Tage)
@@ -631,13 +653,23 @@ export class WhatsAppFunctionHandlers {
       }
 
       // 8. Formatiere für KI
+      // Prüfe ob nur ein Tag abgefragt wird (gleicher Tag)
+      const isSingleDay = startDate.toISOString().split('T')[0] === endDate.toISOString().split('T')[0];
+      
       // WICHTIG: Zeige Zimmer auch wenn minAvailableRooms = 0, aber maxAvailableRooms > 0 (verfügbar an mindestens einem Tag)
       const rooms = Array.from(roomMap.values())
         .filter(room => room.maxAvailableRooms > 0) // Filtere nur wenn mindestens an einem Tag verfügbar
         .map(room => {
-          // WICHTIG: Wenn minAvailableRooms = 0 aber maxAvailableRooms > 0, verwende maxAvailableRooms für Anzeige
-          // (Zimmer ist an mindestens einem Tag verfügbar)
-          const availableRooms = room.minAvailableRooms > 0 ? room.minAvailableRooms : room.maxAvailableRooms;
+          // WICHTIG: Wenn nur ein Tag abgefragt wird, zeige die Verfügbarkeit für diesen Tag (nicht maxAvailableRooms)
+          // Wenn mehrere Tage abgefragt werden, zeige minAvailableRooms (garantiert verfügbar) oder maxAvailableRooms (verfügbar an mindestens einem Tag)
+          let availableRooms: number;
+          if (isSingleDay) {
+            // Nur ein Tag: Zeige die Verfügbarkeit für diesen Tag (sollte minAvailableRooms = maxAvailableRooms sein)
+            availableRooms = room.minAvailableRooms;
+          } else {
+            // Mehrere Tage: Zeige minAvailableRooms wenn > 0, sonst maxAvailableRooms (verfügbar an mindestens einem Tag)
+            availableRooms = room.minAvailableRooms > 0 ? room.minAvailableRooms : room.maxAvailableRooms;
+          }
           
           return {
             categoryId: room.categoryId,

@@ -413,11 +413,11 @@ export class WhatsAppAiService {
             properties: {
               startDate: {
                 type: 'string',
-                description: 'Check-in Datum im Format YYYY-MM-DD oder "today"/"heute"/"hoy" für heute (erforderlich). Verwende IMMER "today" wenn der User "heute" sagt!'
+                description: 'Startdatum im Format YYYY-MM-DD, "today"/"heute"/"hoy" für heute oder "tomorrow"/"morgen"/"mañana" für morgen (erforderlich). Verwende IMMER "today" wenn der User "heute" sagt! Verwende IMMER "tomorrow" wenn der User "morgen" sagt!'
               },
               endDate: {
                 type: 'string',
-                description: 'Check-out Datum im Format YYYY-MM-DD oder "today"/"heute"/"hoy" für heute (optional, falls nicht angegeben: startDate + 1 Tag)'
+                description: 'Enddatum im Format YYYY-MM-DD, "today"/"heute"/"hoy" für heute oder "tomorrow"/"morgen"/"mañana" für morgen (optional). WICHTIG: Wenn User nur "heute" sagt, lasse endDate leer (wird automatisch auf heute gesetzt, nicht +1 Tag)! Wenn User nur "morgen" sagt, lasse endDate leer (wird automatisch auf morgen gesetzt)!'
               },
               roomType: {
                 type: 'string',
@@ -636,6 +636,8 @@ export class WhatsAppAiService {
     prompt += '  WICHTIG: Verwende IMMER diese Function wenn der User nach Zimmerverfügbarkeit fragt!\n';
     prompt += '  WICHTIG: Zeige ALLE verfügbaren Zimmer aus dem Function-Ergebnis an, nicht nur einige!\n';
     prompt += '  WICHTIG: Jedes Zimmer im Function-Ergebnis muss in der Antwort erwähnt werden!\n';
+    prompt += '  WICHTIG: Wenn User nur "heute" sagt, verwende startDate: "today" und lasse endDate leer (zeigt nur heute, nicht heute+morgen)!\n';
+    prompt += '  WICHTIG: Wenn User nur "morgen" sagt, verwende startDate: "tomorrow" und lasse endDate leer (zeigt nur morgen)!\n';
     prompt += '  WICHTIG: Terminologie beachten!\n';
     prompt += '    - Bei compartida (Dorm-Zimmer): Verwende "Betten" (beds), NICHT "Zimmer"!\n';
     prompt += '    - Bei privada (private Zimmer): Verwende "Zimmer" (rooms)!\n';
@@ -643,6 +645,7 @@ export class WhatsAppAiService {
     prompt += '    - Beispiel privada: "1 Zimmer verfügbar" oder "2 Zimmer verfügbar"\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "today" })\n';
+    prompt += '    - "Haben wir Zimmer frei morgen?" → check_room_availability({ startDate: "tomorrow" })\n';
     prompt += '    - "Haben wir Zimmer frei vom 1.2. bis 3.2.?" → check_room_availability({ startDate: "2025-02-01", endDate: "2025-02-03" })\n';
     prompt += '    - "gibt es Dorm-Zimmer frei?" → check_room_availability({ startDate: "today", roomType: "compartida" })\n';
     prompt += '    - "¿tienen habitaciones privadas disponibles?" → check_room_availability({ startDate: "today", roomType: "privada" })\n';
@@ -706,6 +709,8 @@ export class WhatsAppAiService {
     prompt += '\nWICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat, verwende "today" als checkInDate!';
     prompt += '\nWICHTIG: Wenn User nach einer Buchungsanfrage Daten gibt (z.B. "01.dez bis 02.dez"), rufe create_room_reservation auf, NICHT check_room_availability!';
     prompt += '\nWICHTIG: Nutze den Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende es als Check-in-Datum!';
+    prompt += '\nWICHTIG: Wenn User nur "reservar" sagt (ohne weitere Details), aber bereits Zimmer und Daten in vorherigen Nachrichten genannt hat, rufe create_room_reservation mit diesen Informationen auf!';
+    prompt += '\nWICHTIG: Wenn User "reservar" sagt und alle Informationen vorhanden sind (Zimmer-Name, Daten), rufe create_room_reservation direkt auf, frage NICHT nach Details!';
     prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
     prompt += '\nWICHTIG: Wenn check_room_availability mehrere Zimmer zurückgibt, zeige ALLE Zimmer in der Antwort an!';
     prompt += '\nWICHTIG: Jedes Zimmer im Function-Ergebnis (rooms Array) muss in der Antwort erwähnt werden!';

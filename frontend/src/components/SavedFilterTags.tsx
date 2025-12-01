@@ -94,6 +94,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [recentClientNames, setRecentClientNames] = useState<string[]>([]);
   
+  // ✅ KRITISCH: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
+  const defaultFilterAppliedRef = useRef<boolean>(false);
+  
   // Responsive Tag-Display States (optimiert)
   const containerRef = useRef<HTMLDivElement>(null);
   const tagRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -205,7 +208,11 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   }, [loadRecentClients]);
 
   // Lade gespeicherte Filter und Gruppen beim ersten Render
+  // ✅ KRITISCH: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
   useEffect(() => {
+    // ✅ Reset Ref wenn tableId sich ändert
+    defaultFilterAppliedRef.current = false;
+    
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -229,10 +236,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         setSavedFilters(filters);
         setFilterGroups(groups);
 
-        // Default-Filter anwenden wenn defaultFilterName vorhanden und activeFilterName leer ist
-        if (defaultFilterName && !activeFilterName) {
+        // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
+        if (defaultFilterName && !activeFilterName && !defaultFilterAppliedRef.current) {
           const defaultFilter = filters.find((filter: SavedFilter) => filter != null && filter.name === defaultFilterName);
           if (defaultFilter) {
+            // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
+            defaultFilterAppliedRef.current = true;
+            
             // Sicherstellen, dass sortDirections ein Array ist
             const validSortDirections = Array.isArray(defaultFilter.sortDirections) ? defaultFilter.sortDirections : undefined;
             if (onFilterChange) {
@@ -253,7 +263,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     };
     
     fetchData();
-  }, [tableId]);
+  }, [tableId, defaultFilterName, activeFilterName, onFilterChange, onSelectFilter]);
 
   // ✅ MEMORY: Cleanup - Filter Arrays beim Unmount löschen
   useEffect(() => {
