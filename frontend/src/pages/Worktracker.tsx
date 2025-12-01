@@ -834,72 +834,11 @@ const Worktracker: React.FC = () => {
         }
     }, [reservationFilterLogicalOperators, t]);
 
-    // ✅ Initialer Filter-Load für Reservations (wie bei Tasks)
-    useEffect(() => {
-        const setInitialReservationFilter = async () => {
-            // ✅ Verhindere mehrfaches Anwenden des initialen Filters
-            if (initialReservationFilterAppliedRef.current || initialReservationFilterLoading) {
-                return;
-            }
-            
-            // ✅ Prüfe, ob bereits ein Filter gesetzt ist (z.B. durch manuellen Wechsel)
-            if (reservationSelectedFilterId !== null || reservationFilterConditions.length > 0) {
-                initialReservationFilterAppliedRef.current = true;
-                return;
-            }
-            
-            try {
-                setInitialReservationFilterLoading(true);
-                const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(RESERVATIONS_TABLE_ID));
-                const filters = response.data;
-                
-                // ✅ Suche nach "Hoy" Filter (Standardfilter für heute)
-                const hoyFilter = filters.find((filter: any) => filter.name === 'Hoy');
-                if (hoyFilter) {
-                    setReservationActiveFilterName('Hoy');
-                    setReservationSelectedFilterId(hoyFilter.id);
-                    applyReservationFilterConditions(hoyFilter.conditions, hoyFilter.operators);
-                    // ✅ Lade Reservierungen mit Filter (nur heute)
-                    await loadReservations(hoyFilter.id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-                    initialReservationFilterAppliedRef.current = true; // ✅ Markiere als angewendet
-                } else {
-                    // Fallback: Lade alle Reservierungen (sollte nicht passieren, wenn Filter erstellt wurde)
-                    await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-                    initialReservationFilterAppliedRef.current = true; // ✅ Markiere als angewendet
-                }
-            } catch (error: any) {
-                console.error('Fehler beim Setzen des initialen Filters:', error);
-                // ✅ Bei Timeout-Fehlern nicht erneut laden (verhindert Endlosschleife)
-                if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-                    console.error('⛔ Timeout beim Laden des initialen Filters - verhindere erneutes Laden');
-                    setReservationsError('Timeout beim Laden der Filter. Bitte Seite neu laden.');
-                    initialReservationFilterAppliedRef.current = true; // ✅ Markiere als angewendet, um weitere Versuche zu verhindern
-                    return; // ✅ WICHTIG: Nicht erneut laden bei Timeout
-                }
-                // Fallback: Lade alle Reservierungen (nur bei anderen Fehlern)
-                try {
-                    await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-                    initialReservationFilterAppliedRef.current = true; // ✅ Markiere als angewendet
-                } catch (loadError) {
-                    console.error('Fehler beim Fallback-Laden der Reservations:', loadError);
-                    initialReservationFilterAppliedRef.current = true; // ✅ Markiere als angewendet, auch bei Fehler
-                }
-            } finally {
-                setInitialReservationFilterLoading(false);
-            }
-        };
-        
-        // ✅ Reset Ref wenn Tab gewechselt wird
-        if (activeTab !== 'reservations') {
-            initialReservationFilterAppliedRef.current = false;
-            return;
-        }
-        
-        // ✅ Nur ausführen, wenn noch nicht angewendet und nicht am Laden
-        if (!initialReservationFilterAppliedRef.current && !initialReservationFilterLoading) {
-            setInitialReservationFilter();
-        }
-    }, [activeTab]); // ✅ NUR activeTab - initialReservationFilterLoading würde Endlosschleife verursachen
+    // ✅ Initialer Filter-Load für Reservations - DEAKTIVIERT, da SavedFilterTags den Default-Filter bereits anwendet
+    // ✅ SavedFilterTags wendet den Default-Filter automatisch an, daher ist dieser useEffect nicht nötig
+    // useEffect(() => {
+    //     // SavedFilterTags übernimmt die Anwendung des Default-Filters
+    // }, [activeTab]);
     
     // Infinite Scroll Handler für Tasks
     // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
@@ -994,73 +933,11 @@ const Worktracker: React.FC = () => {
         }
     };
     
-    // ✅ Initialer Filter-Load für Todos (wie bei Reservations)
-    // ✅ KRITISCH: Loading-State verhindert Endlosschleife bei Timeout-Fehlern
-    useEffect(() => {
-        const setInitialTodoFilter = async () => {
-            // ✅ Verhindere mehrfaches Anwenden des initialen Filters
-            if (initialFilterAppliedRef.current || initialFilterLoading) {
-                return;
-            }
-            
-            // ✅ Prüfe, ob bereits ein Filter gesetzt ist (z.B. durch manuellen Wechsel)
-            if (selectedFilterId !== null || filterConditions.length > 0) {
-                initialFilterAppliedRef.current = true;
-                return;
-            }
-            
-            try {
-                setInitialFilterLoading(true);
-                const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TODOS_TABLE_ID));
-                const filters = response.data;
-                
-                // ✅ Suche nach "Aktuell" Filter (Standardfilter)
-                const aktuellFilter = filters.find((filter: any) => filter.name === 'Aktuell');
-                if (aktuellFilter) {
-                    setActiveFilterName('Aktuell');
-                    setSelectedFilterId(aktuellFilter.id);
-                    applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
-                    // ✅ Lade Todos mit Filter
-                    await loadTasks(aktuellFilter.id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-                    initialFilterAppliedRef.current = true; // ✅ Markiere als angewendet
-                } else {
-                    // Fallback: Lade alle Todos (sollte nicht passieren, wenn Filter erstellt wurde)
-                    await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-                    initialFilterAppliedRef.current = true; // ✅ Markiere als angewendet
-                }
-            } catch (error: any) {
-                console.error('Fehler beim Setzen des initialen Filters:', error);
-                // ✅ Bei Timeout-Fehlern nicht erneut laden (verhindert Endlosschleife)
-                if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-                    console.error('⛔ Timeout beim Laden des initialen Filters - verhindere erneutes Laden');
-                    setError('Timeout beim Laden der Filter. Bitte Seite neu laden.');
-                    initialFilterAppliedRef.current = true; // ✅ Markiere als angewendet, um weitere Versuche zu verhindern
-                    return; // ✅ WICHTIG: Nicht erneut laden bei Timeout
-                }
-                // Fallback: Lade alle Todos (nur bei anderen Fehlern)
-                try {
-                    await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-                    initialFilterAppliedRef.current = true; // ✅ Markiere als angewendet
-                } catch (loadError) {
-                    console.error('Fehler beim Fallback-Laden der Todos:', loadError);
-                    initialFilterAppliedRef.current = true; // ✅ Markiere als angewendet, auch bei Fehler
-                }
-            } finally {
-                setInitialFilterLoading(false);
-            }
-        };
-        
-        // ✅ Reset Ref wenn Tab gewechselt wird
-        if (activeTab !== 'todos') {
-            initialFilterAppliedRef.current = false;
-            return;
-        }
-        
-        // ✅ Nur ausführen, wenn noch nicht angewendet und nicht am Laden
-        if (!initialFilterAppliedRef.current && !initialFilterLoading) {
-            setInitialTodoFilter();
-        }
-    }, [activeTab]); // ✅ NUR activeTab - initialFilterLoading würde Endlosschleife verursachen
+    // ✅ Initialer Filter-Load für Todos - DEAKTIVIERT, da SavedFilterTags den Default-Filter bereits anwendet
+    // ✅ SavedFilterTags wendet den Default-Filter automatisch an, daher ist dieser useEffect nicht nötig
+    // useEffect(() => {
+    //     // SavedFilterTags übernimmt die Anwendung des Default-Filters
+    // }, [activeTab]);
     
     useEffect(() => {
         if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
