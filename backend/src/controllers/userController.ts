@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { Prisma, NotificationType } from '@prisma/client';
-import { prisma } from '../utils/prisma';
+import { prisma, getPrisma } from '../utils/prisma';
 import bcrypt from 'bcrypt';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getUserNotificationText } from '../utils/translations';
@@ -1500,8 +1500,10 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             }
         }
         
+        // ✅ FIX: Verwende getPrisma() für Transaktionen, da Round-Robin-Proxy nicht mit Transaktionen funktioniert
         // Transaktion starten - alle Prisma-Operationen innerhalb der Transaktion
-        await prisma.$transaction(async (tx) => {
+        const prismaClient = getPrisma();
+        await prismaClient.$transaction(async (tx) => {
             // Prüfen, ob die Rolle dem Benutzer zugewiesen ist (INNERHALB der Transaktion)
             const userRole = await tx.userRole.findFirst({
                 where: {

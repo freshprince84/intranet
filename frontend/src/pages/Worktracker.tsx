@@ -895,10 +895,11 @@ const Worktracker: React.FC = () => {
             return;
         }
         
-        if (!initialReservationFilterLoading) {
+        // ✅ Nur ausführen, wenn noch nicht angewendet und nicht am Laden
+        if (!initialReservationFilterAppliedRef.current && !initialReservationFilterLoading) {
             setInitialReservationFilter();
         }
-    }, [activeTab, initialReservationFilterLoading]); // ✅ Reduzierte Dependencies - nur activeTab und initialReservationFilterLoading
+    }, [activeTab]); // ✅ NUR activeTab - initialReservationFilterLoading würde Endlosschleife verursachen
     
     // Infinite Scroll Handler für Tasks
     // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
@@ -1055,10 +1056,11 @@ const Worktracker: React.FC = () => {
             return;
         }
         
-        if (!initialFilterLoading) {
+        // ✅ Nur ausführen, wenn noch nicht angewendet und nicht am Laden
+        if (!initialFilterAppliedRef.current && !initialFilterLoading) {
             setInitialTodoFilter();
         }
-    }, [activeTab, initialFilterLoading]); // ✅ Reduzierte Dependencies - nur activeTab und initialFilterLoading
+    }, [activeTab]); // ✅ NUR activeTab - initialFilterLoading würde Endlosschleife verursachen
     
     useEffect(() => {
         if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
@@ -2416,7 +2418,7 @@ const Worktracker: React.FC = () => {
                                     activeFilterName={activeTab === 'todos' ? activeFilterName : reservationActiveFilterName}
                                     selectedFilterId={activeTab === 'todos' ? selectedFilterId : reservationSelectedFilterId}
                                     onFilterChange={activeTab === 'todos' ? handleFilterChange : handleReservationFilterChange}
-                                    defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : t('reservations.filters.current', 'Aktuell')}
+                                    defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : 'Hoy'}
                                 />
                                 </div>
                             )}
