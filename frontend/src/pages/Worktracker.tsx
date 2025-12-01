@@ -712,6 +712,16 @@ const Worktracker: React.FC = () => {
         }
     }, []); // ✅ Keine Dependencies nötig - nur State-Setter
 
+    // ✅ KRITISCH: useCallback für Stabilität - MUSS VOR useEffect sein, der es verwendet
+    const applyReservationFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        setReservationFilterConditions(conditions);
+        setReservationFilterLogicalOperators(operators);
+        if (sortDirections !== undefined) {
+            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+            setReservationFilterSortDirections(validSortDirections);
+        }
+    }, []); // ✅ Keine Dependencies nötig - nur State-Setter
+
     const handleGeneratePinAndSend = async (reservationId: number) => {
         try {
             setGeneratingPinForReservation(reservationId);
@@ -850,7 +860,7 @@ const Worktracker: React.FC = () => {
         if (activeTab === 'reservations' && hasPermission('reservations', 'read', 'table')) {
             setInitialReservationFilter();
         }
-    }, [activeTab]);
+    }, [activeTab, loadReservations, applyReservationFilterConditions]); // ✅ Dependencies hinzugefügt - hasPermission entfernt (ändert sich bei jedem Render)
     
     // Infinite Scroll Handler für Tasks
     // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
@@ -993,7 +1003,7 @@ const Worktracker: React.FC = () => {
         if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table') && !initialFilterLoading) {
             setInitialTodoFilter();
         }
-    }, [activeTab, hasPermission, loadTasks, applyFilterConditions, initialFilterLoading]);
+    }, [activeTab, loadTasks, applyFilterConditions, initialFilterLoading]); // ✅ hasPermission entfernt - Funktion ändert sich bei jedem Render
     
     useEffect(() => {
         if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
@@ -1209,17 +1219,6 @@ const Worktracker: React.FC = () => {
         setActiveFilterName('');
         setSelectedFilterId(null);
     };
-    
-    // Reservations Filter Functions
-    // ✅ KRITISCH: useCallback für Stabilität - verhindert Endlosschleife
-    const applyReservationFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
-        setReservationFilterConditions(conditions);
-        setReservationFilterLogicalOperators(operators);
-        if (sortDirections !== undefined) {
-            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-            setReservationFilterSortDirections(validSortDirections);
-        }
-    }, []); // ✅ Keine Dependencies nötig - nur State-Setter
     
     const resetReservationFilterConditions = () => {
         setReservationFilterConditions([]);
