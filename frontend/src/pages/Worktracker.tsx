@@ -701,6 +701,17 @@ const Worktracker: React.FC = () => {
     
     // ❌ loadMoreTasks entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
+    // ✅ KRITISCH: useCallback für Stabilität in useEffect Dependencies - MUSS VOR useEffect sein, der es verwendet
+    const applyFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        setFilterConditions(conditions);
+        setFilterLogicalOperators(operators);
+        if (sortDirections !== undefined) {
+            // Sicherstellen, dass sortDirections ein Array ist
+            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+            setFilterSortDirections(validSortDirections);
+        }
+    }, []); // ✅ Keine Dependencies nötig - nur State-Setter
+
     const handleGeneratePinAndSend = async (reservationId: number) => {
         try {
             setGeneratingPinForReservation(reservationId);
@@ -1190,17 +1201,6 @@ const Worktracker: React.FC = () => {
         }
         return 0;
     };
-
-    // ✅ KRITISCH: useCallback für Stabilität in useEffect Dependencies
-    const applyFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
-        setFilterConditions(conditions);
-        setFilterLogicalOperators(operators);
-        if (sortDirections !== undefined) {
-            // Sicherstellen, dass sortDirections ein Array ist
-            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-            setFilterSortDirections(validSortDirections);
-        }
-    }, []); // ✅ Keine Dependencies nötig - nur State-Setter
     
     const resetFilterConditions = () => {
         setFilterConditions([]);
