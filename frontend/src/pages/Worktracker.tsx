@@ -1200,6 +1200,11 @@ const Worktracker: React.FC = () => {
     
     // ✅ KRITISCH: useCallback für Stabilität - verhindert Endlosschleife in SavedFilterTags
     const handleReservationFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        // ✅ KRITISCH: Verhindere mehrfaches Anwenden des gleichen Filters (Endlosschleife)
+        if (id === reservationSelectedFilterId && name === reservationActiveFilterName) {
+            return; // Filter bereits aktiv, keine erneute Anwendung
+        }
+        
         setReservationActiveFilterName(name);
         setReservationSelectedFilterId(id);
         applyReservationFilterConditions(conditions, operators, sortDirections);
@@ -1213,7 +1218,7 @@ const Worktracker: React.FC = () => {
         } else {
             await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
         }
-    }, [applyReservationFilterConditions, loadReservations]);
+    }, [applyReservationFilterConditions, loadReservations, reservationSelectedFilterId, reservationActiveFilterName]);
 
     const getStatusPriority = (status: Task['status']): number => {
         switch (status) {
@@ -3598,7 +3603,7 @@ const Worktracker: React.FC = () => {
                                 activeFilterName={activeTab === 'todos' ? activeFilterName : reservationActiveFilterName}
                                 selectedFilterId={activeTab === 'todos' ? selectedFilterId : reservationSelectedFilterId}
                                 onFilterChange={activeTab === 'todos' ? handleFilterChange : handleReservationFilterChange}
-                                defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : t('reservations.filters.current', 'Aktuell')}
+                                defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : 'Hoy'}
                             />
 
                             {/* Tabelle oder Cards */}
