@@ -1230,22 +1230,41 @@
 
 ---
 
-### Phase 2: Wichtige Verbesserungen (NÄCHSTE WOCHE) - 5.5 Stunden
+### Phase 2: Kritische Filter-Fixes (SOFORT) - 3 Stunden
 
-**3. Doppelte Filterung beheben** (1.5 Stunden)
-- **Dateien:** `frontend/src/components/Requests.tsx` + `frontend/src/pages/Worktracker.tsx` (Tasks + Reservations)
-- **Code-Änderungen:** 3 Dateien, ~100 Zeilen
-- **Priorität:** 🔴🔴 WICHTIG - Behebt doppelte Filterung (Server + Client)
+**⚠️ WICHTIG:** Diese Probleme müssen VOR allen anderen behoben werden, da sie das System unbrauchbar machen.
+
+**2.8. Filter-Tag-Klick lädt falsche Resultate** (1.5 Stunden)
+- **Dateien:** `frontend/src/pages/Worktracker.tsx`
+- **Code-Änderungen:** 1 Datei, ~20 Zeilen
+- **Priorität:** 🔴🔴🔴 KRITISCH - Filter funktionieren nicht korrekt
+- **Problem:** Prüfung gegen Endlosschleife verhindert, dass Filter korrekt angewendet werden
+- **Lösung:** Prüfung anpassen oder entfernen, sicherstellen dass Daten immer neu geladen werden
+
+**2.9. Initiales Laden lädt falsche Resultate** (1.5 Stunden)
+- **Dateien:** `frontend/src/pages/Worktracker.tsx` + `frontend/src/components/SavedFilterTags.tsx`
+- **Code-Änderungen:** 2 Dateien, ~30 Zeilen
+- **Priorität:** 🔴🔴🔴 KRITISCH - System funktioniert nicht beim initialen Laden
+- **Problem:** Race Condition zwischen initialem Laden und Default-Filter-Anwendung
+- **Lösung:** Sicherstellen, dass Daten NUR geladen werden, NACHDEM Default-Filter angewendet wurde
+
+---
+
+### Phase 2b: Weitere Filter-Verbesserungen (NACH Phase 2) - 3 Stunden
+
+**3. Doppelte Filterung beheben** - ✅ BEREITS ERLEDIGT
+- **Status:** ✅ Client-seitige Filterung wurde bereits entfernt
+- **Kann aus Plan entfernt werden**
 
 **4. Apply Filter Button funktioniert nicht** (1.5 Stunden)
 - **Dateien:** `frontend/src/components/Requests.tsx` + `frontend/src/pages/Worktracker.tsx` (Tasks + Reservations)
 - **Code-Änderungen:** 3 Dateien, ~50 Zeilen
-- **Priorität:** 🔴🔴🔴 KRITISCH - Filter funktionieren nicht beim Apply Filter Button
+- **Priorität:** 🔴🔴 WICHTIG - Muss nach Problem 2.8/2.9 überarbeitet werden
+- **Hinweis:** Lösung muss mit Problem 2.8/2.9 abgestimmt werden
 
-**5. To Do's laden nicht beim Öffnen** (30 Minuten)
-- **Dateien:** `frontend/src/pages/Worktracker.tsx`
-- **Code-Änderungen:** 1 Datei, 1 Zeile (Dependencies korrigieren)
-- **Priorität:** 🔴🔴🔴 KRITISCH - To Do's müssen sofort laden
+**5. To Do's laden nicht beim Öffnen** - ⚠️ MUSS ÜBERPRÜFT WERDEN
+- **Status:** ⚠️ Könnte Teil von Problem 2.9 sein
+- **Muss nach Problem 2.9 überprüft werden**
 
 **6. Format-Inkonsistenzen beheben** (30 Minuten)
 - **Dateien:** `backend/src/controllers/savedFilterController.ts` + `frontend/src/components/SavedFilterTags.tsx`
@@ -1427,8 +1446,126 @@
 
 ---
 
+---
+
+## 🚨 KRITISCHE NEUE PROBLEME (2025-12-01)
+
+### Problem 2.8: Filter-Tag-Klick lädt falsche Resultate
+
+**Datum:** 2025-12-01  
+**Status:** 🔴🔴🔴 KRITISCH - System funktioniert nicht korrekt
+
+**Symptom:**
+- Bei Klick auf Filter-Tag bei To Do's oder Reservations werden falsche Resultate geladen
+- Resultate entsprechen nicht dem angeklickten Filter
+
+**Ursache (aus Code-Analyse):**
+1. `frontend/src/pages/Worktracker.tsx` Zeile 1169-1172: `handleFilterChange` prüft, ob Filter bereits aktiv ist
+   ```typescript
+   if (id === selectedFilterId && name === activeFilterName) {
+       return; // Filter bereits aktiv, keine erneute Anwendung
+   }
+   ```
+2. **FAKT:** Wenn Filter bereits aktiv ist, wird früh zurückgekehrt (return), OHNE `loadTasks`/`loadReservations` aufzurufen
+3. **FAKT:** Die Prüfung kommt NACH `setSelectedFilterId` und `setActiveFilterName` (Zeile 1174-1175), aber BEVOR `loadTasks`/`loadReservations` (Zeile 1182-1187)
+4. **Problem:** Wenn User einen bereits aktiven Filter-Tag erneut klickt, werden die Daten nicht neu geladen
+5. **ABER:** Das erklärt nicht, warum falsche Resultate geladen werden. Das Problem könnte sein:
+   - Die Prüfung verhindert, dass der Filter korrekt angewendet wird
+   - Oder: Die Daten werden geladen, aber mit falschen Filter-Parametern
+
+**Code-Änderungen in letzten 12h:**
+- Commit `7e0696b` (2025-12-01): Prüfung gegen Endlosschleife hinzugefügt (Zeile 1169-1172, 1189-1192)
+- **FAKT:** Diese Prüfung verhindert, dass Filter erneut angewendet werden, auch wenn User den Filter-Tag erneut klickt
+
+**Lösung:**
+- Prüfung anpassen: Nur verhindern, wenn Filter bereits aktiv ist UND Daten bereits geladen wurden
+- Oder: Prüfung entfernen und stattdessen sicherstellen, dass `loadTasks`/`loadReservations` idempotent sind
+- Oder: Prüfung verschieben, um sicherzustellen, dass Daten immer neu geladen werden, wenn Filter-Tag geklickt wird
+
+---
+
+### Problem 2.9: Initiales Laden lädt falsche Resultate
+
+**Datum:** 2025-12-01  
+**Status:** 🔴🔴🔴 KRITISCH - System funktioniert nicht korrekt
+
+**Symptom:**
+- Beim initialen Laden von Tabs wird zwar der richtige Filter aktiviert
+- Aber es werden falsche Resultate geladen (evtl. alle aus der Tabelle?)
+- Resultate stimmen nicht mit dem Filter überein
+
+**Ursache (aus Code-Analyse):**
+1. `frontend/src/components/SavedFilterTags.tsx` Zeile 241-271: Default-Filter wird beim initialen Laden angewendet
+2. `frontend/src/components/SavedFilterTags.tsx` Zeile 262: `onFilterChange` wird aufgerufen mit `defaultFilter.id`, `defaultFilter.conditions`, etc.
+3. `frontend/src/pages/Worktracker.tsx` Zeile 1167-1208: `handleFilterChange` wird aufgerufen
+4. **FAKT:** `handleFilterChange` ruft `loadTasks`/`loadReservations` auf (Zeile 1182-1187, 1202-1207)
+5. **Problem:** Es könnte sein, dass:
+   - Die Daten bereits geladen wurden (ohne Filter), bevor der Default-Filter angewendet wird
+   - Oder: Die Filter-Parameter werden nicht korrekt an `loadTasks`/`loadReservations` übergeben
+   - Oder: `loadTasks`/`loadReservations` verwenden falsche Filter-Parameter
+
+**Code-Änderungen in letzten 12h:**
+- `frontend/src/pages/Worktracker.tsx` Zeile 936-940: Initialer Filter-Load für Todos wurde DEAKTIVIERT
+- **FAKT:** Kommentar sagt: "SavedFilterTags wendet den Default-Filter bereits an, daher ist dieser useEffect nicht nötig"
+- **Problem:** Wenn SavedFilterTags den Default-Filter anwendet, aber die Daten bereits geladen wurden (ohne Filter), werden falsche Resultate angezeigt
+
+**Lösung:**
+- Sicherstellen, dass Daten NUR geladen werden, NACHDEM der Default-Filter angewendet wurde
+- Oder: Initiales Laden deaktivieren und nur über SavedFilterTags laden
+- Oder: Race Condition beheben zwischen initialem Laden und Default-Filter-Anwendung
+
+---
+
+## 📋 REVIDIERTER PLAN (2025-12-01)
+
+### Was wurde bereits erledigt?
+
+**Aus Code-Analyse:**
+1. ✅ **Client-seitige Filterung entfernt** (Worktracker.tsx Zeile 1308-1312, Requests.tsx Zeile 713-715)
+   - **FAKT:** Kommentare zeigen, dass Client-seitige Filterung entfernt wurde
+   - **Status:** ✅ ERLEDIGT (Problem 2.3 aus Plan)
+
+2. ✅ **Endlosschleife-Prüfung hinzugefügt** (Worktracker.tsx Zeile 1169-1172, 1189-1192)
+   - **FAKT:** Prüfung gegen mehrfaches Anwenden des gleichen Filters
+   - **Status:** ✅ ERLEDIGT (aber verursacht neue Probleme)
+
+3. ✅ **Initialer Filter-Load deaktiviert** (Worktracker.tsx Zeile 936-940)
+   - **FAKT:** Kommentar sagt, dass SavedFilterTags den Default-Filter bereits anwendet
+   - **Status:** ✅ ERLEDIGT (aber verursacht neue Probleme)
+
+### Was ist überflüssig geworden?
+
+**Aus Code-Analyse:**
+1. ❌ **Problem 2.3: Doppelte Filterung beheben** - BEREITS ERLEDIGT
+   - **FAKT:** Client-seitige Filterung wurde bereits entfernt
+   - **Status:** ✅ ERLEDIGT, kann aus Plan entfernt werden
+
+2. ❌ **Problem 2.7: To Do's laden nicht beim Öffnen** - MÖGLICHERWEISE ÜBERFLÜSSIG
+   - **FAKT:** Initialer Filter-Load wurde deaktiviert, SavedFilterTags übernimmt
+   - **Status:** ⚠️ MUSS ÜBERPRÜFT WERDEN - könnte Teil von Problem 2.9 sein
+
+### Was macht keinen Sinn mehr?
+
+**Aus Code-Analyse:**
+1. ❌ **Problem 2.5: Apply Filter Button funktioniert nicht** - MUSS ÜBERARBEITET WERDEN
+   - **FAKT:** `applyFilterConditions` ruft immer noch nicht `loadTasks`/`loadReservations` auf
+   - **ABER:** Neue Probleme (2.8, 2.9) sind kritischer und müssen zuerst behoben werden
+   - **Status:** ⚠️ MUSS ÜBERARBEITET WERDEN - Lösung muss mit Problem 2.8/2.9 abgestimmt werden
+
+### Was muss ergänzt werden?
+
+**Neue Probleme:**
+1. ✅ **Problem 2.8: Filter-Tag-Klick lädt falsche Resultate** - NEU, KRITISCH
+2. ✅ **Problem 2.9: Initiales Laden lädt falsche Resultate** - NEU, KRITISCH
+
+**Priorität:**
+- 🔴🔴🔴 **KRITISCH:** Problem 2.8 und 2.9 müssen SOFORT behoben werden
+- 🔴🔴 **WICHTIG:** Problem 2.5 muss überarbeitet werden (nach 2.8/2.9)
+
+---
+
 **Erstellt:** 2025-01-26  
-**Aktualisiert:** 2025-01-26 (Alle identifizierten Probleme integriert: Apply Filter Button, User-Gruppen, To Do's Lade-Problem)  
-**Status:** 📋 PLAN - Vollständig geplant, alle Probleme berücksichtigt  
-**Nächster Schritt:** Phase 1 starten (Schema-Fehler + executeWithRetry)
+**Aktualisiert:** 2025-12-01 (Kritische neue Probleme identifiziert: Filter-Tag-Klick und Initiales Laden)  
+**Status:** 📋 PLAN - REVIDIERT, neue kritische Probleme müssen zuerst behoben werden  
+**Nächster Schritt:** Problem 2.8 und 2.9 analysieren und beheben
 

@@ -417,9 +417,8 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         const isolationFilter = getDataIsolationFilter(req as any, 'task');
         
         // Aktuellen Task abrufen, um Änderungen zu erkennen
-        // ✅ PERFORMANCE: executeWithRetry für DB-Query
-        const currentTask = await executeWithRetry(() =>
-            prisma.task.findFirst({
+        // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
+        const currentTask = await prisma.task.findFirst({
             where: {
                 id: taskId,
                 ...isolationFilter
@@ -435,8 +434,7 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
                     select: { id: true, name: true, organizationId: true }
                 }
             }
-            })
-        );
+        });
 
         if (!currentTask) {
             return res.status(404).json({ error: 'Task nicht gefunden' });

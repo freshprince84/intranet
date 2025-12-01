@@ -268,6 +268,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             // ✅ Debug: Log wenn Filter nicht gefunden wird
             console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, filters.map(f => f?.name));
           }
+          
+          // ✅ FIX: Wenn kein Default-Filter gefunden wurde, lade Daten ohne Filter (Fallback)
+          // ✅ Dies verhindert, dass keine Daten angezeigt werden, wenn Default-Filter fehlt
+          if (!defaultFilter && defaultFilterName && onFilterChange) {
+            // Lade Daten ohne Filter (leere Bedingungen)
+            onFilterChange('', null, [], [], undefined);
+          }
         }
       } catch (err) {
         console.error('Fehler beim Laden der gespeicherten Filter:', err);
