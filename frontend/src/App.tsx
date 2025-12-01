@@ -20,6 +20,7 @@ import LoadingScreen from './components/LoadingScreen.tsx';
 import { OnboardingProvider } from './contexts/OnboardingContext.tsx';
 import { onboardingSteps } from './config/onboardingSteps.ts';
 import OnboardingTour from './components/OnboardingTour.tsx';
+import { FilterProvider } from './contexts/FilterContext.tsx';
 
 // Lazy Loading für Page-Komponenten
 const Login = React.lazy(() => import('./pages/Login.tsx'));
@@ -58,6 +59,7 @@ const App: React.FC = () => {
                                     <WorktimeProvider>
                                         <BranchProvider>
                                                 <MessageProvider>
+                                                <FilterProvider>
                                                 <FaviconLoader />
                                                 <Router>
                                                     <OnboardingProvider steps={onboardingSteps}>
@@ -174,9 +176,10 @@ const App: React.FC = () => {
                                                     <OnboardingTour />
                                                     </OnboardingProvider>
                                                 </Router>
-                                        </MessageProvider>
-                                    </BranchProvider>
-                                </WorktimeProvider>
+                                                </FilterProvider>
+                                                </MessageProvider>
+                                        </BranchProvider>
+                                    </WorktimeProvider>
                             </SidepaneProvider>
                             </SidebarProvider>
                         </ThemeProvider>

@@ -5,6 +5,7 @@ import { FilterCondition } from './FilterRow.tsx';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import useMessage from '../hooks/useMessage.ts';
+import { useFilterContext } from '../contexts/FilterContext.tsx';
 
 interface SortDirection {
   column: string;
@@ -57,6 +58,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
 }) => {
   const { t } = useTranslation();
   const { showMessage } = useMessage();
+  const filterContext = useFilterContext();
   
   // Übersetze Filter-Namen beim Anzeigen
   const translateFilterName = (name: string): string => {
@@ -88,10 +90,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     return groupName;
   };
   
-  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
-  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // ✅ PERFORMANCE: Verwende Filter-Context statt lokaler State
+  // Filter werden zentral geladen und für alle Komponenten bereitgestellt
+  const savedFilters = filterContext.getFilters(tableId);
+  const filterGroups = filterContext.getFilterGroups(tableId);
+  const loading = filterContext.isLoading(tableId);
+  const error = filterContext.getError(tableId);
   const [recentClientNames, setRecentClientNames] = useState<string[]>([]);
   
   // ✅ KRITISCH: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
@@ -121,23 +125,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
   const [editingGroupName, setEditingGroupName] = useState<string>('');
 
-  // Refresh Filter-Liste und Gruppen (für external updates) - MUSS vor cleanupExcessiveClientFilters sein!
+  // ✅ PERFORMANCE: Verwende Filter-Context refreshFilters statt lokaler Implementierung
   const refreshFilters = useCallback(async () => {
-    try {
-      const [filtersResponse, groupsResponse] = await Promise.all([
-        axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)),
-        axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.GROUPS.BY_TABLE(tableId))
-      ]);
-      
-      const filters = Array.isArray(filtersResponse.data) ? filtersResponse.data.filter(f => f != null) : [];
-      const groups = Array.isArray(groupsResponse.data) ? groupsResponse.data.filter(g => g != null) : [];
-      
-      setSavedFilters(filters);
-      setFilterGroups(groups);
-    } catch (error) {
-      console.error('Fehler beim Neuladen der Filter:', error);
-    }
-  }, [tableId]);
+    await filterContext.refreshFilters(tableId);
+  }, [tableId, filterContext]);
 
   // Bereinigungsfunktion für überschüssige Client-Filter
   const cleanupExcessiveClientFilters = useCallback(async (currentClientNames: string[]) => {
@@ -207,85 +198,62 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     loadRecentClients();
   }, [loadRecentClients]);
 
-  // Lade gespeicherte Filter und Gruppen beim ersten Render
+  // ✅ PERFORMANCE: Lade Filter über Filter-Context (verhindert doppelte Ladung)
   // ✅ KRITISCH: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
   useEffect(() => {
     // ✅ Reset Ref wenn tableId sich ändert
     defaultFilterAppliedRef.current = false;
     
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          setError('Nicht authentifiziert');
-          return;
-        }
-        
-        // Lade Filter und Gruppen parallel
-        const [filtersResponse, groupsResponse] = await Promise.all([
-          axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)),
-          axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.GROUPS.BY_TABLE(tableId))
-        ]);
-        
-        // Sicherstellen, dass response.data ein Array ist
-        const filters = Array.isArray(filtersResponse.data) ? filtersResponse.data.filter(f => f != null) : [];
-        const groups = Array.isArray(groupsResponse.data) ? groupsResponse.data.filter(g => g != null) : [];
-        
-        setSavedFilters(filters);
-        setFilterGroups(groups);
-
-        // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
-        // ✅ ZUSÄTZLICH: Prüfe selectedFilterId, um zu verhindern, dass Filter erneut angewendet wird
-        if (defaultFilterName && !activeFilterName && !selectedFilterId && !defaultFilterAppliedRef.current) {
-          // ✅ Suche nach Filter mit exaktem Namen oder alternativen Namen (für Migration)
-          const defaultFilter = filters.find((filter: SavedFilter) => {
-            if (!filter || !filter.name) return false;
-            // Exakte Übereinstimmung
-            if (filter.name === defaultFilterName) return true;
-            // Alternative Namen für "Aktuell"
-            if (defaultFilterName === 'Aktuell' && (filter.name === 'tasks.filters.current' || filter.name === 'requests.filters.aktuell')) return true;
-            // Alternative Namen für "Hoy"
-            if (defaultFilterName === 'Hoy' && (filter.name === 'Heute' || filter.name === 'common.today')) return true;
-            return false;
-          });
-          
-          if (defaultFilter) {
-            // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
-            defaultFilterAppliedRef.current = true;
-            
-            // ✅ FIX: Einheitliches Format - immer Array (nicht undefined)
-            const validSortDirections = Array.isArray(defaultFilter.sortDirections) ? defaultFilter.sortDirections : [];
-            if (onFilterChange) {
-              // Controlled Mode: Verwende onFilterChange
-              onFilterChange(defaultFilter.name, defaultFilter.id, defaultFilter.conditions, defaultFilter.operators, validSortDirections);
-            } else {
-              // Uncontrolled Mode: Verwende onSelectFilter
-              onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
-            }
-          } else if (defaultFilterName && process.env.NODE_ENV === 'development') {
-            // ✅ Debug: Log wenn Filter nicht gefunden wird
-            console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, filters.map(f => f?.name));
-          }
-          
-          // ✅ FIX: Wenn kein Default-Filter gefunden wurde, lade Daten ohne Filter (Fallback)
-          // ✅ Dies verhindert, dass keine Daten angezeigt werden, wenn Default-Filter fehlt
-          if (!defaultFilter && defaultFilterName && onFilterChange) {
-            // Lade Daten ohne Filter (leere Bedingungen)
-            onFilterChange('', null, [], [], undefined);
-          }
-        }
-      } catch (err) {
-        console.error('Fehler beim Laden der gespeicherten Filter:', err);
-        setError('Fehler beim Laden der gespeicherten Filter');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Lade Filter über Filter-Context
+    filterContext.loadFilters(tableId);
+  }, [tableId, filterContext]);
+  
+  // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
+  // ✅ Wird ausgeführt, NACHDEM Filter geladen wurden
+  useEffect(() => {
+    // Warte bis Filter geladen sind
+    if (loading) return;
     
-    fetchData();
-  }, [tableId]); // ✅ NUR tableId - onFilterChange/onSelectFilter können sich ändern und verursachen Endlosschleife
+    // ✅ ZUSÄTZLICH: Prüfe selectedFilterId, um zu verhindern, dass Filter erneut angewendet wird
+    if (defaultFilterName && !activeFilterName && !selectedFilterId && !defaultFilterAppliedRef.current) {
+      // ✅ Suche nach Filter mit exaktem Namen oder alternativen Namen (für Migration)
+      const defaultFilter = savedFilters.find((filter: SavedFilter) => {
+        if (!filter || !filter.name) return false;
+        // Exakte Übereinstimmung
+        if (filter.name === defaultFilterName) return true;
+        // Alternative Namen für "Aktuell"
+        if (defaultFilterName === 'Aktuell' && (filter.name === 'tasks.filters.current' || filter.name === 'requests.filters.aktuell')) return true;
+        // Alternative Namen für "Hoy"
+        if (defaultFilterName === 'Hoy' && (filter.name === 'Heute' || filter.name === 'common.today')) return true;
+        return false;
+      });
+      
+      if (defaultFilter) {
+        // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
+        defaultFilterAppliedRef.current = true;
+        
+        // ✅ FIX: Einheitliches Format - immer Array (nicht undefined)
+        const validSortDirections = Array.isArray(defaultFilter.sortDirections) ? defaultFilter.sortDirections : [];
+        if (onFilterChange) {
+          // Controlled Mode: Verwende onFilterChange
+          onFilterChange(defaultFilter.name, defaultFilter.id, defaultFilter.conditions, defaultFilter.operators, validSortDirections);
+        } else {
+          // Uncontrolled Mode: Verwende onSelectFilter
+          onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
+        }
+      } else if (defaultFilterName && process.env.NODE_ENV === 'development') {
+        // ✅ Debug: Log wenn Filter nicht gefunden wird
+        console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, savedFilters.map(f => f?.name));
+      }
+      
+      // ✅ FIX: Wenn kein Default-Filter gefunden wurde, lade Daten ohne Filter (Fallback)
+      // ✅ Dies verhindert, dass keine Daten angezeigt werden, wenn Default-Filter fehlt
+      if (!defaultFilter && defaultFilterName && onFilterChange) {
+        // Lade Daten ohne Filter (leere Bedingungen)
+        onFilterChange('', null, [], [], undefined);
+      }
+    }
+  }, [loading, savedFilters, defaultFilterName, activeFilterName, selectedFilterId, onFilterChange, onSelectFilter]);
 
   // ✅ MEMORY: Cleanup - Filter Arrays beim Unmount löschen
   useEffect(() => {

@@ -85,29 +85,101 @@ if (!globalForPrisma.prismaPools) {
   prismaPools = globalForPrisma.prismaPools;
 }
 
-// Round-Robin-Verteilung für Lastverteilung
-let currentPoolIndex = 0;
-let poolUsageCount = 0; // Zähler für Pool-Nutzung
+// ✅ PERFORMANCE: Pool-Status-Tracking für intelligente Auswahl
+interface PoolStatus {
+  activeQueries: number; // Anzahl aktiver Queries (Schätzung)
+  lastUsed: number; // Timestamp des letzten Zugriffs
+  totalQueries: number; // Gesamtanzahl Queries (für Monitoring)
+}
+
+const poolStatuses: PoolStatus[] = prismaPools.map(() => ({
+  activeQueries: 0,
+  lastUsed: Date.now(),
+  totalQueries: 0
+}));
+
+// ✅ PERFORMANCE: Intelligente Pool-Auswahl statt Round-Robin
+// Wählt Pool mit den wenigsten aktiven Queries (Schätzung)
 const getPrismaPool = (): PrismaClient => {
-  const pool = prismaPools[currentPoolIndex];
-  const poolId = currentPoolIndex + 1;
-  currentPoolIndex = (currentPoolIndex + 1) % prismaPools.length;
-  poolUsageCount++;
-  // Logging bei jedem 100. Zugriff, um zu sehen welche Pools genutzt werden
-  if (poolUsageCount % 100 === 0) {
-    console.log(`[Prisma] Round-Robin: Nutze Pool ${poolId}/${prismaPools.length} (Zugriff #${poolUsageCount})`);
+  // Finde Pool mit den wenigsten aktiven Queries
+  let bestPoolIndex = 0;
+  let minActiveQueries = poolStatuses[0].activeQueries;
+  
+  for (let i = 1; i < poolStatuses.length; i++) {
+    if (poolStatuses[i].activeQueries < minActiveQueries) {
+      minActiveQueries = poolStatuses[i].activeQueries;
+      bestPoolIndex = i;
+    }
   }
+  
+  // Wenn mehrere Pools gleich wenig haben, wähle den zuletzt genutzten (Round-Robin-Fallback)
+  if (minActiveQueries === poolStatuses[bestPoolIndex].activeQueries) {
+    // Finde alle Pools mit minimalen aktiven Queries
+    const candidates = poolStatuses
+      .map((status, index) => ({ status, index }))
+      .filter(({ status }) => status.activeQueries === minActiveQueries)
+      .sort((a, b) => a.status.lastUsed - b.status.lastUsed); // Ältester zuerst
+    
+    if (candidates.length > 0) {
+      bestPoolIndex = candidates[0].index;
+    }
+  }
+  
+  const pool = prismaPools[bestPoolIndex];
+  const poolId = bestPoolIndex + 1;
+  
+  // Update Pool-Status
+  poolStatuses[bestPoolIndex].activeQueries++;
+  poolStatuses[bestPoolIndex].lastUsed = Date.now();
+  poolStatuses[bestPoolIndex].totalQueries++;
+  
+  // Logging bei jedem 100. Zugriff
+  if (poolStatuses[bestPoolIndex].totalQueries % 100 === 0) {
+    const avgActive = poolStatuses.reduce((sum, s) => sum + s.activeQueries, 0) / poolStatuses.length;
+    console.log(`[Prisma] Intelligente Pool-Auswahl: Pool ${poolId}/${prismaPools.length} (aktive Queries: ${poolStatuses[bestPoolIndex].activeQueries}, Durchschnitt: ${avgActive.toFixed(1)})`);
+  }
+  
   return pool;
 };
 
-// ✅ PERFORMANCE: prisma export nutzt automatisch Round-Robin für Lastverteilung
-// Jeder Zugriff auf prisma.* nutzt einen anderen Pool
-// WICHTIG: Proxy leitet alle Property-Zugriffe (prisma.user, prisma.task, etc.) an Round-Robin weiter
+// ✅ HELPER: Query beendet - reduziere aktive Queries
+export const releasePoolQuery = (poolIndex: number) => {
+  if (poolIndex >= 0 && poolIndex < poolStatuses.length) {
+    poolStatuses[poolIndex].activeQueries = Math.max(0, poolStatuses[poolIndex].activeQueries - 1);
+  }
+};
+
+// ✅ PERFORMANCE: prisma export nutzt intelligente Pool-Auswahl für Lastverteilung
+// Jeder Zugriff auf prisma.* nutzt den Pool mit den wenigsten aktiven Queries
+// WICHTIG: Proxy leitet alle Property-Zugriffe (prisma.user, prisma.task, etc.) an intelligente Auswahl weiter
 const prismaProxy = new Proxy({} as PrismaClient, {
   get(target, prop) {
-    // Für jeden Property-Zugriff: Nutze Round-Robin
+    // Für jeden Property-Zugriff: Nutze intelligente Pool-Auswahl
     const pool = getPrismaPool();
-    return (pool as any)[prop];
+    const poolIndex = prismaPools.indexOf(pool);
+    
+    // Wrapper für async Operations: Track Query-Start und -Ende
+    const originalProp = (pool as any)[prop];
+    
+    // Wenn es eine Funktion ist (z.B. findMany, create, etc.), wrappe sie
+    if (typeof originalProp === 'function') {
+      return function(...args: any[]) {
+        const result = originalProp.apply(pool, args);
+        
+        // Wenn es ein Promise ist, tracke Start und Ende
+        if (result && typeof result.then === 'function') {
+          // Query startet - bereits in getPrismaPool() gezählt
+          return result.finally(() => {
+            // Query beendet - reduziere Counter
+            releasePoolQuery(poolIndex);
+          });
+        }
+        
+        return result;
+      };
+    }
+    
+    return originalProp;
   }
 });
 

@@ -815,7 +815,7 @@ const Worktracker: React.FC = () => {
                 setReservationsLoadingMore(false);
             }
         }
-    }, [reservationFilterLogicalOperators, t]);
+    }, [reservationFilterLogicalOperators, t, showMessage]);
 
     // ✅ KRITISCH: useCallback für Stabilität - MUSS VOR useEffect sein, der es verwendet
     const applyReservationFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
