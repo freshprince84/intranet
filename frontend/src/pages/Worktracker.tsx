@@ -347,6 +347,7 @@ const Worktracker: React.FC = () => {
     const [reservationsLoadingMore, setReservationsLoadingMore] = useState<boolean>(false); // ✅ PAGINATION: Lädt weitere Items
     const [reservationsLoading, setReservationsLoading] = useState(false);
     const [reservationsError, setReservationsError] = useState<string | null>(null);
+    const [initialReservationFilterLoading, setInitialReservationFilterLoading] = useState<boolean>(false); // ✅ KRITISCH: Verhindert Endlosschleife beim initialen Filter-Load
     const [reservationSearchTerm, setReservationSearchTerm] = useState('');
     const [reservationFilterStatus, setReservationFilterStatus] = useState<ReservationStatus | 'all'>('all');
     const [reservationFilterPaymentStatus, setReservationFilterPaymentStatus] = useState<PaymentStatus | 'all'>('all');
@@ -741,8 +742,8 @@ const Worktracker: React.FC = () => {
         }
     };
 
-    // ✅ PAGINATION: loadReservations mit Pagination
-    const loadReservations = async (
+    // ✅ PAGINATION: loadReservations mit Pagination - useCallback für Stabilität
+    const loadReservations = useCallback(async (
         filterId?: number, 
         filterConditions?: any[],
         append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
@@ -829,12 +830,18 @@ const Worktracker: React.FC = () => {
                 setReservationsLoadingMore(false);
             }
         }
-    };
+    }, [reservationFilterLogicalOperators, t]);
 
     // ✅ Initialer Filter-Load für Reservations (wie bei Tasks)
     useEffect(() => {
         const setInitialReservationFilter = async () => {
+            // ✅ Verhindere doppelte Requests
+            if (initialReservationFilterLoading) {
+                return;
+            }
+            
             try {
+                setInitialReservationFilterLoading(true);
                 const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(RESERVATIONS_TABLE_ID));
                 const filters = response.data;
                 
@@ -850,17 +857,29 @@ const Worktracker: React.FC = () => {
                     // Fallback: Lade alle Reservierungen (sollte nicht passieren, wenn Filter erstellt wurde)
                     await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Fehler beim Setzen des initialen Filters:', error);
-                // Fallback: Lade alle Reservierungen
-                await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                // ✅ Bei Timeout-Fehlern nicht erneut laden (verhindert Endlosschleife)
+                if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+                    console.error('⛔ Timeout beim Laden des initialen Filters - verhindere erneutes Laden');
+                    setReservationsError('Timeout beim Laden der Filter. Bitte Seite neu laden.');
+                    return; // ✅ WICHTIG: Nicht erneut laden bei Timeout
+                }
+                // Fallback: Lade alle Reservierungen (nur bei anderen Fehlern)
+                try {
+                    await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                } catch (loadError) {
+                    console.error('Fehler beim Fallback-Laden der Reservations:', loadError);
+                }
+            } finally {
+                setInitialReservationFilterLoading(false);
             }
         };
         
-        if (activeTab === 'reservations' && hasPermission('reservations', 'read', 'table')) {
+        if (activeTab === 'reservations' && hasPermission('reservations', 'read', 'table') && !initialReservationFilterLoading) {
             setInitialReservationFilter();
         }
-    }, [activeTab, loadReservations, applyReservationFilterConditions]); // ✅ Dependencies hinzugefügt - hasPermission entfernt (ändert sich bei jedem Render)
+    }, [activeTab, loadReservations, applyReservationFilterConditions, initialReservationFilterLoading]); // ✅ hasPermission entfernt - Funktion ändert sich bei jedem Render
     
     // Infinite Scroll Handler für Tasks
     // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
