@@ -1019,10 +1019,10 @@ const Worktracker: React.FC = () => {
             }
         };
         
-        if (activeTab === 'todos' && hasPermission('tasks', 'read', 'table') && !initialFilterLoading) {
+        if (activeTab === 'todos' && !initialFilterLoading) {
             setInitialTodoFilter();
         }
-    }, [activeTab, loadTasks, applyFilterConditions, initialFilterLoading]); // ✅ hasPermission entfernt - Funktion ändert sich bei jedem Render
+    }, [activeTab, loadTasks, applyFilterConditions, initialFilterLoading]); // ✅ hasPermission entfernt - Filter soll immer geladen werden
     
     useEffect(() => {
         if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
