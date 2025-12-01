@@ -182,7 +182,10 @@ export const getAllTasks = async (req: Request, res: Response) => {
             }
         });
         const queryDuration = Date.now() - queryStartTime;
-        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
+        // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
+        if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
+            console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
+        }
         
         // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
         if (totalCount === 0 && tasks.length > 0) {
@@ -208,12 +211,15 @@ export const getAllTasks = async (req: Request, res: Response) => {
             hasMore: offset + tasks.length < totalCount
         };
         
-        console.log('[getAllTasks] ✅ Response vorbereitet:', {
-            dataLength: response.data.length,
-            totalCount: response.totalCount,
-            hasMore: response.hasMore,
-            dataIsArray: Array.isArray(response.data)
-        });
+        // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
+        if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
+            console.log('[getAllTasks] ✅ Response vorbereitet:', {
+                dataLength: response.data.length,
+                totalCount: response.totalCount,
+                hasMore: response.hasMore,
+                dataIsArray: Array.isArray(response.data)
+            });
+        }
         
         res.json(response);
     } catch (error) {
