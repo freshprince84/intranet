@@ -50,6 +50,7 @@ import { ReservationScheduler } from './services/reservationScheduler';
 // Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
 // import { EmailReservationScheduler } from './services/emailReservationScheduler';
 import { LobbyPmsReservationScheduler } from './services/lobbyPmsReservationScheduler';
+import { ReservationAutoCancelScheduler } from './services/reservationAutoCancelScheduler';
 import { startWorkers, stopWorkers } from './queues';
 
 const app = express();
@@ -159,6 +160,9 @@ ReservationScheduler.start();
 
 // Starte LobbyPMS-Reservation Scheduler (ersetzt Email-Import)
 LobbyPmsReservationScheduler.start();
+
+// Automatische Stornierung von nicht bezahlten Reservierungen
+ReservationAutoCancelScheduler.start();
 
 // Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
 // EmailReservationScheduler.start();

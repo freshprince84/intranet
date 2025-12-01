@@ -524,7 +524,7 @@ export class WhatsAppAiService {
         type: 'function',
         function: {
           name: 'create_room_reservation',
-          description: 'Erstellt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! Wenn der User "reservar", "buchen", "reservar" sagt oder eine Nummer wählt (z.B. "2."), verwende diese Function. Benötigt: checkInDate, checkOutDate, guestName, roomType (compartida/privada), categoryId (optional, aus check_room_availability), guestPhone (optional), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
+          description: 'Erstellt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! Wenn der User "reservar", "buchen", "buche", "buche mir", "reservame" sagt oder eine Nummer wählt (z.B. "2."), verwende diese Function. WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende "today" als checkInDate. Wenn User Zimmer-Namen sagt (z.B. "la tia artista"), finde categoryId aus vorheriger check_room_availability Response. Benötigt: checkInDate, checkOutDate, guestName, roomType (compartida/privada), categoryId (optional, aus check_room_availability), guestPhone (optional), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
           parameters: {
             type: 'object',
             properties: {
@@ -547,7 +547,7 @@ export class WhatsAppAiService {
               },
               categoryId: {
                 type: 'number',
-                description: 'Category ID des Zimmers (optional, aus check_room_availability Ergebnis). Wenn User eine Nummer wählt (z.B. "2."), verwende die categoryId des entsprechenden Zimmers aus der Liste.'
+                description: 'Category ID des Zimmers (optional, aus check_room_availability Ergebnis). WICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "la tia artista", "el primo aventurero"), finde die categoryId aus der vorherigen check_room_availability Response! Wenn User eine Nummer wählt (z.B. "2."), verwende die categoryId des entsprechenden Zimmers aus der Liste. Wenn nur ein Zimmer der gewählten Art (compartida/privada) verfügbar ist, kann categoryId weggelassen werden - wird automatisch gefunden.'
               },
               guestPhone: {
                 type: 'string',
@@ -670,8 +670,11 @@ export class WhatsAppAiService {
     prompt += '\n- create_room_reservation: Erstelle eine Zimmer-Reservation (checkInDate, checkOutDate, guestName, roomType, categoryId optional)\n';
     prompt += '  WICHTIG: Verwende diese Function wenn der User ein ZIMMER buchen möchte (NICHT für Touren)!\n';
     prompt += '  WICHTIG: Unterscheide klar zwischen ZIMMER (create_room_reservation) und TOUREN (book_tour)!\n';
-    prompt += '  WICHTIG: Wenn der User "reservar", "buchen", "reservar", "reservame" sagt → create_room_reservation!\n';
+    prompt += '  WICHTIG: Wenn der User "reservar", "buchen", "buche", "buche mir", "reservame", "ich möchte buchen", "ich möchte reservieren" sagt → create_room_reservation!\n';
     prompt += '  WICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige → create_room_reservation mit categoryId!\n';
+    prompt += '  WICHTIG: Wenn der User einen Zimmer-Namen sagt (z.B. "la tia artista", "el primo aventurero") → finde die categoryId aus der vorherigen check_room_availability Response!\n';
+    prompt += '  WICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat → verwende "today" als checkInDate!\n';
+    prompt += '  WICHTIG: Wenn User nach Buchung Daten gibt (z.B. "01.dez bis 02.dez") → rufe create_room_reservation auf, NICHT check_room_availability!\n';
     prompt += '  WICHTIG: Generiert automatisch Payment Link und Check-in-Link, setzt Zahlungsfrist (1 Stunde)\n';
     prompt += '  WICHTIG: Alle Reservierungen sind Branch-spezifisch (Branch wird automatisch aus Context verwendet)\n';
     prompt += '  Beispiele:\n';
@@ -695,10 +698,14 @@ export class WhatsAppAiService {
     prompt += '\n\nWICHTIG: Wenn der User nach Zimmerverfügbarkeit fragt, verwende IMMER check_room_availability!';
     prompt += '\nWICHTIG: Wenn der User nach Touren fragt, verwende IMMER get_tours oder get_tour_details!';
     prompt += '\nWICHTIG: Wenn der User eine Tour buchen möchte, verwende IMMER book_tour!';
-    prompt += '\nWICHTIG: Wenn der User ein ZIMMER buchen möchte (z.B. "reservar", "buchen", "reservar", "reservame", "ich möchte buchen"), verwende IMMER create_room_reservation!';
+    prompt += '\nWICHTIG: Wenn der User ein ZIMMER buchen möchte (z.B. "reservar", "buchen", "buche", "buche mir", "reservame", "ich möchte buchen", "ich möchte reservieren"), verwende IMMER create_room_reservation!';
     prompt += '\nWICHTIG: Unterscheide klar zwischen ZIMMER (create_room_reservation) und TOUREN (book_tour)!';
     prompt += '\nWICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige, verwende create_room_reservation mit der categoryId des entsprechenden Zimmers!';
-    prompt += '\nWICHTIG: Wenn der User sagt "reservame 1 cama" oder ähnlich, verwende create_room_reservation mit den Informationen aus dem Kontext!';
+    prompt += '\nWICHTIG: Wenn der User sagt "reservame 1 cama" oder "buche mir 1 bett" oder ähnlich, verwende create_room_reservation mit den Informationen aus dem Kontext!';
+    prompt += '\nWICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "la tia artista"), finde die categoryId aus der vorherigen check_room_availability Response!';
+    prompt += '\nWICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat, verwende "today" als checkInDate!';
+    prompt += '\nWICHTIG: Wenn User nach einer Buchungsanfrage Daten gibt (z.B. "01.dez bis 02.dez"), rufe create_room_reservation auf, NICHT check_room_availability!';
+    prompt += '\nWICHTIG: Nutze den Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende es als Check-in-Datum!';
     prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
     prompt += '\nWICHTIG: Wenn check_room_availability mehrere Zimmer zurückgibt, zeige ALLE Zimmer in der Antwort an!';
     prompt += '\nWICHTIG: Jedes Zimmer im Function-Ergebnis (rooms Array) muss in der Antwort erwähnt werden!';

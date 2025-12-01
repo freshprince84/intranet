@@ -1077,8 +1077,35 @@ export class WhatsAppFunctionHandlers {
       }
 
       // 3. Validierung: categoryId ist erforderlich für LobbyPMS Buchung
-      if (!args.categoryId) {
-        throw new Error('categoryId ist erforderlich für die Reservierung. Bitte zuerst Verfügbarkeit prüfen und ein Zimmer auswählen.');
+      // Wenn categoryId fehlt, versuche sie aus Zimmer-Namen zu finden (falls roomType und Name bekannt)
+      let categoryId = args.categoryId;
+      if (!categoryId) {
+        // Versuche categoryId aus Verfügbarkeitsprüfung zu finden
+        try {
+          const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+          const availability = await lobbyPmsService.checkAvailability(checkInDate, checkOutDate);
+          
+          // Finde Zimmer mit passendem roomType
+          const matchingRooms = availability.filter(item => item.roomType === args.roomType);
+          
+          if (matchingRooms.length === 1) {
+            // Nur ein Zimmer dieser Art verfügbar → verwende es
+            categoryId = matchingRooms[0].categoryId;
+            console.log(`[create_room_reservation] categoryId aus Verfügbarkeit gefunden: ${categoryId} (${matchingRooms[0].roomName})`);
+          } else if (matchingRooms.length > 1) {
+            // Mehrere Zimmer verfügbar → kann nicht automatisch bestimmt werden
+            throw new Error(`Mehrere ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} verfügbar. Bitte wählen Sie ein spezifisches Zimmer aus der Verfügbarkeitsliste.`);
+          } else {
+            // Kein Zimmer dieser Art verfügbar
+            throw new Error(`Keine ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} für diese Daten verfügbar.`);
+          }
+        } catch (error: any) {
+          // Wenn automatische Suche fehlschlägt, werfe Fehler
+          if (error.message.includes('Mehrere') || error.message.includes('Keine')) {
+            throw error;
+          }
+          throw new Error('categoryId ist erforderlich für die Reservierung. Bitte zuerst Verfügbarkeit prüfen und ein Zimmer auswählen.');
+        }
       }
 
       // 4. Hole Branch für organizationId (WICHTIG: branchId aus Context verwenden!)
@@ -1100,7 +1127,7 @@ export class WhatsAppFunctionHandlers {
       try {
         const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
         lobbyReservationId = await lobbyPmsService.createBooking(
-          args.categoryId,
+          categoryId, // Verwende gefundene oder übergebene categoryId
           checkInDate,
           checkOutDate,
           args.guestName.trim(),
@@ -1114,12 +1141,46 @@ export class WhatsAppFunctionHandlers {
         throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
       }
 
-      // 6. Berechne Betrag (vereinfacht - sollte aus Verfügbarkeitsprüfung kommen)
-      // TODO: Preis aus categoryId/Verfügbarkeitsprüfung übernehmen
+      // 6. Berechne Betrag aus Verfügbarkeitsprüfung (falls categoryId vorhanden)
       const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
-      const estimatedAmount = nights * 50000; // Platzhalter - sollte aus Verfügbarkeit kommen
+      let estimatedAmount: number;
+      
+      if (args.categoryId) {
+        try {
+          // Hole Preis aus Verfügbarkeitsprüfung für diese categoryId
+          const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+          const availability = await lobbyPmsService.checkAvailability(checkInDate, checkOutDate);
+          
+          // Finde Zimmer mit dieser categoryId
+          const room = availability.find(item => item.categoryId === args.categoryId);
+          
+          if (room && room.pricePerNight > 0) {
+            // Verwende Preis aus Verfügbarkeitsprüfung
+            // TODO: Verschiedene Personenanzahl berücksichtigen (aktuell: 1 Person)
+            estimatedAmount = nights * room.pricePerNight;
+            console.log(`[create_room_reservation] Preis aus Verfügbarkeit: ${room.pricePerNight} COP/Nacht × ${nights} Nächte = ${estimatedAmount} COP`);
+          } else {
+            // Fallback: Platzhalter wenn Zimmer nicht gefunden
+            console.warn(`[create_room_reservation] Zimmer mit categoryId ${args.categoryId} nicht in Verfügbarkeit gefunden, verwende Platzhalter`);
+            estimatedAmount = nights * 50000; // Platzhalter
+          }
+        } catch (error) {
+          // Fallback: Platzhalter bei Fehler
+          console.error('[create_room_reservation] Fehler beim Abrufen des Preises, verwende Platzhalter:', error);
+          estimatedAmount = nights * 50000; // Platzhalter
+        }
+      } else {
+        // Fallback: Platzhalter wenn keine categoryId
+        console.warn('[create_room_reservation] Keine categoryId angegeben, verwende Platzhalter');
+        estimatedAmount = nights * 50000; // Platzhalter
+      }
 
-      // 7. Erstelle Reservierung in DB (WICHTIG: branchId und lobbyReservationId setzen!)
+      // 7. Setze Payment-Deadline (konfigurierbar, Standard: 1 Stunde)
+      const paymentDeadlineHours = parseInt(process.env.RESERVATION_PAYMENT_DEADLINE_HOURS || '1', 10);
+      const paymentDeadline = new Date();
+      paymentDeadline.setHours(paymentDeadline.getHours() + paymentDeadlineHours);
+
+      // 8. Erstelle Reservierung in DB (WICHTIG: branchId und lobbyReservationId setzen!)
       const reservation = await prisma.reservation.create({
         data: {
           guestName: args.guestName.trim(),
@@ -1133,14 +1194,15 @@ export class WhatsAppFunctionHandlers {
           currency: 'COP',
           organizationId: branch.organizationId,
           branchId: branchId, // WICHTIG: Branch-spezifisch!
-          lobbyReservationId: lobbyReservationId // WICHTIG: LobbyPMS Booking ID!
-          // TODO: paymentDeadline und autoCancelEnabled werden später hinzugefügt (Migration erforderlich)
+          lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
+          paymentDeadline: paymentDeadline, // Frist für Zahlung (Standard: 1 Stunde)
+          autoCancelEnabled: true // Automatische Stornierung aktiviert
           // HINWEIS: roomType und categoryId werden NICHT in der DB gespeichert, da sie nicht im Schema existieren.
           // Diese Informationen sind in LobbyPMS über lobbyReservationId verfügbar.
         }
       });
 
-      // 8. Erstelle Payment Link (wenn Telefonnummer vorhanden)
+      // 9. Erstelle Payment Link (wenn Telefonnummer vorhanden)
       let paymentLink: string | null = null;
       if (args.guestPhone || reservation.guestPhone) {
         try {
@@ -1163,7 +1225,7 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 9. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
+      // 10. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
       let linksSent = false;
       if (args.guestPhone || reservation.guestPhone) {
         try {
@@ -1182,7 +1244,7 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 10. Generiere Check-in Link (falls Email vorhanden)
+      // 11. Generiere Check-in Link (falls Email vorhanden)
       // WICHTIG: Check-in Link kann erst nach erfolgreicher LobbyPMS-Buchung erstellt werden!
       let checkInLink: string | null = null;
       if (reservation.guestEmail && reservation.lobbyReservationId) {
@@ -1197,7 +1259,7 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 11. Return Ergebnis
+      // 12. Return Ergebnis
       return {
         success: true,
         reservationId: reservation.id,
@@ -1208,16 +1270,16 @@ export class WhatsAppFunctionHandlers {
         checkInDate: checkInDate.toISOString().split('T')[0],
         checkOutDate: checkOutDate.toISOString().split('T')[0],
         roomType: args.roomType,
-        categoryId: args.categoryId,
+        categoryId: categoryId, // Verwende gefundene oder übergebene categoryId
         amount: estimatedAmount,
         currency: 'COP',
         paymentLink: paymentLink,
         checkInLink: checkInLink,
-        // TODO: paymentDeadline wird später hinzugefügt (Migration erforderlich)
+        paymentDeadline: paymentDeadline.toISOString(),
         linksSent: linksSent,
         message: linksSent 
-          ? 'Reservierung erstellt. Zahlungslink und Check-in-Link wurden per WhatsApp gesendet. Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Reservierung automatisch storniert.'
-          : 'Reservierung erstellt. Bitte Zahlungslink und Check-in-Link manuell senden. Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Reservierung automatisch storniert.'
+          ? `Reservierung erstellt. Zahlungslink und Check-in-Link wurden per WhatsApp gesendet. Bitte zahlen Sie innerhalb von ${paymentDeadlineHours} Stunde(n), sonst wird die Reservierung automatisch storniert.`
+          : `Reservierung erstellt. Bitte Zahlungslink und Check-in-Link manuell senden. Bitte zahlen Sie innerhalb von ${paymentDeadlineHours} Stunde(n), sonst wird die Reservierung automatisch storniert.`
       };
     } catch (error: any) {
       console.error('[WhatsApp Function Handlers] create_room_reservation Fehler:', error);

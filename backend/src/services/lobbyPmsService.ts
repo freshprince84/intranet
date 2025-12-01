@@ -676,27 +676,28 @@ export class LobbyPmsService {
 
       console.log(`[LobbyPMS] Erstelle Reservierung: category_id=${categoryId}, checkIn=${this.formatDate(checkInDate)}, checkOut=${this.formatDate(checkOutDate)}, guest=${guestName}`);
 
-      const response = await this.axiosInstance.post<LobbyPmsApiResponse<LobbyPmsReservation>>(
+      const response = await this.axiosInstance.post<any>(
         '/api/v1/bookings',
         payload
       );
 
-      // Response-Struktur: { success: true, data: { booking_id: "...", ... } }
-      // Oder direkt: { booking_id: "...", ... }
+      // Response-Struktur (aus Tests bekannt):
+      // { booking: { booking_id: 18251865, room_id: 807372 } }
       let bookingId: string | undefined;
 
-      if (response.data.success && response.data.data) {
-        // Standard Response-Format
-        bookingId = response.data.data.booking_id || response.data.data.id;
-      } else if ((response.data as any).booking_id) {
-        // Direktes Objekt mit booking_id
-        bookingId = (response.data as any).booking_id;
+      // Prüfe verschiedene Response-Formate
+      if (response.data?.booking?.booking_id) {
+        // Standard Response-Format: { booking: { booking_id: ..., room_id: ... } }
+        bookingId = String(response.data.booking.booking_id);
+      } else if (response.data?.booking_id) {
+        // Direktes booking_id im Root
+        bookingId = String(response.data.booking_id);
+      } else if (response.data?.data?.booking_id) {
+        // Verschachteltes Format: { data: { booking_id: ... } }
+        bookingId = String(response.data.data.booking_id);
       } else if ((response.data as any).id) {
-        // Direktes Objekt mit id
-        bookingId = (response.data as any).id;
-      } else if (response.data.data && typeof response.data.data === 'object') {
-        // Fallback: Suche in data-Objekt
-        bookingId = (response.data.data as any).booking_id || (response.data.data as any).id;
+        // Fallback: id statt booking_id
+        bookingId = String((response.data as any).id);
       }
 
       if (!bookingId) {

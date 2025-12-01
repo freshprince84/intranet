@@ -1,9 +1,25 @@
 # Filter-Anwendungsproblem - Finaler Korrekturplan
 
-**Datum:** 2025-01-26  
+**Datum:** 2025-01-26 (aktualisiert: 2025-01-29)  
 **Status:** ✅ Vollständig analysiert, alle Fakten geklärt  
 **Problem:** Filter werden nicht angewendet, wenn ein gespeicherter Filter erweitert wird  
 **Ziel:** Filter funktionieren wieder, Performance bleibt gleich oder verbessert sich
+
+## ⚠️ WICHTIG: Standardfilter-Migration (2025-01-29)
+
+**Neue Erkenntnis:** Standardfilter werden jetzt im Seed erstellt, nicht mehr im Frontend.
+
+**Status:**
+- ✅ Todos, Requests, Reservations: Standardfilter bereits im Seed
+- ❌ 6 weitere Tabellen: Standardfilter werden noch im Frontend erstellt
+- ❌ `isStandardFilter` Liste ist unvollständig
+
+**Siehe:** `docs/analysis/STANDARDFILTER_SEED_MIGRATION_ANALYSE.md` für Details
+
+**Auswirkung auf diesen Plan:**
+- Keine direkte Auswirkung auf Filter-Anwendungsproblem
+- Aber: Standardfilter müssen unlöschbar sein (OHNE Kreuzchen)
+- `isStandardFilter` muss alle Standardfilter-Namen kennen
 
 ## ✅ Geklärte Fakten (nur was im Code steht)
 

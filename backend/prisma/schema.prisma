@@ -1119,6 +1119,11 @@ model Reservation {
   amount                   Decimal?                     @db.Decimal(10, 2) // Preis der Reservierung
   currency                 String?                      @default("COP") // Währung (COP, USD, EUR, etc.)
   paymentLink              String? // Bold Payment Link
+  paymentDeadline          DateTime? // Frist für Zahlung (wird bei Erstellung gesetzt, z.B. 1 Stunde)
+  autoCancelEnabled        Boolean                      @default(true) // Automatische Stornierung aktiviert
+  cancelledAt              DateTime? // Wann wurde storniert
+  cancelledBy              String? // Wer hat storniert ("system" für automatisch, User-ID für manuell)
+  cancellationReason       String? // Grund für Stornierung
   doorPin                  String? // PIN für Türsystem
   doorAppName              String? // App-Name (z.B. "TTLock")
   ttlLockId                String? // TTLock Lock ID
@@ -1154,6 +1159,8 @@ model Reservation {
   @@index([status])
   @@index([lobbyReservationId])
   @@index([paymentStatus])
+  @@index([paymentDeadline]) // Für automatische Stornierung
+  @@index([autoCancelEnabled]) // Für automatische Stornierung
 }
 
 model ReservationSyncHistory {

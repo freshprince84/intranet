@@ -76,29 +76,63 @@
 - "Doble básica" (category_id: 34312) - 1 Zimmer verfügbar, 100.000 COP/Person (1 Person), 120.000 COP (2 Personen)
 - "Apartamento doble" (category_id: 34284) - 0 Zimmer verfügbar, 200.000-260.000 COP (1-4 Personen)
 
-### ⚠️ Reservierungserstellungs-API (`/api/v1/bookings`) - TEILWEISE
+### ✅ Reservierungserstellungs-API (`/api/v1/bookings`) - FUNKTIONIERT!
 
-**Status:** Endpunkt existiert, benötigt `category_id`
+**Datum:** 2025-01-29  
+**Status:** ✅ **ERFOLGREICH GETESTET**
 
-**Erfolgreiche Tests:** 0 von 16
+**Erfolgreiche Tests:** 3 von 6 Tests erfolgreich (Status 201)
 
-**Fehlermeldung:**
+**Erforderliche Felder (GETESTET):**
+- ✅ `category_id` (erforderlich) - Zimmerkategorie-ID
+- ✅ `start_date` (erforderlich) - Format: "YYYY-MM-DD"
+- ✅ `end_date` (erforderlich) - Format: "YYYY-MM-DD"
+- ✅ `holder_name` (erforderlich) - Name des Gastes (NICHT `guest_name`!)
+- ✅ `total_adults` (erforderlich) - Anzahl Erwachsene (snake_case, NICHT camelCase!)
+
+**Optionale Felder:**
+- `guest_email` - E-Mail des Gastes
+- `guest_phone` - Telefonnummer des Gastes
+
+**Response-Struktur (GETESTET):**
 ```json
 {
-  "error_code": "INPUT_PARAMETERS",
-  "error": "The category id field is required."
+  "booking": {
+    "booking_id": 18251865,
+    "room_id": 807372
+  }
 }
 ```
 
-**Erkenntnisse:**
-- ✅ Endpunkt `/api/v1/bookings` existiert (Status 422, nicht 404)
-- ❌ Endpunkte `/api/v2/bookings`, `/api/v1/reservations`, `/api/v2/reservations` existieren nicht (404)
-- ✅ Erforderliche Felder: `category_id` (mindestens)
-- ❓ Weitere erforderliche Felder müssen getestet werden
+**Erfolgreiche Payload-Beispiele:**
+```json
+{
+  "category_id": 34280,
+  "start_date": "2025-12-01",
+  "end_date": "2025-12-02",
+  "holder_name": "Test Gast",
+  "total_adults": 1
+}
+```
 
-**Nächste Schritte:**
-- Test mit `category_id` durchführen
-- Weitere erforderliche Felder identifizieren
+**Wichtige Erkenntnisse:**
+- ✅ Endpunkt `/api/v1/bookings` funktioniert (Status 201 bei Erfolg)
+- ✅ Response enthält `booking_id` (nicht `id`!)
+- ✅ `holder_name` ist erforderlich (nicht `guest_name`!)
+- ✅ `total_adults` muss snake_case sein (nicht `totalAdults`!)
+- ❌ Endpunkte `/api/v2/bookings`, `/api/v1/reservations`, `/api/v2/reservations` existieren nicht (404)
+
+**Fehlerfälle:**
+- Status 422: "The holder name field is required when customer document is not present."
+- Status 422: "The total adults field is required."
+- Status 422: "The customer nationality field is required when customer document is present."
+- Status 422: "room not available" (wenn Zimmer bereits belegt)
+
+**Test-Ergebnisse (2025-01-29):**
+- ✅ Minimal: `category_id` + `holder_name` + `total_adults` → Status 201
+- ✅ Mit Kontakt: `holder_name` + `guest_email` + `guest_phone` + `total_adults` → Status 201
+- ❌ Mit `customer_document`: Benötigt `customer_nationality` → Status 422
+- ❌ Mit `totalAdults` (camelCase): API erwartet `total_adults` (snake_case) → Status 422
 
 ### ❓ Stornierungs-API
 
@@ -170,4 +204,5 @@
 ---
 
 **Erstellt:** 2025-01-26  
-**Status:** ✅ VERFÜGBARKEITS-API GETESTET - Response-Struktur bekannt
+**Letzte Aktualisierung:** 2025-01-29  
+**Status:** ✅ VERFÜGBARKEITS-API & BOOKING-API GETESTET - Beide funktionieren!
