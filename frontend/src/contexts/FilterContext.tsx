@@ -145,6 +145,8 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       
       setFilters(prev => ({ ...prev, [tableId]: filtersData }));
       setFilterGroups(prev => ({ ...prev, [tableId]: groupsData }));
+      // ✅ Cache zurücksetzen, damit Filter neu geladen werden können
+      loadedTablesRef.current.delete(tableId);
     } catch (error) {
       console.error(`[FilterContext] Fehler beim Aktualisieren der Filter für ${tableId}:`, error);
       setErrors(prev => ({ ...prev, [tableId]: 'Fehler beim Aktualisieren der Filter' }));

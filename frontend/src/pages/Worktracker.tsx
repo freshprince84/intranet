@@ -944,6 +944,12 @@ const Worktracker: React.FC = () => {
         filterConditionsRef.current = filterConditions;
     }, [filterConditions]);
     
+    // ✅ PERFORMANCE: reservationFilterConditions als useRef verwenden (verhindert Re-Render-Loops)
+    const reservationFilterConditionsRef = useRef(reservationFilterConditions);
+    useEffect(() => {
+        reservationFilterConditionsRef.current = reservationFilterConditions;
+    }, [reservationFilterConditions]);
+    
     // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
     const tasksLoadMoreRef = useRef<HTMLDivElement>(null);
     const reservationsLoadMoreRef = useRef<HTMLDivElement>(null);
@@ -1779,6 +1785,7 @@ const Worktracker: React.FC = () => {
     }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
     
     // ✅ PAGINATION: Infinite Scroll für Tasks mit Intersection Observer
+    // ✅ FIX: filterConditionsRef verwenden statt filterConditions direkt (verhindert Endlosschleife)
     useEffect(() => {
         if (activeTab !== 'todos') return;
         
@@ -1787,9 +1794,11 @@ const Worktracker: React.FC = () => {
                 const firstEntry = entries[0];
                 if (firstEntry.isIntersecting && tasksHasMore && !tasksLoadingMore && !loading) {
                     const nextOffset = tasks.length;
+                    // ✅ FIX: Verwende filterConditionsRef.current statt filterConditions direkt
+                    const currentFilterConditions = filterConditionsRef.current;
                     loadTasks(
                         selectedFilterId || undefined,
-                        filterConditions.length > 0 ? filterConditions : undefined,
+                        currentFilterConditions.length > 0 ? currentFilterConditions : undefined,
                         true, // append = true
                         20, // limit
                         nextOffset // offset
@@ -1808,9 +1817,10 @@ const Worktracker: React.FC = () => {
                 observer.unobserve(tasksLoadMoreRef.current);
             }
         };
-    }, [activeTab, tasksHasMore, tasksLoadingMore, loading, tasks.length, selectedFilterId, filterConditions, loadTasks]);
+    }, [activeTab, tasksHasMore, tasksLoadingMore, loading, tasks.length, selectedFilterId, loadTasks]); // ✅ FIX: filterConditions entfernt, verwende filterConditionsRef
     
     // ✅ PAGINATION: Infinite Scroll für Reservations mit Intersection Observer
+    // ✅ FIX: reservationFilterConditionsRef verwenden statt reservationFilterConditions direkt (verhindert Endlosschleife)
     useEffect(() => {
         if (activeTab !== 'reservations') return;
         
@@ -1819,9 +1829,11 @@ const Worktracker: React.FC = () => {
                 const firstEntry = entries[0];
                 if (firstEntry.isIntersecting && reservationsHasMore && !reservationsLoadingMore && !reservationsLoading) {
                     const nextOffset = reservations.length;
+                    // ✅ FIX: Verwende reservationFilterConditionsRef.current statt reservationFilterConditions direkt
+                    const currentReservationFilterConditions = reservationFilterConditionsRef.current;
                     loadReservations(
                         reservationSelectedFilterId || undefined,
-                        reservationFilterConditions.length > 0 ? reservationFilterConditions : undefined,
+                        currentReservationFilterConditions.length > 0 ? currentReservationFilterConditions : undefined,
                         true, // append = true
                         20, // limit
                         nextOffset // offset
@@ -1840,7 +1852,7 @@ const Worktracker: React.FC = () => {
                 observer.unobserve(reservationsLoadMoreRef.current);
             }
         };
-    }, [activeTab, reservationsHasMore, reservationsLoadingMore, reservationsLoading, reservations.length, reservationSelectedFilterId, reservationFilterConditions]);
+    }, [activeTab, reservationsHasMore, reservationsLoadingMore, reservationsLoading, reservations.length, reservationSelectedFilterId, loadReservations]); // ✅ FIX: reservationFilterConditions entfernt, verwende reservationFilterConditionsRef
     
     // ✅ PAGINATION: Infinite Scroll für Tour Bookings mit Intersection Observer
     useEffect(() => {

@@ -207,44 +207,44 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     // Lade Filter über Filter-Context
     filterContext.loadFilters(tableId);
   }, [tableId, filterContext]);
-  
-  // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
+
+        // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
   // ✅ Wird ausgeführt, NACHDEM Filter geladen wurden
   useEffect(() => {
     // Warte bis Filter geladen sind
     if (loading) return;
     
-    // ✅ ZUSÄTZLICH: Prüfe selectedFilterId, um zu verhindern, dass Filter erneut angewendet wird
-    if (defaultFilterName && !activeFilterName && !selectedFilterId && !defaultFilterAppliedRef.current) {
-      // ✅ Suche nach Filter mit exaktem Namen oder alternativen Namen (für Migration)
+        // ✅ ZUSÄTZLICH: Prüfe selectedFilterId, um zu verhindern, dass Filter erneut angewendet wird
+        if (defaultFilterName && !activeFilterName && !selectedFilterId && !defaultFilterAppliedRef.current) {
+          // ✅ Suche nach Filter mit exaktem Namen oder alternativen Namen (für Migration)
       const defaultFilter = savedFilters.find((filter: SavedFilter) => {
-        if (!filter || !filter.name) return false;
-        // Exakte Übereinstimmung
-        if (filter.name === defaultFilterName) return true;
-        // Alternative Namen für "Aktuell"
-        if (defaultFilterName === 'Aktuell' && (filter.name === 'tasks.filters.current' || filter.name === 'requests.filters.aktuell')) return true;
-        // Alternative Namen für "Hoy"
-        if (defaultFilterName === 'Hoy' && (filter.name === 'Heute' || filter.name === 'common.today')) return true;
-        return false;
-      });
-      
-      if (defaultFilter) {
-        // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
-        defaultFilterAppliedRef.current = true;
-        
+            if (!filter || !filter.name) return false;
+            // Exakte Übereinstimmung
+            if (filter.name === defaultFilterName) return true;
+            // Alternative Namen für "Aktuell"
+            if (defaultFilterName === 'Aktuell' && (filter.name === 'tasks.filters.current' || filter.name === 'requests.filters.aktuell')) return true;
+            // Alternative Namen für "Hoy"
+            if (defaultFilterName === 'Hoy' && (filter.name === 'Heute' || filter.name === 'common.today')) return true;
+            return false;
+          });
+          
+          if (defaultFilter) {
+            // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
+            defaultFilterAppliedRef.current = true;
+            
         // ✅ FIX: Einheitliches Format - immer Array (nicht undefined)
         const validSortDirections = Array.isArray(defaultFilter.sortDirections) ? defaultFilter.sortDirections : [];
-        if (onFilterChange) {
-          // Controlled Mode: Verwende onFilterChange
-          onFilterChange(defaultFilter.name, defaultFilter.id, defaultFilter.conditions, defaultFilter.operators, validSortDirections);
-        } else {
-          // Uncontrolled Mode: Verwende onSelectFilter
-          onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
-        }
-      } else if (defaultFilterName && process.env.NODE_ENV === 'development') {
-        // ✅ Debug: Log wenn Filter nicht gefunden wird
+            if (onFilterChange) {
+              // Controlled Mode: Verwende onFilterChange
+              onFilterChange(defaultFilter.name, defaultFilter.id, defaultFilter.conditions, defaultFilter.operators, validSortDirections);
+            } else {
+              // Uncontrolled Mode: Verwende onSelectFilter
+              onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
+            }
+          } else if (defaultFilterName && process.env.NODE_ENV === 'development') {
+            // ✅ Debug: Log wenn Filter nicht gefunden wird
         console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, savedFilters.map(f => f?.name));
-      }
+          }
       
       // ✅ FIX: Wenn kein Default-Filter gefunden wurde, lade Daten ohne Filter (Fallback)
       // ✅ Dies verhindert, dass keine Daten angezeigt werden, wenn Default-Filter fehlt

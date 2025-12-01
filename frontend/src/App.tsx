@@ -177,9 +177,9 @@ const App: React.FC = () => {
                                                     </OnboardingProvider>
                                                 </Router>
                                                 </FilterProvider>
-                                                </MessageProvider>
-                                        </BranchProvider>
-                                    </WorktimeProvider>
+                                        </MessageProvider>
+                                    </BranchProvider>
+                                </WorktimeProvider>
                             </SidepaneProvider>
                             </SidebarProvider>
                         </ThemeProvider>
