@@ -263,7 +263,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     };
     
     fetchData();
-  }, [tableId, defaultFilterName, activeFilterName, onFilterChange, onSelectFilter]);
+  }, [tableId]); // ✅ NUR tableId - onFilterChange/onSelectFilter können sich ändern und verursachen Endlosschleife
 
   // ✅ MEMORY: Cleanup - Filter Arrays beim Unmount löschen
   useEffect(() => {
