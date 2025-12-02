@@ -701,7 +701,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                 activeFilterName={tourActiveFilterName}
                 selectedFilterId={tourSelectedFilterId}
                 onFilterChange={handleTourFilterChange}
-                defaultFilterName={t('tours.filters.current', 'Aktuell')}
+                defaultFilterName="Aktuell" // ✅ FIX: Hardcodiert (konsistent mit DB)
             />
 
             {/* Table View */}

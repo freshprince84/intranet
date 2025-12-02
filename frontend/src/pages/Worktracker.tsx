@@ -3733,7 +3733,7 @@ const Worktracker: React.FC = () => {
                                 activeFilterName={activeTab === 'todos' ? activeFilterName : reservationActiveFilterName}
                                 selectedFilterId={activeTab === 'todos' ? selectedFilterId : reservationSelectedFilterId}
                                 onFilterChange={activeTab === 'todos' ? handleFilterChange : handleReservationFilterChange}
-                                defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : 'Hoy'}
+                                defaultFilterName={activeTab === 'todos' ? 'Aktuell' : 'Hoy'} // ✅ FIX: Einheitlich hardcodiert (konsistent mit DB und Table-View)
                             />
 
                             {/* Tabelle oder Cards */}

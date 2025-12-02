@@ -202,7 +202,7 @@ const CerebroLayout: React.FC = () => {
               activeFilterName={activeFilterName}
               selectedFilterId={selectedFilterId}
               onFilterChange={handleFilterChange}
-              defaultFilterName={t('cerebro.filters.all', 'Alle Artikel')}
+              defaultFilterName="Alle Artikel" // ✅ FIX: Hardcodiert (konsistent mit DB)
             />
           </div>
         </div>

@@ -437,7 +437,7 @@ const PasswordManagerTab: React.FC = () => {
           activeFilterName={activeFilterName}
           selectedFilterId={selectedFilterId}
           onFilterChange={handleFilterChange}
-          defaultFilterName={t('passwordManager.allEntries', 'Alle Einträge')}
+          defaultFilterName="Alle Einträge" // ✅ FIX: Hardcodiert (konsistent mit DB)
         />
       </div>
 
