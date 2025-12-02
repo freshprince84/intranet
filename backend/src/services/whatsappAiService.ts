@@ -530,11 +530,11 @@ export class WhatsAppAiService {
             properties: {
               checkInDate: {
                 type: 'string',
-                description: 'Check-in Datum (YYYY-MM-DD oder "today"/"heute"/"hoy"). Verwende IMMER "today" wenn der User "heute" sagt!'
+                description: 'Check-in Datum (YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"). WICHTIG: Wenn User "heute" sagt, verwende "today"! Wenn User "morgen" sagt, verwende "tomorrow"!'
               },
               checkOutDate: {
                 type: 'string',
-                description: 'Check-out Datum (YYYY-MM-DD oder "today"/"heute"/"hoy")'
+                description: 'Check-out Datum (YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"). WICHTIG: Wenn User "morgen" sagt, verwende "tomorrow"!'
               },
               guestName: {
                 type: 'string',
@@ -547,7 +547,11 @@ export class WhatsAppAiService {
               },
               categoryId: {
                 type: 'number',
-                description: 'Category ID des Zimmers (optional, aus check_room_availability Ergebnis). WICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "la tia artista", "el primo aventurero"), finde die categoryId aus der vorherigen check_room_availability Response! Wenn User eine Nummer wählt (z.B. "2."), verwende die categoryId des entsprechenden Zimmers aus der Liste. Wenn nur ein Zimmer der gewählten Art (compartida/privada) verfügbar ist, kann categoryId weggelassen werden - wird automatisch gefunden.'
+                description: 'Category ID des Zimmers (optional, aus check_room_availability Ergebnis). WICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "la tia artista", "el primo aventurero", "el abuelo viajero"), finde die categoryId aus der vorherigen check_room_availability Response! Wenn User eine Nummer wählt (z.B. "2."), verwende die categoryId des entsprechenden Zimmers aus der Liste. Wenn nur ein Zimmer der gewählten Art (compartida/privada) verfügbar ist, kann categoryId weggelassen werden - wird automatisch gefunden.'
+              },
+              roomName: {
+                type: 'string',
+                description: 'Zimmer-Name (optional, z.B. "el abuelo viajero", "la tia artista", "el primo aventurero"). WICHTIG: Wenn User einen Zimmer-Namen sagt, verwende diesen Parameter! Die categoryId wird dann automatisch aus der Verfügbarkeitsprüfung gefunden.'
               },
               guestPhone: {
                 type: 'string',

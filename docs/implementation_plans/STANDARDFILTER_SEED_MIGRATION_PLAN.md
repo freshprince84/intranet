@@ -401,3 +401,4 @@ const standardFilterNames = [
 - **ActiveUsersList.tsx:** Verwendet Übersetzungen (`t('teamWorktime.filters.active')`) - Seed muss hardcoded Namen verwenden
 - **isStandardFilter:** Prüft auch `recentClientNames` für consultations-table - bleibt unverändert
 
+

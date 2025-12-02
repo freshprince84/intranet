@@ -57,11 +57,12 @@ const WorktimeStats: React.FC = () => {
         const userIsColombia = user?.country === 'CO';
         const orgIsColombia = organization?.country === 'CO'; // KORREKTUR: Direkt auf organization, nicht settings
         const result = userIsColombia || orgIsColombia;
-        console.log('Quinzena-Check:', { 
-            userCountry: user?.country, 
-            orgCountry: organization?.country, // KORREKTUR: Direkt auf organization
-            isColombia: result 
-        });
+        // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+        // console.log('Quinzena-Check:', { 
+        //     userCountry: user?.country, 
+        //     orgCountry: organization?.country,
+        //     isColombia: result 
+        // });
         return result;
     }, [user?.country, organization?.country]); // KORREKTUR: Spezifische Dependency
     
@@ -120,7 +121,8 @@ const WorktimeStats: React.FC = () => {
         const result = useQuinzena 
             ? (selectedQuinzenaDate || convertQuinzenaToDate(getCurrentQuinzena()))
             : (selectedWeekDate || format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'));
-        console.log('selectedDate calculated:', { useQuinzena, selectedQuinzenaDate, selectedWeekDate, result });
+        // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+        // console.log('selectedDate calculated:', { useQuinzena, selectedQuinzenaDate, selectedWeekDate, result });
         return result;
     }, [useQuinzena, selectedQuinzenaDate, selectedWeekDate]);
     
@@ -169,28 +171,30 @@ const WorktimeStats: React.FC = () => {
                 return;
             }
             
-            console.log('Fetch Stats:', { isQuinzena, dateToSend });
+            // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+            // console.log('Fetch Stats:', { isQuinzena, dateToSend });
             
             const endpoint = isQuinzena 
                 ? `${API_ENDPOINTS.WORKTIME.STATS}?quinzena=${dateToSend}`
                 : `${API_ENDPOINTS.WORKTIME.STATS}?week=${dateToSend}`;
             
-            console.log('API Endpoint:', endpoint);
+            // console.log('API Endpoint:', endpoint);
             
             const response = await axiosInstance.get(endpoint);
             const data = response.data;
             
-            console.log('API Response:', data);
+            // console.log('API Response:', data);
             
             // Wichtig: Stelle sicher, dass die weeklyData das richtige date-Format haben
             if (data && data.weeklyData) {
                 if (isQuinzena) {
                     // Für Quinzenas: Backend gibt bereits korrekte Daten mit date zurück
-                    console.log('Quinzena-Daten vom Backend:', {
-                        totalHours: data.totalHours,
-                        weeklyDataLength: data.weeklyData.length,
-                        weeklyData: data.weeklyData
-                    });
+                    // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+                    // console.log('Quinzena-Daten vom Backend:', {
+                    //     totalHours: data.totalHours,
+                    //     weeklyDataLength: data.weeklyData.length,
+                    //     weeklyData: data.weeklyData
+                    // });
                     
                     // Stelle sicher, dass alle Einträge ein date-Feld haben und sortiere nach Datum
                     const validatedData = {
@@ -209,7 +213,8 @@ const WorktimeStats: React.FC = () => {
                                 return 0;
                             })
                     };
-                    console.log('Validierte Quinzena-Daten:', validatedData);
+                    // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+                    // console.log('Validierte Quinzena-Daten:', validatedData);
                     // ✅ PERFORMANCE: Priorisierung - Erste 5 Tage zuerst (sichtbarer Teil)
                     const first5Days = {
                         ...validatedData,

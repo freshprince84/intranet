@@ -241,3 +241,4 @@ if (filterId) {
 2. **Wie sollen Edge Cases behandelt werden?** (Filter erweitern, dann wieder entfernen)
 3. **Sollen alle Komponenten `handleFilterChange` haben?** Oder reicht `applyFilterConditions` mit Fix?
 
+

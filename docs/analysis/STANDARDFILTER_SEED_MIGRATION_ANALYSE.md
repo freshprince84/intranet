@@ -174,3 +174,4 @@ model SavedFilter {
 - `frontend/src/components/organization/JoinRequestsList.tsx` - createStandardFilters entfernen
 - `frontend/src/components/SavedFilterTags.tsx` - isStandardFilter erweitern
 
+
