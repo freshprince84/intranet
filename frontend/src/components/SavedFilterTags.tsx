@@ -230,10 +230,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       setFilterLoadState('loading');
     } else if (error) {
       setFilterLoadState('error');
-    } else if (savedFilters.length > 0 || !loading) {
+    } else {
+      // ✅ FIX: Wenn nicht mehr am Laden und kein Fehler, dann ist es geladen
+      // (auch wenn savedFilters.length === 0, weil Filter geladen wurden, aber leer sind)
       setFilterLoadState('loaded');
     }
-  }, [loading, error, savedFilters.length]);
+  }, [loading, error]);
 
   // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
   // ✅ FIX: Default-Filter nur anwenden, wenn Filter geladen wurden
@@ -256,6 +258,11 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       }
       
       // ✅ Suche nach Default-Filter
+      // ✅ DEBUG: Log verfügbare Filter (nur in Development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[SavedFilterTags] Suche Default-Filter "${defaultFilterName}". Verfügbare Filter:`, savedFilters.map(f => f?.name));
+      }
+      
       const defaultFilter = savedFilters.find((filter: SavedFilter) => {
         if (!filter || !filter.name) return false;
         // Exakte Übereinstimmung
@@ -268,6 +275,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       });
       
       if (defaultFilter) {
+        // ✅ DEBUG: Log gefundenen Filter (nur in Development)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[SavedFilterTags] Default-Filter gefunden:`, defaultFilter.name, defaultFilter.id);
+        }
         // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
         defaultFilterAppliedRef.current = true;
         
