@@ -414,9 +414,20 @@ const Worktracker: React.FC = () => {
             // Tour Bookings
             setTourBookings([]);
             
-            // Filter States (können auch groß sein)
+            // ✅ MEMORY: Alle Filter-States löschen (vollständig)
+            // Tasks Filter
             setFilterConditions([]);
+            setFilterLogicalOperators([]);
+            setFilterSortDirections([]);
+            setActiveFilterName('');
+            setSelectedFilterId(null);
+            
+            // Reservations Filter
             setReservationFilterConditions([]);
+            setReservationFilterLogicalOperators([]);
+            setReservationFilterSortDirections([]);
+            setReservationActiveFilterName('');
+            setReservationSelectedFilterId(null);
         };
     }, []); // Nur beim Unmount ausführen
 

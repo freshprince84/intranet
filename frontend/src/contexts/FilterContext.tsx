@@ -72,6 +72,14 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
   // Cache für bereits geladene Filter (verhindert doppelte Ladung)
   const loadedTablesRef = useRef<Set<string>>(new Set());
   
+  // ✅ MEMORY: TTL und Limits für Filter-Cache
+  const FILTER_CACHE_TTL_MS = 10 * 60 * 1000; // 10 Minuten
+  const MAX_FILTERS_PER_TABLE = 50; // Max 50 Filter pro Tabelle
+  const MAX_TABLES_IN_CACHE = 20; // Max 20 Tabellen im Cache
+  
+  // Cache-Timestamps für TTL
+  const filterCacheTimestamps = useRef<Record<string, number>>({});
+  
   // ✅ PERFORMANCE: Lade Filter für eine tableId
   const loadFilters = useCallback(async (tableId: string) => {
     // Wenn bereits geladen, nicht nochmal laden
@@ -109,6 +117,8 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       
       setFilters(prev => ({ ...prev, [tableId]: filtersData }));
       setFilterGroups(prev => ({ ...prev, [tableId]: groupsData }));
+      // ✅ MEMORY: Timestamp für TTL setzen
+      filterCacheTimestamps.current[tableId] = Date.now();
       loadedTablesRef.current.add(tableId);
     } catch (error) {
       console.error(`[FilterContext] Fehler beim Laden der Filter für ${tableId}:`, error);
@@ -117,6 +127,105 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       setLoading(prev => ({ ...prev, [tableId]: false }));
     }
   }, [loading]);
+  
+  // ✅ MEMORY: Cleanup-Funktion für alte Filter
+  const cleanupOldFilters = useCallback(() => {
+    const now = Date.now();
+    const tablesToCleanup: string[] = [];
+    
+    // Finde Tabellen, deren TTL abgelaufen ist
+    Object.entries(filterCacheTimestamps.current).forEach(([tableId, timestamp]) => {
+      if (now - timestamp > FILTER_CACHE_TTL_MS) {
+        tablesToCleanup.push(tableId);
+      }
+    });
+    
+    // Lösche alte Filter-Arrays
+    if (tablesToCleanup.length > 0) {
+      setFilters(prev => {
+        const newFilters = { ...prev };
+        tablesToCleanup.forEach(tableId => {
+          delete newFilters[tableId];
+          delete filterCacheTimestamps.current[tableId];
+          loadedTablesRef.current.delete(tableId);
+        });
+        return newFilters;
+      });
+      
+      setFilterGroups(prev => {
+        const newFilterGroups = { ...prev };
+        tablesToCleanup.forEach(tableId => {
+          delete newFilterGroups[tableId];
+        });
+        return newFilterGroups;
+      });
+    }
+    
+    // Begrenze Anzahl Tabellen im Cache
+    setFilters(prev => {
+      const allTables = Object.keys(prev);
+      if (allTables.length > MAX_TABLES_IN_CACHE) {
+        // Lösche älteste Tabellen (nach Timestamp)
+        const sortedTables = allTables
+          .map(tableId => ({
+            tableId,
+            timestamp: filterCacheTimestamps.current[tableId] || 0
+          }))
+          .sort((a, b) => a.timestamp - b.timestamp)
+          .slice(0, allTables.length - MAX_TABLES_IN_CACHE);
+        
+        const newFilters = { ...prev };
+        sortedTables.forEach(({ tableId }) => {
+          delete newFilters[tableId];
+          delete filterCacheTimestamps.current[tableId];
+          loadedTablesRef.current.delete(tableId);
+        });
+        
+        setFilterGroups(prevGroups => {
+          const newFilterGroups = { ...prevGroups };
+          sortedTables.forEach(({ tableId }) => {
+            delete newFilterGroups[tableId];
+          });
+          return newFilterGroups;
+        });
+        
+        return newFilters;
+      }
+      return prev;
+    });
+    
+    // Begrenze Anzahl Filter pro Tabelle
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      Object.entries(prev).forEach(([tableId, tableFilters]) => {
+        if (tableFilters.length > MAX_FILTERS_PER_TABLE) {
+          // Behalte nur die neuesten Filter (nach createdAt)
+          const sortedFilters = [...tableFilters]
+            .sort((a, b) => {
+              const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return bTime - aTime; // Neueste zuerst
+            })
+            .slice(0, MAX_FILTERS_PER_TABLE);
+          
+          newFilters[tableId] = sortedFilters;
+        }
+      });
+      return newFilters;
+    });
+  }, []);
+  
+  // ✅ MEMORY: Cleanup-Timer für alte Filter
+  useEffect(() => {
+    // Cleanup alle 5 Minuten
+    const cleanupInterval = setInterval(() => {
+      cleanupOldFilters();
+    }, 5 * 60 * 1000); // 5 Minuten
+    
+    return () => {
+      clearInterval(cleanupInterval);
+    };
+  }, [cleanupOldFilters]);
   
   // ✅ PERFORMANCE: Aktualisiere Filter für eine tableId (z.B. nach Create/Update/Delete)
   const refreshFilters = useCallback(async (tableId: string) => {
@@ -145,6 +254,8 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       
       setFilters(prev => ({ ...prev, [tableId]: filtersData }));
       setFilterGroups(prev => ({ ...prev, [tableId]: groupsData }));
+      // ✅ MEMORY: Timestamp für TTL aktualisieren
+      filterCacheTimestamps.current[tableId] = Date.now();
       // ✅ Cache zurücksetzen, damit Filter neu geladen werden können
       loadedTablesRef.current.delete(tableId);
     } catch (error) {

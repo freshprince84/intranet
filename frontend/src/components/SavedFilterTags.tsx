@@ -155,7 +155,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         await refreshFilters();
       }
     } catch (error) {
-      console.error('Fehler beim Bereinigen der Client-Filter:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Bereinigen der Client-Filter:', error);
+      }
     }
   }, [tableId, refreshFilters]);
 
@@ -163,17 +165,23 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const loadRecentClients = useCallback(async () => {
     if (tableId === 'consultations-table') {
       try {
-        console.log('🔄 SavedFilterTags: Loading recent clients...');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔄 SavedFilterTags: Loading recent clients...');
+        }
         const response = await axiosInstance.get(API_ENDPOINTS.CLIENTS.RECENT);
         // Verwende die Reihenfolge der API-Antwort direkt (Backend sortiert bereits richtig)
         const clientNames = response.data.map((client: any) => client.name);
-        console.log('📋 SavedFilterTags: Recent client names:', clientNames);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📋 SavedFilterTags: Recent client names:', clientNames);
+        }
         setRecentClientNames(clientNames);
         
         // Auto-Bereinigung: Lösche überschüssige Recent Client Filter (LRU-basiert)
         await cleanupExcessiveClientFilters(clientNames);
       } catch (error) {
-        console.error('❌ SavedFilterTags: Error loading recent clients:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('❌ SavedFilterTags: Error loading recent clients:', error);
+        }
         // Stille Behandlung - normale Situation wenn noch keine Clients beraten wurden
       }
     }
@@ -182,7 +190,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   // Event-Listener für Consultation-Änderungen (z.B. neue Beratung gestartet)
   useEffect(() => {
     const handleConsultationChanged = () => {
-      console.log('🔔 SavedFilterTags: Received consultationChanged event');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔔 SavedFilterTags: Received consultationChanged event');
+      }
       loadRecentClients();
     };
 
@@ -244,7 +254,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         }
       } else if (defaultFilterName && process.env.NODE_ENV === 'development') {
         // ✅ Debug: Log wenn Filter nicht gefunden wird
-        console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, savedFilters.map(f => f?.name));
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, savedFilters.map(f => f?.name));
+        }
         
         // ✅ FIX: Wenn kein Default-Filter gefunden wurde, lade Daten ohne Filter (Fallback)
         // ✅ Dies verhindert, dass keine Daten angezeigt werden, wenn Default-Filter fehlt
@@ -282,25 +294,31 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Wähle einen gespeicherten Filter aus
   const handleSelectFilter = (filter: SavedFilter) => {
-    console.log('🔄 SavedFilterTags: handleSelectFilter called', {
-      filterName: filter.name,
-      filterId: filter.id,
-      conditionsCount: filter.conditions?.length || 0,
-      operatorsCount: filter.operators?.length || 0,
-      sortDirectionsCount: filter.sortDirections?.length || 0,
-      hasOnFilterChange: !!onFilterChange
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 SavedFilterTags: handleSelectFilter called', {
+        filterName: filter.name,
+        filterId: filter.id,
+        conditionsCount: filter.conditions?.length || 0,
+        operatorsCount: filter.operators?.length || 0,
+        sortDirectionsCount: filter.sortDirections?.length || 0,
+        hasOnFilterChange: !!onFilterChange
+      });
+    }
     
     // ✅ FIX: Einheitliches Format - immer Array (nicht undefined)
     const validSortDirections = Array.isArray(filter.sortDirections) ? filter.sortDirections : [];
     
     if (onFilterChange) {
       // Controlled component
-      console.log('📋 SavedFilterTags: Calling onFilterChange (controlled)');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📋 SavedFilterTags: Calling onFilterChange (controlled)');
+      }
       onFilterChange(filter.name, filter.id, filter.conditions, filter.operators, validSortDirections);
     } else {
       // Backward compatibility - uncontrolled component
-      console.log('📋 SavedFilterTags: Calling onSelectFilter (uncontrolled)');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📋 SavedFilterTags: Calling onSelectFilter (uncontrolled)');
+      }
       onSelectFilter(filter.conditions, filter.operators, validSortDirections);
     }
   };
@@ -341,7 +359,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       
       showMessage(t('filter.deleteSuccess', { defaultValue: 'Filter erfolgreich gelöscht' }), 'success');
     } catch (err) {
-      console.error('Fehler beim Löschen des Filters:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Löschen des Filters:', err);
+      }
       showMessage(t('filter.deleteError', { defaultValue: 'Fehler beim Löschen des Filters' }), 'error');
     }
   };
@@ -378,9 +398,11 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     
     // Sortierung für Consultations
     if (tableId === 'consultations-table') {
-      console.log('🔧 SavedFilterTags: Sorting filters...');
-      console.log('📋 SavedFilterTags: recentClientNames:', recentClientNames);
-      console.log('🗂️ SavedFilterTags: savedFilters:', ungroupedFilters.map(f => f.name));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 SavedFilterTags: Sorting filters...');
+        console.log('📋 SavedFilterTags: recentClientNames:', recentClientNames);
+        console.log('🗂️ SavedFilterTags: savedFilters:', ungroupedFilters.map(f => f.name));
+      }
 
       const heute = ungroupedFilters.find(f => f != null && f.name === 'Heute');
       const woche = ungroupedFilters.find(f => f != null && f.name === 'Woche');
@@ -391,7 +413,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         .map(clientName => ungroupedFilters.find(f => f != null && f.name === clientName))
         .filter(filter => filter != null) as SavedFilter[];
       
-      console.log('✅ SavedFilterTags: sortedRecentClientFilters:', sortedRecentClientFilters.map(f => f.name));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ SavedFilterTags: sortedRecentClientFilters:', sortedRecentClientFilters.map(f => f.name));
+      }
       
       const customFilters = ungroupedFilters.filter(f => 
         f != null && 
@@ -399,7 +423,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         !recentClientNames.includes(f.name)
       );
       
-      console.log('🔧 SavedFilterTags: customFilters:', customFilters.map(f => f.name));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 SavedFilterTags: customFilters:', customFilters.map(f => f.name));
+      }
 
       const orderedFilters: SavedFilter[] = [];
       
@@ -409,7 +435,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       orderedFilters.push(...customFilters);
       if (archiv) orderedFilters.push(archiv);
       
-      console.log('🎯 SavedFilterTags: Final filter order:', orderedFilters.map(f => f.name));
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🎯 SavedFilterTags: Final filter order:', orderedFilters.map(f => f.name));
+      }
       
       return orderedFilters;
     }
@@ -735,7 +763,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       // Refresh Filter-Liste
       await refreshFilters();
     } catch (err) {
-      console.error('Fehler beim Gruppieren der Filter:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Gruppieren der Filter:', err);
+      }
       showMessage(t('filter.groupError', { defaultValue: 'Fehler beim Gruppieren der Filter' }), 'error');
     } finally {
       handleDragEnd();
@@ -766,7 +796,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         return newSet;
       });
     } catch (err) {
-      console.error('Fehler beim Auflösen der Gruppe:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Auflösen der Gruppe:', err);
+      }
       showMessage(t('filter.ungroupError', { defaultValue: 'Fehler beim Auflösen der Gruppe' }), 'error');
     }
   };
@@ -796,7 +828,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       setEditingGroupId(null);
       setEditingGroupName('');
     } catch (err: any) {
-      console.error('Fehler beim Umbenennen der Gruppe:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Umbenennen der Gruppe:', err);
+      }
       const errorMessage = err.response?.data?.message || 'Fehler beim Umbenennen der Gruppe';
       showMessage(errorMessage, 'error');
     }
