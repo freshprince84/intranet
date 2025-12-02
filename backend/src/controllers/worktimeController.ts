@@ -1233,9 +1233,7 @@ export const checkAndStopExceededWorktimes = async () => {
       const currentSessionMs = nowUtcMs - startTimeUtcMs;
       const currentSessionHours = currentSessionMs / (1000 * 60 * 60);
       
-      // Formatiere lokale Zeit für bessere Lesbarkeit (verwende Zeitzone des Benutzers)
-      const userTimezone = worktime.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const nowLocal = worktime.timezone ? toZonedTime(now, worktime.timezone) : now;
+      // Formatiere lokale Zeit für bessere Lesbarkeit (verwende bereits deklarierte Variablen)
       const localNowString = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')} ${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}:${String(nowLocal.getSeconds()).padStart(2, '0')}`;
       
       console.log(`Aktuelle laufende Sitzung: ${worktime.startTime.toISOString()} (${startTimeUtcMs}) - jetzt (${localNowString}, ${userTimezone}, ${nowUtcMs}) = ${currentSessionHours.toFixed(2)}h`);
