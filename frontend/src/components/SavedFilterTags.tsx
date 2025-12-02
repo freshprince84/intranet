@@ -226,7 +226,17 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     
     // ✅ FIX: Prüfe nur defaultFilterAppliedRef, nicht activeFilterName/selectedFilterId
     // Diese könnten bereits gesetzt sein, aber der Default-Filter wurde noch nicht angewendet
-    if (defaultFilterName && !defaultFilterAppliedRef.current && savedFilters.length > 0) {
+    if (defaultFilterName && !defaultFilterAppliedRef.current) {
+      // ✅ FIX: Wenn keine Filter geladen wurden, Fallback ausführen
+      if (savedFilters.length === 0) {
+        // Keine Filter geladen → Fallback: Lade Daten ohne Filter
+        if (onFilterChange) {
+          defaultFilterAppliedRef.current = true; // Markiere als angewendet, um Endlosschleife zu vermeiden
+          onFilterChange('', null, [], [], undefined);
+        }
+        return;
+      }
+      
       // ✅ Suche nach Filter mit exaktem Namen oder alternativen Namen (für Migration)
       const defaultFilter = savedFilters.find((filter: SavedFilter) => {
         if (!filter || !filter.name) return false;
@@ -252,14 +262,15 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           // Uncontrolled Mode: Verwende onSelectFilter
           onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
         }
-      } else if (defaultFilterName && process.env.NODE_ENV === 'development') {
-        // ✅ Debug: Log wenn Filter nicht gefunden wird
+      } else if (defaultFilterName) {
+        // ✅ Debug: Log wenn Filter nicht gefunden wird (nur in Development)
         if (process.env.NODE_ENV === 'development') {
           console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, savedFilters.map(f => f?.name));
         }
         
         // ✅ FIX: Wenn kein Default-Filter gefunden wurde, lade Daten ohne Filter (Fallback)
         // ✅ Dies verhindert, dass keine Daten angezeigt werden, wenn Default-Filter fehlt
+        // ✅ WICHTIG: Fallback auch in Production ausführen!
         if (onFilterChange) {
           defaultFilterAppliedRef.current = true; // Markiere als angewendet, um Endlosschleife zu vermeiden
           onFilterChange('', null, [], [], undefined);
