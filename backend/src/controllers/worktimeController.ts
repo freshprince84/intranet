@@ -1183,14 +1183,9 @@ export const checkAndStopExceededWorktimes = async () => {
       const todayEnd = new Date(year, month, day, 23, 59, 59, 999);
       
       // Protokolliere lokale und UTC-Zeit für Vergleichszwecke
-      // KORREKT: Verwende die Zeitzone des Benutzers für die lokale Zeit-Anzeige
-      const userTimezone = worktime.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const nowLocal = worktime.timezone ? toZonedTime(now, worktime.timezone) : now;
-      const localTimeString = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')} ${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}:${String(nowLocal.getSeconds()).padStart(2, '0')}`;
-      
       console.log(`Prüfung auf überschrittene Arbeitszeit für Datum: ${format(now, 'yyyy-MM-dd')}`);
       console.log(`Aktuelle Zeit (UTC): ${now.toISOString()}`);
-      console.log(`Aktuelle Zeit (lokal, ${userTimezone}): ${localTimeString}`);
+      console.log(`Aktuelle Zeit (lokal): ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`);
       console.log(`Tagesbeginn (lokal): ${todayStart.toISOString()}`);
       console.log(`Tagesende (lokal): ${todayEnd.toISOString()}`);
 
@@ -1233,10 +1228,10 @@ export const checkAndStopExceededWorktimes = async () => {
       const currentSessionMs = nowUtcMs - startTimeUtcMs;
       const currentSessionHours = currentSessionMs / (1000 * 60 * 60);
       
-      // Formatiere lokale Zeit für bessere Lesbarkeit (verwende bereits deklarierte Variablen)
-      const localNowString = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')} ${String(nowLocal.getHours()).padStart(2, '0')}:${String(nowLocal.getMinutes()).padStart(2, '0')}:${String(nowLocal.getSeconds()).padStart(2, '0')}`;
+      // Formatiere lokale Zeit für bessere Lesbarkeit
+      const localNowString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
       
-      console.log(`Aktuelle laufende Sitzung: ${worktime.startTime.toISOString()} (${startTimeUtcMs}) - jetzt (${localNowString}, ${userTimezone}, ${nowUtcMs}) = ${currentSessionHours.toFixed(2)}h`);
+      console.log(`Aktuelle laufende Sitzung: ${worktime.startTime.toISOString()} (${startTimeUtcMs}) - jetzt (${localNowString}, ${nowUtcMs}) = ${currentSessionHours.toFixed(2)}h`);
       
       totalWorkTimeMs += currentSessionMs;
 
@@ -1266,11 +1261,7 @@ export const checkAndStopExceededWorktimes = async () => {
         });
 
         console.log(`Zeiterfassung ID ${stoppedWorktime.id} wurde beendet um: ${stoppedWorktime.endTime.toISOString()}`);
-        // KORREKT: Verwende die Zeitzone des Benutzers für die lokale Endzeit-Anzeige
-        const endTimezone = stoppedWorktime.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const endTimeLocal = stoppedWorktime.timezone ? toZonedTime(stoppedWorktime.endTime, stoppedWorktime.timezone) : stoppedWorktime.endTime;
-        const localEndTimeString = `${endTimeLocal.getFullYear()}-${String(endTimeLocal.getMonth() + 1).padStart(2, '0')}-${String(endTimeLocal.getDate()).padStart(2, '0')} ${String(endTimeLocal.getHours()).padStart(2, '0')}:${String(endTimeLocal.getMinutes()).padStart(2, '0')}:${String(endTimeLocal.getSeconds()).padStart(2, '0')}`;
-        console.log(`Lokale Endzeit (${endTimezone}): ${localEndTimeString}`);
+        console.log(`Lokale Endzeit: ${stoppedWorktime.endTime.getFullYear()}-${String(stoppedWorktime.endTime.getMonth() + 1).padStart(2, '0')}-${String(stoppedWorktime.endTime.getDate()).padStart(2, '0')} ${String(stoppedWorktime.endTime.getHours()).padStart(2, '0')}:${String(stoppedWorktime.endTime.getMinutes()).padStart(2, '0')}:${String(stoppedWorktime.endTime.getSeconds()).padStart(2, '0')}`);
 
         // Benachrichtigung erstellen
         const userLang = await getUserLanguage(worktime.userId);
