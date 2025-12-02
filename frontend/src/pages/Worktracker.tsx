@@ -683,6 +683,7 @@ const Worktracker: React.FC = () => {
                 setTasks(prev => [...prev, ...tasksWithAttachments]);
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
+                // ✅ PERFORMANCE: Direktes Setzen überschreibt alte Referenz (React macht automatisches Cleanup)
                 setTasks(tasksWithAttachments);
             }
             
@@ -806,7 +807,8 @@ const Worktracker: React.FC = () => {
                 setReservations(prev => [...prev, ...reservationsData]);
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
-            setReservations(reservationsData);
+                // ✅ PERFORMANCE: Direktes Setzen überschreibt alte Referenz (React macht automatisches Cleanup)
+                setReservations(reservationsData);
             }
             
             setReservationsTotalCount(totalCount);
@@ -1025,6 +1027,7 @@ const Worktracker: React.FC = () => {
                 setTourBookings(prev => [...prev, ...bookingsData]);
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
+                // ✅ PERFORMANCE: Direktes Setzen überschreibt alte Referenz (React macht automatisches Cleanup)
                 setTourBookings(bookingsData);
             }
             
@@ -1500,7 +1503,7 @@ const Worktracker: React.FC = () => {
         // console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         }
         return sorted;
-    }, [tasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]);
+    }, [tasks, selectedFilterId, searchTerm, tableSortConfig, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]); // ✅ PERFORMANCE: getStatusPriority entfernt (ist konstante Funktion, ändert sich nie)
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {
@@ -1828,9 +1831,8 @@ const Worktracker: React.FC = () => {
         }
 
         return () => {
-            if (tasksLoadMoreRef.current) {
-                observer.unobserve(tasksLoadMoreRef.current);
-            }
+            // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
+            observer.disconnect();
         };
     }, [activeTab, tasksHasMore, tasksLoadingMore, loading, tasks.length, selectedFilterId, loadTasks]); // ✅ FIX: filterConditions entfernt, verwende filterConditionsRef
     
@@ -1863,9 +1865,8 @@ const Worktracker: React.FC = () => {
         }
 
         return () => {
-            if (reservationsLoadMoreRef.current) {
-                observer.unobserve(reservationsLoadMoreRef.current);
-            }
+            // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
+            observer.disconnect();
         };
     }, [activeTab, reservationsHasMore, reservationsLoadingMore, reservationsLoading, reservations.length, reservationSelectedFilterId, loadReservations]); // ✅ FIX: reservationFilterConditions entfernt, verwende reservationFilterConditionsRef
     
@@ -1893,9 +1894,8 @@ const Worktracker: React.FC = () => {
         }
 
         return () => {
-            if (tourBookingsLoadMoreRef.current) {
-                observer.unobserve(tourBookingsLoadMoreRef.current);
-            }
+            // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
+            observer.disconnect();
         };
     }, [activeTab, tourBookingsHasMore, tourBookingsLoadingMore, tourBookingsLoading, tourBookings.length]);
 
