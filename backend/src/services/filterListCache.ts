@@ -172,7 +172,7 @@ class FilterListCache {
             createdAt: filter.createdAt,
             updatedAt: filter.updatedAt
           };
-        }));
+        });
 
         // ✅ FIX: Filtere User-Filter-Gruppen nach aktiven Usern
         if (group.name === 'Users' || group.name === 'Benutzer' || group.name === 'Usuarios') {
@@ -296,4 +296,3 @@ class FilterListCache {
 
 // Singleton-Instanz
 export const filterListCache = new FilterListCache();
-
