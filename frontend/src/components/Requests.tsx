@@ -526,22 +526,8 @@ const Requests: React.FC = () => {
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // ✅ FIX: Warte auf Filter-Load, dann wird Default-Filter angewendet, dann werden Daten geladen
-  // ✅ Fallback: Wenn nach 3 Sekunden keine Requests geladen wurden, Requests ohne Filter laden
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      // Prüfe, ob Requests bereits geladen wurden
-      // ✅ FIX: Prüfe auch, ob loading noch true ist (dann wurde fetchRequests nie aufgerufen)
-      if (requests.length === 0) {
-        // Fallback: Lade Requests ohne Filter (auch wenn loading noch true ist)
-        fetchRequests(undefined, undefined, false, 20, 0);
-      }
-    }, 3000); // 3 Sekunden Wartezeit (erhöht von 2 auf 3 Sekunden)
-    
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, []); // Nur beim Mount ausführen
+  // ✅ FIX: Kein Fallback nötig - SavedFilterTags wendet immer einen Standardfilter an
+  // ✅ Nur wenn Filter im FilterPane zurückgesetzt wird, werden alle Resultate geladen (dann mit Infinite Scroll)
 
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {
