@@ -532,14 +532,43 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       }, 0) / sortedFilters.filter(filter => filter != null).length;
   }, [sortedFilters, measuredTagWidths]);
 
+  // ✅ FIX: Berechne tatsächlich verfügbare Breite unter Berücksichtigung von negativen Margins
+  // Das Problem: Wenn der Container in einem Wrapper mit negativen Margins liegt, misst container.clientWidth
+  // die reduzierte Breite. Wir müssen die tatsächlich verfügbare Breite berechnen.
+  const getAvailableWidth = useCallback(() => {
+    if (!containerRef.current) return 0;
+    
+    const container = containerRef.current;
+    const parentElement = container.parentElement;
+    
+    // Prüfe ob Parent negative Margins hat
+    if (parentElement) {
+      const parentStyles = window.getComputedStyle(parentElement);
+      const parentMarginLeft = parseFloat(parentStyles.marginLeft) || 0;
+      const parentMarginRight = parseFloat(parentStyles.marginRight) || 0;
+      
+      // Wenn Parent negative Margins hat, verwende die Breite des Großeltern-Containers
+      if (parentMarginLeft < 0 || parentMarginRight < 0) {
+        const grandParent = parentElement.parentElement;
+        if (grandParent) {
+          // Verwende die Breite des Großeltern-Containers (z.B. dashboard-tasks-wrapper)
+          // Diese Breite entspricht der tatsächlich verfügbaren Breite
+          return grandParent.clientWidth;
+        }
+      }
+    }
+    
+    // Fallback: Verwende Container-Breite (wenn keine negativen Margins vorhanden)
+    return container.clientWidth;
+  }, []);
+
   // Optimierte Sichtbarkeits-Berechnung mit useCallback
   const calculateVisibleTags = useCallback(() => {
     if (!containerRef.current || sortedFilters.length === 0) return;
     // Nicht berechnen während Messung
     if (isMeasuring) return;
 
-    const container = containerRef.current;
-    const currentWidth = container.clientWidth;
+    const currentWidth = getAvailableWidth();
 
     // Nur neu berechnen wenn sich die Breite signifikant geändert hat (>= 10px)
     if (Math.abs(currentWidth - containerWidth) < 10 && containerWidth > 0) return;
@@ -618,7 +647,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         setVisibleTagCount(Math.max(1, maxTagsWithDropdown));
       }
     }
-  }, [sortedFilters, averageTagWidth, containerWidth, isMeasuring, measuredTagWidths]);
+  }, [sortedFilters, averageTagWidth, containerWidth, isMeasuring, measuredTagWidths, getAvailableWidth]);
 
   // Debounced ResizeObserver für bessere Performance
   const handleResize = useCallback(() => {

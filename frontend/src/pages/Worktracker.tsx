@@ -2994,14 +2994,15 @@ const Worktracker: React.FC = () => {
                                                 // Debug: Log für Berechtigungsprüfung (nur für erste Reservation) - IMMER loggen
                                                 if (reservation.id === filteredAndSortedReservations[0]?.id) {
                                                     // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+                                                    // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
                                                     // console.log('[Reservations] Berechtigungsprüfung:', {
-                                                        hasWritePermission,
-                                                        reservationId: reservation.id,
-                                                        entity: 'reservations',
-                                                        accessLevel: 'write',
-                                                        entityType: 'table',
-                                                        actionButtonsWillBeCreated: hasWritePermission
-                                                    });
+                                                    //     hasWritePermission,
+                                                    //     reservationId: reservation.id,
+                                                    //     entity: 'reservations',
+                                                    //     accessLevel: 'write',
+                                                    //     entityType: 'table',
+                                                    //     actionButtonsWillBeCreated: hasWritePermission
+                                                    // });
                                                 }
                                                 const actionButtons = hasWritePermission ? (
                                                     <div className="flex items-center space-x-2">
