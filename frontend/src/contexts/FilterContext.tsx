@@ -82,8 +82,9 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
   
   // ✅ PERFORMANCE: Lade Filter für eine tableId
   const loadFilters = useCallback(async (tableId: string) => {
-    // Wenn bereits geladen, nicht nochmal laden
-    if (loadedTablesRef.current.has(tableId)) {
+    // ✅ FIX: Prüfe auf Filter im State, nicht nur loadedTablesRef
+    // Wenn Filter bereits im State sind, nicht nochmal laden
+    if (loadedTablesRef.current.has(tableId) || filters[tableId]) {
       return;
     }
     
@@ -126,7 +127,7 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
     } finally {
       setLoading(prev => ({ ...prev, [tableId]: false }));
     }
-  }, [loading]);
+  }, [loading, filters]);
   
   // ✅ MEMORY: Cleanup-Funktion für alte Filter
   const cleanupOldFilters = useCallback(() => {
@@ -268,6 +269,12 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
   
   // Helper-Funktionen
   const getFilters = useCallback((tableId: string): SavedFilter[] => {
+    // ✅ FIX: Wenn Filter nicht im State sind, aber loadedTablesRef gesetzt ist, Filter neu laden
+    if (!filters[tableId] && loadedTablesRef.current.has(tableId)) {
+      // Filter wurden gelöscht, aber loadedTablesRef ist noch gesetzt
+      // Lösche loadedTablesRef, damit Filter neu geladen werden können
+      loadedTablesRef.current.delete(tableId);
+    }
     return filters[tableId] || [];
   }, [filters]);
   
