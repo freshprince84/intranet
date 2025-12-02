@@ -83,7 +83,8 @@ const getOperatorsByColumnType = (columnId: string, t: (key: string) => string):
     return dateOperators;
   } else if (columnId === 'duration' || columnId === 'amount') {
     return durationOperators;
-  } else if (columnId === 'status' || columnId === 'paymentStatus') {
+  } else if (columnId === 'status' || columnId === 'paymentStatus' || columnId === 'roomNumber') {
+    // ✅ FIX: roomNumber nur = und != (wie Status)
     return statusOperators;
   } else if (columnId === 'responsible' || columnId === 'qualityControl' || columnId === 'responsibleAndQualityControl') {
     return statusOperators;
@@ -113,9 +114,11 @@ const FilterRow: React.FC<FilterRowProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [roomNumbers, setRoomNumbers] = useState<string[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [loadingBranches, setLoadingBranches] = useState(false);
+  const [loadingRoomNumbers, setLoadingRoomNumbers] = useState(false);
   
   // Operatoren aktualisieren, wenn sich die Spalte ändert
   useEffect(() => {
@@ -174,6 +177,27 @@ const FilterRow: React.FC<FilterRowProps> = ({
           setLoadingBranches(false);
         }
       }
+      
+      // ✅ NEU: RoomNumbers laden für roomNumber-Spalte (pro Branch)
+      if (condition.column === 'roomNumber') {
+        setLoadingRoomNumbers(true);
+        try {
+          // Hole alle Reservations und extrahiere eindeutige roomNumbers
+          // TODO: Später durch dedizierten API-Endpoint ersetzen
+          const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE);
+          const reservations = response.data?.data || response.data || [];
+          const uniqueRoomNumbers = Array.from(new Set(
+            reservations
+              .map((r: any) => r.roomNumber)
+              .filter((rn: string | null) => rn && rn.trim() !== '')
+          )).sort() as string[];
+          setRoomNumbers(uniqueRoomNumbers);
+        } catch (error) {
+          console.error('Fehler beim Laden der RoomNumbers:', error);
+        } finally {
+          setLoadingRoomNumbers(false);
+        }
+      }
     };
     
     loadUsersAndRoles();
@@ -192,8 +216,26 @@ const FilterRow: React.FC<FilterRowProps> = ({
       const isRequestTable = columns.some(col => col.id === 'requestedBy' || col.id === 'createTodo');
       const isTaskTable = columns.some(col => col.id === 'responsible' || col.id === 'qualityControl');
       const isInvoiceTable = columns.some(col => col.id === 'client') && !columns.some(col => col.id === 'responsible');
+      const isReservationTable = columns.some(col => col.id === 'checkInDate' || col.id === 'checkOutDate' || col.id === 'roomNumber');
       
-      if (isRequestTable) {
+      if (isReservationTable) {
+        // ✅ Reservation-Status-Optionen
+        return (
+          <select
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            value={value as string || ''}
+            onChange={(e) => onChange(e.target.value)}
+          >
+            <option value="">{t('filter.row.pleaseSelect')}</option>
+            <option value="confirmed">{t('reservations.status.confirmed', 'Bestätigt')}</option>
+            <option value="notification_sent">{t('reservations.status.notification_sent', 'Benachrichtigung gesendet')}</option>
+            <option value="checked_in">{t('reservations.status.checked_in', 'Eingecheckt')}</option>
+            <option value="checked_out">{t('reservations.status.checked_out', 'Ausgecheckt')}</option>
+            <option value="cancelled">{t('reservations.status.cancelled', 'Storniert')}</option>
+            <option value="no_show">{t('reservations.status.no_show', 'Nicht erschienen')}</option>
+          </select>
+        );
+      } else if (isRequestTable) {
         // Request-Status-Optionen
         return (
           <select
@@ -350,6 +392,53 @@ const FilterRow: React.FC<FilterRowProps> = ({
             <option value="sick_leave">{t('requests.types.sick_leave')}</option>
             <option value="employment_certificate">{t('requests.types.employment_certificate')}</option>
             <option value="other">{t('requests.types.other')}</option>
+          </select>
+        );
+      }
+    }
+    
+    // ✅ NEU: Für PaymentStatus ein Dropdown rendern (nur bei Reservations)
+    if (columnId === 'paymentStatus') {
+      const isReservationTable = columns.some(col => col.id === 'checkInDate' || col.id === 'checkOutDate' || col.id === 'roomNumber');
+      if (isReservationTable) {
+        return (
+          <select
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            value={value as string || ''}
+            onChange={(e) => onChange(e.target.value)}
+          >
+            <option value="">{t('filter.row.pleaseSelect')}</option>
+            <option value="pending">{t('reservations.paymentStatus.pending', 'Ausstehend')}</option>
+            <option value="paid">{t('reservations.paymentStatus.paid', 'Bezahlt')}</option>
+            <option value="partially_paid">{t('reservations.paymentStatus.partially_paid', 'Teilweise bezahlt')}</option>
+            <option value="refunded">{t('reservations.paymentStatus.refunded', 'Erstattet')}</option>
+          </select>
+        );
+      }
+    }
+    
+    // ✅ NEU: Für roomNumber ein Dropdown rendern (nur bei Reservations, nur = und !=)
+    if (columnId === 'roomNumber') {
+      const isReservationTable = columns.some(col => col.id === 'checkInDate' || col.id === 'checkOutDate' || col.id === 'roomNumber');
+      if (isReservationTable) {
+        return (
+          <select
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            value={value as string || ''}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={loadingRoomNumbers}
+          >
+            <option value="">{t('filter.row.pleaseSelect')}</option>
+            {roomNumbers.length > 0 && (
+              roomNumbers.map(roomNumber => (
+                <option key={roomNumber} value={roomNumber}>
+                  {roomNumber}
+                </option>
+              ))
+            )}
+            {loadingRoomNumbers && (
+              <option value="" disabled>{t('filter.row.loadingData')}</option>
+            )}
           </select>
         );
       }

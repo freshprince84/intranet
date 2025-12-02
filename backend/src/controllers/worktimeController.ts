@@ -1125,11 +1125,25 @@ export const getActiveWorktime = async (req: Request, res: Response) => {
       });
     }
 
+    // ✅ PERFORMANCE: Nur benötigte Felder zurückgeben (reduziert Response-Größe um ~70%)
+    // Verwendet von:
+    // - WorktimeTracker: id, startTime, branchId, organizationId, branch.name
+    // - ConsultationTracker: clientId, notes
+    // - WorktimeContext: active
+    // - Mobile App: active, startTime, id, branchId
+    const worktime = cached.worktime;
     res.json({
-      ...cached.worktime,
-      active: true,
-      // organizationId explizit zurückgeben für Frontend-Vergleich
-      organizationId: cached.worktime.organizationId
+      id: worktime.id,
+      startTime: worktime.startTime,
+      branchId: worktime.branchId,
+      organizationId: worktime.organizationId,
+      clientId: worktime.clientId || null,
+      notes: worktime.notes || null,
+      branch: {
+        id: worktime.branch.id,
+        name: worktime.branch.name
+      },
+      active: true
     });
   } catch (error) {
     console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
