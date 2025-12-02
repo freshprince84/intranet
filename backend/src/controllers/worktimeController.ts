@@ -1223,23 +1223,13 @@ export const checkAndStopExceededWorktimes = async () => {
       }
 
       // Füge die aktuelle laufende Sitzung hinzu
-      // KORREKT: Berechne Differenz unter Berücksichtigung der Zeitzone (wie in getWorktimeStats)
-      // PROBLEM: worktime.startTime wurde als lokale Zeit gespeichert, aber Prisma interpretiert es als UTC
-      // LÖSUNG: Wenn worktime.timezone vorhanden ist, korrigiere die Interpretation mit fromZonedTime
-      let startTimeUtcMs: number;
-      if (worktime.timezone) {
-        // worktime.startTime wurde als lokale Zeit gespeichert (z.B. 10:00 lokal in Kolumbien)
-        // Prisma interpretiert es fälschlicherweise als UTC (10:00 UTC)
-        // Tatsächlich sollte es sein: 10:00 lokal = 15:00 UTC (für UTC-5)
-        // Lösung: Interpretiere worktime.startTime als lokale Zeit und konvertiere zu UTC
-        const startTimeUtcCorrected = fromZonedTime(worktime.startTime, worktime.timezone);
-        startTimeUtcMs = startTimeUtcCorrected.getTime(); // UTC-Millisekunden (korrigiert)
-      } else {
-        // Fallback: Wenn keine Zeitzone gespeichert ist, verwende direkte Differenz
-        // (kann falsch sein, aber besser als nichts)
-        startTimeUtcMs = worktime.startTime.getTime();
-      }
-      const nowUtcMs = now.getTime(); // UTC-Millisekunden (korrekt)
+      // KORREKT: Beide Werte (now.getTime() und worktime.startTime.getTime()) sind bereits UTC-Millisekunden
+      // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
+      // Siehe getWorktimeStats Zeile 639-641 für die korrekte Referenz-Implementierung
+      // WICHTIG: worktime.startTime wurde als lokale Zeit gespeichert, aber getTime() gibt UTC-Millisekunden zurück
+      // Da die Datenbank die Zeit als lokale Zeit speichert, müssen wir sicherstellen, dass beide Werte korrekt interpretiert werden
+      const startTimeUtcMs = worktime.startTime.getTime(); // UTC-Millisekunden
+      const nowUtcMs = now.getTime(); // UTC-Millisekunden
       const currentSessionMs = nowUtcMs - startTimeUtcMs;
       const currentSessionHours = currentSessionMs / (1000 * 60 * 60);
       
