@@ -101,11 +101,44 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   const prevSavedOperatorsRef = useRef<('AND' | 'OR')[] | undefined>(savedOperators);
   const prevSavedSortDirectionsRef = useRef<SortDirection[] | undefined>(savedSortDirections);
   
+  // ✅ MEMORY: Verwende shallow comparison statt JSON.stringify
+  const areConditionsEqual = (a: FilterCondition[] | undefined, b: FilterCondition[] | undefined): boolean => {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    return a.every((item, index) => {
+      const other = b[index];
+      return item.column === other.column && 
+             item.operator === other.operator && 
+             item.value === other.value;
+    });
+  };
+
+  const areOperatorsEqual = (a: ('AND' | 'OR')[] | undefined, b: ('AND' | 'OR')[] | undefined): boolean => {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    return a.every((item, index) => item === b[index]);
+  };
+
+  const areSortDirectionsEqual = (a: SortDirection[] | undefined, b: SortDirection[] | undefined): boolean => {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    return a.every((item, index) => {
+      const other = b[index];
+      return item.column === other.column && 
+             item.direction === other.direction && 
+             item.priority === other.priority && 
+             item.conditionIndex === other.conditionIndex;
+    });
+  };
+  
   useEffect(() => {
-    // Prüfe, ob sich die Props wirklich geändert haben (nicht durch lokale State-Änderungen)
-    const conditionsChanged = JSON.stringify(prevSavedConditionsRef.current) !== JSON.stringify(savedConditions);
-    const operatorsChanged = JSON.stringify(prevSavedOperatorsRef.current) !== JSON.stringify(savedOperators);
-    const sortDirectionsChanged = JSON.stringify(prevSavedSortDirectionsRef.current) !== JSON.stringify(savedSortDirections);
+    // ✅ MEMORY: Verwende shallow comparison statt JSON.stringify
+    const conditionsChanged = !areConditionsEqual(prevSavedConditionsRef.current, savedConditions);
+    const operatorsChanged = !areOperatorsEqual(prevSavedOperatorsRef.current, savedOperators);
+    const sortDirectionsChanged = !areSortDirectionsEqual(prevSavedSortDirectionsRef.current, savedSortDirections);
     
     if (conditionsChanged && savedConditions) {
       if (savedConditions.length > 0) {
