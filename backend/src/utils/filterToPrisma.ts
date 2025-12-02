@@ -101,22 +101,28 @@ function convertSingleCondition(
       return {};
 
     case 'title':
-      if (operator === 'equals') {
-        return { title: { equals: value, mode: 'insensitive' } };
-      } else if (operator === 'contains') {
-        return { title: { contains: value as string, mode: 'insensitive' } };
-      } else if (operator === 'startsWith') {
-        return { title: { startsWith: value as string, mode: 'insensitive' } };
-      } else if (operator === 'endsWith') {
-        return { title: { endsWith: value as string, mode: 'insensitive' } };
+      // ✅ FIX: title wird für Reservations nicht unterstützt (haben kein title-Feld)
+      if (entityType !== 'reservation') {
+        if (operator === 'equals') {
+          return { title: { equals: value, mode: 'insensitive' } };
+        } else if (operator === 'contains') {
+          return { title: { contains: value as string, mode: 'insensitive' } };
+        } else if (operator === 'startsWith') {
+          return { title: { startsWith: value as string, mode: 'insensitive' } };
+        } else if (operator === 'endsWith') {
+          return { title: { endsWith: value as string, mode: 'insensitive' } };
+        }
       }
       return {};
 
     case 'type':
-      if (operator === 'equals') {
-        return { type: value };
-      } else if (operator === 'notEquals') {
-        return { type: { not: value } };
+      // ✅ FIX: type wird für Reservations nicht unterstützt (haben kein type-Feld)
+      if (entityType !== 'reservation') {
+        if (operator === 'equals') {
+          return { type: value };
+        } else if (operator === 'notEquals') {
+          return { type: { not: value } };
+        }
       }
       return {};
 
@@ -161,11 +167,13 @@ function convertSingleCondition(
       return {};
 
     case 'roomNumber':
+      // ✅ FIX: roomNumber nur = und != für Reservations (wie Status)
       if (entityType === 'reservation') {
         if (operator === 'equals') {
           return { roomNumber: { equals: value, mode: 'insensitive' } };
-        } else if (operator === 'contains') {
-          return { roomNumber: { contains: value as string, mode: 'insensitive' } };
+        } else if (operator === 'notEquals') {
+          // Prisma notEquals für String-Felder (case-insensitive)
+          return { roomNumber: { not: { equals: value, mode: 'insensitive' } } };
         }
       }
       return {};

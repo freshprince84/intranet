@@ -315,10 +315,9 @@ const Worktracker: React.FC = () => {
         { id: 'actions', label: t('reservations.columns.actions', 'Aktionen'), shortLabel: t('common.actions').substring(0, 3) },
     ], [t]);
     
-    // Reservations Filter-Spalten (zusätzliche Spalten nur für Filter)
+    // ✅ FIX: Reservations Filter-Spalten - nur die gewünschten Felder für Filter
     const reservationFilterOnlyColumns = useMemo(() => [
-        { id: 'onlineCheckInCompleted', label: t('reservations.columns.onlineCheckInCompleted', 'Online Check-in'), shortLabel: t('reservations.columns.onlineCheckInCompleted', 'Online Check-in').substring(0, 3) },
-        { id: 'doorPin', label: t('reservations.columns.doorPin', 'Tür-PIN'), shortLabel: t('reservations.columns.doorPin', 'Tür-PIN').substring(0, 3) },
+        // Keine zusätzlichen Filter-Spalten mehr - alle Filter-Felder sind in availableReservationColumns
     ], [t]);
     
     
@@ -2340,7 +2339,14 @@ const Worktracker: React.FC = () => {
                                         />
                                     ) : (
                                         <FilterPane
-                                            columns={[...availableReservationColumns, ...reservationFilterOnlyColumns]}
+                                            columns={[
+                                                { id: 'checkInDate', label: t('reservations.columns.checkInDate', 'Check-in') },
+                                                { id: 'checkOutDate', label: t('reservations.columns.checkOutDate', 'Check-out') },
+                                                { id: 'roomNumber', label: t('reservations.columns.roomNumber', 'Zimmer') },
+                                                { id: 'status', label: t('reservations.columns.status', 'Status') },
+                                                { id: 'paymentStatus', label: t('reservations.columns.paymentStatus', 'Zahlungsstatus') },
+                                                { id: 'branch', label: t('reservations.columns.branch', 'Niederlassung') },
+                                            ]}
                                             onApply={applyReservationFilterConditions}
                                             onReset={resetReservationFilterConditions}
                                             savedConditions={reservationFilterConditions}
@@ -3645,7 +3651,14 @@ const Worktracker: React.FC = () => {
                                         />
                                     ) : (
                                         <FilterPane
-                                            columns={[...availableReservationColumns, ...reservationFilterOnlyColumns]}
+                                            columns={[
+                                                { id: 'checkInDate', label: t('reservations.columns.checkInDate', 'Check-in') },
+                                                { id: 'checkOutDate', label: t('reservations.columns.checkOutDate', 'Check-out') },
+                                                { id: 'roomNumber', label: t('reservations.columns.roomNumber', 'Zimmer') },
+                                                { id: 'status', label: t('reservations.columns.status', 'Status') },
+                                                { id: 'paymentStatus', label: t('reservations.columns.paymentStatus', 'Zahlungsstatus') },
+                                                { id: 'branch', label: t('reservations.columns.branch', 'Niederlassung') },
+                                            ]}
                                             onApply={applyReservationFilterConditions}
                                             onReset={resetReservationFilterConditions}
                                             savedConditions={reservationFilterConditions}
