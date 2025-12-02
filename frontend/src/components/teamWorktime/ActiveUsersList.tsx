@@ -1103,7 +1103,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         activeFilterName={activeFilterName}
         selectedFilterId={selectedFilterId}
         onFilterChange={handleFilterChange}
-          defaultFilterName={t('teamWorktime.filters.active')}
+          defaultFilterName="Aktive" // ✅ FIX: Hardcodiert (konsistent mit DB)
       />
       </div>
       

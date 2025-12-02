@@ -459,7 +459,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         activeFilterName={activeFilterName}
         selectedFilterId={selectedFilterId}
         onFilterChange={handleFilterChange}
-        defaultFilterName={t('teamWorktime.filters.all')}
+        defaultFilterName="Alle" // ✅ FIX: Hardcodiert (konsistent mit DB)
       />
       </div>
 

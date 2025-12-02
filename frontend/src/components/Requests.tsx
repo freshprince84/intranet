@@ -216,9 +216,6 @@ const Requests: React.FC = () => {
   const [activeFilterName, setActiveFilterName] = useState<string>('');
   const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
   
-  // ✅ FIX: Überwache Filter-Anwendung
-  const [filterApplied, setFilterApplied] = useState(false);
-  
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -529,21 +526,13 @@ const Requests: React.FC = () => {
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // ✅ FIX: Überwache, ob Filter angewendet wurde
-  useEffect(() => {
-    // Wenn selectedFilterId oder filterConditions gesetzt sind, wurde Filter angewendet
-    if (selectedFilterId !== null || filterConditions.length > 0) {
-      setFilterApplied(true);
-    }
-  }, [selectedFilterId, filterConditions.length]);
-
-  // ✅ FIX: Lade Daten nur, wenn Filter angewendet wurde ODER explizit zurückgesetzt
-  // ABER: SavedFilterTags sollte immer einen Default-Filter anwenden
-  // Wenn nach 5 Sekunden kein Filter angewendet wurde, warnen (nur in Development)
+  // ✅ FIX: Warnung wenn nach 5 Sekunden kein Filter angewendet wurde (nur in Development)
+  // Prüft direkt auf selectedFilterId und filterConditions (kein redundanter State nötig)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       const timeoutId = setTimeout(() => {
-        if (!filterApplied && requests.length === 0) {
+        // ✅ Prüfe direkt auf selectedFilterId und filterConditions
+        if (selectedFilterId === null && filterConditions.length === 0 && requests.length === 0) {
           console.warn('[Requests] Kein Filter wurde angewendet nach 5 Sekunden. Möglicherweise fehlt Default-Filter in SavedFilterTags.');
         }
       }, 5000);
@@ -552,7 +541,7 @@ const Requests: React.FC = () => {
         clearTimeout(timeoutId);
       };
     }
-  }, [filterApplied, requests.length]);
+  }, [selectedFilterId, filterConditions.length, requests.length]);
 
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {
@@ -709,21 +698,19 @@ const Requests: React.FC = () => {
     // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
     setSortConfig({ key: 'dueDate', direction: 'asc' });
     
-    // ✅ FIX: Setze Filter-State, aber lade Daten nur EINMAL
-    setFilterConditions(conditions);
-    setFilterLogicalOperators(operators);
-    if (sortDirections !== undefined) {
-      const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-      setFilterSortDirections(validSortDirections);
-    }
-    
-    // ✅ FIX: Lade Daten nur EINMAL (nicht doppelt über applyFilterConditions)
+    // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
+    // ✅ Sonst: Verwende applyFilterConditions (setzt auch selectedFilterId = null, activeFilterName = '')
     if (id) {
+      setFilterConditions(conditions);
+      setFilterLogicalOperators(operators);
+      if (sortDirections !== undefined) {
+        const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+        setFilterSortDirections(validSortDirections);
+      }
       await fetchRequests(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
-    } else if (conditions.length > 0) {
-      await fetchRequests(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
     } else {
-      await fetchRequests(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+      // ✅ Direkte Bedingungen: applyFilterConditions lädt bereits und setzt State korrekt
+      await applyFilterConditions(conditions, operators, sortDirections);
     }
   };
 
