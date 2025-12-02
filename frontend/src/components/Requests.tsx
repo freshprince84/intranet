@@ -216,6 +216,9 @@ const Requests: React.FC = () => {
   const [activeFilterName, setActiveFilterName] = useState<string>('');
   const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
   
+  // ✅ FIX: Überwache Filter-Anwendung
+  const [filterApplied, setFilterApplied] = useState(false);
+  
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -382,7 +385,7 @@ const Requests: React.FC = () => {
       const params: any = {
         limit: limit,
         offset: offset,
-        includeAttachments: 'false' // ✅ PERFORMANCE: Attachments optional - nur laden wenn benötigt
+        includeAttachments: 'true' // ✅ VORSCHAU: Attachments für Bild/Link-Vorschau benötigt
       };
       if (filterId) {
         params.filterId = filterId;
@@ -526,8 +529,30 @@ const Requests: React.FC = () => {
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // ✅ FIX: Kein Fallback nötig - SavedFilterTags wendet immer einen Standardfilter an
-  // ✅ Nur wenn Filter im FilterPane zurückgesetzt wird, werden alle Resultate geladen (dann mit Infinite Scroll)
+  // ✅ FIX: Überwache, ob Filter angewendet wurde
+  useEffect(() => {
+    // Wenn selectedFilterId oder filterConditions gesetzt sind, wurde Filter angewendet
+    if (selectedFilterId !== null || filterConditions.length > 0) {
+      setFilterApplied(true);
+    }
+  }, [selectedFilterId, filterConditions.length]);
+
+  // ✅ FIX: Lade Daten nur, wenn Filter angewendet wurde ODER explizit zurückgesetzt
+  // ABER: SavedFilterTags sollte immer einen Default-Filter anwenden
+  // Wenn nach 5 Sekunden kein Filter angewendet wurde, warnen (nur in Development)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const timeoutId = setTimeout(() => {
+        if (!filterApplied && requests.length === 0) {
+          console.warn('[Requests] Kein Filter wurde angewendet nach 5 Sekunden. Möglicherweise fehlt Default-Filter in SavedFilterTags.');
+        }
+      }, 5000);
+      
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [filterApplied, requests.length]);
 
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {

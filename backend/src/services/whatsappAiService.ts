@@ -530,11 +530,11 @@ export class WhatsAppAiService {
             properties: {
               checkInDate: {
                 type: 'string',
-                description: 'Check-in Datum (YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"). WICHTIG: Wenn User "heute" sagt, verwende "today"! Wenn User "morgen" sagt, verwende "tomorrow"!'
+                description: 'Check-in Datum (YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"). WICHTIG: Wenn User "heute" sagt, verwende "today"! Wenn User "morgen" sagt, verwende "tomorrow"! Wenn User "04/12" oder "04.12" sagt, verwende "2025-12-04" (Format: DD/MM oder DD.MM = Tag/Monat, Jahr wird automatisch ergänzt)!'
               },
               checkOutDate: {
                 type: 'string',
-                description: 'Check-out Datum (YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana", ERFORDERLICH). WICHTIG: Check-out muss mindestens 1 Tag nach Check-in liegen! "heute bis heute" gibt es nicht! WICHTIG: Wenn User "bis zum 3." sagt, bedeutet das Check-out am 4. (Check-out ist immer am Morgen des nächsten Tages)! Wenn User nur "heute" sagt ohne Check-out, frage nach: "Für wie viele Nächte?" oder "Bis wann möchten Sie bleiben?"'
+                description: 'Check-out Datum (YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana", ERFORDERLICH). WICHTIG: Check-out muss mindestens 1 Tag nach Check-in liegen! "heute bis heute" gibt es nicht! WICHTIG: Wenn User "bis zum 3." sagt, bedeutet das Check-out am 4. (Check-out ist immer am Morgen des nächsten Tages)! Wenn User "04/12" sagt nach Check-in, ist das das Check-out Datum! Wenn User "para mañana" + "1 noche" sagt, dann checkOutDate="day after tomorrow" (übermorgen)! Wenn User nur "heute" sagt ohne Check-out, frage nach: "Für wie viele Nächte?" oder "Bis wann möchten Sie bleiben?"'
               },
               guestName: {
                 type: 'string',
@@ -677,13 +677,17 @@ export class WhatsAppAiService {
     prompt += '\n- create_room_reservation: Erstelle eine Zimmer-Reservation (checkInDate, checkOutDate, guestName, roomType, categoryId optional)\n';
     prompt += '  WICHTIG: Verwende diese Function wenn der User ein ZIMMER buchen möchte (NICHT für Touren)!\n';
     prompt += '  WICHTIG: Unterscheide klar zwischen ZIMMER (create_room_reservation) und TOUREN (book_tour)!\n';
-    prompt += '  WICHTIG: Wenn der User "reservar", "buchen", "buche", "buche mir", "reservame", "ich möchte buchen", "ich möchte reservieren" sagt → create_room_reservation!\n';
-    prompt += '  WICHTIG: Wenn User "buche [Zimmer-Name]" sagt (z.B. "buche el abuelo viajero"), erkenne dies als Buchungsanfrage!\n';
+    prompt += '  WICHTIG: Wenn der User "reservar", "buchen", "buche", "buche mir", "reservame", "ich möchte buchen", "ich möchte reservieren", "quiero reservar", "quiero hacer una reserva" sagt → create_room_reservation!\n';
+    prompt += '  WICHTIG: Wenn User "buche [Zimmer-Name]" oder "quiero reservar [Zimmer-Name]" sagt (z.B. "buche el abuelo viajero", "quiero reservar una doble estándar"), erkenne dies als Buchungsanfrage!\n';
     prompt += '  WICHTIG: Wenn User "buche [Zimmer-Name] von [Datum] auf [Datum] für [Name]" sagt, hat er ALLE Informationen - rufe SOFORT create_room_reservation auf!\n';
+    prompt += '  WICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "doble estándar", "apartamento doble", "primo deportista"), erkenne dies IMMER als Zimmer-Name aus der Verfügbarkeitsliste, NICHT als sozialen Begriff!\n';
+    prompt += '  WICHTIG: Zimmer-Namen aus Verfügbarkeitsliste: "doble estándar", "doble básica", "doble deluxe", "apartamento doble", "apartamento singular", "apartaestudio", "primo deportista", "el primo aventurero", "la tia artista", "el abuelo viajero"!\n';
     prompt += '  WICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige → create_room_reservation mit categoryId!\n';
     prompt += '  WICHTIG: Wenn der User einen Zimmer-Namen sagt (z.B. "la tia artista", "el primo aventurero", "el abuelo viajero") → finde die categoryId aus der vorherigen check_room_availability Response!\n';
     prompt += '  WICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat → verwende "today" als checkInDate!\n';
     prompt += '  WICHTIG: Wenn User "von heute auf morgen" sagt → checkInDate="today", checkOutDate="tomorrow"!\n';
+    prompt += '  WICHTIG: Wenn User "para mañana" + "1 noche" sagt, dann: checkInDate="tomorrow", checkOutDate="day after tomorrow"!\n';
+    prompt += '  WICHTIG: Wenn User "04/12" oder "04.12" sagt, erkenne dies als Datum (04. Dezember, aktuelles Jahr)!\n';
     prompt += '  WICHTIG: Wenn User nach Buchung Daten gibt (z.B. "01.dez bis 02.dez") → rufe create_room_reservation auf, NICHT check_room_availability!\n';
     prompt += '  WICHTIG: Generiert automatisch Payment Link und Check-in-Link, setzt Zahlungsfrist (1 Stunde)\n';
     prompt += '  WICHTIG: Alle Reservierungen sind Branch-spezifisch (Branch wird automatisch aus Context verwendet)\n';
@@ -733,9 +737,13 @@ export class WhatsAppAiService {
     prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht einen Namen gesagt hat (z.B. "Patrick Ammann"), verwende diesen als guestName!';
     prompt += '\nWICHTIG: Kombiniere Informationen aus MEHREREN Nachrichten! Wenn User "heute" sagt und später "1 nacht", dann: checkInDate="today", checkOutDate="tomorrow"!';
     prompt += '\nWICHTIG: Wenn User "1" sagt nachdem er "heute" gesagt hat, interpretiere es als "1 Nacht"!';
+    prompt += '\nWICHTIG: Wenn User strukturierte Antworten gibt (z.B. "1. hoy, 02/12. 3. 1 4. sara"), interpretiere: 1. = Check-in, 3. = Nächte, 4. = Name!';
+    prompt += '\nWICHTIG: Wenn User widersprüchliche Informationen gibt (z.B. erst "sí" dann "para mañana"), verwende IMMER die LETZTE/NEUESTE Information!';
     prompt += '\nWICHTIG: Wenn User "ja" sagt nachdem du eine Frage gestellt hast, interpretiere es als Bestätigung deiner Vorschläge!';
-    prompt += '\nWICHTIG: Wenn User "ja, ich bestätige, bitte buchen" oder "ja ich möchte buchen" sagt, rufe SOFORT create_room_reservation auf!';
-    prompt += '\nWICHTIG: Wenn User "ja" sagt nachdem du eine Buchungsbestätigung gefragt hast (z.B. "Möchten Sie buchen?"), rufe SOFORT create_room_reservation auf!';
+    prompt += '\nWICHTIG: Wenn User "ja", "sí", "yes" sagt nachdem du eine Frage gestellt hast, interpretiere es als Bestätigung und führe die Aktion aus!';
+    prompt += '\nWICHTIG: Wenn User "ja, ich bestätige, bitte buchen" oder "ja ich möchte buchen" oder "sí, quiero reservar" sagt, rufe SOFORT create_room_reservation auf!';
+    prompt += '\nWICHTIG: Wenn User "ja" oder "sí" sagt nachdem du eine Buchungsbestätigung gefragt hast (z.B. "Möchten Sie buchen?"), rufe SOFORT create_room_reservation auf!';
+    prompt += '\nWICHTIG: Wenn User "sí" sagt, verliere NICHT den Kontext! Nutze die Informationen aus vorherigen Nachrichten und führe die Buchung aus!';
     prompt += '\nWICHTIG: Wenn User "ok, buchen" oder "ok, reservar" sagt und ALLE Informationen vorhanden sind, rufe SOFORT create_room_reservation auf!';
     prompt += '\nWICHTIG: checkOutDate ist ERFORDERLICH und muss mindestens 1 Tag nach checkInDate liegen! "heute bis heute" gibt es NICHT!';
     prompt += '\nWICHTIG: Wenn User nur "heute" sagt ohne Check-out, frage: "Für wie viele Nächte möchten Sie buchen?" oder "Bis wann möchten Sie bleiben?"';
@@ -744,6 +752,9 @@ export class WhatsAppAiService {
     prompt += '\nWICHTIG: "von heute auf morgen" bedeutet: checkInDate="today", checkOutDate="tomorrow"!';
     prompt += '\nWICHTIG: "von [Datum] auf [Datum]" bedeutet: checkInDate=[erstes Datum], checkOutDate=[zweites Datum]!';
     prompt += '\nWICHTIG: Wenn User "02.12.25 bis 03.12.25" sagt, bedeutet das: checkInDate="2025-12-02", checkOutDate="2025-12-04" (Check-out ist am Morgen des 4.12.)!';
+    prompt += '\nWICHTIG: Wenn User "para mañana" sagt und "1 noche" oder "una noche", bedeutet das: checkInDate="tomorrow", checkOutDate="day after tomorrow" (übermorgen)!';
+    prompt += '\nWICHTIG: Datum-Formate erkennen: "04/12", "04.12", "04-12" = 04. Dezember (aktuelles Jahr)! Wenn User "04/12" sagt nach Check-in, ist das das Check-out Datum!';
+    prompt += '\nWICHTIG: Wenn User "04/12" sagt und Check-in bereits "mañana" ist, dann: checkInDate="tomorrow", checkOutDate="2025-12-04"!';
     prompt += '\nWICHTIG: Wenn User nur "reservar" sagt (ohne weitere Details), aber bereits Zimmer und Daten in vorherigen Nachrichten genannt hat, rufe create_room_reservation mit diesen Informationen auf!';
     prompt += '\nWICHTIG: Wenn User "reservar" sagt und alle Informationen vorhanden sind (Zimmer-Name, Daten, Name), rufe create_room_reservation direkt auf, frage NICHT nach Details!';
     prompt += '\nWICHTIG: Wenn User "ok, buchen" sagt und du bereits alle Informationen hast (Check-in, Check-out, Zimmer, Name), rufe create_room_reservation SOFORT auf!';

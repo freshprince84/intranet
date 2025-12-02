@@ -14,6 +14,100 @@ import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
  */
 export class WhatsAppFunctionHandlers {
   /**
+   * Parst ein Datum in verschiedenen Formaten
+   * Unterstützt: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, DD/MM, DD.MM
+   */
+  private static parseDate(dateStr: string): Date {
+    const trimmed = dateStr.trim();
+    
+    // Relative Daten (sollten bereits vorher behandelt werden, aber als Fallback)
+    if (trimmed === 'today' || trimmed === 'heute' || trimmed === 'hoy') {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+    if (trimmed === 'tomorrow' || trimmed === 'morgen' || trimmed === 'mañana') {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+    if (trimmed === 'day after tomorrow' || trimmed === 'übermorgen' || trimmed === 'pasado mañana') {
+      const date = new Date();
+      date.setDate(date.getDate() + 2);
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+    
+    // Format: DD/MM/YYYY oder DD/MM (aktuelles Jahr)
+    const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+    if (slashMatch) {
+      const day = parseInt(slashMatch[1], 10);
+      const month = parseInt(slashMatch[2], 10) - 1; // Monate sind 0-indexiert
+      const yearStr = slashMatch[3];
+      let year: number;
+      if (yearStr) {
+        year = parseInt(yearStr, 10);
+        // Wenn Jahr 2-stellig, interpretiere als 20XX
+        if (year < 100) {
+          year = 2000 + year;
+        }
+      } else {
+        // Kein Jahr angegeben → aktuelles Jahr
+        year = new Date().getFullYear();
+      }
+      return new Date(year, month, day);
+    }
+    
+    // Format: DD.MM.YYYY oder DD.MM (aktuelles Jahr)
+    const dotMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?$/);
+    if (dotMatch) {
+      const day = parseInt(dotMatch[1], 10);
+      const month = parseInt(dotMatch[2], 10) - 1;
+      const yearStr = dotMatch[3];
+      let year: number;
+      if (yearStr) {
+        year = parseInt(yearStr, 10);
+        if (year < 100) {
+          year = 2000 + year;
+        }
+      } else {
+        year = new Date().getFullYear();
+      }
+      return new Date(year, month, day);
+    }
+    
+    // Format: DD-MM-YYYY oder DD-MM (aktuelles Jahr)
+    const dashMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})(?:-(\d{2,4}))?$/);
+    if (dashMatch) {
+      const day = parseInt(dashMatch[1], 10);
+      const month = parseInt(dashMatch[2], 10) - 1;
+      const yearStr = dashMatch[3];
+      let year: number;
+      if (yearStr) {
+        year = parseInt(yearStr, 10);
+        if (year < 100) {
+          year = 2000 + year;
+        }
+      } else {
+        year = new Date().getFullYear();
+      }
+      return new Date(year, month, day);
+    }
+    
+    // Format: YYYY-MM-DD (ISO)
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (isoMatch) {
+      const year = parseInt(isoMatch[1], 10);
+      const month = parseInt(isoMatch[2], 10) - 1;
+      const day = parseInt(isoMatch[3], 10);
+      return new Date(year, month, day);
+    }
+    
+    // Fallback: Standard Date-Parsing
+    return new Date(trimmed);
+  }
+  /**
    * Holt Requests (Solicitudes) für einen User
    */
   static async get_requests(
@@ -1103,10 +1197,15 @@ export class WhatsAppFunctionHandlers {
         checkInDate = new Date();
         checkInDate.setDate(checkInDate.getDate() + 1);
         checkInDate.setHours(0, 0, 0, 0);
+      } else if (checkInDateStr === 'day after tomorrow' || checkInDateStr === 'übermorgen' || checkInDateStr === 'pasado mañana') {
+        checkInDate = new Date();
+        checkInDate.setDate(checkInDate.getDate() + 2);
+        checkInDate.setHours(0, 0, 0, 0);
       } else {
-        checkInDate = new Date(args.checkInDate);
+        // Versuche verschiedene Datum-Formate zu parsen
+        checkInDate = this.parseDate(args.checkInDate);
         if (isNaN(checkInDate.getTime())) {
-          throw new Error(`Ungültiges Check-in Datum: ${args.checkInDate}. Format: YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
+          throw new Error(`Ungültiges Check-in Datum: ${args.checkInDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
         }
       }
 
@@ -1119,10 +1218,15 @@ export class WhatsAppFunctionHandlers {
         checkOutDate = new Date();
         checkOutDate.setDate(checkOutDate.getDate() + 1);
         checkOutDate.setHours(23, 59, 59, 999);
+      } else if (checkOutDateStr === 'day after tomorrow' || checkOutDateStr === 'übermorgen' || checkOutDateStr === 'pasado mañana') {
+        checkOutDate = new Date();
+        checkOutDate.setDate(checkOutDate.getDate() + 2);
+        checkOutDate.setHours(23, 59, 59, 999);
       } else {
-        checkOutDate = new Date(args.checkOutDate);
+        // Versuche verschiedene Datum-Formate zu parsen
+        checkOutDate = this.parseDate(args.checkOutDate);
         if (isNaN(checkOutDate.getTime())) {
-          throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}. Format: YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
+          throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
         }
       }
 

@@ -82,24 +82,26 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
   
   // ✅ PERFORMANCE: Lade Filter für eine tableId
   const loadFilters = useCallback(async (tableId: string) => {
-    // ✅ FIX: Prüfe auf Filter im State, nicht nur loadedTablesRef
-    // Wenn Filter bereits im State sind, nicht nochmal laden
-    if (loadedTablesRef.current.has(tableId) || filters[tableId]) {
-      return;
+    // ✅ FIX: Prüfe nur auf Filter im State (Source of Truth)
+    // loadedTablesRef wird nur während des Ladens verwendet
+    if (filters[tableId]) {
+      return; // Filter bereits im State
     }
     
     // Wenn bereits am Laden, nicht nochmal starten
-    if (loading[tableId]) {
-      return;
+    if (loading[tableId] || loadedTablesRef.current.has(tableId)) {
+      return; // Wird bereits geladen
     }
     
     try {
+      loadedTablesRef.current.add(tableId); // ✅ Setze Flag: Wird geladen
       setLoading(prev => ({ ...prev, [tableId]: true }));
       setErrors(prev => ({ ...prev, [tableId]: null }));
       
       const token = localStorage.getItem('token');
       if (!token) {
         setErrors(prev => ({ ...prev, [tableId]: 'Nicht authentifiziert' }));
+        loadedTablesRef.current.delete(tableId); // ✅ Entferne Flag bei Fehler
         return;
       }
       
@@ -120,11 +122,13 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       setFilterGroups(prev => ({ ...prev, [tableId]: groupsData }));
       // ✅ MEMORY: Timestamp für TTL setzen
       filterCacheTimestamps.current[tableId] = Date.now();
-      loadedTablesRef.current.add(tableId);
+      // ✅ WICHTIG: loadedTablesRef NICHT hier setzen (nur während Laden)
+      // Filter im State sind Source of Truth
     } catch (error) {
       console.error(`[FilterContext] Fehler beim Laden der Filter für ${tableId}:`, error);
       setErrors(prev => ({ ...prev, [tableId]: 'Fehler beim Laden der Filter' }));
     } finally {
+      loadedTablesRef.current.delete(tableId); // ✅ Entferne Flag: Laden abgeschlossen
       setLoading(prev => ({ ...prev, [tableId]: false }));
     }
   }, [loading, filters]);
@@ -148,7 +152,8 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
         tablesToCleanup.forEach(tableId => {
           delete newFilters[tableId];
           delete filterCacheTimestamps.current[tableId];
-          loadedTablesRef.current.delete(tableId);
+          // ✅ FIX: loadedTablesRef NICHT löschen (wird nur während Laden verwendet)
+          // Wenn Filter gelöscht werden, wird loadedTablesRef automatisch beim nächsten loadFilters gesetzt
         });
         return newFilters;
       });
@@ -179,7 +184,8 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
         sortedTables.forEach(({ tableId }) => {
           delete newFilters[tableId];
           delete filterCacheTimestamps.current[tableId];
-          loadedTablesRef.current.delete(tableId);
+          // ✅ FIX: loadedTablesRef NICHT löschen (wird nur während Laden verwendet)
+          // Wenn Filter gelöscht werden, wird loadedTablesRef automatisch beim nächsten loadFilters gesetzt
         });
         
         setFilterGroups(prevGroups => {
@@ -269,12 +275,8 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
   
   // Helper-Funktionen
   const getFilters = useCallback((tableId: string): SavedFilter[] => {
-    // ✅ FIX: Wenn Filter nicht im State sind, aber loadedTablesRef gesetzt ist, Filter neu laden
-    if (!filters[tableId] && loadedTablesRef.current.has(tableId)) {
-      // Filter wurden gelöscht, aber loadedTablesRef ist noch gesetzt
-      // Lösche loadedTablesRef, damit Filter neu geladen werden können
-      loadedTablesRef.current.delete(tableId);
-    }
+    // ✅ FIX: Vereinfacht - filters[tableId] ist Source of Truth
+    // loadedTablesRef wird nur während Laden verwendet, nicht als Cache
     return filters[tableId] || [];
   }, [filters]);
   
