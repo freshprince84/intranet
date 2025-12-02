@@ -682,11 +682,18 @@ const Requests: React.FC = () => {
   const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
-    applyFilterConditions(conditions, operators, sortDirections);
     // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
     setSortConfig({ key: 'dueDate', direction: 'asc' });
     
-    // ✅ PAGINATION: Filter zurücksetzen - lade erste 20 Items
+    // ✅ FIX: Setze Filter-State, aber lade Daten nur EINMAL
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
+    if (sortDirections !== undefined) {
+      const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+      setFilterSortDirections(validSortDirections);
+    }
+    
+    // ✅ FIX: Lade Daten nur EINMAL (nicht doppelt über applyFilterConditions)
     if (id) {
       await fetchRequests(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
     } else if (conditions.length > 0) {
@@ -694,7 +701,6 @@ const Requests: React.FC = () => {
     } else {
       await fetchRequests(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
     }
-    // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedRequests angewendet
   };
 
   const getActiveFilterCount = () => {
