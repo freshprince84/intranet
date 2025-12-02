@@ -2761,7 +2761,7 @@ const Worktracker: React.FC = () => {
                             {/* Reservations Rendering - Cards */}
                             {activeTab === 'reservations' && viewMode === 'cards' && (
                                 <div className="-mx-3 sm:-mx-4 md:-mx-6">
-                                    {reservationsLoading ? (
+                                    {reservationsLoading && reservations.length === 0 ? (
                                         <div className="flex justify-center py-12">
                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
                                         </div>
@@ -3116,7 +3116,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            {reservationsLoading ? (
+                                            {reservationsLoading && reservations.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
                                                         <div className="flex justify-center">
@@ -4459,7 +4459,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            {reservationsLoading ? (
+                                            {reservationsLoading && reservations.length === 0 ? (
                                                 <tr>
                                                     <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
                                                         <div className="flex justify-center">

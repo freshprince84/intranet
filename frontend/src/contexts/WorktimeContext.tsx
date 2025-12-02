@@ -56,9 +56,9 @@ export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             intervalId = setInterval(() => {
                 // Prüfe nochmal, ob Seite sichtbar ist
                 if (!document.hidden) {
-                    checkTrackingStatus();
+            checkTrackingStatus();
                 }
-            }, 30000);
+        }, 30000);
         };
         
         const stopPolling = () => {
