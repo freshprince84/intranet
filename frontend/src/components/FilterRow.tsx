@@ -178,22 +178,33 @@ const FilterRow: React.FC<FilterRowProps> = ({
         }
       }
       
-      // ✅ NEU: RoomNumbers laden für roomNumber-Spalte (pro Branch)
+      // ✅ FIX: Zimmernamen laden für roomNumber-Spalte (Zimmername aus roomDescription für Dorms, roomNumber für Privates)
       if (condition.column === 'roomNumber') {
         setLoadingRoomNumbers(true);
         try {
-          // Hole alle Reservations und extrahiere eindeutige roomNumbers
-          // TODO: Später durch dedizierten API-Endpoint ersetzen
+          // Hole alle Reservations und extrahiere eindeutige Zimmernamen
+          // Dorms: roomDescription = Zimmername, roomNumber = Bettnummer
+          // Privates: roomNumber = Zimmername, roomDescription = optional
           const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE);
           const reservations = response.data?.data || response.data || [];
-          const uniqueRoomNumbers = Array.from(new Set(
-            reservations
-              .map((r: any) => r.roomNumber)
-              .filter((rn: string | null) => rn && rn.trim() !== '')
-          )).sort() as string[];
-          setRoomNumbers(uniqueRoomNumbers);
+          
+          // Kombiniere roomDescription (Dorms) und roomNumber (Privates) zu Zimmernamen
+          const roomNames = new Set<string>();
+          reservations.forEach((r: any) => {
+            // Für Dorms: roomDescription enthält Zimmername
+            if (r.roomDescription && r.roomDescription.trim() !== '') {
+              roomNames.add(r.roomDescription.trim());
+            }
+            // Für Privates: roomNumber enthält Zimmername (nur wenn nicht "Cama" - dann ist es Bettnummer)
+            if (r.roomNumber && r.roomNumber.trim() !== '' && !r.roomNumber.toLowerCase().startsWith('cama')) {
+              roomNames.add(r.roomNumber.trim());
+            }
+          });
+          
+          const uniqueRoomNames = Array.from(roomNames).sort();
+          setRoomNumbers(uniqueRoomNames);
         } catch (error) {
-          console.error('Fehler beim Laden der RoomNumbers:', error);
+          console.error('Fehler beim Laden der Zimmernamen:', error);
         } finally {
           setLoadingRoomNumbers(false);
         }

@@ -167,13 +167,26 @@ function convertSingleCondition(
       return {};
 
     case 'roomNumber':
-      // ✅ FIX: roomNumber nur = und != für Reservations (wie Status)
+      // ✅ FIX: Für Reservations: Filter nach Zimmername (roomNumber ODER roomDescription)
+      // Dorms: roomDescription = Zimmername, roomNumber = Bettnummer
+      // Privates: roomNumber = Zimmername, roomDescription = optional
       if (entityType === 'reservation') {
         if (operator === 'equals') {
-          return { roomNumber: { equals: value, mode: 'insensitive' } };
+          // OR: Suche in beiden Feldern (Zimmername kann in roomNumber oder roomDescription sein)
+          return {
+            OR: [
+              { roomNumber: { equals: value, mode: 'insensitive' } },
+              { roomDescription: { equals: value, mode: 'insensitive' } }
+            ]
+          };
         } else if (operator === 'notEquals') {
-          // Prisma notEquals für String-Felder (case-insensitive)
-          return { roomNumber: { not: { equals: value, mode: 'insensitive' } } };
+          // AND: Beide Felder müssen nicht gleich sein
+          return {
+            AND: [
+              { roomNumber: { not: { equals: value, mode: 'insensitive' } } },
+              { roomDescription: { not: { equals: value, mode: 'insensitive' } } }
+            ]
+          };
         }
       }
       return {};

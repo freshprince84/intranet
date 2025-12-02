@@ -48,12 +48,48 @@ export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Initiale Prüfung
         checkTrackingStatus();
 
-        // Polling für regelmäßige Statusprüfung alle 30 Sekunden
-        const intervalId = setInterval(() => {
-            checkTrackingStatus();
-        }, 30000);
+        // ✅ MEMORY: Polling nur wenn Seite sichtbar ist (Page Visibility API)
+        let intervalId: ReturnType<typeof setInterval> | null = null;
         
-        return () => clearInterval(intervalId);
+        const startPolling = () => {
+            if (intervalId) return; // Bereits gestartet
+            intervalId = setInterval(() => {
+                // Prüfe nochmal, ob Seite sichtbar ist
+                if (!document.hidden) {
+                    checkTrackingStatus();
+                }
+            }, 30000);
+        };
+        
+        const stopPolling = () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        };
+        
+        // Starte Polling wenn Seite sichtbar ist
+        if (!document.hidden) {
+            startPolling();
+        }
+        
+        // Event-Listener für Page Visibility
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                stopPolling();
+            } else {
+                // Seite ist wieder sichtbar - sofort prüfen und Polling starten
+                checkTrackingStatus();
+                startPolling();
+            }
+        };
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        return () => {
+            stopPolling();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []); // Leere Abhängigkeitsliste, da checkTrackingStatus im Komponentenkontext definiert ist
 
     return (

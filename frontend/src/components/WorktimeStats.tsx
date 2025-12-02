@@ -47,6 +47,10 @@ const WorktimeStats: React.FC = () => {
     const [commissionStats, setCommissionStats] = useState<any>(null);
     const [commissionLoading, setCommissionLoading] = useState(false);
     
+    // ✅ MEMORY: Refs für setTimeout-Cleanup
+    const statsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const periodChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    
     // Prüfe ob Organisation oder User aus Kolumbien kommt
     const isColombia = useMemo(() => {
         // Prüfe zuerst User-Land, dann Organisation (falls vorhanden)
@@ -127,6 +131,15 @@ const WorktimeStats: React.FC = () => {
     // ✅ MEMORY: Cleanup - Stats beim Unmount löschen
     useEffect(() => {
         return () => {
+            // ✅ MEMORY: Cleanup - setTimeout löschen
+            if (statsTimeoutRef.current) {
+                clearTimeout(statsTimeoutRef.current);
+                statsTimeoutRef.current = null;
+            }
+            if (periodChangeTimeoutRef.current) {
+                clearTimeout(periodChangeTimeoutRef.current);
+                periodChangeTimeoutRef.current = null;
+            }
             setStats(null);
             setFullStats(null);
             setCommissionStats(null);
@@ -269,10 +282,15 @@ const WorktimeStats: React.FC = () => {
             
             // ✅ PERFORMANCE: Rest im Hintergrund (nach 200ms Verzögerung)
             // Zeige vollständige Stats nach kurzer Verzögerung
-            setTimeout(() => {
+            // ✅ MEMORY: Cleanup - Alten Timeout löschen bevor neuer erstellt wird
+            if (statsTimeoutRef.current) {
+                clearTimeout(statsTimeoutRef.current);
+            }
+            statsTimeoutRef.current = setTimeout(() => {
                 if (fullStats === null && data && data.weeklyData) {
                     setStats(data); // ✅ Zeige vollständige Stats
                 }
+                statsTimeoutRef.current = null;
             }, 200);
             
             setError(null);
@@ -359,8 +377,13 @@ const WorktimeStats: React.FC = () => {
         queueMicrotask(() => {
             fetchStatsWithDate(newDate, newUseQuinzena);
             // Reset nach kurzer Verzögerung
-            setTimeout(() => {
+            // ✅ MEMORY: Cleanup - Alten Timeout löschen bevor neuer erstellt wird
+            if (periodChangeTimeoutRef.current) {
+                clearTimeout(periodChangeTimeoutRef.current);
+            }
+            periodChangeTimeoutRef.current = setTimeout(() => {
                 isManualPeriodChange.current = false;
+                periodChangeTimeoutRef.current = null;
             }, 100);
         });
     };

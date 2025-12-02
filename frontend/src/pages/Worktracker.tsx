@@ -2774,6 +2774,29 @@ const Worktracker: React.FC = () => {
                                     ) : (
                                         <CardGrid>
                                             {filteredAndSortedReservations.map(reservation => {
+                                                // ✅ FIX: Hilfsfunktion: Erkenne Dorm vs. Private und formatiere Zimmername-Anzeige
+                                                const getRoomDisplayText = (reservation: Reservation): string | null => {
+                                                    const isDorm = reservation.roomNumber?.toLowerCase().startsWith('cama') || 
+                                                                   (reservation.roomDescription && reservation.roomDescription.trim() !== '');
+                                                    
+                                                    if (isDorm) {
+                                                        // Dorm: Zeige "Zimmername (Bettnummer)"
+                                                        const roomName = reservation.roomDescription?.trim() || '';
+                                                        const bedNumber = reservation.roomNumber?.trim() || '';
+                                                        if (roomName && bedNumber) {
+                                                            return `${roomName} (${bedNumber})`;
+                                                        } else if (roomName) {
+                                                            return roomName;
+                                                        } else if (bedNumber) {
+                                                            return bedNumber;
+                                                        }
+                                                    } else {
+                                                        // Private: Zeige nur Zimmername
+                                                        return reservation.roomNumber?.trim() || null;
+                                                    }
+                                                    return null;
+                                                };
+                                                
                                                 const formatDate = (dateString: string) => {
                                                     try {
                                                         // Extrahiere nur den Datumsteil (YYYY-MM-DD) und parse als lokales Datum
@@ -2802,11 +2825,12 @@ const Worktracker: React.FC = () => {
                                                     section: 'main'
                                                 });
                                                 
-                                                // Zweite Zeile: Zimmernummer
-                                                if (reservation.roomNumber) {
+                                                // ✅ FIX: Zweite Zeile: Zimmername (Dorms: "Zimmername (Bettnummer)", Privates: "Zimmername")
+                                                const roomDisplayText = getRoomDisplayText(reservation);
+                                                if (roomDisplayText) {
                                                     metadata.push({
                                                         icon: <HomeIcon className="h-4 w-4" />,
-                                                        value: reservation.roomNumber,
+                                                        value: roomDisplayText,
                                                         section: 'main-second'
                                                     });
                                                 }
@@ -3169,10 +3193,32 @@ const Worktracker: React.FC = () => {
                                                                                 </td>
                                                                             );
                                                                         case 'roomNumber':
+                                                                            // ✅ FIX: Tabellen-Anzeige: Dorms zeigen "Zimmername (Bettnummer)", Privates zeigen nur "Zimmername"
+                                                                            const getRoomDisplayTextForTable = (reservation: Reservation): string => {
+                                                                                const isDorm = reservation.roomNumber?.toLowerCase().startsWith('cama') || 
+                                                                                               (reservation.roomDescription && reservation.roomDescription.trim() !== '');
+                                                                                
+                                                                                if (isDorm) {
+                                                                                    // Dorm: Zeige "Zimmername (Bettnummer)"
+                                                                                    const roomName = reservation.roomDescription?.trim() || '';
+                                                                                    const bedNumber = reservation.roomNumber?.trim() || '';
+                                                                                    if (roomName && bedNumber) {
+                                                                                        return `${roomName} (${bedNumber})`;
+                                                                                    } else if (roomName) {
+                                                                                        return roomName;
+                                                                                    } else if (bedNumber) {
+                                                                                        return bedNumber;
+                                                                                    }
+                                                                                } else {
+                                                                                    // Private: Zeige nur Zimmername
+                                                                                    return reservation.roomNumber?.trim() || '-';
+                                                                                }
+                                                                                return '-';
+                                                                            };
                                                                             return (
                                                                                 <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                                     <div className="text-sm text-gray-900 dark:text-gray-200">
-                                                                                        {reservation.roomNumber || '-'}
+                                                                                        {getRoomDisplayTextForTable(reservation)}
                                                                                     </div>
                                                                                 </td>
                                                                             );
@@ -4082,6 +4128,29 @@ const Worktracker: React.FC = () => {
                                     ) : (
                                         <CardGrid>
                                             {filteredAndSortedReservations.map(reservation => {
+                                                // ✅ FIX: Hilfsfunktion: Erkenne Dorm vs. Private und formatiere Zimmername-Anzeige
+                                                const getRoomDisplayText = (reservation: Reservation): string | null => {
+                                                    const isDorm = reservation.roomNumber?.toLowerCase().startsWith('cama') || 
+                                                                   (reservation.roomDescription && reservation.roomDescription.trim() !== '');
+                                                    
+                                                    if (isDorm) {
+                                                        // Dorm: Zeige "Zimmername (Bettnummer)"
+                                                        const roomName = reservation.roomDescription?.trim() || '';
+                                                        const bedNumber = reservation.roomNumber?.trim() || '';
+                                                        if (roomName && bedNumber) {
+                                                            return `${roomName} (${bedNumber})`;
+                                                        } else if (roomName) {
+                                                            return roomName;
+                                                        } else if (bedNumber) {
+                                                            return bedNumber;
+                                                        }
+                                                    } else {
+                                                        // Private: Zeige nur Zimmername
+                                                        return reservation.roomNumber?.trim() || null;
+                                                    }
+                                                    return null;
+                                                };
+                                                
                                                 const formatDate = (dateString: string) => {
                                                     try {
                                                         // Extrahiere nur den Datumsteil (YYYY-MM-DD) und parse als lokales Datum
@@ -4110,11 +4179,12 @@ const Worktracker: React.FC = () => {
                                                     section: 'main'
                                                 });
                                                 
-                                                // Zweite Zeile: Zimmernummer
-                                                if (reservation.roomNumber) {
+                                                // ✅ FIX: Zweite Zeile: Zimmername (Dorms: "Zimmername (Bettnummer)", Privates: "Zimmername")
+                                                const roomDisplayText = getRoomDisplayText(reservation);
+                                                if (roomDisplayText) {
                                                     metadata.push({
                                                         icon: <HomeIcon className="h-4 w-4" />,
-                                                        value: reservation.roomNumber,
+                                                        value: roomDisplayText,
                                                         section: 'main-second'
                                                     });
                                                 }
@@ -4466,10 +4536,32 @@ const Worktracker: React.FC = () => {
                                                                                 </td>
                                                                             );
                                                                         case 'roomNumber':
+                                                                            // ✅ FIX: Tabellen-Anzeige: Dorms zeigen "Zimmername (Bettnummer)", Privates zeigen nur "Zimmername"
+                                                                            const getRoomDisplayTextForTable = (reservation: Reservation): string => {
+                                                                                const isDorm = reservation.roomNumber?.toLowerCase().startsWith('cama') || 
+                                                                                               (reservation.roomDescription && reservation.roomDescription.trim() !== '');
+                                                                                
+                                                                                if (isDorm) {
+                                                                                    // Dorm: Zeige "Zimmername (Bettnummer)"
+                                                                                    const roomName = reservation.roomDescription?.trim() || '';
+                                                                                    const bedNumber = reservation.roomNumber?.trim() || '';
+                                                                                    if (roomName && bedNumber) {
+                                                                                        return `${roomName} (${bedNumber})`;
+                                                                                    } else if (roomName) {
+                                                                                        return roomName;
+                                                                                    } else if (bedNumber) {
+                                                                                        return bedNumber;
+                                                                                    }
+                                                                                } else {
+                                                                                    // Private: Zeige nur Zimmername
+                                                                                    return reservation.roomNumber?.trim() || '-';
+                                                                                }
+                                                                                return '-';
+                                                                            };
                                                                             return (
                                                                                 <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                                     <div className="text-sm text-gray-900 dark:text-gray-200">
-                                                                                        {reservation.roomNumber || '-'}
+                                                                                        {getRoomDisplayTextForTable(reservation)}
                                                                                     </div>
                                                                                 </td>
                                                                             );
