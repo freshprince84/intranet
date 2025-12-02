@@ -583,7 +583,7 @@ const Worktracker: React.FC = () => {
             const params: any = {
                 limit: limit,
                 offset: offset,
-                includeAttachments: 'false' // ✅ PERFORMANCE: Attachments optional - nur laden wenn benötigt
+                includeAttachments: 'true' // ✅ VORSCHAU: Attachments für Bild/Link-Vorschau benötigt
             };
             if (filterId) {
                 params.filterId = filterId;
