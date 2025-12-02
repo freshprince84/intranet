@@ -103,6 +103,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Responsive Tag-Display States (optimiert)
   const containerRef = useRef<HTMLDivElement>(null);
+  const grandParentRef = useRef<HTMLElement | null>(null); // ✅ FIX: Ref für Großeltern-Container
   const tagRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const [visibleTagCount, setVisibleTagCount] = useState(4); // Fallback für SSR
   const [containerWidth, setContainerWidth] = useState(0);
@@ -533,33 +534,17 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   }, [sortedFilters, measuredTagWidths]);
 
   // ✅ FIX: Berechne tatsächlich verfügbare Breite unter Berücksichtigung von negativen Margins
-  // Das Problem: Wenn der Container in einem Wrapper mit negativen Margins liegt, misst container.clientWidth
-  // die reduzierte Breite. Wir müssen die tatsächlich verfügbare Breite berechnen.
+  // Vereinfachte Lösung: Verwende grandParentRef wenn vorhanden, sonst Container-Breite
   const getAvailableWidth = useCallback(() => {
     if (!containerRef.current) return 0;
     
-    const container = containerRef.current;
-    const parentElement = container.parentElement;
-    
-    // Prüfe ob Parent negative Margins hat
-    if (parentElement) {
-      const parentStyles = window.getComputedStyle(parentElement);
-      const parentMarginLeft = parseFloat(parentStyles.marginLeft) || 0;
-      const parentMarginRight = parseFloat(parentStyles.marginRight) || 0;
-      
-      // Wenn Parent negative Margins hat, verwende die Breite des Großeltern-Containers
-      if (parentMarginLeft < 0 || parentMarginRight < 0) {
-        const grandParent = parentElement.parentElement;
-        if (grandParent) {
-          // Verwende die Breite des Großeltern-Containers (z.B. dashboard-tasks-wrapper)
-          // Diese Breite entspricht der tatsächlich verfügbaren Breite
-          return grandParent.clientWidth;
-        }
-      }
+    // Wenn wir einen Großeltern-Container-Ref haben (bei negativen Margins), verwende dessen Breite
+    if (grandParentRef.current) {
+      return grandParentRef.current.clientWidth;
     }
     
     // Fallback: Verwende Container-Breite (wenn keine negativen Margins vorhanden)
-    return container.clientWidth;
+    return containerRef.current.clientWidth;
   }, []);
 
   // Optimierte Sichtbarkeits-Berechnung mit useCallback
@@ -660,12 +645,34 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }, 100); // 100ms Debounce für Filter-Tags (schneller als Client-Tags)
   }, [calculateVisibleTags]);
 
-  // Optimierter ResizeObserver
+  // ✅ FIX: Initialisiere grandParentRef und setze ResizeObserver auf beide Container
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const container = containerRef.current;
+    const parentElement = container.parentElement;
+    
+    // Prüfe ob Parent negative Margins hat und setze grandParentRef
+    if (parentElement) {
+      const parentStyles = window.getComputedStyle(parentElement);
+      const parentMarginLeft = parseFloat(parentStyles.marginLeft) || 0;
+      const parentMarginRight = parseFloat(parentStyles.marginRight) || 0;
+      
+      if (parentMarginLeft < 0 || parentMarginRight < 0) {
+        const grandParent = parentElement.parentElement;
+        if (grandParent) {
+          grandParentRef.current = grandParent;
+        }
+      }
+    }
+
     const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(containerRef.current);
+    resizeObserver.observe(container);
+    
+    // ✅ FIX: Beobachte auch den Großeltern-Container, wenn vorhanden
+    if (grandParentRef.current) {
+      resizeObserver.observe(grandParentRef.current);
+    }
     
     // Auch Window-Resize überwachen für bessere Abdeckung
     window.addEventListener('resize', handleResize);
@@ -676,6 +683,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
       }
+      grandParentRef.current = null; // Cleanup
     };
   }, [handleResize]);
 
@@ -722,10 +730,15 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }
   }, [sortedFilters, visibleTagCount, isMeasuring, calculateVisibleTags]);
 
-  // Initial calculation nach Filter-Änderungen (nur wenn nicht im Messmodus)
+  // ✅ FIX: Initial calculation mit Verzögerung, damit Container ihre finale Größe haben
   useLayoutEffect(() => {
     if (!isMeasuring) {
-      calculateVisibleTags();
+      // Verzögerung, damit Container ihre finale Größe haben (besonders wichtig bei negativen Margins)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          calculateVisibleTags();
+        });
+      });
     }
   }, [calculateVisibleTags, isMeasuring]);
   
