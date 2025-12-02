@@ -1112,9 +1112,11 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 2. Validierung: Check-out muss nach Check-in liegen (erlaubt gleichen Tag für Tagestrips)
-      if (checkOutDate < checkInDate) {
-        throw new Error('Check-out Datum muss nach oder gleich Check-in Datum liegen');
+      // 2. Validierung: Check-out muss mindestens 1 Tag nach Check-in liegen
+      // WICHTIG: "heute bis heute" gibt es nicht! Check-out muss mindestens 1 Tag später sein
+      const daysDiff = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff < 1) {
+        throw new Error('Check-out Datum muss mindestens 1 Tag nach Check-in Datum liegen. Bitte geben Sie ein Check-out-Datum an (z.B. "morgen" oder ein konkretes Datum).');
       }
 
       // 3. Validierung: categoryId ist erforderlich für LobbyPMS Buchung
