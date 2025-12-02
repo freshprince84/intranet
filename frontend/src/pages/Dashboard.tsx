@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -20,12 +20,6 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // ✅ PERFORMANCE: Lazy Loading - Komponenten erst laden wenn sichtbar
-  const [isWorktimeStatsVisible, setIsWorktimeStatsVisible] = useState(false);
-  const [isRequestsVisible, setIsRequestsVisible] = useState(false);
-  const worktimeStatsRef = useRef<HTMLDivElement>(null);
-  const requestsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -46,52 +40,6 @@ const Dashboard: React.FC = () => {
     setLoading(false);
   }, [navigate]);
 
-  // ✅ PERFORMANCE: Lazy Loading - WorktimeStats mit Intersection Observer
-  useEffect(() => {
-    if (!worktimeStatsRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const firstEntry = entries[0];
-        if (firstEntry.isIntersecting) {
-          setIsWorktimeStatsVisible(true);
-          // Observer kann nach erstem Sichtbarwerden entfernt werden
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(worktimeStatsRef.current);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  // ✅ PERFORMANCE: Lazy Loading - Requests mit Intersection Observer
-  useEffect(() => {
-    if (!requestsRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const firstEntry = entries[0];
-        if (firstEntry.isIntersecting) {
-          setIsRequestsVisible(true);
-          // Observer kann nach erstem Sichtbarwerden entfernt werden
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(requestsRef.current);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -104,37 +52,14 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen dark:bg-gray-900">
       <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6" data-onboarding="dashboard-header">
-        {/* ✅ PERFORMANCE: Lazy Loading - WorktimeStats nur laden wenn sichtbar */}
-        <div ref={worktimeStatsRef} data-onboarding="worktime-stats">
-          {isWorktimeStatsVisible ? (
-            <WorktimeStats />
-          ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-              <div className="animate-pulse">
-                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
-                <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              </div>
-            </div>
-          )}
+        <div data-onboarding="worktime-stats">
+          <WorktimeStats />
         </div>
 
         <div className="mt-2 sm:mt-4 md:mt-6 grid grid-cols-1 gap-4">
-          {/* ✅ PERFORMANCE: Lazy Loading - Requests nur laden wenn sichtbar */}
-          <div ref={requestsRef} className="dashboard-requests-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full" data-onboarding="requests-section">
-            {isRequestsVisible ? (
-              <Requests />
-            ) : (
-              <div className="p-6">
-                <div className="animate-pulse">
-                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
-                  <div className="space-y-3">
-                    <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                    <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                    <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  </div>
-                </div>
-              </div>
-            )}
+          {/* Anfragen-Bereich */}
+          <div className="dashboard-requests-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full" data-onboarding="requests-section">
+            <Requests />
           </div>
           
           {/* App-Download-Bereich */}
