@@ -961,6 +961,34 @@ const Requests: React.FC = () => {
     }
   };
 
+  // ✅ PERFORMANCE: Skeleton-Loading für LCP-Element (sofort sichtbar, auch ohne Daten)
+  if (loading && requests.length === 0) {
+    return (
+      <div className="-mx-3 sm:-mx-4 md:-mx-6">
+        <CardGrid>
+          {Array(3).fill(null).map((_, i) => (
+            <div key={`skeleton-${i}`} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm">
+              <div className="space-y-4">
+                {/* LCP-Element: Titel-Skeleton */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded flex-1 min-w-0"></div>
+                </div>
+                {/* Status-Skeleton */}
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                {/* Metadaten-Skeleton */}
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </CardGrid>
+      </div>
+    );
+  }
   if (error) return <div className="p-4 text-red-600">{error}</div>;
 
   // Filtern und sortieren der Spalten gemäß den Benutzereinstellungen
