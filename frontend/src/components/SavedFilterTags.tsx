@@ -244,12 +244,15 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     // 3. Filter geladen wurden (nicht während Laden)
     if (defaultFilterName && !defaultFilterAppliedRef.current && filterLoadState === 'loaded') {
       // ✅ FIX: Wenn keine Filter geladen wurden, aber State ist "loaded"
-      // → Filter existieren nicht in DB → Kein Fallback, einfach keine Filter anwenden
+      // → Filter existieren nicht in DB → Lade Daten ohne Filter (Fallback)
       if (savedFilters.length === 0) {
-        // ✅ FIX: Kein Fallback - wenn keine Filter existieren, werden keine angewendet
-        // Daten werden ohne Filter geladen (nur wenn explizit zurückgesetzt)
+        // ✅ FIX: Wenn keine Filter existieren, lade Daten ohne Filter (Fallback)
+        // Dies verhindert, dass keine Daten angezeigt werden, wenn keine Filter existieren
         defaultFilterAppliedRef.current = true;
-        return; // Keine Filter → Keine Anwendung
+        if (onFilterChange) {
+          onFilterChange('', null, [], [], undefined);
+        }
+        return;
       }
       
       // ✅ Suche nach Default-Filter
@@ -278,13 +281,16 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
         }
       } else if (defaultFilterName) {
-        // ✅ FIX: Wenn Default-Filter nicht gefunden wurde, warnen aber nicht Fallback
+        // ✅ FIX: Wenn Default-Filter nicht gefunden wurde, warnen und Fallback
         if (process.env.NODE_ENV === 'development') {
           console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, savedFilters.map(f => f?.name));
         }
-        // ✅ FIX: Kein Fallback - wenn Default-Filter nicht existiert, werden keine angewendet
-        // Daten werden ohne Filter geladen (nur wenn explizit zurückgesetzt)
+        // ✅ FIX: Fallback - wenn Default-Filter nicht existiert, lade Daten ohne Filter
+        // Dies verhindert, dass keine Daten angezeigt werden, wenn Default-Filter fehlt
         defaultFilterAppliedRef.current = true;
+        if (onFilterChange) {
+          onFilterChange('', null, [], [], undefined);
+        }
       }
     }
   }, [defaultFilterName, filterLoadState, savedFilters, onFilterChange, onSelectFilter]);
