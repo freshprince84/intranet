@@ -150,9 +150,10 @@ class ClaudeConsole {
       this.logBuffer.push(logEntry);
     }
 
-    // Buffer-Größe begrenzen
-    if (this.logBuffer.length > 1000) {
-      this.logBuffer = this.logBuffer.slice(-500);
+    // ✅ MEMORY: Buffer-Größe deutlich reduzieren (verhindert Memory-Leak)
+    // Reduziert von 1000 auf 100 Einträge (jeder Eintrag kann 100KB-1MB groß sein)
+    if (this.logBuffer.length > 100) {
+      this.logBuffer = this.logBuffer.slice(-50);
     }
   }
 

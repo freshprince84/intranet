@@ -597,15 +597,17 @@ const Worktracker: React.FC = () => {
             const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE, { params });
             const responseData = response.data;
             
-            // ✅ DEBUG: Log Response-Struktur
-            console.log('[Worktracker Tasks] Response-Struktur:', {
-                isObject: typeof responseData === 'object',
-                hasData: responseData?.data !== undefined,
-                dataIsArray: Array.isArray(responseData?.data),
-                responseDataIsArray: Array.isArray(responseData),
-                keys: responseData ? Object.keys(responseData) : [],
-                dataType: responseData?.data ? typeof responseData.data : 'undefined'
-            });
+            // ✅ MEMORY: Debug-Logs nur in Development und reduziert
+            if (process.env.NODE_ENV === 'development' && false) { // Deaktiviert um Memory zu sparen
+                console.log('[Worktracker Tasks] Response-Struktur:', {
+                    isObject: typeof responseData === 'object',
+                    hasData: responseData?.data !== undefined,
+                    dataIsArray: Array.isArray(responseData?.data),
+                    responseDataIsArray: Array.isArray(responseData),
+                    keys: responseData ? Object.keys(responseData) : [],
+                    dataType: responseData?.data ? typeof responseData.data : 'undefined'
+                });
+            }
             
             // ✅ PAGINATION: Response-Struktur mit totalCount
             // Sicherstellen, dass tasksData immer ein Array ist
@@ -678,7 +680,16 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                setTasks(prev => [...prev, ...tasksWithAttachments]);
+                // ✅ MEMORY: Begrenze Array-Größe auf max 200 Items (verhindert Memory-Leak)
+                const MAX_ITEMS_IN_STATE = 200;
+                setTasks(prev => {
+                    const newTasks = [...prev, ...tasksWithAttachments];
+                    if (newTasks.length > MAX_ITEMS_IN_STATE) {
+                        // Behalte die neuesten Items
+                        return newTasks.slice(-MAX_ITEMS_IN_STATE);
+                    }
+                    return newTasks;
+                });
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
                 setTasks(tasksWithAttachments);
@@ -801,7 +812,16 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                setReservations(prev => [...prev, ...reservationsData]);
+                // ✅ MEMORY: Begrenze Array-Größe auf max 200 Items (verhindert Memory-Leak)
+                const MAX_ITEMS_IN_STATE = 200;
+                setReservations(prev => {
+                    const newReservations = [...prev, ...reservationsData];
+                    if (newReservations.length > MAX_ITEMS_IN_STATE) {
+                        // Behalte die neuesten Items
+                        return newReservations.slice(-MAX_ITEMS_IN_STATE);
+                    }
+                    return newReservations;
+                });
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
             setReservations(reservationsData);
@@ -1020,7 +1040,16 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                setTourBookings(prev => [...prev, ...bookingsData]);
+                // ✅ MEMORY: Begrenze Array-Größe auf max 200 Items (verhindert Memory-Leak)
+                const MAX_ITEMS_IN_STATE = 200;
+                setTourBookings(prev => {
+                    const newBookings = [...prev, ...bookingsData];
+                    if (newBookings.length > MAX_ITEMS_IN_STATE) {
+                        // Behalte die neuesten Items
+                        return newBookings.slice(-MAX_ITEMS_IN_STATE);
+                    }
+                    return newBookings;
+                });
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
                 setTourBookings(bookingsData);
@@ -1328,10 +1357,10 @@ const Worktracker: React.FC = () => {
         // ✅ PAGINATION: Verwende tasks (bereits server-seitig gefiltert und paginiert)
         const tasksToFilter = tasks;
         
-        if (process.env.NODE_ENV === 'development') {
-        console.log('🔄 Filtere Tasks:', tasksToFilter.length, 'Tasks vorhanden');
-            // ✅ PAGINATION: tasks werden server-seitig gefiltert und paginiert
-        }
+        // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+        // if (process.env.NODE_ENV === 'development') {
+        //     console.log('🔄 Filtere Tasks:', tasksToFilter.length, 'Tasks vorhanden');
+        // }
         
         // Sicherstellen, dass keine undefined/null Werte im Array sind
         const validTasks = tasksToFilter.filter(task => task != null);
@@ -1358,9 +1387,10 @@ const Worktracker: React.FC = () => {
                 return true;
             });
         
-        if (process.env.NODE_ENV === 'development') {
-            console.log('✅ Gefilterte Tasks:', filtered.length, 'von', tasks.length, 'Tasks');
-        }
+        // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+        // if (process.env.NODE_ENV === 'development') {
+        //     console.log('✅ Gefilterte Tasks:', filtered.length, 'von', tasks.length, 'Tasks');
+        // }
         
         // Hilfsfunktion zum Extrahieren von Werten für Sortierung
         const getSortValue = (task: Task, columnId: string): any => {
@@ -1493,7 +1523,8 @@ const Worktracker: React.FC = () => {
         });
         
         if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
+        // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+        // console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         }
         return sorted;
     }, [tasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]);
@@ -1789,7 +1820,8 @@ const Worktracker: React.FC = () => {
         });
         
         if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
+        // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+        // console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
         }
         return sorted;
     }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
@@ -1995,7 +2027,8 @@ const Worktracker: React.FC = () => {
         if (window.confirm(t('worktime.messages.taskDeleteConfirm'))) {
             if (process.env.NODE_ENV === 'development') {
             console.log('🗑️ Starte Löschung von Task:', taskId);
-            console.log('📋 Aktuelle Tasks vor Löschung:', tasks.length);
+            // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+            // console.log('📋 Aktuelle Tasks vor Löschung:', tasks.length);
             }
             
             // Optimistisches Update: Task sofort aus Liste entfernen für sofortiges Feedback
@@ -2003,7 +2036,8 @@ const Worktracker: React.FC = () => {
             setTasks(prevTasks => {
                 const filtered = prevTasks.filter(task => task != null && task.id !== taskId);
                 if (process.env.NODE_ENV === 'development') {
-                console.log('📋 Tasks nach Filterung:', filtered.length, 'von', prevTasks.length);
+                // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+                // console.log('📋 Tasks nach Filterung:', filtered.length, 'von', prevTasks.length);
                 }
                 return filtered;
             });
@@ -2986,7 +3020,8 @@ const Worktracker: React.FC = () => {
                                                 const hasWritePermission = hasPermission('reservations', 'write', 'table');
                                                 // Debug: Log für Berechtigungsprüfung (nur für erste Reservation) - IMMER loggen
                                                 if (reservation.id === filteredAndSortedReservations[0]?.id) {
-                                                    console.log('[Reservations] Berechtigungsprüfung:', {
+                                                    // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+                                                    // console.log('[Reservations] Berechtigungsprüfung:', {
                                                         hasWritePermission,
                                                         reservationId: reservation.id,
                                                         entity: 'reservations',

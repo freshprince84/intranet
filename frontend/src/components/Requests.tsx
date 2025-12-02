@@ -396,15 +396,15 @@ const Requests: React.FC = () => {
       const response = await axiosInstance.get('/requests', { params });
       const responseData = response.data;
       
-      // ✅ DEBUG: Log Response-Struktur
-      console.log('[Requests] Response-Struktur:', {
-        isObject: typeof responseData === 'object',
-        hasData: responseData?.data !== undefined,
-        dataIsArray: Array.isArray(responseData?.data),
-        responseDataIsArray: Array.isArray(responseData),
-        keys: responseData ? Object.keys(responseData) : [],
-        dataType: responseData?.data ? typeof responseData.data : 'undefined'
-      });
+      // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
+      // console.log('[Requests] Response-Struktur:', {
+      //   isObject: typeof responseData === 'object',
+      //   hasData: responseData?.data !== undefined,
+      //   dataIsArray: Array.isArray(responseData?.data),
+      //   responseDataIsArray: Array.isArray(responseData),
+      //   keys: responseData ? Object.keys(responseData) : [],
+      //   dataType: responseData?.data ? typeof responseData.data : 'undefined'
+      // });
       
       // ✅ PAGINATION: Response-Struktur mit totalCount
       // Sicherstellen, dass requestsData immer ein Array ist
@@ -473,7 +473,16 @@ const Requests: React.FC = () => {
       
       if (append) {
         // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-        setRequests(prev => [...prev, ...requestsWithAttachments]);
+        // ✅ MEMORY: Begrenze Array-Größe auf max 200 Items (verhindert Memory-Leak)
+        const MAX_ITEMS_IN_STATE = 200;
+        setRequests(prev => {
+          const newRequests = [...prev, ...requestsWithAttachments];
+          if (newRequests.length > MAX_ITEMS_IN_STATE) {
+            // Behalte die neuesten Items
+            return newRequests.slice(-MAX_ITEMS_IN_STATE);
+          }
+          return newRequests;
+        });
       } else {
         // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
         setRequests(requestsWithAttachments);

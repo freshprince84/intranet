@@ -1070,6 +1070,7 @@ export class WhatsAppFunctionHandlers {
       guestName: string;
       roomType: 'compartida' | 'privada';
       categoryId?: number;
+      roomName?: string; // Optional: Zimmer-Name (z.B. "el abuelo viajero", "la tia artista")
       guestPhone?: string;
       guestEmail?: string;
     },
@@ -1078,16 +1079,20 @@ export class WhatsAppFunctionHandlers {
     branchId: number // WICHTIG: Wird automatisch aus Context übergeben
   ): Promise<any> {
     try {
-      // 1. Parse Datum (unterstützt "today"/"heute"/"hoy")
+      // 1. Parse Datum (unterstützt "today"/"heute"/"hoy"/"tomorrow"/"morgen"/"mañana")
       let checkInDate: Date;
       const checkInDateStr = args.checkInDate.toLowerCase().trim();
       if (checkInDateStr === 'today' || checkInDateStr === 'heute' || checkInDateStr === 'hoy') {
         checkInDate = new Date();
         checkInDate.setHours(0, 0, 0, 0);
+      } else if (checkInDateStr === 'tomorrow' || checkInDateStr === 'morgen' || checkInDateStr === 'mañana') {
+        checkInDate = new Date();
+        checkInDate.setDate(checkInDate.getDate() + 1);
+        checkInDate.setHours(0, 0, 0, 0);
       } else {
         checkInDate = new Date(args.checkInDate);
         if (isNaN(checkInDate.getTime())) {
-          throw new Error(`Ungültiges Check-in Datum: ${args.checkInDate}`);
+          throw new Error(`Ungültiges Check-in Datum: ${args.checkInDate}. Format: YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
         }
       }
 
@@ -1096,16 +1101,20 @@ export class WhatsAppFunctionHandlers {
       if (checkOutDateStr === 'today' || checkOutDateStr === 'heute' || checkOutDateStr === 'hoy') {
         checkOutDate = new Date();
         checkOutDate.setHours(23, 59, 59, 999);
+      } else if (checkOutDateStr === 'tomorrow' || checkOutDateStr === 'morgen' || checkOutDateStr === 'mañana') {
+        checkOutDate = new Date();
+        checkOutDate.setDate(checkOutDate.getDate() + 1);
+        checkOutDate.setHours(23, 59, 59, 999);
       } else {
         checkOutDate = new Date(args.checkOutDate);
         if (isNaN(checkOutDate.getTime())) {
-          throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}`);
+          throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}. Format: YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
         }
       }
 
-      // 2. Validierung: Check-out muss nach Check-in liegen
-      if (checkOutDate <= checkInDate) {
-        throw new Error('Check-out Datum muss nach Check-in Datum liegen');
+      // 2. Validierung: Check-out muss nach Check-in liegen (erlaubt gleichen Tag für Tagestrips)
+      if (checkOutDate < checkInDate) {
+        throw new Error('Check-out Datum muss nach oder gleich Check-in Datum liegen');
       }
 
       // 3. Validierung: categoryId ist erforderlich für LobbyPMS Buchung
@@ -1118,9 +1127,27 @@ export class WhatsAppFunctionHandlers {
           const availability = await lobbyPmsService.checkAvailability(checkInDate, checkOutDate);
           
           // Finde Zimmer mit passendem roomType
-          const matchingRooms = availability.filter(item => item.roomType === args.roomType);
+          let matchingRooms = availability.filter(item => item.roomType === args.roomType);
           
-          if (matchingRooms.length === 1) {
+          // WICHTIG: Wenn roomName angegeben ist, suche nach ähnlichem Namen
+          if (args.roomName && matchingRooms.length > 1) {
+            const roomNameLower = args.roomName.toLowerCase().trim();
+            // Suche nach exakter Übereinstimmung oder Teilübereinstimmung
+            const nameMatch = matchingRooms.find(item => {
+              const itemNameLower = item.roomName.toLowerCase();
+              return itemNameLower === roomNameLower || 
+                     itemNameLower.includes(roomNameLower) || 
+                     roomNameLower.includes(itemNameLower);
+            });
+            
+            if (nameMatch) {
+              categoryId = nameMatch.categoryId;
+              console.log(`[create_room_reservation] categoryId aus Zimmer-Namen gefunden: ${categoryId} (${nameMatch.roomName})`);
+            } else {
+              // Keine exakte Übereinstimmung, aber mehrere Zimmer → Fehler
+              throw new Error(`Mehrere ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} verfügbar. Bitte wählen Sie ein spezifisches Zimmer aus der Verfügbarkeitsliste.`);
+            }
+          } else if (matchingRooms.length === 1) {
             // Nur ein Zimmer dieser Art verfügbar → verwende es
             categoryId = matchingRooms[0].categoryId;
             console.log(`[create_room_reservation] categoryId aus Verfügbarkeit gefunden: ${categoryId} (${matchingRooms[0].roomName})`);
