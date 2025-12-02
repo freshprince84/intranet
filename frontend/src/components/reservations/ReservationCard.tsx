@@ -121,15 +121,38 @@ const ReservationCard: React.FC<ReservationCardProps> = ({ reservation, onClick,
           </span>
         </div>
 
-        {/* Zimmer */}
-        {reservation.roomNumber && (
-          <div className="flex items-center text-gray-600 dark:text-gray-400">
-            <HomeIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span>
-              {t('reservations.room', 'Zimmer')} {reservation.roomNumber}
-            </span>
-          </div>
-        )}
+        {/* ✅ FIX: Zimmer - Dorms zeigen "Zimmername (Bettnummer)", Privates zeigen nur "Zimmername" */}
+        {(() => {
+          const isDorm = reservation.roomNumber?.toLowerCase().startsWith('cama') || 
+                         (reservation.roomDescription && reservation.roomDescription.trim() !== '');
+          
+          let roomDisplayText: string | null = null;
+          
+          if (isDorm) {
+            // Dorm: Zeige "Zimmername (Bettnummer)"
+            const roomName = reservation.roomDescription?.trim() || '';
+            const bedNumber = reservation.roomNumber?.trim() || '';
+            if (roomName && bedNumber) {
+              roomDisplayText = `${roomName} (${bedNumber})`;
+            } else if (roomName) {
+              roomDisplayText = roomName;
+            } else if (bedNumber) {
+              roomDisplayText = bedNumber;
+            }
+          } else {
+            // Private: Zeige nur Zimmername
+            roomDisplayText = reservation.roomNumber?.trim() || null;
+          }
+          
+          return roomDisplayText ? (
+            <div className="flex items-center text-gray-600 dark:text-gray-400">
+              <HomeIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>
+                {t('reservations.room', 'Zimmer')} {roomDisplayText}
+              </span>
+            </div>
+          ) : null;
+        })()}
 
         {/* E-Mail */}
         {reservation.guestEmail && (

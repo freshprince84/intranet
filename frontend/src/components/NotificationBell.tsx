@@ -169,9 +169,48 @@ const NotificationBell: React.FC = () => {
   useEffect(() => {
     fetchUnreadCount();
     
-    const interval = setInterval(fetchUnreadCount, 60000);
+    // ✅ MEMORY: Polling nur wenn Seite sichtbar ist (Page Visibility API)
+    let interval: ReturnType<typeof setInterval> | null = null;
     
-    return () => clearInterval(interval);
+    const startPolling = () => {
+      if (interval) return; // Bereits gestartet
+      interval = setInterval(() => {
+        // Prüfe nochmal, ob Seite sichtbar ist
+        if (!document.hidden) {
+          fetchUnreadCount();
+        }
+      }, 60000);
+    };
+    
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+    
+    // Starte Polling wenn Seite sichtbar ist
+    if (!document.hidden) {
+      startPolling();
+    }
+    
+    // Event-Listener für Page Visibility
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        // Seite ist wieder sichtbar - sofort prüfen und Polling starten
+        fetchUnreadCount();
+        startPolling();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
