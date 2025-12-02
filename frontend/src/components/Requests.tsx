@@ -526,15 +526,16 @@ const Requests: React.FC = () => {
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // ✅ FIX: Warte auf Filter-Load, dann wird Default-Filter angewendet, dann werden Daten geladen
-  // ✅ Fallback: Wenn nach 2 Sekunden keine Filter geladen wurden, Requests ohne Filter laden
+  // ✅ Fallback: Wenn nach 3 Sekunden keine Requests geladen wurden, Requests ohne Filter laden
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       // Prüfe, ob Requests bereits geladen wurden
-      if (requests.length === 0 && !loading) {
-        // Fallback: Lade Requests ohne Filter
+      // ✅ FIX: Prüfe auch, ob loading noch true ist (dann wurde fetchRequests nie aufgerufen)
+      if (requests.length === 0) {
+        // Fallback: Lade Requests ohne Filter (auch wenn loading noch true ist)
         fetchRequests(undefined, undefined, false, 20, 0);
       }
-    }, 2000); // 2 Sekunden Wartezeit
+    }, 3000); // 3 Sekunden Wartezeit (erhöht von 2 auf 3 Sekunden)
     
     return () => {
       clearTimeout(timeoutId);

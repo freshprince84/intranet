@@ -221,12 +221,24 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
   // ✅ Wird ausgeführt, NACHDEM Filter geladen wurden
   useEffect(() => {
-    // Warte bis Filter geladen sind
-    if (loading) return;
-    
     // ✅ FIX: Prüfe nur defaultFilterAppliedRef, nicht activeFilterName/selectedFilterId
     // Diese könnten bereits gesetzt sein, aber der Default-Filter wurde noch nicht angewendet
     if (defaultFilterName && !defaultFilterAppliedRef.current) {
+      // ✅ FIX: Wenn Filter noch laden, warte max 3 Sekunden, dann Fallback
+      if (loading) {
+        const timeoutId = setTimeout(() => {
+          // Nach 3 Sekunden: Fallback ausführen, auch wenn loading noch true ist
+          if (!defaultFilterAppliedRef.current && onFilterChange) {
+            defaultFilterAppliedRef.current = true;
+            onFilterChange('', null, [], [], undefined);
+          }
+        }, 3000);
+        
+        return () => {
+          clearTimeout(timeoutId);
+        };
+      }
+      
       // ✅ FIX: Wenn keine Filter geladen wurden, Fallback ausführen
       if (savedFilters.length === 0) {
         // Keine Filter geladen → Fallback: Lade Daten ohne Filter
