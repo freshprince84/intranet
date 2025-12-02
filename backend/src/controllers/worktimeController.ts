@@ -1218,9 +1218,6 @@ export const checkAndStopExceededWorktimes = async () => {
       }
 
       // Füge die aktuelle laufende Sitzung hinzu
-      // KORREKT: Beide Werte (now.getTime() und worktime.startTime.getTime()) sind bereits UTC-Millisekunden
-      // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
-      // Siehe getWorktimeStats Zeile 639-641 für die korrekte Referenz-Implementierung
       // WICHTIG: worktime.startTime wurde als lokale Zeit gespeichert, aber getTime() gibt UTC-Millisekunden zurück
       // Da die Datenbank die Zeit als lokale Zeit speichert, müssen wir sicherstellen, dass beide Werte korrekt interpretiert werden
       const startTimeUtcMs = worktime.startTime.getTime(); // UTC-Millisekunden

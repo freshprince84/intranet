@@ -526,22 +526,20 @@ const Requests: React.FC = () => {
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // ✅ FIX: Warnung wenn nach 5 Sekunden kein Filter angewendet wurde (nur in Development)
-  // Prüft direkt auf selectedFilterId und filterConditions (kein redundanter State nötig)
+  // ✅ FIX: Fallback - Lade Daten wenn nach 1 Sekunde kein Filter angewendet wurde
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      const timeoutId = setTimeout(() => {
-        // ✅ Prüfe direkt auf selectedFilterId und filterConditions
-        if (selectedFilterId === null && filterConditions.length === 0 && requests.length === 0) {
-          console.warn('[Requests] Kein Filter wurde angewendet nach 5 Sekunden. Möglicherweise fehlt Default-Filter in SavedFilterTags.');
-        }
-      }, 5000);
-      
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [selectedFilterId, filterConditions.length, requests.length]);
+    const timeoutId = setTimeout(() => {
+      // ✅ Prüfe direkt auf selectedFilterId und filterConditions
+      if (selectedFilterId === null && filterConditions.length === 0 && requests.length === 0 && loading) {
+        // Kein Filter wurde angewendet → Lade Daten ohne Filter (Fallback)
+        fetchRequests(undefined, undefined, false, 20, 0);
+      }
+    }, 1000);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [selectedFilterId, filterConditions.length, requests.length, loading, fetchRequests]);
 
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {

@@ -404,13 +404,13 @@ const Worktracker: React.FC = () => {
     // ✅ MEMORY: Cleanup - Alle großen Arrays beim Unmount löschen
     useEffect(() => {
         return () => {
-            // Tasks
+            // Tasks - NUR beim Unmount löschen, NICHT beim Neuladen
             setTasks([]);
             
-            // Reservations
+            // Reservations - NUR beim Unmount löschen, NICHT beim Neuladen
             setReservations([]);
             
-            // Tour Bookings
+            // Tour Bookings - NUR beim Unmount löschen, NICHT beim Neuladen
             setTourBookings([]);
             
             // ✅ MEMORY: Alle Filter-States löschen (vollständig)
@@ -2420,15 +2420,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            {loading && tasks.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
-                                                        <div className="flex justify-center">
-                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ) : error ? (
+                                            {error ? (
                                                 <tr>
                                                     <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
                                                         {error}
@@ -2761,11 +2753,7 @@ const Worktracker: React.FC = () => {
                             {/* Reservations Rendering - Cards */}
                             {activeTab === 'reservations' && viewMode === 'cards' && (
                                 <div className="-mx-3 sm:-mx-4 md:-mx-6">
-                                    {reservationsLoading && reservations.length === 0 ? (
-                                        <div className="flex justify-center py-12">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                        </div>
-                                    ) : reservationsError ? (
+                                    {reservationsError ? (
                                         <div className="flex justify-center py-12 text-red-600 dark:text-red-400">
                                             {reservationsError}
                                         </div>
@@ -3116,15 +3104,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            {reservationsLoading && reservations.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
-                                                        <div className="flex justify-center">
-                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ) : reservationsError ? (
+                                            {reservationsError ? (
                                                 <tr>
                                                     <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
                                                         {reservationsError}
@@ -3775,15 +3755,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            {loading && tasks.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
-                                                        <div className="flex justify-center">
-                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ) : error ? (
+                                            {error ? (
                                                 <tr>
                                                     <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
                                                         {error}
@@ -4116,11 +4088,7 @@ const Worktracker: React.FC = () => {
                             {/* Reservations Rendering - Desktop - Cards */}
                             {activeTab === 'reservations' && viewMode === 'cards' && (
                                 <div className="-mx-3 sm:-mx-4 md:-mx-6">
-                                    {reservationsLoading && reservations.length === 0 ? (
-                                        <div className="flex justify-center py-12">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                        </div>
-                                    ) : reservationsError ? (
+                                    {reservationsError ? (
                                         <div className="flex justify-center py-12 text-red-600 dark:text-red-400">
                                             {reservationsError}
                                         </div>
@@ -4459,15 +4427,7 @@ const Worktracker: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            {reservationsLoading && reservations.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
-                                                        <div className="flex justify-center">
-                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ) : reservationsError ? (
+                                            {reservationsError ? (
                                                 <tr>
                                                     <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
                                                         {reservationsError}
