@@ -680,16 +680,7 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                // ✅ MEMORY: Begrenze Array-Größe auf max 200 Items (verhindert Memory-Leak)
-                const MAX_ITEMS_IN_STATE = 200;
-                setTasks(prev => {
-                    const newTasks = [...prev, ...tasksWithAttachments];
-                    if (newTasks.length > MAX_ITEMS_IN_STATE) {
-                        // Behalte die neuesten Items
-                        return newTasks.slice(-MAX_ITEMS_IN_STATE);
-                    }
-                    return newTasks;
-                });
+                setTasks(prev => [...prev, ...tasksWithAttachments]);
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
                 setTasks(tasksWithAttachments);
@@ -812,16 +803,7 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                // ✅ MEMORY: Begrenze Array-Größe auf max 200 Items (verhindert Memory-Leak)
-                const MAX_ITEMS_IN_STATE = 200;
-                setReservations(prev => {
-                    const newReservations = [...prev, ...reservationsData];
-                    if (newReservations.length > MAX_ITEMS_IN_STATE) {
-                        // Behalte die neuesten Items
-                        return newReservations.slice(-MAX_ITEMS_IN_STATE);
-                    }
-                    return newReservations;
-                });
+                setReservations(prev => [...prev, ...reservationsData]);
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
             setReservations(reservationsData);
@@ -1040,16 +1022,7 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                // ✅ MEMORY: Begrenze Array-Größe auf max 200 Items (verhindert Memory-Leak)
-                const MAX_ITEMS_IN_STATE = 200;
-                setTourBookings(prev => {
-                    const newBookings = [...prev, ...bookingsData];
-                    if (newBookings.length > MAX_ITEMS_IN_STATE) {
-                        // Behalte die neuesten Items
-                        return newBookings.slice(-MAX_ITEMS_IN_STATE);
-                    }
-                    return newBookings;
-                });
+                setTourBookings(prev => [...prev, ...bookingsData]);
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
                 setTourBookings(bookingsData);

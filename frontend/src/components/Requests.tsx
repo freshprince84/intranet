@@ -473,16 +473,7 @@ const Requests: React.FC = () => {
       
       if (append) {
         // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-        // ✅ MEMORY: Begrenze Array-Größe auf max 200 Items (verhindert Memory-Leak)
-        const MAX_ITEMS_IN_STATE = 200;
-        setRequests(prev => {
-          const newRequests = [...prev, ...requestsWithAttachments];
-          if (newRequests.length > MAX_ITEMS_IN_STATE) {
-            // Behalte die neuesten Items
-            return newRequests.slice(-MAX_ITEMS_IN_STATE);
-          }
-          return newRequests;
-        });
+        setRequests(prev => [...prev, ...requestsWithAttachments]);
       } else {
         // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
         setRequests(requestsWithAttachments);
