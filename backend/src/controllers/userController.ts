@@ -12,6 +12,7 @@ import { organizationMiddleware, getUserOrganizationFilter, getDataIsolationFilt
 import { LifecycleService } from '../services/lifecycleService';
 import { userLanguageCache } from '../services/userLanguageCache';
 import { userCache } from '../services/userCache';
+import { filterListCache } from '../services/filterListCache';
 
 interface AuthenticatedRequest extends Request {
     userId: string;
@@ -435,6 +436,12 @@ export const updateUserById = async (req: Request, res: Response) => {
         }
         // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
         userCache.invalidate(userId);
+        // ✅ FIX: FilterListCache invalidieren wenn User aktiviert/deaktiviert wird (betrifft User-Filter-Gruppen)
+        if ('active' in updateData && updateData.active !== undefined) {
+            // Wenn User-Status geändert wird, müssen alle Filter-Gruppen-Caches invalidiert werden
+            // (da User-Filter-Gruppen nur aktive User zeigen sollen)
+            filterListCache.clear();
+        }
 
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
@@ -1856,6 +1863,12 @@ export const updateUser = async (req: Request, res: Response) => {
         }
         // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
         userCache.invalidate(userId);
+        // ✅ FIX: FilterListCache invalidieren wenn User aktiviert/deaktiviert wird (betrifft User-Filter-Gruppen)
+        if ('active' in updateData && updateData.active !== undefined) {
+            // Wenn User-Status geändert wird, müssen alle Filter-Gruppen-Caches invalidiert werden
+            // (da User-Filter-Gruppen nur aktive User zeigen sollen)
+            filterListCache.clear();
+        }
 
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {

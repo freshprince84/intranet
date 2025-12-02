@@ -525,10 +525,11 @@ const Requests: React.FC = () => {
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // ✅ PAGINATION: Initial nur 20 Requests laden
-  useEffect(() => {
-    fetchRequests(undefined, undefined, false, 20, 0);
-  }, []);
+  // ✅ FIX: Warte auf Filter-Load, dann wird Default-Filter angewendet, dann werden Daten geladen
+  // ✅ Kein initiales Laden mehr - SavedFilterTags wendet Default-Filter an und löst handleFilterChange aus
+  // useEffect(() => {
+  //   fetchRequests(undefined, undefined, false, 20, 0);
+  // }, []);
 
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {
