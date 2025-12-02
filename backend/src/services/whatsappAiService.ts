@@ -689,6 +689,12 @@ export class WhatsAppAiService {
     prompt += '    - "ich möchte das Zimmer 2 buchen vom 1.12. bis 3.12." → create_room_reservation({ checkInDate: "2025-12-01", checkOutDate: "2025-12-04", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34281 })\n';
     prompt += '    - "reservar habitación privada bis zum 3.12." → create_room_reservation({ checkInDate: "today", checkOutDate: "2025-12-04", guestName: "Juan Pérez", roomType: "privada" })\n';
     prompt += '    - "heute buchen" → FRAGE: "Für wie viele Nächte möchten Sie buchen?" oder "Bis wann möchten Sie bleiben?" (checkOutDate ist erforderlich!)\n';
+    prompt += '    - User: "el abuelo viajero buchen für heute" → Bot fragt nach Check-out → User: "1" → Bot interpretiert als "1 Nacht" → create_room_reservation({ checkInDate: "today", checkOutDate: "tomorrow", ... })\n';
+    prompt += '    - User: "checkin 02.12. und checkout 03.12.25" → Bot: "Möchten Sie bis zum 03.12. bleiben?" → User: "ja" → Bot interpretiert als Bestätigung → create_room_reservation({ checkInDate: "2025-12-02", checkOutDate: "2025-12-04", ... })\n';
+    prompt += '    - User: "dorm, Patrick Ammann" (nachdem Daten bereits genannt wurden) → Bot hat alle Infos → User: "ok, buchen" → Bot ruft SOFORT create_room_reservation auf!\n';
+    prompt += '    - User: "el abuelo viajero buchen für heute" → Bot fragt nach Check-out → User: "1" → Bot interpretiert als "1 Nacht" → create_room_reservation({ checkInDate: "today", checkOutDate: "tomorrow", ... })\n';
+    prompt += '    - User: "checkin 02.12. und checkout 03.12.25" → Bot: "Möchten Sie bis zum 03.12. bleiben?" → User: "ja" → Bot interpretiert als Bestätigung → create_room_reservation({ checkInDate: "2025-12-02", checkOutDate: "2025-12-04", ... })\n';
+    prompt += '    - User: "dorm, Patrick Ammann" (nachdem Daten bereits genannt wurden) → Bot hat alle Infos → User: "ok, buchen" → Bot ruft SOFORT create_room_reservation auf!\n';
     
     // Andere Funktionen - nur für Mitarbeiter
     if (conversationContext?.userId) {
@@ -713,13 +719,25 @@ export class WhatsAppAiService {
     prompt += '\nWICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "la tia artista"), finde die categoryId aus der vorherigen check_room_availability Response!';
     prompt += '\nWICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat, verwende "today" als checkInDate!';
     prompt += '\nWICHTIG: Wenn User nach einer Buchungsanfrage Daten gibt (z.B. "01.dez bis 02.dez"), rufe create_room_reservation auf, NICHT check_room_availability!';
-    prompt += '\nWICHTIG: Nutze den Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende es als Check-in-Datum!';
+    prompt += '\n\n=== KRITISCH: KONTEXT-NUTZUNG ===';
+    prompt += '\nWICHTIG: Du MUSST ALLE Informationen aus der aktuellen UND vorherigen Nachrichten nutzen!';
+    prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht "heute" gesagt hat, verwende es IMMER als checkInDate!';
+    prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht "checkin 02.12. und checkout 03.12." gesagt hat, verwende diese Daten IMMER!';
+    prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht einen Zimmer-Namen gesagt hat (z.B. "el abuelo viajero"), behalte diesen IMMER im Kontext!';
+    prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht "dorm" oder "privada" gesagt hat, behalte diese Information IMMER!';
+    prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht einen Namen gesagt hat (z.B. "Patrick Ammann"), verwende diesen als guestName!';
+    prompt += '\nWICHTIG: Kombiniere Informationen aus MEHREREN Nachrichten! Wenn User "heute" sagt und später "1 nacht", dann: checkInDate="today", checkOutDate="tomorrow"!';
+    prompt += '\nWICHTIG: Wenn User "1" sagt nachdem er "heute" gesagt hat, interpretiere es als "1 Nacht"!';
+    prompt += '\nWICHTIG: Wenn User "ja" sagt nachdem du eine Frage gestellt hast, interpretiere es als Bestätigung deiner Vorschläge!';
+    prompt += '\nWICHTIG: Wenn User "ok, buchen" oder "ok, reservar" sagt und ALLE Informationen vorhanden sind, rufe SOFORT create_room_reservation auf!';
     prompt += '\nWICHTIG: checkOutDate ist ERFORDERLICH und muss mindestens 1 Tag nach checkInDate liegen! "heute bis heute" gibt es NICHT!';
     prompt += '\nWICHTIG: Wenn User nur "heute" sagt ohne Check-out, frage: "Für wie viele Nächte möchten Sie buchen?" oder "Bis wann möchten Sie bleiben?"';
     prompt += '\nWICHTIG: "bis zum 3." bedeutet Check-out am 4. (Check-out ist immer am Morgen des nächsten Tages)! Wenn User "bis zum 3.12." sagt, verwende checkOutDate: "2025-12-04"!';
     prompt += '\nWICHTIG: "1 Nacht" bedeutet: Check-out ist 1 Tag nach Check-in! Wenn Check-in "heute" und User sagt "1 Nacht", dann checkOutDate: "tomorrow"!';
     prompt += '\nWICHTIG: Wenn User nur "reservar" sagt (ohne weitere Details), aber bereits Zimmer und Daten in vorherigen Nachrichten genannt hat, rufe create_room_reservation mit diesen Informationen auf!';
-    prompt += '\nWICHTIG: Wenn User "reservar" sagt und alle Informationen vorhanden sind (Zimmer-Name, Daten), rufe create_room_reservation direkt auf, frage NICHT nach Details!';
+    prompt += '\nWICHTIG: Wenn User "reservar" sagt und alle Informationen vorhanden sind (Zimmer-Name, Daten, Name), rufe create_room_reservation direkt auf, frage NICHT nach Details!';
+    prompt += '\nWICHTIG: Wenn User "ok, buchen" sagt und du bereits alle Informationen hast (Check-in, Check-out, Zimmer, Name), rufe create_room_reservation SOFORT auf!';
+    prompt += '\nWICHTIG: Zeige NICHT nochmal Verfügbarkeit, wenn User bereits "buchen" oder "reservar" gesagt hat! Rufe direkt create_room_reservation auf!';
     prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
     prompt += '\nWICHTIG: Wenn check_room_availability mehrere Zimmer zurückgibt, zeige ALLE Zimmer in der Antwort an!';
     prompt += '\nWICHTIG: Jedes Zimmer im Function-Ergebnis (rooms Array) muss in der Antwort erwähnt werden!';
