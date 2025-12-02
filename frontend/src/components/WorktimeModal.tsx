@@ -148,11 +148,12 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
     const calculateActiveDuration = (): string => {
         if (!activeWorktime) return '-';
         
-        // KORREKT: Direkte UTC-Differenz berechnen
+        // KORREKT: Wie im WorktimeTracker - direkte UTC-Differenz berechnen
         // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
-        // WICHTIG: startTime vom Backend kommt als ISO-String mit 'Z' (UTC), nicht entfernen!
-        // new Date() interpretiert ISO-Strings mit 'Z' korrekt als UTC
-        const startTimeDate = new Date(activeWorktime.startTime);
+        const startISOString = activeWorktime.startTime.endsWith('Z') 
+            ? activeWorktime.startTime.substring(0, activeWorktime.startTime.length - 1)
+            : activeWorktime.startTime;
+        const startTimeDate = new Date(startISOString);
         const now = new Date();
         const diff = now.getTime() - startTimeDate.getTime();
         
