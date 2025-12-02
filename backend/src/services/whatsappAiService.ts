@@ -534,7 +534,7 @@ export class WhatsAppAiService {
               },
               checkOutDate: {
                 type: 'string',
-                description: 'Check-out Datum (YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"). WICHTIG: Wenn User "morgen" sagt, verwende "tomorrow"!'
+                description: 'Check-out Datum (YYYY-MM-DD, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana", ERFORDERLICH). WICHTIG: Check-out muss mindestens 1 Tag nach Check-in liegen! "heute bis heute" gibt es nicht! WICHTIG: Wenn User "bis zum 3." sagt, bedeutet das Check-out am 4. (Check-out ist immer am Morgen des nächsten Tages)! Wenn User nur "heute" sagt ohne Check-out, frage nach: "Für wie viele Nächte?" oder "Bis wann möchten Sie bleiben?"'
               },
               guestName: {
                 type: 'string',
@@ -685,9 +685,10 @@ export class WhatsAppAiService {
     prompt += '  WICHTIG: Generiert automatisch Payment Link und Check-in-Link, setzt Zahlungsfrist (1 Stunde)\n';
     prompt += '  WICHTIG: Alle Reservierungen sind Branch-spezifisch (Branch wird automatisch aus Context verwendet)\n';
     prompt += '  Beispiele:\n';
-    prompt += '    - "reservame 1 cama en el primo aventurero" → create_room_reservation({ checkInDate: "today", checkOutDate: "2025-11-29", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34280 })\n';
-    prompt += '    - "ich möchte das Zimmer 2 buchen" → create_room_reservation({ checkInDate: "today", checkOutDate: "2025-11-29", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34281 })\n';
-    prompt += '    - "reservar habitación privada" → create_room_reservation({ checkInDate: "today", checkOutDate: "2025-11-29", guestName: "Juan Pérez", roomType: "privada" })\n';
+    prompt += '    - "reservame 1 cama en el primo aventurero für heute, 1 nacht" → create_room_reservation({ checkInDate: "today", checkOutDate: "tomorrow", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34280 })\n';
+    prompt += '    - "ich möchte das Zimmer 2 buchen vom 1.12. bis 3.12." → create_room_reservation({ checkInDate: "2025-12-01", checkOutDate: "2025-12-04", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34281 })\n';
+    prompt += '    - "reservar habitación privada bis zum 3.12." → create_room_reservation({ checkInDate: "today", checkOutDate: "2025-12-04", guestName: "Juan Pérez", roomType: "privada" })\n';
+    prompt += '    - "heute buchen" → FRAGE: "Für wie viele Nächte möchten Sie buchen?" oder "Bis wann möchten Sie bleiben?" (checkOutDate ist erforderlich!)\n';
     
     // Andere Funktionen - nur für Mitarbeiter
     if (conversationContext?.userId) {
@@ -713,6 +714,10 @@ export class WhatsAppAiService {
     prompt += '\nWICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat, verwende "today" als checkInDate!';
     prompt += '\nWICHTIG: Wenn User nach einer Buchungsanfrage Daten gibt (z.B. "01.dez bis 02.dez"), rufe create_room_reservation auf, NICHT check_room_availability!';
     prompt += '\nWICHTIG: Nutze den Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende es als Check-in-Datum!';
+    prompt += '\nWICHTIG: checkOutDate ist ERFORDERLICH und muss mindestens 1 Tag nach checkInDate liegen! "heute bis heute" gibt es NICHT!';
+    prompt += '\nWICHTIG: Wenn User nur "heute" sagt ohne Check-out, frage: "Für wie viele Nächte möchten Sie buchen?" oder "Bis wann möchten Sie bleiben?"';
+    prompt += '\nWICHTIG: "bis zum 3." bedeutet Check-out am 4. (Check-out ist immer am Morgen des nächsten Tages)! Wenn User "bis zum 3.12." sagt, verwende checkOutDate: "2025-12-04"!';
+    prompt += '\nWICHTIG: "1 Nacht" bedeutet: Check-out ist 1 Tag nach Check-in! Wenn Check-in "heute" und User sagt "1 Nacht", dann checkOutDate: "tomorrow"!';
     prompt += '\nWICHTIG: Wenn User nur "reservar" sagt (ohne weitere Details), aber bereits Zimmer und Daten in vorherigen Nachrichten genannt hat, rufe create_room_reservation mit diesen Informationen auf!';
     prompt += '\nWICHTIG: Wenn User "reservar" sagt und alle Informationen vorhanden sind (Zimmer-Name, Daten), rufe create_room_reservation direkt auf, frage NICHT nach Details!';
     prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
