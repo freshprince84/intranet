@@ -184,7 +184,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
         const queryDuration = Date.now() - queryStartTime;
         // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
         if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
-            console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
+        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
         }
         
         // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
@@ -213,12 +213,12 @@ export const getAllTasks = async (req: Request, res: Response) => {
         
         // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
         if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
-            console.log('[getAllTasks] ✅ Response vorbereitet:', {
-                dataLength: response.data.length,
-                totalCount: response.totalCount,
-                hasMore: response.hasMore,
-                dataIsArray: Array.isArray(response.data)
-            });
+        console.log('[getAllTasks] ✅ Response vorbereitet:', {
+            dataLength: response.data.length,
+            totalCount: response.totalCount,
+            hasMore: response.hasMore,
+            dataIsArray: Array.isArray(response.data)
+        });
         }
         
         res.json(response);
