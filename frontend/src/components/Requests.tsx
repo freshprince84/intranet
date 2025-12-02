@@ -476,6 +476,7 @@ const Requests: React.FC = () => {
         setRequests(prev => [...prev, ...requestsWithAttachments]);
       } else {
         // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
+        // ✅ PERFORMANCE: Direktes Setzen überschreibt alte Referenz (React macht automatisches Cleanup)
         setRequests(requestsWithAttachments);
       }
       
@@ -916,9 +917,8 @@ const Requests: React.FC = () => {
     }
 
     return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current);
-      }
+      // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
+      observer.disconnect();
     };
   }, [hasMore, loadingMore, loading, requests.length, selectedFilterId, filterConditions, fetchRequests]);
 

@@ -357,6 +357,12 @@ export class LobbyPmsService {
         const date = dateEntry.date;
         const categories = dateEntry.categories || [];
         
+        // Debug: Logge alle Kategorien für diesen Tag
+        console.log(`[LobbyPMS] Datum ${date}: ${categories.length} Kategorien gefunden`);
+        for (const cat of categories) {
+          console.log(`[LobbyPMS]   - ${cat.category_id}: ${cat.name}, available_rooms: ${cat.available_rooms || 0}`);
+        }
+        
         for (const category of categories) {
           // Hole Preis für 1 Person (Standard)
           const priceForOnePerson = category.plans?.[0]?.prices?.find((p: any) => p.people === 1);
@@ -372,6 +378,7 @@ export class LobbyPmsService {
             roomType = 'compartida';
           }
           
+          // WICHTIG: Füge ALLE Kategorien hinzu, auch wenn available_rooms = 0 (für Debugging)
           allCategories.push({
             categoryId: category.category_id,
             roomName: category.name,
@@ -382,6 +389,11 @@ export class LobbyPmsService {
             date: date,
             prices: category.plans?.[0]?.prices || [] // Alle Preise (verschiedene Personenanzahl)
           });
+          
+          // Debug: Spezifisch für "apartamento doble" und "primo deportista"
+          if (name.includes('apartamento doble') || name.includes('primo deportista')) {
+            console.log(`[LobbyPMS] ⚠️ Apartamento doble / Primo deportista: category_id=${category.category_id}, name=${category.name}, roomType=${roomType}, available_rooms=${category.available_rooms || 0}, date=${date}`);
+          }
         }
       }
       

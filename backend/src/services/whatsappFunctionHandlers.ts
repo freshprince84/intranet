@@ -608,6 +608,20 @@ export class WhatsAppFunctionHandlers {
       for (const cat of uniqueCategories) {
         console.log(`[WhatsApp Function Handlers]   - ${cat}`);
       }
+      
+      // Debug: Logge spezifisch "apartamento doble" und "primo deportista" falls vorhanden
+      const apartamentoDoble = availability.filter(item => 
+        item.roomName?.toLowerCase().includes('apartamento doble') || 
+        item.roomName?.toLowerCase().includes('primo deportista')
+      );
+      if (apartamentoDoble.length > 0) {
+        console.log(`[WhatsApp Function Handlers] ⚠️ Apartamento doble / Primo deportista gefunden: ${apartamentoDoble.length} Einträge`);
+        apartamentoDoble.forEach(item => {
+          console.log(`[WhatsApp Function Handlers]   - ${item.categoryId}: ${item.roomName}, roomType: ${item.roomType}, availableRooms: ${item.availableRooms}, date: ${item.date}`);
+        });
+      } else {
+        console.log(`[WhatsApp Function Handlers] ⚠️ Apartamento doble / Primo deportista NICHT in API-Response gefunden!`);
+      }
 
       // 6. Filtere nach roomType falls angegeben
       let filteredAvailability = availability;
