@@ -526,10 +526,20 @@ const Requests: React.FC = () => {
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // ✅ FIX: Warte auf Filter-Load, dann wird Default-Filter angewendet, dann werden Daten geladen
-  // ✅ Kein initiales Laden mehr - SavedFilterTags wendet Default-Filter an und löst handleFilterChange aus
-  // useEffect(() => {
-  //   fetchRequests(undefined, undefined, false, 20, 0);
-  // }, []);
+  // ✅ Fallback: Wenn nach 2 Sekunden keine Filter geladen wurden, Requests ohne Filter laden
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      // Prüfe, ob Requests bereits geladen wurden
+      if (requests.length === 0 && !loading) {
+        // Fallback: Lade Requests ohne Filter
+        fetchRequests(undefined, undefined, false, 20, 0);
+      }
+    }, 2000); // 2 Sekunden Wartezeit
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, []); // Nur beim Mount ausführen
 
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {
