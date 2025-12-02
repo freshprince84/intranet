@@ -319,6 +319,9 @@ export const switchUserBranch = async (req: Request, res: Response) => {
         const organizationId = (req as any).organizationId;
         const roleId = (req as any).roleId;
         branchCache.invalidate(userId, organizationId, roleId);
+        // ✅ FIX: OrganizationCache invalidieren (branchId hat sich geändert)
+        const { organizationCache } = await import('../utils/organizationCache');
+        organizationCache.invalidate(userId);
 
         return res.json({ 
             success: true, 

@@ -137,13 +137,9 @@ class FilterListCache {
       });
 
       // 3. Parse die JSON-Strings der Filter zurück in Arrays
-      const parsedGroups = groups.map(group => ({
-        id: group.id,
-        userId: group.userId,
-        tableId: group.tableId,
-        name: group.name,
-        order: group.order,
-        filters: group.filters.map(filter => {
+      // ✅ FIX: Filtere User-Filter-Gruppen nach aktiven Usern
+      const parsedGroups = await Promise.all(groups.map(async (group) => {
+        let filters = group.filters.map(filter => {
           let sortDirections: any[] = [];
           if (filter.sortDirections) {
             try {
@@ -176,9 +172,62 @@ class FilterListCache {
             createdAt: filter.createdAt,
             updatedAt: filter.updatedAt
           };
-        }),
-        createdAt: group.createdAt,
-        updatedAt: group.updatedAt
+        }));
+
+        // ✅ FIX: Filtere User-Filter-Gruppen nach aktiven Usern
+        if (group.name === 'Users' || group.name === 'Benutzer' || group.name === 'Usuarios') {
+          // Extrahiere User-IDs aus Filter-Bedingungen (Format: user-{id})
+          const userIds: number[] = [];
+          filters.forEach(filter => {
+            if (Array.isArray(filter.conditions)) {
+              filter.conditions.forEach((condition: any) => {
+                if (condition.value && typeof condition.value === 'string' && condition.value.startsWith('user-')) {
+                  const userId = parseInt(condition.value.replace('user-', ''), 10);
+                  if (!isNaN(userId)) {
+                    userIds.push(userId);
+                  }
+                }
+              });
+            }
+          });
+
+          // Prüfe welche User noch aktiv sind
+          if (userIds.length > 0) {
+            const activeUsers = await prisma.user.findMany({
+              where: {
+                id: { in: userIds },
+                active: true
+              },
+              select: { id: true }
+            });
+            const activeUserIds = new Set(activeUsers.map(u => u.id));
+
+            // Filtere Filter heraus, deren User nicht mehr aktiv sind
+            filters = filters.filter(filter => {
+              if (Array.isArray(filter.conditions)) {
+                return filter.conditions.some((condition: any) => {
+                  if (condition.value && typeof condition.value === 'string' && condition.value.startsWith('user-')) {
+                    const userId = parseInt(condition.value.replace('user-', ''), 10);
+                    return !isNaN(userId) && activeUserIds.has(userId);
+                  }
+                  return true; // Nicht-User-Filter behalten
+                });
+              }
+              return true; // Filter ohne Bedingungen behalten
+            });
+          }
+        }
+
+        return {
+          id: group.id,
+          userId: group.userId,
+          tableId: group.tableId,
+          name: group.name,
+          order: group.order,
+          filters,
+          createdAt: group.createdAt,
+          updatedAt: group.updatedAt
+        };
       }));
 
       // 4. Speichere im Cache
