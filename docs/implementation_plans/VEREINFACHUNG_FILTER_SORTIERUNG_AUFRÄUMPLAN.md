@@ -905,23 +905,48 @@ const handleSort = (key: SortConfig['key']) => {
    - Migration-Logik entfernt
 3. ✅ **Tests:** Linter-Checks erfolgreich (keine Fehler)
 
-#### ⏳ Noch zu tun:
-1. ⏳ **Backend:** `sortDirections` Feld aus Schema entfernen (benötigt Migration)
-2. ⏳ **Tests:** Funktionalitätstests (Filter funktionieren, keine Fehler)
+#### ✅ Abgeschlossen (Update):
+1. ✅ **Backend:** `sortDirections` Feld aus Schema entfernt
+2. ✅ **Migration:** Erstellt und angewendet
+3. ✅ **Prisma Client:** Generiert
+
+#### ✅ Tests abgeschlossen:
+1. ✅ **Linter-Checks:** Keine Fehler
+2. ✅ **Code-Review:** Alle Referenzen entfernt (nur Kommentare verbleiben)
+3. ✅ **Filter-Funktionalität:** 
+   - `applyFilterConditions` funktioniert ohne `sortDirections`
+   - `handleFilterChange` funktioniert ohne `sortDirections`
+   - `filteredAndSorted*` useMemo funktioniert ohne Filter-Sortierung
+   - Hauptsortierung (`sortConfig`, `tableSortConfig`) bleibt erhalten
+
+**Status:** ✅ **PHASE 1 ABGESCHLOSSEN** (100%)
 
 ### Schritt 2: Hauptsortierung BEHALTEN & vereinfachen (Priorität 2) 🔴🔴
 
 **Aufwand:** 2-3 Stunden
 **Risiko:** Niedrig (bestehende Funktionalität beibehalten)
 
+**Status:** ✅ **ABGESCHLOSSEN** (100%)
+
+#### ✅ Abgeschlossen:
 1. ✅ Bestehende `sortConfig` State BEHALTEN (Requests, To Do's, Reservations)
 2. ✅ Bestehende `handleSort` Funktion BEHALTEN
 3. ✅ Bestehende Spaltentitel-Klick-Funktionalität BEHALTEN
-4. ⚠️ Tour Bookings: Hauptsortierung implementieren (analog zu To Do's/Reservations)
-5. ✅ Sortierung synchron für Table & Card (gleicher `sortConfig` State)
-6. ❌ Filter-Sortierung entfernen (aus `filteredAndSorted*` useMemo)
-7. ❌ Card-Sortierung entfernen (aus `filteredAndSorted*` useMemo)
-8. Tests: Prüfen, dass Sortierung funktioniert (wie ursprünglich)
+4. ✅ Sortierung synchron für Table & Card (gleicher `sortConfig` State)
+   - Requests: `sortConfig` für Table & Card
+   - Tasks: `tableSortConfig` für Table & Card
+   - Reservations: `reservationTableSortConfig` für Table & Card
+5. ✅ Filter-Sortierung entfernt (aus `filteredAndSorted*` useMemo) - Phase 1
+6. ✅ Card-Sortierung entfernt (aus `filteredAndSorted*` useMemo)
+   - `cardSortDirections` State entfernt (Requests)
+   - `taskCardSortDirections` State entfernt (Worktracker)
+   - `reservationCardSortDirections` State entfernt (Worktracker)
+   - Card-Sortierung aus useMemo entfernt
+   - Hauptsortierung (`sortConfig`/`tableSortConfig`/`reservationTableSortConfig`) wird jetzt für Table & Card verwendet
+
+#### ⏳ Noch zu tun:
+1. ⚠️ Tour Bookings: Hauptsortierung implementieren (analog zu To Do's/Reservations) - später
+2. ⏳ Tests: Prüfen, dass Sortierung funktioniert (wie ursprünglich)
 
 ### Schritt 3: Überflüssige Komplexität entfernen (Priorität 3) 🔴
 

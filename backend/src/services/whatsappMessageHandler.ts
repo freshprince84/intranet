@@ -225,7 +225,35 @@ export class WhatsAppMessageHandler {
         return await this.continueConversation(normalizedPhone, branchId, messageText, mediaUrl, conversation, user);
       }
 
-      // 6. KI-Antwort generieren (falls kein Keyword und kein aktiver State)
+      // 6. Prüfe ob alle Buchungsinformationen vorhanden sind (explizite Logik)
+      const bookingContext = await this.checkBookingContext(conversation, messageText, branchId);
+      if (bookingContext.shouldBook) {
+        console.log('[WhatsApp Message Handler] Alle Buchungsinformationen vorhanden, rufe create_room_reservation auf');
+        try {
+          const { WhatsAppFunctionHandlers } = await import('./whatsappFunctionHandlers');
+          const bookingResult = await WhatsAppFunctionHandlers.create_room_reservation(
+            bookingContext.bookingData!,
+            user?.id || null,
+            roleId,
+            branchId
+          );
+          
+          // Context nach erfolgreicher Buchung löschen
+          await prisma.whatsAppConversation.update({
+            where: { id: conversation.id },
+            data: {
+              context: null
+            }
+          });
+          
+          return bookingResult.message || 'Reservierung erfolgreich erstellt!';
+        } catch (bookingError: any) {
+          console.error('[WhatsApp Message Handler] Fehler bei automatischer Buchung:', bookingError);
+          // Weiter mit normaler KI-Antwort
+        }
+      }
+      
+      // 7. KI-Antwort generieren (falls kein Keyword und kein aktiver State)
       try {
         // Erweitere Conversation Context mit Rollen für Function Calling
         const conversationContext: any = {
@@ -233,14 +261,16 @@ export class WhatsAppMessageHandler {
           roleId: roleId,
           userName: userWithRoles ? `${userWithRoles.firstName} ${userWithRoles.lastName}` : null,
           conversationState: conversation.state,
-          groupId: groupId
+          groupId: groupId,
+          bookingContext: bookingContext.context // Füge Buchungs-Context hinzu
         };
         
         const aiResponse = await WhatsAppAiService.generateResponse(
           messageText,
           branchId,
           normalizedPhone,
-          conversationContext
+          conversationContext,
+          conversation.id // conversationId für Message History
         );
         return aiResponse.message;
       } catch (error) {
@@ -1475,6 +1505,146 @@ export class WhatsAppMessageHandler {
         }
       });
       return await this.getLanguageResponse(branchId, phoneNumber, 'error');
+    }
+  }
+
+  /**
+   * Prüft ob alle Buchungsinformationen vorhanden sind und gibt Context zurück
+   */
+  private static async checkBookingContext(
+    conversation: any,
+    currentMessage: string,
+    branchId: number
+  ): Promise<{
+    shouldBook: boolean;
+    context: any;
+    bookingData?: {
+      checkInDate: string;
+      checkOutDate: string;
+      guestName: string;
+      roomType: 'compartida' | 'privada';
+      categoryId?: number;
+      roomName?: string;
+    };
+  }> {
+    try {
+      // Lade aktuellen Context
+      const context = (conversation.context as any) || {};
+      const bookingContext = context.booking || {};
+      
+      // Parse aktuelle Nachricht nach Buchungsinformationen
+      const normalizedMessage = currentMessage.toLowerCase().trim();
+      
+      // Prüfe auf explizite Buchungsanfragen
+      const bookingKeywords = ['reservar', 'buchen', 'quiero reservar', 'quiero hacer una reserva', 'buche', 'reservame'];
+      const isBookingRequest = bookingKeywords.some(keyword => normalizedMessage.includes(keyword));
+      
+      if (!isBookingRequest && !bookingContext.checkInDate && !bookingContext.guestName) {
+        // Keine Buchungsanfrage und kein Context vorhanden
+        return { shouldBook: false, context: bookingContext };
+      }
+      
+      // Extrahiere Informationen aus aktueller Nachricht
+      let checkInDate = bookingContext.checkInDate;
+      let checkOutDate = bookingContext.checkOutDate;
+      let guestName = bookingContext.guestName;
+      let roomType = bookingContext.roomType as 'compartida' | 'privada' | undefined;
+      let categoryId = bookingContext.categoryId;
+      let roomName = bookingContext.roomName;
+      
+      // Parse "para mañana" + "1 noche"
+      if (normalizedMessage.includes('para mañana') || normalizedMessage.includes('para manana')) {
+        checkInDate = 'tomorrow';
+        if (normalizedMessage.includes('1 noche') || normalizedMessage.includes('una noche')) {
+          checkOutDate = 'day after tomorrow';
+        }
+      }
+      
+      // Parse "checkin" und "checkout"
+      const checkInMatch = currentMessage.match(/checkin[:\s]+([^\s,]+)/i) || currentMessage.match(/check-in[:\s]+([^\s,]+)/i);
+      const checkOutMatch = currentMessage.match(/checkout[:\s]+([^\s,]+)/i) || currentMessage.match(/check-out[:\s]+([^\s,]+)/i);
+      
+      if (checkInMatch) {
+        checkInDate = checkInMatch[1].trim();
+      }
+      if (checkOutMatch) {
+        checkOutDate = checkOutMatch[1].trim();
+      }
+      
+      // Parse Namen (einfache Heuristik: Wörter die wie Namen aussehen)
+      const namePattern = /(?:a nombre de|name|nombre|für)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
+      const nameMatch = currentMessage.match(namePattern);
+      if (nameMatch) {
+        guestName = nameMatch[1].trim();
+      }
+      
+      // Parse Zimmer-Art
+      if (normalizedMessage.includes('compartida') || normalizedMessage.includes('dorm') || normalizedMessage.includes('cama')) {
+        roomType = 'compartida';
+      } else if (normalizedMessage.includes('privada') || normalizedMessage.includes('habitación') || normalizedMessage.includes('zimmer')) {
+        roomType = 'privada';
+      }
+      
+      // Parse Zimmer-Namen
+      const roomNames = [
+        'el primo aventurero', 'la tia artista', 'el abuelo viajero',
+        'doble estándar', 'doble basica', 'apartamento doble', 'primo deportista'
+      ];
+      for (const name of roomNames) {
+        if (normalizedMessage.includes(name.toLowerCase())) {
+          roomName = name;
+          break;
+        }
+      }
+      
+      // Aktualisiere Context
+      const updatedContext = {
+        ...bookingContext,
+        checkInDate: checkInDate || bookingContext.checkInDate,
+        checkOutDate: checkOutDate || bookingContext.checkOutDate,
+        guestName: guestName || bookingContext.guestName,
+        roomType: roomType || bookingContext.roomType,
+        categoryId: categoryId || bookingContext.categoryId,
+        roomName: roomName || bookingContext.roomName
+      };
+      
+      // Speichere Context in Conversation
+      await prisma.whatsAppConversation.update({
+        where: { id: conversation.id },
+        data: {
+          context: {
+            ...context,
+            booking: updatedContext
+          }
+        }
+      });
+      
+      // Prüfe ob ALLE Informationen vorhanden sind
+      const hasAllInfo = 
+        updatedContext.checkInDate &&
+        updatedContext.checkOutDate &&
+        updatedContext.guestName &&
+        updatedContext.roomType;
+      
+      if (hasAllInfo && isBookingRequest) {
+        return {
+          shouldBook: true,
+          context: updatedContext,
+          bookingData: {
+            checkInDate: updatedContext.checkInDate,
+            checkOutDate: updatedContext.checkOutDate,
+            guestName: updatedContext.guestName,
+            roomType: updatedContext.roomType,
+            categoryId: updatedContext.categoryId,
+            roomName: updatedContext.roomName
+          }
+        };
+      }
+      
+      return { shouldBook: false, context: updatedContext };
+    } catch (error) {
+      console.error('[WhatsApp Message Handler] Fehler bei checkBookingContext:', error);
+      return { shouldBook: false, context: {} };
     }
   }
 }

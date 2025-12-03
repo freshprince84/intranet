@@ -32,7 +32,8 @@ export class WhatsAppAiService {
     message: string,
     branchId: number,
     phoneNumber: string,
-    conversationContext?: any
+    conversationContext?: any,
+    conversationId?: number
   ): Promise<AIResponse> {
     // 1. Lade Branch und KI-Konfiguration
     const branch = await prisma.branch.findUnique({
@@ -125,19 +126,58 @@ export class WhatsAppAiService {
     }
 
     try {
+      // Lade Message History (letzte 10 Nachrichten) falls conversationId vorhanden
+      let messageHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+      if (conversationId) {
+        try {
+          const recentMessages = await prisma.whatsAppMessage.findMany({
+            where: {
+              conversationId: conversationId,
+              branchId: branchId
+            },
+            orderBy: {
+              sentAt: 'desc'
+            },
+            take: 10, // Letzte 10 Nachrichten
+            select: {
+              direction: true,
+              message: true,
+              sentAt: true
+            }
+          });
+          
+          // Konvertiere zu OpenAI-Format (neueste zuerst, dann umdrehen für chronologische Reihenfolge)
+          messageHistory = recentMessages
+            .reverse() // Älteste zuerst
+            .map(msg => ({
+              role: msg.direction === 'incoming' ? 'user' as const : 'assistant' as const,
+              content: msg.message
+            }))
+            .filter(msg => msg.content && msg.content.trim().length > 0); // Filtere leere Nachrichten
+          
+          console.log(`[WhatsApp AI Service] Message History geladen: ${messageHistory.length} Nachrichten`);
+        } catch (historyError) {
+          console.error('[WhatsApp AI Service] Fehler beim Laden der Message History:', historyError);
+          // Weiter ohne History
+        }
+      }
+      
       // Erster API Call (mit Function Definitions, falls aktiviert)
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        ...messageHistory, // Füge Message History hinzu
+        {
+          role: 'user',
+          content: message
+        }
+      ];
+      
       const requestPayload: any = {
         model: aiConfig.model || 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
-          {
-            role: 'user',
-            content: message
-          }
-        ],
+        messages: messages,
         temperature: aiConfig.temperature ?? 0.7,
         max_tokens: aiConfig.maxTokens || 500
       };
@@ -219,30 +259,30 @@ export class WhatsAppAiService {
         const languageInstruction = this.getLanguageInstruction(language);
         const systemPromptWithLanguage = languageInstruction + '\n\n' + systemPrompt;
         
+        // Erstelle Messages-Array mit History, aktueller Nachricht, Function Calls und Results
+        const finalMessages: Array<any> = [
+          {
+            role: 'system',
+            content: systemPromptWithLanguage
+          },
+          ...messageHistory, // Message History
+          {
+            role: 'user',
+            content: message
+          },
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: responseMessage.tool_calls
+          },
+          ...toolResults
+        ];
+        
         const finalResponse = await axios.post(
           'https://api.openai.com/v1/chat/completions',
           {
             model: aiConfig.model || 'gpt-4o',
-            messages: [
-              {
-                role: 'system',
-                content: systemPromptWithLanguage
-              },
-              {
-                role: 'user',
-                content: message
-              },
-              {
-                role: 'assistant',
-                content: null,
-                tool_calls: responseMessage.tool_calls
-              },
-              ...toolResults,
-              {
-                role: 'user',
-                content: `WICHTIG: Antworte auf ${language === 'de' ? 'Deutsch' : language === 'es' ? 'Spanisch' : language === 'en' ? 'Englisch' : 'der erkannten Sprache'}. Die Function Results sind in JSON-Format, aber deine Antwort muss in der korrekten Sprache sein.`
-              }
-            ],
+            messages: finalMessages,
             temperature: aiConfig.temperature ?? 0.7,
             max_tokens: aiConfig.maxTokens || 500
           },

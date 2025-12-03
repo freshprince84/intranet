@@ -520,31 +520,7 @@ const Worktracker: React.FC = () => {
         return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
     }, [cardMetadataOrder, hiddenCardMetadata]);
 
-    // Lokale Sortierrichtungen für Tasks Cards (nicht persistiert)
-    const [taskCardSortDirections, setTaskCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
-        return defaultCardSortDirections;
-    });
-
-    // Handler für Sortierrichtung-Änderung bei Tasks
-    const handleTaskCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
-        setTaskCardSortDirections(prev => ({
-            ...prev,
-            [columnId]: direction
-        }));
-    };
-
-    // Lokale Sortierrichtungen für Reservations Cards (nicht persistiert)
-    const [reservationCardSortDirections, setReservationCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
-        return defaultReservationCardSortDirections;
-    });
-
-    // Handler für Sortierrichtung-Änderung bei Reservations
-    const handleReservationCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
-        setReservationCardSortDirections(prev => ({
-            ...prev,
-            [columnId]: direction
-        }));
-    };
+    // ❌ ENTFERNT: taskCardSortDirections & reservationCardSortDirections - Card-Sortierung wurde entfernt, Hauptsortierung (tableSortConfig/reservationTableSortConfig) wird für Table & Card verwendet (Phase 2)
 
 
     // Toggle-Funktion für Expand/Collapse bei Reservations
@@ -1394,36 +1370,10 @@ const Worktracker: React.FC = () => {
             }
             
             // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
+            // ❌ ENTFERNT: Cards-Mode Multi-Sortierung (Priorität 2) - Card-Sortierung wurde entfernt (Phase 2)
             
-            // 2. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
-            if (viewMode === 'cards' && selectedFilterId === null && filterConditions.length === 0) {
-                const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
-                
-                for (const columnId of sortableColumns) {
-                    const direction = taskCardSortDirections[columnId] || 'asc';
-                    const valueA = getSortValue(a, columnId);
-                    const valueB = getSortValue(b, columnId);
-                    
-                    let comparison = 0;
-                    if (typeof valueA === 'number' && typeof valueB === 'number') {
-                        comparison = valueA - valueB;
-                    } else {
-                        comparison = String(valueA).localeCompare(String(valueB));
-                    }
-                    
-                    if (direction === 'desc') {
-                        comparison = -comparison;
-                    }
-                    
-                    if (comparison !== 0) {
-                        return comparison;
-                    }
-                }
-                return 0;
-            }
-            
-            // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
-            if (viewMode === 'table' && selectedFilterId === null && filterConditions.length === 0 && tableSortConfig.key) {
+            // 2. Priorität: Hauptsortierung (tableSortConfig) - für Table & Card gleich (synchron)
+            if (tableSortConfig.key && (selectedFilterId === null || filterConditions.length === 0)) {
                 const valueA = getSortValue(a, tableSortConfig.key);
                 const valueB = getSortValue(b, tableSortConfig.key);
                 
@@ -1462,7 +1412,7 @@ const Worktracker: React.FC = () => {
         // console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         }
         return sorted;
-    }, [tasks, selectedFilterId, searchTerm, tableSortConfig, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]); // ✅ PERFORMANCE: getStatusPriority entfernt (ist konstante Funktion, ändert sich nie), filterSortDirections entfernt (Phase 1)
+    }, [tasks, selectedFilterId, searchTerm, tableSortConfig]); // ✅ cardSortDirections entfernt (Phase 2), cardMetadataOrder & visibleCardMetadata entfernt (nicht mehr benötigt für Sortierung)
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {
@@ -1680,36 +1630,10 @@ const Worktracker: React.FC = () => {
             }
             
             // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
+            // ❌ ENTFERNT: Cards-Mode Multi-Sortierung (Priorität 2) - Card-Sortierung wurde entfernt (Phase 2)
             
-            // 2. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
-            if (viewMode === 'cards' && reservationSelectedFilterId === null && reservationFilterConditions.length === 0) {
-                const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
-                
-                for (const columnId of sortableColumns) {
-                    const direction = reservationCardSortDirections[columnId] || 'asc';
-                    const valueA = getReservationSortValue(a, columnId);
-                    const valueB = getReservationSortValue(b, columnId);
-                    
-                    let comparison = 0;
-                    if (typeof valueA === 'number' && typeof valueB === 'number') {
-                        comparison = valueA - valueB;
-                    } else {
-                        comparison = String(valueA).localeCompare(String(valueB));
-                    }
-                    
-                    if (direction === 'desc') {
-                        comparison = -comparison;
-                    }
-                    
-                    if (comparison !== 0) {
-                        return comparison;
-                    }
-                }
-                return 0;
-            }
-            
-            // 3. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
-            if (viewMode === 'table' && reservationSelectedFilterId === null && reservationFilterConditions.length === 0 && reservationTableSortConfig.key) {
+            // 2. Priorität: Hauptsortierung (reservationTableSortConfig) - für Table & Card gleich (synchron)
+            if (reservationTableSortConfig.key && (reservationSelectedFilterId === null || reservationFilterConditions.length === 0)) {
                 const valueA = getReservationSortValue(a, reservationTableSortConfig.key);
                 const valueB = getReservationSortValue(b, reservationTableSortConfig.key);
                 
@@ -1734,7 +1658,7 @@ const Worktracker: React.FC = () => {
         // console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
         }
         return sorted;
-    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]); // ✅ reservationFilterSortDirections entfernt (Phase 1)
+    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationTableSortConfig]); // ✅ reservationCardSortDirections entfernt (Phase 2), cardMetadataOrder & visibleCardMetadata entfernt (nicht mehr benötigt für Sortierung)
     
     // ✅ PAGINATION: Infinite Scroll für Tasks mit Intersection Observer
     // ✅ FIX: filterConditionsRef verwenden statt filterConditions direkt (verhindert Endlosschleife)
@@ -2247,17 +2171,7 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                                            sortDirections={viewMode === 'cards' && activeTab === 'todos'
-                                                ? taskCardSortDirections
-                                                : viewMode === 'cards' && activeTab === 'reservations' 
-                                                ? reservationCardSortDirections 
-                                                : undefined}
-                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'todos'
-                                                ? handleTaskCardSortDirectionChange
-                                                : viewMode === 'cards' && activeTab === 'reservations'
-                                                ? handleReservationCardSortDirectionChange
-                                                : undefined}
-                                            showSortDirection={viewMode === 'cards' && (activeTab === 'todos' || activeTab === 'reservations')}
+                                            // ❌ ENTFERNT: sortDirections, onSortDirectionChange, showSortDirection - Card-Sortierung wurde entfernt (Phase 2)
                                             onClose={() => {}}
                                         />
                                     </div>
@@ -3584,17 +3498,7 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                                            sortDirections={viewMode === 'cards' && activeTab === 'todos'
-                                                ? taskCardSortDirections
-                                                : viewMode === 'cards' && activeTab === 'reservations' 
-                                                ? reservationCardSortDirections 
-                                                : undefined}
-                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'todos'
-                                                ? handleTaskCardSortDirectionChange
-                                                : viewMode === 'cards' && activeTab === 'reservations'
-                                                ? handleReservationCardSortDirectionChange
-                                                : undefined}
-                                            showSortDirection={viewMode === 'cards' && (activeTab === 'todos' || activeTab === 'reservations')}
+                                            // ❌ ENTFERNT: sortDirections, onSortDirectionChange, showSortDirection - Card-Sortierung wurde entfernt (Phase 2)
                                             onClose={() => {}}
                                         />
                                     </div>

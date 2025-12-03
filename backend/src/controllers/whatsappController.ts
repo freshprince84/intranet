@@ -134,6 +134,23 @@ export const handleWebhook = async (req: Request, res: Response) => {
           const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(fromNumber);
           const messageId = message.id;
           
+          // Hole oder erstelle Conversation für conversationId
+          let conversationId: number | null = null;
+          try {
+            const conversation = await prisma.whatsAppConversation.findUnique({
+              where: {
+                phoneNumber_branchId: {
+                  phoneNumber: normalizedPhone,
+                  branchId: branchId
+                }
+              },
+              select: { id: true }
+            });
+            conversationId = conversation?.id || null;
+          } catch (convError) {
+            console.error('[WhatsApp Webhook] Fehler beim Laden der Conversation:', convError);
+          }
+          
           // Prüfe ob es eine Reservation zu dieser Telefonnummer gibt
           const reservation = await prisma.reservation.findFirst({
             where: {
@@ -153,12 +170,13 @@ export const handleWebhook = async (req: Request, res: Response) => {
               message: messageText,
               messageId: messageId,
               branchId: branchId,
+              conversationId: conversationId,
               reservationId: reservation?.id || null,
               sentAt: new Date(parseInt(message.timestamp) * 1000) // WhatsApp timestamp ist in Sekunden
             }
           });
           
-          console.log('[WhatsApp Webhook] ✅ Eingehende Nachricht in Datenbank gespeichert');
+          console.log('[WhatsApp Webhook] ✅ Eingehende Nachricht in Datenbank gespeichert', { conversationId });
         } catch (dbError) {
           console.error('[WhatsApp Webhook] ⚠️ Fehler beim Speichern der eingehenden Nachricht:', dbError);
           // Weiter mit Verarbeitung, auch wenn Speichern fehlschlägt
