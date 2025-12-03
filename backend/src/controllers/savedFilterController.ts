@@ -16,7 +16,7 @@ interface SavedFilterRequest {
   name: string;
   conditions: any[];
   operators: string[];
-  sortDirections?: SortDirection[];
+  // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
 }
 
 interface FilterGroupRequest {
@@ -62,7 +62,8 @@ export const getUserSavedFilters = async (req: AuthenticatedRequest, res: Respon
 export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = parseInt(req.userId, 10);
-    const { tableId, name, conditions, operators, sortDirections } = req.body as SavedFilterRequest;
+    const { tableId, name, conditions, operators } = req.body as SavedFilterRequest;
+    // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
 
     if (isNaN(userId)) {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
@@ -79,10 +80,7 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
     // Konvertiere Arrays in JSON-Strings für die Datenbank
     const conditionsJson = JSON.stringify(conditions || []);
     const operatorsJson = JSON.stringify(operators || []);
-    // ✅ FIX: Einheitliches Format - immer Array (nicht Objekt)
-    const sortDirectionsJson = JSON.stringify(
-      Array.isArray(sortDirections) ? sortDirections : []
-    );
+    // ❌ ENTFERNT: sortDirectionsJson - Filter-Sortierung wurde entfernt (Phase 1)
 
     // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
     try {
@@ -108,8 +106,8 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
           },
           data: {
             conditions: conditionsJson,
-            operators: operatorsJson,
-            sortDirections: sortDirectionsJson
+            operators: operatorsJson
+            // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
           }
           })
         );
@@ -126,8 +124,8 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
             tableId,
             name,
             conditions: conditionsJson,
-            operators: operatorsJson,
-            sortDirections: sortDirectionsJson
+            operators: operatorsJson
+            // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
           }
           })
         );
@@ -135,9 +133,7 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
         filterListCache.invalidate(userId, tableId);
       }
 
-      // ✅ FIX: Verwende zentrale Migration-Funktion
-      const { migrateSortDirections } = require('../utils/filterMigration');
-      const sortDirections = migrateSortDirections(filter.sortDirections);
+      // ❌ ENTFERNT: sortDirections Migration - Filter-Sortierung wurde entfernt (Phase 1)
       
       const parsedFilter = {
         id: filter.id,
@@ -146,7 +142,7 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
         name: filter.name,
         conditions: JSON.parse(filter.conditions),
         operators: JSON.parse(filter.operators),
-        sortDirections,
+        // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         groupId: filter.groupId,
         order: filter.order,
         createdAt: filter.createdAt,

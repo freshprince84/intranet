@@ -65,11 +65,8 @@ class FilterListCache {
       });
 
       // 3. Parse die JSON-Strings zurück in Arrays
-      // ✅ FIX: Verwende zentrale Migration-Funktion
-      const { migrateSortDirections } = require('../utils/filterMigration');
+      // ❌ ENTFERNT: sortDirections Migration - Filter-Sortierung wurde entfernt (Phase 1)
       const parsedFilters = savedFilters.map(filter => {
-        const sortDirections = migrateSortDirections(filter.sortDirections);
-        
         return {
           id: filter.id,
           userId: filter.userId,
@@ -77,7 +74,7 @@ class FilterListCache {
           name: filter.name,
           conditions: JSON.parse(filter.conditions),
           operators: JSON.parse(filter.operators),
-          sortDirections,
+          // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
           groupId: filter.groupId,
           order: filter.order,
           createdAt: filter.createdAt,
@@ -138,27 +135,9 @@ class FilterListCache {
 
       // 3. Parse die JSON-Strings der Filter zurück in Arrays
       // ✅ FIX: Filtere User-Filter-Gruppen nach aktiven Usern
+      // ❌ ENTFERNT: sortDirections Parsing - Filter-Sortierung wurde entfernt (Phase 1)
       const parsedGroups = await Promise.all(groups.map(async (group) => {
         let filters = group.filters.map(filter => {
-          let sortDirections: any[] = [];
-          if (filter.sortDirections) {
-            try {
-              const parsed = JSON.parse(filter.sortDirections);
-              if (Array.isArray(parsed)) {
-                sortDirections = parsed;
-              } else if (typeof parsed === 'object' && parsed !== null) {
-                sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                  column,
-                  direction: direction as 'asc' | 'desc',
-                  priority: index + 1
-                }));
-              }
-            } catch (e) {
-              console.error('Fehler beim Parsen von sortDirections:', e);
-              sortDirections = [];
-            }
-          }
-          
           return {
             id: filter.id,
             userId: filter.userId,
@@ -166,7 +145,7 @@ class FilterListCache {
             name: filter.name,
             conditions: JSON.parse(filter.conditions),
             operators: JSON.parse(filter.operators),
-            sortDirections,
+            // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
             groupId: filter.groupId,
             order: filter.order,
             createdAt: filter.createdAt,

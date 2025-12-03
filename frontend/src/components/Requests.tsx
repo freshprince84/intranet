@@ -210,7 +210,7 @@ const Requests: React.FC = () => {
   // State-Variablen für erweiterte Filterbedingungen
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-  const [filterSortDirections, setFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
+  // ❌ ENTFERNT: filterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
   
   // Filter State Management (Controlled Mode)
   const [activeFilterName, setActiveFilterName] = useState<string>('');
@@ -660,14 +660,10 @@ const Requests: React.FC = () => {
     setDragOverColumn(null);
   };
 
-  const applyFilterConditions = async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+  const applyFilterConditions = async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
-    if (sortDirections !== undefined) {
-      // Sicherstellen, dass sortDirections ein Array ist
-      const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-      setFilterSortDirections(validSortDirections);
-    }
+    // ❌ ENTFERNT: sortDirections Parameter und setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
     
     // ✅ FIX: Lade Daten mit Filter (server-seitig)
     setSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
@@ -684,16 +680,16 @@ const Requests: React.FC = () => {
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
-    setFilterSortDirections([]);
+    // ❌ ENTFERNT: setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
     setActiveFilterName('');
     setSelectedFilterId(null);
   };
   
   // Filter Change Handler (Controlled Mode)
-  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
-    // Table-Header-Sortierung zurücksetzen, damit Filter-Sortierung übernimmt
+    // Table-Header-Sortierung zurücksetzen
     setSortConfig({ key: 'dueDate', direction: 'asc' });
     
     // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
@@ -701,14 +697,11 @@ const Requests: React.FC = () => {
     if (id) {
       setFilterConditions(conditions);
       setFilterLogicalOperators(operators);
-      if (sortDirections !== undefined) {
-        const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-        setFilterSortDirections(validSortDirections);
-      }
+      // ❌ ENTFERNT: sortDirections Parameter und setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
       await fetchRequests(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
     } else {
       // ✅ Direkte Bedingungen: applyFilterConditions lädt bereits und setzt State korrekt
-      await applyFilterConditions(conditions, operators, sortDirections);
+      await applyFilterConditions(conditions, operators);
     }
   };
 
@@ -797,34 +790,9 @@ const Requests: React.FC = () => {
           }
         }
         
-        // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
-        if (filterSortDirections.length > 0 && (selectedFilterId !== null || filterConditions.length > 0)) {
-          // Sortiere nach Priorität (1, 2, 3, ...)
-          const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
-          
-          for (const sortDir of sortedByPriority) {
-            const valueA = getSortValue(a, sortDir.column);
-            const valueB = getSortValue(b, sortDir.column);
-            
-            let comparison = 0;
-            if (typeof valueA === 'number' && typeof valueB === 'number') {
-              comparison = valueA - valueB;
-            } else {
-              comparison = String(valueA).localeCompare(String(valueB));
-            }
-            
-            if (sortDir.direction === 'desc') {
-              comparison = -comparison;
-            }
-            
-            if (comparison !== 0) {
-              return comparison;
-            }
-          }
-          return 0;
-        }
+        // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
         
-        // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
+        // 2. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
         if (viewMode === 'cards' && selectedFilterId === null && filterConditions.length === 0) {
           const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
           
@@ -851,7 +819,7 @@ const Requests: React.FC = () => {
           return 0;
         }
         
-        // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
+        // 3. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
         if (viewMode === 'table' && selectedFilterId === null && filterConditions.length === 0 && sortConfig.key) {
           let aValue: any = a[sortConfig.key as keyof Request];
           let bValue: any = b[sortConfig.key as keyof Request];
@@ -883,10 +851,10 @@ const Requests: React.FC = () => {
           return 0;
         }
         
-        // 5. Fallback: Standardsortierung
+        // 4. Fallback: Standardsortierung
         return 0;
       });
-  }, [requests, selectedFilterId, searchTerm, sortConfig, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+  }, [requests, selectedFilterId, searchTerm, sortConfig, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
 
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   useEffect(() => {
@@ -1226,8 +1194,7 @@ const Requests: React.FC = () => {
             onReset={resetFilterConditions}
             savedConditions={filterConditions}
             savedOperators={filterLogicalOperators}
-            savedSortDirections={filterSortDirections}
-            onSortDirectionsChange={setFilterSortDirections}
+            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
             tableId={REQUESTS_TABLE_ID}
             />
           </div>
