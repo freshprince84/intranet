@@ -231,11 +231,13 @@ export class WhatsAppMessageHandler {
         console.log('[WhatsApp Message Handler] Alle Buchungsinformationen vorhanden, rufe create_room_reservation auf');
         try {
           const { WhatsAppFunctionHandlers } = await import('./whatsappFunctionHandlers');
+          // WICHTIG: Übergebe WhatsApp-Telefonnummer als Fallback für Kontaktdaten
           const bookingResult = await WhatsAppFunctionHandlers.create_room_reservation(
             bookingContext.bookingData!,
             user?.id || null,
             roleId,
-            branchId
+            branchId,
+            normalizedPhone // WhatsApp-Telefonnummer als Fallback
           );
           
           // Context nach erfolgreicher Buchung löschen

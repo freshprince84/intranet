@@ -323,12 +323,12 @@ const PasswordManagerTab: React.FC = () => {
     }
 
     // ❌ ENTFERNT: Filter-Sortierung - Filter-Sortierung wurde entfernt (Phase 1)
-    // Standard-Sortierung: nach createdAt desc
-    filtered.sort((a, b) => {
-      const aTime = new Date(a.createdAt).getTime();
-      const bTime = new Date(b.createdAt).getTime();
-      return bTime - aTime;
-    });
+      // Standard-Sortierung: nach createdAt desc
+      filtered.sort((a, b) => {
+        const aTime = new Date(a.createdAt).getTime();
+        const bTime = new Date(b.createdAt).getTime();
+        return bTime - aTime;
+      });
 
     return filtered;
   }, [entries, filterConditions, filterLogicalOperators]); // ✅ filterSortDirections entfernt (Phase 1)

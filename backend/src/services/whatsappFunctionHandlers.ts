@@ -1239,7 +1239,8 @@ export class WhatsAppFunctionHandlers {
     },
     userId: number | null,
     roleId: number | null,
-    branchId: number // WICHTIG: Wird automatisch aus Context übergeben
+    branchId: number, // WICHTIG: Wird automatisch aus Context übergeben
+    phoneNumber?: string // Optional: WhatsApp-Telefonnummer (wird automatisch aus Context übergeben)
   ): Promise<any> {
     try {
       // 1. Parse Datum (unterstützt "today"/"heute"/"hoy"/"tomorrow"/"morgen"/"mañana")
@@ -1356,6 +1357,22 @@ export class WhatsAppFunctionHandlers {
         throw new Error(`Branch ${branchId} nicht gefunden`);
       }
 
+      // 4.5. Validierung: Mindestens eine Kontaktinformation (Telefon ODER Email) ist erforderlich
+      // WICHTIG: Nutze WhatsApp-Telefonnummer als Fallback, falls nicht angegeben
+      let guestPhone = args.guestPhone?.trim() || null;
+      let guestEmail = args.guestEmail?.trim() || null;
+      
+      // Fallback: Nutze WhatsApp-Telefonnummer, falls vorhanden
+      if (!guestPhone && phoneNumber) {
+        const { LanguageDetectionService } = await import('./languageDetectionService');
+        guestPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
+        console.log(`[create_room_reservation] WhatsApp-Telefonnummer als Fallback verwendet: ${guestPhone}`);
+      }
+      
+      if (!guestPhone && !guestEmail) {
+        throw new Error('Mindestens eine Kontaktinformation (Telefonnummer oder Email) ist erforderlich für die Reservierung. Bitte geben Sie Ihre Telefonnummer oder Email-Adresse an.');
+      }
+
       // 5. Erstelle Reservierung in LobbyPMS (WICHTIG: ZUERST in LobbyPMS, dann lokal!)
       let lobbyReservationId: string | null = null;
       try {
@@ -1365,8 +1382,8 @@ export class WhatsAppFunctionHandlers {
           checkInDate,
           checkOutDate,
           args.guestName.trim(),
-          args.guestEmail?.trim(),
-          args.guestPhone?.trim(),
+          guestEmail || undefined, // Verwende validierte Email
+          guestPhone || undefined, // Verwende validierte Telefonnummer
           1 // Anzahl Personen (default: 1, kann später erweitert werden)
         );
         console.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
@@ -1418,8 +1435,8 @@ export class WhatsAppFunctionHandlers {
       const reservation = await prisma.reservation.create({
         data: {
           guestName: args.guestName.trim(),
-          guestPhone: args.guestPhone?.trim() || null,
-          guestEmail: args.guestEmail?.trim() || null,
+          guestPhone: guestPhone, // Verwende validierte Telefonnummer
+          guestEmail: guestEmail, // Verwende validierte Email
           checkInDate: checkInDate,
           checkOutDate: checkOutDate,
           status: ReservationStatus.confirmed,
@@ -1461,12 +1478,12 @@ export class WhatsAppFunctionHandlers {
 
       // 10. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
       let linksSent = false;
-      if (args.guestPhone || reservation.guestPhone) {
+      if (guestPhone || reservation.guestPhone) {
         try {
           await ReservationNotificationService.sendReservationInvitation(
             reservation.id,
             {
-              guestPhone: args.guestPhone || reservation.guestPhone || undefined,
+              guestPhone: guestPhone || reservation.guestPhone || undefined,
               amount: estimatedAmount,
               currency: 'COP'
             }
