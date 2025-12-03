@@ -57,8 +57,10 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   );
   
   // Initialisiere Sortierrichtungen (Array-basiert mit Priorität)
-  // WICHTIG: Sicherstellen, dass sortDirections immer ein Array ist
+  // ✅ OPTIONAL: Nur initialisieren wenn Sort-Props vorhanden sind
   const [sortDirections, setSortDirections] = useState<SortDirection[]>(() => {
+    // Nur initialisieren, wenn onSortDirectionsChange vorhanden ist
+    if (!onSortDirectionsChange) return [];
     if (!savedSortDirections) return [];
     if (Array.isArray(savedSortDirections)) return savedSortDirections;
     // Fallback: Wenn es kein Array ist, leeres Array zurückgeben
@@ -99,7 +101,10 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   // Verwende useRef, um die vorherigen Werte zu speichern und nur bei echten Änderungen zu aktualisieren
   const prevSavedConditionsRef = useRef<FilterCondition[] | undefined>(savedConditions);
   const prevSavedOperatorsRef = useRef<('AND' | 'OR')[] | undefined>(savedOperators);
-  const prevSavedSortDirectionsRef = useRef<SortDirection[] | undefined>(savedSortDirections);
+  // ✅ OPTIONAL: Nur initialisieren wenn Sort-Props vorhanden sind
+  const prevSavedSortDirectionsRef = useRef<SortDirection[] | undefined>(
+    onSortDirectionsChange ? savedSortDirections : undefined
+  );
   
   // ✅ MEMORY: Verwende shallow comparison statt JSON.stringify
   const areConditionsEqual = (a: FilterCondition[] | undefined, b: FilterCondition[] | undefined): boolean => {
@@ -138,7 +143,10 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     // ✅ MEMORY: Verwende shallow comparison statt JSON.stringify
     const conditionsChanged = !areConditionsEqual(prevSavedConditionsRef.current, savedConditions);
     const operatorsChanged = !areOperatorsEqual(prevSavedOperatorsRef.current, savedOperators);
-    const sortDirectionsChanged = !areSortDirectionsEqual(prevSavedSortDirectionsRef.current, savedSortDirections);
+    // ✅ OPTIONAL: Nur prüfen wenn Sort-Props vorhanden sind
+    const sortDirectionsChanged = onSortDirectionsChange 
+      ? !areSortDirectionsEqual(prevSavedSortDirectionsRef.current, savedSortDirections)
+      : false;
     
     if (conditionsChanged && savedConditions) {
       if (savedConditions.length > 0) {
@@ -155,7 +163,8 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       prevSavedOperatorsRef.current = savedOperators;
     }
     
-    if (sortDirectionsChanged && savedSortDirections !== undefined) {
+    // ✅ OPTIONAL: Nur ausführen wenn Sort-Props vorhanden sind
+    if (onSortDirectionsChange && sortDirectionsChanged && savedSortDirections !== undefined) {
       // Sicherstellen, dass savedSortDirections ein Array ist
       const validSortDirections = Array.isArray(savedSortDirections) 
         ? savedSortDirections 
@@ -163,7 +172,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       setSortDirections(validSortDirections);
       prevSavedSortDirectionsRef.current = validSortDirections;
     }
-  }, [savedConditions, savedOperators, savedSortDirections]);
+  }, [savedConditions, savedOperators, savedSortDirections, onSortDirectionsChange]);
   
   // Hilfsfunktion: Prioritäten neu nummerieren (1, 2, 3, ...)
   const renumberPriorities = (sortDirs: SortDirection[]): SortDirection[] => {
@@ -188,8 +197,9 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     newConditions[index] = newCondition;
     setConditions(newConditions);
     
+    // ✅ OPTIONAL: Nur ausführen wenn Sort-Props vorhanden sind
     // Wenn sich die Spalte geändert hat, aktualisiere Sortierrichtungen
-    if (oldCondition.column !== newCondition.column) {
+    if (onSortDirectionsChange && oldCondition.column !== newCondition.column) {
       // Sicherstellen, dass sortDirections ein Array ist
       const safeSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
       let newSortDirections = [...safeSortDirections];
@@ -226,9 +236,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       newSortDirections = renumberPriorities(newSortDirections);
       
       setSortDirections(newSortDirections);
-      if (onSortDirectionsChange) {
-        onSortDirectionsChange(newSortDirections);
-      }
+      onSortDirectionsChange(newSortDirections);
     }
   };
   
@@ -260,29 +268,33 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       setLogicalOperators(newOperators);
     }
     
+    // ✅ OPTIONAL: Nur ausführen wenn Sort-Props vorhanden sind
     // Entferne Sortierrichtung für diese Zeile und aktualisiere Indizes
-    // Sicherstellen, dass sortDirections ein Array ist
-    const safeSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-    let newSortDirections = safeSortDirections
-      .filter(sd => sd.conditionIndex !== index) // Entferne Sortierrichtung für gelöschte Zeile
-      .map(sd => {
-        // Aktualisiere conditionIndex für alle Zeilen nach der gelöschten
-        if (sd.conditionIndex > index) {
-          return { ...sd, conditionIndex: sd.conditionIndex - 1 };
-        }
-        return sd;
-      });
-    
-    // Prioritäten neu nummerieren
-    newSortDirections = renumberPriorities(newSortDirections);
-    
-    setSortDirections(newSortDirections);
     if (onSortDirectionsChange) {
+      // Sicherstellen, dass sortDirections ein Array ist
+      const safeSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+      let newSortDirections = safeSortDirections
+        .filter(sd => sd.conditionIndex !== index) // Entferne Sortierrichtung für gelöschte Zeile
+        .map(sd => {
+          // Aktualisiere conditionIndex für alle Zeilen nach der gelöschten
+          if (sd.conditionIndex > index) {
+            return { ...sd, conditionIndex: sd.conditionIndex - 1 };
+          }
+          return sd;
+        });
+      
+      // Prioritäten neu nummerieren
+      newSortDirections = renumberPriorities(newSortDirections);
+      
+      setSortDirections(newSortDirections);
       onSortDirectionsChange(newSortDirections);
     }
   };
   
   const handleSortDirectionChange = (index: number, direction: 'asc' | 'desc') => {
+    // ✅ OPTIONAL: Nur ausführen wenn Sort-Props vorhanden sind
+    if (!onSortDirectionsChange) return;
+    
     const condition = conditions[index];
     if (condition && condition.column) {
       // Sicherstellen, dass sortDirections ein Array ist
@@ -312,13 +324,14 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       }
       
       setSortDirections(newSortDirections);
-      if (onSortDirectionsChange) {
-        onSortDirectionsChange(newSortDirections);
-      }
+      onSortDirectionsChange(newSortDirections);
     }
   };
   
   const handlePriorityChange = (index: number, newPriority: number) => {
+    // ✅ OPTIONAL: Nur ausführen wenn Sort-Props vorhanden sind
+    if (!onSortDirectionsChange) return;
+    
     const condition = conditions[index];
     if (condition && condition.column) {
       // Sicherstellen, dass sortDirections ein Array ist
@@ -341,9 +354,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
         newSortDirections = renumberPriorities(newSortDirections);
         
         setSortDirections(newSortDirections);
-        if (onSortDirectionsChange) {
-          onSortDirectionsChange(newSortDirections);
-        }
+        onSortDirectionsChange(newSortDirections);
       }
     }
   };
@@ -357,8 +368,9 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   const handleResetFilters = () => {
     setConditions([{ column: '', operator: 'equals', value: null }]);
     setLogicalOperators([]);
-    setSortDirections([]);
+    // ✅ OPTIONAL: Nur ausführen wenn Sort-Props vorhanden sind
     if (onSortDirectionsChange) {
+      setSortDirections([]);
       onSortDirectionsChange([]);
     }
     onReset();
@@ -410,7 +422,8 @@ const FilterPane: React.FC<FilterPaneProps> = ({
           name: filterName,
           conditions: validConditions,
           operators: logicalOperators,
-          sortDirections: sortDirections
+          // ✅ OPTIONAL: Nur mitspeichern wenn Sort-Props vorhanden sind
+          sortDirections: onSortDirectionsChange ? sortDirections : []
         }
       );
       
@@ -443,32 +456,33 @@ const FilterPane: React.FC<FilterPaneProps> = ({
               columns={columns}
               isFirst={index === 0}
               isLast={index === conditions.length - 1}
-              sortDirection={(() => {
+              // ✅ OPTIONAL: Sort-Props nur übergeben wenn onSortDirectionsChange vorhanden ist
+              sortDirection={onSortDirectionsChange ? (() => {
                 const sortDir = getSortDirectionForIndex(index);
                 return sortDir ? sortDir.direction : undefined;
-              })()}
-              sortPriority={(() => {
+              })() : undefined}
+              sortPriority={onSortDirectionsChange ? (() => {
                 const sortDir = getSortDirectionForIndex(index);
                 return sortDir ? sortDir.priority : undefined;
-              })()}
-              onSortDirectionChange={condition.column && condition.column !== '' ? (direction) => {
+              })() : undefined}
+              onSortDirectionChange={onSortDirectionsChange && condition.column && condition.column !== '' ? (direction) => {
                 handleSortDirectionChange(index, direction);
               } : undefined}
-              onPriorityChange={(() => {
+              onPriorityChange={onSortDirectionsChange ? (() => {
                 const sortDir = getSortDirectionForIndex(index);
                 if (sortDir) {
                   return (newPriority: number) => handlePriorityChange(index, newPriority);
                 }
                 return undefined;
-              })()}
-              canMoveUp={(() => {
+              })() : undefined}
+              canMoveUp={onSortDirectionsChange ? (() => {
                 const sortDir = getSortDirectionForIndex(index);
                 if (sortDir && sortDir.priority > 1) {
                   return true;
                 }
                 return false;
-              })()}
-              canMoveDown={(() => {
+              })() : false}
+              canMoveDown={onSortDirectionsChange ? (() => {
                 const sortDir = getSortDirectionForIndex(index);
                 if (sortDir) {
                   const safeSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
@@ -478,7 +492,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
                   return sortDir.priority < maxPriority;
                 }
                 return false;
-              })()}
+              })() : false}
             />
             
             {/* Operator zwischen Bedingungen einfügen (aber nicht nach der letzten) */}

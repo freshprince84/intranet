@@ -44,7 +44,9 @@ const DraggableColumnItem: React.FC<DraggableItemProps> = ({
   label, 
   index, 
   isVisible,
-  // ❌ ENTFERNT: isDragging, isOver, onDragStart, onDragOver, onDragEnd - Drag & Drop wurde aus Modal entfernt (Phase 3)
+  isDragging = false, // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3), aber als Prop übergeben
+  isOver = false, // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3), aber als Prop übergeben
+  // ❌ ENTFERNT: onDragStart, onDragOver, onDragEnd - Drag & Drop wurde aus Modal entfernt (Phase 3)
   onToggleVisibility,
   sortDirection,
   onSortDirectionChange,
