@@ -64,23 +64,19 @@
 
 ## 🔴 KRITISCHE VERBLEIBENDE SCHRITTE
 
-### 1. Tour Bookings: Hauptsortierung implementieren ⚠️
+### 1. Tour Bookings: Hauptsortierung implementieren ✅
 
-**Status:** ❌ **FEHLT NOCH**
+**Status:** ✅ **ABGESCHLOSSEN**
 
-**Problem:**
-- Tour Bookings Tab hat keine Hauptsortierung implementiert
-- Sollte analog zu To Do's und Reservations funktionieren
+**Was wurde gemacht:**
+1. ✅ `TourBookingSortConfig` Interface definiert
+2. ✅ `tourBookingsSortConfig` State hinzugefügt
+3. ✅ `handleTourBookingsSort` Funktion hinzugefügt
+4. ✅ `filteredAndSortedTourBookings` useMemo erstellt
+5. ✅ Spaltentitel klickbar gemacht
+6. ✅ Sortier-Icons hinzugefügt
 
-**Datei:** `frontend/src/pages/Worktracker.tsx`
-
-**Was zu tun ist:**
-1. `tourBookingsSortConfig` State hinzufügen (analog zu `tableSortConfig`, `reservationTableSortConfig`)
-2. `handleTourBookingsSort` Funktion hinzufügen
-3. Sortierung in `filteredAndSortedTourBookings` useMemo implementieren
-4. Spaltentitel klickbar machen (analog zu To Do's/Reservations)
-
-**Priorität:** 🔴 Mittel (funktioniert bereits, aber nicht konsistent)
+**Detaillierte Dokumentation:** Siehe `TOUR_BOOKINGS_SORTIERUNG_IMPLEMENTIERT_2025-01-30.md`
 
 ---
 
@@ -201,7 +197,7 @@
 
 ### Priorität 1 (Hoch - sollte gemacht werden):
 
-1. **Tour Bookings: Hauptsortierung implementieren** 🔴
+1. ✅ **Tour Bookings: Hauptsortierung implementieren** ✅ **ABGESCHLOSSEN**
    - Aufwand: 1-2 Stunden
    - Risiko: Niedrig
    - Impact: Konsistenz über alle Tabs
@@ -254,12 +250,12 @@
 - 🔵 Infinite Scroll verifizieren (Priorität 2)
 
 ### Nächste Schritte:
-1. **Tour Bookings Hauptsortierung implementieren** (1-2 Stunden)
+1. ✅ **Tour Bookings Hauptsortierung implementieren** ✅ **ABGESCHLOSSEN** (1-2 Stunden)
 2. **Tests durchführen** (2-3 Stunden)
 3. **Doppelte Filterung prüfen** (1 Stunde)
 4. **Infinite Scroll verifizieren** (30 Minuten)
 
-**Gesamt verbleibender Aufwand:** ~5-7 Stunden für kritische Punkte, ~4-5 Stunden für nice-to-have
+**Gesamt verbleibender Aufwand:** ~3-5 Stunden für kritische Punkte, ~4-5 Stunden für nice-to-have
 
 ---
 

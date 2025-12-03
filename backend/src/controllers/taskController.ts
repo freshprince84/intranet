@@ -65,7 +65,8 @@ export const getAllTasks = async (req: Request, res: Response) => {
                 filterWhereClause = convertFilterConditionsToPrismaWhere(
                     conditions,
                     operators,
-                    'task'
+                    'task',
+                    req
                 );
                 // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
                 filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'task');
@@ -75,7 +76,8 @@ export const getAllTasks = async (req: Request, res: Response) => {
             filterWhereClause = convertFilterConditionsToPrismaWhere(
                 filterConditions.conditions || filterConditions,
                 filterConditions.operators || [],
-                'task'
+                'task',
+                req
             );
             // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
             filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'task');

@@ -682,6 +682,8 @@ export class WhatsAppAiService {
     // Zimmerverfügbarkeit - IMMER verfügbar
     prompt += '- check_room_availability: Prüfe Zimmerverfügbarkeit für einen Zeitraum (startDate, endDate, roomType)\n';
     prompt += '  WICHTIG: Verwende IMMER diese Function wenn der User nach Zimmerverfügbarkeit fragt!\n';
+    prompt += '  WICHTIG: Rufe diese Function NICHT mehrfach auf, wenn bereits Verfügbarkeitsinformationen vorhanden sind!\n';
+    prompt += '  WICHTIG: Wenn der User bereits ein Zimmer ausgewählt hat (z.B. "ja, el tia artista"), rufe diese Function NICHT erneut auf!\n';
     prompt += '  WICHTIG: Zeige ALLE verfügbaren Zimmer aus dem Function-Ergebnis an, nicht nur einige!\n';
     prompt += '  WICHTIG: Jedes Zimmer im Function-Ergebnis muss in der Antwort erwähnt werden!\n';
     prompt += '  WICHTIG: Wenn User nur "heute" sagt, verwende startDate: "today" und lasse endDate leer (zeigt nur heute, nicht heute+morgen)!\n';

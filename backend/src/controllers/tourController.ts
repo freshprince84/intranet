@@ -89,7 +89,8 @@ export const getAllTours = async (req: Request, res: Response) => {
           filterWhereClause = convertFilterConditionsToPrismaWhere(
             conditions,
             operators,
-            'tour'
+            'tour',
+            req
           );
           // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
           filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'tour');
@@ -101,7 +102,8 @@ export const getAllTours = async (req: Request, res: Response) => {
       filterWhereClause = convertFilterConditionsToPrismaWhere(
         filterConditions.conditions || filterConditions,
         filterConditions.operators || [],
-        'tour'
+        'tour',
+        req
       );
       // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
       filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'tour');

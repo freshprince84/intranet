@@ -1579,6 +1579,38 @@ async function main() {
             }
           });
           
+          // ✅ PHASE 4: "Meine Aufgaben" Filter (responsible = user OR qc = user OR responsible = rolle OR qc = rolle)
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: todosTableId,
+                name: 'Meine Aufgaben'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'responsible', operator: 'equals', value: '__CURRENT_USER__' },
+                { column: 'qualityControl', operator: 'equals', value: '__CURRENT_USER__' },
+                { column: 'responsible', operator: 'equals', value: '__CURRENT_ROLE__' },
+                { column: 'qualityControl', operator: 'equals', value: '__CURRENT_ROLE__' }
+              ]),
+              operators: JSON.stringify(['OR', 'OR', 'OR'])
+            },
+            create: {
+              userId,
+              tableId: todosTableId,
+              name: 'Meine Aufgaben',
+              conditions: JSON.stringify([
+                { column: 'responsible', operator: 'equals', value: '__CURRENT_USER__' },
+                { column: 'qualityControl', operator: 'equals', value: '__CURRENT_USER__' },
+                { column: 'responsible', operator: 'equals', value: '__CURRENT_ROLE__' },
+                { column: 'qualityControl', operator: 'equals', value: '__CURRENT_ROLE__' }
+              ]),
+              operators: JSON.stringify(['OR', 'OR', 'OR'])
+            }
+          });
+          
           // Standard-Filter für Requests (requests-table)
           const requestsTableId = 'requests-table';
           
@@ -1638,6 +1670,34 @@ async function main() {
             }
           });
           
+          // ✅ PHASE 4: "Alle" Filter (status != approved AND branch = aktueller branch)
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: requestsTableId,
+                name: 'Alle'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'notEquals', value: 'approved' },
+                { column: 'branch', operator: 'equals', value: '__CURRENT_BRANCH__' }
+              ]),
+              operators: JSON.stringify(['AND'])
+            },
+            create: {
+              userId,
+              tableId: requestsTableId,
+              name: 'Alle',
+              conditions: JSON.stringify([
+                { column: 'status', operator: 'notEquals', value: 'approved' },
+                { column: 'branch', operator: 'equals', value: '__CURRENT_BRANCH__' }
+              ]),
+              operators: JSON.stringify(['AND'])
+            }
+          });
+          
           // Standard-Filter für Reservations (worktracker-reservations)
           const reservationsTableId = 'worktracker-reservations';
           
@@ -1662,6 +1722,58 @@ async function main() {
               name: 'Hoy',
               conditions: JSON.stringify([
                 { column: 'checkInDate', operator: 'equals', value: '__TODAY__' }
+              ]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // ✅ PHASE 4: "Morgen" Filter
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: reservationsTableId,
+                name: 'Morgen'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'checkInDate', operator: 'equals', value: '__TOMORROW__' }
+              ]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: reservationsTableId,
+              name: 'Morgen',
+              conditions: JSON.stringify([
+                { column: 'checkInDate', operator: 'equals', value: '__TOMORROW__' }
+              ]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // ✅ PHASE 4: "Gestern" Filter
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: reservationsTableId,
+                name: 'Gestern'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'checkInDate', operator: 'equals', value: '__YESTERDAY__' }
+              ]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: reservationsTableId,
+              name: 'Gestern',
+              conditions: JSON.stringify([
+                { column: 'checkInDate', operator: 'equals', value: '__YESTERDAY__' }
               ]),
               operators: JSON.stringify([])
             }

@@ -669,7 +669,8 @@ export const getAllReservations = async (req: Request, res: Response) => {
             filterWhereClause = convertFilterConditionsToPrismaWhere(
                 conditions,
                 operators,
-                'reservation'
+                'reservation',
+                req
             );
             // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
             filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'reservation');
@@ -679,7 +680,8 @@ export const getAllReservations = async (req: Request, res: Response) => {
         filterWhereClause = convertFilterConditionsToPrismaWhere(
             filterConditions.conditions || filterConditions,
             filterConditions.operators || [],
-            'reservation'
+            'reservation',
+            req
         );
         // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
         filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'reservation');

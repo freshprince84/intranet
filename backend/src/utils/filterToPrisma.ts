@@ -20,16 +20,19 @@ export interface FilterCondition {
  * - Zahlen-Operatoren: greaterThan, lessThan
  * - UND/ODER-Verknüpfungen
  * - User/Role-Filter (user-{id}, role-{id})
+ * - Placeholder: __CURRENT_BRANCH__, __CURRENT_USER__, __CURRENT_ROLE__
  * 
  * @param conditions - Array von Filter-Bedingungen
  * @param operators - Array von logischen Operatoren ('AND' | 'OR')
  * @param entityType - Entity-Typ ('request' | 'task' | 'tour' | 'tour_booking' | 'reservation') für spezielle Logik
+ * @param req - Optional: Request-Objekt für Placeholder-Auflösung (__CURRENT_BRANCH__, __CURRENT_USER__, __CURRENT_ROLE__)
  * @returns Prisma Where-Klausel
  */
 export function convertFilterConditionsToPrismaWhere(
   conditions: FilterCondition[],
   operators: ('AND' | 'OR')[],
-  entityType: 'request' | 'task' | 'tour' | 'tour_booking' | 'reservation'
+  entityType: 'request' | 'task' | 'tour' | 'tour_booking' | 'reservation',
+  req?: Request
 ): Prisma.RequestWhereInput | Prisma.TaskWhereInput | Prisma.TourWhereInput | Prisma.TourBookingWhereInput | Prisma.ReservationWhereInput | {} {
   if (conditions.length === 0) {
     return {};
@@ -39,7 +42,7 @@ export function convertFilterConditionsToPrismaWhere(
   const prismaConditions: any[] = [];
 
   for (const cond of conditions) {
-    const whereClause = convertSingleCondition(cond, entityType);
+    const whereClause = convertSingleCondition(cond, entityType, req);
     if (Object.keys(whereClause).length > 0) {
       prismaConditions.push(whereClause);
     }
@@ -87,16 +90,44 @@ export function convertFilterConditionsToPrismaWhere(
  */
 function convertSingleCondition(
   condition: FilterCondition,
-  entityType: 'request' | 'task' | 'tour' | 'tour_booking' | 'reservation'
+  entityType: 'request' | 'task' | 'tour' | 'tour_booking' | 'reservation',
+  req?: Request
 ): any {
   const { column, operator, value } = condition;
+  
+  // ✅ PHASE 4: Placeholder auflösen (__CURRENT_BRANCH__, __CURRENT_USER__, __CURRENT_ROLE__)
+  let resolvedValue = value;
+  if (typeof value === 'string' && req) {
+    if (value === '__CURRENT_BRANCH__') {
+      const branchId = (req as any).branchId;
+      if (branchId) {
+        resolvedValue = branchId;
+      } else {
+        return {}; // Kein Branch verfügbar
+      }
+    } else if (value === '__CURRENT_USER__') {
+      const userId = parseInt(req.userId as string, 10);
+      if (!isNaN(userId)) {
+        resolvedValue = `user-${userId}`;
+      } else {
+        return {}; // Kein User verfügbar
+      }
+    } else if (value === '__CURRENT_ROLE__') {
+      const roleId = parseInt((req as any).roleId as string, 10);
+      if (!isNaN(roleId)) {
+        resolvedValue = `role-${roleId}`;
+      } else {
+        return {}; // Keine Rolle verfügbar
+      }
+    }
+  }
 
   switch (column) {
     case 'status':
       if (operator === 'equals') {
-        return { status: value };
+        return { status: resolvedValue };
       } else if (operator === 'notEquals') {
-        return { status: { not: value } };
+        return { status: { not: resolvedValue } };
       }
       return {};
 
@@ -104,13 +135,13 @@ function convertSingleCondition(
       // ✅ FIX: title wird für Reservations nicht unterstützt (haben kein title-Feld)
       if (entityType !== 'reservation') {
         if (operator === 'equals') {
-          return { title: { equals: value, mode: 'insensitive' } };
+          return { title: { equals: resolvedValue, mode: 'insensitive' } };
         } else if (operator === 'contains') {
-          return { title: { contains: value as string, mode: 'insensitive' } };
+          return { title: { contains: resolvedValue as string, mode: 'insensitive' } };
         } else if (operator === 'startsWith') {
-          return { title: { startsWith: value as string, mode: 'insensitive' } };
+          return { title: { startsWith: resolvedValue as string, mode: 'insensitive' } };
         } else if (operator === 'endsWith') {
-          return { title: { endsWith: value as string, mode: 'insensitive' } };
+          return { title: { endsWith: resolvedValue as string, mode: 'insensitive' } };
         }
       }
       return {};
@@ -119,9 +150,9 @@ function convertSingleCondition(
       // ✅ FIX: type wird für Reservations nicht unterstützt (haben kein type-Feld)
       if (entityType !== 'reservation') {
         if (operator === 'equals') {
-          return { type: value };
+          return { type: resolvedValue };
         } else if (operator === 'notEquals') {
-          return { type: { not: value } };
+          return { type: { not: resolvedValue } };
         }
       }
       return {};
@@ -131,13 +162,13 @@ function convertSingleCondition(
     case 'bookingDate':
     case 'checkInDate':
     case 'checkOutDate':
-      return convertDateCondition(value, operator, column);
+      return convertDateCondition(resolvedValue, operator, column);
 
     case 'Deadline':
     case 'deadline':
       // ✅ FIX: Deadline → paymentDeadline (korrekter Feldname im Schema)
       if (entityType === 'reservation') {
-        return convertDateCondition(value, operator, 'paymentDeadline');
+        return convertDateCondition(resolvedValue, operator, 'paymentDeadline');
       }
       return {};
 
@@ -145,13 +176,13 @@ function convertSingleCondition(
     case 'guestName':
       if (entityType === 'reservation') {
         if (operator === 'equals') {
-          return { guestName: { equals: value, mode: 'insensitive' } };
+          return { guestName: { equals: resolvedValue, mode: 'insensitive' } };
         } else if (operator === 'contains') {
-          return { guestName: { contains: value as string, mode: 'insensitive' } };
+          return { guestName: { contains: resolvedValue as string, mode: 'insensitive' } };
         } else if (operator === 'startsWith') {
-          return { guestName: { startsWith: value as string, mode: 'insensitive' } };
+          return { guestName: { startsWith: resolvedValue as string, mode: 'insensitive' } };
         } else if (operator === 'endsWith') {
-          return { guestName: { endsWith: value as string, mode: 'insensitive' } };
+          return { guestName: { endsWith: resolvedValue as string, mode: 'insensitive' } };
         }
       }
       return {};
@@ -159,9 +190,9 @@ function convertSingleCondition(
     case 'paymentStatus':
       if (entityType === 'reservation') {
         if (operator === 'equals') {
-          return { paymentStatus: value };
+          return { paymentStatus: resolvedValue };
         } else if (operator === 'notEquals') {
-          return { paymentStatus: { not: value } };
+          return { paymentStatus: { not: resolvedValue } };
         }
       }
       return {};
@@ -175,16 +206,16 @@ function convertSingleCondition(
           // OR: Suche in beiden Feldern (Zimmername kann in roomNumber oder roomDescription sein)
           return {
             OR: [
-              { roomNumber: { equals: value, mode: 'insensitive' } },
-              { roomDescription: { equals: value, mode: 'insensitive' } }
+              { roomNumber: { equals: resolvedValue, mode: 'insensitive' } },
+              { roomDescription: { equals: resolvedValue, mode: 'insensitive' } }
             ]
           };
         } else if (operator === 'notEquals') {
           // AND: Beide Felder müssen nicht gleich sein
           return {
             AND: [
-              { roomNumber: { not: { equals: value, mode: 'insensitive' } } },
-              { roomDescription: { not: { equals: value, mode: 'insensitive' } } }
+              { roomNumber: { not: { equals: resolvedValue, mode: 'insensitive' } } },
+              { roomDescription: { not: { equals: resolvedValue, mode: 'insensitive' } } }
             ]
           };
         }
@@ -194,9 +225,9 @@ function convertSingleCondition(
     case 'guestEmail':
       if (entityType === 'reservation') {
         if (operator === 'equals') {
-          return { guestEmail: { equals: value, mode: 'insensitive' } };
+          return { guestEmail: { equals: resolvedValue, mode: 'insensitive' } };
         } else if (operator === 'contains') {
-          return { guestEmail: { contains: value as string, mode: 'insensitive' } };
+          return { guestEmail: { contains: resolvedValue as string, mode: 'insensitive' } };
         }
       }
       return {};
@@ -204,9 +235,9 @@ function convertSingleCondition(
     case 'guestPhone':
       if (entityType === 'reservation') {
         if (operator === 'equals') {
-          return { guestPhone: { equals: value, mode: 'insensitive' } };
+          return { guestPhone: { equals: resolvedValue, mode: 'insensitive' } };
         } else if (operator === 'contains') {
-          return { guestPhone: { contains: value as string, mode: 'insensitive' } };
+          return { guestPhone: { contains: resolvedValue as string, mode: 'insensitive' } };
         }
       }
       return {};
@@ -214,27 +245,27 @@ function convertSingleCondition(
     case 'amount':
       if (entityType === 'reservation') {
         if (operator === 'equals') {
-          return { amount: value };
+          return { amount: resolvedValue };
         } else if (operator === 'greaterThan') {
-          return { amount: { gt: value } };
+          return { amount: { gt: resolvedValue } };
         } else if (operator === 'lessThan') {
-          return { amount: { lt: value } };
+          return { amount: { lt: resolvedValue } };
         }
       }
       return {};
 
     case 'arrivalTime':
       if (entityType === 'reservation') {
-        return convertDateCondition(value, operator, 'arrivalTime');
+        return convertDateCondition(resolvedValue, operator, 'arrivalTime');
       }
       return {};
 
     case 'onlineCheckInCompleted':
       if (entityType === 'reservation') {
-        // ✅ Konvertiere Wert zu Boolean (value ist string | number | Date)
-        const boolValue = typeof value === 'boolean' 
-          ? value 
-          : (value === 'true' || value === '1' || value === 1);
+        // ✅ Konvertiere Wert zu Boolean (resolvedValue ist string | number | Date)
+        const boolValue = typeof resolvedValue === 'boolean' 
+          ? resolvedValue 
+          : (resolvedValue === 'true' || resolvedValue === '1' || resolvedValue === 1);
         if (operator === 'equals') {
           return { onlineCheckInCompleted: boolValue };
         } else if (operator === 'notEquals') {
@@ -246,42 +277,42 @@ function convertSingleCondition(
     case 'doorPin':
       if (entityType === 'reservation') {
         if (operator === 'equals') {
-          return { doorPin: { equals: value, mode: 'insensitive' } };
+          return { doorPin: { equals: resolvedValue, mode: 'insensitive' } };
         } else if (operator === 'contains') {
-          return { doorPin: { contains: value as string, mode: 'insensitive' } };
+          return { doorPin: { contains: resolvedValue as string, mode: 'insensitive' } };
         }
       }
       return {};
 
     case 'responsible':
-      return convertUserRoleCondition(value, operator, entityType, 'responsible');
+      return convertUserRoleCondition(resolvedValue, operator, entityType, 'responsible');
 
     case 'qualityControl':
       if (entityType === 'task') {
-        return convertUserRoleCondition(value, operator, entityType, 'qualityControl');
+        return convertUserRoleCondition(resolvedValue, operator, entityType, 'qualityControl');
       }
       return {};
 
     case 'requestedBy':
       if (entityType === 'request') {
-        return convertUserRoleCondition(value, operator, entityType, 'requestedBy');
+        return convertUserRoleCondition(resolvedValue, operator, entityType, 'requestedBy');
       }
       return {};
 
     case 'createdBy':
       if (entityType === 'tour') {
-        return convertUserRoleCondition(value, operator, entityType, 'createdBy');
+        return convertUserRoleCondition(resolvedValue, operator, entityType, 'createdBy');
       }
       return {};
 
     case 'bookedBy':
       if (entityType === 'tour_booking') {
-        return convertUserRoleCondition(value, operator, entityType, 'bookedBy');
+        return convertUserRoleCondition(resolvedValue, operator, entityType, 'bookedBy');
       }
       return {};
 
     case 'branch':
-      return convertBranchCondition(value, operator);
+      return convertBranchCondition(resolvedValue, operator, req);
 
     default:
       // Fallback für unbekannte Spalten
@@ -296,12 +327,22 @@ function convertSingleCondition(
  * @param fieldName - Der Name des Feldes ('dueDate', 'checkInDate', 'checkOutDate', etc.)
  */
 function convertDateCondition(value: any, operator: string, fieldName: string = 'dueDate'): any {
-  // Handle __TODAY__ dynamic date
+  // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__ dynamic dates
   let dateValue: Date;
   if (value === '__TODAY__') {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     dateValue = today;
+  } else if (value === '__TOMORROW__') {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    dateValue = tomorrow;
+  } else if (value === '__YESTERDAY__') {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    dateValue = yesterday;
   } else {
     dateValue = new Date(value);
     if (isNaN(dateValue.getTime())) {
@@ -394,12 +435,29 @@ function convertUserRoleCondition(
 /**
  * Konvertiert Branch-Bedingungen
  */
-function convertBranchCondition(value: any, operator: string): any {
-  if (typeof value === 'string') {
+function convertBranchCondition(value: any, operator: string, req?: Request): any {
+  // ✅ PHASE 4: __CURRENT_BRANCH__ Placeholder auflösen
+  let resolvedValue = value;
+  if (typeof value === 'string' && value === '__CURRENT_BRANCH__' && req) {
+    const branchId = (req as any).branchId;
+    if (branchId) {
+      // Wenn branchId verfügbar, filtere direkt nach branchId
+      if (operator === 'equals') {
+        return { branchId: branchId };
+      } else if (operator === 'notEquals') {
+        return { branchId: { not: branchId } };
+      }
+      return {};
+    } else {
+      return {}; // Kein Branch verfügbar
+    }
+  }
+  
+  if (typeof resolvedValue === 'string') {
     if (operator === 'equals') {
-      return { branch: { name: { equals: value, mode: 'insensitive' } } };
+      return { branch: { name: { equals: resolvedValue, mode: 'insensitive' } } };
     } else if (operator === 'contains') {
-      return { branch: { name: { contains: value, mode: 'insensitive' } } };
+      return { branch: { name: { contains: resolvedValue, mode: 'insensitive' } } };
     }
   }
   return {};
