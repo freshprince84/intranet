@@ -531,16 +531,17 @@ const Requests: React.FC = () => {
     // 4. Kein Filter ausgewählt wurde (selectedFilterId === null)
     // ✅ FIX: !loading entfernt, da loading initial false ist und von fetchRequests gesetzt wird
     if (!filtersLoading && requests.length === 0 && !initialLoadAttemptedRef.current && selectedFilterId === null && filterConditions.length === 0) {
-      // Warte 500ms, damit SavedFilterTags Zeit hat, Default-Filter anzuwenden
+      // Warte 800ms, damit SavedFilterTags Zeit hat, Default-Filter anzuwenden
+      // ✅ FIX: Längere Wartezeit, damit SavedFilterTags definitiv fertig ist
       const timeoutId = setTimeout(() => {
-        // Prüfe nochmal, ob inzwischen ein Filter angewendet wurde
+        // Prüfe nochmal, ob inzwischen ein Filter angewendet wurde oder ob bereits geladen wurde
         if (selectedFilterId === null && filterConditions.length === 0 && requests.length === 0 && !initialLoadAttemptedRef.current) {
           // ✅ FIX: Markiere als versucht, BEVOR fetchRequests aufgerufen wird
           initialLoadAttemptedRef.current = true;
           // Fallback: Lade Requests ohne Filter
           fetchRequests(undefined, undefined, false, 20, 0);
         }
-      }, 500);
+      }, 800);
       
       return () => clearTimeout(timeoutId);
     }
@@ -695,18 +696,17 @@ const Requests: React.FC = () => {
     // Table-Header-Sortierung zurücksetzen
     setSortConfig({ key: 'dueDate', direction: 'asc' });
     
-    // ✅ FIX: Markiere initial load als versucht, wenn ein Filter angewendet wird
-    initialLoadAttemptedRef.current = true;
-    
     // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
     // ✅ Sonst: Verwende applyFilterConditions (setzt auch selectedFilterId = null, activeFilterName = '')
     if (id) {
       setFilterConditions(conditions);
       setFilterLogicalOperators(operators);
       // ❌ ENTFERNT: sortDirections Parameter wird ignoriert - Filter-Sortierung wurde entfernt (Phase 1)
+      // ✅ FIX: Flag wird in fetchRequests gesetzt (wenn offset === 0)
       await fetchRequests(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
     } else {
       // ✅ Direkte Bedingungen: applyFilterConditions lädt bereits und setzt State korrekt
+      // ✅ FIX: Flag wird in applyFilterConditions gesetzt
       await applyFilterConditions(conditions, operators);
     }
   };
