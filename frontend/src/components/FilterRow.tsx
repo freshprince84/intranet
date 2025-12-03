@@ -139,7 +139,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
           const response = await axiosInstance.get('/users/dropdown');
           setUsers(response.data);
         } catch (error) {
-          console.error('Fehler beim Laden der Benutzer:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Fehler beim Laden der Benutzer:', error);
+          }
         } finally {
           setLoadingUsers(false);
         }
@@ -158,7 +160,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
             const response = await axiosInstance.get('/roles');
             setRoles(response.data);
           } catch (error) {
-            console.error('Fehler beim Laden der Rollen:', error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Fehler beim Laden der Rollen:', error);
+            }
           } finally {
             setLoadingRoles(false);
           }
@@ -172,7 +176,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
           const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
           setBranches(response.data);
         } catch (error) {
-          console.error('Fehler beim Laden der Branches:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Fehler beim Laden der Branches:', error);
+          }
         } finally {
           setLoadingBranches(false);
         }
@@ -204,7 +210,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
           const uniqueRoomNames = Array.from(roomNames).sort();
           setRoomNumbers(uniqueRoomNames);
         } catch (error) {
-          console.error('Fehler beim Laden der Zimmernamen:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Fehler beim Laden der Zimmernamen:', error);
+          }
         } finally {
           setLoadingRoomNumbers(false);
         }

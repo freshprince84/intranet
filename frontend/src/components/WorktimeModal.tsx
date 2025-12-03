@@ -36,7 +36,9 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             // Vergleiche mit selectedDate
             return dateOnly === selectedDate;
         } catch (error) {
-            console.error("Fehler beim Prüfen der Relevanz der aktiven Zeiterfassung:", error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error("Fehler beim Prüfen der Relevanz der aktiven Zeiterfassung:", error);
+            }
             return false;
         }
     };
@@ -74,7 +76,9 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             
             setLoading(false);
         } catch (error) {
-            console.error('Fehler beim Laden der Zeiterfassungen:', error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Fehler beim Laden der Zeiterfassungen:', error);
+            }
             setError(t('worktime.list.loadError'));
             setLoading(false);
         }
@@ -106,7 +110,9 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                         totalMinutes += minutes;
                     }
                 } catch (error) {
-                    console.error('Fehler bei der Berechnung:', error);
+                    if (process.env.NODE_ENV === 'development') {
+                      console.error('Fehler bei der Berechnung:', error);
+                    }
                 }
             }
         });
@@ -128,7 +134,9 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                     totalMinutes += minutes;
                 }
             } catch (error) {
-                console.error("Fehler bei der Berechnung der aktiven Zeiterfassung:", error);
+                if (process.env.NODE_ENV === 'development') {
+                  console.error("Fehler bei der Berechnung der aktiven Zeiterfassung:", error);
+                }
             }
         }
         

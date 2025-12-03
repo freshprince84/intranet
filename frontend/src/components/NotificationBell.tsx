@@ -49,9 +49,13 @@ const NotificationBell: React.FC = () => {
   const fetchUnreadCount = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('Versuche, ungelesene Benachrichtigungen zu zählen...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Versuche, ungelesene Benachrichtigungen zu zählen...');
+      }
       const response = await notificationApi.getUnreadCount();
-      console.log('Antwort vom Server für ungelesene Benachrichtigungen:', response);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Antwort vom Server für ungelesene Benachrichtigungen:', response);
+      }
       
       // Prüfe verschiedene mögliche Antwortformate
       let count = 0;
@@ -63,11 +67,15 @@ const NotificationBell: React.FC = () => {
         count = response.data.count;
       }
       
-      console.log('Setze ungelesene Benachrichtigungen auf:', count);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Setze ungelesene Benachrichtigungen auf:', count);
+      }
       setUnreadCount(count);
       setError(null);
     } catch (error) {
-      console.error('Fehler beim Laden der ungelesenen Nachrichten:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Laden der ungelesenen Nachrichten:', error);
+      }
       setUnreadCount(0);
     } finally {
       setLoading(false);
@@ -80,7 +88,9 @@ const NotificationBell: React.FC = () => {
     setLoading(true);
     try {
       const response = await notificationApi.getNotifications(1, 5);
-      console.log('Benachrichtigungen Response:', response);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Benachrichtigungen Response:', response);
+      }
       
       // Prüfe verschiedene mögliche Antwortformate
       let notifications = [];
@@ -92,11 +102,15 @@ const NotificationBell: React.FC = () => {
         notifications = response.notifications;
       }
       
-      console.log('Verarbeitete Benachrichtigungen:', notifications);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Verarbeitete Benachrichtigungen:', notifications);
+      }
       setNotifications(notifications);
       setError(null);
     } catch (err) {
-      console.error('Fehler beim Laden der Benachrichtigungen:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Laden der Benachrichtigungen:', err);
+      }
       setError(t('notifications.loadError'));
       setNotifications([]);
     } finally {
@@ -114,7 +128,9 @@ const NotificationBell: React.FC = () => {
       );
       fetchUnreadCount();
     } catch (err) {
-      console.error('Fehler beim Markieren als gelesen:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Markieren als gelesen:', err);
+      }
     }
   };
 
@@ -126,7 +142,9 @@ const NotificationBell: React.FC = () => {
       );
       setUnreadCount(0);
     } catch (err) {
-      console.error('Fehler beim Markieren aller als gelesen:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Markieren aller als gelesen:', err);
+      }
     }
   };
 

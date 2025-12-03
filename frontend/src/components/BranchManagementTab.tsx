@@ -508,7 +508,9 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                         API_ENDPOINTS.SAVED_FILTERS.BASE,
                         alleFilter
                     );
-                    console.log(t('branches.filterCreated'));
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log(t('branches.filterCreated'));
+                    }
                 }
             } catch (error) {
                 console.error(t('branches.createStandardFiltersError'), error);
