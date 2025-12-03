@@ -969,12 +969,13 @@ const handleSort = (key: SortConfig['key']) => {
 
 **❌ ENTFERNEN:**
 1. ✅ Drag & Drop im TableColumnConfig Modal (nur im Modal, nicht bei Table Headern!) - **ABGESCHLOSSEN**
-2. Doppelte Funktionen entfernen
-3. Controlled Mode entfernen
-4. Fallback-Timeout entfernen
-5. Cleanup useEffects entfernen
-6. Weitere überflüssige Dinge entfernen
-7. Tests: Prüfen, dass alles noch funktioniert
+2. ⏳ Doppelte Funktionen entfernen (analysieren: applyFilterConditions vs handleFilterChange - beide haben unterschiedliche Zwecke)
+3. ⚠️ Controlled Mode entfernen - **NICHT ENTFERNEN** (activeFilterName, selectedFilterId werden für visuelles Highlighting in SavedFilterTags benötigt)
+4. ✅ Fallback-Timeout entfernen - **ABGESCHLOSSEN**
+5. ✅ getActiveFilterCount vereinfacht - **ABGESCHLOSSEN** (direkt `filterConditions.length` verwendet)
+6. Cleanup useEffects entfernen (prüfen ob vorhanden)
+7. Weitere überflüssige Dinge entfernen
+8. Tests: Prüfen, dass alles noch funktioniert
 
 ### Schritt 4: Standardfilter korrekt implementieren (Priorität 4) 🔴
 
