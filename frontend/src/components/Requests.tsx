@@ -354,7 +354,8 @@ const Requests: React.FC = () => {
     filterConditions?: any[], 
     append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
     limit = 20,
-    offset = 0
+    offset = 0,
+    signal?: AbortSignal // ✅ MEMORY: AbortSignal für Request-Cancellation
   ) => {
     try {
       if (!append) {
@@ -382,7 +383,15 @@ const Requests: React.FC = () => {
         });
       }
       
-      const response = await axiosInstance.get('/requests', { params });
+      // ✅ MEMORY: Prüfe ob Request bereits abgebrochen wurde
+      if (signal?.aborted) {
+        return;
+      }
+      
+      const response = await axiosInstance.get('/requests', { 
+        params,
+        signal // ✅ MEMORY: AbortSignal für Request-Cancellation
+      });
       const responseData = response.data;
       
       // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
@@ -475,14 +484,24 @@ const Requests: React.FC = () => {
         setRequests(requestsWithAttachments);
       }
       
+      // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
+      if (signal?.aborted) {
+        return;
+      }
+      
       setTotalCount(totalCount);
       setHasMore(hasMore);
       setError(null);
     } catch (err) {
+      // ✅ MEMORY: Ignoriere Abort-Errors
+      const axiosError = err as any;
+      if (axiosError.name === 'AbortError' || axiosError.name === 'CanceledError' || signal?.aborted) {
+        return; // Request wurde abgebrochen
+      }
+      
       if (process.env.NODE_ENV === 'development') {
         console.error('Request Error:', err);
       }
-      const axiosError = err as any;
       if (!append) {
         if (axiosError.code === 'ERR_NETWORK') {
           setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
@@ -534,6 +553,9 @@ const Requests: React.FC = () => {
   
   // ✅ FIX: Initiales Laden von Requests (wenn Filter geladen wurden, aber kein Default-Filter angewendet wurde)
   useEffect(() => {
+    // ✅ MEMORY: AbortController für Request-Cancellation
+    const abortController = new AbortController();
+    
     // Nur ausführen, wenn:
     // 1. Filter nicht mehr am Laden sind
     // 2. Keine Requests geladen wurden (requests.length === 0)
@@ -549,12 +571,19 @@ const Requests: React.FC = () => {
           // ✅ FIX: Markiere als versucht, BEVOR fetchRequests aufgerufen wird
           initialLoadAttemptedRef.current = true;
           // Fallback: Lade Requests ohne Filter
-          fetchRequests(undefined, undefined, false, 20, 0);
+          fetchRequests(undefined, undefined, false, 20, 0, abortController.signal);
         }
       }, 800);
       
-      return () => clearTimeout(timeoutId);
+      return () => {
+        clearTimeout(timeoutId);
+        abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
+      };
     }
+    
+    return () => {
+      abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
+    };
   }, [filtersLoading, requests.length, selectedFilterId, filterConditions.length, fetchRequests]);
 
   // ❌ ENTFERNT: Cleanup useEffect - React macht automatisches Cleanup, manuelles Löschen ist überflüssig (Phase 3)
@@ -818,6 +847,9 @@ const Requests: React.FC = () => {
 
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   useEffect(() => {
+    // ✅ MEMORY: AbortController für Request-Cancellation
+    const abortController = new AbortController();
+    
     const observer = new IntersectionObserver(
       (entries) => {
         const firstEntry = entries[0];
@@ -829,7 +861,8 @@ const Requests: React.FC = () => {
             filterConditions.length > 0 ? filterConditions : undefined,
             true, // append = true
             20, // limit
-            nextOffset // offset
+            nextOffset, // offset
+            abortController.signal // ✅ MEMORY: AbortSignal für Request-Cancellation
           );
         }
       },
@@ -843,6 +876,7 @@ const Requests: React.FC = () => {
     return () => {
       // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
       observer.disconnect();
+      abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
     };
   }, [hasMore, loadingMore, loading, requests.length, selectedFilterId, filterConditions, fetchRequests]);
 
