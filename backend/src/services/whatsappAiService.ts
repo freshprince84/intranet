@@ -225,12 +225,20 @@ export class WhatsAppAiService {
           try {
             // Führe Function aus
             // WICHTIG: check_room_availability kann auch ohne userId aufgerufen werden
-            const result = await (WhatsAppFunctionHandlers as any)[functionName](
+            // WICHTIG: Für create_room_reservation: Übergebe phoneNumber als Fallback für Kontaktdaten
+            const functionParams: any[] = [
               functionArgs,
               conversationContext?.userId || null,
               conversationContext?.roleId || null,
               branchId
-            );
+            ];
+            
+            // Für create_room_reservation: Füge phoneNumber hinzu
+            if (functionName === 'create_room_reservation') {
+              functionParams.push(phoneNumber); // WhatsApp-Telefonnummer als Fallback
+            }
+            
+            const result = await (WhatsAppFunctionHandlers as any)[functionName](...functionParams);
             
             toolResults.push({
               tool_call_id: toolCall.id,

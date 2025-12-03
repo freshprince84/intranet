@@ -659,8 +659,52 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     // Extrahiere Anhänge aus dem originalen content
     const attachments = extractAttachments();
     
+    // ✅ FIX: Füge Anhänge aus attachmentMetadata hinzu, auch wenn sie nicht im Markdown-Text sind
+    // Dies ist wichtig für Card-Ansicht, wo Anhänge separat übergeben werden
+    const metadataAttachments = (attachmentMetadata || []).map(meta => {
+      // Prüfe, ob dieser Anhang bereits in attachments vorhanden ist (um Duplikate zu vermeiden)
+      const alreadyInAttachments = attachments.some(att => {
+        // Prüfe nach Dateiname
+        if (att.alt === meta.fileName || att.alt.toLowerCase() === meta.fileName.toLowerCase()) {
+          return true;
+        }
+        // Prüfe nach URL
+        if (att.url === meta.url) {
+          return true;
+        }
+        // Prüfe nach ID in URL
+        const attIdMatch = att.url?.match(/\/attachments\/(\d+)/);
+        if (attIdMatch && parseInt(attIdMatch[1]) === meta.id) {
+          return true;
+        }
+        return false;
+      });
+      
+      // Wenn bereits vorhanden, überspringe
+      if (alreadyInAttachments) {
+        return null;
+      }
+      
+      // Bestimme Typ basierend auf fileType
+      let attachmentType: 'image' | 'link' = 'link';
+      if (meta.fileType?.startsWith('image/')) {
+        attachmentType = 'image';
+      }
+      
+      // Erstelle Attachment-Objekt aus Metadaten
+      return {
+        type: attachmentType,
+        alt: meta.fileName,
+        url: meta.url,
+        isTemporary: false
+      };
+    }).filter((item): item is { type: string; alt: string; url: string; isTemporary: boolean } => item !== null);
+    
+    // Kombiniere attachments aus Markdown mit metadataAttachments
+    const allAttachments = [...attachments, ...metadataAttachments];
+    
     // Filtere Bilder heraus, die als große Vorschau gerendert werden sollen
-    const imagesToRender = attachments.filter(attachment => {
+    const imagesToRender = allAttachments.filter(attachment => {
       // WICHTIG: Cerebro-Media-Links werden NICHT als Vorschau gerendert,
       // da sie bereits separat angezeigt werden (wie bei Requests & Tasks)
       const isCerebroMedia = attachment.url?.includes('/cerebro/media/');
@@ -735,7 +779,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     processedContent = processedContent.replace(/\n{3,}/g, '\n\n').trim();
     
     // Filtere externe Links heraus, die als Web-Vorschau gerendert werden sollen
-    const externalLinksToRender = attachments.filter(attachment => {
+    const externalLinksToRender = allAttachments.filter(attachment => {
       // WICHTIG: Cerebro-Media-Links werden NICHT als Web-Vorschau gerendert
       const isCerebroMedia = attachment.url?.includes('/cerebro/media/');
       if (isCerebroMedia) {

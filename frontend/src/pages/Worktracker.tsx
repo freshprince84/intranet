@@ -1634,7 +1634,7 @@ const Worktracker: React.FC = () => {
                     (booking.customerPhone && booking.customerPhone.includes(searchLower));
                 
                 if (!matchesSearch) return false;
-            }
+                    }
             
             return true;
         });
@@ -4693,7 +4693,7 @@ const Worktracker: React.FC = () => {
                                             onClick={() => handleTourBookingsSort('tour.title')}
                                         >
                                             <div className="flex items-center gap-2">
-                                                {t('tourBookings.tour', 'Tour')}
+                                            {t('tourBookings.tour', 'Tour')}
                                                 {tourBookingsSortConfig.key === 'tour.title' && (
                                                     <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
                                                 )}
@@ -4704,7 +4704,7 @@ const Worktracker: React.FC = () => {
                                             onClick={() => handleTourBookingsSort('customerName')}
                                         >
                                             <div className="flex items-center gap-2">
-                                                {t('tourBookings.customerName', 'Kunde')}
+                                            {t('tourBookings.customerName', 'Kunde')}
                                                 {tourBookingsSortConfig.key === 'customerName' && (
                                                     <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
                                                 )}
@@ -4715,7 +4715,7 @@ const Worktracker: React.FC = () => {
                                             onClick={() => handleTourBookingsSort('tourDate')}
                                         >
                                             <div className="flex items-center gap-2">
-                                                {t('tourBookings.tourDate', 'Tour-Datum')}
+                                            {t('tourBookings.tourDate', 'Tour-Datum')}
                                                 {tourBookingsSortConfig.key === 'tourDate' && (
                                                     <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
                                                 )}
@@ -4726,7 +4726,7 @@ const Worktracker: React.FC = () => {
                                             onClick={() => handleTourBookingsSort('numberOfParticipants')}
                                         >
                                             <div className="flex items-center gap-2">
-                                                {t('tourBookings.numberOfParticipants', 'Teilnehmer')}
+                                            {t('tourBookings.numberOfParticipants', 'Teilnehmer')}
                                                 {tourBookingsSortConfig.key === 'numberOfParticipants' && (
                                                     <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
                                                 )}
@@ -4737,7 +4737,7 @@ const Worktracker: React.FC = () => {
                                             onClick={() => handleTourBookingsSort('totalPrice')}
                                         >
                                             <div className="flex items-center gap-2">
-                                                {t('tourBookings.totalPrice', 'Gesamtpreis')}
+                                            {t('tourBookings.totalPrice', 'Gesamtpreis')}
                                                 {tourBookingsSortConfig.key === 'totalPrice' && (
                                                     <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
                                                 )}
@@ -4748,7 +4748,7 @@ const Worktracker: React.FC = () => {
                                             onClick={() => handleTourBookingsSort('paymentStatus')}
                                         >
                                             <div className="flex items-center gap-2">
-                                                {t('tourBookings.paymentStatus', 'Zahlungsstatus')}
+                                            {t('tourBookings.paymentStatus', 'Zahlungsstatus')}
                                                 {tourBookingsSortConfig.key === 'paymentStatus' && (
                                                     <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
                                                 )}
@@ -4759,7 +4759,7 @@ const Worktracker: React.FC = () => {
                                             onClick={() => handleTourBookingsSort('status')}
                                         >
                                             <div className="flex items-center gap-2">
-                                                {t('tourBookings.status', 'Status')}
+                                            {t('tourBookings.status', 'Status')}
                                                 {tourBookingsSortConfig.key === 'status' && (
                                                     <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
                                                 )}
@@ -4770,7 +4770,7 @@ const Worktracker: React.FC = () => {
                                             onClick={() => handleTourBookingsSort('bookedBy')}
                                         >
                                             <div className="flex items-center gap-2">
-                                                {t('tourBookings.bookedBy', 'Gebucht von')}
+                                            {t('tourBookings.bookedBy', 'Gebucht von')}
                                                 {tourBookingsSortConfig.key === 'bookedBy' && (
                                                     <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
                                                 )}
