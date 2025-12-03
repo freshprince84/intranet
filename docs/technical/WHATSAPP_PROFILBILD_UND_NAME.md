@@ -94,16 +94,16 @@ Diese Anleitung erklärt, wie du dem WhatsApp-Bot ein Profilbild und einen Namen
 
 ---
 
-## 📋 Schritt 7: Verifizierung prüfen
+## 📋 Schritt 5: Verifizierung prüfen
 
-### 7.1 Status prüfen
+### 5.1 Status prüfen
 
-1. **Im WhatsApp Manager**:
-   - Gehe zu **"Telefonnummern"** → Deine Nummer → **"Profil"** Tab
+1. **In Meta Business Suite**:
+   - Gehe zu **"WhatsApp Accounts"** → Dein Account → **"Business Profile"**
    - Prüfe den **Status** von Profilbild und Name:
-     - ✅ **"Genehmigt"** (Approved) = Wird angezeigt
-     - ⏳ **"Ausstehend"** (Pending) = Wird noch geprüft
-     - ❌ **"Abgelehnt"** (Rejected) = Muss geändert werden
+     - ✅ **"Approved"** (Genehmigt) = Wird angezeigt
+     - ⏳ **"Pending"** (Ausstehend) = Wird noch geprüft
+     - ❌ **"Rejected"** (Abgelehnt) = Muss geändert werden
 
 ### 5.2 Bei Ablehnung
 
@@ -118,16 +118,16 @@ Diese Anleitung erklärt, wie du dem WhatsApp-Bot ein Profilbild und einen Namen
 
 ---
 
-## 📋 Schritt 8: Testen
+## 📋 Schritt 6: Testen
 
-### 8.1 Test-Nachricht senden
+### 6.1 Test-Nachricht senden
 
 1. **Sende eine Test-Nachricht** an eine Test-Telefonnummer
 2. **Prüfe auf dem Empfänger-Gerät**:
    - Wird der Name angezeigt? (statt der Telefonnummer)
    - Wird das Profilbild angezeigt?
 
-### 8.2 Falls nicht sichtbar
+### 6.2 Falls nicht sichtbar
 
 - **Wartezeit**: Bis zu 24 Stunden für die Genehmigung
 - **Cache**: WhatsApp-Cache auf dem Empfänger-Gerät leeren
@@ -152,8 +152,8 @@ Diese Anleitung erklärt, wie du dem WhatsApp-Bot ein Profilbild und einen Namen
 
 ### Genehmigungsprozess
 
-- ⏱️ **Dauer**: Profilbild bis zu 24 Stunden, Name bis zu 2-3 Werktage
-- 🔄 **Status prüfen**: Im WhatsApp Manager → Telefonnummern → Profil Tab
+- ⏱️ **Dauer**: Bis zu 24 Stunden
+- 🔄 **Status prüfen**: In Meta Business Suite → WhatsApp Accounts → Business Profile
 - 📧 **Benachrichtigung**: Du erhältst eine E-Mail, wenn Profilbild/Name genehmigt wurde
 
 ### Sichtbarkeit
@@ -205,7 +205,7 @@ Diese Anleitung erklärt, wie du dem WhatsApp-Bot ein Profilbild und einen Namen
 ### Meta Business Suite
 - **Hauptseite**: `https://business.facebook.com`
 - **WhatsApp Accounts**: `https://business.facebook.com/settings/whatsapp-accounts`
-- **WhatsApp Manager**: Über WhatsApp Account → Button "WhatsApp Manager"
+- **Business Profile**: `https://business.facebook.com/settings/whatsapp-accounts/[ACCOUNT_ID]/business-profile`
 
 ### Meta for Developers
 - **WhatsApp Business API Dokumentation**: `https://developers.facebook.com/docs/whatsapp`
@@ -248,16 +248,11 @@ Diese Anleitung erklärt, wie du dem WhatsApp-Bot ein Profilbild und einen Namen
 **Profilbild und Name für WhatsApp-Bot konfigurieren:**
 
 1. ✅ Meta Business Suite öffnen
-2. ✅ Settings → Accounts → WhatsApp Accounts
-3. ✅ WhatsApp Business Account auswählen
-4. ✅ **"WhatsApp Manager"** Button klicken (im rechten Bereich)
-5. ✅ Telefonnummer auswählen → Tab **"Profil"**
-6. ✅ Profilbild hochladen (JPG/PNG, min. 640x640 Pixel, max. 5 MB)
-7. ✅ Anzeigename bearbeiten (Stift-Symbol klicken, max. 25 Zeichen)
-8. ✅ Auf Genehmigung warten (Profilbild: bis 24h, Name: bis 2-3 Werktage)
-9. ✅ Status prüfen und testen
+2. ✅ WhatsApp Business Account öffnen
+3. ✅ Profilbild hochladen (JPG/PNG, min. 640x640 Pixel, max. 5 MB)
+4. ✅ Anzeigename eingeben (max. 25 Zeichen)
+5. ✅ Auf Genehmigung warten (bis zu 24 Stunden)
+6. ✅ Status prüfen und testen
 
-**Wichtig:** 
-- Die Konfiguration erfolgt **nicht im Code**, sondern über die **Meta Business Suite**!
-- Du musst den **"WhatsApp Manager"** öffnen, nicht direkt die Settings!
+**Wichtig:** Die Konfiguration erfolgt **nicht im Code**, sondern über die **Meta Business Suite**!
 

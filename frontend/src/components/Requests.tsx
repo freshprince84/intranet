@@ -519,6 +519,14 @@ const Requests: React.FC = () => {
 
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  // ✅ MEMORY: Ref für aktuelle requests.length (verhindert Endlosschleife durch requests.length in Dependencies)
+  const requestsLengthRef = useRef(requests.length);
+  
+  // ✅ MEMORY: Aktualisiere Ref wenn requests sich ändert
+  useEffect(() => {
+    requestsLengthRef.current = requests.length;
+  }, [requests.length]);
 
   // ✅ FIX: Initiales Laden von Requests (wenn keine Filter existieren oder wenn Filter geladen wurden)
   const filterContext = useFilterContext();
@@ -823,7 +831,8 @@ const Requests: React.FC = () => {
         const firstEntry = entries[0];
         if (firstEntry.isIntersecting && hasMore && !loadingMore && !loading) {
           // ✅ PAGINATION: Lade weitere Items
-          const nextOffset = requests.length;
+          // ✅ MEMORY: Verwende requestsLengthRef.current statt requests.length (verhindert Endlosschleife)
+          const nextOffset = requestsLengthRef.current;
           fetchRequests(
             selectedFilterId || undefined,
             filterConditions.length > 0 ? filterConditions : undefined,
@@ -844,7 +853,7 @@ const Requests: React.FC = () => {
       // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
       observer.disconnect();
     };
-  }, [hasMore, loadingMore, loading, requests.length, selectedFilterId, filterConditions, fetchRequests]);
+  }, [hasMore, loadingMore, loading, selectedFilterId, filterConditions, fetchRequests]); // ✅ MEMORY: requests.length entfernt (verhindert Endlosschleife), verwende requestsLengthRef
 
   // Funktion zum Kopieren eines Requests
   const handleCopyRequest = async (request) => {

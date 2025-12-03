@@ -802,8 +802,10 @@ export class LobbyPmsService {
    */
   async syncReservation(lobbyReservation: LobbyPmsReservation): Promise<Reservation> {
     // Mappe LobbyPMS Status zu unserem ReservationStatus
+    // Unterstützt sowohl englische als auch spanische Status-Strings
     const mapStatus = (status?: string): ReservationStatus => {
       switch (status?.toLowerCase()) {
+        // Englische Status
         case 'checked_in':
           return ReservationStatus.checked_in;
         case 'checked_out':
@@ -812,6 +814,20 @@ export class LobbyPmsService {
           return ReservationStatus.cancelled;
         case 'no_show':
           return ReservationStatus.no_show;
+        // Spanische Status (LobbyPMS ist auf Spanisch)
+        case 'ingresado':
+        case 'check-in':
+          return ReservationStatus.checked_in;
+        case 'salido':
+        case 'check-out':
+          return ReservationStatus.checked_out;
+        case 'cancelado':
+          return ReservationStatus.cancelled;
+        case 'no_aparecio':
+        case 'no apareció':
+          return ReservationStatus.no_show;
+        case 'confirmado':
+          return ReservationStatus.confirmed;
         default:
           return ReservationStatus.confirmed;
       }
