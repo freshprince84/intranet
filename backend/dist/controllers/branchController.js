@@ -42,7 +42,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBranch = exports.updateBranch = exports.createBranch = exports.switchUserBranch = exports.getUserBranches = exports.getAllBranches = exports.getTest = void 0;
+exports.getRoomDescription = exports.updateRoomDescriptions = exports.getRoomDescriptions = exports.deleteBranch = exports.updateBranch = exports.createBranch = exports.switchUserBranch = exports.getUserBranches = exports.getAllBranches = exports.getTest = void 0;
 const organization_1 = require("../middleware/organization");
 const prisma_1 = require("../utils/prisma");
 const branchCache_1 = require("../services/branchCache");
@@ -328,6 +328,9 @@ const switchUserBranch = (req, res) => __awaiter(void 0, void 0, void 0, functio
         const organizationId = req.organizationId;
         const roleId = req.roleId;
         branchCache_1.branchCache.invalidate(userId, organizationId, roleId);
+        // ✅ FIX: OrganizationCache invalidieren (branchId hat sich geändert)
+        const { organizationCache } = yield Promise.resolve().then(() => __importStar(require('../utils/organizationCache')));
+        organizationCache.invalidate(userId);
         return res.json({
             success: true,
             branches,
@@ -627,4 +630,162 @@ const deleteBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.deleteBranch = deleteBranch;
+/**
+ * GET /api/branches/:id/room-descriptions
+ * Lädt alle Zimmer-Beschreibungen für einen Branch
+ */
+const getRoomDescriptions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const branchId = parseInt(req.params.id, 10);
+        const organizationId = req.organizationId;
+        if (isNaN(branchId)) {
+            return res.status(400).json({ message: 'Ungültige Branch-ID' });
+        }
+        // Prüfe ob Branch zur Organisation gehört
+        const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
+        const branch = yield prisma_1.prisma.branch.findFirst({
+            where: Object.assign({ id: branchId }, branchFilter),
+            select: {
+                id: true,
+                lobbyPmsSettings: true
+            }
+        });
+        if (!branch) {
+            return res.status(404).json({ message: 'Branch nicht gefunden' });
+        }
+        // Lade und entschlüssele lobbyPmsSettings
+        let roomDescriptions = {};
+        if (branch.lobbyPmsSettings) {
+            try {
+                const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
+                const lobbyPmsSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) || decryptedSettings;
+                roomDescriptions = (lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.roomDescriptions) || {};
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+            }
+        }
+        res.json(roomDescriptions);
+    }
+    catch (error) {
+        console.error('Error in getRoomDescriptions:', error);
+        res.status(500).json({
+            message: 'Fehler beim Laden der Zimmer-Beschreibungen',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.getRoomDescriptions = getRoomDescriptions;
+/**
+ * PUT /api/branches/:id/room-descriptions
+ * Speichert Zimmer-Beschreibungen für einen Branch
+ */
+const updateRoomDescriptions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const branchId = parseInt(req.params.id, 10);
+        const { roomDescriptions } = req.body;
+        if (isNaN(branchId)) {
+            return res.status(400).json({ message: 'Ungültige Branch-ID' });
+        }
+        if (!roomDescriptions || typeof roomDescriptions !== 'object') {
+            return res.status(400).json({ message: 'roomDescriptions muss ein Objekt sein' });
+        }
+        // Prüfe ob Branch zur Organisation gehört
+        const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
+        const branch = yield prisma_1.prisma.branch.findFirst({
+            where: Object.assign({ id: branchId }, branchFilter),
+            select: {
+                id: true,
+                lobbyPmsSettings: true
+            }
+        });
+        if (!branch) {
+            return res.status(404).json({ message: 'Branch nicht gefunden' });
+        }
+        // Lade bestehende lobbyPmsSettings
+        let lobbyPmsSettings = {};
+        if (branch.lobbyPmsSettings) {
+            try {
+                const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
+                lobbyPmsSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) || decryptedSettings || {};
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+                lobbyPmsSettings = {};
+            }
+        }
+        // Aktualisiere roomDescriptions
+        lobbyPmsSettings.roomDescriptions = roomDescriptions;
+        // Verschlüssele und speichere
+        const { encryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+        const encryptedSettings = encryptBranchApiSettings(lobbyPmsSettings);
+        yield prisma_1.prisma.branch.update({
+            where: { id: branchId },
+            data: {
+                lobbyPmsSettings: encryptedSettings
+            }
+        });
+        // Cache leeren
+        branchCache_1.branchCache.clear();
+        res.json({ success: true, roomDescriptions });
+    }
+    catch (error) {
+        console.error('Error in updateRoomDescriptions:', error);
+        res.status(500).json({
+            message: 'Fehler beim Speichern der Zimmer-Beschreibungen',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.updateRoomDescriptions = updateRoomDescriptions;
+/**
+ * GET /api/branches/:id/room-descriptions/:categoryId
+ * Lädt Beschreibung für ein spezifisches Zimmer
+ */
+const getRoomDescription = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const branchId = parseInt(req.params.id, 10);
+        const categoryId = parseInt(req.params.categoryId, 10);
+        if (isNaN(branchId) || isNaN(categoryId)) {
+            return res.status(400).json({ message: 'Ungültige Branch-ID oder Category-ID' });
+        }
+        // Prüfe ob Branch zur Organisation gehört
+        const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
+        const branch = yield prisma_1.prisma.branch.findFirst({
+            where: Object.assign({ id: branchId }, branchFilter),
+            select: {
+                id: true,
+                lobbyPmsSettings: true
+            }
+        });
+        if (!branch) {
+            return res.status(404).json({ message: 'Branch nicht gefunden' });
+        }
+        // Lade roomDescriptions
+        let roomDescription = null;
+        if (branch.lobbyPmsSettings) {
+            try {
+                const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
+                const lobbyPmsSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) || decryptedSettings;
+                roomDescription = ((_a = lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.roomDescriptions) === null || _a === void 0 ? void 0 : _a[categoryId]) || null;
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+            }
+        }
+        res.json(roomDescription || {});
+    }
+    catch (error) {
+        console.error('Error in getRoomDescription:', error);
+        res.status(500).json({
+            message: 'Fehler beim Laden der Zimmer-Beschreibung',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.getRoomDescription = getRoomDescription;
 //# sourceMappingURL=branchController.js.map

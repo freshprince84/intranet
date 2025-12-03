@@ -287,6 +287,11 @@ class LobbyPmsService {
                 for (const dateEntry of responseData) {
                     const date = dateEntry.date;
                     const categories = dateEntry.categories || [];
+                    // Debug: Logge alle Kategorien für diesen Tag
+                    console.log(`[LobbyPMS] Datum ${date}: ${categories.length} Kategorien gefunden`);
+                    for (const cat of categories) {
+                        console.log(`[LobbyPMS]   - ${cat.category_id}: ${cat.name}, available_rooms: ${cat.available_rooms || 0}`);
+                    }
                     for (const category of categories) {
                         // Hole Preis für 1 Person (Standard)
                         const priceForOnePerson = (_c = (_b = (_a = category.plans) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.prices) === null || _c === void 0 ? void 0 : _c.find((p) => p.people === 1);
@@ -300,6 +305,7 @@ class LobbyPmsService {
                             category.category_id === 34280 || category.category_id === 34281 || category.category_id === 34282) {
                             roomType = 'compartida';
                         }
+                        // WICHTIG: Füge ALLE Kategorien hinzu, auch wenn available_rooms = 0 (für Debugging)
                         allCategories.push({
                             categoryId: category.category_id,
                             roomName: category.name,
@@ -310,6 +316,10 @@ class LobbyPmsService {
                             date: date,
                             prices: ((_f = (_e = category.plans) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.prices) || [] // Alle Preise (verschiedene Personenanzahl)
                         });
+                        // Debug: Spezifisch für "apartamento doble" und "primo deportista"
+                        if (name.includes('apartamento doble') || name.includes('primo deportista')) {
+                            console.log(`[LobbyPMS] ⚠️ Apartamento doble / Primo deportista: category_id=${category.category_id}, name=${category.name}, roomType=${roomType}, available_rooms=${category.available_rooms || 0}, date=${date}`);
+                        }
                     }
                 }
                 return allCategories;
@@ -551,18 +561,20 @@ class LobbyPmsService {
      */
     createBooking(categoryId_1, checkInDate_1, checkOutDate_1, guestName_1, guestEmail_1, guestPhone_1) {
         return __awaiter(this, arguments, void 0, function* (categoryId, checkInDate, checkOutDate, guestName, guestEmail, guestPhone, guests = 1) {
-            var _a, _b, _c, _d, _e, _f;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
             // Lade Settings falls noch nicht geladen
             if (!this.apiKey) {
                 yield this.loadSettings();
             }
             try {
                 // Payload basierend auf Test-Ergebnissen
+                // WICHTIG: total_adults und holder_name sind ERFORDERLICH!
                 const payload = {
                     category_id: categoryId,
                     start_date: this.formatDate(checkInDate), // Format: "YYYY-MM-DD"
                     end_date: this.formatDate(checkOutDate), // Format: "YYYY-MM-DD"
-                    guest_name: guestName.trim()
+                    holder_name: guestName.trim(), // ERFORDERLICH: holder_name (nicht guest_name!)
+                    total_adults: guests > 0 ? guests : 1 // ERFORDERLICH: Standard 1, falls nicht angegeben
                 };
                 // Optionale Felder
                 if (guestEmail) {
@@ -571,29 +583,27 @@ class LobbyPmsService {
                 if (guestPhone) {
                     payload.guest_phone = guestPhone.trim();
                 }
-                if (guests && guests > 0) {
-                    payload.guests = guests;
-                }
                 console.log(`[LobbyPMS] Erstelle Reservierung: category_id=${categoryId}, checkIn=${this.formatDate(checkInDate)}, checkOut=${this.formatDate(checkOutDate)}, guest=${guestName}`);
                 const response = yield this.axiosInstance.post('/api/v1/bookings', payload);
-                // Response-Struktur: { success: true, data: { booking_id: "...", ... } }
-                // Oder direkt: { booking_id: "...", ... }
+                // Response-Struktur (aus Tests bekannt):
+                // { booking: { booking_id: 18251865, room_id: 807372 } }
                 let bookingId;
-                if (response.data.success && response.data.data) {
-                    // Standard Response-Format
-                    bookingId = response.data.data.booking_id || response.data.data.id;
+                // Prüfe verschiedene Response-Formate
+                if ((_b = (_a = response.data) === null || _a === void 0 ? void 0 : _a.booking) === null || _b === void 0 ? void 0 : _b.booking_id) {
+                    // Standard Response-Format: { booking: { booking_id: ..., room_id: ... } }
+                    bookingId = String(response.data.booking.booking_id);
                 }
-                else if (response.data.booking_id) {
-                    // Direktes Objekt mit booking_id
-                    bookingId = response.data.booking_id;
+                else if ((_c = response.data) === null || _c === void 0 ? void 0 : _c.booking_id) {
+                    // Direktes booking_id im Root
+                    bookingId = String(response.data.booking_id);
+                }
+                else if ((_e = (_d = response.data) === null || _d === void 0 ? void 0 : _d.data) === null || _e === void 0 ? void 0 : _e.booking_id) {
+                    // Verschachteltes Format: { data: { booking_id: ... } }
+                    bookingId = String(response.data.data.booking_id);
                 }
                 else if (response.data.id) {
-                    // Direktes Objekt mit id
-                    bookingId = response.data.id;
-                }
-                else if (response.data.data && typeof response.data.data === 'object') {
-                    // Fallback: Suche in data-Objekt
-                    bookingId = response.data.data.booking_id || response.data.data.id;
+                    // Fallback: id statt booking_id
+                    bookingId = String(response.data.id);
                 }
                 if (!bookingId) {
                     console.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(response.data, null, 2));
@@ -605,9 +615,9 @@ class LobbyPmsService {
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    const errorMessage = ((_b = (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.error) ||
-                        (Array.isArray((_c = axiosError.response) === null || _c === void 0 ? void 0 : _c.data) ? ((_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.data).join(', ') : undefined) ||
-                        ((_f = (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.data) === null || _f === void 0 ? void 0 : _f.message) ||
+                    const errorMessage = ((_g = (_f = axiosError.response) === null || _f === void 0 ? void 0 : _f.data) === null || _g === void 0 ? void 0 : _g.error) ||
+                        (Array.isArray((_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.data) ? ((_j = axiosError.response) === null || _j === void 0 ? void 0 : _j.data).join(', ') : undefined) ||
+                        ((_l = (_k = axiosError.response) === null || _k === void 0 ? void 0 : _k.data) === null || _l === void 0 ? void 0 : _l.message) ||
                         `LobbyPMS API Fehler: ${axiosError.message}`;
                     console.error('[LobbyPMS] Fehler beim Erstellen der Reservierung:', errorMessage);
                     throw new Error(errorMessage);
@@ -676,10 +686,12 @@ class LobbyPmsService {
      */
     syncReservation(lobbyReservation) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a, _b, _c;
             // Mappe LobbyPMS Status zu unserem ReservationStatus
+            // Unterstützt sowohl englische als auch spanische Status-Strings
             const mapStatus = (status) => {
                 switch (status === null || status === void 0 ? void 0 : status.toLowerCase()) {
+                    // Englische Status
                     case 'checked_in':
                         return client_1.ReservationStatus.checked_in;
                     case 'checked_out':
@@ -688,6 +700,20 @@ class LobbyPmsService {
                         return client_1.ReservationStatus.cancelled;
                     case 'no_show':
                         return client_1.ReservationStatus.no_show;
+                    // Spanische Status (LobbyPMS ist auf Spanisch)
+                    case 'ingresado':
+                    case 'check-in':
+                        return client_1.ReservationStatus.checked_in;
+                    case 'salido':
+                    case 'check-out':
+                        return client_1.ReservationStatus.checked_out;
+                    case 'cancelado':
+                        return client_1.ReservationStatus.cancelled;
+                    case 'no_aparecio':
+                    case 'no apareció':
+                        return client_1.ReservationStatus.no_show;
+                    case 'confirmado':
+                        return client_1.ReservationStatus.confirmed;
                     default:
                         return client_1.ReservationStatus.confirmed;
                 }
@@ -735,17 +761,23 @@ class LobbyPmsService {
             const isDorm = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.type) === 'compartida';
             let roomNumber = null;
             let roomDescription = null;
+            // Extrahiere categoryId für Zimmer-Beschreibungen
+            const categoryId = ((_a = lobbyReservation.category) === null || _a === void 0 ? void 0 : _a.category_id) || null;
             if (isDorm) {
                 // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
-                const dormName = ((_a = lobbyReservation.category) === null || _a === void 0 ? void 0 : _a.name) || null;
+                const dormName = ((_b = lobbyReservation.category) === null || _b === void 0 ? void 0 : _b.name) || null;
                 const bedNumber = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.name) || null;
-                roomNumber = bedNumber; // Bettnummer (z.B. "Cama 5")
-                roomDescription = dormName; // Zimmername (z.B. "La tia artista")
+                // Kombiniere Zimmername + Bettnummer für roomNumber
+                roomNumber = dormName && bedNumber
+                    ? `${dormName} (${bedNumber})`
+                    : bedNumber || dormName || null;
+                // roomDescription wird später aus Branch-Settings geladen (siehe Phase 5)
+                roomDescription = null; // Wird beim Versenden der Nachricht aus Branch-Settings geladen
             }
             else {
                 // Für Privatzimmer: assigned_room.name = Zimmername
                 roomNumber = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.name) || lobbyReservation.room_number || null;
-                roomDescription = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.type) || lobbyReservation.room_description || ((_b = lobbyReservation.category) === null || _b === void 0 ? void 0 : _b.name) || null;
+                roomDescription = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.type) || lobbyReservation.room_description || ((_c = lobbyReservation.category) === null || _c === void 0 ? void 0 : _c.name) || null;
             }
             // Status: API gibt checked_in/checked_out Booleans zurück
             let status = client_1.ReservationStatus.confirmed;
@@ -791,6 +823,7 @@ class LobbyPmsService {
                 arrivalTime: lobbyReservation.arrival_time ? new Date(lobbyReservation.arrival_time) : null,
                 roomNumber: roomNumber,
                 roomDescription: roomDescription,
+                categoryId: categoryId, // LobbyPMS category_id (für Zimmer-Beschreibungen)
                 status: status,
                 paymentStatus: paymentStatus,
                 amount: amount,

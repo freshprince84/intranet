@@ -170,6 +170,10 @@ class ReservationTaskService {
                 // Synchronisiere Task-Status mit Reservierungs-Status
                 let newTaskStatus = null;
                 switch (reservation.status) {
+                    case 'potential':
+                        // "potential" Reservation: Task bleibt offen (wird erst bei "confirmed" erstellt)
+                        newTaskStatus = client_1.TaskStatus.open;
+                        break;
                     case 'confirmed':
                         newTaskStatus = client_1.TaskStatus.open;
                         break;

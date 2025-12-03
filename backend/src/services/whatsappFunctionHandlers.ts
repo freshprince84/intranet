@@ -15,23 +15,33 @@ import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 export class WhatsAppFunctionHandlers {
   /**
    * Findet Reservationen mit gleichem Kunden-Namen (Name, Telefonnummer oder Email)
+   * UND Datum-Überlappung (checkInDate <= tourDate <= checkOutDate)
    */
   private static async findReservationByCustomerName(
     customerName: string,
     customerPhone: string | null,
     customerEmail: string | null,
     branchId: number,
-    organizationId: number
+    organizationId: number,
+    tourDate: Date // Tour-Datum für Überlappungsprüfung
   ): Promise<any> {
     try {
       const normalizedName = customerName.trim().toLowerCase();
       
       // Suche nach Name, Telefonnummer oder Email
+      // WICHTIG: Prüfe auch Datum-Überlappung (checkInDate <= tourDate <= checkOutDate)
       const where: any = {
         organizationId: organizationId,
         branchId: branchId,
         status: {
           in: [ReservationStatus.confirmed, ReservationStatus.notification_sent, ReservationStatus.checked_in]
+        },
+        // Datum-Überlappung prüfen: Tour-Datum muss zwischen checkInDate und checkOutDate liegen
+        checkInDate: {
+          lte: tourDate // checkInDate <= tourDate
+        },
+        checkOutDate: {
+          gte: tourDate // checkOutDate >= tourDate
         },
         OR: []
       };
@@ -1293,18 +1303,20 @@ export class WhatsAppFunctionHandlers {
         }
       });
 
-      // Prüfe ob Reservation mit gleichem Namen existiert und verknüpfe Tour
+      // Prüfe ob Reservation mit gleichem Namen UND Datum-Überlappung existiert
+      let matchingReservation = null;
       try {
-        const matchingReservation = await this.findReservationByCustomerName(
+        matchingReservation = await this.findReservationByCustomerName(
           args.customerName.trim(),
           customerPhone,
           customerEmail,
           branchId,
-          branch.organizationId
+          branch.organizationId,
+          tourDate // NEU: Tour-Datum für Überlappungsprüfung
         );
         
         if (matchingReservation) {
-          console.log(`[book_tour] ✅ Reservation ${matchingReservation.id} mit gleichem Namen gefunden, verknüpfe Tour-Buchung`);
+          console.log(`[book_tour] ✅ Reservation ${matchingReservation.id} mit gleichem Namen und Datum-Überlappung gefunden, verknüpfe Tour-Buchung`);
           
           // Erstelle TourReservation Verknüpfung
           // WICHTIG: tourPrice = totalPrice, accommodationPrice = 0 (Tour ist zusätzlich zur Reservation)
@@ -1322,10 +1334,6 @@ export class WhatsAppFunctionHandlers {
           });
           
           console.log(`[book_tour] ✅ TourReservation Verknüpfung erstellt: ${tourReservation.id}`);
-          
-          // WICHTIG: Payment Link für Tour bleibt separat (in TourBooking.paymentLink)
-          // Reservation hat bereits eigenen Payment Link (in Reservation.paymentLink)
-          // Beide Links können unabhängig bezahlt werden
         }
       } catch (linkError) {
         console.error('[book_tour] Fehler beim Verknüpfen mit Reservation:', linkError);
@@ -1336,26 +1344,35 @@ export class WhatsAppFunctionHandlers {
       let paymentLink: string | null = null;
       if (totalPrice > 0 && (customerPhone || customerEmail)) {
         try {
-          // Erstelle "Dummy"-Reservation für Payment Link
-          const dummyReservation = await prisma.reservation.create({
-            data: {
-              guestName: args.customerName,
-              guestPhone: customerPhone,
-              guestEmail: customerEmail,
-              checkInDate: tourDate,
-              checkOutDate: new Date(tourDate.getTime() + 24 * 60 * 60 * 1000), // +1 Tag
-              status: 'confirmed',
-              paymentStatus: 'pending',
-              amount: totalPrice,
-              currency: tour.currency || 'COP',
-              organizationId: branch.organizationId,
-              branchId: branchId
-            }
-          });
+          let reservationForPaymentLink;
+          
+          if (matchingReservation) {
+            // WICHTIG: Verwende bestehende Reservation für Payment Link
+            console.log(`[book_tour] Verwende bestehende Reservation ${matchingReservation.id} für Payment Link`);
+            reservationForPaymentLink = matchingReservation;
+          } else {
+            // Nur wenn KEINE passende Reservation gefunden wurde: Erstelle "Dummy"-Reservation
+            console.log(`[book_tour] Keine passende Reservation gefunden, erstelle "Dummy"-Reservation für Payment Link`);
+            reservationForPaymentLink = await prisma.reservation.create({
+              data: {
+                guestName: args.customerName,
+                guestPhone: customerPhone,
+                guestEmail: customerEmail,
+                checkInDate: tourDate,
+                checkOutDate: new Date(tourDate.getTime() + 24 * 60 * 60 * 1000), // +1 Tag
+                status: 'confirmed',
+                paymentStatus: 'pending',
+                amount: totalPrice,
+                currency: tour.currency || 'COP',
+                organizationId: branch.organizationId,
+                branchId: branchId
+              }
+            });
+          }
           
           const boldPaymentService = await BoldPaymentService.createForBranch(branchId);
           paymentLink = await boldPaymentService.createPaymentLink(
-            dummyReservation,
+            reservationForPaymentLink,
             totalPrice,
             tour.currency || 'COP',
             `Zahlung für Tour-Buchung: ${tour.title}`

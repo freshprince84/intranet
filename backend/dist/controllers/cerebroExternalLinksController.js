@@ -54,6 +54,23 @@ const prisma_1 = require("../utils/prisma");
  */
 const extractMetadata = (url) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // ✅ FIX: URL-Validierung vor Metadaten-Extraktion
+        try {
+            const urlObj = new URL(url);
+            // Prüfe ob es eine gültige URL ist (nicht nur IP-Adresse oder lokale Adresse)
+            if (!urlObj.hostname || urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
+                return { type: 'link', title: url, thumbnail: '' };
+            }
+            // Prüfe ob Hostname nur Zahlen enthält (z.B. "17.35.00")
+            if (/^[\d.]+$/.test(urlObj.hostname)) {
+                return { type: 'link', title: url, thumbnail: '' };
+            }
+        }
+        catch (urlError) {
+            // URL ist ungültig
+            console.warn('[extractMetadata] Ungültige URL:', url);
+            return { type: 'link', title: url, thumbnail: '' };
+        }
         // Standardwerte
         let type = 'link';
         let title = '';

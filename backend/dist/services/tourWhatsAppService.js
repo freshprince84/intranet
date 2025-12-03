@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -197,6 +230,90 @@ class TourWhatsAppService {
     /**
      * Sendet Stornierungs-Benachrichtigung an Kunde
      */
+    /**
+     * Sendet Tour-Buchungsbestätigung an Kunden mit Payment Link
+     */
+    static sendBookingConfirmationToCustomer(bookingId_1, organizationId_1, branchId_1, paymentLink_1, amount_1) {
+        return __awaiter(this, arguments, void 0, function* (bookingId, organizationId, branchId, paymentLink, amount, currency = 'COP') {
+            var _a, _b, _c;
+            try {
+                const booking = yield prisma_1.prisma.tourBooking.findUnique({
+                    where: { id: bookingId },
+                    include: {
+                        tour: true
+                    }
+                });
+                if (!booking || !booking.customerPhone) {
+                    console.log('[TourWhatsApp] Keine Kunden-Telefonnummer für Buchung', bookingId);
+                    return false;
+                }
+                const whatsappService = branchId
+                    ? new whatsappService_1.WhatsAppService(undefined, branchId)
+                    : new whatsappService_1.WhatsAppService(organizationId);
+                // Erkenne Sprache basierend auf Telefonnummer
+                const { LanguageDetectionService } = yield Promise.resolve().then(() => __importStar(require('./languageDetectionService')));
+                const language = LanguageDetectionService.detectLanguageFromPhoneNumber(booking.customerPhone);
+                // Formatiere Datum
+                const tourDate = new Date(booking.tourDate).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : 'es-ES', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                // Erstelle Nachricht basierend auf Sprache
+                let message;
+                if (language === 'de') {
+                    message = `Hallo ${booking.customerName}!\n\n` +
+                        `Ihre Reservierung für die Tour "${((_a = booking.tour) === null || _a === void 0 ? void 0 : _a.title) || 'Tour'}" wurde bestätigt.\n\n` +
+                        `📅 Datum: ${tourDate}\n` +
+                        `👥 Teilnehmer: ${booking.numberOfParticipants}\n` +
+                        `💰 Preis: ${Number(amount).toLocaleString('de-DE')} ${currency}\n\n` +
+                        `Sie können online bezahlen:\n${paymentLink}\n\n` +
+                        `💡 Sie können die Tour auch in Bar an der Rezeption zwischen 09:00 und 17:30 bezahlen.\n\n` +
+                        `Wir freuen uns auf Sie!`;
+                }
+                else if (language === 'en') {
+                    message = `Hello ${booking.customerName}!\n\n` +
+                        `Your reservation for the tour "${((_b = booking.tour) === null || _b === void 0 ? void 0 : _b.title) || 'Tour'}" has been confirmed.\n\n` +
+                        `📅 Date: ${tourDate}\n` +
+                        `👥 Participants: ${booking.numberOfParticipants}\n` +
+                        `💰 Price: ${Number(amount).toLocaleString('en-US')} ${currency}\n\n` +
+                        `You can pay online:\n${paymentLink}\n\n` +
+                        `💡 You can also pay in cash at the reception between 09:00 and 17:30.\n\n` +
+                        `We look forward to seeing you!`;
+                }
+                else {
+                    // Spanisch (Standard)
+                    message = `¡Hola ${booking.customerName}!\n\n` +
+                        `Tu reserva para la tour "${((_c = booking.tour) === null || _c === void 0 ? void 0 : _c.title) || 'Tour'}" ha sido confirmada.\n\n` +
+                        `📅 Fecha: ${tourDate}\n` +
+                        `👥 Participantes: ${booking.numberOfParticipants}\n` +
+                        `💰 Precio: ${Number(amount).toLocaleString('es-ES')} ${currency}\n\n` +
+                        `Puedes realizar el pago en línea:\n${paymentLink}\n\n` +
+                        `💡 También puedes pagar en efectivo en la recepción entre las 09:00 y 17:30.\n\n` +
+                        `¡Te esperamos!`;
+                }
+                const success = yield whatsappService.sendMessage(booking.customerPhone, message);
+                if (success) {
+                    yield prisma_1.prisma.tourWhatsAppMessage.create({
+                        data: {
+                            bookingId,
+                            direction: 'outgoing',
+                            status: 'sent',
+                            phoneNumber: booking.customerPhone || '',
+                            message
+                        }
+                    });
+                    console.log(`[TourWhatsApp] ✅ Buchungsbestätigung mit Payment Link gesendet an Kunden für Buchung ${bookingId}`);
+                }
+                return success;
+            }
+            catch (error) {
+                console.error('[TourWhatsApp] Fehler beim Senden der Buchungsbestätigung:', error);
+                return false;
+            }
+        });
+    }
     /**
      * Sendet Bestätigung an Kunden nach erfolgreicher Zahlung
      */

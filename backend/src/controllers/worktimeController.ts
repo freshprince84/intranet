@@ -620,23 +620,19 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
       let hoursWorked: number;
       
       if (entry.endTime === null) {
-        // Aktive Zeitmessung: Berechne Differenz aus lokalen Komponenten (ohne getTime() - verboten!)
-        // WICHTIG: Beide Werte (entry.startTime und now) werden 1:1 genommen, KEINE UTC-Umrechnung!
+        // Aktive Zeitmessung: Berechne Differenz genau wie im Modal (WorktimeModal.tsx Zeile 125-130)
+        // KORREKT: Entferne 'Z' vom ISO-String, damit JavaScript die Zeit als lokal interpretiert
         const now = new Date();
         
-        // Berechne Tage-Differenz manuell (ohne getTime() - verboten!)
-        const daysDiff = (now.getFullYear() - entry.startTime.getFullYear()) * 365.25 +
-                         (now.getMonth() - entry.startTime.getMonth()) * 30.44 +
-                         (now.getDate() - entry.startTime.getDate());
-        const daysDiffMs = Math.floor(daysDiff) * 86400000;
-
-        // Berechne Zeit-Differenz innerhalb des Tages
-        const timeDiffMs = (now.getHours() - entry.startTime.getHours()) * 3600000 +
-                           (now.getMinutes() - entry.startTime.getMinutes()) * 60000 +
-                           (now.getSeconds() - entry.startTime.getSeconds()) * 1000 +
-                           (now.getMilliseconds() - entry.startTime.getMilliseconds());
-
-        const diffMs = daysDiffMs + timeDiffMs;
+        // Konvertiere entry.startTime zu ISO-String und entferne 'Z' (wie im Modal)
+        const startISOString = entry.startTime.toISOString();
+        const startISOStringWithoutZ = startISOString.endsWith('Z') 
+            ? startISOString.substring(0, startISOString.length - 1)
+            : startISOString;
+        const startTimeDate = new Date(startISOStringWithoutZ);
+        
+        // Berechne Differenz mit getTime() - funktioniert korrekt, weil beide als lokale Zeit interpretiert werden
+        const diffMs = now.getTime() - startTimeDate.getTime();
         hoursWorked = diffMs / (1000 * 60 * 60);
         
         // Für Verteilung: Verwende originale Zeiten

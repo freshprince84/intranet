@@ -152,9 +152,38 @@ function createUpdateGuestContactWorker(connection) {
                 }
                 // Schritt 3: WhatsApp-Nachricht senden
                 console.log(`[UpdateGuestContact Worker] Sende WhatsApp-Nachricht für Reservierung ${reservationId}...`);
-                const checkInDateStr = reservation.checkInDate.toLocaleDateString('es-ES');
-                const checkOutDateStr = reservation.checkOutDate.toLocaleDateString('es-ES');
-                sentMessage = `Hola ${guestName},
+                // Erstelle Nachrichtentext basierend auf Sprache
+                const { CountryLanguageService } = require('../services/countryLanguageService');
+                const languageCode = CountryLanguageService.getLanguageForReservation({
+                    guestNationality: reservation.guestNationality,
+                    guestPhone: reservation.guestPhone
+                });
+                // Datum-Formatierung basierend auf Sprache
+                const dateLocale = languageCode === 'en' ? 'en-US' : 'es-ES';
+                const checkInDateStr = reservation.checkInDate.toLocaleDateString(dateLocale);
+                const checkOutDateStr = reservation.checkOutDate.toLocaleDateString(dateLocale);
+                // Generiere Nachricht basierend auf Sprache
+                if (languageCode === 'en') {
+                    // Englische Version
+                    sentMessage = `Hello ${guestName},
+
+Welcome to La Familia Hostel!
+
+Your reservation has been confirmed:
+- Check-in: ${checkInDateStr}
+- Check-out: ${checkOutDateStr}
+
+Please make the payment:
+${paymentLink}
+
+${ttlockCode ? `Your TTLock access code:
+${ttlockCode}
+
+` : ''}We look forward to seeing you!`;
+                }
+                else {
+                    // Spanische Version
+                    sentMessage = `Hola ${guestName},
 
 ¡Bienvenido a La Familia Hostel!
 
@@ -169,6 +198,7 @@ ${ttlockCode ? `Tu código de acceso TTLock:
 ${ttlockCode}
 
 ` : ''}¡Te esperamos!`;
+                }
                 const whatsappService = reservation.branchId
                     ? new whatsappService_1.WhatsAppService(undefined, reservation.branchId)
                     : new whatsappService_1.WhatsAppService(organizationId);

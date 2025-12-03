@@ -554,6 +554,29 @@ class BoldPaymentService {
                                     console.error(`[Bold Payment Webhook] Fehler beim Senden der Bestätigung für TourBooking ${tourBooking.id}:`, whatsappError);
                                 }
                             }
+                            // Prüfe ob TourReservation Verknüpfung existiert und aktualisiere tourPricePaid
+                            try {
+                                const tourReservations = yield prisma_1.prisma.tourReservation.findMany({
+                                    where: {
+                                        bookingId: tourBooking.id
+                                    }
+                                });
+                                // Aktualisiere tourPricePaid für alle Verknüpfungen
+                                for (const tourReservation of tourReservations) {
+                                    yield prisma_1.prisma.tourReservation.update({
+                                        where: { id: tourReservation.id },
+                                        data: {
+                                            tourPricePaid: paidAmount,
+                                            tourPricePending: 0
+                                        }
+                                    });
+                                    console.log(`[Bold Payment Webhook] ✅ TourReservation ${tourReservation.id} aktualisiert (tourPricePaid: ${paidAmount})`);
+                                }
+                            }
+                            catch (tourReservationError) {
+                                console.error('[Bold Payment Webhook] Fehler beim Aktualisieren der TourReservation:', tourReservationError);
+                                // Nicht abbrechen, nur loggen
+                            }
                         }
                         // Prüfe ob Gast bereits eingecheckt ist
                         const isAlreadyCheckedIn = reservation.status === 'checked_in';

@@ -58,6 +58,7 @@ const organization_1 = require("../middleware/organization");
 const lifecycleService_1 = require("../services/lifecycleService");
 const userLanguageCache_1 = require("../services/userLanguageCache");
 const userCache_1 = require("../services/userCache");
+const filterListCache_1 = require("../services/filterListCache");
 // Alle Benutzer abrufen
 const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -321,6 +322,12 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
         // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
         userCache_1.userCache.invalidate(userId);
+        // ✅ FIX: FilterListCache invalidieren wenn User aktiviert/deaktiviert wird (betrifft User-Filter-Gruppen)
+        if ('active' in updateData && updateData.active !== undefined) {
+            // Wenn User-Status geändert wird, müssen alle Filter-Gruppen-Caches invalidiert werden
+            // (da User-Filter-Gruppen nur aktive User zeigen sollen)
+            filterListCache_1.filterListCache.clear();
+        }
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
@@ -1196,19 +1203,7 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (isNaN(roleId) || roleId <= 0) {
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
-        // Prüfen, ob die Rolle dem Benutzer zugewiesen ist
-        const userRole = yield prisma_1.prisma.userRole.findFirst({
-            where: {
-                userId,
-                roleId
-            }
-        });
-        if (!userRole) {
-            return res.status(404).json({
-                message: 'Diese Rolle ist dem Benutzer nicht zugewiesen'
-            });
-        }
-        // Prüfe, ob die Rolle für die aktive Branch verfügbar ist
+        // Prüfe, ob die Rolle für die aktive Branch verfügbar ist (VOR der Transaktion)
         const activeBranch = yield prisma_1.prisma.usersBranches.findFirst({
             where: {
                 userId,
@@ -1228,8 +1223,20 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 });
             }
         }
-        // Transaktion starten
-        yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        // ✅ FIX: Verwende getPrisma() für Transaktionen, da Round-Robin-Proxy nicht mit Transaktionen funktioniert
+        // Transaktion starten - alle Prisma-Operationen innerhalb der Transaktion
+        const prismaClient = (0, prisma_1.getPrisma)();
+        yield prismaClient.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+            // Prüfen, ob die Rolle dem Benutzer zugewiesen ist (INNERHALB der Transaktion)
+            const userRole = yield tx.userRole.findFirst({
+                where: {
+                    userId,
+                    roleId
+                }
+            });
+            if (!userRole) {
+                throw new Error('Diese Rolle ist dem Benutzer nicht zugewiesen');
+            }
             // Alle Rollen des Benutzers auf lastUsed=false setzen
             yield tx.userRole.updateMany({
                 where: { userId },
@@ -1273,6 +1280,12 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
     catch (error) {
         console.error('Error in switchUserRole:', error);
+        // Spezielle Behandlung für "Rolle nicht zugewiesen" Fehler
+        if (error instanceof Error && error.message === 'Diese Rolle ist dem Benutzer nicht zugewiesen') {
+            return res.status(404).json({
+                message: error.message
+            });
+        }
         res.status(500).json({
             message: 'Fehler beim Wechseln der Benutzerrolle',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1516,6 +1529,12 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         // ✅ PERFORMANCE: UserCache invalidieren bei User-Update
         userCache_1.userCache.invalidate(userId);
+        // ✅ FIX: FilterListCache invalidieren wenn User aktiviert/deaktiviert wird (betrifft User-Filter-Gruppen)
+        if ('active' in updateData && updateData.active !== undefined) {
+            // Wenn User-Status geändert wird, müssen alle Filter-Gruppen-Caches invalidiert werden
+            // (da User-Filter-Gruppen nur aktive User zeigen sollen)
+            filterListCache_1.filterListCache.clear();
+        }
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
