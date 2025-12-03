@@ -97,7 +97,11 @@ export class WhatsAppAiService {
       aiConfig = whatsappSettings?.ai;
     }
 
-    if (!aiConfig?.enabled) {
+    if (!aiConfig) {
+      throw new Error('KI-Konfiguration nicht gefunden für diesen Branch');
+    }
+
+    if (!aiConfig.enabled) {
       throw new Error('KI ist für diesen Branch nicht aktiviert');
     }
 
@@ -1077,8 +1081,9 @@ export class WhatsAppAiService {
 
   /**
    * Erkennt Sprache aus Nachrichtentext (einfache Heuristik)
+   * WICHTIG: Public, damit andere Services diese Funktion nutzen können
    */
-  private static detectLanguageFromMessage(message: string): string | null {
+  static detectLanguageFromMessage(message: string): string | null {
     if (!message || message.trim().length === 0) {
       return null;
     }
