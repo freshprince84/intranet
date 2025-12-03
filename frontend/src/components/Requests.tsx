@@ -225,10 +225,7 @@ const Requests: React.FC = () => {
   const { hasPermission } = usePermissions();
   
   // Status-Funktionen (verwende zentrale Utils mit Übersetzungsunterstützung)
-  // WICHTIG: Funktionalität bleibt identisch - nur Code-Duplikation entfernt!
-  const getStatusLabel = (status: string): string => {
-    return getStatusText(status, 'request', t);
-  };
+  // ❌ ENTFERNT: getStatusLabel Wrapper - getStatusText wird direkt verwendet (Phase 3)
   
   // Definition der verfügbaren Spalten (dynamisch aus Übersetzungen)
   const availableColumns = useMemo(() => [
@@ -503,27 +500,16 @@ const Requests: React.FC = () => {
 
   // ✅ Standard-Filter werden jetzt im Seed erstellt, nicht mehr im Frontend
 
-  // Infinite Scroll Handler für Requests
-  // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
-  const filterConditionsRef = useRef(filterConditions);
-  useEffect(() => {
-    filterConditionsRef.current = filterConditions;
-  }, [filterConditions]);
+  // ❌ ENTFERNT: filterConditionsRef - Wird nicht mehr verwendet, Dependencies sind korrekt (Phase 3)
 
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // ❌ ENTFERNT: Fallback-Timeout - War Workaround für Filter-Load, sollte nicht mehr nötig sein (Phase 3)
 
-  // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
-  useEffect(() => {
-    return () => {
-      setRequests([]);
-      setFilterConditions([]);
-    };
-  }, []); // Nur beim Unmount ausführen
+  // ❌ ENTFERNT: Cleanup useEffect - React macht automatisches Cleanup, manuelles Löschen ist überflüssig (Phase 3)
 
-  // getStatusText wird jetzt direkt von statusUtils verwendet (siehe getStatusLabel oben)
+  // getStatusText wird direkt von statusUtils verwendet (getStatusLabel Wrapper wurde entfernt - Phase 3)
 
   // Status-Workflow: vorheriger/nächster Status für Shift-Buttons
   const getPreviousStatus = (status: Request['status']): Request['status'] | null => {
@@ -1241,7 +1227,7 @@ const Requests: React.FC = () => {
                             return (
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status, 'request')} dark:bg-opacity-30 status-col`}>
-                                  {getStatusLabel(request.status)}
+                                  {getStatusText(request.status, 'request', t)}
                                 </span>
                               </td>
                             );

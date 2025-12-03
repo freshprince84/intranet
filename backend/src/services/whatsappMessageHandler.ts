@@ -1537,7 +1537,10 @@ export class WhatsAppMessageHandler {
       
       // Prüfe auf explizite Buchungsanfragen
       const bookingKeywords = ['reservar', 'buchen', 'quiero reservar', 'quiero hacer una reserva', 'buche', 'reservame'];
-      const isBookingRequest = bookingKeywords.some(keyword => normalizedMessage.includes(keyword));
+      const confirmationKeywords = ['ja', 'sí', 'si', 'yes', 'ok', 'okay', 'genau', 'correcto', 'correct'];
+      const hasConfirmation = confirmationKeywords.some(keyword => normalizedMessage.includes(keyword));
+      const isBookingRequest = bookingKeywords.some(keyword => normalizedMessage.includes(keyword)) || 
+                                (hasConfirmation && (bookingContext.checkInDate || bookingContext.lastAvailabilityCheck));
       
       if (!isBookingRequest && !bookingContext.checkInDate && !bookingContext.guestName) {
         // Keine Buchungsanfrage und kein Context vorhanden
@@ -1585,16 +1588,83 @@ export class WhatsAppMessageHandler {
         roomType = 'privada';
       }
       
-      // Parse Zimmer-Namen
+      // Parse Zimmer-Namen (auch mit Varianten wie "el tia artista" statt "la tia artista")
       const roomNames = [
         'el primo aventurero', 'la tia artista', 'el abuelo viajero',
         'doble estándar', 'doble basica', 'apartamento doble', 'primo deportista'
       ];
       for (const name of roomNames) {
-        if (normalizedMessage.includes(name.toLowerCase())) {
+        const nameLower = name.toLowerCase();
+        // Prüfe auf exakte Übereinstimmung oder Teilübereinstimmung (z.B. "tia artista" in "el tia artista")
+        if (normalizedMessage.includes(nameLower) || 
+            normalizedMessage.includes(nameLower.replace('la ', '').replace('el ', ''))) {
           roomName = name;
           break;
         }
+      }
+      
+      // Prüfe auf Bestätigungen ("ja", "sí", "yes") + Zimmer-Name
+      const confirmationKeywords = ['ja', 'sí', 'si', 'yes', 'ok', 'okay', 'genau', 'correcto', 'correct'];
+      const hasConfirmation = confirmationKeywords.some(keyword => normalizedMessage.includes(keyword));
+      
+      if (hasConfirmation && !roomName) {
+        // Versuche Zimmer-Name aus Nachricht zu extrahieren (auch wenn nicht exakt)
+        for (const name of roomNames) {
+          const nameParts = name.toLowerCase().split(' ');
+          // Prüfe ob mindestens 2 Wörter des Zimmer-Namens in der Nachricht vorkommen
+          const matchingParts = nameParts.filter(part => 
+            part.length > 2 && normalizedMessage.includes(part)
+          );
+          if (matchingParts.length >= 2) {
+            roomName = name;
+            break;
+          }
+        }
+      }
+      
+      // Wenn Bestätigung vorhanden, aber kein roomName gefunden, versuche aus Context zu holen
+      if (hasConfirmation && !roomName && bookingContext.lastAvailabilityCheck) {
+        // Versuche aus letzter Verfügbarkeitsprüfung zu extrahieren
+        const lastCheck = bookingContext.lastAvailabilityCheck;
+        if (lastCheck.rooms && lastCheck.rooms.length > 0) {
+          // Wenn nur ein Zimmer verfügbar war, verwende es
+          if (lastCheck.rooms.length === 1) {
+            roomName = lastCheck.rooms[0].name;
+            categoryId = lastCheck.rooms[0].categoryId;
+            roomType = lastCheck.rooms[0].type as 'compartida' | 'privada';
+          } else {
+            // Versuche Zimmer-Name aus Nachricht zu finden (auch Teilübereinstimmung)
+            for (const room of lastCheck.rooms) {
+              const roomNameLower = room.name.toLowerCase();
+              const nameParts = roomNameLower.split(' ');
+              const matchingParts = nameParts.filter(part => 
+                part.length > 2 && normalizedMessage.includes(part)
+              );
+              if (matchingParts.length >= 2) {
+                roomName = room.name;
+                categoryId = room.categoryId;
+                roomType = room.type as 'compartida' | 'privada';
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      // Wenn Bestätigung vorhanden, verwende checkInDate aus Context falls vorhanden
+      if (hasConfirmation && !checkInDate && bookingContext.checkInDate) {
+        checkInDate = bookingContext.checkInDate;
+      }
+      
+      // Wenn Bestätigung vorhanden, verwende checkOutDate aus Context falls vorhanden
+      if (hasConfirmation && !checkOutDate && bookingContext.checkOutDate) {
+        checkOutDate = bookingContext.checkOutDate;
+      }
+      
+      // Wenn Bestätigung vorhanden, ist es eine Buchungsanfrage
+      if (hasConfirmation) {
+        // Aktualisiere isBookingRequest
+        // (wird später verwendet)
       }
       
       // Aktualisiere Context

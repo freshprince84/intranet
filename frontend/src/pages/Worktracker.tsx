@@ -401,34 +401,7 @@ const Worktracker: React.FC = () => {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [copiedTask, setCopiedTask] = useState<Task | null>(null);
 
-    // ✅ MEMORY: Cleanup - Alle großen Arrays beim Unmount löschen
-    useEffect(() => {
-        return () => {
-            // Tasks - NUR beim Unmount löschen, NICHT beim Neuladen
-            setTasks([]);
-            
-            // Reservations - NUR beim Unmount löschen, NICHT beim Neuladen
-            setReservations([]);
-            
-            // Tour Bookings - NUR beim Unmount löschen, NICHT beim Neuladen
-            setTourBookings([]);
-            
-            // ✅ MEMORY: Alle Filter-States löschen (vollständig)
-            // Tasks Filter
-            setFilterConditions([]);
-            setFilterLogicalOperators([]);
-            // ❌ ENTFERNT: setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
-            setActiveFilterName('');
-            setSelectedFilterId(null);
-            
-            // Reservations Filter
-            setReservationFilterConditions([]);
-            setReservationFilterLogicalOperators([]);
-            // ❌ ENTFERNT: setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
-            setReservationActiveFilterName('');
-            setReservationSelectedFilterId(null);
-        };
-    }, []); // Nur beim Unmount ausführen
+    // ❌ ENTFERNT: Cleanup useEffect - React macht automatisches Cleanup, manuelles Löschen ist überflüssig (Phase 3)
 
     // ❌ ENTFERNEN: allTasks wird nicht mehr benötigt (Pagination lädt nur benötigte Items)
 
