@@ -576,7 +576,7 @@ export class WhatsAppAiService {
         type: 'function',
         function: {
           name: 'create_potential_reservation',
-          description: 'Erstellt eine potenzielle Reservierung (Status "potential") mit ersten Buchungsinformationen. Wird aufgerufen, wenn User Check-in, Check-out und Zimmer angibt, aber noch nicht bestätigt hat. WICHTIG: Diese Funktion erstellt sofort eine Reservation mit Status "potential" (ohne LobbyPMS-Buchung). Bei Bestätigung wird create_room_reservation() aufgerufen, die den Status auf "confirmed" ändert und die LobbyPMS-Buchung erstellt.',
+          description: 'Erstellt eine potenzielle Reservierung (Status "potential") mit ersten Buchungsinformationen. Wird aufgerufen, wenn User Check-in, Check-out und Zimmer angibt, aber noch nicht alle Daten hat (z.B. kein Name oder fehlende Kontaktdaten). WICHTIG: Diese Funktion erstellt sofort eine Reservation mit Status "potential" (ohne LobbyPMS-Buchung). guestName ist optional. Bei Bestätigung wird create_room_reservation() aufgerufen, die den Status auf "confirmed" ändert und die LobbyPMS-Buchung erstellt.',
           parameters: {
             type: 'object',
             properties: {
@@ -618,7 +618,7 @@ export class WhatsAppAiService {
         type: 'function',
         function: {
           name: 'create_room_reservation',
-          description: 'Erstellt oder bestätigt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! Wenn der User "reservar", "buchen", "buche", "buche mir", "reservame" sagt oder eine Nummer wählt (z.B. "2."), verwende diese Function. WICHTIG: Wenn bereits eine "potential" Reservation existiert, wird diese bestätigt (Status "potential" → "confirmed") und LobbyPMS-Buchung erstellt. Wenn keine "potential" Reservation existiert, wird eine neue Reservation erstellt. WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende "today" als checkInDate. Wenn User Zimmer-Namen sagt (z.B. "la tia artista"), finde categoryId aus vorheriger check_room_availability Response. Benötigt: checkInDate, checkOutDate, guestName, roomType (compartida/privada), categoryId (optional, aus check_room_availability), guestPhone (optional), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
+          description: 'Erstellt oder bestätigt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! WICHTIG: Diese Function darf NUR aufgerufen werden, wenn ALLE erforderlichen Daten vorhanden sind: checkInDate, checkOutDate, guestName (vollständiger Name), roomType, categoryId. WICHTIG: Wenn Daten fehlen (z.B. kein Name), rufe NICHT diese Function auf, sondern create_potential_reservation() und FRAGE dann nach fehlenden Daten! WICHTIG: Wenn bereits eine "potential" Reservation existiert, wird diese bestätigt (Status "potential" → "confirmed") und LobbyPMS-Buchung erstellt. Wenn keine "potential" Reservation existiert, wird eine neue Reservation erstellt. WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende "today" als checkInDate. Wenn User Zimmer-Namen sagt (z.B. "la tia artista"), finde categoryId aus vorheriger check_room_availability Response. Benötigt: checkInDate, checkOutDate, guestName (ERFORDERLICH - vollständiger Name), roomType (compartida/privada), categoryId (optional, wird automatisch gefunden). Optional: guestPhone (optional, WhatsApp-Nummer als Fallback), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
           parameters: {
             type: 'object',
             properties: {
@@ -632,7 +632,7 @@ export class WhatsAppAiService {
               },
               guestName: {
                 type: 'string',
-                description: 'Name des Gastes (vollständiger Name). Wenn nicht angegeben, verwende den Namen aus dem WhatsApp-Kontext oder frage nach.'
+                description: 'Name des Gastes (ERFORDERLICH - vollständiger Name). WICHTIG: Wenn kein Name vorhanden ist, rufe NICHT diese Function auf, sondern create_potential_reservation() und FRAGE dann nach dem Namen!'
               },
               roomType: {
                 type: 'string',
@@ -787,13 +787,17 @@ export class WhatsAppAiService {
     prompt += '  WICHTIG: Wenn User nach Buchung Daten gibt (z.B. "01.dez bis 02.dez") → rufe create_room_reservation auf, NICHT check_room_availability!\n';
     prompt += '  WICHTIG: Generiert automatisch Payment Link und Check-in-Link, setzt Zahlungsfrist (1 Stunde)\n';
     prompt += '  WICHTIG: Alle Reservierungen sind Branch-spezifisch (Branch wird automatisch aus Context verwendet)\n';
-    prompt += '  WICHTIG: Reservierungsablauf:\n';
-    prompt += '    1. Wenn User erste Buchungsinformationen gibt (Check-in, Check-out, Zimmer) → rufe create_potential_reservation() auf\n';
-    prompt += '    2. Frage nach Kontaktdaten (Email optional, Telefonnummer = WhatsApp-Nummer)\n';
-    prompt += '    3. Wenn User bestätigt → rufe create_room_reservation() auf (ändert Status von "potential" auf "confirmed")\n';
-    prompt += '  WICHTIG: create_potential_reservation() erstellt sofort eine Reservation mit Status "potential" (ohne LobbyPMS-Buchung)\n';
-    prompt += '  WICHTIG: create_room_reservation() ändert Status von "potential" auf "confirmed" (keine neue Reservation) und erstellt LobbyPMS-Buchung\n';
+    prompt += '  WICHTIG: Reservierungsablauf - KRITISCH BEACHTEN:\n';
+    prompt += '    1. Wenn User erste Buchungsinformationen gibt (Check-in, Check-out, Zimmer) ABER noch nicht ALLE Daten hat (z.B. kein Name, keine categoryId) → rufe create_potential_reservation() auf\n';
+    prompt += '    2. FRAGE IMMER nach fehlenden Daten (z.B. "Wie lautet Ihr vollständiger Name?" oder "Für welches Zimmer möchten Sie buchen?")\n';
+    prompt += '    3. create_room_reservation() darf NUR aufgerufen werden, wenn ALLE erforderlichen Daten vorhanden sind: checkInDate, checkOutDate, guestName (vollständiger Name), roomType, categoryId\n';
+    prompt += '    4. Wenn guestName fehlt → rufe create_potential_reservation() auf und FRAGE nach dem Namen!\n';
+    prompt += '    5. Wenn categoryId fehlt → rufe create_potential_reservation() auf und FRAGE nach dem Zimmer!\n';
+    prompt += '  WICHTIG: create_potential_reservation() erstellt sofort eine Reservation mit Status "potential" (ohne LobbyPMS-Buchung, guestName optional)\n';
+    prompt += '  WICHTIG: create_room_reservation() ändert Status von "potential" auf "confirmed" (keine neue Reservation) und erstellt LobbyPMS-Buchung (guestName ERFORDERLICH!)\n';
     prompt += '  WICHTIG: Payment-Link wird mit Betrag + 5% erstellt und versendet (automatisch in boldPaymentService)\n';
+    prompt += '  WICHTIG: Wenn User direkt ALLE Daten gibt (Check-in, Check-out, Zimmer, Name) → rufe SOFORT create_room_reservation() auf (keine "potential" Reservation nötig)\n';
+    prompt += '  WICHTIG: NIEMALS create_room_reservation() aufrufen, wenn guestName fehlt! Immer erst create_potential_reservation() und dann nachfragen!\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "reservame 1 cama en el primo aventurero für heute, 1 nacht" → create_room_reservation({ checkInDate: "today", checkOutDate: "tomorrow", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34280 })\n';
     prompt += '    - "ich möchte das Zimmer 2 buchen vom 1.12. bis 3.12." → create_room_reservation({ checkInDate: "2025-12-01", checkOutDate: "2025-12-04", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34281 })\n';
@@ -826,11 +830,12 @@ export class WhatsAppAiService {
     prompt += '\nWICHTIG: Wenn User "buche [Zimmer-Name]" sagt (z.B. "buche el abuelo viajero"), erkenne dies als vollständige Buchungsanfrage und rufe create_room_reservation auf!';
     prompt += '\nWICHTIG: Wenn User "buche [Zimmer-Name] von [Datum] auf [Datum] für [Name]" sagt, hat er ALLE Informationen gegeben - rufe SOFORT create_room_reservation auf!';
     prompt += '\nWICHTIG: Unterscheide klar zwischen ZIMMER (create_room_reservation) und TOUREN (book_tour)!';
-    prompt += '\nWICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige, verwende create_room_reservation mit der categoryId des entsprechenden Zimmers!';
-    prompt += '\nWICHTIG: Wenn der User sagt "reservame 1 cama" oder "buche mir 1 bett" oder ähnlich, verwende create_room_reservation mit den Informationen aus dem Kontext!';
-    prompt += '\nWICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "la tia artista"), finde die categoryId aus der vorherigen check_room_availability Response!';
+    prompt += '\nWICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige, prüfe ob ALLE Daten vorhanden sind (Name, Check-in, Check-out). Wenn Name fehlt → create_potential_reservation() und FRAGE nach Name!';
+    prompt += '\nWICHTIG: Wenn der User sagt "reservame 1 cama" oder "buche mir 1 bett" oder ähnlich, prüfe ob ALLE Daten vorhanden sind. Wenn Name fehlt → create_potential_reservation() und FRAGE nach Name!';
+    prompt += '\nWICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "la tia artista"), finde die categoryId aus der vorherigen check_room_availability Response. Wenn Name fehlt → create_potential_reservation() und FRAGE nach Name!';
     prompt += '\nWICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat, verwende "today" als checkInDate!';
-    prompt += '\nWICHTIG: Wenn User nach einer Buchungsanfrage Daten gibt (z.B. "01.dez bis 02.dez"), rufe create_room_reservation auf, NICHT check_room_availability!';
+    prompt += '\nWICHTIG: Wenn User nach einer Buchungsanfrage Daten gibt (z.B. "01.dez bis 02.dez"), prüfe ob ALLE Daten vorhanden sind. Wenn Name fehlt → create_potential_reservation() und FRAGE nach Name!';
+    prompt += '\nWICHTIG: Beispiel: User sagt "apartamento doble para el 7. de diciembre entonces. 1 noche" → Name fehlt! → rufe create_potential_reservation() auf und FRAGE: "Wie lautet Ihr vollständiger Name?"';
     prompt += '\n\n=== KRITISCH: KONTEXT-NUTZUNG ===';
     prompt += '\nWICHTIG: Du MUSST ALLE Informationen aus der aktuellen UND vorherigen Nachrichten nutzen!';
     prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht "heute" gesagt hat, verwende es IMMER als checkInDate!';

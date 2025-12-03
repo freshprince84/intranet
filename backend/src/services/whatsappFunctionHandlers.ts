@@ -1455,7 +1455,7 @@ export class WhatsAppFunctionHandlers {
     args: {
       checkInDate: string;
       checkOutDate: string;
-      guestName: string;
+      guestName: string; // ERFORDERLICH: Name des Gastes (vollständiger Name)
       roomType: 'compartida' | 'privada';
       categoryId?: number;
       roomName?: string; // Optional: Zimmer-Name (z.B. "el abuelo viajero", "la tia artista")
@@ -1598,6 +1598,12 @@ export class WhatsAppFunctionHandlers {
         throw new Error('Mindestens eine Kontaktinformation (Telefonnummer oder Email) ist erforderlich für die Reservierung. Bitte geben Sie Ihre Telefonnummer oder Email-Adresse an.');
       }
 
+      // 4.6. Validierung: guestName ist ERFORDERLICH
+      if (!args.guestName || !args.guestName.trim()) {
+        throw new Error('Der Name des Gastes ist erforderlich für die Reservierung. Bitte geben Sie Ihren vollständigen Namen an.');
+      }
+      const guestName = args.guestName.trim();
+
       // 5. Prüfe ob bereits eine "potential" Reservation existiert
       // WICHTIG: Normalisiere Telefonnummer für Suche
       const { LanguageDetectionService } = await import('./languageDetectionService');
@@ -1628,7 +1634,7 @@ export class WhatsAppFunctionHandlers {
             categoryId,
             checkInDate,
             checkOutDate,
-            args.guestName.trim(),
+            guestName,
             guestEmail || undefined,
             guestPhone || undefined,
             1
@@ -1707,7 +1713,7 @@ export class WhatsAppFunctionHandlers {
           where: { id: existingPotentialReservation.id },
           data: {
             status: ReservationStatus.confirmed,
-            guestName: args.guestName.trim(),
+            guestName: guestName,
             guestPhone: guestPhone,
             guestEmail: guestEmail,
             lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
@@ -1722,7 +1728,7 @@ export class WhatsAppFunctionHandlers {
         // Erstelle neue Reservation (Rückwärtskompatibilität)
         reservation = await prisma.reservation.create({
           data: {
-            guestName: args.guestName.trim(),
+            guestName: guestName,
             guestPhone: guestPhone, // Verwende validierte Telefonnummer
             guestEmail: guestEmail, // Verwende validierte Email
             checkInDate: checkInDate,
