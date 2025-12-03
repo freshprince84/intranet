@@ -528,4 +528,103 @@ export const validateConnection = async (req: AuthenticatedRequest, res: Respons
   }
 };
 
+/**
+ * POST /api/lobby-pms/sync-full
+ * Vollständiger manueller Sync (nach check_out_date)
+ * 
+ * Synchronisiert alle Reservierungen mit check_out_date >= gestern
+ * Für ersten Sync oder manuelle Synchronisation aller aktuellen Reservierungen
+ */
+export const syncFullReservations = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const organizationId = req.organizationId;
+
+    // Hole alle Branches der Organisation
+    const branches = await prisma.branch.findMany({
+      where: {
+        organizationId: organizationId
+      },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            settings: true
+          }
+        }
+      }
+    });
+
+    let totalSynced = 0;
+    const branchResults: Array<{ branchId: number; branchName: string; syncedCount: number; error?: string }> = [];
+
+    // Sync jede Branch mit check_out_date Filter
+    for (const branch of branches) {
+      try {
+        // Prüfe ob LobbyPMS Sync aktiviert ist
+        const branchSettings = branch.lobbyPmsSettings as any;
+        const orgSettings = branch.organization?.settings as any;
+        
+        const { decryptBranchApiSettings, decryptApiSettings } = await import('../utils/encryption');
+        const decryptedBranchSettings = branchSettings ? decryptBranchApiSettings(branchSettings) : null;
+        const decryptedOrgSettings = orgSettings ? decryptApiSettings(orgSettings) : null;
+        
+        const lobbyPmsSettings = decryptedBranchSettings || decryptedOrgSettings?.lobbyPms;
+
+        if (!lobbyPmsSettings?.apiKey) {
+          branchResults.push({
+            branchId: branch.id,
+            branchName: branch.name,
+            syncedCount: 0,
+            error: 'Kein LobbyPMS API Key konfiguriert'
+          });
+          continue;
+        }
+
+        if (lobbyPmsSettings.syncEnabled === false) {
+          branchResults.push({
+            branchId: branch.id,
+            branchName: branch.name,
+            syncedCount: 0,
+            error: 'LobbyPMS Sync ist deaktiviert'
+          });
+          continue;
+        }
+
+        // Erstelle Service für Branch und führe vollständigen Sync durch
+        const service = await LobbyPmsService.createForBranch(branch.id);
+        const syncedCount = await service.syncReservationsByCheckoutDate();
+        
+        totalSynced += syncedCount;
+        branchResults.push({
+          branchId: branch.id,
+          branchName: branch.name,
+          syncedCount: syncedCount
+        });
+      } catch (error) {
+        branchResults.push({
+          branchId: branch.id,
+          branchName: branch.name,
+          syncedCount: 0,
+          error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+        // Weiter mit nächster Branch
+      }
+    }
+
+    res.json({
+      success: true,
+      syncedCount: totalSynced,
+      branchResults: branchResults,
+      errors: branchResults.filter(r => r.error).map(r => `${r.branchName}: ${r.error}`)
+    });
+  } catch (error) {
+    console.error('Error in full sync:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Fehler beim vollständigen Sync'
+    });
+  }
+};
+
 

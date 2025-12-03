@@ -31,8 +31,9 @@ export class LobbyPmsReservationScheduler {
       await this.checkAllBranches();
     }, CHECK_INTERVAL_MS);
 
-    // Führe sofort einen Check aus beim Start
-    this.checkAllBranches();
+    // ✅ MEMORY: Sofortigen Check beim Start entfernt (verhindert 674MB Memory-Verbrauch beim Server-Start)
+    // Stattdessen: Manueller Sync über Settings/System Tab verfügbar
+    // this.checkAllBranches();
 
     this.isRunning = true;
   }

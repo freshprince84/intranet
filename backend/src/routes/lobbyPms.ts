@@ -5,6 +5,7 @@ import {
   getReservations,
   getReservationById,
   syncReservations,
+  syncFullReservations,
   checkInReservation,
   handleWebhook,
   validateConnection,
@@ -27,6 +28,7 @@ router.put('/reservations/:id/check-in', checkInReservation);
 
 // Synchronisation
 router.post('/sync', syncReservations);
+router.post('/sync-full', syncFullReservations); // ✅ MEMORY: Vollständiger Sync nach check_out_date (für manuellen ersten Sync)
 
 // Validierung
 router.get('/validate', validateConnection);

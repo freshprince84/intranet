@@ -559,6 +559,51 @@ const Settings: React.FC = () => {
                             </p>
                             <DatabaseManagement />
                         </div>
+
+                        {/* LobbyPMS Full Sync Section */}
+                        <div className="border-t pt-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-medium mb-2 dark:text-white">LobbyPMS: Vollständiger Sync</h3>
+                                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                                        Synchronisiert alle Reservierungen mit Check-out ab gestern. 
+                                        Wird für den ersten Sync oder manuelle Synchronisation verwendet.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            setIsSaving(true);
+                                            const response = await axiosInstance.post(API_ENDPOINTS.RESERVATIONS.SYNC_FULL);
+                                            if (response.data.success) {
+                                                toast.success(`Sync erfolgreich: ${response.data.syncedCount} Reservierungen synchronisiert`);
+                                            } else {
+                                                toast.error('Sync fehlgeschlagen');
+                                            }
+                                        } catch (error) {
+                                            console.error('Fehler beim vollständigen Sync:', error);
+                                            toast.error(error instanceof Error ? error.message : 'Fehler beim vollständigen Sync');
+                                        } finally {
+                                            setIsSaving(false);
+                                        }
+                                    }}
+                                    disabled={isSaving}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    {isSaving ? (
+                                        <>
+                                            <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                                            <span>Sync läuft...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ArrowPathIcon className="h-5 w-5" />
+                                            <span>Vollständigen Sync starten</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 

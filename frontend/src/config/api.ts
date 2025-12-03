@@ -307,6 +307,7 @@ export const API_ENDPOINTS = {
         BY_ID: (id: number) => `/lobby-pms/reservations/${id}`,
         CHECK_IN: (id: number) => `/lobby-pms/reservations/${id}/check-in`,
         SYNC: '/lobby-pms/sync',
+        SYNC_FULL: '/lobby-pms/sync-full', // ✅ MEMORY: Vollständiger Sync nach check_out_date
         VALIDATE: '/lobby-pms/validate',
         REGISTER_SIRE: (id: number) => `/lobby-pms/reservations/${id}/register-sire`,
         SIRE_STATUS: (id: number) => `/lobby-pms/reservations/${id}/sire-status`

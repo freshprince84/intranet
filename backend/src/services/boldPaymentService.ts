@@ -689,6 +689,11 @@ export class BoldPaymentService {
 
             // Erstelle TTLock Passcode (wenn konfiguriert und Kontaktinfo vorhanden)
             // TTLock-Code sollte auch erstellt werden, wenn nur Email vorhanden ist
+            // WICHTIG: Versende PIN nur wenn:
+            // 1. Check-in-Link abgeschlossen (checkInDataUploaded = true) ODER
+            // 2. Bereits eingecheckt (status = checked_in)
+            const shouldSendPin = updatedReservation.checkInDataUploaded || isAlreadyCheckedIn;
+            
             if (updatedReservation.guestPhone || updatedReservation.guestEmail) {
               let ttlockCode: string | null = null;
               
@@ -791,25 +796,36 @@ export class BoldPaymentService {
                 // Weiter ohne TTLock Code
               }
 
-              // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
-              // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
-              console.log(`[Bold Payment Webhook] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${ttlockCode ? `(${ttlockCode})` : ''} wird nur im Frontend angezeigt`);
-              
-              // Log: Versendung deaktiviert
-              try {
-                await prisma.reservationNotificationLog.create({
-                  data: {
-                    reservationId: reservation.id,
-                    notificationType: 'pin',
-                    channel: 'whatsapp',
-                    success: false,
-                    sentAt: new Date(),
-                    sentTo: updatedReservation.guestPhone || null,
-                    errorMessage: 'WhatsApp-Versendung temporär deaktiviert - Code wird nur im Frontend angezeigt'
-                  }
-                });
-              } catch (logError) {
-                console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags:', logError);
+              // Versende PIN nur wenn Check-in-Link abgeschlossen ODER bereits eingecheckt
+              if (shouldSendPin && ttlockCode) {
+                try {
+                  console.log(`[Bold Payment Webhook] Check-in-Link abgeschlossen/Check-in durchgeführt → versende PIN für Reservierung ${reservation.id}`);
+                  const { ReservationNotificationService } = await import('./reservationNotificationService');
+                  await ReservationNotificationService.generatePinAndSendNotification(reservation.id);
+                } catch (error) {
+                  console.error(`[Bold Payment Webhook] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
+                  // Fehler nicht weiterwerfen, da PIN-Versand optional ist
+                }
+              } else if (!shouldSendPin) {
+                // ⚠️ Check-in-Link noch nicht abgeschlossen - PIN wird nicht versendet
+                console.log(`[Bold Payment Webhook] ⚠️ Check-in-Link noch nicht abgeschlossen - TTLock-Code ${ttlockCode ? `(${ttlockCode})` : ''} wird nur im Frontend angezeigt`);
+                
+                // Log: Versendung deaktiviert (Check-in-Link noch nicht abgeschlossen)
+                try {
+                  await prisma.reservationNotificationLog.create({
+                    data: {
+                      reservationId: reservation.id,
+                      notificationType: 'pin',
+                      channel: 'whatsapp',
+                      success: false,
+                      sentAt: new Date(),
+                      sentTo: updatedReservation.guestPhone || null,
+                      errorMessage: 'PIN nicht versendet - Check-in-Link noch nicht abgeschlossen (Dokumente noch nicht hochgeladen)'
+                    }
+                  });
+                } catch (logError) {
+                  console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags:', logError);
+                }
               }
 
               // ⚠️ TEMPORÄR AUSKOMMENTIERT - WhatsApp-Versendung nach TTLock-Webhook

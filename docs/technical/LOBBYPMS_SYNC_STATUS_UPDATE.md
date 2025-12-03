@@ -2,9 +2,12 @@
 
 ## Übersicht
 
-Da Bold Payment Webhooks im Moment nicht verfügbar sind, kann der Status über die **LobbyPMS-Synchronisation** aktualisiert werden. LobbyPMS synchronisiert automatisch:
+Die **LobbyPMS-Synchronisation** aktualisiert automatisch:
 - **Check-in Status** (`checked_in` Boolean)
 - **Payment Status** (`paid_out` vs `total_to_pay`)
+- **Check-in-Link-Abschluss** (`checkin_online` Boolean, `holder.type_document` + `holder.document`)
+
+**Siehe auch**: [LOBBYPMS_CHECKIN_LINK_ERKENNUNG.md](LOBBYPMS_CHECKIN_LINK_ERKENNUNG.md) - Detaillierte Beschreibung der Check-in-Link-Erkennung
 
 ## Wie funktioniert die Synchronisation?
 
