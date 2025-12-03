@@ -5,6 +5,7 @@ import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
+import { useFilterContext } from '../contexts/FilterContext.tsx';
 import CreateRequestModal from './CreateRequestModal.tsx';
 import EditRequestModal from './EditRequestModal.tsx';
 import TableColumnConfig from './TableColumnConfig.tsx';
@@ -505,7 +506,35 @@ const Requests: React.FC = () => {
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // ❌ ENTFERNT: Fallback-Timeout - War Workaround für Filter-Load, sollte nicht mehr nötig sein (Phase 3)
+  // ✅ FIX: Initiales Laden von Requests (wenn keine Filter existieren oder wenn Filter geladen wurden)
+  const filterContext = useFilterContext();
+  const filtersLoading = filterContext.isLoading(REQUESTS_TABLE_ID);
+  
+  useEffect(() => {
+    // Lade Filter für Requests-Tabelle
+    filterContext.loadFilters(REQUESTS_TABLE_ID);
+  }, [filterContext]);
+  
+  // ✅ FIX: Initiales Laden von Requests (wenn Filter geladen wurden, aber kein Default-Filter angewendet wurde)
+  useEffect(() => {
+    // Nur ausführen, wenn:
+    // 1. Filter nicht mehr am Laden sind
+    // 2. Keine Requests geladen wurden (requests.length === 0)
+    // 3. Nicht bereits am Laden (loading === false)
+    // 4. Kein Filter ausgewählt wurde (selectedFilterId === null)
+    if (!filtersLoading && requests.length === 0 && !loading && selectedFilterId === null && filterConditions.length === 0) {
+      // Warte 500ms, damit SavedFilterTags Zeit hat, Default-Filter anzuwenden
+      const timeoutId = setTimeout(() => {
+        // Prüfe nochmal, ob inzwischen ein Filter angewendet wurde
+        if (selectedFilterId === null && filterConditions.length === 0 && requests.length === 0) {
+          // Fallback: Lade Requests ohne Filter
+          fetchRequests(undefined, undefined, false, 20, 0);
+        }
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [filtersLoading, requests.length, loading, selectedFilterId, filterConditions.length, fetchRequests]);
 
   // ❌ ENTFERNT: Cleanup useEffect - React macht automatisches Cleanup, manuelles Löschen ist überflüssig (Phase 3)
 
@@ -646,7 +675,8 @@ const Requests: React.FC = () => {
   };
   
   // Filter Change Handler (Controlled Mode)
-  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  // ✅ FIX: sortDirections Parameter hinzugefügt (wird ignoriert, aber für Kompatibilität mit SavedFilterTags nötig)
+  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: any) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     // Table-Header-Sortierung zurücksetzen
@@ -657,7 +687,7 @@ const Requests: React.FC = () => {
     if (id) {
       setFilterConditions(conditions);
       setFilterLogicalOperators(operators);
-      // ❌ ENTFERNT: sortDirections Parameter und setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
+      // ❌ ENTFERNT: sortDirections Parameter wird ignoriert - Filter-Sortierung wurde entfernt (Phase 1)
       await fetchRequests(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
     } else {
       // ✅ Direkte Bedingungen: applyFilterConditions lädt bereits und setzt State korrekt
