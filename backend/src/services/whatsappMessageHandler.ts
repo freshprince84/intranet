@@ -1604,9 +1604,7 @@ export class WhatsAppMessageHandler {
       }
       
       // Prüfe auf Bestätigungen ("ja", "sí", "yes") + Zimmer-Name
-      const confirmationKeywords = ['ja', 'sí', 'si', 'yes', 'ok', 'okay', 'genau', 'correcto', 'correct'];
-      const hasConfirmation = confirmationKeywords.some(keyword => normalizedMessage.includes(keyword));
-      
+      // (confirmationKeywords und hasConfirmation wurden bereits oben deklariert)
       if (hasConfirmation && !roomName) {
         // Versuche Zimmer-Name aus Nachricht zu extrahieren (auch wenn nicht exakt)
         for (const name of roomNames) {
