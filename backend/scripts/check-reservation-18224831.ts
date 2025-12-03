@@ -104,17 +104,40 @@ async function checkReservation18224831() {
         console.log(`   Versuche Branch ${branch.id} (${branch.name})...`);
         const service = await LobbyPmsService.createForBranch(branch.id);
         
+        // Versuche zuerst über fetchReservationById (falls Endpoint korrekt ist)
         try {
           lobbyReservation = await service.fetchReservationById(reservationId);
           foundBranchId = branch.id;
-          console.log(`   ✅ Reservation in LobbyPMS gefunden über Branch ${branch.id}!`);
+          console.log(`   ✅ Reservation in LobbyPMS gefunden über Branch ${branch.id} (fetchReservationById)!`);
           break;
         } catch (error) {
-          if (error instanceof Error && error.message.includes('nicht gefunden')) {
-            console.log(`   ⚠️  Reservation nicht in diesem Branch gefunden`);
-            continue;
-          } else {
-            console.log(`   ⚠️  Fehler: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+          console.log(`   ⚠️  fetchReservationById fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+          console.log(`   💡 Versuche über fetchReservations (Liste)...`);
+          
+          // Fallback: Suche über fetchReservations (funktioniert definitiv)
+          try {
+            // Hole Reservierungen der letzten 90 Tage (breiter Zeitraum)
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 90);
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + 30);
+            
+            const allReservations = await service.fetchReservations(startDate, endDate);
+            lobbyReservation = allReservations.find(r => 
+              String(r.booking_id) === reservationId || 
+              String(r.id) === reservationId ||
+              String(r.booking_id || r.id) === reservationId
+            );
+            
+            if (lobbyReservation) {
+              foundBranchId = branch.id;
+              console.log(`   ✅ Reservation in LobbyPMS gefunden über Branch ${branch.id} (fetchReservations)!`);
+              break;
+            } else {
+              console.log(`   ⚠️  Reservation nicht in den letzten 90 Tagen gefunden (${allReservations.length} Reservierungen durchsucht)`);
+            }
+          } catch (fetchError) {
+            console.log(`   ⚠️  Fehler bei fetchReservations: ${fetchError instanceof Error ? fetchError.message : 'Unbekannter Fehler'}`);
             continue;
           }
         }
