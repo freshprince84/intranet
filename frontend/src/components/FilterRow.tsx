@@ -238,6 +238,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
             onChange={(e) => onChange(e.target.value)}
           >
             <option value="">{t('filter.row.pleaseSelect')}</option>
+            <option value="potential">{t('reservations.status.potential', 'Potenzielle Reservierung')}</option>
             <option value="confirmed">{t('reservations.status.confirmed', 'Bestätigt')}</option>
             <option value="notification_sent">{t('reservations.status.notification_sent', 'Benachrichtigung gesendet')}</option>
             <option value="checked_in">{t('reservations.status.checked_in', 'Eingecheckt')}</option>

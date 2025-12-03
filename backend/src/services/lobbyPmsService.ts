@@ -868,12 +868,19 @@ export class LobbyPmsService {
     let roomNumber: string | null = null;
     let roomDescription: string | null = null;
     
+    // Extrahiere categoryId für Zimmer-Beschreibungen
+    const categoryId = lobbyReservation.category?.category_id || null;
+    
     if (isDorm) {
       // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
       const dormName = lobbyReservation.category?.name || null;
       const bedNumber = assignedRoom?.name || null;
-      roomNumber = bedNumber; // Bettnummer (z.B. "Cama 5")
-      roomDescription = dormName; // Zimmername (z.B. "La tia artista")
+      // Kombiniere Zimmername + Bettnummer für roomNumber
+      roomNumber = dormName && bedNumber 
+        ? `${dormName} (${bedNumber})` 
+        : bedNumber || dormName || null;
+      // roomDescription wird später aus Branch-Settings geladen (siehe Phase 5)
+      roomDescription = null; // Wird beim Versenden der Nachricht aus Branch-Settings geladen
     } else {
       // Für Privatzimmer: assigned_room.name = Zimmername
       roomNumber = assignedRoom?.name || lobbyReservation.room_number || null;
@@ -924,6 +931,7 @@ export class LobbyPmsService {
       arrivalTime: lobbyReservation.arrival_time ? new Date(lobbyReservation.arrival_time) : null,
       roomNumber: roomNumber,
       roomDescription: roomDescription,
+      categoryId: categoryId, // LobbyPMS category_id (für Zimmer-Beschreibungen)
       status: status,
       paymentStatus: paymentStatus,
       amount: amount,

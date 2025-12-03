@@ -882,6 +882,7 @@ enum SubscriptionPlan {
 }
 
 enum ReservationStatus {
+  potential // Potenzielle Reservierung (noch nicht bestätigt)
   confirmed
   notification_sent
   checked_in
@@ -1114,6 +1115,7 @@ model Reservation {
   arrivalTime              DateTime? // Geschätzte Ankunftszeit
   roomNumber               String?
   roomDescription          String?
+  categoryId               Int? // LobbyPMS category_id (für Zimmer-Beschreibungen)
   status                   ReservationStatus            @default(confirmed)
   paymentStatus            PaymentStatus                @default(pending)
   amount                   Decimal?                     @db.Decimal(10, 2) // Preis der Reservierung
