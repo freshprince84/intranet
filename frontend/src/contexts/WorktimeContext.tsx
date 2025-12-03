@@ -39,7 +39,7 @@ export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
         } catch (error) {
             if (process.env.NODE_ENV === 'development') {
-              console.error('Fehler beim Abrufen des Zeiterfassungsstatus:', error);
+            console.error('Fehler beim Abrufen des Zeiterfassungsstatus:', error);
             }
             setIsTracking(false);
         }
@@ -50,8 +50,8 @@ export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // ✅ MEMORY: Verzögertes Laden - nicht sofort beim Mount, sondern nach kurzem Delay
         // Dies reduziert die Anzahl der parallelen API-Calls beim Initial Load
         const timeoutId = setTimeout(() => {
-            // Initiale Prüfung
-            checkTrackingStatus();
+        // Initiale Prüfung
+        checkTrackingStatus();
         }, 200); // 200ms Delay - Worktime ist weniger kritisch als Auth/Organization
 
         // ✅ MEMORY: Polling nur wenn Seite sichtbar ist (Page Visibility API)

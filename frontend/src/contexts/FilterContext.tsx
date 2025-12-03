@@ -136,13 +136,9 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       filterCacheTimestamps.current[tableId] = Date.now();
       // ✅ WICHTIG: loadedTablesRef NICHT hier setzen (nur während Laden)
       // Filter im State sind Source of Truth
-    } catch (error: any) {
-      // ✅ MEMORY: Ignoriere Abort-Errors
-      if (error.name === 'AbortError' || error.name === 'CanceledError') {
-        return; // Request wurde abgebrochen
-      }
+    } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.error(`[FilterContext] Fehler beim Laden der Filter für ${tableId}:`, error);
+      console.error(`[FilterContext] Fehler beim Laden der Filter für ${tableId}:`, error);
       }
       setErrors(prev => ({ ...prev, [tableId]: 'Fehler beim Laden der Filter' }));
     } finally {
@@ -264,8 +260,6 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
         return;
       }
       
-      // ✅ MEMORY: AbortController für Request-Cancellation
-      // Hinweis: AbortController wird von aufrufenden Komponenten verwaltet
       // Lade Filter und Gruppen parallel
       const [filtersResponse, groupsResponse] = await Promise.all([
         axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)),
@@ -285,13 +279,9 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       filterCacheTimestamps.current[tableId] = Date.now();
       // ✅ Cache zurücksetzen, damit Filter neu geladen werden können
       loadedTablesRef.current.delete(tableId);
-    } catch (error: any) {
-      // ✅ MEMORY: Ignoriere Abort-Errors
-      if (error.name === 'AbortError' || error.name === 'CanceledError') {
-        return; // Request wurde abgebrochen
-      }
+    } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.error(`[FilterContext] Fehler beim Aktualisieren der Filter für ${tableId}:`, error);
+      console.error(`[FilterContext] Fehler beim Aktualisieren der Filter für ${tableId}:`, error);
       }
       setErrors(prev => ({ ...prev, [tableId]: 'Fehler beim Aktualisieren der Filter' }));
     } finally {

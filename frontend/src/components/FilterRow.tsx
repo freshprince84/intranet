@@ -140,7 +140,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           setUsers(response.data);
         } catch (error) {
           if (process.env.NODE_ENV === 'development') {
-            console.error('Fehler beim Laden der Benutzer:', error);
+          console.error('Fehler beim Laden der Benutzer:', error);
           }
         } finally {
           setLoadingUsers(false);
@@ -161,7 +161,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
             setRoles(response.data);
           } catch (error) {
             if (process.env.NODE_ENV === 'development') {
-              console.error('Fehler beim Laden der Rollen:', error);
+            console.error('Fehler beim Laden der Rollen:', error);
             }
           } finally {
             setLoadingRoles(false);
@@ -177,7 +177,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           setBranches(response.data);
         } catch (error) {
           if (process.env.NODE_ENV === 'development') {
-            console.error('Fehler beim Laden der Branches:', error);
+          console.error('Fehler beim Laden der Branches:', error);
           }
         } finally {
           setLoadingBranches(false);
@@ -211,7 +211,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           setRoomNumbers(uniqueRoomNames);
         } catch (error) {
           if (process.env.NODE_ENV === 'development') {
-            console.error('Fehler beim Laden der Zimmernamen:', error);
+          console.error('Fehler beim Laden der Zimmernamen:', error);
           }
         } finally {
           setLoadingRoomNumbers(false);

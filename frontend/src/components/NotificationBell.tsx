@@ -46,15 +46,15 @@ const NotificationBell: React.FC = () => {
   const open = Boolean(anchorEl);
   const id = open ? 'notification-popover' : undefined;
 
-  const fetchUnreadCount = useCallback(async (signal?: AbortSignal) => {
+  const fetchUnreadCount = useCallback(async () => {
     setLoading(true);
     try {
       if (process.env.NODE_ENV === 'development') {
-        console.log('Versuche, ungelesene Benachrichtigungen zu zählen...');
+      console.log('Versuche, ungelesene Benachrichtigungen zu zählen...');
       }
-      const response = await notificationApi.getUnreadCount(signal);
+      const response = await notificationApi.getUnreadCount();
       if (process.env.NODE_ENV === 'development') {
-        console.log('Antwort vom Server für ungelesene Benachrichtigungen:', response);
+      console.log('Antwort vom Server für ungelesene Benachrichtigungen:', response);
       }
       
       // Prüfe verschiedene mögliche Antwortformate
@@ -68,40 +68,28 @@ const NotificationBell: React.FC = () => {
       }
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('Setze ungelesene Benachrichtigungen auf:', count);
+      console.log('Setze ungelesene Benachrichtigungen auf:', count);
       }
-      // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
-      if (signal?.aborted) {
-        return;
-      }
-      
       setUnreadCount(count);
       setError(null);
-    } catch (error: any) {
-      // ✅ MEMORY: Ignoriere Abort-Errors
-      if (error.name === 'AbortError' || error.name === 'CanceledError' || signal?.aborted) {
-        return; // Request wurde abgebrochen
-      }
+    } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Fehler beim Laden der ungelesenen Nachrichten:', error);
+      console.error('Fehler beim Laden der ungelesenen Nachrichten:', error);
       }
       setUnreadCount(0);
     } finally {
-      // ✅ MEMORY: Nur loading setzen wenn nicht abgebrochen
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, []);
 
-  const fetchRecentNotifications = useCallback(async (signal?: AbortSignal) => {
+  const fetchRecentNotifications = useCallback(async () => {
     if (!open) return;
     
     setLoading(true);
     try {
-      const response = await notificationApi.getNotifications(1, 5, signal);
+      const response = await notificationApi.getNotifications(1, 5);
       if (process.env.NODE_ENV === 'development') {
-        console.log('Benachrichtigungen Response:', response);
+      console.log('Benachrichtigungen Response:', response);
       }
       
       // Prüfe verschiedene mögliche Antwortformate
@@ -115,30 +103,18 @@ const NotificationBell: React.FC = () => {
       }
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('Verarbeitete Benachrichtigungen:', notifications);
+      console.log('Verarbeitete Benachrichtigungen:', notifications);
       }
-      // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
-      if (signal?.aborted) {
-        return;
-      }
-      
       setNotifications(notifications);
       setError(null);
-    } catch (err: any) {
-      // ✅ MEMORY: Ignoriere Abort-Errors
-      if (err.name === 'AbortError' || err.name === 'CanceledError' || signal?.aborted) {
-        return; // Request wurde abgebrochen
-      }
+    } catch (err) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Fehler beim Laden der Benachrichtigungen:', err);
+      console.error('Fehler beim Laden der Benachrichtigungen:', err);
       }
       setError(t('notifications.loadError'));
       setNotifications([]);
     } finally {
-      // ✅ MEMORY: Nur loading setzen wenn nicht abgebrochen
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [open, t]);
 
@@ -153,7 +129,7 @@ const NotificationBell: React.FC = () => {
       fetchUnreadCount();
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Fehler beim Markieren als gelesen:', err);
+      console.error('Fehler beim Markieren als gelesen:', err);
       }
     }
   };
@@ -167,7 +143,7 @@ const NotificationBell: React.FC = () => {
       setUnreadCount(0);
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Fehler beim Markieren aller als gelesen:', err);
+      console.error('Fehler beim Markieren aller als gelesen:', err);
       }
     }
   };
@@ -209,10 +185,7 @@ const NotificationBell: React.FC = () => {
   };
 
   useEffect(() => {
-    // ✅ MEMORY: AbortController für Request-Cancellation
-    const abortController = new AbortController();
-    
-    fetchUnreadCount(abortController.signal);
+    fetchUnreadCount();
     
     // ✅ MEMORY: Polling nur wenn Seite sichtbar ist (Page Visibility API)
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -222,7 +195,7 @@ const NotificationBell: React.FC = () => {
       interval = setInterval(() => {
         // Prüfe nochmal, ob Seite sichtbar ist
         if (!document.hidden) {
-          fetchUnreadCount(abortController.signal);
+          fetchUnreadCount();
         }
       }, 60000);
     };
@@ -245,7 +218,7 @@ const NotificationBell: React.FC = () => {
         stopPolling();
       } else {
         // Seite ist wieder sichtbar - sofort prüfen und Polling starten
-        fetchUnreadCount(abortController.signal);
+        fetchUnreadCount();
         startPolling();
       }
     };
@@ -253,23 +226,15 @@ const NotificationBell: React.FC = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchUnreadCount]);
+  }, []);
 
   useEffect(() => {
-    // ✅ MEMORY: AbortController für Request-Cancellation
-    const abortController = new AbortController();
-    
     if (open) {
-      fetchRecentNotifications(abortController.signal);
+      fetchRecentNotifications();
     }
-    
-    return () => {
-      abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount oder wenn open sich ändert
-    };
   }, [open, fetchRecentNotifications]);
 
   const formatDate = (dateString: string) => {

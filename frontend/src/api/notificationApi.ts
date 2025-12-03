@@ -47,47 +47,31 @@ export interface NotificationResponse {
 // API-Funktionen für Benachrichtigungen mit verbessertem Error-Handling
 export const notificationApi = {
   // Benachrichtigungen abrufen
-  getNotifications: async (page: number = 1, limit: number = 10, signal?: AbortSignal): Promise<NotificationResponse> => {
+  getNotifications: async (page: number = 1, limit: number = 10): Promise<NotificationResponse> => {
     try {
-      const response = await axiosInstance.get(`/notifications?page=${page}&limit=${limit}`, { signal });
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Notifications API Response:', response.data);
-      }
+      const response = await axiosInstance.get(`/notifications?page=${page}&limit=${limit}`);
+      console.log('Notifications API Response:', response.data);
       
       return response.data;
-    } catch (error: any) {
-      // ✅ MEMORY: Ignoriere Abort-Errors
-      if (error.name === 'AbortError' || error.name === 'CanceledError' || signal?.aborted) {
-        throw error; // Re-throw für korrekte Behandlung
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Fehler beim Abrufen der Benachrichtigungen:', error);
-      }
+    } catch (error) {
+      console.error('Fehler beim Abrufen der Benachrichtigungen:', error);
       throw error;
     }
   },
   
   // Ungelesene Benachrichtigungen zählen
-  getUnreadCount: async (signal?: AbortSignal): Promise<number> => {
+  getUnreadCount: async (): Promise<number> => {
     try {
-      const response = await axiosInstance.get(`/notifications/unread/count`, { signal });
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Unread Count API Response:', response.data);
-      }
+      const response = await axiosInstance.get(`/notifications/unread/count`);
+      console.log('Unread Count API Response:', response.data);
       
       if (response.data && typeof response.data.count === 'number') {
         return response.data.count;
       }
       
       return 0;
-    } catch (error: any) {
-      // ✅ MEMORY: Ignoriere Abort-Errors
-      if (error.name === 'AbortError' || error.name === 'CanceledError' || signal?.aborted) {
-        return 0;
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Fehler beim Abrufen der ungelesenen Benachrichtigungen:', error);
-      }
+    } catch (error) {
+      console.error('Fehler beim Abrufen der ungelesenen Benachrichtigungen:', error);
       return 0;
     }
   },
