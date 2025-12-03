@@ -620,20 +620,17 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
       let hoursWorked: number;
       
       if (entry.endTime === null) {
-        // Aktive Zeitmessung: Berechne Differenz genau wie im Modal (WorktimeModal.tsx Zeile 125-130)
+        // Aktive Zeitmessung: Berechne Differenz genau wie im Modal
         // KORREKT: Entferne 'Z' vom ISO-String, damit JavaScript die Zeit als lokal interpretiert
-        const now = new Date();
-        
-        // Konvertiere entry.startTime zu ISO-String und entferne 'Z' (wie im Modal)
+        // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
         const startISOString = entry.startTime.toISOString();
         const startISOStringWithoutZ = startISOString.endsWith('Z') 
             ? startISOString.substring(0, startISOString.length - 1)
             : startISOString;
         const startTimeDate = new Date(startISOStringWithoutZ);
-        
-        // Berechne Differenz mit getTime() - funktioniert korrekt, weil beide als lokale Zeit interpretiert werden
-        const diffMs = now.getTime() - startTimeDate.getTime();
-        hoursWorked = diffMs / (1000 * 60 * 60);
+        const now = new Date();
+        const diff = now.getTime() - startTimeDate.getTime();
+        hoursWorked = diff / (1000 * 60 * 60);
         
         // Für Verteilung: Verwende originale Zeiten
         actualStartTime = entry.startTime;
@@ -1210,21 +1207,17 @@ export const checkAndStopExceededWorktimes = async () => {
       }
 
       // Füge die aktuelle laufende Sitzung hinzu
-      // WICHTIG: Beide Werte (worktime.startTime und now) werden 1:1 aus der DB bzw. als aktuelle Systemzeit genommen
-      // KEINE UTC-Umrechnung! Differenz wird direkt aus lokalen Komponenten berechnet
-      // Berechne Tage-Differenz manuell (ohne getTime() - verboten!)
-      const daysDiff = (now.getFullYear() - worktime.startTime.getFullYear()) * 365.25 +
-                       (now.getMonth() - worktime.startTime.getMonth()) * 30.44 +
-                       (now.getDate() - worktime.startTime.getDate());
-      const daysDiffMs = Math.floor(daysDiff) * 86400000;
-
-      // Berechne Zeit-Differenz innerhalb des Tages
-      const timeDiffMs = (now.getHours() - worktime.startTime.getHours()) * 3600000 +
-                         (now.getMinutes() - worktime.startTime.getMinutes()) * 60000 +
-                         (now.getSeconds() - worktime.startTime.getSeconds()) * 1000 +
-                         (now.getMilliseconds() - worktime.startTime.getMilliseconds());
-
-      const currentSessionMs = daysDiffMs + timeDiffMs;
+      // KORREKT: Wie im WorktimeModal - entferne 'Z' vom ISO-String und verwende getTime()
+      // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
+      const startISOString = worktime.startTime.toISOString();
+      const startISOStringWithoutZ = startISOString.endsWith('Z') 
+          ? startISOString.substring(0, startISOString.length - 1)
+          : startISOString;
+      const startTimeDate = new Date(startISOStringWithoutZ);
+      const now = new Date();
+      const diff = now.getTime() - startTimeDate.getTime();
+      
+      const currentSessionMs = diff;
       const currentSessionHours = currentSessionMs / (1000 * 60 * 60);
       
       // Formatiere lokale Zeit für bessere Lesbarkeit
@@ -1246,7 +1239,7 @@ export const checkAndStopExceededWorktimes = async () => {
         console.log(`Schwellenwert erreicht oder überschritten. Stoppe Zeiterfassung automatisch.`);
         
         // Zeiterfassung beenden - speichere die aktuelle Zeit direkt
-        // KORREKT: new Date() gibt bereits die korrekte Zeit zurück, die als lokale Zeit gespeichert wird
+        // KORREKT: Wie im Modal - verwende new Date() direkt (wird als lokale Zeit gespeichert)
         // Siehe stopWorktime Zeile 175 für die korrekte Referenz-Implementierung
         const endTimeNow = new Date();
         

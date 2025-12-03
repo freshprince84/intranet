@@ -1132,6 +1132,8 @@ model Reservation {
   ttlLockPassword          String? // TTLock Passcode/Password
   onlineCheckInCompleted   Boolean                      @default(false)
   onlineCheckInCompletedAt DateTime?
+  checkInDataUploaded      Boolean                      @default(false) // Gast hat Check-in-Link abgeschlossen (Dokumente hochgeladen)
+  checkInDataUploadedAt    DateTime? // Wann wurden Dokumente hochgeladen
   invitationSentAt         DateTime? // Wann wurde die Check-in-Einladung versendet
   sentMessage              String? // Versendete WhatsApp-Nachricht (für Anzeige)
   sentMessageAt            DateTime? // Wann wurde die Nachricht versendet
