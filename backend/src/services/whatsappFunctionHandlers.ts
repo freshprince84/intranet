@@ -945,10 +945,9 @@ export class WhatsAppFunctionHandlers {
           const availableCount = room.availableRooms;
           return {
             ...room,
-            // WICHTIG: Füge explizite Terminologie-Hinweise hinzu für KI
-            description: room.type === 'compartida' 
-              ? `${room.name}: ${availableCount} ${availableCount === 1 ? 'Bett' : 'Betten'} verfügbar (Dorm-Zimmer)`
-              : `${room.name}: ${availableCount} ${availableCount === 1 ? 'Zimmer' : 'Zimmer'} verfügbar (privates Zimmer)`
+            // WICHTIG: Sprachneutral - keine deutschen Begriffe, nur roomType (compartida/privada)
+            // Die KI muss die Begriffe selbst in die erkannte Sprache übersetzen
+            description: `${room.name}: ${availableCount} available (type: ${room.type}, unit: ${room.unit})`
           };
         })
       };
