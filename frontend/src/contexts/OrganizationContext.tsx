@@ -49,10 +49,16 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   useEffect(() => {
+    // ✅ MEMORY: Verzögertes Laden - nicht sofort beim Mount, sondern nach kurzem Delay
+    // Dies reduziert die Anzahl der parallelen API-Calls beim Initial Load
     const abortController = new AbortController();
-    fetchOrganization(abortController.signal);
+    
+    const timeoutId = setTimeout(() => {
+      fetchOrganization(abortController.signal);
+    }, 100); // 100ms Delay - gibt anderen kritischen Requests Vorrang
     
     return () => {
+      clearTimeout(timeoutId);
       abortController.abort();
     };
   }, []);
