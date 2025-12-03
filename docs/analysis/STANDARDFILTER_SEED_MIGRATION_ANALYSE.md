@@ -175,3 +175,4 @@ model SavedFilter {
 - `frontend/src/components/SavedFilterTags.tsx` - isStandardFilter erweitern
 
 
+

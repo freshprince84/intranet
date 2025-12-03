@@ -944,9 +944,18 @@ const handleSort = (key: SortConfig['key']) => {
    - Card-Sortierung aus useMemo entfernt
    - Hauptsortierung (`sortConfig`/`tableSortConfig`/`reservationTableSortConfig`) wird jetzt für Table & Card verwendet
 
+#### ✅ Probleme behoben (2025-01-30):
+1. ✅ **Doppelte Sortierung entfernt:**
+   - Requests.tsx: "Table-Header-Sortierung" entfernt (Zeile 763-778)
+   - Worktracker.tsx Tasks: "Table-Header-Sortierung" entfernt (Zeile 1355-1370)
+   - Worktracker.tsx Reservations: "Table-Header-Sortierung" entfernt (Zeile 1615-1630)
+2. ✅ PasswordManagerTab.tsx: `filterSortDirections` entfernt
+3. ✅ filterMigration.ts: Datei gelöscht
+
 #### ⏳ Noch zu tun:
 1. ⚠️ Tour Bookings: Hauptsortierung implementieren (analog zu To Do's/Reservations) - später
 2. ⏳ Tests: Prüfen, dass Sortierung funktioniert (wie ursprünglich)
+3. ⏳ Probleme beheben (siehe oben)
 
 ### Schritt 3: Überflüssige Komplexität entfernen (Priorität 3) 🔴
 
