@@ -87,6 +87,11 @@ interface ReservationSortConfig {
     direction: 'asc' | 'desc';
 }
 
+interface TourBookingSortConfig {
+    key: 'tour.title' | 'customerName' | 'tourDate' | 'numberOfParticipants' | 'totalPrice' | 'paymentStatus' | 'status' | 'bookedBy' | 'branch.name';
+    direction: 'asc' | 'desc';
+}
+
 
 // Standard-Spaltenreihenfolge (wird in der Komponente neu definiert)
 const defaultColumnOrder = ['title', 'responsibleAndQualityControl', 'status', 'dueDate', 'branch', 'actions'];
@@ -396,6 +401,8 @@ const Worktracker: React.FC = () => {
     const [tableSortConfig, setTableSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
     // Tabellen-Header-Sortierung für Reservations (nur für Tabellen-Ansicht)
     const [reservationTableSortConfig, setReservationTableSortConfig] = useState<ReservationSortConfig>({ key: 'checkInDate', direction: 'desc' });
+    // Tabellen-Header-Sortierung für Tour Bookings (nur für Tabellen-Ansicht)
+    const [tourBookingsSortConfig, setTourBookingsSortConfig] = useState<TourBookingSortConfig>({ key: 'tourDate', direction: 'desc' });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -1080,6 +1087,16 @@ const Worktracker: React.FC = () => {
         }
     };
 
+    const handleTourBookingsSort = (key: TourBookingSortConfig['key']) => {
+        // Nur für Tabellen-Ansicht (Header-Sortierung)
+        if (viewMode === 'table' && activeTab === 'tourBookings') {
+            setTourBookingsSortConfig(current => ({
+                key,
+                direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+            }));
+        }
+    };
+
 
     const renderStatusButtons = (task: Task): JSX.Element[] => {
         const buttons: JSX.Element[] = [];
@@ -1600,6 +1617,92 @@ const Worktracker: React.FC = () => {
         }
         return sorted;
     }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationTableSortConfig]); // ✅ reservationCardSortDirections entfernt (Phase 2), cardMetadataOrder & visibleCardMetadata entfernt (nicht mehr benötigt für Sortierung)
+    
+    // Filter- und Sortierlogik für Tour Bookings
+    const filteredAndSortedTourBookings = useMemo(() => {
+        // ✅ NUR tourBookingsSearchTerm wird client-seitig gefiltert
+        const validTourBookings = tourBookings.filter(booking => booking != null);
+        
+        const filtered = validTourBookings.filter(booking => {
+            // ✅ Such-Filter (client-seitig)
+            if (tourBookingsSearchTerm) {
+                const searchLower = tourBookingsSearchTerm.toLowerCase();
+                const matchesSearch = 
+                    (booking.customerName && booking.customerName.toLowerCase().includes(searchLower)) ||
+                    (booking.customerEmail && booking.customerEmail.toLowerCase().includes(searchLower)) ||
+                    (booking.tour?.title && booking.tour.title.toLowerCase().includes(searchLower)) ||
+                    (booking.customerPhone && booking.customerPhone.includes(searchLower));
+                
+                if (!matchesSearch) return false;
+            }
+            
+            return true;
+        });
+        
+        // Hilfsfunktion zum Extrahieren von Werten für Sortierung
+        const getTourBookingSortValue = (booking: TourBooking, columnId: string): any => {
+            switch (columnId) {
+                case 'tour.title':
+                    return booking.tour?.title?.toLowerCase() || '';
+                case 'customerName':
+                    return booking.customerName.toLowerCase();
+                case 'tourDate':
+                    return booking.tourDate ? new Date(booking.tourDate).getTime() : 0;
+                case 'numberOfParticipants':
+                    return booking.numberOfParticipants;
+                case 'totalPrice':
+                    return typeof booking.totalPrice === 'string' ? parseFloat(booking.totalPrice) : (booking.totalPrice || 0);
+                case 'paymentStatus':
+                    const paymentStatusOrder: Record<string, number> = {
+                        'paid': 0,
+                        'partially_paid': 1,
+                        'pending': 2,
+                        'refunded': 3
+                    };
+                    return paymentStatusOrder[booking.paymentStatus] ?? 999;
+                case 'status':
+                    const statusOrder: Record<string, number> = {
+                        'confirmed': 0,
+                        'completed': 1,
+                        'cancelled': 2,
+                        'no_show': 3
+                    };
+                    return statusOrder[booking.status] ?? 999;
+                case 'bookedBy':
+                    return booking.bookedBy ? `${booking.bookedBy.firstName} ${booking.bookedBy.lastName}`.toLowerCase() : '';
+                case 'branch.name':
+                    return booking.branch?.name?.toLowerCase() || '';
+                default:
+                    return '';
+            }
+        };
+        
+        const sorted = filtered.sort((a, b) => {
+            // Hauptsortierung (tourBookingsSortConfig) - für Table & Card gleich (synchron)
+            if (tourBookingsSortConfig.key) {
+                const valueA = getTourBookingSortValue(a, tourBookingsSortConfig.key);
+                const valueB = getTourBookingSortValue(b, tourBookingsSortConfig.key);
+                
+                let comparison = 0;
+                if (typeof valueA === 'number' && typeof valueB === 'number') {
+                    comparison = valueA - valueB;
+                } else {
+                    comparison = String(valueA).localeCompare(String(valueB));
+                }
+                
+                if (comparison !== 0) {
+                    return tourBookingsSortConfig.direction === 'asc' ? comparison : -comparison;
+                }
+            }
+            
+            // Fallback: Tour-Datum (neueste zuerst)
+            const aDate = a.tourDate ? new Date(a.tourDate).getTime() : 0;
+            const bDate = b.tourDate ? new Date(b.tourDate).getTime() : 0;
+            return bDate - aDate;
+        });
+        
+        return sorted;
+    }, [tourBookings, tourBookingsSearchTerm, tourBookingsSortConfig]);
     
     // ✅ PAGINATION: Infinite Scroll für Tasks mit Intersection Observer
     // ✅ FIX: filterConditionsRef verwenden statt filterConditions direkt (verhindert Endlosschleife)
@@ -4576,7 +4679,7 @@ const Worktracker: React.FC = () => {
                         <div className="text-center py-8 text-red-500 dark:text-red-400">
                             {tourBookingsError}
                         </div>
-                    ) : tourBookings.length === 0 ? (
+                    ) : filteredAndSortedTourBookings.length === 0 ? (
                         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                             {t('tourBookings.noBookings', 'Keine Buchungen vorhanden')}
                         </div>
@@ -4585,29 +4688,93 @@ const Worktracker: React.FC = () => {
                             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead className="bg-gray-50 dark:bg-gray-800">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {t('tourBookings.tour', 'Tour')}
+                                        <th 
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            onClick={() => handleTourBookingsSort('tour.title')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {t('tourBookings.tour', 'Tour')}
+                                                {tourBookingsSortConfig.key === 'tour.title' && (
+                                                    <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </div>
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {t('tourBookings.customerName', 'Kunde')}
+                                        <th 
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            onClick={() => handleTourBookingsSort('customerName')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {t('tourBookings.customerName', 'Kunde')}
+                                                {tourBookingsSortConfig.key === 'customerName' && (
+                                                    <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </div>
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {t('tourBookings.tourDate', 'Tour-Datum')}
+                                        <th 
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            onClick={() => handleTourBookingsSort('tourDate')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {t('tourBookings.tourDate', 'Tour-Datum')}
+                                                {tourBookingsSortConfig.key === 'tourDate' && (
+                                                    <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </div>
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {t('tourBookings.numberOfParticipants', 'Teilnehmer')}
+                                        <th 
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            onClick={() => handleTourBookingsSort('numberOfParticipants')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {t('tourBookings.numberOfParticipants', 'Teilnehmer')}
+                                                {tourBookingsSortConfig.key === 'numberOfParticipants' && (
+                                                    <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </div>
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {t('tourBookings.totalPrice', 'Gesamtpreis')}
+                                        <th 
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            onClick={() => handleTourBookingsSort('totalPrice')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {t('tourBookings.totalPrice', 'Gesamtpreis')}
+                                                {tourBookingsSortConfig.key === 'totalPrice' && (
+                                                    <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </div>
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {t('tourBookings.paymentStatus', 'Zahlungsstatus')}
+                                        <th 
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            onClick={() => handleTourBookingsSort('paymentStatus')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {t('tourBookings.paymentStatus', 'Zahlungsstatus')}
+                                                {tourBookingsSortConfig.key === 'paymentStatus' && (
+                                                    <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </div>
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {t('tourBookings.status', 'Status')}
+                                        <th 
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            onClick={() => handleTourBookingsSort('status')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {t('tourBookings.status', 'Status')}
+                                                {tourBookingsSortConfig.key === 'status' && (
+                                                    <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </div>
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            {t('tourBookings.bookedBy', 'Gebucht von')}
+                                        <th 
+                                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            onClick={() => handleTourBookingsSort('bookedBy')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {t('tourBookings.bookedBy', 'Gebucht von')}
+                                                {tourBookingsSortConfig.key === 'bookedBy' && (
+                                                    <ArrowsUpDownIcon className={`h-4 w-4 ${tourBookingsSortConfig.direction === 'asc' ? 'rotate-180' : ''}`} />
+                                                )}
+                                            </div>
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             {t('common.actions', 'Aktionen')}
@@ -4615,18 +4782,7 @@ const Worktracker: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    {tourBookings
-                                        .filter(booking => {
-                                            if (!tourBookingsSearchTerm) return true;
-                                            const search = tourBookingsSearchTerm.toLowerCase();
-                                            return (
-                                                booking.customerName?.toLowerCase().includes(search) ||
-                                                booking.customerEmail?.toLowerCase().includes(search) ||
-                                                booking.tour?.title?.toLowerCase().includes(search) ||
-                                                booking.customerPhone?.includes(search)
-                                            );
-                                        })
-                                        .map((booking) => (
+                                    {filteredAndSortedTourBookings.map((booking) => (
                                             <tr key={booking.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm font-medium text-gray-900 dark:text-white">

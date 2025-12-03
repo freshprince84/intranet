@@ -1558,8 +1558,22 @@ export class WhatsAppMessageHandler {
       // Parse "para mañana" + "1 noche"
       if (normalizedMessage.includes('para mañana') || normalizedMessage.includes('para manana')) {
         checkInDate = 'tomorrow';
-        if (normalizedMessage.includes('1 noche') || normalizedMessage.includes('una noche')) {
+        if (normalizedMessage.includes('1 noche') || normalizedMessage.includes('una noche') || 
+            normalizedMessage.includes('1 nacht') || normalizedMessage.includes('eine nacht')) {
           checkOutDate = 'day after tomorrow';
+        }
+      }
+      
+      // Parse "1 noche" / "1 nacht" allgemein (auch ohne "para mañana")
+      if (normalizedMessage.includes('1 noche') || normalizedMessage.includes('una noche') || 
+          normalizedMessage.includes('1 nacht') || normalizedMessage.includes('eine nacht')) {
+        if (checkInDate && !checkOutDate) {
+          // Wenn checkInDate bereits gesetzt ist, setze checkOutDate auf +1 Tag
+          if (checkInDate === 'tomorrow' || checkInDate === 'morgen' || checkInDate === 'mañana') {
+            checkOutDate = 'day after tomorrow';
+          } else if (checkInDate === 'today' || checkInDate === 'heute' || checkInDate === 'hoy') {
+            checkOutDate = 'tomorrow';
+          }
         }
       }
       
@@ -1589,62 +1603,65 @@ export class WhatsAppMessageHandler {
       }
       
       // Parse Zimmer-Namen (auch mit Varianten wie "el tia artista" statt "la tia artista")
-      const roomNames = [
-        'el primo aventurero', 'la tia artista', 'el abuelo viajero',
-        'doble estándar', 'doble basica', 'apartamento doble', 'primo deportista'
-      ];
-      for (const name of roomNames) {
-        const nameLower = name.toLowerCase();
-        // Prüfe auf exakte Übereinstimmung oder Teilübereinstimmung (z.B. "tia artista" in "el tia artista")
-        if (normalizedMessage.includes(nameLower) || 
-            normalizedMessage.includes(nameLower.replace('la ', '').replace('el ', ''))) {
-          roomName = name;
-          break;
-        }
-      }
-      
-      // Prüfe auf Bestätigungen ("ja", "sí", "yes") + Zimmer-Name
-      // (confirmationKeywords und hasConfirmation wurden bereits oben deklariert)
-      if (hasConfirmation && !roomName) {
-        // Versuche Zimmer-Name aus Nachricht zu extrahieren (auch wenn nicht exakt)
-        for (const name of roomNames) {
-          const nameParts = name.toLowerCase().split(' ');
+      // WICHTIG: Prüfe zuerst in lastAvailabilityCheck, dann in statischer Liste
+      if (bookingContext.lastAvailabilityCheck && bookingContext.lastAvailabilityCheck.rooms) {
+        const lastCheck = bookingContext.lastAvailabilityCheck;
+        // Versuche Zimmer-Name aus Nachricht zu finden (auch Teilübereinstimmung)
+        for (const room of lastCheck.rooms) {
+          const roomNameLower = room.name.toLowerCase();
+          const nameParts = roomNameLower.split(' ').filter(part => part.length > 2);
+          
+          // Prüfe auf exakte Übereinstimmung oder Teilübereinstimmung
+          // Z.B. "tia artista" in "la tia artista" oder "el tia artista"
+          const nameWithoutArticle = nameParts.join(' ');
+          const messageWithoutArticle = normalizedMessage.replace(/\b(el|la|los|las|un|una)\s+/g, '');
+          
+          if (normalizedMessage.includes(roomNameLower) || 
+              normalizedMessage.includes(nameWithoutArticle) ||
+              messageWithoutArticle.includes(nameWithoutArticle)) {
+            roomName = room.name;
+            categoryId = room.categoryId;
+            roomType = room.type as 'compartida' | 'privada';
+            console.log(`[checkBookingContext] Zimmer gefunden in lastAvailabilityCheck: ${room.name} (categoryId: ${categoryId})`);
+            break;
+          }
+          
           // Prüfe ob mindestens 2 Wörter des Zimmer-Namens in der Nachricht vorkommen
-          const matchingParts = nameParts.filter(part => 
-            part.length > 2 && normalizedMessage.includes(part)
-          );
+          const matchingParts = nameParts.filter(part => normalizedMessage.includes(part));
           if (matchingParts.length >= 2) {
-            roomName = name;
+            roomName = room.name;
+            categoryId = room.categoryId;
+            roomType = room.type as 'compartida' | 'privada';
+            console.log(`[checkBookingContext] Zimmer gefunden durch Teilübereinstimmung: ${room.name} (categoryId: ${categoryId})`);
             break;
           }
         }
       }
       
-      // Wenn Bestätigung vorhanden, aber kein roomName gefunden, versuche aus Context zu holen
-      if (hasConfirmation && !roomName && bookingContext.lastAvailabilityCheck) {
-        // Versuche aus letzter Verfügbarkeitsprüfung zu extrahieren
-        const lastCheck = bookingContext.lastAvailabilityCheck;
-        if (lastCheck.rooms && lastCheck.rooms.length > 0) {
-          // Wenn nur ein Zimmer verfügbar war, verwende es
-          if (lastCheck.rooms.length === 1) {
-            roomName = lastCheck.rooms[0].name;
-            categoryId = lastCheck.rooms[0].categoryId;
-            roomType = lastCheck.rooms[0].type as 'compartida' | 'privada';
-          } else {
-            // Versuche Zimmer-Name aus Nachricht zu finden (auch Teilübereinstimmung)
-            for (const room of lastCheck.rooms) {
-              const roomNameLower = room.name.toLowerCase();
-              const nameParts = roomNameLower.split(' ');
-              const matchingParts = nameParts.filter(part => 
-                part.length > 2 && normalizedMessage.includes(part)
+      // Falls nicht in lastAvailabilityCheck gefunden, versuche statische Liste
+      if (!roomName) {
+        const roomNames = [
+          'el primo aventurero', 'la tia artista', 'el abuelo viajero',
+          'doble estándar', 'doble basica', 'apartamento doble', 'primo deportista'
+        ];
+        for (const name of roomNames) {
+          const nameLower = name.toLowerCase();
+          const nameWithoutArticle = nameLower.replace(/^(el|la|los|las|un|una)\s+/, '');
+          // Prüfe auf exakte Übereinstimmung oder Teilübereinstimmung
+          if (normalizedMessage.includes(nameLower) || 
+              normalizedMessage.includes(nameWithoutArticle)) {
+            roomName = name;
+            // Versuche categoryId aus lastAvailabilityCheck zu finden
+            if (bookingContext.lastAvailabilityCheck && bookingContext.lastAvailabilityCheck.rooms) {
+              const matchingRoom = bookingContext.lastAvailabilityCheck.rooms.find(
+                r => r.name.toLowerCase() === nameLower || r.name.toLowerCase().includes(nameWithoutArticle)
               );
-              if (matchingParts.length >= 2) {
-                roomName = room.name;
-                categoryId = room.categoryId;
-                roomType = room.type as 'compartida' | 'privada';
-                break;
+              if (matchingRoom) {
+                categoryId = matchingRoom.categoryId;
+                roomType = matchingRoom.type as 'compartida' | 'privada';
               }
             }
+            break;
           }
         }
       }
@@ -1687,21 +1704,48 @@ export class WhatsAppMessageHandler {
         }
       });
       
+      // Wenn roomName vorhanden ist, aber categoryId fehlt, versuche es aus lastAvailabilityCheck zu holen
+      if (updatedContext.roomName && !updatedContext.categoryId && updatedContext.lastAvailabilityCheck) {
+        const lastCheck = updatedContext.lastAvailabilityCheck;
+        if (lastCheck.rooms) {
+          const roomNameLower = updatedContext.roomName.toLowerCase();
+          const roomNameWithoutArticle = roomNameLower.replace(/^(el|la|los|las|un|una)\s+/, '');
+          const matchingRoom = lastCheck.rooms.find(
+            r => {
+              const rNameLower = r.name.toLowerCase();
+              return rNameLower === roomNameLower ||
+                     rNameLower.includes(roomNameWithoutArticle) ||
+                     roomNameWithoutArticle && rNameLower.includes(roomNameWithoutArticle);
+            }
+          );
+          if (matchingRoom) {
+            updatedContext.categoryId = matchingRoom.categoryId;
+            updatedContext.roomType = matchingRoom.type as 'compartida' | 'privada';
+            console.log(`[checkBookingContext] categoryId aus lastAvailabilityCheck gefunden: ${matchingRoom.categoryId} für ${matchingRoom.name}`);
+          }
+        }
+      }
+      
       // Prüfe ob ALLE Informationen vorhanden sind
+      // WICHTIG: guestName ist optional für automatische Buchung (kann später nachgefragt werden)
+      // Aber categoryId MUSS vorhanden sein, wenn roomName vorhanden ist
       const hasAllInfo = 
         updatedContext.checkInDate &&
         updatedContext.checkOutDate &&
-        updatedContext.guestName &&
-        updatedContext.roomType;
+        updatedContext.roomType &&
+        (updatedContext.categoryId || !updatedContext.roomName); // categoryId nur erforderlich wenn roomName vorhanden
       
       if (hasAllInfo && isBookingRequest) {
+        // Wenn guestName fehlt, verwende Platzhalter (wird später nachgefragt)
+        const finalGuestName = updatedContext.guestName || 'Gast';
+        
         return {
           shouldBook: true,
           context: updatedContext,
           bookingData: {
             checkInDate: updatedContext.checkInDate,
             checkOutDate: updatedContext.checkOutDate,
-            guestName: updatedContext.guestName,
+            guestName: finalGuestName,
             roomType: updatedContext.roomType,
             categoryId: updatedContext.categoryId,
             roomName: updatedContext.roomName
