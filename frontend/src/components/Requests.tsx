@@ -265,20 +265,7 @@ const Requests: React.FC = () => {
   // View-Mode aus Settings laden
   const viewMode = settings.viewMode || 'cards';
   
-  // Lokale Sortierrichtungen für Cards (nicht persistiert)
-  const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
-    const defaults: Record<string, 'asc' | 'desc'> = {
-      title: 'asc',
-      status: 'asc',
-      type: 'asc',
-      requestedBy: 'asc',
-      responsible: 'asc',
-      branch: 'asc',
-      dueDate: 'asc',
-      description: 'asc'
-    };
-    return defaults;
-  });
+  // ❌ ENTFERNT: cardSortDirections - Card-Sortierung wurde entfernt, Hauptsortierung (sortConfig) wird für Table & Card verwendet (Phase 2)
 
   // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
   // Card-Metadaten-Reihenfolge aus columnOrder ableiten
@@ -791,70 +778,30 @@ const Requests: React.FC = () => {
         }
         
         // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
+        // ❌ ENTFERNT: Cards-Mode Multi-Sortierung (Priorität 2) - Card-Sortierung wurde entfernt (Phase 2)
         
-        // 2. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
-        if (viewMode === 'cards' && selectedFilterId === null && filterConditions.length === 0) {
-          const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+        // 2. Priorität: Hauptsortierung (sortConfig) - für Table & Card gleich (synchron)
+        if (sortConfig.key && (selectedFilterId === null || filterConditions.length === 0)) {
+          // Verwende getSortValue für konsistente Sortierung (Table & Card)
+          const valueA = getSortValue(a, sortConfig.key);
+          const valueB = getSortValue(b, sortConfig.key);
           
-          for (const columnId of sortableColumns) {
-            const valueA = getSortValue(a, columnId);
-            const valueB = getSortValue(b, columnId);
-            
-            const direction = cardSortDirections[columnId] || 'asc';
-            let comparison = 0;
-            if (typeof valueA === 'number' && typeof valueB === 'number') {
-              comparison = valueA - valueB;
-            } else {
-              comparison = String(valueA).localeCompare(String(valueB));
-            }
-            
-            if (direction === 'desc') {
-              comparison = -comparison;
-            }
-            
-            if (comparison !== 0) {
-              return comparison;
-            }
+          let comparison = 0;
+          if (typeof valueA === 'number' && typeof valueB === 'number') {
+            comparison = valueA - valueB;
+          } else {
+            comparison = String(valueA).localeCompare(String(valueB));
           }
-          return 0;
+          
+          if (comparison !== 0) {
+            return sortConfig.direction === 'asc' ? comparison : -comparison;
+          }
         }
         
-        // 3. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
-        if (viewMode === 'table' && selectedFilterId === null && filterConditions.length === 0 && sortConfig.key) {
-          let aValue: any = a[sortConfig.key as keyof Request];
-          let bValue: any = b[sortConfig.key as keyof Request];
-
-          // Handle nested properties
-          if (sortConfig.key === 'requestedBy.firstName') {
-            aValue = a.requestedBy.firstName;
-            bValue = b.requestedBy.firstName;
-          } else if (sortConfig.key === 'responsible.firstName') {
-            aValue = a.responsible.firstName;
-            bValue = b.responsible.firstName;
-          } else if (sortConfig.key === 'branch.name') {
-            aValue = a.branch.name;
-            bValue = b.branch.name;
-          } else if (sortConfig.key === 'type') {
-            const typeOrder: Record<string, number> = {
-              'vacation': 0,
-              'improvement_suggestion': 1,
-              'sick_leave': 2,
-              'employment_certificate': 3,
-              'other': 4
-            };
-            aValue = typeOrder[(a as any).type || 'other'] ?? 999;
-            bValue = typeOrder[(b as any).type || 'other'] ?? 999;
-          }
-
-          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-          return 0;
-        }
-        
-        // 4. Fallback: Standardsortierung
+        // 3. Fallback: Standardsortierung
         return 0;
       });
-  }, [requests, selectedFilterId, searchTerm, sortConfig, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+  }, [requests, selectedFilterId, searchTerm, sortConfig]); // ✅ cardSortDirections entfernt (Phase 2), cardMetadataOrder & visibleCardMetadata entfernt (nicht mehr benötigt für Sortierung)
 
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   useEffect(() => {
