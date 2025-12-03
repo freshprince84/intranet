@@ -292,7 +292,9 @@ const GitHubFileView: React.FC = () => {
         setLoading(false);
       } catch (err) {
         // Falls der Artikel nicht gefunden wurde, versuche es als Markdown aus GitHub zu laden
-        console.log("Artikel nicht in der Datenbank gefunden, versuche als Markdown-Datei zu laden");
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Artikel nicht in der Datenbank gefunden, versuche als Markdown-Datei zu laden");
+        }
         
         // Fallback für den Fall, dass der Artikel nicht in der DB ist oder keinen githubPath hat
         // Lookup-Map für bekannte Markdown-Dateien und ihre richtigen Pfade
@@ -423,7 +425,9 @@ const ArticleViewWithRouter: React.FC = () => {
           }
         } catch (err) {
           // Wenn der Markdown-Ordner nicht gefunden wird, prüfe nur auf githubPath
-          console.warn('Markdown-Ordner nicht gefunden:', err);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Markdown-Ordner nicht gefunden:', err);
+          }
           if (article.githubPath) {
             setIsMarkdownFile(true);
           } else {
@@ -433,7 +437,9 @@ const ArticleViewWithRouter: React.FC = () => {
         
         setLoading(false);
       } catch (err) {
-        console.log('Artikel nicht in der Datenbank gefunden, versuche als Markdown-Datei:', err);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Artikel nicht in der Datenbank gefunden, versuche als Markdown-Datei:', err);
+        }
         setArticleExists(false);
         setIsMarkdownFile(true);
         setLoading(false);

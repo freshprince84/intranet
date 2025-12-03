@@ -826,7 +826,9 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
               }
             }
           );
-          console.log('Aktive-Filter für Workcenter erstellt');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Aktive-Filter für Workcenter erstellt');
+          }
         }
 
         // Erstelle "Alle"-Filter, wenn er noch nicht existiert
@@ -848,10 +850,14 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
               }
             }
           );
-          console.log('Alle-Filter für Workcenter erstellt');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Alle-Filter für Workcenter erstellt');
+          }
         }
       } catch (error) {
-        console.error('Fehler beim Erstellen der Standard-Filter:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Fehler beim Erstellen der Standard-Filter:', error);
+        }
       }
     };
 

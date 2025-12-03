@@ -137,7 +137,9 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       // ✅ WICHTIG: loadedTablesRef NICHT hier setzen (nur während Laden)
       // Filter im State sind Source of Truth
     } catch (error) {
-      console.error(`[FilterContext] Fehler beim Laden der Filter für ${tableId}:`, error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`[FilterContext] Fehler beim Laden der Filter für ${tableId}:`, error);
+      }
       setErrors(prev => ({ ...prev, [tableId]: 'Fehler beim Laden der Filter' }));
     } finally {
       loadedTablesRef.current.delete(tableId); // ✅ Entferne Flag: Laden abgeschlossen
@@ -278,7 +280,9 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       // ✅ Cache zurücksetzen, damit Filter neu geladen werden können
       loadedTablesRef.current.delete(tableId);
     } catch (error) {
-      console.error(`[FilterContext] Fehler beim Aktualisieren der Filter für ${tableId}:`, error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`[FilterContext] Fehler beim Aktualisieren der Filter für ${tableId}:`, error);
+      }
       setErrors(prev => ({ ...prev, [tableId]: 'Fehler beim Aktualisieren der Filter' }));
     } finally {
       setLoading(prev => ({ ...prev, [tableId]: false }));

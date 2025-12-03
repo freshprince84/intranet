@@ -38,7 +38,9 @@ export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setIsTracking(false);
             }
         } catch (error) {
-            console.error('Fehler beim Abrufen des Zeiterfassungsstatus:', error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Fehler beim Abrufen des Zeiterfassungsstatus:', error);
+            }
             setIsTracking(false);
         }
     };

@@ -416,28 +416,34 @@ const Requests: React.FC = () => {
           hasMore = false;
         } else {
           // ❌ FEHLER: responseData ist ein Objekt, aber data ist kein Array
-          console.error('[Requests] ❌ FEHLER: responseData.data ist kein Array!', {
-            responseData,
-            data: responseData.data,
-            dataType: typeof responseData.data
-          });
+          if (process.env.NODE_ENV === 'development') {
+            console.error('[Requests] ❌ FEHLER: responseData.data ist kein Array!', {
+              responseData,
+              data: responseData.data,
+              dataType: typeof responseData.data
+            });
+          }
           throw new Error(`Ungültige Response-Struktur: responseData.data ist kein Array (Typ: ${typeof responseData.data})`);
         }
       } else {
         // ❌ FEHLER: responseData ist kein Objekt
-        console.error('[Requests] ❌ FEHLER: responseData ist kein Objekt!', {
-          responseData,
-          type: typeof responseData
-        });
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[Requests] ❌ FEHLER: responseData ist kein Objekt!', {
+            responseData,
+            type: typeof responseData
+          });
+        }
         throw new Error(`Ungültige Response-Struktur: responseData ist kein Objekt (Typ: ${typeof responseData})`);
       }
       
       // ✅ Sicherheitsprüfung: requestsData muss ein Array sein
       if (!Array.isArray(requestsData)) {
-        console.error('[Requests] ❌ FEHLER: requestsData ist kein Array!', {
-          requestsData,
-          type: typeof requestsData
-        });
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[Requests] ❌ FEHLER: requestsData ist kein Array!', {
+            requestsData,
+            type: typeof requestsData
+          });
+        }
         throw new Error(`Ungültige Response-Struktur: requestsData ist kein Array (Typ: ${typeof requestsData})`);
       }
       
@@ -473,7 +479,9 @@ const Requests: React.FC = () => {
       setHasMore(hasMore);
       setError(null);
     } catch (err) {
-      console.error('Request Error:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Request Error:', err);
+      }
       const axiosError = err as any;
       if (!append) {
         if (axiosError.code === 'ERR_NETWORK') {
@@ -484,11 +492,13 @@ const Requests: React.FC = () => {
             || axiosError.response?.data?.error 
             || axiosError.message 
             || 'Unbekannter Fehler';
-          console.error('Request Error Details:', {
-            message: errorMessage,
-            status: axiosError.response?.status,
-            data: axiosError.response?.data
-          });
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Request Error Details:', {
+              message: errorMessage,
+              status: axiosError.response?.status,
+              data: axiosError.response?.data
+            });
+          }
           setError(`Fehler beim Laden der Requests: ${errorMessage}`);
         }
       }
@@ -604,7 +614,9 @@ const Requests: React.FC = () => {
       );
     } catch (err) {
       // Rollback bei Fehler: Vollständiges Reload
-      console.error('Status Update Error:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Status Update Error:', err);
+      }
       fetchRequests();
       const axiosError = err as any;
       setError(`Fehler beim Aktualisieren des Status: ${axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten'}`);
@@ -868,7 +880,9 @@ const Requests: React.FC = () => {
       setIsEditModalOpen(true);
       
     } catch (err) {
-      console.error('Fehler beim Kopieren des Requests:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Fehler beim Kopieren des Requests:', err);
+      }
       // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
       setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');

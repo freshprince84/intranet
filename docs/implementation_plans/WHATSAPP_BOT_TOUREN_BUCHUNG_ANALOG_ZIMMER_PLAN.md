@@ -123,6 +123,42 @@
 
 ---
 
+## 🔍 Status: Was existiert bereits für Tour-Reservation Verknüpfung?
+
+### ✅ Vorhanden:
+
+1. **DB-Model `TourReservation`** (Prisma Schema, Zeile 1597-1624):
+   - Verknüpft `Tour`, `TourBooking` und `Reservation`
+   - Felder: `tourId`, `bookingId`, `reservationId`
+   - Preisaufschlüsselung: `tourPrice`, `accommodationPrice`
+   - Zahlungsstatus: `tourPricePaid`, `tourPricePending`, `accommodationPaid`, `accommodationPending`
+   - Unique Constraint: `[reservationId, bookingId]` (verhindert Duplikate)
+
+2. **Controller `tourReservationController.ts`**:
+   - `POST /api/tour-reservations` - Manuelle Verknüpfung erstellen
+   - `PUT /api/tour-reservations/:id` - Verknüpfung aktualisieren
+   - `DELETE /api/tour-reservations/:id` - Verknüpfung löschen
+   - `GET /api/tour-reservations/reservation/:reservationId` - Verknüpfungen einer Reservation
+   - `GET /api/tour-reservations/booking/:bookingId` - Verknüpfungen einer Buchung
+
+3. **Frontend-Komponente `TourReservationLinkModal.tsx`**:
+   - Manuelles Verknüpfen im Frontend (Worktracker)
+   - Zeigt verfügbare Reservierungen
+   - Erstellt Verknüpfung mit Preisaufschlüsselung
+
+### ❌ Fehlt noch:
+
+1. **Automatische Suche nach Reservationen mit gleichem Namen:**
+   - Funktion `findReservationByCustomerName()` existiert noch nicht
+   - Sucht nach Name, Telefonnummer oder Email
+   - Filtert nach Branch, Organization, Status
+
+2. **Automatische Verknüpfung in `book_tour()`:**
+   - Wird noch nicht automatisch aufgerufen
+   - Erstellt `TourReservation` Verknüpfung wenn Reservation gefunden wird
+
+---
+
 ## 🎯 Was muss für Touren implementiert werden?
 
 ### 1. Tour-Buchung anlegen (bereits vorhanden, muss erweitert werden)
@@ -299,7 +335,9 @@ if (paymentLink && (args.customerPhone || args.customerEmail)) {
 
 **Neue Funktion:** `findReservationByCustomerName()`
 
-**Zweck:** Findet Reservationen mit gleichem Kunden-Namen
+**Zweck:** Findet Reservationen mit gleichem Kunden-Namen (Name, Telefonnummer oder Email)
+
+**WICHTIG:** Diese Funktion existiert noch NICHT und muss neu erstellt werden!
 
 **Parameter:**
 ```typescript
@@ -447,6 +485,9 @@ try {
 - `accommodationPrice = 0`: Tour ist zusätzlich zur Reservation, reduziert nicht den Accommodation-Preis
 - `tourPrice = totalPrice`: Vollständiger Tour-Preis
 - Payment Links bleiben separat: Tour Payment Link in `TourBooking.paymentLink`, Reservation Payment Link in `Reservation.paymentLink`
+- **Verwendet bestehende `TourReservation` Verknüpfung** (Model und Controller existieren bereits)
+- **Automatische Verknüpfung:** Wird automatisch erstellt wenn Name/Telefon/Email übereinstimmt
+- **Manuelle Verknüpfung:** Kann weiterhin über Frontend (`TourReservationLinkModal`) erstellt werden
 
 ### Phase 3: Webhook-Erweiterung (bereits vorhanden, prüfen)
 
