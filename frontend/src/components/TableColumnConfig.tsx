@@ -12,7 +12,7 @@ interface TableColumnConfigProps {
   visibleColumns: string[];
   columnOrder: string[];
   onToggleColumnVisibility: (columnId: string) => void;
-  onMoveColumn: (dragIndex: number, hoverIndex: number) => void;
+  onMoveColumn?: (dragIndex: number, hoverIndex: number) => void; // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3 - Drag & Drop nur bei Table Headern)
   onClose: () => void;
   buttonTitle?: string; // Optional: Custom Button-Titel
   modalTitle?: string; // Optional: Custom Modal-Titel
@@ -26,11 +26,11 @@ interface DraggableItemProps {
   label: string;
   index: number;
   isVisible: boolean;
-  isDragging: boolean;
-  isOver: boolean;
-  onDragStart: (index: number) => void;
-  onDragOver: (index: number) => void;
-  onDragEnd: () => void;
+  isDragging: boolean; // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3)
+  isOver: boolean; // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3)
+  onDragStart: (index: number) => void; // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3)
+  onDragOver: (index: number) => void; // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3)
+  onDragEnd: () => void; // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3)
   onToggleVisibility: (id: string) => void;
   sortDirection?: 'asc' | 'desc'; // Optional: Sortierrichtung für diese Spalte
   onSortDirectionChange?: (id: string, direction: 'asc' | 'desc') => void; // Optional: Callback für Sortierrichtung
@@ -38,17 +38,13 @@ interface DraggableItemProps {
   sortOrder?: number; // Optional: Sortierreihenfolge (1, 2, 3, etc.)
 }
 
-// Komponente für eine einzelne, ziehbare Spalte
+// Komponente für eine einzelne Spalte (ohne Drag & Drop im Modal)
 const DraggableColumnItem: React.FC<DraggableItemProps> = ({ 
   id, 
   label, 
   index, 
   isVisible,
-  isDragging,
-  isOver,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
+  // ❌ ENTFERNT: isDragging, isOver, onDragStart, onDragOver, onDragEnd - Drag & Drop wurde aus Modal entfernt (Phase 3)
   onToggleVisibility,
   sortDirection,
   onSortDirectionChange,
@@ -59,20 +55,12 @@ const DraggableColumnItem: React.FC<DraggableItemProps> = ({
   
   return (
     <li 
-      draggable
-      onDragStart={() => onDragStart(index)}
-      onDragOver={(e) => {
-        e.preventDefault();
-        onDragOver(index);
-      }}
-      onDragEnd={onDragEnd}
+      // ❌ ENTFERNT: Drag & Drop im Modal - Drag & Drop wurde aus Modal entfernt (Phase 3), bleibt nur bei Table Headern
       className={`flex items-center justify-between px-2.5 py-2 rounded-md transition-colors duration-150
-        ${isDragging ? 'opacity-50 bg-gray-100 dark:bg-gray-700' : ''}
-        ${isOver ? 'border-t-2 border-blue-500 dark:border-blue-400' : ''}
         ${!isDragging && !isOver ? 'hover:bg-gray-50 dark:hover:bg-gray-700' : ''}`}
     >
       <div className="flex items-center flex-1 min-w-0">
-        <Bars2Icon className="h-4 w-4 mr-2 text-gray-400 dark:text-gray-500 cursor-move flex-shrink-0" />
+        {/* ❌ ENTFERNT: Bars2Icon - Drag-Handle wurde entfernt (Phase 3) */}
         <span className="text-sm dark:text-gray-300 flex items-center gap-2">
           {showSortDirection && sortOrder !== undefined && isVisible && (
             <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
@@ -133,8 +121,7 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
   const defaultButtonTitle = buttonTitle || t('tableColumn.configure');
   const defaultModalTitle = modalTitle || t('tableColumn.configure');
   const [isOpen, setIsOpen] = useState(false);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
+  // ❌ ENTFERNT: draggedIndex, overIndex, handleDragStart, handleDragOver, handleDragEnd - Drag & Drop wurde aus Modal entfernt (Phase 3)
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Sortiere die Spalten gemäß der benutzerdefinierten Reihenfolge
@@ -146,26 +133,6 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
     if (indexB === -1) return -1;
     return indexA - indexB;
   });
-
-  // Handler für den Beginn des Drag-Vorgangs
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-    setOverIndex(index);
-  };
-
-  // Handler für Drag-Over-Ereignis
-  const handleDragOver = (index: number) => {
-    setOverIndex(index);
-  };
-
-  // Handler für das Ende des Drag-Vorgangs
-  const handleDragEnd = () => {
-    if (draggedIndex !== null && overIndex !== null && draggedIndex !== overIndex) {
-      onMoveColumn(draggedIndex, overIndex);
-    }
-    setDraggedIndex(null);
-    setOverIndex(null);
-  };
 
   // Handler zum Schließen des Menüs
   const handleClose = () => {
@@ -209,7 +176,7 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
       {isOpen && (
         <div 
           className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-300 dark:border-gray-600"
-          onDragOver={(e) => e.preventDefault()}
+          // ❌ ENTFERNT: onDragOver - Drag & Drop wurde aus Modal entfernt (Phase 3)
         >
           <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{defaultModalTitle}</h3>
@@ -235,11 +202,11 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
                   label={column.label}
                   index={index}
                   isVisible={isVisible}
-                  isDragging={draggedIndex === index}
-                  isOver={overIndex === index && draggedIndex !== index}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDragEnd={handleDragEnd}
+                  isDragging={false} // ❌ ENTFERNT: Drag & Drop wurde aus Modal entfernt (Phase 3)
+                  isOver={false} // ❌ ENTFERNT: Drag & Drop wurde aus Modal entfernt (Phase 3)
+                  onDragStart={() => {}} // ❌ ENTFERNT: Drag & Drop wurde aus Modal entfernt (Phase 3)
+                  onDragOver={() => {}} // ❌ ENTFERNT: Drag & Drop wurde aus Modal entfernt (Phase 3)
+                  onDragEnd={() => {}} // ❌ ENTFERNT: Drag & Drop wurde aus Modal entfernt (Phase 3)
                   onToggleVisibility={onToggleColumnVisibility}
                   sortDirection={showSortDirection && isVisible ? (sortDirections[column.id] || 'asc') : undefined}
                   onSortDirectionChange={showSortDirection ? onSortDirectionChange : undefined}

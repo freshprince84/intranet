@@ -962,14 +962,19 @@ const handleSort = (key: SortConfig['key']) => {
 **Aufwand:** 6-8 Stunden
 **Risiko:** Mittel (viele Dateien betroffen)
 
-1. Table Settings entfernen
-2. Card-Metadaten-Mapping entfernen
-3. Drag & Drop entfernen
-4. Doppelte Funktionen entfernen
-5. Controlled Mode entfernen
-6. Fallback-Timeout entfernen
-7. Cleanup useEffects entfernen
-8. Tests: Prüfen, dass alles noch funktioniert
+**⚠️ WICHTIG - BEHALTEN:**
+- ✅ **Table Settings (useTableSettings):** MUSS bleiben (persistente Spalteneinstellungen pro User)
+- ✅ **Card-Metadaten-Mapping:** MUSS bleiben (wird für Card-Ansicht benötigt)
+- ✅ **Drag & Drop bei Table Headern:** MUSS bleiben (direkt in der Tabelle)
+
+**❌ ENTFERNEN:**
+1. ✅ Drag & Drop im TableColumnConfig Modal (nur im Modal, nicht bei Table Headern!) - **ABGESCHLOSSEN**
+2. Doppelte Funktionen entfernen
+3. Controlled Mode entfernen
+4. Fallback-Timeout entfernen
+5. Cleanup useEffects entfernen
+6. Weitere überflüssige Dinge entfernen
+7. Tests: Prüfen, dass alles noch funktioniert
 
 ### Schritt 4: Standardfilter korrekt implementieren (Priorität 4) 🔴
 
