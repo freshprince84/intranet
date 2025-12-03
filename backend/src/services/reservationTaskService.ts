@@ -171,6 +171,10 @@ export class ReservationTaskService {
       let newTaskStatus: TaskStatus | null = null;
 
       switch (reservation.status) {
+        case 'potential':
+          // "potential" Reservation: Task bleibt offen (wird erst bei "confirmed" erstellt)
+          newTaskStatus = TaskStatus.open;
+          break;
         case 'confirmed':
           newTaskStatus = TaskStatus.open;
           break;

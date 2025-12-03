@@ -77,7 +77,9 @@ export const API_ENDPOINTS = {
         SWITCH: '/branches/switch',
         CREATE: '/branches',
         UPDATE: (id: number) => `/branches/${id}`,
-        DELETE: (id: number) => `/branches/${id}`
+        DELETE: (id: number) => `/branches/${id}`,
+        ROOM_DESCRIPTIONS: (id: number) => `/branches/${id}/room-descriptions`,
+        ROOM_DESCRIPTION: (id: number, categoryId: number) => `/branches/${id}/room-descriptions/${categoryId}`
     },
     // Benutzer
     USERS: {

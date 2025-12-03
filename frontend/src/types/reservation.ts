@@ -29,6 +29,7 @@ export interface Reservation {
   arrivalTime?: string | null; // ISO datetime string
   roomNumber?: string | null;
   roomDescription?: string | null;
+  categoryId?: number | null; // LobbyPMS category_id (für Zimmer-Beschreibungen)
   status: ReservationStatus;
   paymentStatus: PaymentStatus;
   amount?: number | string | null; // Betrag der Reservierung

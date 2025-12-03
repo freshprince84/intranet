@@ -2440,6 +2440,7 @@
     "noResults": "Keine Reservierungen gefunden",
     "resultCount": "{{count}} von {{total}} Reservierungen",
     "status": "Status",
+    "status.potential": "Potenzielle Reservierung",
     "status.confirmed": "Bestätigt",
     "status.notification_sent": "Mitteilung versendet",
     "status.checkedIn": "Eingecheckt",

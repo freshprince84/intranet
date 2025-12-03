@@ -9,6 +9,7 @@ import FilterPane from '../components/FilterPane.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
+import RoomDescriptionsSection from './branches/RoomDescriptionsSection.tsx';
 
 interface Branch {
     id: number;
@@ -1071,6 +1072,11 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                                                     />
                                                                 </div>
                                                             </div>
+                                                            
+                                                            {/* Zimmer-Beschreibungen Sektion */}
+                                                            {editingBranch && (
+                                                                <RoomDescriptionsSection branchId={editingBranch.id} />
+                                                            )}
                                                         </div>
                                                     )}
 
@@ -1920,6 +1926,11 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                                                     />
                                                                 </div>
                                                             </div>
+                                                            
+                                                            {/* Zimmer-Beschreibungen Sektion */}
+                                                            {editingBranch && (
+                                                                <RoomDescriptionsSection branchId={editingBranch.id} />
+                                                            )}
                                                         </div>
                                                     )}
 

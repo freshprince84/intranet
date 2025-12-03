@@ -59,7 +59,6 @@ Your room information:
 
 Access:
 - Door PIN: {{passcode}}
-- App: {{doorAppName}}
 
 We wish you a pleasant stay!`;
     }
@@ -77,7 +76,6 @@ Información de tu habitación:
 
 Acceso:
 - PIN de la puerta: {{passcode}}
-- App: {{doorAppName}}
 
 ¡Te deseamos una estancia agradable!`;
   };

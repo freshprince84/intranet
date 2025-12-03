@@ -1226,6 +1226,231 @@ export class WhatsAppFunctionHandlers {
    * Erstellt eine Zimmer-Reservation für den aktuellen Branch
    * WICHTIG: Nur für ZIMMER, nicht für Touren!
    */
+  /**
+   * Erstellt eine potenzielle Reservierung (Status "potential")
+   * Wird aufgerufen, wenn User erste Buchungsinformationen gibt, aber noch nicht bestätigt hat
+   */
+  static async create_potential_reservation(
+    args: {
+      checkInDate: string;
+      checkOutDate: string;
+      guestName?: string; // Optional, kann später ergänzt werden
+      roomType: 'compartida' | 'privada';
+      categoryId: number;
+      roomName?: string;
+      guestPhone?: string; // WhatsApp-Telefonnummer (automatisch)
+      guestEmail?: string; // Optional
+    },
+    userId: number | null,
+    roleId: number | null,
+    branchId: number,
+    phoneNumber?: string // WhatsApp-Telefonnummer
+  ): Promise<any> {
+    try {
+      // 1. Parse Datum (unterstützt "today"/"heute"/"hoy"/"tomorrow"/"morgen"/"mañana")
+      let checkInDate: Date;
+      const checkInDateStr = args.checkInDate.toLowerCase().trim();
+      if (checkInDateStr === 'today' || checkInDateStr === 'heute' || checkInDateStr === 'hoy') {
+        checkInDate = new Date();
+        checkInDate.setHours(0, 0, 0, 0);
+      } else if (checkInDateStr === 'tomorrow' || checkInDateStr === 'morgen' || checkInDateStr === 'mañana') {
+        checkInDate = new Date();
+        checkInDate.setDate(checkInDate.getDate() + 1);
+        checkInDate.setHours(0, 0, 0, 0);
+      } else if (checkInDateStr === 'day after tomorrow' || checkInDateStr === 'übermorgen' || checkInDateStr === 'pasado mañana') {
+        checkInDate = new Date();
+        checkInDate.setDate(checkInDate.getDate() + 2);
+        checkInDate.setHours(0, 0, 0, 0);
+      } else {
+        checkInDate = this.parseDate(args.checkInDate);
+        if (isNaN(checkInDate.getTime())) {
+          throw new Error(`Ungültiges Check-in Datum: ${args.checkInDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
+        }
+      }
+
+      let checkOutDate: Date;
+      const checkOutDateStr = args.checkOutDate.toLowerCase().trim();
+      if (checkOutDateStr === 'today' || checkOutDateStr === 'heute' || checkOutDateStr === 'hoy') {
+        checkOutDate = new Date();
+        checkOutDate.setHours(23, 59, 59, 999);
+      } else if (checkOutDateStr === 'tomorrow' || checkOutDateStr === 'morgen' || checkOutDateStr === 'mañana') {
+        checkOutDate = new Date();
+        checkOutDate.setDate(checkOutDate.getDate() + 1);
+        checkOutDate.setHours(23, 59, 59, 999);
+      } else if (checkOutDateStr === 'day after tomorrow' || checkOutDateStr === 'übermorgen' || checkOutDateStr === 'pasado mañana') {
+        checkOutDate = new Date();
+        checkOutDate.setDate(checkOutDate.getDate() + 2);
+        checkOutDate.setHours(23, 59, 59, 999);
+      } else {
+        checkOutDate = this.parseDate(args.checkOutDate);
+        if (isNaN(checkOutDate.getTime())) {
+          throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
+        }
+      }
+
+      // 2. Validierung: Check-out muss mindestens 1 Tag nach Check-in liegen
+      const daysDiff = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff < 1) {
+        throw new Error('Check-out Datum muss mindestens 1 Tag nach Check-in Datum liegen.');
+      }
+
+      // 3. Validierung: Mindestens eine Kontaktinformation (Telefon ODER Email) ist erforderlich
+      let guestPhone = args.guestPhone?.trim() || null;
+      let guestEmail = args.guestEmail?.trim() || null;
+      
+      // Fallback: Nutze WhatsApp-Telefonnummer, falls vorhanden
+      if (!guestPhone && phoneNumber) {
+        const { LanguageDetectionService } = await import('./languageDetectionService');
+        guestPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
+        console.log(`[create_potential_reservation] WhatsApp-Telefonnummer als Fallback verwendet: ${guestPhone}`);
+      }
+      
+      if (!guestPhone && !guestEmail) {
+        throw new Error('Mindestens eine Kontaktinformation (Telefonnummer oder Email) ist erforderlich für die Reservierung. Bitte geben Sie Ihre Telefonnummer oder Email-Adresse an.');
+      }
+
+      // 4. Hole Branch für organizationId
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { 
+          id: true,
+          name: true,
+          organizationId: true 
+        }
+      });
+
+      if (!branch) {
+        throw new Error(`Branch ${branchId} nicht gefunden`);
+      }
+
+      // 5. Berechne Betrag aus Verfügbarkeitsprüfung
+      const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+      let estimatedAmount: number;
+      
+      try {
+        const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+        const availability = await lobbyPmsService.checkAvailability(checkInDate, checkOutDate);
+        
+        // Finde Zimmer mit dieser categoryId
+        const room = availability.find(item => item.categoryId === args.categoryId);
+        
+        if (room && room.pricePerNight > 0) {
+          estimatedAmount = nights * room.pricePerNight;
+          console.log(`[create_potential_reservation] Preis aus Verfügbarkeit: ${room.pricePerNight} COP/Nacht × ${nights} Nächte = ${estimatedAmount} COP`);
+        } else {
+          console.warn(`[create_potential_reservation] Zimmer mit categoryId ${args.categoryId} nicht in Verfügbarkeit gefunden, verwende Platzhalter`);
+          estimatedAmount = nights * 50000; // Platzhalter
+        }
+      } catch (error) {
+        console.error('[create_potential_reservation] Fehler beim Abrufen des Preises, verwende Platzhalter:', error);
+        estimatedAmount = nights * 50000; // Platzhalter
+      }
+
+      // 6. Prüfe ob bereits eine "potential" Reservation existiert (verhindert Duplikate)
+      const existingPotentialReservation = await prisma.reservation.findFirst({
+        where: {
+          guestPhone: guestPhone,
+          branchId: branchId,
+          status: ReservationStatus.potential,
+          checkInDate: checkInDate,
+          checkOutDate: checkOutDate
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      let reservation;
+      if (existingPotentialReservation) {
+        // Aktualisiere bestehende Reservation
+        console.log(`[create_potential_reservation] Aktualisiere bestehende "potential" Reservation ${existingPotentialReservation.id}`);
+        reservation = await prisma.reservation.update({
+          where: { id: existingPotentialReservation.id },
+          data: {
+            guestName: args.guestName?.trim() || existingPotentialReservation.guestName,
+            guestPhone: guestPhone,
+            guestEmail: guestEmail,
+            amount: estimatedAmount,
+            currency: 'COP'
+          }
+        });
+      } else {
+        // Erstelle neue "potential" Reservation
+        // WICHTIG: KEINE LobbyPMS-Buchung (erst bei Bestätigung!)
+        reservation = await prisma.reservation.create({
+          data: {
+            guestName: args.guestName?.trim() || 'Gast', // Fallback wenn kein Name
+            guestPhone: guestPhone,
+            guestEmail: guestEmail,
+            checkInDate: checkInDate,
+            checkOutDate: checkOutDate,
+            status: ReservationStatus.potential, // WICHTIG: Status "potential"
+            paymentStatus: PaymentStatus.pending,
+            amount: estimatedAmount,
+            currency: 'COP',
+            organizationId: branch.organizationId,
+            branchId: branchId,
+            // WICHTIG: lobbyReservationId bleibt null (wird erst bei Bestätigung erstellt)
+            // WICHTIG: paymentDeadline bleibt null (wird erst bei Bestätigung gesetzt)
+            autoCancelEnabled: false // Keine automatische Stornierung für "potential"
+          }
+        });
+        console.log(`[create_potential_reservation] Neue "potential" Reservation erstellt: ${reservation.id}`);
+      }
+
+      // 7. Verknüpfe WhatsApp-Nachrichten mit reservationId (über conversationId)
+      // WICHTIG: conversationId muss übergeben werden, aber wir haben es hier nicht direkt
+      // Lösung: Suche über phoneNumber und branchId
+      try {
+        const { LanguageDetectionService } = await import('./languageDetectionService');
+        const normalizedPhone = guestPhone ? LanguageDetectionService.normalizePhoneNumber(guestPhone) : null;
+        
+        if (normalizedPhone) {
+          // Finde Conversation für diese Telefonnummer
+          const conversation = await prisma.whatsAppConversation.findUnique({
+            where: {
+              phoneNumber_branchId: {
+                phoneNumber: normalizedPhone,
+                branchId: branchId
+              }
+            },
+            select: { id: true }
+          });
+
+          if (conversation) {
+            // Verknüpfe alle Nachrichten dieser Conversation mit reservationId
+            await prisma.whatsAppMessage.updateMany({
+              where: {
+                conversationId: conversation.id,
+                reservationId: null // Nur Nachrichten ohne Reservation
+              },
+              data: {
+                reservationId: reservation.id
+              }
+            });
+            console.log(`[create_potential_reservation] WhatsApp-Nachrichten mit Reservation ${reservation.id} verknüpft`);
+          }
+        }
+      } catch (error) {
+        console.error('[create_potential_reservation] Fehler beim Verknüpfen der WhatsApp-Nachrichten:', error);
+        // Nicht abbrechen, nur loggen
+      }
+
+      return {
+        success: true,
+        reservationId: reservation.id,
+        branchId: branchId,
+        branchName: branch.name,
+        guestName: reservation.guestName,
+        checkInDate: checkInDate.toISOString().split('T')[0],
+        checkOutDate: checkOutDate.toISOString().split('T')[0],
+        status: reservation.status,
+        message: `Potenzielle Reservierung erstellt. Bitte bestätigen Sie die Buchung.`
+      };
+    } catch (error: any) {
+      console.error('[create_potential_reservation] Fehler:', error);
+      throw new Error(`Fehler beim Erstellen der potenziellen Reservierung: ${error.message}`);
+    }
+  }
+
   static async create_room_reservation(
     args: {
       checkInDate: string;
@@ -1373,37 +1598,81 @@ export class WhatsAppFunctionHandlers {
         throw new Error('Mindestens eine Kontaktinformation (Telefonnummer oder Email) ist erforderlich für die Reservierung. Bitte geben Sie Ihre Telefonnummer oder Email-Adresse an.');
       }
 
-      // 5. Erstelle Reservierung in LobbyPMS (WICHTIG: ZUERST in LobbyPMS, dann lokal!)
+      // 5. Prüfe ob bereits eine "potential" Reservation existiert
+      // WICHTIG: Normalisiere Telefonnummer für Suche
+      const { LanguageDetectionService } = await import('./languageDetectionService');
+      const searchPhone = guestPhone || (phoneNumber ? LanguageDetectionService.normalizePhoneNumber(phoneNumber) : null);
+      
+      const existingPotentialReservation = searchPhone ? await prisma.reservation.findFirst({
+        where: {
+          guestPhone: searchPhone,
+          branchId: branchId,
+          status: ReservationStatus.potential,
+          checkInDate: checkInDate,
+          checkOutDate: checkOutDate
+        },
+        orderBy: { createdAt: 'desc' }
+      }) : null;
+
+      let reservation;
       let lobbyReservationId: string | null = null;
-      try {
-        const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
-        lobbyReservationId = await lobbyPmsService.createBooking(
-          categoryId, // Verwende gefundene oder übergebene categoryId
-          checkInDate,
-          checkOutDate,
-          args.guestName.trim(),
-          guestEmail || undefined, // Verwende validierte Email
-          guestPhone || undefined, // Verwende validierte Telefonnummer
-          1 // Anzahl Personen (default: 1, kann später erweitert werden)
-        );
-        console.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
-      } catch (lobbyError: any) {
-        console.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
-        throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
+
+      if (existingPotentialReservation) {
+        // Bestätigung einer "potential" Reservation
+        console.log(`[create_room_reservation] Bestätige "potential" Reservation ${existingPotentialReservation.id}`);
+        
+        // 5.1. Erstelle LobbyPMS-Buchung (nur bei Bestätigung!)
+        try {
+          const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+          lobbyReservationId = await lobbyPmsService.createBooking(
+            categoryId,
+            checkInDate,
+            checkOutDate,
+            args.guestName.trim(),
+            guestEmail || undefined,
+            guestPhone || undefined,
+            1
+          );
+          console.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
+        } catch (lobbyError: any) {
+          console.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
+          throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
+        }
+      } else {
+        // Neue Reservation (Rückwärtskompatibilität)
+        console.log(`[create_room_reservation] Erstelle neue Reservation (keine "potential" Reservation gefunden)`);
+        
+        // 5.1. Erstelle Reservierung in LobbyPMS (WICHTIG: ZUERST in LobbyPMS, dann lokal!)
+        try {
+          const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+          lobbyReservationId = await lobbyPmsService.createBooking(
+            categoryId, // Verwende gefundene oder übergebene categoryId
+            checkInDate,
+            checkOutDate,
+            args.guestName.trim(),
+            guestEmail || undefined, // Verwende validierte Email
+            guestPhone || undefined, // Verwende validierte Telefonnummer
+            1 // Anzahl Personen (default: 1, kann später erweitert werden)
+          );
+          console.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
+        } catch (lobbyError: any) {
+          console.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
+          throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
+        }
       }
 
       // 6. Berechne Betrag aus Verfügbarkeitsprüfung (falls categoryId vorhanden)
       const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
       let estimatedAmount: number;
       
-      if (args.categoryId) {
+      if (args.categoryId || categoryId) {
         try {
           // Hole Preis aus Verfügbarkeitsprüfung für diese categoryId
           const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
           const availability = await lobbyPmsService.checkAvailability(checkInDate, checkOutDate);
           
           // Finde Zimmer mit dieser categoryId
-          const room = availability.find(item => item.categoryId === args.categoryId);
+          const room = availability.find(item => item.categoryId === (args.categoryId || categoryId));
           
           if (room && room.pricePerNight > 0) {
             // Verwende Preis aus Verfügbarkeitsprüfung
@@ -1412,7 +1681,7 @@ export class WhatsAppFunctionHandlers {
             console.log(`[create_room_reservation] Preis aus Verfügbarkeit: ${room.pricePerNight} COP/Nacht × ${nights} Nächte = ${estimatedAmount} COP`);
           } else {
             // Fallback: Platzhalter wenn Zimmer nicht gefunden
-            console.warn(`[create_room_reservation] Zimmer mit categoryId ${args.categoryId} nicht in Verfügbarkeit gefunden, verwende Platzhalter`);
+            console.warn(`[create_room_reservation] Zimmer mit categoryId ${args.categoryId || categoryId} nicht in Verfügbarkeit gefunden, verwende Platzhalter`);
             estimatedAmount = nights * 50000; // Platzhalter
           }
         } catch (error) {
@@ -1431,27 +1700,47 @@ export class WhatsAppFunctionHandlers {
       const paymentDeadline = new Date();
       paymentDeadline.setHours(paymentDeadline.getHours() + paymentDeadlineHours);
 
-      // 8. Erstelle Reservierung in DB (WICHTIG: branchId und lobbyReservationId setzen!)
-      const reservation = await prisma.reservation.create({
-        data: {
-          guestName: args.guestName.trim(),
-          guestPhone: guestPhone, // Verwende validierte Telefonnummer
-          guestEmail: guestEmail, // Verwende validierte Email
-          checkInDate: checkInDate,
-          checkOutDate: checkOutDate,
-          status: ReservationStatus.confirmed,
-          paymentStatus: PaymentStatus.pending,
-          amount: estimatedAmount,
-          currency: 'COP',
-          organizationId: branch.organizationId,
-          branchId: branchId, // WICHTIG: Branch-spezifisch!
-          lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
-          paymentDeadline: paymentDeadline, // Frist für Zahlung (Standard: 1 Stunde)
-          autoCancelEnabled: true // Automatische Stornierung aktiviert
-          // HINWEIS: roomType und categoryId werden NICHT in der DB gespeichert, da sie nicht im Schema existieren.
-          // Diese Informationen sind in LobbyPMS über lobbyReservationId verfügbar.
-        }
-      });
+      // 8. Erstelle oder aktualisiere Reservierung in DB
+      if (existingPotentialReservation) {
+        // Aktualisiere bestehende "potential" Reservation: Status "potential" → "confirmed"
+        reservation = await prisma.reservation.update({
+          where: { id: existingPotentialReservation.id },
+          data: {
+            status: ReservationStatus.confirmed,
+            guestName: args.guestName.trim(),
+            guestPhone: guestPhone,
+            guestEmail: guestEmail,
+            lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
+            amount: estimatedAmount,
+            currency: 'COP',
+            paymentDeadline: paymentDeadline, // Frist für Zahlung (Standard: 1 Stunde)
+            autoCancelEnabled: true // Automatische Stornierung aktiviert
+          }
+        });
+        console.log(`[create_room_reservation] Reservation ${reservation.id} von "potential" auf "confirmed" aktualisiert`);
+      } else {
+        // Erstelle neue Reservation (Rückwärtskompatibilität)
+        reservation = await prisma.reservation.create({
+          data: {
+            guestName: args.guestName.trim(),
+            guestPhone: guestPhone, // Verwende validierte Telefonnummer
+            guestEmail: guestEmail, // Verwende validierte Email
+            checkInDate: checkInDate,
+            checkOutDate: checkOutDate,
+            status: ReservationStatus.confirmed,
+            paymentStatus: PaymentStatus.pending,
+            amount: estimatedAmount,
+            currency: 'COP',
+            organizationId: branch.organizationId,
+            branchId: branchId, // WICHTIG: Branch-spezifisch!
+            lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
+            paymentDeadline: paymentDeadline, // Frist für Zahlung (Standard: 1 Stunde)
+            autoCancelEnabled: true // Automatische Stornierung aktiviert
+            // HINWEIS: roomType und categoryId werden NICHT in der DB gespeichert, da sie nicht im Schema existieren.
+            // Diese Informationen sind in LobbyPMS über lobbyReservationId verfügbar.
+          }
+        });
+      }
 
       // 9. Erstelle Payment Link (wenn Telefonnummer vorhanden)
       let paymentLink: string | null = null;

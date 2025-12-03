@@ -233,8 +233,8 @@ export class WhatsAppAiService {
               branchId
             ];
             
-            // Für create_room_reservation: Füge phoneNumber hinzu
-            if (functionName === 'create_room_reservation') {
+            // Für create_room_reservation und create_potential_reservation: Füge phoneNumber hinzu
+            if (functionName === 'create_room_reservation' || functionName === 'create_potential_reservation') {
               functionParams.push(phoneNumber); // WhatsApp-Telefonnummer als Fallback
             }
             
@@ -575,8 +575,50 @@ export class WhatsAppAiService {
       {
         type: 'function',
         function: {
+          name: 'create_potential_reservation',
+          description: 'Erstellt eine potenzielle Reservierung (Status "potential") mit ersten Buchungsinformationen. Wird aufgerufen, wenn User Check-in, Check-out und Zimmer angibt, aber noch nicht bestätigt hat. WICHTIG: Diese Funktion erstellt sofort eine Reservation mit Status "potential" (ohne LobbyPMS-Buchung). Bei Bestätigung wird create_room_reservation() aufgerufen, die den Status auf "confirmed" ändert und die LobbyPMS-Buchung erstellt.',
+          parameters: {
+            type: 'object',
+            properties: {
+              checkInDate: {
+                type: 'string',
+                description: 'Check-in Datum (Format: YYYY-MM-DD, "today", "tomorrow", etc.)'
+              },
+              checkOutDate: {
+                type: 'string',
+                description: 'Check-out Datum (Format: YYYY-MM-DD, "tomorrow", etc.)'
+              },
+              guestName: {
+                type: 'string',
+                description: 'Name des Gastes (optional, kann später ergänzt werden)'
+              },
+              roomType: {
+                type: 'string',
+                enum: ['compartida', 'privada'],
+                description: 'Zimmer-Art'
+              },
+              categoryId: {
+                type: 'number',
+                description: 'Category ID des Zimmers (aus Verfügbarkeitsprüfung)'
+              },
+              roomName: {
+                type: 'string',
+                description: 'Zimmer-Name (optional)'
+              },
+              guestEmail: {
+                type: 'string',
+                description: 'Email-Adresse (optional, wird abgefragt wenn fehlt)'
+              }
+            },
+            required: ['checkInDate', 'checkOutDate', 'roomType', 'categoryId']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
           name: 'create_room_reservation',
-          description: 'Erstellt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! Wenn der User "reservar", "buchen", "buche", "buche mir", "reservame" sagt oder eine Nummer wählt (z.B. "2."), verwende diese Function. WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende "today" als checkInDate. Wenn User Zimmer-Namen sagt (z.B. "la tia artista"), finde categoryId aus vorheriger check_room_availability Response. Benötigt: checkInDate, checkOutDate, guestName, roomType (compartida/privada), categoryId (optional, aus check_room_availability), guestPhone (optional), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
+          description: 'Erstellt oder bestätigt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! Wenn der User "reservar", "buchen", "buche", "buche mir", "reservame" sagt oder eine Nummer wählt (z.B. "2."), verwende diese Function. WICHTIG: Wenn bereits eine "potential" Reservation existiert, wird diese bestätigt (Status "potential" → "confirmed") und LobbyPMS-Buchung erstellt. Wenn keine "potential" Reservation existiert, wird eine neue Reservation erstellt. WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende "today" als checkInDate. Wenn User Zimmer-Namen sagt (z.B. "la tia artista"), finde categoryId aus vorheriger check_room_availability Response. Benötigt: checkInDate, checkOutDate, guestName, roomType (compartida/privada), categoryId (optional, aus check_room_availability), guestPhone (optional), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
           parameters: {
             type: 'object',
             properties: {
@@ -745,6 +787,13 @@ export class WhatsAppAiService {
     prompt += '  WICHTIG: Wenn User nach Buchung Daten gibt (z.B. "01.dez bis 02.dez") → rufe create_room_reservation auf, NICHT check_room_availability!\n';
     prompt += '  WICHTIG: Generiert automatisch Payment Link und Check-in-Link, setzt Zahlungsfrist (1 Stunde)\n';
     prompt += '  WICHTIG: Alle Reservierungen sind Branch-spezifisch (Branch wird automatisch aus Context verwendet)\n';
+    prompt += '  WICHTIG: Reservierungsablauf:\n';
+    prompt += '    1. Wenn User erste Buchungsinformationen gibt (Check-in, Check-out, Zimmer) → rufe create_potential_reservation() auf\n';
+    prompt += '    2. Frage nach Kontaktdaten (Email optional, Telefonnummer = WhatsApp-Nummer)\n';
+    prompt += '    3. Wenn User bestätigt → rufe create_room_reservation() auf (ändert Status von "potential" auf "confirmed")\n';
+    prompt += '  WICHTIG: create_potential_reservation() erstellt sofort eine Reservation mit Status "potential" (ohne LobbyPMS-Buchung)\n';
+    prompt += '  WICHTIG: create_room_reservation() ändert Status von "potential" auf "confirmed" (keine neue Reservation) und erstellt LobbyPMS-Buchung\n';
+    prompt += '  WICHTIG: Payment-Link wird mit Betrag + 5% erstellt und versendet (automatisch in boldPaymentService)\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "reservame 1 cama en el primo aventurero für heute, 1 nacht" → create_room_reservation({ checkInDate: "today", checkOutDate: "tomorrow", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34280 })\n';
     prompt += '    - "ich möchte das Zimmer 2 buchen vom 1.12. bis 3.12." → create_room_reservation({ checkInDate: "2025-12-01", checkOutDate: "2025-12-04", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34281 })\n';

@@ -226,7 +226,7 @@ export class WhatsAppMessageHandler {
       }
 
       // 6. Prüfe ob alle Buchungsinformationen vorhanden sind (explizite Logik)
-      const bookingContext = await this.checkBookingContext(conversation, messageText, branchId);
+      const bookingContext = await this.checkBookingContext(conversation, messageText, branchId, normalizedPhone);
       if (bookingContext.shouldBook) {
         console.log('[WhatsApp Message Handler] Alle Buchungsinformationen vorhanden, rufe create_room_reservation auf');
         try {
@@ -1516,7 +1516,8 @@ export class WhatsAppMessageHandler {
   private static async checkBookingContext(
     conversation: any,
     currentMessage: string,
-    branchId: number
+    branchId: number,
+    phoneNumber?: string // WhatsApp-Telefonnummer für Suche nach "potential" Reservation
   ): Promise<{
     shouldBook: boolean;
     context: any;
@@ -1533,6 +1534,48 @@ export class WhatsAppMessageHandler {
       // Lade aktuellen Context
       const context = (conversation.context as any) || {};
       const bookingContext = context.booking || {};
+      
+      // Prüfe ob bereits eine "potential" Reservation existiert (verhindert Duplikate)
+      let existingPotentialReservation = null;
+      if (phoneNumber) {
+        try {
+          const { LanguageDetectionService } = await import('./languageDetectionService');
+          const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
+          
+          const { ReservationStatus } = await import('@prisma/client');
+          existingPotentialReservation = await prisma.reservation.findFirst({
+            where: {
+              guestPhone: normalizedPhone,
+              branchId: branchId,
+              status: ReservationStatus.potential
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+          
+          if (existingPotentialReservation) {
+            console.log(`[checkBookingContext] Bestehende "potential" Reservation gefunden: ${existingPotentialReservation.id}`);
+            // Verwende Daten aus bestehender Reservation
+            if (!bookingContext.checkInDate) {
+              bookingContext.checkInDate = existingPotentialReservation.checkInDate.toISOString().split('T')[0];
+            }
+            if (!bookingContext.checkOutDate) {
+              bookingContext.checkOutDate = existingPotentialReservation.checkOutDate.toISOString().split('T')[0];
+            }
+            if (!bookingContext.guestName && existingPotentialReservation.guestName) {
+              bookingContext.guestName = existingPotentialReservation.guestName;
+            }
+            if (!bookingContext.guestEmail && existingPotentialReservation.guestEmail) {
+              bookingContext.guestEmail = existingPotentialReservation.guestEmail;
+            }
+            if (!bookingContext.guestPhone && existingPotentialReservation.guestPhone) {
+              bookingContext.guestPhone = existingPotentialReservation.guestPhone;
+            }
+          }
+        } catch (error) {
+          console.error('[checkBookingContext] Fehler beim Prüfen auf "potential" Reservation:', error);
+          // Weiter ohne Fehler
+        }
+      }
       
       // Parse aktuelle Nachricht nach Buchungsinformationen
       const normalizedMessage = currentMessage.toLowerCase().trim();
