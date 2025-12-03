@@ -696,6 +696,7 @@ const Worktracker: React.FC = () => {
     const loadReservations = useCallback(async (
         filterId?: number, 
         filterConditions?: any[],
+        operators?: ('AND' | 'OR')[], // ✅ FIX: operators als Parameter (verhindert Re-Creation)
         append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
         limit = 20,
         offset = 0
@@ -718,7 +719,7 @@ const Worktracker: React.FC = () => {
             } else if (filterConditions && filterConditions.length > 0) {
                 params.filterConditions = JSON.stringify({
                     conditions: filterConditions,
-                    operators: reservationFilterLogicalOperators
+                    operators: operators || reservationFilterLogicalOperatorsRef.current // ✅ FIX: Verwende Parameter oder Ref
                 });
             }
             
@@ -781,7 +782,7 @@ const Worktracker: React.FC = () => {
                 setReservationsLoadingMore(false);
             }
         }
-    }, [reservationFilterLogicalOperators, t, showMessage]);
+    }, [t, showMessage]); // ✅ FIX: reservationFilterLogicalOperators entfernt - wird als Parameter übergeben
 
     // ✅ KRITISCH: useCallback für Stabilität - MUSS VOR useEffect sein, der es verwendet
     const applyReservationFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
@@ -795,9 +796,9 @@ const Worktracker: React.FC = () => {
         setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' }); // Reset Sortierung
         
         if (conditions.length > 0) {
-            await loadReservations(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+            await loadReservations(undefined, conditions, operators, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
         } else {
-            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
+            await loadReservations(undefined, undefined, operators, false, 20, 0); // ✅ PAGINATION: Kein Filter
         }
     }, [loadReservations]); // ✅ loadReservations als Dependency
 
@@ -859,7 +860,7 @@ const Worktracker: React.FC = () => {
             setReservationFilterConditions(conditions);
             setReservationFilterLogicalOperators(operators);
             // ❌ ENTFERNT: sortDirections Parameter und setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
-            await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+            await loadReservations(id, undefined, operators, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
         } else {
             // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
             await applyReservationFilterConditions(conditions, operators);
@@ -871,7 +872,7 @@ const Worktracker: React.FC = () => {
             setGeneratingPinForReservation(reservationId);
             await reservationService.generatePinAndSend(reservationId);
             showMessage(t('reservations.pinGeneratedAndSent', 'PIN-Code generiert und Mitteilung versendet'), 'success');
-            await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Aktualisiere Liste
+            await loadReservations(undefined, undefined, undefined, false, 20, 0); // ✅ PAGINATION: Aktualisiere Liste
         } catch (error: any) {
             if (process.env.NODE_ENV === 'development') {
             console.error('Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
@@ -903,6 +904,12 @@ const Worktracker: React.FC = () => {
     useEffect(() => {
         reservationFilterConditionsRef.current = reservationFilterConditions;
     }, [reservationFilterConditions]);
+    
+    // ✅ FIX: reservationFilterLogicalOperators als useRef verwenden (verhindert Re-Creation von loadReservations)
+    const reservationFilterLogicalOperatorsRef = useRef(reservationFilterLogicalOperators);
+    useEffect(() => {
+        reservationFilterLogicalOperatorsRef.current = reservationFilterLogicalOperators;
+    }, [reservationFilterLogicalOperators]);
     
     // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
     const tasksLoadMoreRef = useRef<HTMLDivElement>(null);
@@ -1750,9 +1757,11 @@ const Worktracker: React.FC = () => {
                     const nextOffset = reservations.length;
                     // ✅ FIX: Verwende reservationFilterConditionsRef.current statt reservationFilterConditions direkt
                     const currentReservationFilterConditions = reservationFilterConditionsRef.current;
+                    const currentReservationFilterOperators = reservationFilterLogicalOperatorsRef.current;
                     loadReservations(
                         reservationSelectedFilterId || undefined,
                         currentReservationFilterConditions.length > 0 ? currentReservationFilterConditions : undefined,
+                        currentReservationFilterOperators.length > 0 ? currentReservationFilterOperators : undefined,
                         true, // append = true
                         20, // limit
                         nextOffset // offset
@@ -2051,7 +2060,7 @@ const Worktracker: React.FC = () => {
                                                         setSyncingReservations(true);
                                                         await axiosInstance.post(API_ENDPOINTS.RESERVATIONS.SYNC);
                                                         showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
-                                                        await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                                                        await loadReservations(undefined, undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                                                     } catch (err: any) {
                                                         if (process.env.NODE_ENV === 'development') {
                                                         console.error('Fehler beim Synchronisieren:', err);
@@ -3357,7 +3366,7 @@ const Worktracker: React.FC = () => {
                                                         setSyncingReservations(true);
                                                         await axiosInstance.post(API_ENDPOINTS.RESERVATIONS.SYNC);
                                                         showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
-                                                        await loadReservations(undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+                                                        await loadReservations(undefined, undefined, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
                                                     } catch (err: any) {
                                                         if (process.env.NODE_ENV === 'development') {
                                                         console.error('Fehler beim Synchronisieren:', err);

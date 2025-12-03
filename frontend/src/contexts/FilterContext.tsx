@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { FilterCondition } from '../components/FilterRow.tsx';
@@ -80,16 +80,28 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
   // Cache-Timestamps für TTL
   const filterCacheTimestamps = useRef<Record<string, number>>({});
   
+  // ✅ FIX: Refs für aktuelle Werte (verhindert Re-Creation von loadFilters)
+  const filtersRef = useRef(filters);
+  const loadingRef = useRef(loading);
+  
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+  
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+  
   // ✅ PERFORMANCE: Lade Filter für eine tableId
   const loadFilters = useCallback(async (tableId: string) => {
     // ✅ FIX: Prüfe nur auf Filter im State (Source of Truth)
     // loadedTablesRef wird nur während des Ladens verwendet
-    if (filters[tableId]) {
+    if (filtersRef.current[tableId]) {
       return; // Filter bereits im State
     }
     
     // Wenn bereits am Laden, nicht nochmal starten
-    if (loading[tableId] || loadedTablesRef.current.has(tableId)) {
+    if (loadingRef.current[tableId] || loadedTablesRef.current.has(tableId)) {
       return; // Wird bereits geladen
     }
     
@@ -131,7 +143,7 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       loadedTablesRef.current.delete(tableId); // ✅ Entferne Flag: Laden abgeschlossen
       setLoading(prev => ({ ...prev, [tableId]: false }));
     }
-  }, [loading, filters]);
+  }, []); // ✅ FIX: Keine Dependencies mehr - verwendet Refs
   
   // ✅ MEMORY: Cleanup-Funktion für alte Filter
   const cleanupOldFilters = useCallback(() => {
@@ -292,7 +304,8 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
     return errors[tableId] || null;
   }, [errors]);
   
-  const value: FilterContextType = {
+  // ✅ FIX: value mit useMemo stabilisieren (verhindert Re-Creation bei jedem Render)
+  const value = useMemo<FilterContextType>(() => ({
     filters,
     filterGroups,
     loading,
@@ -303,7 +316,7 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
     getFilterGroups,
     isLoading,
     getError
-  };
+  }), [filters, filterGroups, loading, errors, loadFilters, refreshFilters, getFilters, getFilterGroups, isLoading, getError]);
   
   return (
     <FilterContext.Provider value={value}>
