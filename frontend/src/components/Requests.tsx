@@ -513,20 +513,7 @@ const Requests: React.FC = () => {
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // ✅ FIX: Fallback - Lade Daten wenn nach 1 Sekunde kein Filter angewendet wurde
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      // ✅ Prüfe direkt auf selectedFilterId und filterConditions
-      if (selectedFilterId === null && filterConditions.length === 0 && requests.length === 0 && loading) {
-        // Kein Filter wurde angewendet → Lade Daten ohne Filter (Fallback)
-        fetchRequests(undefined, undefined, false, 20, 0);
-      }
-    }, 1000);
-    
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [selectedFilterId, filterConditions.length, requests.length, loading, fetchRequests]);
+  // ❌ ENTFERNT: Fallback-Timeout - War Workaround für Filter-Load, sollte nicht mehr nötig sein (Phase 3)
 
   // ✅ MEMORY: Cleanup - Requests Array beim Unmount löschen
   useEffect(() => {
@@ -692,9 +679,7 @@ const Requests: React.FC = () => {
     }
   };
 
-  const getActiveFilterCount = () => {
-    return filterConditions.length;
-  };
+  // getActiveFilterCount wird direkt inline verwendet (filterConditions.length)
 
   const filteredAndSortedRequests = useMemo(() => {
     // ✅ FAKT: Wenn selectedFilterId gesetzt ist, wurden Requests bereits server-seitig gefiltert
@@ -984,13 +969,13 @@ const Requests: React.FC = () => {
             {/* Filter-Button */}
             <div className="relative group">
               <button
-                className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1`}
+                className={`p-2 rounded-md ${filterConditions.length > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1`}
                 onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
               >
                 <FunnelIcon className="h-5 w-5" />
-                {getActiveFilterCount() > 0 && (
+                {filterConditions.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10" style={{ position: 'absolute', top: '-0.25rem', right: '-0.25rem' }}>
-                    {getActiveFilterCount()}
+                    {filterConditions.length}
                   </span>
                 )}
               </button>
