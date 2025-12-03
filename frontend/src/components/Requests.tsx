@@ -201,7 +201,7 @@ const Requests: React.FC = () => {
   const [requests, setRequests] = useState<Request[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0); // ✅ PAGINATION: Gesamtanzahl
   const [hasMore, setHasMore] = useState<boolean>(true); // ✅ PAGINATION: Gibt es noch weitere Items?
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // ✅ FIX: Initial false, damit Fallback nicht blockiert wird
   const [loadingMore, setLoadingMore] = useState(false); // ✅ PAGINATION: Lädt weitere Items
   const [error, setError] = useState<string | null>(null);
   
@@ -358,7 +358,11 @@ const Requests: React.FC = () => {
   ) => {
     try {
       if (!append) {
-        setLoading(true);
+        setLoading(true); // ✅ FIX: Setze loading = true BEVOR Daten geladen werden
+        // ✅ FIX: Markiere initial load als versucht, wenn nicht append
+        if (offset === 0) {
+          initialLoadAttemptedRef.current = true;
+        }
       } else {
         setLoadingMore(true);
       }
@@ -510,6 +514,9 @@ const Requests: React.FC = () => {
   const filterContext = useFilterContext();
   const filtersLoading = filterContext.isLoading(REQUESTS_TABLE_ID);
   
+  // ✅ FIX: Ref verhindert doppeltes Laden (initial load attempted)
+  const initialLoadAttemptedRef = useRef<boolean>(false);
+  
   useEffect(() => {
     // Lade Filter für Requests-Tabelle
     filterContext.loadFilters(REQUESTS_TABLE_ID);
@@ -520,13 +527,16 @@ const Requests: React.FC = () => {
     // Nur ausführen, wenn:
     // 1. Filter nicht mehr am Laden sind
     // 2. Keine Requests geladen wurden (requests.length === 0)
-    // 3. Nicht bereits am Laden (loading === false)
+    // 3. Noch kein initiales Laden versucht wurde (initialLoadAttemptedRef.current === false)
     // 4. Kein Filter ausgewählt wurde (selectedFilterId === null)
-    if (!filtersLoading && requests.length === 0 && !loading && selectedFilterId === null && filterConditions.length === 0) {
+    // ✅ FIX: !loading entfernt, da loading initial false ist und von fetchRequests gesetzt wird
+    if (!filtersLoading && requests.length === 0 && !initialLoadAttemptedRef.current && selectedFilterId === null && filterConditions.length === 0) {
       // Warte 500ms, damit SavedFilterTags Zeit hat, Default-Filter anzuwenden
       const timeoutId = setTimeout(() => {
         // Prüfe nochmal, ob inzwischen ein Filter angewendet wurde
-        if (selectedFilterId === null && filterConditions.length === 0 && requests.length === 0) {
+        if (selectedFilterId === null && filterConditions.length === 0 && requests.length === 0 && !initialLoadAttemptedRef.current) {
+          // ✅ FIX: Markiere als versucht, BEVOR fetchRequests aufgerufen wird
+          initialLoadAttemptedRef.current = true;
           // Fallback: Lade Requests ohne Filter
           fetchRequests(undefined, undefined, false, 20, 0);
         }
@@ -534,7 +544,7 @@ const Requests: React.FC = () => {
       
       return () => clearTimeout(timeoutId);
     }
-  }, [filtersLoading, requests.length, loading, selectedFilterId, filterConditions.length, fetchRequests]);
+  }, [filtersLoading, requests.length, selectedFilterId, filterConditions.length, fetchRequests]);
 
   // ❌ ENTFERNT: Cleanup useEffect - React macht automatisches Cleanup, manuelles Löschen ist überflüssig (Phase 3)
 
@@ -659,6 +669,9 @@ const Requests: React.FC = () => {
     setActiveFilterName(''); // Kein Filter-Name
     setSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
     
+    // ✅ FIX: Markiere initial load als versucht, wenn Filter angewendet wird
+    initialLoadAttemptedRef.current = true;
+    
     if (conditions.length > 0) {
       await fetchRequests(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
     } else {
@@ -681,6 +694,9 @@ const Requests: React.FC = () => {
     setSelectedFilterId(id);
     // Table-Header-Sortierung zurücksetzen
     setSortConfig({ key: 'dueDate', direction: 'asc' });
+    
+    // ✅ FIX: Markiere initial load als versucht, wenn ein Filter angewendet wird
+    initialLoadAttemptedRef.current = true;
     
     // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
     // ✅ Sonst: Verwende applyFilterConditions (setzt auch selectedFilterId = null, activeFilterName = '')
