@@ -890,7 +890,7 @@ const handleSort = (key: SortConfig['key']) => {
 **Aufwand:** 4-6 Stunden
 **Risiko:** Mittel (viele Dateien betroffen)
 
-**Status:** ✅ **IN ARBEIT** (80% abgeschlossen)
+**Status:** ✅ **90% ABGESCHLOSSEN** (nur Migration anwenden & Tests ausstehend)
 
 #### ✅ Abgeschlossen:
 1. ✅ **Frontend:** Alle `filterSortDirections` Referenzen entfernt
@@ -1847,12 +1847,15 @@ const isAdmin = userRole?.role?.name?.toLowerCase() === 'admin' ||
 - ✅ `sortDirections` Parsing entfernt
 - ✅ `sortDirections` aus Response entfernt (getFilters & getFilterGroups)
 
+**Backend (schema.prisma):**
+- ✅ `sortDirections` Feld aus `SavedFilter` Model entfernt (Zeile 397)
+- ✅ Migration erstellt: `20250130120000_remove_sort_directions_from_saved_filter/migration.sql`
+- ✅ Prisma Client generiert
+
 **Tests:**
 - ✅ Linter-Checks: Keine Fehler
-- ⏳ Funktionalitätstests: Ausstehend
-
-**Noch zu tun:**
-- ⏳ Schema: `sortDirections` Feld aus `SavedFilter` Model entfernen (benötigt Migration)
+- ✅ Schema-Formatierung: Erfolgreich
+- ⏳ Migration anwenden: `npx prisma migrate deploy` (muss vom Benutzer gemacht werden, da Server-Neustart nötig)
 - ⏳ Funktionalitätstests: Filter funktionieren korrekt, keine Fehler
 
 ---
