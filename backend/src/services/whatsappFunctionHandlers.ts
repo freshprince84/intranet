@@ -14,6 +14,69 @@ import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
  */
 export class WhatsAppFunctionHandlers {
   /**
+   * Findet Reservationen mit gleichem Kunden-Namen (Name, Telefonnummer oder Email)
+   */
+  private static async findReservationByCustomerName(
+    customerName: string,
+    customerPhone: string | null,
+    customerEmail: string | null,
+    branchId: number,
+    organizationId: number
+  ): Promise<any> {
+    try {
+      const normalizedName = customerName.trim().toLowerCase();
+      
+      // Suche nach Name, Telefonnummer oder Email
+      const where: any = {
+        organizationId: organizationId,
+        branchId: branchId,
+        status: {
+          in: [ReservationStatus.confirmed, ReservationStatus.notification_sent, ReservationStatus.checked_in]
+        },
+        OR: []
+      };
+      
+      // Suche nach Name
+      where.OR.push({
+        guestName: {
+          contains: normalizedName,
+          mode: 'insensitive'
+        }
+      });
+      
+      // Suche nach Telefonnummer (falls vorhanden)
+      if (customerPhone) {
+        const { LanguageDetectionService } = await import('./languageDetectionService');
+        const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(customerPhone);
+        where.OR.push({
+          guestPhone: normalizedPhone
+        });
+      }
+      
+      // Suche nach Email (falls vorhanden)
+      if (customerEmail) {
+        where.OR.push({
+          guestEmail: {
+            equals: customerEmail.trim().toLowerCase(),
+            mode: 'insensitive'
+          }
+        });
+      }
+      
+      const reservations = await prisma.reservation.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 1
+      });
+      
+      return reservations.length > 0 ? reservations[0] : null;
+    } catch (error) {
+      console.error('[findReservationByCustomerName] Fehler:', error);
+      return null;
+    }
+  }
+
+  /**
    * Parst ein Datum in verschiedenen Formaten
    * Unterstützt: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, DD/MM, DD.MM
    */
@@ -892,7 +955,8 @@ export class WhatsAppFunctionHandlers {
     args: any,
     userId: number | null,
     roleId: number | null,
-    branchId: number
+    branchId: number,
+    conversationId?: number // Optional: Conversation ID für Context-Speicherung
   ): Promise<any> {
     try {
       // Filter: isActive = true, availableFrom <= heute <= availableTo
@@ -949,7 +1013,7 @@ export class WhatsAppFunctionHandlers {
         take: args.limit || 20
       });
       
-      return tours.map(t => ({
+      const formattedTours = tours.map(t => ({
         id: t.id,
         title: t.title,
         description: t.description || '',
@@ -964,6 +1028,52 @@ export class WhatsAppFunctionHandlers {
         imageUrl: t.imageUrl,
         hasGallery: !!t.galleryUrls && Array.isArray(t.galleryUrls) && t.galleryUrls.length > 0
       }));
+
+      // Speichere Context in Conversation (falls conversationId vorhanden)
+      if (conversationId) {
+        try {
+          const conversation = await prisma.whatsAppConversation.findUnique({
+            where: { id: conversationId },
+            select: { context: true }
+          });
+          
+          if (conversation) {
+            const context = (conversation.context as any) || {};
+            const tourContext = context.tour || {};
+            
+            // Aktualisiere Context mit Tour-Liste
+            const updatedContext = {
+              ...tourContext,
+              lastToursList: formattedTours.map(t => ({
+                id: t.id,
+                title: t.title,
+                price: t.price,
+                location: t.location
+              })),
+              lastToursCheckAt: new Date().toISOString()
+            };
+            
+            await prisma.whatsAppConversation.update({
+              where: { id: conversationId },
+              data: {
+                context: {
+                  ...context,
+                  tour: updatedContext
+                }
+              }
+            });
+            
+            console.log('[get_tours] Context aktualisiert:', {
+              toursCount: formattedTours.length
+            });
+          }
+        } catch (contextError) {
+          console.error('[get_tours] Fehler beim Speichern des Contexts:', contextError);
+          // Nicht abbrechen, nur loggen
+        }
+      }
+
+      return formattedTours;
     } catch (error: any) {
       console.error('[WhatsApp Function Handlers] get_tours Fehler:', error);
       throw error;
@@ -1051,22 +1161,65 @@ export class WhatsAppFunctionHandlers {
     args: any,
     userId: number | null,
     roleId: number | null,
-    branchId: number
+    branchId: number,
+    phoneNumber?: string // WhatsApp-Telefonnummer (wird automatisch aus Context übergeben)
   ): Promise<any> {
     try {
-      // Validierung
-      if (!args.tourId || !args.tourDate || !args.numberOfParticipants || !args.customerName) {
-        throw new Error('Fehlende erforderliche Parameter: tourId, tourDate, numberOfParticipants, customerName');
+      // 1. Validierung: Alle erforderlichen Parameter
+      if (!args.tourId) {
+        throw new Error('tourId ist erforderlich. Bitte wählen Sie eine Tour aus der Liste.');
+      }
+      if (!args.tourDate) {
+        throw new Error('Tour-Datum ist erforderlich. Bitte geben Sie das Datum der Tour an (z.B. "morgen" oder ein konkretes Datum).');
+      }
+      if (!args.numberOfParticipants || args.numberOfParticipants < 1) {
+        throw new Error('Anzahl Teilnehmer ist erforderlich und muss mindestens 1 sein.');
+      }
+      if (!args.customerName || !args.customerName.trim()) {
+        throw new Error('Name des Kunden ist erforderlich. Bitte geben Sie Ihren vollständigen Namen an.');
       }
       
-      if (!args.customerPhone && !args.customerEmail) {
-        throw new Error('Mindestens eine Kontaktinformation (customerPhone oder customerEmail) ist erforderlich');
+      // 2. Parse Datum (unterstützt "today"/"heute"/"hoy"/"tomorrow"/"morgen"/"mañana")
+      let tourDate: Date;
+      const tourDateStr = args.tourDate.toLowerCase().trim();
+      if (tourDateStr === 'today' || tourDateStr === 'heute' || tourDateStr === 'hoy') {
+        tourDate = new Date();
+        tourDate.setHours(0, 0, 0, 0);
+      } else if (tourDateStr === 'tomorrow' || tourDateStr === 'morgen' || tourDateStr === 'mañana') {
+        tourDate = new Date();
+        tourDate.setDate(tourDate.getDate() + 1);
+        tourDate.setHours(0, 0, 0, 0);
+      } else if (tourDateStr === 'day after tomorrow' || tourDateStr === 'übermorgen' || tourDateStr === 'pasado mañana') {
+        tourDate = new Date();
+        tourDate.setDate(tourDate.getDate() + 2);
+        tourDate.setHours(0, 0, 0, 0);
+      } else {
+        // Versuche verschiedene Datum-Formate zu parsen
+        tourDate = this.parseDate(args.tourDate);
+        if (isNaN(tourDate.getTime())) {
+          throw new Error(`Ungültiges Tour-Datum: ${args.tourDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
+        }
       }
       
-      // Parse Datum
-      const tourDate = new Date(args.tourDate);
+      // Validierung: Tour-Datum muss in der Zukunft sein
       if (tourDate < new Date()) {
         throw new Error('Tour-Datum muss in der Zukunft sein');
+      }
+      
+      // 3. Validierung: Mindestens eine Kontaktinformation (Telefon ODER Email) ist erforderlich
+      // WICHTIG: Nutze WhatsApp-Telefonnummer als Fallback, falls nicht angegeben
+      let customerPhone = args.customerPhone?.trim() || null;
+      let customerEmail = args.customerEmail?.trim() || null;
+      
+      // Fallback: Nutze WhatsApp-Telefonnummer, falls vorhanden
+      if (!customerPhone && phoneNumber) {
+        const { LanguageDetectionService } = await import('./languageDetectionService');
+        customerPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
+        console.log(`[book_tour] WhatsApp-Telefonnummer als Fallback verwendet: ${customerPhone}`);
+      }
+      
+      if (!customerPhone && !customerEmail) {
+        throw new Error('Mindestens eine Kontaktinformation (Telefonnummer oder Email) ist erforderlich für die Tour-Buchung. Bitte geben Sie Ihre Telefonnummer oder Email-Adresse an.');
       }
       
       // Hole Branch für organizationId
@@ -1117,8 +1270,8 @@ export class WhatsAppFunctionHandlers {
           totalPrice: totalPrice,
           currency: tour.currency || 'COP',
           customerName: args.customerName.trim(),
-          customerEmail: args.customerEmail?.trim() || null,
-          customerPhone: args.customerPhone?.trim() || null,
+          customerEmail: customerEmail,
+          customerPhone: customerPhone,
           customerNotes: args.customerNotes?.trim() || null,
           bookedById: userId || null,
           organizationId: branch.organizationId,
@@ -1139,17 +1292,56 @@ export class WhatsAppFunctionHandlers {
           }
         }
       });
+
+      // Prüfe ob Reservation mit gleichem Namen existiert und verknüpfe Tour
+      try {
+        const matchingReservation = await this.findReservationByCustomerName(
+          args.customerName.trim(),
+          customerPhone,
+          customerEmail,
+          branchId,
+          branch.organizationId
+        );
+        
+        if (matchingReservation) {
+          console.log(`[book_tour] ✅ Reservation ${matchingReservation.id} mit gleichem Namen gefunden, verknüpfe Tour-Buchung`);
+          
+          // Erstelle TourReservation Verknüpfung
+          // WICHTIG: tourPrice = totalPrice, accommodationPrice = 0 (Tour ist zusätzlich zur Reservation)
+          const tourReservation = await prisma.tourReservation.create({
+            data: {
+              tourId: tour.id,
+              bookingId: booking.id,
+              reservationId: matchingReservation.id,
+              tourPrice: totalPrice,
+              accommodationPrice: 0, // Tour ist zusätzlich, keine Reduzierung der Accommodation
+              currency: tour.currency || 'COP',
+              tourPricePending: totalPrice,
+              accommodationPending: 0
+            }
+          });
+          
+          console.log(`[book_tour] ✅ TourReservation Verknüpfung erstellt: ${tourReservation.id}`);
+          
+          // WICHTIG: Payment Link für Tour bleibt separat (in TourBooking.paymentLink)
+          // Reservation hat bereits eigenen Payment Link (in Reservation.paymentLink)
+          // Beide Links können unabhängig bezahlt werden
+        }
+      } catch (linkError) {
+        console.error('[book_tour] Fehler beim Verknüpfen mit Reservation:', linkError);
+        // Nicht abbrechen, nur loggen
+      }
       
       // Generiere Payment Link (analog zu tourBookingController)
       let paymentLink: string | null = null;
-      if (totalPrice > 0 && (args.customerPhone || args.customerEmail)) {
+      if (totalPrice > 0 && (customerPhone || customerEmail)) {
         try {
           // Erstelle "Dummy"-Reservation für Payment Link
           const dummyReservation = await prisma.reservation.create({
             data: {
               guestName: args.customerName,
-              guestPhone: args.customerPhone || null,
-              guestEmail: args.customerEmail || null,
+              guestPhone: customerPhone,
+              guestEmail: customerEmail,
               checkInDate: tourDate,
               checkOutDate: new Date(tourDate.getTime() + 24 * 60 * 60 * 1000), // +1 Tag
               status: 'confirmed',
@@ -1190,6 +1382,25 @@ export class WhatsAppFunctionHandlers {
         }
       }
       
+      // Sende Buchungsbestätigung per WhatsApp (wenn Payment Link vorhanden)
+      if (paymentLink && (customerPhone || customerEmail)) {
+        try {
+          const { TourWhatsAppService } = await import('../services/tourWhatsAppService');
+          await TourWhatsAppService.sendBookingConfirmationToCustomer(
+            booking.id,
+            branch.organizationId,
+            branchId,
+            paymentLink,
+            totalPrice,
+            tour.currency || 'COP'
+          );
+          console.log(`[book_tour] ✅ Buchungsbestätigung per WhatsApp gesendet`);
+        } catch (whatsappError) {
+          console.error('[book_tour] Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+          // Nicht abbrechen, nur loggen
+        }
+      }
+
       // Bei externer Tour: WhatsApp-Nachricht an Anbieter senden
       if (tour.type === 'external' && tour.externalProvider?.phone) {
         try {

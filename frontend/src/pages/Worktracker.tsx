@@ -916,6 +916,24 @@ const Worktracker: React.FC = () => {
     const reservationsLoadMoreRef = useRef<HTMLDivElement>(null);
     const tourBookingsLoadMoreRef = useRef<HTMLDivElement>(null);
     
+    // ✅ MEMORY: Refs für aktuelle Array-Längen (verhindert Endlosschleife durch tasks.length in Dependencies)
+    const tasksLengthRef = useRef(tasks.length);
+    const reservationsLengthRef = useRef(reservations.length);
+    const tourBookingsLengthRef = useRef(tourBookings.length);
+    
+    // ✅ MEMORY: Aktualisiere Refs wenn Arrays sich ändern
+    useEffect(() => {
+        tasksLengthRef.current = tasks.length;
+    }, [tasks.length]);
+    
+    useEffect(() => {
+        reservationsLengthRef.current = reservations.length;
+    }, [reservations.length]);
+    
+    useEffect(() => {
+        tourBookingsLengthRef.current = tourBookings.length;
+    }, [tourBookings.length]);
+    
     // Funktion zum Laden der Tour-Buchungen
     // ✅ PAGINATION: loadTourBookings mit Pagination
     const loadTourBookings = async (
@@ -1720,7 +1738,8 @@ const Worktracker: React.FC = () => {
             (entries) => {
                 const firstEntry = entries[0];
                 if (firstEntry.isIntersecting && tasksHasMore && !tasksLoadingMore && !loading) {
-                    const nextOffset = tasks.length;
+                    // ✅ MEMORY: Verwende tasksLengthRef.current statt tasks.length (verhindert Endlosschleife)
+                    const nextOffset = tasksLengthRef.current;
                     // ✅ FIX: Verwende filterConditionsRef.current statt filterConditions direkt
                     const currentFilterConditions = filterConditionsRef.current;
                     loadTasks(
@@ -1743,7 +1762,7 @@ const Worktracker: React.FC = () => {
             // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
             observer.disconnect();
         };
-    }, [activeTab, tasksHasMore, tasksLoadingMore, loading, tasks.length, selectedFilterId, loadTasks]); // ✅ FIX: filterConditions entfernt, verwende filterConditionsRef
+    }, [activeTab, tasksHasMore, tasksLoadingMore, loading, selectedFilterId, loadTasks]); // ✅ MEMORY: tasks.length entfernt (verhindert Endlosschleife), verwende tasksLengthRef
     
     // ✅ PAGINATION: Infinite Scroll für Reservations mit Intersection Observer
     // ✅ FIX: reservationFilterConditionsRef verwenden statt reservationFilterConditions direkt (verhindert Endlosschleife)
@@ -1754,7 +1773,8 @@ const Worktracker: React.FC = () => {
             (entries) => {
                 const firstEntry = entries[0];
                 if (firstEntry.isIntersecting && reservationsHasMore && !reservationsLoadingMore && !reservationsLoading) {
-                    const nextOffset = reservations.length;
+                    // ✅ MEMORY: Verwende reservationsLengthRef.current statt reservations.length (verhindert Endlosschleife)
+                    const nextOffset = reservationsLengthRef.current;
                     // ✅ FIX: Verwende reservationFilterConditionsRef.current statt reservationFilterConditions direkt
                     const currentReservationFilterConditions = reservationFilterConditionsRef.current;
                     const currentReservationFilterOperators = reservationFilterLogicalOperatorsRef.current;
@@ -1779,7 +1799,7 @@ const Worktracker: React.FC = () => {
             // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
             observer.disconnect();
         };
-    }, [activeTab, reservationsHasMore, reservationsLoadingMore, reservationsLoading, reservations.length, reservationSelectedFilterId, loadReservations]); // ✅ FIX: reservationFilterConditions entfernt, verwende reservationFilterConditionsRef
+    }, [activeTab, reservationsHasMore, reservationsLoadingMore, reservationsLoading, reservationSelectedFilterId, loadReservations]); // ✅ MEMORY: reservations.length entfernt (verhindert Endlosschleife), verwende reservationsLengthRef
     
     // ✅ PAGINATION: Infinite Scroll für Tour Bookings mit Intersection Observer
     useEffect(() => {
@@ -1789,7 +1809,8 @@ const Worktracker: React.FC = () => {
             (entries) => {
                 const firstEntry = entries[0];
                 if (firstEntry.isIntersecting && tourBookingsHasMore && !tourBookingsLoadingMore && !tourBookingsLoading) {
-                    const nextOffset = tourBookings.length;
+                    // ✅ MEMORY: Verwende tourBookingsLengthRef.current statt tourBookings.length (verhindert Endlosschleife)
+                    const nextOffset = tourBookingsLengthRef.current;
                     loadTourBookings(
                         true, // append = true
                         20, // limit
@@ -1808,7 +1829,7 @@ const Worktracker: React.FC = () => {
             // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
             observer.disconnect();
         };
-    }, [activeTab, tourBookingsHasMore, tourBookingsLoadingMore, tourBookingsLoading, tourBookings.length]);
+    }, [activeTab, tourBookingsHasMore, tourBookingsLoadingMore, tourBookingsLoading]); // ✅ MEMORY: tourBookings.length entfernt (verhindert Endlosschleife), verwende tourBookingsLengthRef
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {

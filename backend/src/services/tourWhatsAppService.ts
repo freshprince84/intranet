@@ -211,6 +211,103 @@ export class TourWhatsAppService {
    * Sendet Stornierungs-Benachrichtigung an Kunde
    */
   /**
+   * Sendet Tour-Buchungsbestätigung an Kunden mit Payment Link
+   */
+  static async sendBookingConfirmationToCustomer(
+    bookingId: number,
+    organizationId: number,
+    branchId: number | null,
+    paymentLink: string,
+    amount: number,
+    currency: string = 'COP'
+  ): Promise<boolean> {
+    try {
+      const booking = await prisma.tourBooking.findUnique({
+        where: { id: bookingId },
+        include: {
+          tour: true
+        }
+      });
+
+      if (!booking || !booking.customerPhone) {
+        console.log('[TourWhatsApp] Keine Kunden-Telefonnummer für Buchung', bookingId);
+        return false;
+      }
+
+      const whatsappService = branchId
+        ? new WhatsAppService(undefined, branchId)
+        : new WhatsAppService(organizationId);
+
+      // Erkenne Sprache basierend auf Telefonnummer
+      const { LanguageDetectionService } = await import('./languageDetectionService');
+      const language = LanguageDetectionService.detectLanguageFromPhoneNumber(booking.customerPhone);
+
+      // Formatiere Datum
+      const tourDate = new Date(booking.tourDate).toLocaleDateString(
+        language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : 'es-ES',
+        {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }
+      );
+
+      // Erstelle Nachricht basierend auf Sprache
+      let message: string;
+      if (language === 'de') {
+        message = `Hallo ${booking.customerName}!\n\n` +
+          `Ihre Reservierung für die Tour "${booking.tour?.title || 'Tour'}" wurde bestätigt.\n\n` +
+          `📅 Datum: ${tourDate}\n` +
+          `👥 Teilnehmer: ${booking.numberOfParticipants}\n` +
+          `💰 Preis: ${Number(amount).toLocaleString('de-DE')} ${currency}\n\n` +
+          `Sie können online bezahlen:\n${paymentLink}\n\n` +
+          `💡 Sie können die Tour auch in Bar an der Rezeption zwischen 09:00 und 17:30 bezahlen.\n\n` +
+          `Wir freuen uns auf Sie!`;
+      } else if (language === 'en') {
+        message = `Hello ${booking.customerName}!\n\n` +
+          `Your reservation for the tour "${booking.tour?.title || 'Tour'}" has been confirmed.\n\n` +
+          `📅 Date: ${tourDate}\n` +
+          `👥 Participants: ${booking.numberOfParticipants}\n` +
+          `💰 Price: ${Number(amount).toLocaleString('en-US')} ${currency}\n\n` +
+          `You can pay online:\n${paymentLink}\n\n` +
+          `💡 You can also pay in cash at the reception between 09:00 and 17:30.\n\n` +
+          `We look forward to seeing you!`;
+      } else {
+        // Spanisch (Standard)
+        message = `¡Hola ${booking.customerName}!\n\n` +
+          `Tu reserva para la tour "${booking.tour?.title || 'Tour'}" ha sido confirmada.\n\n` +
+          `📅 Fecha: ${tourDate}\n` +
+          `👥 Participantes: ${booking.numberOfParticipants}\n` +
+          `💰 Precio: ${Number(amount).toLocaleString('es-ES')} ${currency}\n\n` +
+          `Puedes realizar el pago en línea:\n${paymentLink}\n\n` +
+          `💡 También puedes pagar en efectivo en la recepción entre las 09:00 y 17:30.\n\n` +
+          `¡Te esperamos!`;
+      }
+
+      const success = await whatsappService.sendMessage(booking.customerPhone, message);
+
+      if (success) {
+        await prisma.tourWhatsAppMessage.create({
+          data: {
+            bookingId,
+            direction: 'outgoing',
+            status: 'sent',
+            phoneNumber: booking.customerPhone || '',
+            message
+          }
+        });
+        console.log(`[TourWhatsApp] ✅ Buchungsbestätigung mit Payment Link gesendet an Kunden für Buchung ${bookingId}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error('[TourWhatsApp] Fehler beim Senden der Buchungsbestätigung:', error);
+      return false;
+    }
+  }
+
+  /**
    * Sendet Bestätigung an Kunden nach erfolgreicher Zahlung
    */
   static async sendConfirmationToCustomer(
