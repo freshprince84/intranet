@@ -274,7 +274,8 @@ export class WhatsAppAiService {
         // Erneuter API Call mit Function Results
         // WICHTIG: Sprachanweisung explizit wiederholen, damit KI die richtige Sprache verwendet
         const languageInstruction = this.getLanguageInstruction(language);
-        const systemPromptWithLanguage = languageInstruction + '\n\n' + systemPrompt;
+        // Mehrfache Wiederholung der Sprachinstruktion für maximale Betonung
+        const systemPromptWithLanguage = languageInstruction + '\n\n' + languageInstruction + '\n\n' + systemPrompt;
         
         // Erstelle Messages-Array mit History, aktueller Nachricht, Function Calls und Results
         const finalMessages: Array<any> = [
@@ -673,19 +674,149 @@ export class WhatsAppAiService {
    */
   private static getLanguageInstruction(language: string): string {
     const languageInstructions: Record<string, string> = {
-      es: 'WICHTIG: Antworte IMMER auf Spanisch. Die Antwort muss vollständig auf Spanisch sein, unabhängig von der Sprache des System Prompts.',
-      de: 'WICHTIG: Antworte IMMER auf Deutsch. Die Antwort muss vollständig auf Deutsch sein, unabhängig von der Sprache des System Prompts.',
-      en: 'IMPORTANT: Always answer in English. The response must be completely in English, regardless of the system prompt language.',
-      fr: 'IMPORTANT: Réponds TOUJOURS en français. La réponse doit être entièrement en français, indépendamment de la langue du prompt système.',
-      it: 'IMPORTANTE: Rispondi SEMPRE in italiano. La risposta deve essere completamente in italiano, indipendentemente dalla lingua del prompt di sistema.',
-      pt: 'IMPORTANTE: Responda SEMPRE em português. A resposta deve ser completamente em português, independentemente do idioma do prompt do sistema.',
-      zh: '重要：始终用中文回答。回答必须完全用中文，无论系统提示的语言如何。',
-      ja: '重要：常に日本語で答えてください。回答は完全に日本語でなければなりません。システムプロンプトの言語に関係なく。',
-      ko: '중요: 항상 한국어로 답변하세요. 응답은 완전히 한국어로 작성되어야 하며, 시스템 프롬프트의 언어와 무관합니다.',
-      hi: 'महत्वपूर्ण: हमेशा हिंदी में उत्तर दें। उत्तर पूरी तरह से हिंदी में होना चाहिए, सिस्टम प्रॉम्प्ट की भाषा की परवाह किए बिना।',
-      ru: 'ВАЖНО: Всегда отвечай на русском языке. Ответ должен быть полностью на русском, независимо от языка системного промпта.',
-      tr: 'ÖNEMLİ: Her zaman Türkçe cevap ver. Cevap tamamen Türkçe olmalıdır, sistem isteminin dilinden bağımsız olarak.',
-      ar: 'مهم: أجب دائماً بالعربية. يجب أن تكون الإجابة بالكامل بالعربية، بغض النظر عن لغة مطالبة النظام.'
+      es: '=== KRITISCH: SPRACH-ANWEISUNG ===\n' +
+          'DU MUSST IMMER UND AUSSCHLIESSLICH AUF SPANISCH ANTWORTEN!\n' +
+          'Die gesamte Antwort muss vollständig auf Spanisch sein.\n' +
+          'Verwende KEIN Deutsch, KEIN Englisch, NUR Spanisch.\n' +
+          'Alle Texte, Erklärungen, Fragen und Antworten müssen auf Spanisch sein.\n' +
+          'Auch wenn der System Prompt auf Deutsch ist, antworte IMMER auf Spanisch.\n' +
+          'Wenn du Function Results interpretierst, erkläre sie auf Spanisch.\n' +
+          'Wenn du Fragen stellst, stelle sie auf Spanisch.\n' +
+          'Wenn du Fehler meldest, melde sie auf Spanisch.\n' +
+          'ANTWORTE NUR AUF SPANISCH - KEINE AUSNAHME!\n' +
+          '=== ENDE SPRACH-ANWEISUNG ===\n',
+      de: '=== KRITISCH: SPRACH-ANWEISUNG ===\n' +
+          'DU MUSST IMMER UND AUSSCHLIESSLICH AUF DEUTSCH ANTWORTEN!\n' +
+          'Die gesamte Antwort muss vollständig auf Deutsch sein.\n' +
+          'Verwende KEIN Spanisch, KEIN Englisch, NUR Deutsch.\n' +
+          'Alle Texte, Erklärungen, Fragen und Antworten müssen auf Deutsch sein.\n' +
+          'Auch wenn der System Prompt auf Deutsch ist, antworte IMMER auf Deutsch.\n' +
+          'Wenn du Function Results interpretierst, erkläre sie auf Deutsch.\n' +
+          'Wenn du Fragen stellst, stelle sie auf Deutsch.\n' +
+          'Wenn du Fehler meldest, melde sie auf Deutsch.\n' +
+          'ANTWORTE NUR AUF DEUTSCH - KEINE AUSNAHME!\n' +
+          '=== ENDE SPRACH-ANWEISUNG ===\n',
+      en: '=== CRITICAL: LANGUAGE INSTRUCTION ===\n' +
+          'YOU MUST ALWAYS AND EXCLUSIVELY ANSWER IN ENGLISH!\n' +
+          'The entire response must be completely in English.\n' +
+          'Do NOT use German, do NOT use Spanish, ONLY English.\n' +
+          'All texts, explanations, questions and answers must be in English.\n' +
+          'Even if the system prompt is in German, ALWAYS answer in English.\n' +
+          'When you interpret Function Results, explain them in English.\n' +
+          'When you ask questions, ask them in English.\n' +
+          'When you report errors, report them in English.\n' +
+          'ANSWER ONLY IN ENGLISH - NO EXCEPTION!\n' +
+          '=== END LANGUAGE INSTRUCTION ===\n',
+      fr: '=== CRITIQUE: INSTRUCTION DE LANGUE ===\n' +
+          'TU DOIS TOUJOURS ET EXCLUSIVEMENT RÉPONDRE EN FRANÇAIS!\n' +
+          'La réponse entière doit être complètement en français.\n' +
+          'N\'utilise PAS l\'allemand, N\'utilise PAS l\'espagnol, UNIQUEMENT le français.\n' +
+          'Tous les textes, explications, questions et réponses doivent être en français.\n' +
+          'Même si le prompt système est en allemand, réponds TOUJOURS en français.\n' +
+          'Quand tu interprètes les résultats de fonction, explique-les en français.\n' +
+          'Quand tu poses des questions, pose-les en français.\n' +
+          'Quand tu signales des erreurs, signale-les en français.\n' +
+          'RÉPONDS UNIQUEMENT EN FRANÇAIS - AUCUNE EXCEPTION!\n' +
+          '=== FIN INSTRUCTION DE LANGUE ===\n',
+      it: '=== CRITICO: ISTRUZIONE LINGUISTICA ===\n' +
+          'DEVI SEMPRE E ESCLUSIVAMENTE RISpondere IN ITALIANO!\n' +
+          'L\'intera risposta deve essere completamente in italiano.\n' +
+          'NON usare tedesco, NON usare spagnolo, SOLO italiano.\n' +
+          'Tutti i testi, spiegazioni, domande e risposte devono essere in italiano.\n' +
+          'Anche se il prompt di sistema è in tedesco, rispondi SEMPRE in italiano.\n' +
+          'Quando interpreti i risultati delle funzioni, spiegalo in italiano.\n' +
+          'Quando fai domande, fallo in italiano.\n' +
+          'Quando segnali errori, segnalali in italiano.\n' +
+          'RISpondi SOLO IN ITALIANO - NESSUNA ECCEZIONE!\n' +
+          '=== FINE ISTRUZIONE LINGUISTICA ===\n',
+      pt: '=== CRÍTICO: INSTRUÇÃO DE IDIOMA ===\n' +
+          'VOCÊ DEVE SEMPRE E EXCLUSIVAMENTE RESPONDER EM PORTUGUÊS!\n' +
+          'A resposta inteira deve ser completamente em português.\n' +
+          'NÃO use alemão, NÃO use espanhol, APENAS português.\n' +
+          'Todos os textos, explicações, perguntas e respostas devem estar em português.\n' +
+          'Mesmo que o prompt do sistema esteja em alemão, responda SEMPRE em português.\n' +
+          'Quando você interpreta resultados de função, explique-os em português.\n' +
+          'Quando você faz perguntas, faça-as em português.\n' +
+          'Quando você relata erros, relate-os em português.\n' +
+          'RESPONDA APENAS EM PORTUGUÊS - SEM EXCEÇÃO!\n' +
+          '=== FIM DA INSTRUÇÃO DE IDIOMA ===\n',
+      zh: '=== 关键：语言指令 ===\n' +
+          '你必须始终且仅用中文回答！\n' +
+          '整个回答必须完全用中文。\n' +
+          '不要使用德语，不要使用西班牙语，仅使用中文。\n' +
+          '所有文本、解释、问题和答案都必须用中文。\n' +
+          '即使系统提示是德语，也要始终用中文回答。\n' +
+          '当你解释函数结果时，用中文解释。\n' +
+          '当你提问时，用中文提问。\n' +
+          '当你报告错误时，用中文报告。\n' +
+          '仅用中文回答 - 无例外！\n' +
+          '=== 语言指令结束 ===\n',
+      ja: '=== 重要：言語指示 ===\n' +
+          'あなたは常に日本語でのみ回答する必要があります！\n' +
+          '回答全体は完全に日本語である必要があります。\n' +
+          'ドイツ語を使用せず、スペイン語を使用せず、日本語のみを使用してください。\n' +
+          'すべてのテキスト、説明、質問、回答は日本語である必要があります。\n' +
+          'システムプロンプトがドイツ語であっても、常に日本語で回答してください。\n' +
+          '関数結果を解釈する場合、日本語で説明してください。\n' +
+          '質問をする場合、日本語で質問してください。\n' +
+          'エラーを報告する場合、日本語で報告してください。\n' +
+          '日本語でのみ回答してください - 例外なし！\n' +
+          '=== 言語指示終了 ===\n',
+      ko: '=== 중요: 언어 지시 ===\n' +
+          '당신은 항상 한국어로만 답변해야 합니다!\n' +
+          '전체 응답은 완전히 한국어여야 합니다.\n' +
+          '독일어를 사용하지 말고, 스페인어를 사용하지 말고, 한국어만 사용하세요.\n' +
+          '모든 텍스트, 설명, 질문 및 답변은 한국어여야 합니다.\n' +
+          '시스템 프롬프트가 독일어라도 항상 한국어로 답변하세요.\n' +
+          '함수 결과를 해석할 때 한국어로 설명하세요.\n' +
+          '질문을 할 때 한국어로 질문하세요.\n' +
+          '오류를 보고할 때 한국어로 보고하세요.\n' +
+          '한국어로만 답변하세요 - 예외 없음!\n' +
+          '=== 언어 지시 종료 ===\n',
+      hi: '=== महत्वपूर्ण: भाषा निर्देश ===\n' +
+          'आपको हमेशा और विशेष रूप से हिंदी में उत्तर देना चाहिए!\n' +
+          'पूरा उत्तर पूरी तरह से हिंदी में होना चाहिए।\n' +
+          'जर्मन का उपयोग न करें, स्पेनिश का उपयोग न करें, केवल हिंदी।\n' +
+          'सभी पाठ, स्पष्टीकरण, प्रश्न और उत्तर हिंदी में होने चाहिए।\n' +
+          'भले ही सिस्टम प्रॉम्प्ट जर्मन में हो, हमेशा हिंदी में उत्तर दें।\n' +
+          'जब आप फ़ंक्शन परिणामों की व्याख्या करते हैं, तो उन्हें हिंदी में समझाएं।\n' +
+          'जब आप प्रश्न पूछते हैं, तो उन्हें हिंदी में पूछें।\n' +
+          'जब आप त्रुटियों की रिपोर्ट करते हैं, तो उन्हें हिंदी में रिपोर्ट करें।\n' +
+          'केवल हिंदी में उत्तर दें - कोई अपवाद नहीं!\n' +
+          '=== भाषा निर्देश समाप्त ===\n',
+      ru: '=== КРИТИЧЕСКИ ВАЖНО: ЯЗЫКОВАЯ ИНСТРУКЦИЯ ===\n' +
+          'ВЫ ДОЛЖНЫ ВСЕГДА И ИСКЛЮЧИТЕЛЬНО ОТВЕЧАТЬ НА РУССКОМ ЯЗЫКЕ!\n' +
+          'Весь ответ должен быть полностью на русском языке.\n' +
+          'НЕ используйте немецкий, НЕ используйте испанский, ТОЛЬКО русский.\n' +
+          'Все тексты, объяснения, вопросы и ответы должны быть на русском языке.\n' +
+          'Даже если системный промпт на немецком, ВСЕГДА отвечайте на русском.\n' +
+          'Когда вы интерпретируете результаты функций, объясняйте их на русском.\n' +
+          'Когда вы задаете вопросы, задавайте их на русском.\n' +
+          'Когда вы сообщаете об ошибках, сообщайте их на русском.\n' +
+          'ОТВЕЧАЙТЕ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ - БЕЗ ИСКЛЮЧЕНИЙ!\n' +
+          '=== КОНЕЦ ЯЗЫКОВОЙ ИНСТРУКЦИИ ===\n',
+      tr: '=== KRİTİK: DİL TALİMATI ===\n' +
+          'HER ZAMAN VE YALNIZCA TÜRKÇE CEVAP VERMELİSİNİZ!\n' +
+          'Tüm cevap tamamen Türkçe olmalıdır.\n' +
+          'Almanca kullanmayın, İspanyolca kullanmayın, YALNIZCA Türkçe.\n' +
+          'Tüm metinler, açıklamalar, sorular ve cevaplar Türkçe olmalıdır.\n' +
+          'Sistem istemi Almanca olsa bile, HER ZAMAN Türkçe cevap verin.\n' +
+          'Fonksiyon sonuçlarını yorumlarken, Türkçe açıklayın.\n' +
+          'Soru sorarken, Türkçe sorun.\n' +
+          'Hataları bildirirken, Türkçe bildirin.\n' +
+          'YALNIZCA TÜRKÇE CEVAP VERİN - İSTİSNA YOK!\n' +
+          '=== DİL TALİMATI SONU ===\n',
+      ar: '=== حرج: تعليمات اللغة ===\n' +
+          'يجب عليك دائمًا وحصريًا الإجابة بالعربية!\n' +
+          'يجب أن تكون الإجابة بأكملها بالعربية تمامًا.\n' +
+          'لا تستخدم الألمانية، لا تستخدم الإسبانية، العربية فقط.\n' +
+          'يجب أن تكون جميع النصوص والتفسيرات والأسئلة والإجابات بالعربية.\n' +
+          'حتى لو كان مطالبة النظام بالألمانية، أجب دائمًا بالعربية.\n' +
+          'عند تفسير نتائج الوظائف، اشرحها بالعربية.\n' +
+          'عند طرح الأسئلة، اطرحها بالعربية.\n' +
+          'عند الإبلاغ عن الأخطاء، أبلغ عنها بالعربية.\n' +
+          'أجب بالعربية فقط - لا استثناء!\n' +
+          '=== نهاية تعليمات اللغة ===\n'
     };
     
     return languageInstructions[language] || languageInstructions.es;
@@ -702,8 +833,9 @@ export class WhatsAppAiService {
     // WICHTIG: Sprachanweisung GANZ AN DEN ANFANG setzen für maximale Priorität
     const languageInstruction = this.getLanguageInstruction(language);
     
-    // Beginne mit Sprachanweisung
+    // Beginne mit Sprachanweisung (mehrfach für maximale Betonung)
     let prompt = languageInstruction + '\n\n';
+    prompt += languageInstruction + '\n\n'; // Wiederholung für maximale Betonung
     
     // Dann System Prompt
     prompt += aiConfig.systemPrompt || 'Du bist ein hilfreicher Assistent.';
@@ -758,10 +890,15 @@ export class WhatsAppAiService {
     // Tour-Funktionen - IMMER verfügbar (auch für Gäste)
     prompt += '\n- get_tours: Hole verfügbare Touren (type, availableFrom, availableTo, limit)\n';
     prompt += '  WICHTIG: Verwende diese Function wenn der User nach Touren fragt!\n';
+    prompt += '  WICHTIG: Diese Function zeigt eine Liste aller verfügbaren Touren\n';
+    prompt += '  KRITISCH: Wenn User bereits eine Tour gewählt hat (z.B. "die 2.", "guatape", "tour 2"), rufe diese Function NICHT nochmal auf!\n';
+    prompt += '  KRITISCH: Wenn User nach get_tours() eine Tour wählt, rufe stattdessen book_tour() auf!\n';
+    prompt += '  KRITISCH: Liste NICHT alle Touren nochmal auf, wenn User bereits eine Tour gewählt hat!\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "welche touren gibt es?" → get_tours({})\n';
     prompt += '    - "zeige mir alle touren" → get_tours({})\n';
     prompt += '    - "¿qué tours tienen disponibles?" → get_tours({})\n';
+    prompt += '    - User sagt "die 2." nach get_tours() → NICHT get_tours() nochmal, sondern book_tour()!\n';
     prompt += '\n- get_tour_details: Hole detaillierte Informationen zu einer Tour (tourId)\n';
     prompt += '  WICHTIG: Verwende diese Function wenn der User Details zu einer spezifischen Tour wissen möchte!\n';
     prompt += '  Beispiele:\n';
@@ -780,12 +917,15 @@ export class WhatsAppAiService {
     prompt += '  WICHTIG: Wenn customerName fehlt → FRAGE nach dem Namen, rufe Function NICHT auf!\n';
     prompt += '  WICHTIG: Wenn tourDate fehlt → FRAGE nach dem Datum, rufe Function NICHT auf!\n';
     prompt += '  WICHTIG: Wenn numberOfParticipants fehlt → FRAGE nach der Anzahl, rufe Function NICHT auf!\n';
+    prompt += '  KRITISCH: Wenn User nach get_tours() eine Tour wählt (z.B. "die 2.", "guatape", "tour 2"), rufe SOFORT book_tour() auf, NICHT get_tours() nochmal!\n';
+    prompt += '  KRITISCH: NIEMALS get_tours() nochmal aufrufen, wenn User bereits eine Tour gewählt hat!\n';
+    prompt += '  KRITISCH: Wenn User "die 2. guatape. für morgen" sagt, hat er eine Tour gewählt → rufe book_tour() auf, liste NICHT alle Touren nochmal auf!\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "ich möchte tour 1 für morgen buchen" → book_tour({ tourId: 1, tourDate: "tomorrow", numberOfParticipants: 1, customerName: "Max Mustermann", customerPhone: "+573001234567" })\n';
     prompt += '    - "reservar tour 3 para mañana" → book_tour({ tourId: 3, tourDate: "tomorrow", numberOfParticipants: 1, customerName: "Juan Pérez", customerEmail: "juan@example.com" })\n';
     prompt += '    - "die 2., guatape. für morgen. für 2 personen" → book_tour({ tourId: 2, tourDate: "tomorrow", numberOfParticipants: 2, customerName: "Max Mustermann", customerPhone: "+573001234567" })\n';
-    prompt += '    - User sagt "die 2." nach get_tours() → tourId=2 (aus vorheriger Response)\n';
-    prompt += '    - User sagt "Guatapé" → finde tourId aus get_tours() Response (z.B. tourId=2)\n';
+    prompt += '    - User sagt "die 2." nach get_tours() → tourId=2 (aus vorheriger Response), rufe book_tour() auf, NICHT get_tours() nochmal!\n';
+    prompt += '    - User sagt "Guatapé" → finde tourId aus get_tours() Response (z.B. tourId=2), rufe book_tour() auf, NICHT get_tours() nochmal!\n';
     
     // Zimmer-Buchung - IMMER verfügbar (auch für Gäste)
     prompt += '\n- create_room_reservation: Erstelle eine Zimmer-Reservation (checkInDate, checkOutDate, guestName, roomType, categoryId optional)\n';
@@ -881,6 +1021,10 @@ export class WhatsAppAiService {
     prompt += '\nWICHTIG: Unterscheide klar zwischen TOUR-Buchung (book_tour) und ZIMMER-Buchung (create_room_reservation)!';
     prompt += '\nWICHTIG: Wenn User nach get_tours() eine Nummer wählt (z.B. "2."), ist das IMMER eine Tour-ID, NICHT eine Zimmer-Nummer!';
     prompt += '\nWICHTIG: Wenn User nach check_room_availability() eine Nummer wählt (z.B. "2."), ist das IMMER eine Zimmer-categoryId, NICHT eine Tour-ID!';
+    prompt += '\nKRITISCH: Wenn User nach get_tours() eine Tour wählt (z.B. "die 2.", "guatape", "tour 2"), rufe SOFORT book_tour() auf, NICHT get_tours() nochmal!';
+    prompt += '\nKRITISCH: NIEMALS get_tours() nochmal aufrufen, wenn User bereits eine Tour gewählt hat!';
+    prompt += '\nKRITISCH: Liste NICHT alle Touren nochmal auf, wenn User bereits eine Tour gewählt hat!';
+    prompt += '\nKRITISCH: Wenn User "die 2. guatape. für morgen" sagt, hat er eine Tour gewählt → rufe book_tour() auf, liste NICHT alle Touren nochmal auf!';
     prompt += '\nWICHTIG: Wenn User "ja" sagt nachdem du eine Frage gestellt hast, interpretiere es als Bestätigung deiner Vorschläge!';
     prompt += '\nWICHTIG: Wenn User "ja", "sí", "yes" sagt nachdem du eine Frage gestellt hast, interpretiere es als Bestätigung und führe die Aktion aus!';
     prompt += '\nWICHTIG: Wenn User "ja, ich bestätige, bitte buchen" oder "ja ich möchte buchen" oder "sí, quiero reservar" sagt, rufe SOFORT create_room_reservation auf!';

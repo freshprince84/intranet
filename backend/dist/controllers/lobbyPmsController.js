@@ -315,17 +315,44 @@ const checkInReservation = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const service = localReservation.branchId
             ? yield lobbyPmsService_1.LobbyPmsService.createForBranch(localReservation.branchId)
             : new lobbyPmsService_1.LobbyPmsService(organizationId);
-        yield service.updateReservationStatus(id, 'checked_in');
-        // Aktualisiere lokale Reservierung
-        const updatedReservation = yield prisma_1.prisma.reservation.update({
+        try {
+            yield service.updateReservationStatus(id, 'checked_in');
+        }
+        catch (error) {
+            console.error('Fehler beim Aktualisieren des Status in LobbyPMS:', error);
+            // Weiter mit lokaler Aktualisierung, auch wenn LobbyPMS-Update fehlschlägt
+        }
+        // WICHTIG: Setze Status direkt auf checked_in in lokaler DB
+        // Unabhängig davon, was LobbyPMS zurückgibt, da wir den Check-in durchgeführt haben
+        yield prisma_1.prisma.reservation.update({
             where: { id: localReservation.id },
             data: {
                 status: 'checked_in',
                 onlineCheckInCompleted: true,
                 onlineCheckInCompletedAt: new Date()
-            },
+            }
+        });
+        // Hole aktualisierte Reservierung
+        const updatedReservation = yield prisma_1.prisma.reservation.findUnique({
+            where: { id: localReservation.id },
             include: { branch: true }
         });
+        if (!updatedReservation) {
+            return res.status(404).json({
+                success: false,
+                message: 'Reservierung nicht gefunden'
+            });
+        }
+        // Versuche zusätzlich zu synchronisieren (optional, für Konsistenz mit LobbyPMS)
+        // Aber Status ist bereits korrekt gesetzt, auch wenn Sync fehlschlägt
+        try {
+            const lobbyReservation = yield service.fetchReservationById(id);
+            yield service.syncReservation(lobbyReservation);
+        }
+        catch (syncError) {
+            // Ignoriere Sync-Fehler, da Status bereits korrekt gesetzt ist
+            console.log('Hinweis: Synchronisation mit LobbyPMS fehlgeschlagen, aber Status ist bereits korrekt gesetzt:', syncError);
+        }
         // Aktualisiere verknüpften Task falls vorhanden
         const userId = parseInt(req.userId);
         yield reservationTaskService_1.ReservationTaskService.completeTaskOnCheckIn(localReservation.id, userId);

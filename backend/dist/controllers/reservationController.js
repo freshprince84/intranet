@@ -592,6 +592,10 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
                 console.log(`[Reservation] User hat all_branches Berechtigung, zeige alle Reservations`);
             }
+            else if (hasReservationsPermission) {
+                // ✅ FIX: Alte "reservations" Berechtigung → Zeige alle Reservierungen der Organisation
+                console.log(`[Reservation] User hat alte 'reservations' Berechtigung, zeige alle Reservations der Organisation`);
+            }
             else {
                 // Keine Berechtigung → keine Reservierungen
                 console.log(`[Reservation] User hat keine Berechtigung, gebe leeres Array zurück`);
@@ -611,14 +615,14 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
             if (filterData) {
                 const conditions = JSON.parse(filterData.conditions);
                 const operators = JSON.parse(filterData.operators);
-                filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'reservation');
+                filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'reservation', req);
                 // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
                 filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'reservation');
             }
         }
         else if (filterConditions) {
             // Direkte Filter-Bedingungen
-            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'reservation');
+            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'reservation', req);
             // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
             filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'reservation');
         }

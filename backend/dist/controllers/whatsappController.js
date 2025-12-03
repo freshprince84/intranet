@@ -130,6 +130,23 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     const { LanguageDetectionService } = require('../services/languageDetectionService');
                     const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(fromNumber);
                     const messageId = message.id;
+                    // Hole oder erstelle Conversation für conversationId
+                    let conversationId = null;
+                    try {
+                        const conversation = yield prisma_1.prisma.whatsAppConversation.findUnique({
+                            where: {
+                                phoneNumber_branchId: {
+                                    phoneNumber: normalizedPhone,
+                                    branchId: branchId
+                                }
+                            },
+                            select: { id: true }
+                        });
+                        conversationId = (conversation === null || conversation === void 0 ? void 0 : conversation.id) || null;
+                    }
+                    catch (convError) {
+                        console.error('[WhatsApp Webhook] Fehler beim Laden der Conversation:', convError);
+                    }
                     // Prüfe ob es eine Reservation zu dieser Telefonnummer gibt
                     const reservation = yield prisma_1.prisma.reservation.findFirst({
                         where: {
@@ -148,11 +165,12 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                             message: messageText,
                             messageId: messageId,
                             branchId: branchId,
+                            conversationId: conversationId,
                             reservationId: (reservation === null || reservation === void 0 ? void 0 : reservation.id) || null,
                             sentAt: new Date(parseInt(message.timestamp) * 1000) // WhatsApp timestamp ist in Sekunden
                         }
                     });
-                    console.log('[WhatsApp Webhook] ✅ Eingehende Nachricht in Datenbank gespeichert');
+                    console.log('[WhatsApp Webhook] ✅ Eingehende Nachricht in Datenbank gespeichert', { conversationId });
                 }
                 catch (dbError) {
                     console.error('[WhatsApp Webhook] ⚠️ Fehler beim Speichern der eingehenden Nachricht:', dbError);

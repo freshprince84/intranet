@@ -319,8 +319,31 @@ class ReservationNotificationService {
                                 .replace(/\{\{paymentLink\}\}/g, paymentLink);
                         }
                         else {
-                            // Standard-Nachricht (entspricht Meta Business Template: reservation_checkin_invitation)
-                            sentMessage = `Hola ${reservation.guestName},
+                            // Standard-Nachricht basierend auf Sprache (entspricht Meta Business Template: reservation_checkin_invitation)
+                            const { CountryLanguageService } = require('./countryLanguageService');
+                            const languageCode = CountryLanguageService.getLanguageForReservation({
+                                guestNationality: reservation.guestNationality,
+                                guestPhone: reservation.guestPhone
+                            });
+                            if (languageCode === 'en') {
+                                // Englische Version
+                                sentMessage = `Hello ${reservation.guestName},
+
+We are pleased to welcome you to La Familia Hostel!
+
+As you will arrive after 22:00, you can complete the online check-in now:
+${checkInLink}
+
+Please make the payment in advance:
+${paymentLink}
+
+Please write us briefly once you have completed both the check-in and payment. Thank you!
+
+We look forward to seeing you tomorrow!`;
+                            }
+                            else {
+                                // Spanische Version
+                                sentMessage = `Hola ${reservation.guestName},
 
 ¡Nos complace darte la bienvenida a La Familia Hostel!
 
@@ -333,6 +356,7 @@ ${paymentLink}
 Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago. ¡Gracias!
 
 ¡Te esperamos mañana!`;
+                            }
                         }
                         const whatsappService = reservation.branchId
                             ? new whatsappService_1.WhatsAppService(undefined, reservation.branchId)
@@ -426,8 +450,31 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
                             sentMessage = emailMessage;
                         }
                         else {
-                            // Standard-Nachricht (gleicher Text wie WhatsApp, entspricht Meta Business Template: reservation_checkin_invitation)
-                            emailMessage = `Hola ${reservation.guestName},
+                            // Standard-Nachricht basierend auf Sprache (gleicher Text wie WhatsApp, entspricht Meta Business Template: reservation_checkin_invitation)
+                            const { CountryLanguageService } = require('./countryLanguageService');
+                            const languageCode = CountryLanguageService.getLanguageForReservation({
+                                guestNationality: reservation.guestNationality,
+                                guestPhone: reservation.guestPhone
+                            });
+                            if (languageCode === 'en') {
+                                // Englische Version
+                                emailMessage = `Hello ${reservation.guestName},
+
+We are pleased to welcome you to La Familia Hostel!
+
+As you will arrive after 22:00, you can complete the online check-in now:
+${checkInLink}
+
+Please make the payment in advance:
+${paymentLink}
+
+Please write us briefly once you have completed both the check-in and payment. Thank you!
+
+We look forward to seeing you tomorrow!`;
+                            }
+                            else {
+                                // Spanische Version
+                                emailMessage = `Hola ${reservation.guestName},
 
 ¡Nos complace darte la bienvenida a La Familia Hostel!
 
@@ -440,6 +487,7 @@ ${paymentLink}
 Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago. ¡Gracias!
 
 ¡Te esperamos mañana!`;
+                            }
                             // Setze auch sentMessage für Reservation-Update
                             sentMessage = emailMessage;
                         }
@@ -889,7 +937,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
      */
     static sendPasscodeNotification(reservationId, options) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c;
+            var _a, _b, _c, _d, _e;
             try {
                 const reservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservationId },
@@ -997,19 +1045,77 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
                         .replace(/\{\{passcode\}\}/g, doorPin);
                 }
                 else {
-                    // Standard-Nachricht (entspricht Meta Business Template: reservation_checkin_completed)
+                    // Standard-Nachricht basierend auf Sprache (entspricht Meta Business Template: reservation_checkin_completed)
                     // Template verwendet 2 Variablen: {{1}} = Begrüßung, {{2}} = Kompletter Text
-                    const greeting = `Hola ${reservation.guestName},`;
+                    const { CountryLanguageService } = require('./countryLanguageService');
+                    const languageCode = CountryLanguageService.getLanguageForReservation({
+                        guestNationality: reservation.guestNationality,
+                        guestPhone: reservation.guestPhone
+                    });
                     const roomNumber = reservation.roomNumber || 'N/A';
-                    const roomDescription = reservation.roomDescription || 'N/A';
-                    const contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomNumber} - Descripción: ${roomDescription} Acceso: - PIN de la puerta: ${doorPin || 'N/A'} - App: ${doorAppName || 'TTLock'}`;
-                    messageText = `Bienvenido,
+                    // Lade roomDescription aus Branch-Settings (falls categoryId vorhanden)
+                    let roomDescription = 'N/A';
+                    if (reservation.categoryId && reservation.branchId) {
+                        try {
+                            const branch = yield prisma_1.prisma.branch.findUnique({
+                                where: { id: reservation.branchId },
+                                select: { lobbyPmsSettings: true }
+                            });
+                            if (branch === null || branch === void 0 ? void 0 : branch.lobbyPmsSettings) {
+                                const { decryptBranchApiSettings } = require('../utils/encryption');
+                                const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
+                                const lobbyPmsSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) || decryptedSettings;
+                                const roomDesc = (_d = lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.roomDescriptions) === null || _d === void 0 ? void 0 : _d[reservation.categoryId];
+                                if (roomDesc) {
+                                    // Formatiere Beschreibung: Text, Bild-Link, Video-Link
+                                    const parts = [];
+                                    if (roomDesc.text) {
+                                        parts.push(roomDesc.text);
+                                    }
+                                    if (roomDesc.imageUrl) {
+                                        parts.push(`Bild: ${roomDesc.imageUrl}`);
+                                    }
+                                    if (roomDesc.videoUrl) {
+                                        parts.push(`Video: ${roomDesc.videoUrl}`);
+                                    }
+                                    roomDescription = parts.length > 0 ? parts.join('\n') : 'N/A';
+                                }
+                            }
+                        }
+                        catch (error) {
+                            console.warn(`[ReservationNotification] Fehler beim Laden der Zimmer-Beschreibung:`, error);
+                            // Fallback auf reservation.roomDescription
+                            roomDescription = reservation.roomDescription || 'N/A';
+                        }
+                    }
+                    else {
+                        // Fallback: Verwende reservation.roomDescription (für alte Reservierungen oder ohne categoryId)
+                        roomDescription = reservation.roomDescription || 'N/A';
+                    }
+                    if (languageCode === 'en') {
+                        // Englische Version
+                        const greeting = `Hello ${reservation.guestName},`;
+                        const contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomNumber} - Description: ${roomDescription} Access: - Door PIN: ${doorPin || 'N/A'}`;
+                        messageText = `Welcome,
+
+${greeting}
+
+${contentText}
+
+We wish you a pleasant stay!`;
+                    }
+                    else {
+                        // Spanische Version
+                        const greeting = `Hola ${reservation.guestName},`;
+                        const contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomNumber} - Descripción: ${roomDescription} Acceso: - PIN de la puerta: ${doorPin || 'N/A'}`;
+                        messageText = `Bienvenido,
 
 ${greeting}
 
 ${contentText}
 
 ¡Te deseamos una estancia agradable!`;
+                    }
                 }
                 // Versende Benachrichtigungen
                 let whatsappSuccess = false;
@@ -1080,13 +1186,51 @@ ${contentText}
                                 ? `Hello ${reservation.guestName},`
                                 : `Hola ${reservation.guestName},`;
                             const roomNumber = reservation.roomNumber || 'N/A';
-                            const roomDescription = reservation.roomDescription || 'N/A';
-                            let contentText;
-                            if (languageCode === 'en') {
-                                contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomNumber} - Description: ${roomDescription} Access: - Door PIN: ${doorPin} - App: ${doorAppName || 'TTLock'}`;
+                            // Lade roomDescription aus Branch-Settings (falls categoryId vorhanden)
+                            let roomDescription = 'N/A';
+                            if (reservation.categoryId && reservation.branchId) {
+                                try {
+                                    const branch = yield prisma_1.prisma.branch.findUnique({
+                                        where: { id: reservation.branchId },
+                                        select: { lobbyPmsSettings: true }
+                                    });
+                                    if (branch === null || branch === void 0 ? void 0 : branch.lobbyPmsSettings) {
+                                        const { decryptBranchApiSettings } = require('../utils/encryption');
+                                        const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
+                                        const lobbyPmsSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) || decryptedSettings;
+                                        const roomDesc = (_e = lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.roomDescriptions) === null || _e === void 0 ? void 0 : _e[reservation.categoryId];
+                                        if (roomDesc) {
+                                            // Formatiere Beschreibung: Text, Bild-Link, Video-Link
+                                            const parts = [];
+                                            if (roomDesc.text) {
+                                                parts.push(roomDesc.text);
+                                            }
+                                            if (roomDesc.imageUrl) {
+                                                parts.push(`Bild: ${roomDesc.imageUrl}`);
+                                            }
+                                            if (roomDesc.videoUrl) {
+                                                parts.push(`Video: ${roomDesc.videoUrl}`);
+                                            }
+                                            roomDescription = parts.length > 0 ? parts.join('\n') : 'N/A';
+                                        }
+                                    }
+                                }
+                                catch (error) {
+                                    console.warn(`[ReservationNotification] Fehler beim Laden der Zimmer-Beschreibung:`, error);
+                                    // Fallback auf reservation.roomDescription
+                                    roomDescription = reservation.roomDescription || 'N/A';
+                                }
                             }
                             else {
-                                contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomNumber} - Descripción: ${roomDescription} Acceso: - PIN de la puerta: ${doorPin} - App: ${doorAppName || 'TTLock'}`;
+                                // Fallback: Verwende reservation.roomDescription (für alte Reservierungen oder ohne categoryId)
+                                roomDescription = reservation.roomDescription || 'N/A';
+                            }
+                            let contentText;
+                            if (languageCode === 'en') {
+                                contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomNumber} - Description: ${roomDescription} Access: - Door PIN: ${doorPin}`;
+                            }
+                            else {
+                                contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomNumber} - Descripción: ${roomDescription} Acceso: - PIN de la puerta: ${doorPin}`;
                             }
                             const templateParams = [greeting, contentText];
                             console.log(`[ReservationNotification] Versuche Session Message (24h-Fenster) mit customMessage, bei Fehler: Template Message`);
@@ -1296,8 +1440,12 @@ ${contentText}
     static sendCheckInInvitationEmail(reservation, checkInLink, paymentLink) {
         return __awaiter(this, void 0, void 0, function* () {
             // Bestimme Sprache basierend auf Gast-Nationalität (Standard: Spanisch)
-            const isEnglish = reservation.guestNationality &&
-                ['US', 'GB', 'UK', 'CA', 'AU', 'NZ', 'IE', 'ZA'].includes(reservation.guestNationality.toUpperCase());
+            const { CountryLanguageService } = require('./countryLanguageService');
+            const languageCode = CountryLanguageService.getLanguageForReservation({
+                guestNationality: reservation.guestNationality,
+                guestPhone: reservation.guestPhone
+            });
+            const isEnglish = languageCode === 'en';
             let subject;
             let html;
             let text;
@@ -1451,6 +1599,42 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
      */
     static sendCheckInConfirmationEmail(reservation, doorPin, doorAppName) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            // Lade roomDescription aus Branch-Settings (falls categoryId vorhanden)
+            let roomDescription = reservation.roomDescription || 'N/A';
+            if (reservation.categoryId && reservation.branchId) {
+                try {
+                    const branch = yield prisma_1.prisma.branch.findUnique({
+                        where: { id: reservation.branchId },
+                        select: { lobbyPmsSettings: true }
+                    });
+                    if (branch === null || branch === void 0 ? void 0 : branch.lobbyPmsSettings) {
+                        const { decryptBranchApiSettings } = require('../utils/encryption');
+                        const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
+                        const lobbyPmsSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) || decryptedSettings;
+                        const roomDesc = (_a = lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.roomDescriptions) === null || _a === void 0 ? void 0 : _a[reservation.categoryId];
+                        if (roomDesc) {
+                            // Formatiere Beschreibung: Text, Bild-Link, Video-Link
+                            const parts = [];
+                            if (roomDesc.text) {
+                                parts.push(roomDesc.text);
+                            }
+                            if (roomDesc.imageUrl) {
+                                parts.push(`Bild: ${roomDesc.imageUrl}`);
+                            }
+                            if (roomDesc.videoUrl) {
+                                parts.push(`Video: ${roomDesc.videoUrl}`);
+                            }
+                            roomDescription = parts.length > 0 ? parts.join('\n') : reservation.roomDescription || 'N/A';
+                        }
+                    }
+                }
+                catch (error) {
+                    console.warn(`[ReservationNotification] Fehler beim Laden der Zimmer-Beschreibung für E-Mail:`, error);
+                    // Fallback auf reservation.roomDescription
+                    roomDescription = reservation.roomDescription || 'N/A';
+                }
+            }
             const subject = 'Ihr Check-in ist abgeschlossen - Zimmerinformationen';
             const html = `
       <!DOCTYPE html>
@@ -1483,13 +1667,12 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           <div class="info-box">
             <h3>Información de tu habitación:</h3>
             <p><strong>Habitación:</strong> ${reservation.roomNumber || 'N/A'}</p>
-            <p><strong>Descripción:</strong> ${reservation.roomDescription || 'N/A'}</p>
+            <p><strong>Descripción:</strong> ${roomDescription}</p>
           </div>
           ${doorPin ? `
           <div class="info-box">
             <h3>Acceso:</h3>
             <p><strong>PIN de la puerta:</strong> ${doorPin}</p>
-            <p><strong>App:</strong> ${doorAppName || 'TTLock'}</p>
           </div>
           ` : ''}
           <p>¡Te deseamos una estancia agradable!</p>
@@ -1504,11 +1687,10 @@ Hola ${reservation.guestName},
 
 Información de tu habitación:
 - Habitación: ${reservation.roomNumber || 'N/A'}
-- Descripción: ${reservation.roomDescription || 'N/A'}
+- Descripción: ${roomDescription}
 
 ${doorPin ? `Acceso:
 - PIN de la puerta: ${doorPin}
-- App: ${doorAppName || 'TTLock'}
 ` : ''}
 
 ¡Te deseamos una estancia agradable!

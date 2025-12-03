@@ -48,7 +48,8 @@ exports.getUserSavedFilters = getUserSavedFilters;
 const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
-        const { tableId, name, conditions, operators, sortDirections } = req.body;
+        const { tableId, name, conditions, operators } = req.body;
+        // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
@@ -61,7 +62,7 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Konvertiere Arrays in JSON-Strings für die Datenbank
         const conditionsJson = JSON.stringify(conditions || []);
         const operatorsJson = JSON.stringify(operators || []);
-        const sortDirectionsJson = JSON.stringify(sortDirections || {});
+        // ❌ ENTFERNT: sortDirectionsJson - Filter-Sortierung wurde entfernt (Phase 1)
         // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
             // Prüfe, ob bereits ein Filter mit diesem Namen existiert
@@ -83,8 +84,8 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     },
                     data: {
                         conditions: conditionsJson,
-                        operators: operatorsJson,
-                        sortDirections: sortDirectionsJson
+                        operators: operatorsJson
+                        // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                     }
                 }));
                 // Cache invalidieren
@@ -100,42 +101,14 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         tableId,
                         name,
                         conditions: conditionsJson,
-                        operators: operatorsJson,
-                        sortDirections: sortDirectionsJson
+                        operators: operatorsJson
+                        // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                     }
                 }));
                 // Cache invalidieren
                 filterListCache_1.filterListCache.invalidate(userId, tableId);
             }
-            // Parse die JSON-Strings zurück in Arrays für die Antwort
-            let sortDirections = [];
-            if (filter.sortDirections) {
-                try {
-                    // Prüfe, ob es ein "null" String ist
-                    if (filter.sortDirections.trim() === 'null' || filter.sortDirections.trim() === '') {
-                        sortDirections = [];
-                    }
-                    else {
-                        const parsed = JSON.parse(filter.sortDirections);
-                        // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
-                        if (Array.isArray(parsed)) {
-                            sortDirections = parsed;
-                        }
-                        else if (typeof parsed === 'object' && parsed !== null) {
-                            // Altes Format: { "status": "asc", "branch": "desc" }
-                            sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                                column,
-                                direction: direction,
-                                priority: index + 1
-                            }));
-                        }
-                    }
-                }
-                catch (e) {
-                    console.error('Fehler beim Parsen von sortDirections:', e);
-                    sortDirections = [];
-                }
-            }
+            // ❌ ENTFERNT: sortDirections Migration - Filter-Sortierung wurde entfernt (Phase 1)
             const parsedFilter = {
                 id: filter.id,
                 userId: filter.userId,
@@ -143,7 +116,7 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 name: filter.name,
                 conditions: JSON.parse(filter.conditions),
                 operators: JSON.parse(filter.operators),
-                sortDirections,
+                // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                 groupId: filter.groupId,
                 order: filter.order,
                 createdAt: filter.createdAt,

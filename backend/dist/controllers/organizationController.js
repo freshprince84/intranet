@@ -1196,8 +1196,15 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 console.log('[TTLock] Password wurde MD5-gehasht');
             }
             // ✅ VERSCHLÜSSELUNG: Verschlüssele alle API-Keys vor dem Speichern
+            // ✅ PERFORMANCE: encryptApiSettings prüft jetzt ob bereits verschlüsselt (verhindert mehrfache Verschlüsselung)
             try {
                 const encryptedSettings = (0, encryption_1.encryptApiSettings)(newSettings);
+                // ✅ PERFORMANCE: Validiere Settings-Größe (Warnung bei > 1 MB)
+                const settingsSize = JSON.stringify(encryptedSettings).length;
+                if (settingsSize > 1024 * 1024) { // > 1 MB
+                    console.warn(`[updateCurrentOrganization] ⚠️ Settings sind sehr groß: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
+                    console.warn(`[updateCurrentOrganization] ⚠️ Möglicherweise mehrfach verschlüsselte API-Keys vorhanden!`);
+                }
                 updateData.settings = encryptedSettings;
             }
             catch (encryptionError) {

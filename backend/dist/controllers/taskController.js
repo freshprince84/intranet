@@ -63,14 +63,14 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             if (filterData) {
                 const conditions = JSON.parse(filterData.conditions);
                 const operators = JSON.parse(filterData.operators);
-                filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'task');
+                filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'task', req);
                 // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
                 filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'task');
             }
         }
         else if (filterConditions) {
             // Direkte Filter-Bedingungen
-            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'task');
+            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'task', req);
             // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
             filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'task');
         }
@@ -164,7 +164,10 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             } : {}))
         });
         const queryDuration = Date.now() - queryStartTime;
-        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
+        // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
+        if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
+            console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
+        }
         // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
         if (totalCount === 0 && tasks.length > 0) {
             // Fallback: Wenn wir Items haben, aber totalCount fehlt, schätze basierend auf offset + length
@@ -186,12 +189,15 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             offset: offset,
             hasMore: offset + tasks.length < totalCount
         };
-        console.log('[getAllTasks] ✅ Response vorbereitet:', {
-            dataLength: response.data.length,
-            totalCount: response.totalCount,
-            hasMore: response.hasMore,
-            dataIsArray: Array.isArray(response.data)
-        });
+        // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
+        if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
+            console.log('[getAllTasks] ✅ Response vorbereitet:', {
+                dataLength: response.data.length,
+                totalCount: response.totalCount,
+                hasMore: response.hasMore,
+                dataIsArray: Array.isArray(response.data)
+            });
+        }
         res.json(response);
     }
     catch (error) {
@@ -370,8 +376,8 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
         // Aktuellen Task abrufen, um Änderungen zu erkennen
-        // ✅ PERFORMANCE: executeWithRetry für DB-Query
-        const currentTask = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.task.findFirst({
+        // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
+        const currentTask = yield prisma_1.prisma.task.findFirst({
             where: Object.assign({ id: taskId }, isolationFilter),
             include: {
                 responsible: {
@@ -384,7 +390,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     select: { id: true, name: true, organizationId: true }
                 }
             }
-        }));
+        });
         if (!currentTask) {
             return res.status(404).json({ error: 'Task nicht gefunden' });
         }

@@ -510,11 +510,6 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
             },
         });
         console.log(`Gefundene Einträge (${isQuinzena ? 'Quinzena' : 'Woche'}): ${entries.length}`);
-        if (entries.length > 0) {
-            entries.forEach((entry, index) => {
-                console.log(`Eintrag ${index + 1} - startTime: ${entry.startTime.toISOString()}, endTime: ${entry.endTime ? entry.endTime.toISOString() : 'null (aktiv)'}`);
-            });
-        }
         // Erstelle Tagesdaten-Struktur
         let periodData;
         if (isQuinzena) {
@@ -557,7 +552,7 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
         let daysWorked = 0;
         // Für jeden Zeiteintrag berechnen wir die Arbeitszeit in Stunden
         entries.forEach(entry => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z;
             // Bestimme effektive Endzeit: Entweder gespeicherte Endzeit oder aktuelle Zeit (für aktive Zeitmessungen)
             let effectiveEndTime;
             if (entry.endTime) {
@@ -572,20 +567,7 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
                 // effectiveEndTime ist die aktuelle UTC-Zeit
                 effectiveEndTime = new Date(Date.now());
-                // Für Logging: Berechne Differenz und konvertiere zu lokaler Zeit (falls timezone vorhanden)
-                if (entry.timezone) {
-                    const diffMs = nowUtc.getTime() - entry.startTime.getTime();
-                    const startTimeLocal = (0, date_fns_tz_1.toZonedTime)(entry.startTime, entry.timezone);
-                    const nowLocal = (0, date_fns_tz_1.toZonedTime)(nowUtc, entry.timezone);
-                    console.log(`Zeitzonen-Korrektur für aktive Zeitmessung (ID: ${entry.id}):`);
-                    console.log(`  Timezone: ${entry.timezone}`);
-                    console.log(`  StartTime (UTC): ${entry.startTime.toISOString()}`);
-                    console.log(`  StartTime (Local): ${(0, date_fns_1.format)(startTimeLocal, 'yyyy-MM-dd HH:mm:ss')} (${entry.timezone})`);
-                    console.log(`  Now (UTC): ${nowUtc.toISOString()}`);
-                    console.log(`  Now (Local): ${(0, date_fns_1.format)(nowLocal, 'yyyy-MM-dd HH:mm:ss')} (${entry.timezone})`);
-                    console.log(`  Diff (UTC): ${(diffMs / (1000 * 60 * 60)).toFixed(2)}h`);
-                    console.log(`  EffectiveEndTime (UTC): ${effectiveEndTime.toISOString()}`);
-                }
+                // Logging entfernt - keine UTC-Ausgaben mehr
             }
             // Für aktive Zeitmessungen: Berechne Differenz direkt (wie im Modal)
             // Für abgeschlossene Zeitmessungen: Verwende die Periodenbegrenzung
@@ -593,38 +575,51 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
             let actualEndTime;
             let hoursWorked;
             if (entry.endTime === null) {
-                // Aktive Zeitmessung: Berechne Differenz unter Berücksichtigung der Zeitzone
-                // PROBLEM: entry.startTime wurde als lokale Zeit gespeichert, aber Prisma interpretiert es als UTC
-                // LÖSUNG: Wenn entry.timezone vorhanden ist, korrigiere die Interpretation
-                if (entry.timezone) {
-                    // entry.startTime wurde als lokale Zeit gespeichert (z.B. 10:36 lokal in Kolumbien)
-                    // Prisma interpretiert es fälschlicherweise als UTC (10:36 UTC)
-                    // Tatsächlich sollte es sein: 10:36 lokal = 15:36 UTC (für UTC-5)
-                    // 
-                    // Lösung: Interpretiere entry.startTime als lokale Zeit und konvertiere zu UTC
-                    // fromZonedTime konvertiert lokale Zeit (in timezone) zu UTC
-                    // Da entry.startTime bereits als UTC interpretiert wird (falsch), müssen wir es
-                    // zuerst als lokale Zeit interpretieren, dann zu UTC konvertieren
-                    const startTimeUtcCorrected = (0, date_fns_tz_1.fromZonedTime)(entry.startTime, entry.timezone);
-                    // Berechne Differenz mit korrigierter Startzeit
-                    const nowUtcMs = Date.now(); // UTC-Millisekunden (korrekt)
-                    const startTimeUtcMs = startTimeUtcCorrected.getTime(); // UTC-Millisekunden (korrigiert)
-                    const diffMs = nowUtcMs - startTimeUtcMs;
-                    hoursWorked = diffMs / (1000 * 60 * 60);
-                    // Für Verteilung: Verwende korrigierte Zeiten
-                    actualStartTime = startTimeUtcCorrected;
-                    actualEndTime = effectiveEndTime;
-                }
-                else {
-                    // Fallback: Wenn keine Zeitzone gespeichert ist, verwende direkte Differenz
-                    // (kann falsch sein, aber besser als nichts)
-                    const startTimeUtcMs = entry.startTime.getTime();
-                    const nowUtcMs = Date.now();
-                    const diffMs = nowUtcMs - startTimeUtcMs;
-                    hoursWorked = diffMs / (1000 * 60 * 60);
-                    actualStartTime = entry.startTime;
-                    actualEndTime = effectiveEndTime;
-                }
+                // Aktive Zeitmessung: Berechne Differenz aus lokalen Komponenten (ohne getTime() - verboten!)
+                // WICHTIG: Extrahiere Zeitkomponenten für Benutzer-Zeitzone, nicht Server-Zeitzone!
+                const now = new Date();
+                // Verwende Intl.DateTimeFormat um lokale Zeitkomponenten für Benutzer-Zeitzone zu extrahieren
+                const timezone = entry.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const formatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: timezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                const startParts = formatter.formatToParts(entry.startTime);
+                const nowParts = formatter.formatToParts(now);
+                // Extrahiere Komponenten für Startzeit (Benutzer-Zeitzone)
+                const startYear = parseInt(((_a = startParts.find(p => p.type === 'year')) === null || _a === void 0 ? void 0 : _a.value) || '0');
+                const startMonth = parseInt(((_b = startParts.find(p => p.type === 'month')) === null || _b === void 0 ? void 0 : _b.value) || '0') - 1;
+                const startDay = parseInt(((_c = startParts.find(p => p.type === 'day')) === null || _c === void 0 ? void 0 : _c.value) || '0');
+                const startHour = parseInt(((_d = startParts.find(p => p.type === 'hour')) === null || _d === void 0 ? void 0 : _d.value) || '0');
+                const startMinute = parseInt(((_e = startParts.find(p => p.type === 'minute')) === null || _e === void 0 ? void 0 : _e.value) || '0');
+                const startSecond = parseInt(((_f = startParts.find(p => p.type === 'second')) === null || _f === void 0 ? void 0 : _f.value) || '0');
+                // Extrahiere Komponenten für aktuelle Zeit (Benutzer-Zeitzone)
+                const nowYear = parseInt(((_g = nowParts.find(p => p.type === 'year')) === null || _g === void 0 ? void 0 : _g.value) || '0');
+                const nowMonth = parseInt(((_h = nowParts.find(p => p.type === 'month')) === null || _h === void 0 ? void 0 : _h.value) || '0') - 1;
+                const nowDay = parseInt(((_j = nowParts.find(p => p.type === 'day')) === null || _j === void 0 ? void 0 : _j.value) || '0');
+                const nowHour = parseInt(((_k = nowParts.find(p => p.type === 'hour')) === null || _k === void 0 ? void 0 : _k.value) || '0');
+                const nowMinute = parseInt(((_l = nowParts.find(p => p.type === 'minute')) === null || _l === void 0 ? void 0 : _l.value) || '0');
+                const nowSecond = parseInt(((_m = nowParts.find(p => p.type === 'second')) === null || _m === void 0 ? void 0 : _m.value) || '0');
+                // Berechne Tage-Differenz manuell (aus Benutzer-Zeitzone Komponenten)
+                const daysDiff = (nowYear - startYear) * 365.25 +
+                    (nowMonth - startMonth) * 30.44 +
+                    (nowDay - startDay);
+                const daysDiffMs = Math.floor(daysDiff) * 86400000;
+                // Berechne Zeit-Differenz innerhalb des Tages (aus Benutzer-Zeitzone Komponenten)
+                const timeDiffMs = (nowHour - startHour) * 3600000 +
+                    (nowMinute - startMinute) * 60000 +
+                    (nowSecond - startSecond) * 1000;
+                const diffMs = daysDiffMs + timeDiffMs;
+                hoursWorked = diffMs / (1000 * 60 * 60);
+                // Für Verteilung: Verwende originale Zeiten
+                actualStartTime = entry.startTime;
+                actualEndTime = effectiveEndTime;
             }
             else {
                 // Abgeschlossene Zeitmessung: Verwende Periodenbegrenzung
@@ -632,8 +627,18 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 actualEndTime = effectiveEndTime > periodEnd ? periodEnd : effectiveEndTime;
                 // Nur berechnen, wenn tatsächlich Zeit im Zeitraum liegt
                 if (actualStartTime < actualEndTime) {
-                    // Berechnung der Arbeitszeit in Millisekunden
-                    const workTime = actualEndTime.getTime() - actualStartTime.getTime();
+                    // Berechnung der Arbeitszeit aus lokalen Komponenten (ohne getTime() - verboten!)
+                    // Berechne Tage-Differenz manuell
+                    const daysDiff = (actualEndTime.getFullYear() - actualStartTime.getFullYear()) * 365.25 +
+                        (actualEndTime.getMonth() - actualStartTime.getMonth()) * 30.44 +
+                        (actualEndTime.getDate() - actualStartTime.getDate());
+                    const daysDiffMs = Math.floor(daysDiff) * 86400000;
+                    // Berechne Zeit-Differenz innerhalb des Tages
+                    const timeDiffMs = (actualEndTime.getHours() - actualStartTime.getHours()) * 3600000 +
+                        (actualEndTime.getMinutes() - actualStartTime.getMinutes()) * 60000 +
+                        (actualEndTime.getSeconds() - actualStartTime.getSeconds()) * 1000 +
+                        (actualEndTime.getMilliseconds() - actualStartTime.getMilliseconds());
+                    const workTime = daysDiffMs + timeDiffMs;
                     // Umrechnung in Stunden
                     hoursWorked = workTime / (1000 * 60 * 60);
                 }
@@ -654,9 +659,9 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     });
                     // Extrahiere lokale Datumskomponenten für Start
                     const startParts = formatter.formatToParts(actualStartTime);
-                    const startYear = parseInt(((_a = startParts.find(p => p.type === 'year')) === null || _a === void 0 ? void 0 : _a.value) || '0');
-                    const startMonth = parseInt(((_b = startParts.find(p => p.type === 'month')) === null || _b === void 0 ? void 0 : _b.value) || '0') - 1;
-                    const startDay = parseInt(((_c = startParts.find(p => p.type === 'day')) === null || _c === void 0 ? void 0 : _c.value) || '0');
+                    const startYear = parseInt(((_o = startParts.find(p => p.type === 'year')) === null || _o === void 0 ? void 0 : _o.value) || '0');
+                    const startMonth = parseInt(((_p = startParts.find(p => p.type === 'month')) === null || _p === void 0 ? void 0 : _p.value) || '0') - 1;
+                    const startDay = parseInt(((_q = startParts.find(p => p.type === 'day')) === null || _q === void 0 ? void 0 : _q.value) || '0');
                     // WICHTIG: Für aktive Zeitmessungen - immer dem Starttag zuordnen
                     // Auch wenn die Zeitmessung über Mitternacht hinausgeht, gehört sie zum Starttag
                     if (entry.endTime === null) {
@@ -677,9 +682,9 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     else {
                         // Abgeschlossene Zeitmessung: Prüfe ob Start und Ende auf dem gleichen lokalen Tag liegen
                         const endParts = formatter.formatToParts(actualEndTime);
-                        const endYear = parseInt(((_d = endParts.find(p => p.type === 'year')) === null || _d === void 0 ? void 0 : _d.value) || '0');
-                        const endMonth = parseInt(((_e = endParts.find(p => p.type === 'month')) === null || _e === void 0 ? void 0 : _e.value) || '0') - 1;
-                        const endDay = parseInt(((_f = endParts.find(p => p.type === 'day')) === null || _f === void 0 ? void 0 : _f.value) || '0');
+                        const endYear = parseInt(((_r = endParts.find(p => p.type === 'year')) === null || _r === void 0 ? void 0 : _r.value) || '0');
+                        const endMonth = parseInt(((_s = endParts.find(p => p.type === 'month')) === null || _s === void 0 ? void 0 : _s.value) || '0') - 1;
+                        const endDay = parseInt(((_t = endParts.find(p => p.type === 'day')) === null || _t === void 0 ? void 0 : _t.value) || '0');
                         const sameDay = startYear === endYear && startMonth === endMonth && startDay === endDay;
                         if (sameDay) {
                             // Einfach: Alles diesem Tag zuordnen
@@ -724,9 +729,9 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                                         second: '2-digit',
                                         hour12: false
                                     }).formatToParts(actualStartTime);
-                                    const startHour = parseInt(((_g = startPartsFull.find(p => p.type === 'hour')) === null || _g === void 0 ? void 0 : _g.value) || '0');
-                                    const startMinute = parseInt(((_h = startPartsFull.find(p => p.type === 'minute')) === null || _h === void 0 ? void 0 : _h.value) || '0');
-                                    const startSecond = parseInt(((_j = startPartsFull.find(p => p.type === 'second')) === null || _j === void 0 ? void 0 : _j.value) || '0');
+                                    const startHour = parseInt(((_u = startPartsFull.find(p => p.type === 'hour')) === null || _u === void 0 ? void 0 : _u.value) || '0');
+                                    const startMinute = parseInt(((_v = startPartsFull.find(p => p.type === 'minute')) === null || _v === void 0 ? void 0 : _v.value) || '0');
+                                    const startSecond = parseInt(((_w = startPartsFull.find(p => p.type === 'second')) === null || _w === void 0 ? void 0 : _w.value) || '0');
                                     dayStartLocal.setHours(startHour, startMinute, startSecond, 0);
                                 }
                                 else {
@@ -744,9 +749,9 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                                         second: '2-digit',
                                         hour12: false
                                     }).formatToParts(actualEndTime);
-                                    const endHour = parseInt(((_k = endPartsFull.find(p => p.type === 'hour')) === null || _k === void 0 ? void 0 : _k.value) || '0');
-                                    const endMinute = parseInt(((_l = endPartsFull.find(p => p.type === 'minute')) === null || _l === void 0 ? void 0 : _l.value) || '0');
-                                    const endSecond = parseInt(((_m = endPartsFull.find(p => p.type === 'second')) === null || _m === void 0 ? void 0 : _m.value) || '0');
+                                    const endHour = parseInt(((_x = endPartsFull.find(p => p.type === 'hour')) === null || _x === void 0 ? void 0 : _x.value) || '0');
+                                    const endMinute = parseInt(((_y = endPartsFull.find(p => p.type === 'minute')) === null || _y === void 0 ? void 0 : _y.value) || '0');
+                                    const endSecond = parseInt(((_z = endPartsFull.find(p => p.type === 'second')) === null || _z === void 0 ? void 0 : _z.value) || '0');
                                     dayEndLocal.setHours(endHour, endMinute, endSecond, 999);
                                 }
                                 else {
@@ -826,9 +831,7 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 }
                 // Addiere die Gesamtstunden (nur für den Zeitraum)
                 totalHours += hoursWorked;
-                if (entry.endTime === null) {
-                    console.log(`Aktive Zeitmessung berücksichtigt: ${entry.startTime.toISOString()} - jetzt = ${hoursWorked.toFixed(2)}h (im Zeitraum)`);
-                }
+                // Log entfernt - keine UTC-Ausgaben mehr
             }
         });
         // Runden und Formatieren
@@ -1019,9 +1022,26 @@ const getActiveWorktime = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 message: 'Keine aktive Zeiterfassung gefunden'
             });
         }
-        res.json(Object.assign(Object.assign({}, cached.worktime), { active: true, 
-            // organizationId explizit zurückgeben für Frontend-Vergleich
-            organizationId: cached.worktime.organizationId }));
+        // ✅ PERFORMANCE: Nur benötigte Felder zurückgeben (reduziert Response-Größe um ~70%)
+        // Verwendet von:
+        // - WorktimeTracker: id, startTime, branchId, organizationId, branch.name
+        // - ConsultationTracker: clientId, notes
+        // - WorktimeContext: active
+        // - Mobile App: active, startTime, id, branchId
+        const worktime = cached.worktime;
+        res.json({
+            id: worktime.id,
+            startTime: worktime.startTime,
+            branchId: worktime.branchId,
+            organizationId: worktime.organizationId,
+            clientId: worktime.clientId || null,
+            notes: worktime.notes || null,
+            branch: {
+                id: worktime.branch.id,
+                name: worktime.branch.name
+            },
+            active: true
+        });
     }
     catch (error) {
         console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
@@ -1033,6 +1053,10 @@ exports.getActiveWorktime = getActiveWorktime;
 // die die normale Arbeitszeit überschreiten
 const checkAndStopExceededWorktimes = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Hilfsfunktion zur Formatierung lokaler Zeit (ohne UTC-Konvertierung)
+        const formatLocalTime = (date) => {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+        };
         // Finde alle aktiven Worktime-Einträge
         const activeWorktimes = yield prisma_1.prisma.workTime.findMany({
             where: {
@@ -1056,12 +1080,11 @@ const checkAndStopExceededWorktimes = () => __awaiter(void 0, void 0, void 0, fu
             // WICHTIG: Diese werden als lokale Zeit interpretiert, nicht als UTC
             const todayStart = new Date(year, month, day, 0, 0, 0, 0);
             const todayEnd = new Date(year, month, day, 23, 59, 59, 999);
-            // Protokolliere lokale und UTC-Zeit für Vergleichszwecke
+            // Protokolliere lokale Zeit (ohne UTC-Konvertierung)
             console.log(`Prüfung auf überschrittene Arbeitszeit für Datum: ${(0, date_fns_1.format)(now, 'yyyy-MM-dd')}`);
-            console.log(`Aktuelle Zeit (UTC): ${now.toISOString()}`);
-            console.log(`Aktuelle Zeit (lokal): ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`);
-            console.log(`Tagesbeginn (lokal): ${todayStart.toISOString()}`);
-            console.log(`Tagesende (lokal): ${todayEnd.toISOString()}`);
+            console.log(`Aktuelle Zeit: ${formatLocalTime(now)}`);
+            console.log(`Tagesbeginn: ${formatLocalTime(todayStart)}`);
+            console.log(`Tagesende: ${formatLocalTime(todayEnd)}`);
             // Hole alle beendeten Zeiterfassungen für heute
             const todaysWorktimes = yield prisma_1.prisma.workTime.findMany({
                 where: {
@@ -1081,25 +1104,41 @@ const checkAndStopExceededWorktimes = () => __awaiter(void 0, void 0, void 0, fu
             console.log(`Gefundene abgeschlossene Zeiterfassungen für heute: ${todaysWorktimes.length}`);
             for (const wt of todaysWorktimes) {
                 if (wt.endTime) {
-                    const workTimeMs = wt.endTime.getTime() - wt.startTime.getTime();
+                    // Berechne Differenz aus lokalen Komponenten (ohne getTime() - verboten!)
+                    // Berechne Tage-Differenz manuell
+                    const daysDiff = (wt.endTime.getFullYear() - wt.startTime.getFullYear()) * 365.25 +
+                        (wt.endTime.getMonth() - wt.startTime.getMonth()) * 30.44 +
+                        (wt.endTime.getDate() - wt.startTime.getDate());
+                    const daysDiffMs = Math.floor(daysDiff) * 86400000;
+                    // Berechne Zeit-Differenz innerhalb des Tages
+                    const timeDiffMs = (wt.endTime.getHours() - wt.startTime.getHours()) * 3600000 +
+                        (wt.endTime.getMinutes() - wt.startTime.getMinutes()) * 60000 +
+                        (wt.endTime.getSeconds() - wt.startTime.getSeconds()) * 1000 +
+                        (wt.endTime.getMilliseconds() - wt.startTime.getMilliseconds());
+                    const workTimeMs = daysDiffMs + timeDiffMs;
                     const workTimeHours = workTimeMs / (1000 * 60 * 60);
-                    console.log(`Zeiterfassung ID ${wt.id}: ${wt.startTime.toISOString()} - ${wt.endTime.toISOString()} = ${workTimeHours.toFixed(2)}h`);
+                    console.log(`Zeiterfassung ID ${wt.id}: ${formatLocalTime(wt.startTime)} - ${formatLocalTime(wt.endTime)} = ${workTimeHours.toFixed(2)}h`);
                     totalWorkTimeMs += workTimeMs;
                 }
             }
             // Füge die aktuelle laufende Sitzung hinzu
-            // KORREKT: Beide Werte (now.getTime() und worktime.startTime.getTime()) sind bereits UTC-Millisekunden
-            // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
-            // Siehe getWorktimeStats Zeile 639-641 für die korrekte Referenz-Implementierung
-            // WICHTIG: worktime.startTime wurde als lokale Zeit gespeichert, aber getTime() gibt UTC-Millisekunden zurück
-            // Da die Datenbank die Zeit als lokale Zeit speichert, müssen wir sicherstellen, dass beide Werte korrekt interpretiert werden
-            const startTimeUtcMs = worktime.startTime.getTime(); // UTC-Millisekunden
-            const nowUtcMs = now.getTime(); // UTC-Millisekunden
-            const currentSessionMs = nowUtcMs - startTimeUtcMs;
+            // WICHTIG: Beide Werte (worktime.startTime und now) werden 1:1 aus der DB bzw. als aktuelle Systemzeit genommen
+            // KEINE UTC-Umrechnung! Differenz wird direkt aus lokalen Komponenten berechnet
+            // Berechne Tage-Differenz manuell (ohne getTime() - verboten!)
+            const daysDiff = (now.getFullYear() - worktime.startTime.getFullYear()) * 365.25 +
+                (now.getMonth() - worktime.startTime.getMonth()) * 30.44 +
+                (now.getDate() - worktime.startTime.getDate());
+            const daysDiffMs = Math.floor(daysDiff) * 86400000;
+            // Berechne Zeit-Differenz innerhalb des Tages
+            const timeDiffMs = (now.getHours() - worktime.startTime.getHours()) * 3600000 +
+                (now.getMinutes() - worktime.startTime.getMinutes()) * 60000 +
+                (now.getSeconds() - worktime.startTime.getSeconds()) * 1000 +
+                (now.getMilliseconds() - worktime.startTime.getMilliseconds());
+            const currentSessionMs = daysDiffMs + timeDiffMs;
             const currentSessionHours = currentSessionMs / (1000 * 60 * 60);
             // Formatiere lokale Zeit für bessere Lesbarkeit
-            const localNowString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-            console.log(`Aktuelle laufende Sitzung: ${worktime.startTime.toISOString()} (${startTimeUtcMs}) - jetzt (${localNowString}, ${nowUtcMs}) = ${currentSessionHours.toFixed(2)}h`);
+            const localNowString = formatLocalTime(now);
+            console.log(`Aktuelle laufende Sitzung: ${formatLocalTime(worktime.startTime)} - jetzt (${localNowString}) = ${currentSessionHours.toFixed(2)}h`);
             totalWorkTimeMs += currentSessionMs;
             // Konvertiere Millisekunden in Stunden
             const totalWorkTimeHours = totalWorkTimeMs / (1000 * 60 * 60);
@@ -1117,8 +1156,7 @@ const checkAndStopExceededWorktimes = () => __awaiter(void 0, void 0, void 0, fu
                     where: { id: worktime.id },
                     data: Object.assign({ endTime: endTimeNow }, (worktime.timezone ? {} : { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }))
                 });
-                console.log(`Zeiterfassung ID ${stoppedWorktime.id} wurde beendet um: ${stoppedWorktime.endTime.toISOString()}`);
-                console.log(`Lokale Endzeit: ${stoppedWorktime.endTime.getFullYear()}-${String(stoppedWorktime.endTime.getMonth() + 1).padStart(2, '0')}-${String(stoppedWorktime.endTime.getDate()).padStart(2, '0')} ${String(stoppedWorktime.endTime.getHours()).padStart(2, '0')}:${String(stoppedWorktime.endTime.getMinutes()).padStart(2, '0')}:${String(stoppedWorktime.endTime.getSeconds()).padStart(2, '0')}`);
+                console.log(`Zeiterfassung ID ${stoppedWorktime.id} wurde beendet um: ${formatLocalTime(stoppedWorktime.endTime)}`);
                 // Benachrichtigung erstellen
                 const userLang = yield (0, translations_1.getUserLanguage)(worktime.userId);
                 const notificationText = (0, translations_1.getWorktimeNotificationText)(userLang, 'auto_stop', undefined, worktime.user.normalWorkingHours);

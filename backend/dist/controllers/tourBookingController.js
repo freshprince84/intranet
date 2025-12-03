@@ -95,7 +95,7 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 if (filterData) {
                     const conditions = JSON.parse(filterData.conditions);
                     const operators = JSON.parse(filterData.operators);
-                    filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'tour_booking');
+                    filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'tour_booking', req);
                     // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
                     filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'tour_booking');
                 }
@@ -105,7 +105,7 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
         }
         else if (filterConditions) {
-            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'tour_booking');
+            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'tour_booking', req);
             // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
             filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'tour_booking');
         }

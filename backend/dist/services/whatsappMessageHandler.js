@@ -249,7 +249,30 @@ class WhatsAppMessageHandler {
                     }
                     return yield this.continueConversation(normalizedPhone, branchId, messageText, mediaUrl, conversation, user);
                 }
-                // 6. KI-Antwort generieren (falls kein Keyword und kein aktiver State)
+                // 6. Prüfe ob alle Buchungsinformationen vorhanden sind (explizite Logik)
+                const bookingContext = yield this.checkBookingContext(conversation, messageText, branchId, normalizedPhone);
+                if (bookingContext.shouldBook) {
+                    console.log('[WhatsApp Message Handler] Alle Buchungsinformationen vorhanden, rufe create_room_reservation auf');
+                    try {
+                        const { WhatsAppFunctionHandlers } = yield Promise.resolve().then(() => __importStar(require('./whatsappFunctionHandlers')));
+                        // WICHTIG: Übergebe WhatsApp-Telefonnummer als Fallback für Kontaktdaten
+                        const bookingResult = yield WhatsAppFunctionHandlers.create_room_reservation(bookingContext.bookingData, (user === null || user === void 0 ? void 0 : user.id) || null, roleId, branchId, normalizedPhone // WhatsApp-Telefonnummer als Fallback
+                        );
+                        // Context nach erfolgreicher Buchung löschen
+                        yield prisma_1.prisma.whatsAppConversation.update({
+                            where: { id: conversation.id },
+                            data: {
+                                context: null
+                            }
+                        });
+                        return bookingResult.message || 'Reservierung erfolgreich erstellt!';
+                    }
+                    catch (bookingError) {
+                        console.error('[WhatsApp Message Handler] Fehler bei automatischer Buchung:', bookingError);
+                        // Weiter mit normaler KI-Antwort
+                    }
+                }
+                // 7. KI-Antwort generieren (falls kein Keyword und kein aktiver State)
                 try {
                     // Erweitere Conversation Context mit Rollen für Function Calling
                     const conversationContext = {
@@ -257,9 +280,11 @@ class WhatsAppMessageHandler {
                         roleId: roleId,
                         userName: userWithRoles ? `${userWithRoles.firstName} ${userWithRoles.lastName}` : null,
                         conversationState: conversation.state,
-                        groupId: groupId
+                        groupId: groupId,
+                        bookingContext: bookingContext.context // Füge Buchungs-Context hinzu
                     };
-                    const aiResponse = yield whatsappAiService_1.WhatsAppAiService.generateResponse(messageText, branchId, normalizedPhone, conversationContext);
+                    const aiResponse = yield whatsappAiService_1.WhatsAppAiService.generateResponse(messageText, branchId, normalizedPhone, conversationContext, conversation.id // conversationId für Message History
+                    );
                     return aiResponse.message;
                 }
                 catch (error) {
@@ -1354,6 +1379,316 @@ class WhatsAppMessageHandler {
                     }
                 });
                 return yield this.getLanguageResponse(branchId, phoneNumber, 'error');
+            }
+        });
+    }
+    /**
+     * Prüft ob alle Buchungsinformationen vorhanden sind und gibt Context zurück
+     */
+    static checkBookingContext(conversation, currentMessage, branchId, phoneNumber // WhatsApp-Telefonnummer für Suche nach "potential" Reservation
+    ) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Lade aktuellen Context
+                const context = conversation.context || {};
+                const bookingContext = context.booking || {};
+                // Prüfe ob bereits eine "potential" Reservation existiert (verhindert Duplikate)
+                let existingPotentialReservation = null;
+                if (phoneNumber) {
+                    try {
+                        const { LanguageDetectionService } = yield Promise.resolve().then(() => __importStar(require('./languageDetectionService')));
+                        const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
+                        const { ReservationStatus } = yield Promise.resolve().then(() => __importStar(require('@prisma/client')));
+                        existingPotentialReservation = yield prisma_1.prisma.reservation.findFirst({
+                            where: {
+                                guestPhone: normalizedPhone,
+                                branchId: branchId,
+                                status: ReservationStatus.potential
+                            },
+                            orderBy: { createdAt: 'desc' }
+                        });
+                        if (existingPotentialReservation) {
+                            console.log(`[checkBookingContext] Bestehende "potential" Reservation gefunden: ${existingPotentialReservation.id}`);
+                            // Verwende Daten aus bestehender Reservation
+                            if (!bookingContext.checkInDate) {
+                                bookingContext.checkInDate = existingPotentialReservation.checkInDate.toISOString().split('T')[0];
+                            }
+                            if (!bookingContext.checkOutDate) {
+                                bookingContext.checkOutDate = existingPotentialReservation.checkOutDate.toISOString().split('T')[0];
+                            }
+                            if (!bookingContext.guestName && existingPotentialReservation.guestName) {
+                                bookingContext.guestName = existingPotentialReservation.guestName;
+                            }
+                            if (!bookingContext.guestEmail && existingPotentialReservation.guestEmail) {
+                                bookingContext.guestEmail = existingPotentialReservation.guestEmail;
+                            }
+                            if (!bookingContext.guestPhone && existingPotentialReservation.guestPhone) {
+                                bookingContext.guestPhone = existingPotentialReservation.guestPhone;
+                            }
+                        }
+                    }
+                    catch (error) {
+                        console.error('[checkBookingContext] Fehler beim Prüfen auf "potential" Reservation:', error);
+                        // Weiter ohne Fehler
+                    }
+                }
+                // Parse aktuelle Nachricht nach Buchungsinformationen
+                const normalizedMessage = currentMessage.toLowerCase().trim();
+                // Prüfe auf explizite Buchungsanfragen
+                const bookingKeywords = ['reservar', 'buchen', 'quiero reservar', 'quiero hacer una reserva', 'buche', 'reservame'];
+                const confirmationKeywords = ['ja', 'sí', 'si', 'yes', 'ok', 'okay', 'genau', 'correcto', 'correct'];
+                const hasConfirmation = confirmationKeywords.some(keyword => normalizedMessage.includes(keyword));
+                const isBookingRequest = bookingKeywords.some(keyword => normalizedMessage.includes(keyword)) ||
+                    (hasConfirmation && (bookingContext.checkInDate || bookingContext.lastAvailabilityCheck));
+                if (!isBookingRequest && !bookingContext.checkInDate && !bookingContext.guestName) {
+                    // Keine Buchungsanfrage und kein Context vorhanden
+                    return { shouldBook: false, context: bookingContext };
+                }
+                // Extrahiere Informationen aus aktueller Nachricht
+                let checkInDate = bookingContext.checkInDate;
+                let checkOutDate = bookingContext.checkOutDate;
+                let guestName = bookingContext.guestName;
+                let roomType = bookingContext.roomType;
+                let categoryId = bookingContext.categoryId;
+                let roomName = bookingContext.roomName;
+                // Parse "para mañana" + "1 noche"
+                if (normalizedMessage.includes('para mañana') || normalizedMessage.includes('para manana')) {
+                    checkInDate = 'tomorrow';
+                    if (normalizedMessage.includes('1 noche') || normalizedMessage.includes('una noche') ||
+                        normalizedMessage.includes('1 nacht') || normalizedMessage.includes('eine nacht')) {
+                        checkOutDate = 'day after tomorrow';
+                    }
+                }
+                // Parse "1 noche" / "1 nacht" allgemein (auch ohne "para mañana")
+                if (normalizedMessage.includes('1 noche') || normalizedMessage.includes('una noche') ||
+                    normalizedMessage.includes('1 nacht') || normalizedMessage.includes('eine nacht')) {
+                    if (checkInDate && !checkOutDate) {
+                        // Wenn checkInDate bereits gesetzt ist, setze checkOutDate auf +1 Tag
+                        if (checkInDate === 'tomorrow' || checkInDate === 'morgen' || checkInDate === 'mañana') {
+                            checkOutDate = 'day after tomorrow';
+                        }
+                        else if (checkInDate === 'today' || checkInDate === 'heute' || checkInDate === 'hoy') {
+                            checkOutDate = 'tomorrow';
+                        }
+                    }
+                }
+                // Parse "checkin" und "checkout"
+                const checkInMatch = currentMessage.match(/checkin[:\s]+([^\s,]+)/i) || currentMessage.match(/check-in[:\s]+([^\s,]+)/i);
+                const checkOutMatch = currentMessage.match(/checkout[:\s]+([^\s,]+)/i) || currentMessage.match(/check-out[:\s]+([^\s,]+)/i);
+                if (checkInMatch) {
+                    checkInDate = checkInMatch[1].trim();
+                }
+                if (checkOutMatch) {
+                    checkOutDate = checkOutMatch[1].trim();
+                }
+                // Parse Namen (einfache Heuristik: Wörter die wie Namen aussehen)
+                const namePattern = /(?:a nombre de|name|nombre|für)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
+                const nameMatch = currentMessage.match(namePattern);
+                if (nameMatch) {
+                    guestName = nameMatch[1].trim();
+                }
+                // Parse Zimmer-Art
+                if (normalizedMessage.includes('compartida') || normalizedMessage.includes('dorm') || normalizedMessage.includes('cama')) {
+                    roomType = 'compartida';
+                }
+                else if (normalizedMessage.includes('privada') || normalizedMessage.includes('habitación') || normalizedMessage.includes('zimmer')) {
+                    roomType = 'privada';
+                }
+                // Parse Zimmer-Namen (auch mit Varianten wie "el tia artista" statt "la tia artista")
+                // WICHTIG: Prüfe zuerst in lastAvailabilityCheck, dann in statischer Liste
+                // WICHTIG: In der Verfügbarkeits-API (checkAvailability):
+                //   - Dorms: category.name = Zimmername (z.B. "La tia artista", "El abuelo viajero")
+                //   - Privates: category.name = Kategorie (z.B. "Doble básica", "Apartamento doble")
+                //   Für Privates steht der spezifische Zimmername NICHT in category.name, sondern erst in assigned_room.name (Reservierungs-API)
+                //   Für die Buchung brauchen wir nur die categoryId, daher reicht es, nach der Kategorie zu suchen
+                if (bookingContext.lastAvailabilityCheck && bookingContext.lastAvailabilityCheck.rooms) {
+                    const lastCheck = bookingContext.lastAvailabilityCheck;
+                    // WICHTIG: Für Privates: Wenn User einen spezifischen Zimmernamen sagt (z.B. "El abuelo bromista"),
+                    // der nicht in category.name steht, müssen wir trotzdem die richtige categoryId finden.
+                    // Lösung: Wenn kein Match gefunden wird, aber roomType bereits bekannt ist, nimm die erste verfügbare Kategorie dieser Art
+                    let foundMatch = false;
+                    // Versuche Zimmer-Name aus Nachricht zu finden (auch Teilübereinstimmung)
+                    for (const room of lastCheck.rooms) {
+                        const roomNameLower = room.name.toLowerCase().trim();
+                        const nameParts = roomNameLower.split(' ').filter(part => part.length > 2);
+                        // Entferne Artikel aus beiden Strings für Vergleich
+                        const roomNameWithoutArticle = roomNameLower.replace(/^(el|la|los|las|un|una)\s+/, '');
+                        const messageWithoutArticle = normalizedMessage.replace(/\b(el|la|los|las|un|una)\s+/g, '');
+                        // 1. Exakte Übereinstimmung (mit oder ohne Artikel)
+                        if (normalizedMessage.includes(roomNameLower) ||
+                            normalizedMessage.includes(roomNameWithoutArticle) ||
+                            messageWithoutArticle.includes(roomNameWithoutArticle)) {
+                            roomName = room.name;
+                            categoryId = room.categoryId;
+                            roomType = room.type;
+                            foundMatch = true;
+                            console.log(`[checkBookingContext] Zimmer gefunden (exakt): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+                            break;
+                        }
+                        // 2. Teilübereinstimmung: Prüfe ob mindestens 2 Wörter des Zimmer-Namens in der Nachricht vorkommen
+                        // WICHTIG: Ignoriere Artikel und kurze Wörter (< 3 Zeichen)
+                        const matchingParts = nameParts.filter(part => {
+                            // Prüfe ob das Wort in der Nachricht vorkommt (auch als Teilwort)
+                            return normalizedMessage.includes(part) || messageWithoutArticle.includes(part);
+                        });
+                        if (matchingParts.length >= 2) {
+                            roomName = room.name;
+                            categoryId = room.categoryId;
+                            roomType = room.type;
+                            foundMatch = true;
+                            console.log(`[checkBookingContext] Zimmer gefunden (Teilübereinstimmung, ${matchingParts.length} Wörter): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+                            break;
+                        }
+                        // 3. Fuzzy-Matching: Prüfe auf ähnliche Wörter (z.B. "abuel" vs "abuelo")
+                        // Entferne letzte Buchstaben für Vergleich (z.B. "abuelo" -> "abuel", "viajero" -> "viajer")
+                        const fuzzyRoomName = roomNameWithoutArticle.replace(/(o|a|e|s)$/g, '');
+                        const fuzzyMessage = messageWithoutArticle.replace(/(o|a|e|s)$/g, '');
+                        if (fuzzyMessage.includes(fuzzyRoomName) || fuzzyRoomName.includes(fuzzyMessage)) {
+                            roomName = room.name;
+                            categoryId = room.categoryId;
+                            roomType = room.type;
+                            foundMatch = true;
+                            console.log(`[checkBookingContext] Zimmer gefunden (fuzzy): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+                            break;
+                        }
+                    }
+                    // 4. FALLBACK: Wenn kein Match gefunden wurde, aber roomType bekannt ist (z.B. "privada"),
+                    // und der User einen Zimmernamen sagt, der nicht in category.name steht (Privates),
+                    // dann nimm die erste verfügbare Kategorie dieser Art
+                    if (!foundMatch && roomType) {
+                        const availableRoomsOfType = lastCheck.rooms.filter(r => r.type === roomType);
+                        if (availableRoomsOfType.length > 0) {
+                            // Wenn nur eine Kategorie dieser Art verfügbar ist, nimm sie
+                            if (availableRoomsOfType.length === 1) {
+                                roomName = availableRoomsOfType[0].name;
+                                categoryId = availableRoomsOfType[0].categoryId;
+                                console.log(`[checkBookingContext] Fallback: Einzige verfügbare ${roomType} Kategorie verwendet: ${roomName} (categoryId: ${categoryId})`);
+                            }
+                            else {
+                                // Mehrere Kategorien verfügbar - versuche nach Kategorie-Namen zu suchen
+                                // (z.B. "doble básica", "apartamento doble")
+                                const categoryKeywords = ['doble', 'básica', 'básico', 'estándar', 'estandar', 'apartamento', 'singular', 'deluxe'];
+                                const messageCategoryMatch = categoryKeywords.find(keyword => normalizedMessage.includes(keyword));
+                                if (messageCategoryMatch) {
+                                    // Suche nach Kategorie, die das Keyword enthält
+                                    const matchingCategory = availableRoomsOfType.find(r => r.name.toLowerCase().includes(messageCategoryMatch));
+                                    if (matchingCategory) {
+                                        roomName = matchingCategory.name;
+                                        categoryId = matchingCategory.categoryId;
+                                        console.log(`[checkBookingContext] Fallback: Kategorie gefunden durch Keyword "${messageCategoryMatch}": ${roomName} (categoryId: ${categoryId})`);
+                                    }
+                                }
+                                // Wenn immer noch kein Match, nimm die erste verfügbare
+                                if (!categoryId && availableRoomsOfType.length > 0) {
+                                    roomName = availableRoomsOfType[0].name;
+                                    categoryId = availableRoomsOfType[0].categoryId;
+                                    console.log(`[checkBookingContext] Fallback: Erste verfügbare ${roomType} Kategorie verwendet: ${roomName} (categoryId: ${categoryId})`);
+                                }
+                            }
+                        }
+                    }
+                }
+                // Falls nicht in lastAvailabilityCheck gefunden, versuche erweiterte Suche
+                // WICHTIG: Diese Liste sollte nur als Fallback dienen, da die echten Namen aus lastAvailabilityCheck kommen
+                if (!roomName && bookingContext.lastAvailabilityCheck && bookingContext.lastAvailabilityCheck.rooms) {
+                    // Versuche nochmal mit allen Zimmern aus lastAvailabilityCheck (mit erweiterten Suchkriterien)
+                    const lastCheck = bookingContext.lastAvailabilityCheck;
+                    for (const room of lastCheck.rooms) {
+                        const roomNameLower = room.name.toLowerCase().trim();
+                        const roomNameWithoutArticle = roomNameLower.replace(/^(el|la|los|las|un|una)\s+/, '');
+                        // Prüfe ob irgendein Teil des Zimmer-Namens in der Nachricht vorkommt
+                        // Z.B. "abuel viajero" sollte "El abuelo viajero" finden
+                        const roomWords = roomNameWithoutArticle.split(' ').filter(w => w.length > 3);
+                        const messageWords = normalizedMessage.split(' ').filter(w => w.length > 3);
+                        // Prüfe ob mindestens 2 Wörter übereinstimmen (auch teilweise)
+                        let matchCount = 0;
+                        for (const roomWord of roomWords) {
+                            for (const msgWord of messageWords) {
+                                // Exakte Übereinstimmung oder Teilübereinstimmung
+                                if (msgWord.includes(roomWord) || roomWord.includes(msgWord)) {
+                                    matchCount++;
+                                    break;
+                                }
+                            }
+                        }
+                        if (matchCount >= 2) {
+                            roomName = room.name;
+                            categoryId = room.categoryId;
+                            roomType = room.type;
+                            console.log(`[checkBookingContext] Zimmer gefunden (erweiterte Suche, ${matchCount} Übereinstimmungen): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+                            break;
+                        }
+                    }
+                }
+                // Wenn Bestätigung vorhanden, verwende checkInDate aus Context falls vorhanden
+                if (hasConfirmation && !checkInDate && bookingContext.checkInDate) {
+                    checkInDate = bookingContext.checkInDate;
+                }
+                // Wenn Bestätigung vorhanden, verwende checkOutDate aus Context falls vorhanden
+                if (hasConfirmation && !checkOutDate && bookingContext.checkOutDate) {
+                    checkOutDate = bookingContext.checkOutDate;
+                }
+                // Wenn Bestätigung vorhanden, ist es eine Buchungsanfrage
+                if (hasConfirmation) {
+                    // Aktualisiere isBookingRequest
+                    // (wird später verwendet)
+                }
+                // Aktualisiere Context
+                const updatedContext = Object.assign(Object.assign({}, bookingContext), { checkInDate: checkInDate || bookingContext.checkInDate, checkOutDate: checkOutDate || bookingContext.checkOutDate, guestName: guestName || bookingContext.guestName, roomType: roomType || bookingContext.roomType, categoryId: categoryId || bookingContext.categoryId, roomName: roomName || bookingContext.roomName });
+                // Speichere Context in Conversation
+                yield prisma_1.prisma.whatsAppConversation.update({
+                    where: { id: conversation.id },
+                    data: {
+                        context: Object.assign(Object.assign({}, context), { booking: updatedContext })
+                    }
+                });
+                // Wenn roomName vorhanden ist, aber categoryId fehlt, versuche es aus lastAvailabilityCheck zu holen
+                if (updatedContext.roomName && !updatedContext.categoryId && updatedContext.lastAvailabilityCheck) {
+                    const lastCheck = updatedContext.lastAvailabilityCheck;
+                    if (lastCheck.rooms) {
+                        const roomNameLower = updatedContext.roomName.toLowerCase();
+                        const roomNameWithoutArticle = roomNameLower.replace(/^(el|la|los|las|un|una)\s+/, '');
+                        const matchingRoom = lastCheck.rooms.find(r => {
+                            const rNameLower = r.name.toLowerCase();
+                            return rNameLower === roomNameLower ||
+                                rNameLower.includes(roomNameWithoutArticle) ||
+                                roomNameWithoutArticle && rNameLower.includes(roomNameWithoutArticle);
+                        });
+                        if (matchingRoom) {
+                            updatedContext.categoryId = matchingRoom.categoryId;
+                            updatedContext.roomType = matchingRoom.type;
+                            console.log(`[checkBookingContext] categoryId aus lastAvailabilityCheck gefunden: ${matchingRoom.categoryId} für ${matchingRoom.name}`);
+                        }
+                    }
+                }
+                // Prüfe ob ALLE Informationen vorhanden sind
+                // WICHTIG: guestName ist optional für automatische Buchung (kann später nachgefragt werden)
+                // Aber categoryId MUSS vorhanden sein, wenn roomName vorhanden ist
+                const hasAllInfo = updatedContext.checkInDate &&
+                    updatedContext.checkOutDate &&
+                    updatedContext.roomType &&
+                    (updatedContext.categoryId || !updatedContext.roomName); // categoryId nur erforderlich wenn roomName vorhanden
+                if (hasAllInfo && isBookingRequest) {
+                    // Wenn guestName fehlt, verwende Platzhalter (wird später nachgefragt)
+                    const finalGuestName = updatedContext.guestName || 'Gast';
+                    return {
+                        shouldBook: true,
+                        context: updatedContext,
+                        bookingData: {
+                            checkInDate: updatedContext.checkInDate,
+                            checkOutDate: updatedContext.checkOutDate,
+                            guestName: finalGuestName,
+                            roomType: updatedContext.roomType,
+                            categoryId: updatedContext.categoryId,
+                            roomName: updatedContext.roomName
+                        }
+                    };
+                }
+                return { shouldBook: false, context: updatedContext };
+            }
+            catch (error) {
+                console.error('[WhatsApp Message Handler] Fehler bei checkBookingContext:', error);
+                return { shouldBook: false, context: {} };
             }
         });
     }

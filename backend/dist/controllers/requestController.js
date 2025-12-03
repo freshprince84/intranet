@@ -63,7 +63,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 if (filterData) {
                     const conditions = JSON.parse(filterData.conditions);
                     const operators = JSON.parse(filterData.operators);
-                    filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'request');
+                    filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'request', req);
                     // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
                     filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'request');
                 }
@@ -78,7 +78,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
         else if (filterConditions) {
             // Direkte Filter-Bedingungen
-            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'request');
+            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'request', req);
             // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
             filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'request');
         }

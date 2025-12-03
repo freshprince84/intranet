@@ -26,5 +26,9 @@ router.post('/', branchController_1.createBranch);
 router.put('/:id', branchController_1.updateBranch);
 // Branch löschen
 router.delete('/:id', branchController_1.deleteBranch);
+// Zimmer-Beschreibungen
+router.get('/:id/room-descriptions', branchController_1.getRoomDescriptions);
+router.put('/:id/room-descriptions', branchController_1.updateRoomDescriptions);
+router.get('/:id/room-descriptions/:categoryId', branchController_1.getRoomDescription);
 exports.default = router;
 //# sourceMappingURL=branches.js.map

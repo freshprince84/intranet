@@ -61,6 +61,7 @@ const reservationScheduler_1 = require("./services/reservationScheduler");
 // Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
 // import { EmailReservationScheduler } from './services/emailReservationScheduler';
 const lobbyPmsReservationScheduler_1 = require("./services/lobbyPmsReservationScheduler");
+const reservationAutoCancelScheduler_1 = require("./services/reservationAutoCancelScheduler");
 const queues_1 = require("./queues");
 const app = (0, express_1.default)();
 console.log('[App] ⚠️ App erstellt, shiftRoutes Type:', typeof shifts_1.default);
@@ -151,6 +152,8 @@ setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
 reservationScheduler_1.ReservationScheduler.start();
 // Starte LobbyPMS-Reservation Scheduler (ersetzt Email-Import)
 lobbyPmsReservationScheduler_1.LobbyPmsReservationScheduler.start();
+// Automatische Stornierung von nicht bezahlten Reservierungen
+reservationAutoCancelScheduler_1.ReservationAutoCancelScheduler.start();
 // Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
 // EmailReservationScheduler.start();
 // Starte Queue Workers (wenn aktiviert)

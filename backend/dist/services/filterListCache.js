@@ -59,35 +59,8 @@ class FilterListCache {
                     }
                 });
                 // 3. Parse die JSON-Strings zurück in Arrays
+                // ❌ ENTFERNT: sortDirections Migration - Filter-Sortierung wurde entfernt (Phase 1)
                 const parsedFilters = savedFilters.map(filter => {
-                    let sortDirections = [];
-                    if (filter.sortDirections) {
-                        try {
-                            // Prüfe, ob es ein "null" String ist
-                            if (filter.sortDirections.trim() === 'null' || filter.sortDirections.trim() === '') {
-                                sortDirections = [];
-                            }
-                            else {
-                                const parsed = JSON.parse(filter.sortDirections);
-                                // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
-                                if (Array.isArray(parsed)) {
-                                    sortDirections = parsed;
-                                }
-                                else if (typeof parsed === 'object' && parsed !== null) {
-                                    // Altes Format: { "status": "asc", "branch": "desc" }
-                                    sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                                        column,
-                                        direction: direction,
-                                        priority: index + 1
-                                    }));
-                                }
-                            }
-                        }
-                        catch (e) {
-                            console.error('Fehler beim Parsen von sortDirections:', e);
-                            sortDirections = [];
-                        }
-                    }
                     return {
                         id: filter.id,
                         userId: filter.userId,
@@ -95,7 +68,7 @@ class FilterListCache {
                         name: filter.name,
                         conditions: JSON.parse(filter.conditions),
                         operators: JSON.parse(filter.operators),
-                        sortDirections,
+                        // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                         groupId: filter.groupId,
                         order: filter.order,
                         createdAt: filter.createdAt,
@@ -151,33 +124,10 @@ class FilterListCache {
                     }
                 });
                 // 3. Parse die JSON-Strings der Filter zurück in Arrays
-                const parsedGroups = groups.map(group => ({
-                    id: group.id,
-                    userId: group.userId,
-                    tableId: group.tableId,
-                    name: group.name,
-                    order: group.order,
-                    filters: group.filters.map(filter => {
-                        let sortDirections = [];
-                        if (filter.sortDirections) {
-                            try {
-                                const parsed = JSON.parse(filter.sortDirections);
-                                if (Array.isArray(parsed)) {
-                                    sortDirections = parsed;
-                                }
-                                else if (typeof parsed === 'object' && parsed !== null) {
-                                    sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                                        column,
-                                        direction: direction,
-                                        priority: index + 1
-                                    }));
-                                }
-                            }
-                            catch (e) {
-                                console.error('Fehler beim Parsen von sortDirections:', e);
-                                sortDirections = [];
-                            }
-                        }
+                // ✅ FIX: Filtere User-Filter-Gruppen nach aktiven Usern
+                // ❌ ENTFERNT: sortDirections Parsing - Filter-Sortierung wurde entfernt (Phase 1)
+                const parsedGroups = yield Promise.all(groups.map((group) => __awaiter(this, void 0, void 0, function* () {
+                    let filters = group.filters.map(filter => {
                         return {
                             id: filter.id,
                             userId: filter.userId,
@@ -185,16 +135,65 @@ class FilterListCache {
                             name: filter.name,
                             conditions: JSON.parse(filter.conditions),
                             operators: JSON.parse(filter.operators),
-                            sortDirections,
+                            // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                             groupId: filter.groupId,
                             order: filter.order,
                             createdAt: filter.createdAt,
                             updatedAt: filter.updatedAt
                         };
-                    }),
-                    createdAt: group.createdAt,
-                    updatedAt: group.updatedAt
-                }));
+                    });
+                    // ✅ FIX: Filtere User-Filter-Gruppen nach aktiven Usern
+                    if (group.name === 'Users' || group.name === 'Benutzer' || group.name === 'Usuarios') {
+                        // Extrahiere User-IDs aus Filter-Bedingungen (Format: user-{id})
+                        const userIds = [];
+                        filters.forEach(filter => {
+                            if (Array.isArray(filter.conditions)) {
+                                filter.conditions.forEach((condition) => {
+                                    if (condition.value && typeof condition.value === 'string' && condition.value.startsWith('user-')) {
+                                        const userId = parseInt(condition.value.replace('user-', ''), 10);
+                                        if (!isNaN(userId)) {
+                                            userIds.push(userId);
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                        // Prüfe welche User noch aktiv sind
+                        if (userIds.length > 0) {
+                            const activeUsers = yield prisma_1.prisma.user.findMany({
+                                where: {
+                                    id: { in: userIds },
+                                    active: true
+                                },
+                                select: { id: true }
+                            });
+                            const activeUserIds = new Set(activeUsers.map(u => u.id));
+                            // Filtere Filter heraus, deren User nicht mehr aktiv sind
+                            filters = filters.filter(filter => {
+                                if (Array.isArray(filter.conditions)) {
+                                    return filter.conditions.some((condition) => {
+                                        if (condition.value && typeof condition.value === 'string' && condition.value.startsWith('user-')) {
+                                            const userId = parseInt(condition.value.replace('user-', ''), 10);
+                                            return !isNaN(userId) && activeUserIds.has(userId);
+                                        }
+                                        return true; // Nicht-User-Filter behalten
+                                    });
+                                }
+                                return true; // Filter ohne Bedingungen behalten
+                            });
+                        }
+                    }
+                    return {
+                        id: group.id,
+                        userId: group.userId,
+                        tableId: group.tableId,
+                        name: group.name,
+                        order: group.order,
+                        filters,
+                        createdAt: group.createdAt,
+                        updatedAt: group.updatedAt
+                    };
+                })));
                 // 4. Speichere im Cache
                 this.filterGroupListCache.set(cacheKey, {
                     groups: parsedGroups,
