@@ -182,7 +182,7 @@ export class WhatsAppMessageHandler {
         if (user) {
           return await this.handleRequestsKeyword(user.id, branchId, conversation);
         }
-        return await this.getLanguageResponse(branchId, normalizedPhone, 'requests_require_auth');
+        return await this.getLanguageResponse(branchId, normalizedPhone, 'requests_require_auth', messageText);
       }
 
       // Keyword: "todos" / "to do's" - Liste aller Tasks (PLURAL für Liste)
@@ -190,13 +190,13 @@ export class WhatsAppMessageHandler {
         if (user) {
           return await this.handleTodosKeyword(user.id, branchId, conversation);
         }
-        return await this.getLanguageResponse(branchId, normalizedPhone, 'todos_require_auth');
+        return await this.getLanguageResponse(branchId, normalizedPhone, 'todos_require_auth', messageText);
       }
 
       // Keyword: "request" - Starte Request-Erstellung (SINGULAR für Erstellung)
       if (normalizedText === 'request' && conversation.state === 'idle') {
         if (!user) {
-          return await this.getLanguageResponse(branchId, normalizedPhone, 'request_creation_require_auth');
+          return await this.getLanguageResponse(branchId, normalizedPhone, 'request_creation_require_auth', messageText);
         }
         return await this.startRequestCreation(normalizedPhone, branchId, conversation);
       }
@@ -204,7 +204,7 @@ export class WhatsAppMessageHandler {
       // Keyword: "todo" - Starte Task-Erstellung (SINGULAR für Erstellung)
       if (normalizedText === 'todo' && conversation.state === 'idle') {
         if (!user) {
-          return await this.getLanguageResponse(branchId, normalizedPhone, 'task_creation_require_auth');
+          return await this.getLanguageResponse(branchId, normalizedPhone, 'task_creation_require_auth', messageText);
         }
         return await this.startTaskCreation(normalizedPhone, branchId, conversation);
       }
@@ -275,13 +275,46 @@ export class WhatsAppMessageHandler {
           conversation.id // conversationId für Message History
         );
         return aiResponse.message;
-      } catch (error) {
-        console.error('[WhatsApp Message Handler] KI-Fehler:', error);
-        return await this.getLanguageResponse(branchId, normalizedPhone, 'ai_error');
+      } catch (error: any) {
+        console.error('[WhatsApp Message Handler] KI-Fehler:', {
+          error: error.message,
+          stack: error.stack,
+          messageText: messageText.substring(0, 50),
+          branchId,
+          phoneNumber: normalizedPhone
+        });
+        
+        // Spezifische Fehlermeldungen basierend auf Fehlertyp
+        const errorMessage = error.message || '';
+        if (errorMessage.includes('KI ist für diesen Branch nicht aktiviert') || 
+            errorMessage.includes('KI-Konfiguration nicht gefunden')) {
+          // KI nicht aktiviert - gebe hilfreichere Nachricht
+          const language = await this.detectLanguageForResponse(messageText, normalizedPhone);
+          const translations: Record<string, string> = {
+            es: 'Lo siento, el asistente de IA no está disponible en este momento. Por favor, contacta directamente con el personal.',
+            de: 'Entschuldigung, der KI-Assistent ist derzeit nicht verfügbar. Bitte kontaktiere direkt das Personal.',
+            en: 'Sorry, the AI assistant is not available at the moment. Please contact staff directly.'
+          };
+          return translations[language] || translations.es;
+        }
+        
+        if (errorMessage.includes('OPENAI_API_KEY')) {
+          // API Key fehlt - technischer Fehler
+          const language = await this.detectLanguageForResponse(messageText, normalizedPhone);
+          const translations: Record<string, string> = {
+            es: 'Lo siento, hay un problema técnico. Por favor, intenta más tarde o contacta con el personal.',
+            de: 'Entschuldigung, es gibt ein technisches Problem. Bitte versuche es später erneut oder kontaktiere das Personal.',
+            en: 'Sorry, there is a technical issue. Please try again later or contact staff.'
+          };
+          return translations[language] || translations.es;
+        }
+        
+        // Generische Fehlermeldung
+        return await this.getLanguageResponse(branchId, normalizedPhone, 'ai_error', messageText);
       }
     } catch (error) {
       console.error('[WhatsApp Message Handler] Fehler:', error);
-      return await this.getLanguageResponse(branchId, phoneNumber, 'error');
+      return await this.getLanguageResponse(branchId, phoneNumber, 'error', messageText);
     }
   }
 
@@ -1099,12 +1132,32 @@ export class WhatsAppMessageHandler {
   /**
    * Holt sprachspezifische Antwort
    */
+  /**
+   * Erkennt Sprache für Antwort (aus Nachricht oder Telefonnummer)
+   */
+  private static async detectLanguageForResponse(messageText: string, phoneNumber: string): Promise<string> {
+    if (messageText) {
+      const { WhatsAppAiService } = await import('./whatsappAiService');
+      const detectedFromMessage = WhatsAppAiService.detectLanguageFromMessage(messageText);
+      if (detectedFromMessage) {
+        return detectedFromMessage;
+      }
+    }
+    return LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+  }
+
   private static async getLanguageResponse(
     branchId: number,
     phoneNumber: string,
-    key: string
+    key: string,
+    messageText?: string // Optional: Nachrichtentext für bessere Spracherkennung
   ): Promise<string> {
-    const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+    // WICHTIG: Versuche zuerst Sprache aus Nachricht zu erkennen, dann Fallback auf Telefonnummer
+    const language = messageText 
+      ? await this.detectLanguageForResponse(messageText, phoneNumber)
+      : LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+    
+    console.log(`[getLanguageResponse] Sprache erkannt: ${language} (Nachricht: "${messageText?.substring(0, 50) || 'keine'}")`);
     
     const responses: Record<string, Record<string, string>> = {
       requests_require_auth: {
