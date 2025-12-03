@@ -1,4 +1,4 @@
-import React, { createContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useCallback, useRef, ReactNode } from 'react';
 
 export type MessageType = 'success' | 'error' | 'warning' | 'info' | 'default';
 
@@ -27,24 +27,25 @@ interface MessageProviderProps {
 
 export const MessageProvider: React.FC<MessageProviderProps> = ({ children }) => {
   const [message, setMessage] = useState<Message | null>(null);
-  const [messageTimeout, setMessageTimeout] = useState<NodeJS.Timeout | null>(null);
+  // ✅ FIX: messageTimeout in useRef verschieben (verhindert Re-Creation von showMessage)
+  const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Funktion zum Löschen einer Meldung
   const clearMessage = useCallback(() => {
     setMessage(null);
     
     // Timeout löschen, wenn vorhanden
-    if (messageTimeout) {
-      clearTimeout(messageTimeout);
-      setMessageTimeout(null);
+    if (messageTimeoutRef.current) {
+      clearTimeout(messageTimeoutRef.current);
+      messageTimeoutRef.current = null;
     }
-  }, [messageTimeout]);
+  }, []);
 
   // Funktion zum Anzeigen einer Meldung
   const showMessage = useCallback((content: string, type: MessageType = 'default') => {
     // Vorhandenen Timeout löschen, wenn eine neue Nachricht kommt
-    if (messageTimeout) {
-      clearTimeout(messageTimeout);
+    if (messageTimeoutRef.current) {
+      clearTimeout(messageTimeoutRef.current);
     }
 
     // Neue Meldung setzen
@@ -59,11 +60,11 @@ export const MessageProvider: React.FC<MessageProviderProps> = ({ children }) =>
     // Automatisches Ausblenden nach 3 Sekunden
     const timeout = setTimeout(() => {
       setMessage(null);
-      setMessageTimeout(null);
+      messageTimeoutRef.current = null;
     }, 3000);
 
-    setMessageTimeout(timeout);
-  }, [messageTimeout]);
+    messageTimeoutRef.current = timeout;
+  }, []);
 
   return (
     <MessageContext.Provider

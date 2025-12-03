@@ -68,6 +68,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [WHATSAPP_TOKEN_SETUP.md](docs/technical/WHATSAPP_TOKEN_SETUP.md) - WhatsApp-Token-Setup
 - [TROUBLESHOOTING_WHATSAPP_HETZNER.md](docs/technical/TROUBLESHOOTING_WHATSAPP_HETZNER.md) - WhatsApp-Troubleshooting auf Hetzner
 - [WHATSAPP_AI_KONFIGURATION.md](docs/technical/WHATSAPP_AI_KONFIGURATION.md) - WhatsApp KI-Konfiguration
+- [WHATSAPP_PROFILBILD_UND_NAME.md](docs/technical/WHATSAPP_PROFILBILD_UND_NAME.md) - WhatsApp Bot Profilbild und Name konfigurieren
 - [WO_HER_API_KEYS_BEKOMMEN.md](docs/technical/WO_HER_API_KEYS_BEKOMMEN.md) - API-Keys-Beschaffung
 - [NOTIFICATION_SYSTEM.md](docs/modules/NOTIFICATION_SYSTEM.md) - Benachrichtigungssystem und Trigger
 - [QUEUE_SYSTEM.md](docs/technical/QUEUE_SYSTEM.md) - Queue-System Übersicht (BullMQ mit Redis)
