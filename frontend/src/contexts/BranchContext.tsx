@@ -33,7 +33,9 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                console.error('Kein Authentifizierungstoken gefunden');
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Kein Authentifizierungstoken gefunden');
+                }
                 return;
             }
             
@@ -59,7 +61,9 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 setSelectedBranch(null);
             }
         } catch (error) {
-            console.error('Fehler beim Laden der Niederlassungen:', error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Fehler beim Laden der Niederlassungen:', error);
+            }
             // Bei Fehler: Fallback auf alle Branches (ohne lastUsed)
             try {
                 const fallbackResponse = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
@@ -71,15 +75,25 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     setSelectedBranch(fallbackData[0].id);
                 }
             } catch (fallbackError) {
-                console.error('Fehler beim Fallback-Laden der Niederlassungen:', fallbackError);
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Fehler beim Fallback-Laden der Niederlassungen:', fallbackError);
+                }
             }
         }
     };
 
-    // Lade Niederlassungen, sobald User geladen ist (nicht mehr isLoading)
+    // ✅ MEMORY: Verzögertes Laden - nicht sofort wenn User geladen, sondern nach kurzem Delay
+    // Dies reduziert die Anzahl der parallelen API-Calls beim Initial Load
     useEffect(() => {
         if (!isLoading && user) {
-            loadBranches();
+            // Verzögere das Laden um 150ms - gibt anderen kritischen Requests Vorrang
+            const timeoutId = setTimeout(() => {
+                loadBranches();
+            }, 150);
+            
+            return () => {
+                clearTimeout(timeoutId);
+            };
         }
     }, [isLoading, user]);
 

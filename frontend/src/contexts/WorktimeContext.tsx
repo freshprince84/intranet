@@ -47,8 +47,12 @@ export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Prüfe den Tracking-Status beim Start
     useEffect(() => {
-        // Initiale Prüfung
-        checkTrackingStatus();
+        // ✅ MEMORY: Verzögertes Laden - nicht sofort beim Mount, sondern nach kurzem Delay
+        // Dies reduziert die Anzahl der parallelen API-Calls beim Initial Load
+        const timeoutId = setTimeout(() => {
+            // Initiale Prüfung
+            checkTrackingStatus();
+        }, 200); // 200ms Delay - Worktime ist weniger kritisch als Auth/Organization
 
         // ✅ MEMORY: Polling nur wenn Seite sichtbar ist (Page Visibility API)
         let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -89,6 +93,7 @@ export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         document.addEventListener('visibilitychange', handleVisibilityChange);
         
         return () => {
+            clearTimeout(timeoutId);
             stopPolling();
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
