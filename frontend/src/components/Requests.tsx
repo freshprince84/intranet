@@ -354,8 +354,7 @@ const Requests: React.FC = () => {
     filterConditions?: any[], 
     append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
     limit = 20,
-    offset = 0,
-    signal?: AbortSignal // ✅ MEMORY: AbortSignal für Request-Cancellation
+    offset = 0
   ) => {
     try {
       if (!append) {
@@ -383,15 +382,7 @@ const Requests: React.FC = () => {
         });
       }
       
-      // ✅ MEMORY: Prüfe ob Request bereits abgebrochen wurde
-      if (signal?.aborted) {
-        return;
-      }
-      
-      const response = await axiosInstance.get('/requests', { 
-        params,
-        signal // ✅ MEMORY: AbortSignal für Request-Cancellation
-      });
+      const response = await axiosInstance.get('/requests', { params });
       const responseData = response.data;
       
       // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
@@ -426,21 +417,21 @@ const Requests: React.FC = () => {
         } else {
           // ❌ FEHLER: responseData ist ein Objekt, aber data ist kein Array
           if (process.env.NODE_ENV === 'development') {
-            console.error('[Requests] ❌ FEHLER: responseData.data ist kein Array!', {
-              responseData,
-              data: responseData.data,
-              dataType: typeof responseData.data
-            });
+          console.error('[Requests] ❌ FEHLER: responseData.data ist kein Array!', {
+            responseData,
+            data: responseData.data,
+            dataType: typeof responseData.data
+          });
           }
           throw new Error(`Ungültige Response-Struktur: responseData.data ist kein Array (Typ: ${typeof responseData.data})`);
         }
       } else {
         // ❌ FEHLER: responseData ist kein Objekt
         if (process.env.NODE_ENV === 'development') {
-          console.error('[Requests] ❌ FEHLER: responseData ist kein Objekt!', {
-            responseData,
-            type: typeof responseData
-          });
+        console.error('[Requests] ❌ FEHLER: responseData ist kein Objekt!', {
+          responseData,
+          type: typeof responseData
+        });
         }
         throw new Error(`Ungültige Response-Struktur: responseData ist kein Objekt (Typ: ${typeof responseData})`);
       }
@@ -448,10 +439,10 @@ const Requests: React.FC = () => {
       // ✅ Sicherheitsprüfung: requestsData muss ein Array sein
       if (!Array.isArray(requestsData)) {
         if (process.env.NODE_ENV === 'development') {
-          console.error('[Requests] ❌ FEHLER: requestsData ist kein Array!', {
-            requestsData,
-            type: typeof requestsData
-          });
+        console.error('[Requests] ❌ FEHLER: requestsData ist kein Array!', {
+          requestsData,
+          type: typeof requestsData
+        });
         }
         throw new Error(`Ungültige Response-Struktur: requestsData ist kein Array (Typ: ${typeof requestsData})`);
       }
@@ -484,24 +475,14 @@ const Requests: React.FC = () => {
         setRequests(requestsWithAttachments);
       }
       
-      // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
-      if (signal?.aborted) {
-        return;
-      }
-      
       setTotalCount(totalCount);
       setHasMore(hasMore);
       setError(null);
     } catch (err) {
-      // ✅ MEMORY: Ignoriere Abort-Errors
-      const axiosError = err as any;
-      if (axiosError.name === 'AbortError' || axiosError.name === 'CanceledError' || signal?.aborted) {
-        return; // Request wurde abgebrochen
-      }
-      
       if (process.env.NODE_ENV === 'development') {
-        console.error('Request Error:', err);
+      console.error('Request Error:', err);
       }
+      const axiosError = err as any;
       if (!append) {
         if (axiosError.code === 'ERR_NETWORK') {
           setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
@@ -512,11 +493,11 @@ const Requests: React.FC = () => {
             || axiosError.message 
             || 'Unbekannter Fehler';
           if (process.env.NODE_ENV === 'development') {
-            console.error('Request Error Details:', {
-              message: errorMessage,
-              status: axiosError.response?.status,
-              data: axiosError.response?.data
-            });
+          console.error('Request Error Details:', {
+            message: errorMessage,
+            status: axiosError.response?.status,
+            data: axiosError.response?.data
+          });
           }
           setError(`Fehler beim Laden der Requests: ${errorMessage}`);
         }
@@ -553,9 +534,6 @@ const Requests: React.FC = () => {
   
   // ✅ FIX: Initiales Laden von Requests (wenn Filter geladen wurden, aber kein Default-Filter angewendet wurde)
   useEffect(() => {
-    // ✅ MEMORY: AbortController für Request-Cancellation
-    const abortController = new AbortController();
-    
     // Nur ausführen, wenn:
     // 1. Filter nicht mehr am Laden sind
     // 2. Keine Requests geladen wurden (requests.length === 0)
@@ -571,19 +549,12 @@ const Requests: React.FC = () => {
           // ✅ FIX: Markiere als versucht, BEVOR fetchRequests aufgerufen wird
           initialLoadAttemptedRef.current = true;
           // Fallback: Lade Requests ohne Filter
-          fetchRequests(undefined, undefined, false, 20, 0, abortController.signal);
+          fetchRequests(undefined, undefined, false, 20, 0);
         }
       }, 800);
       
-      return () => {
-        clearTimeout(timeoutId);
-        abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
-      };
+      return () => clearTimeout(timeoutId);
     }
-    
-    return () => {
-      abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
-    };
   }, [filtersLoading, requests.length, selectedFilterId, filterConditions.length, fetchRequests]);
 
   // ❌ ENTFERNT: Cleanup useEffect - React macht automatisches Cleanup, manuelles Löschen ist überflüssig (Phase 3)
@@ -644,7 +615,7 @@ const Requests: React.FC = () => {
     } catch (err) {
       // Rollback bei Fehler: Vollständiges Reload
       if (process.env.NODE_ENV === 'development') {
-        console.error('Status Update Error:', err);
+      console.error('Status Update Error:', err);
       }
       fetchRequests();
       const axiosError = err as any;
@@ -847,9 +818,6 @@ const Requests: React.FC = () => {
 
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   useEffect(() => {
-    // ✅ MEMORY: AbortController für Request-Cancellation
-    const abortController = new AbortController();
-    
     const observer = new IntersectionObserver(
       (entries) => {
         const firstEntry = entries[0];
@@ -861,8 +829,7 @@ const Requests: React.FC = () => {
             filterConditions.length > 0 ? filterConditions : undefined,
             true, // append = true
             20, // limit
-            nextOffset, // offset
-            abortController.signal // ✅ MEMORY: AbortSignal für Request-Cancellation
+            nextOffset // offset
           );
         }
       },
@@ -876,7 +843,6 @@ const Requests: React.FC = () => {
     return () => {
       // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
       observer.disconnect();
-      abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
     };
   }, [hasMore, loadingMore, loading, requests.length, selectedFilterId, filterConditions, fetchRequests]);
 
@@ -915,7 +881,7 @@ const Requests: React.FC = () => {
       
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Fehler beim Kopieren des Requests:', err);
+      console.error('Fehler beim Kopieren des Requests:', err);
       }
       // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;

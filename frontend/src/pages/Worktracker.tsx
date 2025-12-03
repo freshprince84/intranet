@@ -526,8 +526,7 @@ const Worktracker: React.FC = () => {
         filterConditions?: any[], 
         append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
         limit = 20,
-        offset = 0,
-        signal?: AbortSignal // ✅ MEMORY: AbortSignal für Request-Cancellation
+        offset = 0
     ) => {
         try {
             if (!append) {
@@ -551,15 +550,7 @@ const Worktracker: React.FC = () => {
                 });
             }
             
-            // ✅ MEMORY: Prüfe ob Request bereits abgebrochen wurde
-            if (signal?.aborted) {
-                return;
-            }
-            
-            const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE, { 
-                params,
-                signal // ✅ MEMORY: AbortSignal für Request-Cancellation
-            });
+            const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE, { params });
             const responseData = response.data;
             
             // ✅ MEMORY: Debug-Logs nur in Development und reduziert
@@ -652,37 +643,23 @@ const Worktracker: React.FC = () => {
                 setTasks(tasksWithAttachments);
             }
             
-            // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
-            if (signal?.aborted) {
-                return;
-            }
-            
             setTasksTotalCount(totalCount);
             setTasksHasMore(hasMore);
             setError(null);
         } catch (error) {
-            // ✅ MEMORY: Ignoriere Abort-Errors
+            console.error('[Worktracker Tasks] Fehler beim Laden:', error);
             const axiosError = error as any;
-            if (axiosError.name === 'AbortError' || axiosError.name === 'CanceledError' || signal?.aborted) {
-                return; // Request wurde abgebrochen
-            }
-            
-            if (process.env.NODE_ENV === 'development') {
-              console.error('[Worktracker Tasks] Fehler beim Laden:', error);
-            }
             if (!append) {
                 // Zeige detaillierte Fehlermeldung
                 const errorMessage = axiosError.response?.data?.message 
                     || axiosError.response?.data?.error 
                     || axiosError.message 
                     || t('worktime.messages.tasksLoadError');
-                if (process.env.NODE_ENV === 'development') {
-                  console.error('[Worktracker Tasks] Error Details:', {
-                      message: errorMessage,
-                      status: axiosError.response?.status,
-                      data: axiosError.response?.data
-                  });
-                }
+                console.error('[Worktracker Tasks] Error Details:', {
+                    message: errorMessage,
+                    status: axiosError.response?.status,
+                    data: axiosError.response?.data
+                });
                 setError(errorMessage);
             }
         } finally {
@@ -722,8 +699,7 @@ const Worktracker: React.FC = () => {
         operators?: ('AND' | 'OR')[], // ✅ FIX: operators als Parameter (verhindert Re-Creation)
         append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
         limit = 20,
-        offset = 0,
-        signal?: AbortSignal // ✅ MEMORY: AbortSignal für Request-Cancellation
+        offset = 0
     ) => {
         try {
             if (!append) {
@@ -747,15 +723,7 @@ const Worktracker: React.FC = () => {
                 });
             }
             
-            // ✅ MEMORY: Prüfe ob Request bereits abgebrochen wurde
-            if (signal?.aborted) {
-                return;
-            }
-            
-            const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE, { 
-                params,
-                signal // ✅ MEMORY: AbortSignal für Request-Cancellation
-            });
+            const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE, { params });
             const responseData = response.data;
             
             // ✅ PAGINATION: Response-Struktur mit totalCount
@@ -796,18 +764,9 @@ const Worktracker: React.FC = () => {
                 setReservations(reservationsData);
             }
             
-            // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
-            if (signal?.aborted) {
-                return;
-            }
-            
             setReservationsTotalCount(totalCount);
             setReservationsHasMore(hasMore);
         } catch (err: any) {
-            // ✅ MEMORY: Ignoriere Abort-Errors
-            if (err.name === 'AbortError' || err.name === 'CanceledError' || signal?.aborted) {
-                return; // Request wurde abgebrochen
-            }
             if (process.env.NODE_ENV === 'development') {
             console.error('Fehler beim Laden der Reservations:', err);
             }
@@ -817,13 +776,10 @@ const Worktracker: React.FC = () => {
             showMessage(errorMessage, 'error');
             }
         } finally {
-            // ✅ MEMORY: Nur loading setzen wenn nicht abgebrochen
-            if (!signal?.aborted) {
-                if (!append) {
-                setReservationsLoading(false);
-                } else {
-                    setReservationsLoadingMore(false);
-                }
+            if (!append) {
+            setReservationsLoading(false);
+            } else {
+                setReservationsLoadingMore(false);
             }
         }
     }, [t, showMessage]); // ✅ FIX: reservationFilterLogicalOperators entfernt - wird als Parameter übergeben
@@ -1760,9 +1716,6 @@ const Worktracker: React.FC = () => {
     useEffect(() => {
         if (activeTab !== 'todos') return;
         
-        // ✅ MEMORY: AbortController für Request-Cancellation
-        const abortController = new AbortController();
-        
         const observer = new IntersectionObserver(
             (entries) => {
                 const firstEntry = entries[0];
@@ -1775,8 +1728,7 @@ const Worktracker: React.FC = () => {
                         currentFilterConditions.length > 0 ? currentFilterConditions : undefined,
                         true, // append = true
                         20, // limit
-                        nextOffset, // offset
-                        abortController.signal // ✅ MEMORY: AbortSignal für Request-Cancellation
+                        nextOffset // offset
                     );
                 }
             },
@@ -1790,7 +1742,6 @@ const Worktracker: React.FC = () => {
         return () => {
             // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
             observer.disconnect();
-            abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
         };
     }, [activeTab, tasksHasMore, tasksLoadingMore, loading, tasks.length, selectedFilterId, loadTasks]); // ✅ FIX: filterConditions entfernt, verwende filterConditionsRef
     
@@ -1798,9 +1749,6 @@ const Worktracker: React.FC = () => {
     // ✅ FIX: reservationFilterConditionsRef verwenden statt reservationFilterConditions direkt (verhindert Endlosschleife)
     useEffect(() => {
         if (activeTab !== 'reservations') return;
-        
-        // ✅ MEMORY: AbortController für Request-Cancellation
-        const abortController = new AbortController();
         
         const observer = new IntersectionObserver(
             (entries) => {
@@ -1816,8 +1764,7 @@ const Worktracker: React.FC = () => {
                         currentReservationFilterOperators.length > 0 ? currentReservationFilterOperators : undefined,
                         true, // append = true
                         20, // limit
-                        nextOffset, // offset
-                        abortController.signal // ✅ MEMORY: AbortSignal für Request-Cancellation
+                        nextOffset // offset
                     );
                 }
             },
@@ -1831,7 +1778,6 @@ const Worktracker: React.FC = () => {
         return () => {
             // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
             observer.disconnect();
-            abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
         };
     }, [activeTab, reservationsHasMore, reservationsLoadingMore, reservationsLoading, reservations.length, reservationSelectedFilterId, loadReservations]); // ✅ FIX: reservationFilterConditions entfernt, verwende reservationFilterConditionsRef
     

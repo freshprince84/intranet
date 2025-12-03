@@ -509,7 +509,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                         alleFilter
                     );
                     if (process.env.NODE_ENV === 'development') {
-                      console.log(t('branches.filterCreated'));
+                    console.log(t('branches.filterCreated'));
                     }
                 }
             } catch (error) {

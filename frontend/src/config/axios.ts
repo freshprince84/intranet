@@ -123,9 +123,7 @@ instance.interceptors.response.use(
     }
     
     // Andere Fehler normal behandeln
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Fehler im Response Interceptor:', error);
-    }
+    console.error('Fehler im Response Interceptor:', error);
     return Promise.reject(error);
   }
 );
