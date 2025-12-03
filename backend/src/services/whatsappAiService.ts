@@ -35,6 +35,10 @@ export class WhatsAppAiService {
     conversationContext?: any,
     conversationId?: number
   ): Promise<AIResponse> {
+    // Speichere conversationId im conversationContext für Function Handlers
+    if (conversationId && conversationContext) {
+      conversationContext.conversationId = conversationId;
+    }
     // 1. Lade Branch und KI-Konfiguration
     const branch = await prisma.branch.findUnique({
       where: { id: branchId },

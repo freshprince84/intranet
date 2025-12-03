@@ -620,7 +620,8 @@ export class WhatsAppFunctionHandlers {
     },
     userId: number | null,
     roleId: number | null,
-    branchId: number
+    branchId: number,
+    conversationId?: number // Optional: Conversation ID für Context-Speicherung
   ): Promise<any> {
     try {
       // 1. Parse Datum (unterstützt "today"/"heute"/"hoy"/"morgen"/"tomorrow"/"mañana")
@@ -805,6 +806,60 @@ export class WhatsAppFunctionHandlers {
       console.log(`[WhatsApp Function Handlers] check_room_availability: ${rooms.length} Zimmer formatiert`);
       for (const room of rooms) {
         console.log(`[WhatsApp Function Handlers]   - ${room.name} (${room.type}): ${room.availableRooms} verfügbar, ${room.pricePerNight.toLocaleString('de-CH')} COP`);
+      }
+
+      // Speichere Context in Conversation (falls conversationId vorhanden)
+      if (conversationId) {
+        try {
+          const conversation = await prisma.whatsAppConversation.findUnique({
+            where: { id: conversationId },
+            select: { context: true }
+          });
+          
+          if (conversation) {
+            const context = (conversation.context as any) || {};
+            const bookingContext = context.booking || {};
+            
+            // Aktualisiere Context mit Verfügbarkeitsprüfung
+            const updatedContext = {
+              ...bookingContext,
+              checkInDate: args.startDate,
+              checkOutDate: args.endDate || (startDateStr === 'tomorrow' || startDateStr === 'morgen' || startDateStr === 'mañana' 
+                ? 'day after tomorrow' 
+                : undefined),
+              roomType: args.roomType || bookingContext.roomType,
+              lastAvailabilityCheck: {
+                startDate: args.startDate,
+                endDate: endDate.toISOString().split('T')[0],
+                rooms: rooms.map(room => ({
+                  categoryId: room.categoryId,
+                  name: room.name,
+                  type: room.type,
+                  availableRooms: room.availableRooms
+                }))
+              }
+            };
+            
+            await prisma.whatsAppConversation.update({
+              where: { id: conversationId },
+              data: {
+                context: {
+                  ...context,
+                  booking: updatedContext
+                }
+              }
+            });
+            
+            console.log('[check_room_availability] Context aktualisiert:', {
+              checkInDate: updatedContext.checkInDate,
+              checkOutDate: updatedContext.checkOutDate,
+              roomType: updatedContext.roomType
+            });
+          }
+        } catch (contextError) {
+          console.error('[check_room_availability] Fehler beim Speichern des Contexts:', contextError);
+          // Nicht abbrechen, nur loggen
+        }
       }
 
       return {
