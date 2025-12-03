@@ -43,7 +43,7 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
         }
     };
 
-    const fetchWorktimes = useCallback(async () => {
+    const fetchWorktimes = useCallback(async (signal?: AbortSignal) => {
         try {
             setError(null);
             setLoading(true);
@@ -55,9 +55,19 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                 return;
             }
             
+            // ✅ MEMORY: Prüfe ob Request bereits abgebrochen wurde
+            if (signal?.aborted) {
+                return;
+            }
+            
             const formattedDate = selectedDate;
             
-            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${formattedDate}`);
+            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${formattedDate}`, { signal });
+            
+            // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
+            if (signal?.aborted) {
+                return;
+            }
             
             const sortedWorktimes = [...response.data].sort((a, b) => {
                 return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
@@ -66,7 +76,12 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             setWorktimes(sortedWorktimes);
             
             // Auch die aktive Zeiterfassung abrufen
-            const activeResponse = await axiosInstance.get(API_ENDPOINTS.WORKTIME.ACTIVE);
+            const activeResponse = await axiosInstance.get(API_ENDPOINTS.WORKTIME.ACTIVE, { signal });
+            
+            // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
+            if (signal?.aborted) {
+                return;
+            }
             
             if (activeResponse.data && Object.keys(activeResponse.data).length > 0) {
                 setActiveWorktime(activeResponse.data);
@@ -75,7 +90,11 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             }
             
             setLoading(false);
-        } catch (error) {
+        } catch (error: any) {
+            // ✅ MEMORY: Ignoriere Abort-Errors
+            if (error.name === 'AbortError' || error.name === 'CanceledError' || signal?.aborted) {
+                return; // Request wurde abgebrochen
+            }
             if (process.env.NODE_ENV === 'development') {
               console.error('Fehler beim Laden der Zeiterfassungen:', error);
             }
@@ -85,9 +104,16 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
     }, [selectedDate, t]);
 
     useEffect(() => {
+        // ✅ MEMORY: AbortController für Request-Cancellation
+        const abortController = new AbortController();
+        
         if (isOpen) {
-            fetchWorktimes();
+            fetchWorktimes(abortController.signal);
         }
+        
+        return () => {
+            abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount oder wenn isOpen sich ändert
+        };
     }, [isOpen, fetchWorktimes]);
 
     // Berechne die Gesamtdauer aller Zeiteinträge für den Tag

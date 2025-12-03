@@ -39,6 +39,8 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 return;
             }
             
+            // ✅ MEMORY: AbortController für Request-Cancellation
+            // Hinweis: AbortController wird von aufrufenden Komponenten verwaltet
             // Lade User-Branches mit lastUsed-Flag
             const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.USER);
             const data = response.data;
@@ -60,7 +62,11 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 // Keine Branches vorhanden
                 setSelectedBranch(null);
             }
-        } catch (error) {
+        } catch (error: any) {
+            // ✅ MEMORY: Ignoriere Abort-Errors
+            if (error.name === 'AbortError' || error.name === 'CanceledError') {
+                return; // Request wurde abgebrochen
+            }
             if (process.env.NODE_ENV === 'development') {
               console.error('Fehler beim Laden der Niederlassungen:', error);
             }
@@ -74,7 +80,11 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 if (fallbackData.length > 0 && !selectedBranch) {
                     setSelectedBranch(fallbackData[0].id);
                 }
-            } catch (fallbackError) {
+            } catch (fallbackError: any) {
+                // ✅ MEMORY: Ignoriere Abort-Errors
+                if (fallbackError.name === 'AbortError' || fallbackError.name === 'CanceledError') {
+                    return; // Request wurde abgebrochen
+                }
                 if (process.env.NODE_ENV === 'development') {
                   console.error('Fehler beim Fallback-Laden der Niederlassungen:', fallbackError);
                 }

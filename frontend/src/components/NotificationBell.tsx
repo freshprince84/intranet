@@ -46,13 +46,13 @@ const NotificationBell: React.FC = () => {
   const open = Boolean(anchorEl);
   const id = open ? 'notification-popover' : undefined;
 
-  const fetchUnreadCount = useCallback(async () => {
+  const fetchUnreadCount = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
       if (process.env.NODE_ENV === 'development') {
         console.log('Versuche, ungelesene Benachrichtigungen zu zählen...');
       }
-      const response = await notificationApi.getUnreadCount();
+      const response = await notificationApi.getUnreadCount(signal);
       if (process.env.NODE_ENV === 'development') {
         console.log('Antwort vom Server für ungelesene Benachrichtigungen:', response);
       }
@@ -70,24 +70,36 @@ const NotificationBell: React.FC = () => {
       if (process.env.NODE_ENV === 'development') {
         console.log('Setze ungelesene Benachrichtigungen auf:', count);
       }
+      // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
+      if (signal?.aborted) {
+        return;
+      }
+      
       setUnreadCount(count);
       setError(null);
-    } catch (error) {
+    } catch (error: any) {
+      // ✅ MEMORY: Ignoriere Abort-Errors
+      if (error.name === 'AbortError' || error.name === 'CanceledError' || signal?.aborted) {
+        return; // Request wurde abgebrochen
+      }
       if (process.env.NODE_ENV === 'development') {
         console.error('Fehler beim Laden der ungelesenen Nachrichten:', error);
       }
       setUnreadCount(0);
     } finally {
-      setLoading(false);
+      // ✅ MEMORY: Nur loading setzen wenn nicht abgebrochen
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, []);
 
-  const fetchRecentNotifications = useCallback(async () => {
+  const fetchRecentNotifications = useCallback(async (signal?: AbortSignal) => {
     if (!open) return;
     
     setLoading(true);
     try {
-      const response = await notificationApi.getNotifications(1, 5);
+      const response = await notificationApi.getNotifications(1, 5, signal);
       if (process.env.NODE_ENV === 'development') {
         console.log('Benachrichtigungen Response:', response);
       }
@@ -105,16 +117,28 @@ const NotificationBell: React.FC = () => {
       if (process.env.NODE_ENV === 'development') {
         console.log('Verarbeitete Benachrichtigungen:', notifications);
       }
+      // ✅ MEMORY: Prüfe ob Request abgebrochen wurde
+      if (signal?.aborted) {
+        return;
+      }
+      
       setNotifications(notifications);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
+      // ✅ MEMORY: Ignoriere Abort-Errors
+      if (err.name === 'AbortError' || err.name === 'CanceledError' || signal?.aborted) {
+        return; // Request wurde abgebrochen
+      }
       if (process.env.NODE_ENV === 'development') {
         console.error('Fehler beim Laden der Benachrichtigungen:', err);
       }
       setError(t('notifications.loadError'));
       setNotifications([]);
     } finally {
-      setLoading(false);
+      // ✅ MEMORY: Nur loading setzen wenn nicht abgebrochen
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [open, t]);
 
@@ -185,7 +209,10 @@ const NotificationBell: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUnreadCount();
+    // ✅ MEMORY: AbortController für Request-Cancellation
+    const abortController = new AbortController();
+    
+    fetchUnreadCount(abortController.signal);
     
     // ✅ MEMORY: Polling nur wenn Seite sichtbar ist (Page Visibility API)
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -195,7 +222,7 @@ const NotificationBell: React.FC = () => {
       interval = setInterval(() => {
         // Prüfe nochmal, ob Seite sichtbar ist
         if (!document.hidden) {
-          fetchUnreadCount();
+          fetchUnreadCount(abortController.signal);
         }
       }, 60000);
     };
@@ -218,7 +245,7 @@ const NotificationBell: React.FC = () => {
         stopPolling();
       } else {
         // Seite ist wieder sichtbar - sofort prüfen und Polling starten
-        fetchUnreadCount();
+        fetchUnreadCount(abortController.signal);
         startPolling();
       }
     };
@@ -226,15 +253,23 @@ const NotificationBell: React.FC = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
+      abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [fetchUnreadCount]);
 
   useEffect(() => {
+    // ✅ MEMORY: AbortController für Request-Cancellation
+    const abortController = new AbortController();
+    
     if (open) {
-      fetchRecentNotifications();
+      fetchRecentNotifications(abortController.signal);
     }
+    
+    return () => {
+      abortController.abort(); // ✅ MEMORY: Request abbrechen beim Unmount oder wenn open sich ändert
+    };
   }, [open, fetchRecentNotifications]);
 
   const formatDate = (dateString: string) => {

@@ -159,20 +159,94 @@
 
 ---
 
+## 🚨 KRITISCHE PROBLEME (aus Screenshots identifiziert)
+
+### Problem 1: `book_tour()` unterstützt "morgen" nicht
+
+**Aktueller Code (Zeile 1067):**
+```typescript
+const tourDate = new Date(args.tourDate);
+if (tourDate < new Date()) {
+  throw new Error('Tour-Datum muss in der Zukunft sein');
+}
+```
+
+**Problem:**
+- `new Date("morgen")` ergibt `Invalid Date`
+- Bot sagt: "Es scheint ein Problem mit dem Tourdatum zu geben, da das angegebene Datum nicht in der Zukunft liegt"
+- Keine Logik, die "morgen"/"tomorrow" in ein Datum umwandelt
+
+**Lösung:**
+- `book_tour()` muss `parseDate()` verwenden (wie `create_room_reservation()`)
+- Unterstützung für "morgen"/"tomorrow"/"mañana" hinzufügen
+
+### Problem 2: Bot ruft `check_room_availability()` statt `book_tour()` auf
+
+**Was passiert:**
+- User: "die 2., guatape. für morgen. für 2 personen"
+- Bot sollte: `book_tour({ tourId: 2, tourDate: "tomorrow", numberOfParticipants: 2 })`
+- Bot macht stattdessen: `check_room_availability()` → zeigt Zimmer-Verfügbarkeit
+
+**Ursache:**
+- System Prompt unterscheidet nicht klar zwischen Tour- und Zimmer-Buchung
+- Bot verliert den Kontext (hat gerade Touren gezeigt, denkt aber an Zimmer)
+- Bot erkennt nicht, dass "die 2." nach `get_tours()` eine Tour-ID ist
+
+**Lösung:**
+- System Prompt erweitern: Kontext-Erhaltung nach `get_tours()`
+- Klare Anweisung: Wenn User Nummer wählt nach Tour-Liste → `book_tour()`
+- Klare Anweisung: Wenn User Tour-Namen sagt → `book_tour()` mit tourId aus vorheriger Response
+
+### Problem 3: Bot fragt nicht nach fehlenden Daten
+
+**Aktueller Stand:**
+- `book_tour()` wirft Fehler wenn Daten fehlen
+- Bot zeigt Fehlermeldung statt nachzufragen
+- Keine Rückfragen-Logik wie bei Zimmer-Reservierungen
+
+**Lösung:**
+- System Prompt erweitern: Rückfragen wenn Daten fehlen
+- Analog zu `create_room_reservation()`: Prüfe ALLE erforderlichen Daten VOR Function-Call
+- Wenn Daten fehlen: FRAGE nach, rufe Function NICHT auf
+
+### Problem 4: Bot verliert Kontext zwischen Tour- und Zimmer-Buchung
+
+**Was passiert:**
+- User fragt nach Touren → Bot zeigt Touren
+- User sagt "die 2., guatape. für morgen" → Bot denkt an Zimmer
+- Bot zeigt Zimmer-Verfügbarkeit statt Tour zu buchen
+
+**Ursache:**
+- Keine Kontext-Erhaltung für Tour-Buchungen
+- System Prompt unterscheidet nicht klar genug
+
+**Lösung:**
+- Kontext-Speicherung in Conversation (analog zu Zimmer-Buchungen)
+- System Prompt: Wenn vorher `get_tours()` aufgerufen wurde, ist "die 2." eine Tour-ID
+
+---
+
 ## 🎯 Was muss für Touren implementiert werden?
 
-### 1. Tour-Buchung anlegen (bereits vorhanden, muss erweitert werden)
+### 1. Tour-Buchung anlegen (bereits vorhanden, muss ERHEBLICH erweitert werden)
 
 **Aktueller Stand:**
 - `book_tour()` existiert bereits in `whatsappFunctionHandlers.ts` (Zeile 1050-1223)
 - Erstellt `TourBooking` mit allen notwendigen Feldern
 - Erstellt "Dummy"-Reservation für Payment Link
 - Generiert Payment Link (aber noch nicht per WhatsApp versendet)
+- ❌ Unterstützt "morgen"/"tomorrow" NICHT
+- ❌ Wirft Fehler statt nachzufragen
+- ❌ Keine Kontext-Erhaltung
 
 **Was fehlt:**
-- Payment Link wird noch nicht per WhatsApp versendet
-- WhatsApp-Nachricht enthält noch keinen Hinweis auf Barzahlung
-- Tour wird noch nicht automatisch an bestehende Reservation "geheftet"
+- ✅ Datum-Parsing für "morgen"/"tomorrow" (wie `create_room_reservation()`)
+- ✅ WhatsApp-Telefonnummer als Fallback für `customerPhone`
+- ✅ Rückfragen-Logik wenn Daten fehlen
+- ✅ Kontext-Erhaltung (Tour-Liste, Tour-ID aus vorheriger Response)
+- ✅ Payment Link per WhatsApp versenden
+- ✅ WhatsApp-Nachricht mit Barzahlungshinweis
+- ✅ Tour an bestehende Reservation "heften"
 
 ### 2. Zahlungslink per WhatsApp versenden (neu)
 
@@ -204,6 +278,268 @@
 ---
 
 ## 📊 Detaillierter Implementierungsplan
+
+### Phase 0: KRITISCH - `book_tour()` erweitern (Datum-Parsing, Validierung, Rückfragen)
+
+#### 0.1 Datum-Parsing für "morgen"/"tomorrow" hinzufügen
+
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts` (Zeile 1050-1223)
+
+**Problem:** Aktuell wird `new Date(args.tourDate)` direkt verwendet, was "morgen" nicht parsen kann.
+
+**Lösung:** Verwende `parseDate()` Methode (bereits vorhanden, Zeile 20-109) oder eigene Logik wie in `create_room_reservation()`.
+
+**Code-Struktur:**
+```typescript
+// Ersetze Zeile 1066-1070:
+// Parse Datum (unterstützt "today"/"heute"/"hoy"/"tomorrow"/"morgen"/"mañana")
+let tourDate: Date;
+const tourDateStr = args.tourDate.toLowerCase().trim();
+if (tourDateStr === 'today' || tourDateStr === 'heute' || tourDateStr === 'hoy') {
+  tourDate = new Date();
+  tourDate.setHours(0, 0, 0, 0);
+} else if (tourDateStr === 'tomorrow' || tourDateStr === 'morgen' || tourDateStr === 'mañana') {
+  tourDate = new Date();
+  tourDate.setDate(tourDate.getDate() + 1);
+  tourDate.setHours(0, 0, 0, 0);
+} else if (tourDateStr === 'day after tomorrow' || tourDateStr === 'übermorgen' || tourDateStr === 'pasado mañana') {
+  tourDate = new Date();
+  tourDate.setDate(tourDate.getDate() + 2);
+  tourDate.setHours(0, 0, 0, 0);
+} else {
+  // Versuche verschiedene Datum-Formate zu parsen
+  tourDate = this.parseDate(args.tourDate);
+  if (isNaN(tourDate.getTime())) {
+    throw new Error(`Ungültiges Tour-Datum: ${args.tourDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
+  }
+}
+
+// Validierung: Tour-Datum muss in der Zukunft sein
+if (tourDate < new Date()) {
+  throw new Error('Tour-Datum muss in der Zukunft sein');
+}
+```
+
+#### 0.2 WhatsApp-Telefonnummer als Fallback
+
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts` (Zeile 1050-1223)
+
+**Problem:** Aktuell wird `customerPhone` als erforderlich behandelt, aber WhatsApp-Telefonnummer wird nicht als Fallback verwendet.
+
+**Lösung:** Analog zu `create_room_reservation()` (Zeile 1591-1595): Verwende WhatsApp-Telefonnummer als Fallback.
+
+**Code-Struktur:**
+```typescript
+// Ersetze Zeile 1062-1064:
+// Validierung: Mindestens eine Kontaktinformation (Telefon ODER Email) ist erforderlich
+// WICHTIG: Nutze WhatsApp-Telefonnummer als Fallback, falls nicht angegeben
+let customerPhone = args.customerPhone?.trim() || null;
+let customerEmail = args.customerEmail?.trim() || null;
+
+// Fallback: Nutze WhatsApp-Telefonnummer, falls vorhanden
+// WICHTIG: phoneNumber wird über conversationContext übergeben (muss in whatsappAiService.ts erweitert werden)
+if (!customerPhone && phoneNumber) {
+  const { LanguageDetectionService } = await import('./languageDetectionService');
+  customerPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
+  console.log(`[book_tour] WhatsApp-Telefonnummer als Fallback verwendet: ${customerPhone}`);
+}
+
+if (!customerPhone && !customerEmail) {
+  throw new Error('Mindestens eine Kontaktinformation (Telefonnummer oder Email) ist erforderlich für die Tour-Buchung. Bitte geben Sie Ihre Telefonnummer oder Email-Adresse an.');
+}
+```
+
+**WICHTIG:** `phoneNumber` muss in `whatsappAiService.ts` an `book_tour()` übergeben werden (analog zu `create_room_reservation()`).
+
+#### 0.3 Function Signature erweitern
+
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts` (Zeile 1050-1055)
+
+**Änderung:**
+```typescript
+static async book_tour(
+  args: any,
+  userId: number | null,
+  roleId: number | null,
+  branchId: number,
+  phoneNumber?: string // NEU: WhatsApp-Telefonnummer (wird automatisch aus Context übergeben)
+): Promise<any>
+```
+
+**Datei:** `backend/src/services/whatsappAiService.ts` (Zeile 200-250, Function Call)
+
+**Änderung:** Übergebe `phoneNumber` an `book_tour()` (analog zu `create_room_reservation()`).
+
+#### 0.4 Validierung und Fehlerbehandlung verbessern
+
+**Aktueller Stand:**
+- `book_tour()` wirft Fehler wenn Daten fehlen
+- Bot zeigt Fehlermeldung statt nachzufragen
+
+**Lösung:**
+- System Prompt erweitern: Prüfe ALLE erforderlichen Daten VOR Function-Call
+- Wenn Daten fehlen: FRAGE nach, rufe Function NICHT auf
+- Analog zu `create_room_reservation()`: Detaillierte Validierung mit hilfreichen Fehlermeldungen
+
+**Code-Struktur (erweitert):**
+```typescript
+// Erweitere Validierung (nach Zeile 1058):
+// Validierung: Alle erforderlichen Parameter
+if (!args.tourId) {
+  throw new Error('tourId ist erforderlich. Bitte wählen Sie eine Tour aus der Liste.');
+}
+if (!args.tourDate) {
+  throw new Error('Tour-Datum ist erforderlich. Bitte geben Sie das Datum der Tour an (z.B. "morgen" oder ein konkretes Datum).');
+}
+if (!args.numberOfParticipants || args.numberOfParticipants < 1) {
+  throw new Error('Anzahl Teilnehmer ist erforderlich und muss mindestens 1 sein.');
+}
+if (!args.customerName || !args.customerName.trim()) {
+  throw new Error('Name des Kunden ist erforderlich. Bitte geben Sie Ihren vollständigen Namen an.');
+}
+
+// Validierung: Mindestens eine Kontaktinformation (wird bereits oben behandelt)
+```
+
+#### 0.5 System Prompt erweitern für Rückfragen
+
+**Datei:** `backend/src/services/whatsappAiService.ts` (Zeile 538-573)
+
+**Erweiterung der Function Description:**
+```typescript
+description: 'Erstellt eine Tour-Reservation/Buchung. Generiert automatisch Payment Link und setzt Zahlungsfrist (1 Stunde). Wenn Zahlung nicht innerhalb der Frist erfolgt, wird die Buchung automatisch storniert. WICHTIG: Diese Function darf NUR aufgerufen werden, wenn ALLE erforderlichen Daten vorhanden sind: tourId, tourDate, numberOfParticipants, customerName, und mindestens eine Kontaktinformation (customerPhone oder customerEmail). WICHTIG: Wenn Daten fehlen (z.B. kein Name, kein Datum), rufe NICHT diese Function auf, sondern FRAGE nach fehlenden Daten! WICHTIG: Wenn User "morgen" sagt, verwende "tomorrow" als tourDate! Wenn User "die 2." sagt nach get_tours(), ist das tourId=2! Wenn User Tour-Namen sagt (z.B. "Guatapé"), finde tourId aus vorheriger get_tours() Response! Benötigt: tourId, tourDate (unterstützt "tomorrow"/"morgen"/"mañana"), numberOfParticipants, customerName, und mindestens eine Kontaktinformation (customerPhone oder customerEmail).'
+```
+
+**Erweiterung der Parameter Descriptions:**
+```typescript
+tourDate: {
+  type: 'string',
+  description: 'Datum der Tour (ISO-Format, z.B. "2025-01-27T10:00:00Z" oder "2025-01-27", oder "tomorrow"/"morgen"/"mañana" für morgen). WICHTIG: Wenn User "morgen" sagt, verwende "tomorrow"! Wenn User "übermorgen" sagt, verwende "day after tomorrow"! Unterstützt auch DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY Formate.'
+},
+customerName: {
+  type: 'string',
+  description: 'Name des Kunden (ERFORDERLICH - vollständiger Name). WICHTIG: Wenn kein Name vorhanden ist, rufe NICHT diese Function auf, sondern FRAGE nach dem Namen!'
+}
+```
+
+#### 0.6 System Prompt erweitern für Kontext-Erhaltung
+
+**Datei:** `backend/src/services/whatsappAiService.ts` (Zeile 690-985, `buildSystemPrompt()`)
+
+**Erweiterung:**
+```typescript
+// Füge Tour-Buchungs-Anweisungen hinzu (analog zu Zimmer-Buchungen):
+prompt += '\n- book_tour: Erstelle eine Tour-Buchung (tourId, tourDate, numberOfParticipants, customerName, customerPhone/customerEmail)\n';
+prompt += '  WICHTIG: Verwende diese Function wenn der User eine Tour buchen möchte!\n';
+prompt += '  WICHTIG: Generiert automatisch Payment Link und setzt Zahlungsfrist (1 Stunde)\n';
+prompt += '  WICHTIG: Diese Function darf NUR aufgerufen werden, wenn ALLE erforderlichen Daten vorhanden sind!\n';
+prompt += '  WICHTIG: Wenn Daten fehlen (z.B. kein Name, kein Datum), rufe NICHT diese Function auf, sondern FRAGE nach fehlenden Daten!\n';
+prompt += '  WICHTIG: Wenn User "morgen" sagt, verwende "tomorrow" als tourDate!\n';
+prompt += '  WICHTIG: Wenn User "die 2." sagt nach get_tours(), ist das tourId=2 (die zweite Tour aus der Liste)!\n';
+prompt += '  WICHTIG: Wenn User Tour-Namen sagt (z.B. "Guatapé"), finde tourId aus vorheriger get_tours() Response!\n';
+prompt += '  WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User vorher get_tours() aufgerufen hat, behalte die Tour-Liste im Kontext!\n';
+prompt += '  WICHTIG: Wenn User "die 2., guatape. für morgen. für 2 personen" sagt, interpretiere: tourId=2 (aus get_tours()), tourDate="tomorrow", numberOfParticipants=2!\n';
+prompt += '  WICHTIG: Wenn customerName fehlt → FRAGE nach dem Namen, rufe Function NICHT auf!\n';
+prompt += '  WICHTIG: Wenn tourDate fehlt → FRAGE nach dem Datum, rufe Function NICHT auf!\n';
+prompt += '  WICHTIG: Wenn numberOfParticipants fehlt → FRAGE nach der Anzahl, rufe Function NICHT auf!\n';
+prompt += '  Beispiele:\n';
+prompt += '    - "ich möchte tour 1 für morgen buchen" → book_tour({ tourId: 1, tourDate: "tomorrow", numberOfParticipants: 1, customerName: "Max Mustermann", customerPhone: "+573001234567" })\n';
+prompt += '    - "die 2., guatape. für morgen. für 2 personen" → book_tour({ tourId: 2, tourDate: "tomorrow", numberOfParticipants: 2, customerName: "Max Mustermann", customerPhone: "+573001234567" })\n';
+prompt += '    - User sagt "die 2." nach get_tours() → tourId=2 (aus vorheriger Response)\n';
+prompt += '    - User sagt "Guatapé" → finde tourId aus get_tours() Response (z.B. tourId=2)\n';
+```
+
+**Erweiterung für Kontext-Erhaltung:**
+```typescript
+prompt += '\n\n=== KRITISCH: KONTEXT-NUTZUNG FÜR TOUREN ===';
+prompt += '\nWICHTIG: Du MUSST ALLE Informationen aus der aktuellen UND vorherigen Nachrichten nutzen!';
+prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht get_tours() aufgerufen hat, behalte die Tour-Liste im Kontext!';
+prompt += '\nWICHTIG: Wenn User "die 2." sagt nach get_tours(), ist das tourId=2 (die zweite Tour aus der Liste)!';
+prompt += '\nWICHTIG: Wenn User Tour-Namen sagt (z.B. "Guatapé"), finde tourId aus der vorherigen get_tours() Response!';
+prompt += '\nWICHTIG: Wenn User "morgen" sagt, verwende IMMER "tomorrow" als tourDate!';
+prompt += '\nWICHTIG: Wenn User "für 2 personen" sagt, ist das numberOfParticipants=2!';
+prompt += '\nWICHTIG: Kombiniere Informationen aus MEHREREN Nachrichten! Wenn User "die 2." sagt und später "für morgen", dann: tourId=2, tourDate="tomorrow"!';
+prompt += '\nWICHTIG: Wenn User "die 2., guatape. für morgen. für 2 personen" sagt, hat er ALLE Informationen - rufe SOFORT book_tour auf!';
+prompt += '\nWICHTIG: Wenn User nur "die 2." sagt nach get_tours(), aber Name oder Datum fehlt → FRAGE nach fehlenden Daten, rufe book_tour NICHT auf!';
+prompt += '\nWICHTIG: Unterscheide klar zwischen TOUR-Buchung (book_tour) und ZIMMER-Buchung (create_room_reservation)!';
+prompt += '\nWICHTIG: Wenn User nach get_tours() eine Nummer wählt (z.B. "2."), ist das IMMER eine Tour-ID, NICHT eine Zimmer-Nummer!';
+prompt += '\nWICHTIG: Wenn User nach check_room_availability() eine Nummer wählt (z.B. "2."), ist das IMMER eine Zimmer-categoryId, NICHT eine Tour-ID!';
+```
+
+#### 0.7 Kontext-Speicherung in Conversation
+
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts` (Zeile 891-971, `get_tours()`)
+
+**Erweiterung:** Speichere Tour-Liste im Conversation Context (analog zu `check_room_availability()`).
+
+**Code-Struktur:**
+```typescript
+// Nach Zeile 950 (nach Tour-Query):
+// Speichere Context in Conversation (falls conversationId vorhanden)
+if (conversationId) {
+  try {
+    const conversation = await prisma.whatsAppConversation.findUnique({
+      where: { id: conversationId },
+      select: { context: true }
+    });
+    
+    if (conversation) {
+      const context = (conversation.context as any) || {};
+      const tourContext = context.tour || {};
+      
+      // Aktualisiere Context mit Tour-Liste
+      const updatedContext = {
+        ...tourContext,
+        lastToursList: tours.map(t => ({
+          id: t.id,
+          title: t.title,
+          price: t.price,
+          location: t.location
+        })),
+        lastToursCheckAt: new Date().toISOString()
+      };
+      
+      await prisma.whatsAppConversation.update({
+        where: { id: conversationId },
+        data: {
+          context: {
+            ...context,
+            tour: updatedContext
+          }
+        }
+      });
+      
+      console.log('[get_tours] Context aktualisiert:', {
+        toursCount: tours.length
+      });
+    }
+  } catch (contextError) {
+    console.error('[get_tours] Fehler beim Speichern des Contexts:', contextError);
+    // Nicht abbrechen, nur loggen
+  }
+}
+```
+
+**WICHTIG:** `conversationId` muss an `get_tours()` übergeben werden (analog zu `check_room_availability()`).
+
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts` (Zeile 891-896)
+
+**Änderung:**
+```typescript
+static async get_tours(
+  args: any,
+  userId: number | null,
+  roleId: number | null,
+  branchId: number,
+  conversationId?: number // NEU: Conversation ID für Context-Speicherung
+): Promise<any>
+```
+
+**Datei:** `backend/src/services/whatsappAiService.ts` (Function Call)
+
+**Änderung:** Übergebe `conversationId` an `get_tours()`.
+
+---
 
 ### Phase 1: Tour-Buchungsbestätigung per WhatsApp versenden
 
@@ -608,9 +944,21 @@ if (tourBooking) {
 
 ## ✅ Checkliste
 
+### Phase 0: KRITISCH - `book_tour()` erweitern (Datum-Parsing, Validierung, Rückfragen)
+- [ ] Datum-Parsing für "morgen"/"tomorrow" hinzufügen (analog zu `create_room_reservation()`)
+- [ ] WhatsApp-Telefonnummer als Fallback für `customerPhone` (analog zu `create_room_reservation()`)
+- [ ] Function Signature erweitern: `phoneNumber` Parameter hinzufügen
+- [ ] `whatsappAiService.ts` erweitern: `phoneNumber` an `book_tour()` übergeben
+- [ ] Validierung und Fehlerbehandlung verbessern (hilfreiche Fehlermeldungen)
+- [ ] System Prompt erweitern: Rückfragen wenn Daten fehlen (analog zu Zimmer-Buchungen)
+- [ ] System Prompt erweitern: Kontext-Erhaltung (Tour-Liste, Tour-ID aus vorheriger Response)
+- [ ] Kontext-Speicherung in Conversation: Tour-Liste nach `get_tours()` speichern
+- [ ] `get_tours()` erweitern: `conversationId` Parameter hinzufügen
+- [ ] `whatsappAiService.ts` erweitern: `conversationId` an `get_tours()` übergeben
+
 ### Phase 1: Tour-Buchungsbestätigung per WhatsApp
 - [ ] `TourWhatsAppService.sendBookingConfirmationToCustomer()` erweitern
-- [ ] WhatsApp-Nachricht mit Payment Link und Barzahlungshinweis erstellen
+- [ ] WhatsApp-Nachricht mit Payment Link und Barzahlungshinweis erstellen (DE/ES/EN)
 - [ ] Integration in `book_tour()`
 
 ### Phase 2: Tour an Reservation "heften"
@@ -620,6 +968,54 @@ if (tourBooking) {
 
 ### Phase 3: Webhook-Erweiterung (optional)
 - [ ] `TourReservation.tourPricePaid` aktualisieren wenn Tour Payment Link bezahlt wurde
+
+---
+
+## 📋 Zusammenfassung: Was haben wir vergessen/übersehen?
+
+### ✅ Jetzt im Plan enthalten:
+
+1. **KRITISCH - Datum-Parsing:**
+   - `book_tour()` unterstützt "morgen"/"tomorrow" nicht → JETZT im Plan
+   - Analog zu `create_room_reservation()` implementieren
+
+2. **KRITISCH - Bot verwechselt Tour- und Zimmer-Buchung:**
+   - Bot ruft `check_room_availability()` statt `book_tour()` auf → JETZT im Plan
+   - System Prompt erweitern: Kontext-Erhaltung, klare Unterscheidung
+
+3. **KRITISCH - Bot fragt nicht nach fehlenden Daten:**
+   - `book_tour()` wirft Fehler statt nachzufragen → JETZT im Plan
+   - System Prompt erweitern: Rückfragen-Logik (analog zu Zimmer-Buchungen)
+
+4. **KRITISCH - Bot verliert Kontext:**
+   - Bot erkennt nicht, dass "die 2." nach `get_tours()` eine Tour-ID ist → JETZT im Plan
+   - Kontext-Speicherung in Conversation implementieren
+
+5. **WhatsApp-Telefonnummer als Fallback:**
+   - `customerPhone` wird nicht aus WhatsApp-Nummer übernommen → JETZT im Plan
+   - Analog zu `create_room_reservation()` implementieren
+
+6. **Kontext-Speicherung:**
+   - Tour-Liste wird nicht im Conversation Context gespeichert → JETZT im Plan
+   - Analog zu `check_room_availability()` implementieren
+
+### ❌ Was noch zu prüfen ist:
+
+1. **Message History für besseren Kontext:**
+   - Wird Message History bereits an AI übergeben?
+   - Falls nicht: Sollte Message History erweitert werden?
+
+2. **Tour-Namen-Erkennung:**
+   - Bot erkennt "Guatapé" als Tour-Name?
+   - Sollte Tour-Namen aus `get_tours()` Response in Context speichern?
+
+3. **Fehlerbehandlung:**
+   - Wie werden Fehler dem User angezeigt?
+   - Sollten Fehlermeldungen mehrsprachig sein?
+
+4. **Testing:**
+   - Wie werden die Änderungen getestet?
+   - Sollten Test-Szenarien dokumentiert werden?
 
 ---
 
