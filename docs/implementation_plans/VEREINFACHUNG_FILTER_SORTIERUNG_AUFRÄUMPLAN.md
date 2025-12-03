@@ -788,6 +788,73 @@ const handleSort = (key: SortConfig['key']) => {
 
 ### Phase 5: Performance & Sicherheit prüfen
 
+#### 5.1 Memory Leaks beheben (PRIORITÄT 1) 🔴🔴🔴
+
+**Referenz:** `docs/technical/MEMORY_LEAK_FILTER_OPERATIONEN_FIX_PLAN_2025-12-02.md`
+
+**Aufgaben:**
+1. FilterContext: TTL und Limits für Filter-Cache hinzufügen
+2. SavedFilterTags: Alle console.log Statements wrappen
+3. FilterPane: `JSON.stringify()` nur bei tatsächlichen Änderungen verwenden
+4. Worktracker: Alle Filter-States im Cleanup löschen (auch `filterSortDirections`)
+
+**Erwartete Verbesserung:**
+- RAM-Verbrauch: Von > 2.1GB → < 500MB bei Filter-Operationen
+- Memory-Leaks: Behebung aller identifizierten Leaks
+
+#### 5.2 FilterContext Race Condition beheben (PRIORITÄT 1) 🔴🔴🔴
+
+**Referenz:** `docs/technical/FILTER_CONTEXT_RACE_CONDITION_FIX_2025-12-02.md`
+
+**Aufgaben:**
+1. `cleanupOldFilters`: `loadedTablesRef` nur löschen, wenn Filter aus State gelöscht werden
+2. `loadFilters`: Prüfung auf Filter im State, nicht nur `loadedTablesRef`
+
+**Erwartete Verbesserung:**
+- Requests laden wieder korrekt nach Memory-Leak-Fixes
+- Keine Race Conditions mehr
+
+#### 5.3 Doppelte Filterung beheben (PRIORITÄT 1) 🔴🔴🔴
+
+**Referenz:** `docs/technical/INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`
+
+**Aufgaben:**
+1. Requests: Filter nur server-seitig anwenden (client-seitige Filterung entfernen)
+2. Tasks: Filter nur server-seitig anwenden (client-seitige Filterung entfernen)
+3. Reservations: Filter nur server-seitig anwenden (client-seitige Filterung entfernen)
+
+**Erwartete Verbesserung:**
+- Filter wird nicht mehr doppelt angewendet
+- Korrekte Anzahl von Ergebnissen
+- Weniger Re-Renders
+
+#### 5.4 Infinite Scroll korrigieren (PRIORITÄT 2) 🔴🔴
+
+**Referenz:** `docs/technical/INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`
+
+**Aufgaben:**
+1. Requests: Prüfung auf `filteredAndSortedRequests.length` statt `requests.length`
+2. Tasks: Prüfung auf `filteredAndSortedTasks.length` statt `tasks.length`
+3. Reservations: Prüfung auf `filteredAndSortedReservations.length` statt `reservations.length`
+
+**Erwartete Verbesserung:**
+- Infinite Scroll funktioniert wieder korrekt
+- Korrekte Anzeige von "Mehr laden" Button
+
+#### 5.5 Prisma Connection Pool Problem beheben (PRIORITÄT 1) 🔴🔴🔴
+
+**Referenz:** `docs/technical/PRISMA_CONNECTION_POOL_PROBLEM_ANALYSE_UND_FIX_PLAN_2025-12-02.md`
+
+**Aufgaben:**
+1. Singleton Pattern implementieren (1 Instanz statt 10)
+2. `connection_limit: 20-30` setzen
+3. `activeQueries` Counter korrigieren (wird bei Fehlern reduziert)
+
+**Erwartete Verbesserung:**
+- RAM-Verbrauch: Von > 4GB → < 600MB
+- System blockiert nicht mehr
+- Keine "Can't reach database server" Fehler mehr
+
 #### 5.1 Performance-Verbesserungen
 
 **Was verbessert wird:**
@@ -823,10 +890,24 @@ const handleSort = (key: SortConfig['key']) => {
 **Aufwand:** 4-6 Stunden
 **Risiko:** Mittel (viele Dateien betroffen)
 
-1. Backend: `sortDirections` Feld entfernen
-2. Frontend: Alle `filterSortDirections` Referenzen entfernen
-3. Frontend: Sortierungs-Logik vereinfachen
-4. Tests: Prüfen, dass keine Sortierungs-Funktionalität fehlt
+**Status:** ✅ **IN ARBEIT** (80% abgeschlossen)
+
+#### ✅ Abgeschlossen:
+1. ✅ **Frontend:** Alle `filterSortDirections` Referenzen entfernt
+   - `Requests.tsx`: State, Funktionen, Props entfernt
+   - `Worktracker.tsx`: States für Tasks & Reservations entfernt
+   - Filter-Sortierung aus `filteredAndSorted*` useMemo entfernt
+   - Alle `setFilterSortDirections` Aufrufe entfernt
+   - `savedSortDirections` und `onSortDirectionsChange` Props entfernt
+2. ✅ **Backend:** `sortDirections` aus Controller & Cache entfernt
+   - `savedFilterController.ts`: Interface, Speichern, Rückgabe entfernt
+   - `filterListCache.ts`: Parsing und Rückgabe entfernt
+   - Migration-Logik entfernt
+3. ✅ **Tests:** Linter-Checks erfolgreich (keine Fehler)
+
+#### ⏳ Noch zu tun:
+1. ⏳ **Backend:** `sortDirections` Feld aus Schema entfernen (benötigt Migration)
+2. ⏳ **Tests:** Funktionalitätstests (Filter funktionieren, keine Fehler)
 
 ### Schritt 2: Hauptsortierung BEHALTEN & vereinfachen (Priorität 2) 🔴🔴
 
@@ -1637,7 +1718,7 @@ const isAdmin = userRole?.role?.name?.toLowerCase() === 'admin' ||
 
 ---
 
-## 🚨 PERFORMANCE-AUSWIRKUNGEN
+## 🚨 PERFORMANCE-AUSWIRKUNGEN (VOLLSTÄNDIG)
 
 ### ✅ PERFORMANCE-VERBESSERUNGEN (bei Entfernung):
 
@@ -1657,47 +1738,283 @@ const isAdmin = userRole?.role?.name?.toLowerCase() === 'admin' ||
 4. **Weniger API-Calls:**
    - Filter-Sortierung entfernen → keine Sortierung mehr an Server
 
+5. **Weniger Memory-Verbrauch:**
+   - Filter-Sortierung entfernen → weniger Daten im State
+   - Client-seitige Sortierung entfernen → weniger temporäre Arrays
+
 ### ⚠️ PERFORMANCE-RISIKEN (bei Entfernung):
 
 1. **Keine Risiken identifiziert:**
    - Alle entfernten Dinge sind überflüssig
    - Keine Performance-Verschlechterung erwartet
 
+### 🔴 KRITISCHE PERFORMANCE-PROBLEME (müssen BEHOBEN werden):
+
+1. **Memory Leaks in FilterContext:**
+   - **Problem:** FilterContext speichert alle Filter dauerhaft (kein Cleanup)
+   - **Impact:** RAM > 2.1GB bei Filter-Tag-Klicks
+   - **Lösung:** TTL und Limits für Filter-Cache (siehe `MEMORY_LEAK_FILTER_OPERATIONEN_FIX_PLAN_2025-12-02.md`)
+   - **Priorität:** 🔴🔴🔴 KRITISCH
+
+2. **Console.log Statements (nicht gewrappt):**
+   - **Problem:** SavedFilterTags hat 19 console.log Statements (nicht gewrappt)
+   - **Impact:** Browser speichert alle Console-Logs im Memory → 10-50MB Memory
+   - **Lösung:** Alle console.log mit `process.env.NODE_ENV === 'development'` wrappen
+   - **Priorität:** 🔴🔴 WICHTIG
+
+3. **FilterPane erstellt viele temporäre Arrays:**
+   - **Problem:** `useEffect` verwendet `JSON.stringify()` bei jedem Render
+   - **Impact:** 1-5MB Memory-Leak bei vielen Filter-Änderungen
+   - **Lösung:** `JSON.stringify()` nur bei tatsächlichen Änderungen verwenden
+   - **Priorität:** 🔴🔴 WICHTIG
+
+4. **Worktracker Cleanup ist unvollständig:**
+   - **Problem:** Cleanup löscht nur `filterConditions`, nicht `filterSortDirections`
+   - **Impact:** Filter-States bleiben teilweise im Memory → 50-200MB Memory-Leak
+   - **Lösung:** Alle Filter-States im Cleanup löschen (auch `filterSortDirections`)
+   - **Priorität:** 🔴🔴 WICHTIG
+
+5. **Doppelte Filterung (server-seitig + client-seitig):**
+   - **Problem:** Filter wird doppelt angewendet (server-seitig + client-seitig)
+   - **Impact:** Weniger Ergebnisse als erwartet, unnötige Re-Renders
+   - **Lösung:** Filter nur server-seitig anwenden (siehe `INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`)
+   - **Priorität:** 🔴🔴 KRITISCH
+
+6. **Infinite Scroll prüft falsche Länge:**
+   - **Problem:** Infinite Scroll prüft `requests.length` statt `filteredAndSortedRequests.length`
+   - **Impact:** Infinite Scroll funktioniert nicht richtig
+   - **Lösung:** Prüfung auf `filteredAndSortedRequests.length` ändern
+   - **Priorität:** 🔴🔴 WICHTIG
+
+7. **Prisma Connection Pool Problem:**
+   - **Problem:** `activeQueries` Counter wächst kontinuierlich (wird nicht reduziert bei Fehlern)
+   - **Impact:** RAM > 600MB bis > 4GB, System blockiert
+   - **Lösung:** Singleton Pattern (1 Instanz), `connection_limit: 20-30` (siehe `PRISMA_CONNECTION_POOL_PROBLEM_ANALYSE_UND_FIX_PLAN_2025-12-02.md`)
+   - **Priorität:** 🔴🔴🔴 KRITISCH
+
+8. **FilterContext Race Condition:**
+   - **Problem:** Race Condition in `cleanupOldFilters` → Requests laden nicht mehr
+   - **Impact:** System funktioniert nicht mehr nach Memory-Leak-Fixes
+   - **Lösung:** `loadedTablesRef` nur löschen, wenn Filter aus State gelöscht werden (siehe `FILTER_CONTEXT_RACE_CONDITION_FIX_2025-12-02.md`)
+   - **Priorität:** 🔴🔴🔴 KRITISCH
+
+---
+
 ---
 
 ---
 
-## 📚 GELESENE DOKUMENTE
+## 📝 FORTSCHRITT DOKUMENTATION
 
-### Dokumente, die für diese Analyse gelesen wurden:
+### Phase 1: Filter-Sortierung entfernen
 
-1. **`docs/implementation_plans/VEREINFACHUNG_FILTER_SORTIERUNG_AUFRÄUMPLAN.md`** (dieses Dokument)
-   - Vollständige Analyse der überflüssigen Dinge
-   - Cleanup-Plan
+**Start:** 2025-01-30
+**Status:** ✅ 80% abgeschlossen
 
-2. **`docs/technical/FILTER_UND_SORTIERUNG_AKTUELLER_ZUSTAND_2025-01-29.md`**
+#### Durchgeführte Änderungen:
+
+**Frontend (Requests.tsx):**
+- ✅ `filterSortDirections` State entfernt (Zeile 213)
+- ✅ `applyFilterConditions`: `sortDirections` Parameter entfernt
+- ✅ `resetFilterConditions`: `setFilterSortDirections` entfernt
+- ✅ `handleFilterChange`: `sortDirections` Parameter entfernt
+- ✅ Filter-Sortierung aus `filteredAndSortedRequests` useMemo entfernt (Priorität 2)
+- ✅ `filterSortDirections` aus useMemo Dependencies entfernt
+- ✅ `savedSortDirections` und `onSortDirectionsChange` Props aus FilterPane entfernt
+
+**Frontend (Worktracker.tsx):**
+- ✅ `filterSortDirections` State entfernt (Zeile 388)
+- ✅ `reservationFilterSortDirections` State entfernt (Zeile 381)
+- ✅ `applyFilterConditions`: `sortDirections` Parameter entfernt
+- ✅ `applyReservationFilterConditions`: `sortDirections` Parameter entfernt
+- ✅ `handleFilterChange`: `sortDirections` Parameter entfernt
+- ✅ `handleReservationFilterChange`: `sortDirections` Parameter entfernt
+- ✅ Filter-Sortierung aus `filteredAndSortedTasks` useMemo entfernt (Priorität 2)
+- ✅ Filter-Sortierung aus `filteredAndSortedReservations` useMemo entfernt (Priorität 2)
+- ✅ `filterSortDirections` / `reservationFilterSortDirections` aus useMemo Dependencies entfernt
+- ✅ `savedSortDirections` und `onSortDirectionsChange` Props aus FilterPane entfernt (4 Stellen)
+
+**Backend (savedFilterController.ts):**
+- ✅ `sortDirections` aus `SavedFilterRequest` Interface entfernt
+- ✅ `sortDirections` aus Request-Body entfernt
+- ✅ `sortDirectionsJson` entfernt
+- ✅ `sortDirections` aus Prisma create/update entfernt
+- ✅ `sortDirections` Migration entfernt
+- ✅ `sortDirections` aus Response entfernt
+
+**Backend (filterListCache.ts):**
+- ✅ `sortDirections` Migration entfernt
+- ✅ `sortDirections` Parsing entfernt
+- ✅ `sortDirections` aus Response entfernt (getFilters & getFilterGroups)
+
+**Tests:**
+- ✅ Linter-Checks: Keine Fehler
+- ⏳ Funktionalitätstests: Ausstehend
+
+**Noch zu tun:**
+- ⏳ Schema: `sortDirections` Feld aus `SavedFilter` Model entfernen (benötigt Migration)
+- ⏳ Funktionalitätstests: Filter funktionieren korrekt, keine Fehler
+
+---
+
+## 📚 GELESENE DOKUMENTE (VOLLSTÄNDIG)
+
+### Performance-Dokumente (letzte 150 Stunden):
+
+1. **`docs/technical/PERFORMANCE_PROBLEM_GELOEST_2025-01-29.md`** ✅ GELÖST
+   - Hauptproblem: Organization Settings waren 63 MB groß (sollten < 10 KB sein)
+   - Ursache: Mehrfache Verschlüsselung von `lobbyPms.apiKey`
+   - Lösung: Verschlüsselungs-Check implementiert
+   - Ergebnis: System läuft wieder deutlich schneller (5.5 Sekunden → 50ms)
+
+2. **`docs/technical/PERFORMANCE_ENDSCHLEIFE_WORKTRACKER_FIX_2025-01-29.md`** ✅ BEHOBEN
+   - Problem: Endlosschleife in Worktracker.tsx (1GB+ RAM, tausende Logs)
+   - Ursache: `useEffect` Dependencies fehlten (`loadTasks`, `applyFilterConditions`)
+   - Lösung: Loading-State hinzugefügt, Dependencies korrigiert, Fehlerbehandlung
+
+3. **`docs/technical/MEMORY_LEAK_FILTER_OPERATIONEN_FIX_PLAN_2025-12-02.md`** 🔴 KRITISCH
+   - Problem: RAM > 2.1GB bei Filter-Tag-Klicks
+   - Ursachen:
+     - FilterContext speichert alle Filter dauerhaft (kein Cleanup)
+     - SavedFilterTags hat 19 console.log Statements (nicht gewrappt)
+     - FilterPane erstellt viele temporäre Arrays/Strings
+     - Worktracker Cleanup ist unvollständig
+   - Lösung: TTL und Limits für Filter-Cache, Cleanup-Funktionen
+
+4. **`docs/technical/PRISMA_CONNECTION_POOL_PROBLEM_ANALYSE_UND_FIX_PLAN_2025-12-02.md`** 🔴 KRITISCH
+   - Problem: RAM > 600MB bis > 4GB, Prisma-Fehler "Can't reach database server"
+   - Ursachen:
+     - `activeQueries` Counter wächst kontinuierlich (wird nicht reduziert bei Fehlern)
+     - Prisma unterstützt NICHT mehrere Connection Pools (alle teilen sich einen Pool)
+     - Queue-Worker nutzen Prisma (können Counter erhöhen)
+   - Lösung: Singleton Pattern (1 Instanz), `connection_limit: 20-30`
+
+5. **`docs/technical/FILTER_CONTEXT_RACE_CONDITION_FIX_2025-12-02.md`** 🔴 KRITISCH
+   - Problem: Requests laden nicht mehr nach Memory-Leak-Fixes
+   - Ursache: Race Condition in FilterContext `cleanupOldFilters`
+   - Lösung: `loadedTablesRef` nur löschen, wenn Filter aus State gelöscht werden
+
+6. **`docs/technical/PERFORMANCE_LOESUNGSPLAN_VOLLSTAENDIG_2025-01-26.md`** ✅ HAUPTPROBLEM GELÖST
+   - Root Cause: Connection Pool Exhaustion
+   - Lösung: executeWithRetry aus READ-Operationen entfernen, Caching implementieren
+
+7. **`docs/technical/MEMORY_LEAKS_VOLLSTAENDIGER_BEHEBUNGSPLAN_2025-01-26.md`** 🔴 KRITISCH
+   - Problem: RAM > 1 GB, langsame Ladezeiten
+   - Ursachen:
+     - OrganizationSettings.tsx: Settings bleiben im State (19.8 MB)
+     - Worktracker.tsx: Große Arrays werden nie gelöscht
+     - Requests.tsx: Requests Array wird nie gelöscht
+   - Lösung: Cleanup-Funktionen, Settings nur bei Bedarf laden
+
+8. **`docs/technical/PERFORMANCE_ANALYSE_ERGEBNISSE_2025-01-29.md`** ✅ ANALYSE
+   - FilterTags dauern 2-3 Sekunden (DB-Query ist schnell: 0.379ms)
+   - Problem liegt NICHT bei der Datenbank (Network-Latenz, doppelte Requests, JSON-Parsing)
+
+9. **`docs/technical/INFINITE_SCROLL_UND_FILTER_FIX_PLAN_2025-01-29.md`** 🔴 KRITISCH
+   - Problem: Doppelte Filterung (server-seitig + client-seitig)
+   - Problem: Infinite Scroll prüft falsche Länge (`requests.length` statt `filteredAndSortedRequests.length`)
+   - Lösung: Filter nur server-seitig, Infinite Scroll korrigieren
+
+10. **`docs/technical/PERFORMANCE_ENDSCHLEIFE_ANALYSE_ERGEBNISSE_2025-01-29.md`** 🔍 ANALYSE
+    - Exzessives Logging in `apiClient.ts` (31 console.log Statements)
+    - ClaudeConsole fängt ALLE Logs ab (doppelte Speicherung)
+    - Dashboard lädt mehrere Komponenten (keine Lazy-Loading)
+
+11. **`docs/technical/PERFORMANCE_FILTERTAGS_ANALYSE_DETAILLIERT_2025-01-29.md`** 🔍 ANALYSE
+    - DB-Query ist sehr schnell (0.379ms)
+    - Problem liegt woanders (Network-Latenz, doppelte Requests, JSON-Parsing)
+
+12. **`docs/technical/PERFORMANCE_ANALYSE_WEITERE_PROBLEME_2025-01-29.md`** 🔍 ANALYSE
+    - FilterTags dauern immer noch 2-3 Sekunden
+    - Branch Settings könnten ähnliche Probleme haben
+
+13. **`docs/technical/PERFORMANCE_ORGANIZATION_QUERY_FIX_2025-01-29.md`** ✅ GELÖST
+    - Problem: Organization Settings Query läuft 5.5 Sekunden
+    - Lösung: Settings nur bei Bedarf laden, Verschlüsselungs-Check
+
+14. **`docs/technical/PERFORMANCE_LOBBYPMS_SETTINGS_CLEANUP_2025-01-29.md`** ✅ GELÖST
+    - Problem: Settings-Größe 63 MB (lobbyPms: 63 MB)
+    - Lösung: Cleanup-Script, Validierung hinzufügen
+
+15. **`docs/technical/PERFORMANCE_APIKEY_CLEANUP_PLAN_2025-01-29.md`** ✅ GELÖST
+    - Problem: apiKey ist 63 MB groß (sollte ~100-500 bytes sein)
+    - Lösung: apiKey bereinigen, Validierung hinzufügen
+
+16. **`docs/technical/PERFORMANCE_FIX_SOFORTMASSNAHMEN_2025-01-29.md`** ✅ GELÖST
+    - Sofortmaßnahmen: Query killen, Settings-Größe prüfen, Query-Plan analysieren
+
+17. **`docs/technical/INITIAL_LOAD_OPTIMIERUNGSPLAN_AKTUALISIERT_2025-01-29.md`** ⚠️ KONFLIKT
+    - Priorisierung (erste 5 Requests) wurde entfernt durch Infinite Scroll Fix
+    - Lösung: Priorisierung mit neuem Ansatz implementieren (kompatibel mit Filter-Fix)
+
+18. **`docs/technical/SERVER_SEITIGE_PAGINATION_VOLLSTAENDIGER_PLAN_2025-01-29.md`** 📋 PLAN
+    - Problem: Pagination wurde entfernt, lädt immer ALLE Ergebnisse
+    - Lösung: Server-seitige Pagination wieder einführen (limit/offset)
+
+19. **`docs/technical/ROLLEN_ISOLATION_UND_FILTER_FIXES_PLAN_2025-01-29.md`** 📋 PLAN
+    - Problem: To Do's laden nicht beim Öffnen, Filter funktionieren teilweise nicht
+    - Lösung: useEffect Dependencies korrigieren, loadReservations aufrufen
+
+20. **`docs/technical/MEMORY_CLEANUP_KONSISTENZ_ANALYSE_2025-01-26.md`** ✅ ANALYSE
+    - Worktracker.tsx: KONSISTENT & BEST PRACTICE
+    - ToursTab.tsx: NICHT KONSISTENT (allTours wird nie verwendet)
+    - Requests.tsx: KONSISTENT (aber anders als Tasks)
+
+21. **`docs/technical/MEMORY_LEAK_KRITISCH_1GB_ANALYSE_2025-01-26.md`** 🔴 KRITISCH
+    - Problem: RAM > 1GB im Leerlauf
+    - Ursachen:
+      - Intelligentes Cleanup wurde überschrieben (5-Minuten-Timeout)
+      - 35 console.log Statements (nicht gewrappt)
+      - URL.createObjectURL() wird nie aufgeräumt
+      - FileReader base64-Strings bleiben im Memory
+
+22. **`docs/technical/PERFORMANCE_MEMORY_LEAK_ORGANISATION_PLAN.md`** 🔴 KRITISCH
+    - Problem: RAM > 3 GB bei Organisation-Seite
+    - Ursachen:
+      - Settings werden mit `includeSettings: true` geladen (19.8 MB)
+      - Doppeltes Laden: OrganizationContext + OrganizationSettings
+      - Settings bleiben im State, auch wenn nicht verwendet
+
+### Filter & Sortierung Dokumente:
+
+1. **`docs/technical/FILTER_UND_SORTIERUNG_AKTUELLER_ZUSTAND_2025-01-29.md`**
    - Detaillierte Dokumentation des aktuellen Zustands
    - Zeigt 5 Prioritäten für Sortierung (Table-Header, Filter, Cards, Table, Fallback)
    - Dokumentiert bestehende Hauptsortierung (`sortConfig`, `tableSortConfig`, `reservationTableSortConfig`)
 
-3. **`docs/technical/FILTER_SORTIERUNG_VOLLSTAENDIGE_ANALYSE_2025-01-22.md`**
+2. **`docs/technical/FILTER_SORTIERUNG_VOLLSTAENDIGE_ANALYSE_2025-01-22.md`**
    - Analyse der Sortierungs-Prioritäten
    - Dokumentiert: "Spaltentitel anklickbar (sortierbar) = generelle Sortierung"
    - Zeigt bestehende `handleSort` Funktion und `sortConfig` State
 
-4. **`docs/technical/SORTIERUNG_PROBLEM_ANALYSE_UND_PLAN_2025-01-29.md`**
+3. **`docs/technical/SORTIERUNG_PROBLEM_ANALYSE_UND_PLAN_2025-01-29.md`**
    - Analyse des Infinite Scroll Problems
    - Zeigt client-seitige Sortierung mit Prioritäten
 
-5. **`docs/implementation_plans/worktracker_table_sorting.md`**
+4. **`docs/implementation_plans/worktracker_table_sorting.md`**
    - Plan für Tabellensortierung (nicht umgesetzt)
 
-6. **`docs/analysis/FILTER_SORTIERUNG_ANALYSE.md`**
+5. **`docs/analysis/FILTER_SORTIERUNG_ANALYSE.md`**
    - Analyse der Filter-Sortierung
 
-7. **`docs/implementation_plans/FILTER_SORTIERUNG_PRO_FILTER.md`**
+6. **`docs/implementation_plans/FILTER_SORTIERUNG_PRO_FILTER.md`**
    - Plan für Filter-Sortierung (wurde implementiert, aber sollte entfernt werden)
    - Zeigt, dass Filter-Sortierung von Anfang an falsch war
+
+7. **`docs/implementation_plans/FILTER_ANWENDUNG_FIX_PLAN_FINAL.md`**
+   - Problem: Filter werden nicht angewendet, wenn ein gespeicherter Filter erweitert wird
+   - Lösung: `onApplyWithData` Callback hinzufügen
+
+8. **`docs/implementation_plans/INFINITE_SCROLL_FINALER_PLAN.md`**
+   - Anforderungen: KEINE Pagination, Infinite Scroll nur für Anzeige
+   - Problem: Pagination wurde entfernt, lädt immer ALLE Ergebnisse
+
+9. **`docs/implementation_plans/INFINITE_SCROLL_VOLLSTAENDIGER_PLAN.md`**
+   - Vollständiger Plan für Infinite Scroll
+   - Problem: Pagination statt vollständiges Laden
+
+10. **`docs/implementation_plans/STANDARDFILTER_SEED_MIGRATION_PLAN.md`**
+    - Standardfilter werden jetzt im Seed erstellt, nicht mehr im Frontend
 
 ### Code-Dateien, die analysiert wurden:
 

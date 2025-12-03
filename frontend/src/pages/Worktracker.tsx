@@ -378,14 +378,14 @@ const Worktracker: React.FC = () => {
     // Reservations Filter States (analog zu Tasks)
     const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
     const [reservationFilterLogicalOperators, setReservationFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-    const [reservationFilterSortDirections, setReservationFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
+    // ❌ ENTFERNT: reservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
     const [reservationActiveFilterName, setReservationActiveFilterName] = useState<string>('');
     const [reservationSelectedFilterId, setReservationSelectedFilterId] = useState<number | null>(null);
     
     // State für erweiterte Filterbedingungen
     const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
     const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-    const [filterSortDirections, setFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
+    // ❌ ENTFERNT: filterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
     
     // Filter State Management (Controlled Mode)
     const [activeFilterName, setActiveFilterName] = useState<string>('');
@@ -417,14 +417,14 @@ const Worktracker: React.FC = () => {
             // Tasks Filter
             setFilterConditions([]);
             setFilterLogicalOperators([]);
-            setFilterSortDirections([]);
+            // ❌ ENTFERNT: setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
             setActiveFilterName('');
             setSelectedFilterId(null);
             
             // Reservations Filter
             setReservationFilterConditions([]);
             setReservationFilterLogicalOperators([]);
-            setReservationFilterSortDirections([]);
+            // ❌ ENTFERNT: setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
             setReservationActiveFilterName('');
             setReservationSelectedFilterId(null);
         };
@@ -718,14 +718,10 @@ const Worktracker: React.FC = () => {
     // ❌ loadMoreTasks entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
     // ✅ KRITISCH: useCallback für Stabilität in useEffect Dependencies - MUSS VOR useEffect sein, der es verwendet
-    const applyFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    const applyFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         setFilterConditions(conditions);
         setFilterLogicalOperators(operators);
-        if (sortDirections !== undefined) {
-            // Sicherstellen, dass sortDirections ein Array ist
-            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-            setFilterSortDirections(validSortDirections);
-        }
+        // ❌ ENTFERNT: sortDirections Parameter und setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         
         // ✅ FIX: Lade Daten mit Filter (server-seitig)
         setSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
@@ -832,13 +828,10 @@ const Worktracker: React.FC = () => {
     }, [reservationFilterLogicalOperators, t, showMessage]);
 
     // ✅ KRITISCH: useCallback für Stabilität - MUSS VOR useEffect sein, der es verwendet
-    const applyReservationFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    const applyReservationFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         setReservationFilterConditions(conditions);
         setReservationFilterLogicalOperators(operators);
-        if (sortDirections !== undefined) {
-            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-            setReservationFilterSortDirections(validSortDirections);
-        }
+        // ❌ ENTFERNT: sortDirections Parameter und setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         
         // ✅ FIX: Lade Daten mit Filter (server-seitig)
         setReservationSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
@@ -853,7 +846,7 @@ const Worktracker: React.FC = () => {
     }, [loadReservations]); // ✅ loadReservations als Dependency
 
     // ✅ KRITISCH: handleFilterChange MUSS NACH applyReservationFilterConditions definiert werden
-    const handleFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    const handleFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         if (activeTab === 'todos') {
             // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
             // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
@@ -867,14 +860,11 @@ const Worktracker: React.FC = () => {
                 // Gespeicherter Filter: Setze State und lade mit id
                 setFilterConditions(conditions);
                 setFilterLogicalOperators(operators);
-                if (sortDirections !== undefined) {
-                    const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-                    setFilterSortDirections(validSortDirections);
-                }
+                // ❌ ENTFERNT: sortDirections Parameter und setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                 await loadTasks(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             } else {
                 // Direkte Bedingungen: applyFilterConditions lädt bereits
-                await applyFilterConditions(conditions, operators, sortDirections);
+                await applyFilterConditions(conditions, operators);
             }
         } else if (activeTab === 'reservations') {
             // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
@@ -889,20 +879,17 @@ const Worktracker: React.FC = () => {
                 // Gespeicherter Filter: Setze State und lade mit id
                 setReservationFilterConditions(conditions);
                 setReservationFilterLogicalOperators(operators);
-                if (sortDirections !== undefined) {
-                    const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-                    setReservationFilterSortDirections(validSortDirections);
-                }
+                // ❌ ENTFERNT: sortDirections Parameter und setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                 await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             } else {
                 // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
-                await applyReservationFilterConditions(conditions, operators, sortDirections);
+                await applyReservationFilterConditions(conditions, operators);
             }
         }
     }, [activeTab, applyFilterConditions, loadTasks, loadReservations, applyReservationFilterConditions]);
 
     // ✅ KRITISCH: handleReservationFilterChange MUSS NACH applyReservationFilterConditions definiert werden
-    const handleReservationFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    const handleReservationFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
         // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
         setReservationActiveFilterName(name);
@@ -915,14 +902,11 @@ const Worktracker: React.FC = () => {
             // Gespeicherter Filter: Setze State und lade mit id
             setReservationFilterConditions(conditions);
             setReservationFilterLogicalOperators(operators);
-            if (sortDirections !== undefined) {
-                const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-                setReservationFilterSortDirections(validSortDirections);
-            }
+            // ❌ ENTFERNT: sortDirections Parameter und setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
             await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
         } else {
             // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
-            await applyReservationFilterConditions(conditions, operators, sortDirections);
+            await applyReservationFilterConditions(conditions, operators);
         }
     }, [applyReservationFilterConditions, loadReservations]);
 
@@ -1267,7 +1251,7 @@ const Worktracker: React.FC = () => {
     const resetFilterConditions = () => {
         setFilterConditions([]);
         setFilterLogicalOperators([]);
-        setFilterSortDirections([]);
+        // ❌ ENTFERNT: setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         setActiveFilterName('');
         setSelectedFilterId(null);
     };
@@ -1275,7 +1259,7 @@ const Worktracker: React.FC = () => {
     const resetReservationFilterConditions = () => {
         setReservationFilterConditions([]);
         setReservationFilterLogicalOperators([]);
-        setReservationFilterSortDirections([]);
+        // ❌ ENTFERNT: setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         setReservationActiveFilterName('');
         setReservationSelectedFilterId(null);
     };
@@ -1409,34 +1393,9 @@ const Worktracker: React.FC = () => {
                 }
             }
             
-            // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
-            if (filterSortDirections.length > 0 && (selectedFilterId !== null || filterConditions.length > 0)) {
-                // Sortiere nach Priorität (1, 2, 3, ...)
-                const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
-                
-                for (const sortDir of sortedByPriority) {
-                    const valueA = getSortValue(a, sortDir.column);
-                    const valueB = getSortValue(b, sortDir.column);
-                    
-                    let comparison = 0;
-                    if (typeof valueA === 'number' && typeof valueB === 'number') {
-                        comparison = valueA - valueB;
-                    } else {
-                        comparison = String(valueA).localeCompare(String(valueB));
-                    }
-                    
-                    if (sortDir.direction === 'desc') {
-                        comparison = -comparison;
-                    }
-                    
-                    if (comparison !== 0) {
-                        return comparison;
-                    }
-                }
-                return 0;
-            }
+            // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
             
-            // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
+            // 2. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
             if (viewMode === 'cards' && selectedFilterId === null && filterConditions.length === 0) {
                 const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
                 
@@ -1480,7 +1439,7 @@ const Worktracker: React.FC = () => {
                 }
             }
             
-            // 5. Fallback: Standardsortierung (wenn keine benutzerdefinierte Sortierung)
+            // 4. Fallback: Standardsortierung (wenn keine benutzerdefinierte Sortierung)
             const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
             const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
             
@@ -1503,7 +1462,7 @@ const Worktracker: React.FC = () => {
         // console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         }
         return sorted;
-    }, [tasks, selectedFilterId, searchTerm, tableSortConfig, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]); // ✅ PERFORMANCE: getStatusPriority entfernt (ist konstante Funktion, ändert sich nie)
+    }, [tasks, selectedFilterId, searchTerm, tableSortConfig, viewMode, cardMetadataOrder, visibleCardMetadata, taskCardSortDirections]); // ✅ PERFORMANCE: getStatusPriority entfernt (ist konstante Funktion, ändert sich nie), filterSortDirections entfernt (Phase 1)
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {
@@ -1720,34 +1679,9 @@ const Worktracker: React.FC = () => {
                 }
             }
             
-            // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
-            if (reservationFilterSortDirections.length > 0 && (reservationSelectedFilterId !== null || reservationFilterConditions.length > 0)) {
-                // Sortiere nach Priorität (1, 2, 3, ...)
-                const sortedByPriority = [...reservationFilterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
-                
-                for (const sortDir of sortedByPriority) {
-                    const valueA = getReservationSortValue(a, sortDir.column);
-                    const valueB = getReservationSortValue(b, sortDir.column);
-                    
-                    let comparison = 0;
-                    if (typeof valueA === 'number' && typeof valueB === 'number') {
-                        comparison = valueA - valueB;
-                    } else {
-                        comparison = String(valueA).localeCompare(String(valueB));
-                    }
-                    
-                    if (sortDir.direction === 'desc') {
-                        comparison = -comparison;
-                    }
-                    
-                    if (comparison !== 0) {
-                        return comparison;
-                    }
-                }
-                return 0;
-            }
+            // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
             
-            // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
+            // 2. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
             if (viewMode === 'cards' && reservationSelectedFilterId === null && reservationFilterConditions.length === 0) {
                 const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
                 
@@ -1774,7 +1708,7 @@ const Worktracker: React.FC = () => {
                 return 0;
             }
             
-            // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
+            // 3. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
             if (viewMode === 'table' && reservationSelectedFilterId === null && reservationFilterConditions.length === 0 && reservationTableSortConfig.key) {
                 const valueA = getReservationSortValue(a, reservationTableSortConfig.key);
                 const valueB = getReservationSortValue(b, reservationTableSortConfig.key);
@@ -1791,7 +1725,7 @@ const Worktracker: React.FC = () => {
                 }
             }
             
-            // 5. Fallback: Check-in-Datum (neueste zuerst)
+            // 4. Fallback: Check-in-Datum (neueste zuerst)
             return new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime();
         });
         
@@ -1800,7 +1734,7 @@ const Worktracker: React.FC = () => {
         // console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
         }
         return sorted;
-    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, reservationFilterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]);
+    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm, viewMode, cardMetadataOrder, visibleCardMetadata, reservationCardSortDirections, reservationTableSortConfig]); // ✅ reservationFilterSortDirections entfernt (Phase 1)
     
     // ✅ PAGINATION: Infinite Scroll für Tasks mit Intersection Observer
     // ✅ FIX: filterConditionsRef verwenden statt filterConditions direkt (verhindert Endlosschleife)
@@ -2340,8 +2274,7 @@ const Worktracker: React.FC = () => {
                                             onReset={resetFilterConditions}
                                             savedConditions={filterConditions}
                                             savedOperators={filterLogicalOperators}
-                                            savedSortDirections={filterSortDirections}
-                                            onSortDirectionsChange={setFilterSortDirections}
+                                            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
                                             tableId={TODOS_TABLE_ID}
                                         />
                                     ) : (
@@ -2358,8 +2291,7 @@ const Worktracker: React.FC = () => {
                                             onReset={resetReservationFilterConditions}
                                             savedConditions={reservationFilterConditions}
                                             savedOperators={reservationFilterLogicalOperators}
-                                            savedSortDirections={reservationFilterSortDirections}
-                                            onSortDirectionsChange={setReservationFilterSortDirections}
+                                            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
                                             tableId={RESERVATIONS_TABLE_ID}
                                         />
                                     )}
@@ -3679,8 +3611,7 @@ const Worktracker: React.FC = () => {
                                             onReset={resetFilterConditions}
                                             savedConditions={filterConditions}
                                             savedOperators={filterLogicalOperators}
-                                            savedSortDirections={filterSortDirections}
-                                            onSortDirectionsChange={setFilterSortDirections}
+                                            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
                                             tableId={TODOS_TABLE_ID}
                                         />
                                     ) : (
@@ -3697,8 +3628,7 @@ const Worktracker: React.FC = () => {
                                             onReset={resetReservationFilterConditions}
                                             savedConditions={reservationFilterConditions}
                                             savedOperators={reservationFilterLogicalOperators}
-                                            savedSortDirections={reservationFilterSortDirections}
-                                            onSortDirectionsChange={setReservationFilterSortDirections}
+                                            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
                                             tableId={RESERVATIONS_TABLE_ID}
                                         />
                                     )}
