@@ -1214,7 +1214,7 @@ export const checkAndStopExceededWorktimes = async () => {
           ? startISOString.substring(0, startISOString.length - 1)
           : startISOString;
       const startTimeDate = new Date(startISOStringWithoutZ);
-      const now = new Date();
+      // Verwende die bereits oben deklarierte 'now' Variable
       const diff = now.getTime() - startTimeDate.getTime();
       
       const currentSessionMs = diff;
