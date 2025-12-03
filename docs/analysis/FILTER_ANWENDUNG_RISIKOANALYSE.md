@@ -242,3 +242,4 @@ if (filterId) {
 3. **Sollen alle Komponenten `handleFilterChange` haben?** Oder reicht `applyFilterConditions` mit Fix?
 
 
+

@@ -1352,27 +1352,11 @@ const Worktracker: React.FC = () => {
         };
         
         const sorted = filtered.sort((a, b) => {
-            // 1. Priorität: Table-Header-Sortierung (temporäre Überschreibung, auch wenn Filter aktiv)
-            if (viewMode === 'table' && tableSortConfig.key) {
-                const valueA = getSortValue(a, tableSortConfig.key);
-                const valueB = getSortValue(b, tableSortConfig.key);
-                
-                let comparison = 0;
-                if (typeof valueA === 'number' && typeof valueB === 'number') {
-                    comparison = valueA - valueB;
-                } else {
-                    comparison = String(valueA).localeCompare(String(valueB));
-                }
-                
-                if (comparison !== 0) {
-                    return tableSortConfig.direction === 'asc' ? comparison : -comparison;
-                }
-            }
-            
             // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
             // ❌ ENTFERNT: Cards-Mode Multi-Sortierung (Priorität 2) - Card-Sortierung wurde entfernt (Phase 2)
+            // ❌ ENTFERNT: Table-Header-Sortierung (Priorität 1) - war redundant, da Hauptsortierung bereits tableSortConfig verwendet
             
-            // 2. Priorität: Hauptsortierung (tableSortConfig) - für Table & Card gleich (synchron)
+            // Hauptsortierung (tableSortConfig) - für Table & Card gleich (synchron)
             if (tableSortConfig.key && (selectedFilterId === null || filterConditions.length === 0)) {
                 const valueA = getSortValue(a, tableSortConfig.key);
                 const valueB = getSortValue(b, tableSortConfig.key);
@@ -1612,27 +1596,11 @@ const Worktracker: React.FC = () => {
         
         // Sortierung basierend auf Prioritäten
         const sorted = filtered.sort((a, b) => {
-            // 1. Priorität: Table-Header-Sortierung (temporäre Überschreibung, auch wenn Filter aktiv)
-            if (viewMode === 'table' && reservationTableSortConfig.key) {
-                const valueA = getReservationSortValue(a, reservationTableSortConfig.key);
-                const valueB = getReservationSortValue(b, reservationTableSortConfig.key);
-                
-                let comparison = 0;
-                if (typeof valueA === 'number' && typeof valueB === 'number') {
-                    comparison = valueA - valueB;
-                } else {
-                    comparison = String(valueA).localeCompare(String(valueB));
-                }
-                
-                if (comparison !== 0) {
-                    return reservationTableSortConfig.direction === 'asc' ? comparison : -comparison;
-                }
-            }
-            
             // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
             // ❌ ENTFERNT: Cards-Mode Multi-Sortierung (Priorität 2) - Card-Sortierung wurde entfernt (Phase 2)
+            // ❌ ENTFERNT: Table-Header-Sortierung (Priorität 1) - war redundant, da Hauptsortierung bereits reservationTableSortConfig verwendet
             
-            // 2. Priorität: Hauptsortierung (reservationTableSortConfig) - für Table & Card gleich (synchron)
+            // Hauptsortierung (reservationTableSortConfig) - für Table & Card gleich (synchron)
             if (reservationTableSortConfig.key && (reservationSelectedFilterId === null || reservationFilterConditions.length === 0)) {
                 const valueA = getReservationSortValue(a, reservationTableSortConfig.key);
                 const valueB = getReservationSortValue(b, reservationTableSortConfig.key);

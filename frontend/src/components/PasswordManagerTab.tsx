@@ -44,7 +44,7 @@ const PasswordManagerTab: React.FC = () => {
   // Filter State Management (Controlled Mode)
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-  const [filterSortDirections, setFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
+  // ❌ ENTFERNT: filterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
   const [isFilterPaneOpen, setIsFilterPaneOpen] = useState(false);
   const [activeFilterName, setActiveFilterName] = useState<string>('');
   const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
@@ -215,12 +215,10 @@ const PasswordManagerTab: React.FC = () => {
   };
 
   // Filter-Funktionen
-  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
-    if (sortDirections) {
-      setFilterSortDirections(sortDirections);
-    }
+    // ❌ ENTFERNT: sortDirections Parameter - Filter-Sortierung wurde entfernt (Phase 1)
   };
 
   const resetFilterConditions = () => {
@@ -231,10 +229,11 @@ const PasswordManagerTab: React.FC = () => {
     setSelectedFilterId(null);
   };
 
-  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
-    applyFilterConditions(conditions, operators, sortDirections);
+    applyFilterConditions(conditions, operators);
+    // ❌ ENTFERNT: sortDirections Parameter - Filter-Sortierung wurde entfernt (Phase 1)
   };
 
   // Column Evaluators für Filter
@@ -323,39 +322,16 @@ const PasswordManagerTab: React.FC = () => {
       );
     }
 
-    // Sortierung anwenden (aus Filter oder Standard)
-    if (filterSortDirections.length > 0) {
-      filtered.sort((a, b) => {
-        for (const sortDir of filterSortDirections.sort((x, y) => x.priority - y.priority)) {
-          const aValue = getFieldValue(a, sortDir.column);
-          const bValue = getFieldValue(b, sortDir.column);
-          
-          let comparison = 0;
-          if (typeof aValue === 'string' && typeof bValue === 'string') {
-            comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
-          } else if (aValue instanceof Date && bValue instanceof Date) {
-            comparison = aValue.getTime() - bValue.getTime();
-          } else {
-            comparison = aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
-          }
-          
-          if (comparison !== 0) {
-            return sortDir.direction === 'asc' ? comparison : -comparison;
-          }
-        }
-        return 0;
-      });
-    } else {
-      // Standard-Sortierung: nach createdAt desc
-      filtered.sort((a, b) => {
-        const aTime = new Date(a.createdAt).getTime();
-        const bTime = new Date(b.createdAt).getTime();
-        return bTime - aTime;
-      });
-    }
+    // ❌ ENTFERNT: Filter-Sortierung - Filter-Sortierung wurde entfernt (Phase 1)
+    // Standard-Sortierung: nach createdAt desc
+    filtered.sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return bTime - aTime;
+    });
 
     return filtered;
-  }, [entries, filterConditions, filterLogicalOperators, filterSortDirections]);
+  }, [entries, filterConditions, filterLogicalOperators]); // ✅ filterSortDirections entfernt (Phase 1)
 
   if (!canView) {
     return (
@@ -421,8 +397,7 @@ const PasswordManagerTab: React.FC = () => {
             onReset={resetFilterConditions}
             savedConditions={filterConditions}
             savedOperators={filterLogicalOperators}
-            savedSortDirections={filterSortDirections}
-            onSortDirectionsChange={setFilterSortDirections}
+            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
             tableId={PASSWORD_MANAGER_TABLE_ID}
           />
         </div>
@@ -432,7 +407,7 @@ const PasswordManagerTab: React.FC = () => {
       <div className="px-3 sm:px-4 md:px-6">
         <SavedFilterTags
           tableId={PASSWORD_MANAGER_TABLE_ID}
-          onSelectFilter={(conditions, operators, sortDirections) => applyFilterConditions(conditions, operators, sortDirections)}
+          onSelectFilter={(conditions, operators) => applyFilterConditions(conditions, operators)} // ✅ sortDirections Parameter entfernt (Phase 1)
           onReset={resetFilterConditions}
           activeFilterName={activeFilterName}
           selectedFilterId={selectedFilterId}

@@ -760,27 +760,11 @@ const Requests: React.FC = () => {
           }
         };
         
-        // 1. Priorität: Table-Header-Sortierung (temporäre Überschreibung, auch wenn Filter aktiv)
-        if (viewMode === 'table' && sortConfig.key) {
-          const valueA = getSortValue(a, sortConfig.key);
-          const valueB = getSortValue(b, sortConfig.key);
-          
-          let comparison = 0;
-          if (typeof valueA === 'number' && typeof valueB === 'number') {
-            comparison = valueA - valueB;
-          } else {
-            comparison = String(valueA).localeCompare(String(valueB));
-          }
-          
-          if (comparison !== 0) {
-            return sortConfig.direction === 'asc' ? comparison : -comparison;
-          }
-        }
-        
         // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
         // ❌ ENTFERNT: Cards-Mode Multi-Sortierung (Priorität 2) - Card-Sortierung wurde entfernt (Phase 2)
+        // ❌ ENTFERNT: Table-Header-Sortierung (Priorität 1) - war redundant, da Hauptsortierung bereits sortConfig verwendet
         
-        // 2. Priorität: Hauptsortierung (sortConfig) - für Table & Card gleich (synchron)
+        // Hauptsortierung (sortConfig) - für Table & Card gleich (synchron)
         if (sortConfig.key && (selectedFilterId === null || filterConditions.length === 0)) {
           // Verwende getSortValue für konsistente Sortierung (Table & Card)
           const valueA = getSortValue(a, sortConfig.key);

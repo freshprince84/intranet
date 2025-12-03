@@ -402,3 +402,4 @@ const standardFilterNames = [
 - **isStandardFilter:** Prüft auch `recentClientNames` für consultations-table - bleibt unverändert
 
 
+
