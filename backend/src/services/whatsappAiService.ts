@@ -702,10 +702,15 @@ export class WhatsAppAiService {
           'Do NOT use German, do NOT use Spanish, ONLY English.\n' +
           'All texts, explanations, questions and answers must be in English.\n' +
           'Even if the system prompt is in German, ALWAYS answer in English.\n' +
-          'When you interpret Function Results, explain them in English.\n' +
+          'IMPORTANT: If Function Results contain German terms (e.g. "Dorm-Zimmer", "Privates Zimmer", "Betten", "Zimmer"), ALWAYS translate them to English!\n' +
+          'IMPORTANT: "Dorm-Zimmer" → "Shared rooms" or "Dorm rooms", "Privates Zimmer" → "Private rooms"\n' +
+          'IMPORTANT: "Betten" → "beds", "Zimmer" → "rooms"\n' +
+          'IMPORTANT: "compartida" → "shared", "privada" → "private"\n' +
+          'When you interpret Function Results, explain them in English and translate ALL terms.\n' +
           'When you ask questions, ask them in English.\n' +
           'When you report errors, report them in English.\n' +
           'ANSWER ONLY IN ENGLISH - NO EXCEPTION!\n' +
+          'TRANSLATE ALL GERMAN TERMS FROM FUNCTION RESULTS TO ENGLISH!\n' +
           '=== END LANGUAGE INSTRUCTION ===\n',
       fr: '=== CRITIQUE: INSTRUCTION DE LANGUE ===\n' +
           'TU DOIS TOUJOURS ET EXCLUSIVEMENT RÉPONDRE EN FRANÇAIS!\n' +
@@ -875,11 +880,28 @@ export class WhatsAppAiService {
     prompt += '  WICHTIG: Jedes Zimmer im Function-Ergebnis muss in der Antwort erwähnt werden!\n';
     prompt += '  WICHTIG: Wenn User nur "heute" sagt, verwende startDate: "today" und lasse endDate leer (zeigt nur heute, nicht heute+morgen)!\n';
     prompt += '  WICHTIG: Wenn User nur "morgen" sagt, verwende startDate: "tomorrow" und lasse endDate leer (zeigt nur morgen)!\n';
-    prompt += '  WICHTIG: Terminologie beachten!\n';
-    prompt += '    - Bei compartida (Dorm-Zimmer): Verwende "Betten" (beds), NICHT "Zimmer"!\n';
-    prompt += '    - Bei privada (private Zimmer): Verwende "Zimmer" (rooms)!\n';
-    prompt += '    - Beispiel compartida: "1 Bett verfügbar" oder "3 Betten verfügbar"\n';
-    prompt += '    - Beispiel privada: "1 Zimmer verfügbar" oder "2 Zimmer verfügbar"\n';
+    prompt += '  WICHTIG: Terminologie beachten - IMMER in der erkannten Sprache!\n';
+    if (language === 'es') {
+      prompt += '    - Bei compartida: Verwende "camas" (beds), NICHT "habitaciones"!\n';
+      prompt += '    - Bei privada: Verwende "habitaciones" (rooms), NICHT "camas"!\n';
+      prompt += '    - Beispiel compartida: "4 camas disponibles" oder "1 cama disponible"\n';
+      prompt += '    - Beispiel privada: "1 habitación disponible" oder "2 habitaciones disponibles"\n';
+      prompt += '    - Kategorien: "Habitaciones compartidas" (nicht "Dorm-Zimmer") und "Habitaciones privadas" (nicht "Privates Zimmer")\n';
+    } else if (language === 'en') {
+      prompt += '    - Bei compartida: Verwende "beds", NICHT "rooms"!\n';
+      prompt += '    - Bei privada: Verwende "rooms", NICHT "beds"!\n';
+      prompt += '    - Beispiel compartida: "4 beds available" oder "1 bed available"\n';
+      prompt += '    - Beispiel privada: "1 room available" oder "2 rooms available"\n';
+      prompt += '    - Kategorien: "Shared rooms" (nicht "Dorm-Zimmer") und "Private rooms" (nicht "Privates Zimmer")\n';
+    } else {
+      prompt += '    - Bei compartida: Verwende "Betten", NICHT "Zimmer"!\n';
+      prompt += '    - Bei privada: Verwende "Zimmer", NICHT "Betten"!\n';
+      prompt += '    - Beispiel compartida: "4 Betten verfügbar" oder "1 Bett verfügbar"\n';
+      prompt += '    - Beispiel privada: "1 Zimmer verfügbar" oder "2 Zimmer verfügbar"\n';
+      prompt += '    - Kategorien: "Dorm-Zimmer" (compartida) und "Privates Zimmer" (privada)\n';
+    }
+    prompt += '  WICHTIG: Übersetze ALLE Begriffe aus Function Results in die erkannte Sprache!\n';
+    prompt += '  WICHTIG: Wenn Function Results "Dorm-Zimmer" oder "Privates Zimmer" enthalten, übersetze diese IMMER!\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "today" })\n';
     prompt += '    - "Haben wir Zimmer frei morgen?" → check_room_availability({ startDate: "tomorrow" })\n';
