@@ -230,7 +230,8 @@ class ClaudeConsole {
 let claudeConsole: ClaudeConsole | null = null;
 
 export const initClaudeConsole = () => {
-  if (!claudeConsole && typeof window !== 'undefined') {
+  // ✅ FIX: Nur im Development-Modus initialisieren (verhindert Memory-Leak in Production)
+  if (!claudeConsole && typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     claudeConsole = new ClaudeConsole();
   }
   return claudeConsole;

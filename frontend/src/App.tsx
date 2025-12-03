@@ -41,10 +41,12 @@ const Consultations = React.lazy(() => import('./pages/Consultations.tsx'));
 const ReservationDetails = React.lazy(() => import('./components/reservations/ReservationDetails.tsx'));
 
 const App: React.FC = () => {
-    // Claude Console initialisieren
+    // Claude Console nur im Development-Modus initialisieren
     React.useEffect(() => {
-        initClaudeConsole();
-        console.log('🔍 Claude Console Bridge initialized');
+        if (process.env.NODE_ENV === 'development') {
+            initClaudeConsole();
+            console.log('🔍 Claude Console Bridge initialized');
+        }
     }, []);
 
     return (
