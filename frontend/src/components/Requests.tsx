@@ -263,7 +263,29 @@ const Requests: React.FC = () => {
   // View-Mode aus Settings laden
   const viewMode = settings.viewMode || 'cards';
   
-  // ❌ ENTFERNT: cardSortDirections - Card-Sortierung wurde entfernt, Hauptsortierung (sortConfig) wird für Table & Card verwendet (Phase 2)
+  // ✅ WIEDERHERGESTELLT: Card-Sortierung für TableColumnConfig Modal (nicht Filter-Sortierung!)
+  // Card-Sortierung ermöglicht Sortier-Pfeile im "Sortieren & Anzeigen" Modal (Card-Ansicht)
+  const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
+    title: 'asc',
+    status: 'asc',
+    type: 'asc',
+    requestedBy: 'asc',
+    responsible: 'asc',
+    branch: 'asc',
+    dueDate: 'asc',
+    description: 'asc'
+  };
+  
+  const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(
+    defaultCardSortDirections
+  );
+  
+  const handleCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
+    setCardSortDirections(prev => ({
+      ...prev,
+      [columnId]: direction
+    }));
+  };
 
   // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
   // Card-Metadaten-Reihenfolge aus columnOrder ableiten
@@ -1140,9 +1162,9 @@ const Requests: React.FC = () => {
                 onClose={() => {}}
                 buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                 modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                sortDirections={undefined}
-                onSortDirectionChange={undefined}
-                showSortDirection={false}
+                sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
+                onSortDirectionChange={viewMode === 'cards' ? handleCardSortDirectionChange : undefined}
+                showSortDirection={viewMode === 'cards'}
               />
             </div>
           </div>

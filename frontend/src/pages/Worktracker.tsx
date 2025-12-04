@@ -500,7 +500,29 @@ const Worktracker: React.FC = () => {
         return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
     }, [cardMetadataOrder, hiddenCardMetadata]);
 
-    // ❌ ENTFERNT: taskCardSortDirections & reservationCardSortDirections - Card-Sortierung wurde entfernt, Hauptsortierung (tableSortConfig/reservationTableSortConfig) wird für Table & Card verwendet (Phase 2)
+    // ✅ WIEDERHERGESTELLT: Card-Sortierung für TableColumnConfig Modal (nicht Filter-Sortierung!)
+    // Card-Sortierung ermöglicht Sortier-Pfeile im "Sortieren & Anzeigen" Modal (Card-Ansicht)
+    const [taskCardSortDirections, setTaskCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(
+      defaultCardSortDirections
+    );
+    const [reservationCardSortDirections, setReservationCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(
+      defaultReservationCardSortDirections
+    );
+    
+    // Handler für Card-Sortierung
+    const handleTaskCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
+      setTaskCardSortDirections(prev => ({
+        ...prev,
+        [columnId]: direction
+      }));
+    };
+    
+    const handleReservationCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
+      setReservationCardSortDirections(prev => ({
+        ...prev,
+        [columnId]: direction
+      }));
+    };
 
 
     // Toggle-Funktion für Expand/Collapse bei Reservations
@@ -2245,7 +2267,9 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                                            // ❌ ENTFERNT: sortDirections, onSortDirectionChange, showSortDirection - Card-Sortierung wurde entfernt (Phase 2)
+                                            sortDirections={viewMode === 'cards' && activeTab === 'todos' ? taskCardSortDirections : undefined}
+                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'todos' ? handleTaskCardSortDirectionChange : undefined}
+                                            showSortDirection={viewMode === 'cards' && activeTab === 'todos'}
                                             onClose={() => {}}
                                         />
                                     </div>
@@ -3572,7 +3596,9 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                                            // ❌ ENTFERNT: sortDirections, onSortDirectionChange, showSortDirection - Card-Sortierung wurde entfernt (Phase 2)
+                                            sortDirections={viewMode === 'cards' && activeTab === 'reservations' ? reservationCardSortDirections : undefined}
+                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'reservations' ? handleReservationCardSortDirectionChange : undefined}
+                                            showSortDirection={viewMode === 'cards' && activeTab === 'reservations'}
                                             onClose={() => {}}
                                         />
                                     </div>

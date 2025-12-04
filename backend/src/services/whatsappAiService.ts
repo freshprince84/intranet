@@ -266,11 +266,41 @@ export class WhatsAppAiService {
               error: error.message
             });
             
+            // WICHTIG: Übersetze Fehlermeldung in die erkannte Sprache
+            let errorMessage = error.message;
+            if (language === 'es') {
+              // Übersetze häufige Fehlermeldungen ins Spanische
+              if (errorMessage.includes('invalid input value for enum') && errorMessage.includes('potential')) {
+                errorMessage = 'Error técnico: El estado "potential" no está disponible en la base de datos. Por favor, contacta al soporte.';
+              } else if (errorMessage.includes('Der Name des Gastes ist erforderlich')) {
+                errorMessage = 'El nombre del huésped es requerido para la reservación. Por favor, proporciona tu nombre completo.';
+              } else if (errorMessage.includes('Mindestens eine Kontaktinformation')) {
+                errorMessage = 'Se requiere al menos una información de contacto (número de teléfono o correo electrónico) para la reservación.';
+              } else if (errorMessage.includes('Fehler beim Erstellen der Reservierung in LobbyPMS')) {
+                errorMessage = 'Error al crear la reservación en LobbyPMS. Por favor, intenta de nuevo o contacta al soporte.';
+              } else if (errorMessage.includes('categoryId ist erforderlich')) {
+                errorMessage = 'Se requiere la categoría de la habitación. Por favor, selecciona una habitación específica de la lista.';
+              }
+            } else if (language === 'en') {
+              // Übersetze häufige Fehlermeldungen ins Englische
+              if (errorMessage.includes('invalid input value for enum') && errorMessage.includes('potential')) {
+                errorMessage = 'Technical error: The "potential" status is not available in the database. Please contact support.';
+              } else if (errorMessage.includes('Der Name des Gastes ist erforderlich')) {
+                errorMessage = 'Guest name is required for the reservation. Please provide your full name.';
+              } else if (errorMessage.includes('Mindestens eine Kontaktinformation')) {
+                errorMessage = 'At least one contact information (phone number or email) is required for the reservation.';
+              } else if (errorMessage.includes('Fehler beim Erstellen der Reservierung in LobbyPMS')) {
+                errorMessage = 'Error creating reservation in LobbyPMS. Please try again or contact support.';
+              } else if (errorMessage.includes('categoryId ist erforderlich')) {
+                errorMessage = 'Room category is required. Please select a specific room from the list.';
+              }
+            }
+            
             toolResults.push({
               tool_call_id: toolCall.id,
               role: 'tool',
               name: functionName,
-              content: JSON.stringify({ error: error.message })
+              content: JSON.stringify({ error: errorMessage })
             });
           }
         }
@@ -906,6 +936,8 @@ export class WhatsAppAiService {
     }
     prompt += '  WICHTIG: Übersetze ALLE Begriffe aus Function Results in die erkannte Sprache!\n';
     prompt += '  WICHTIG: Wenn Function Results "Dorm-Zimmer" oder "Privates Zimmer" enthalten, übersetze diese IMMER!\n';
+    prompt += '  WICHTIG: Wenn Function Results einen Fehler enthalten (error-Feld), erkläre den Fehler in der erkannten Sprache und gib hilfreiche Anweisungen!\n';
+    prompt += '  WICHTIG: Bei Fehlern in Function Results: Erkläre den Fehler auf ' + (language === 'es' ? 'Spanisch' : language === 'en' ? 'Englisch' : 'Deutsch') + ' und gib dem User hilfreiche Anweisungen, was zu tun ist!\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "today" })\n';
     prompt += '    - "Haben wir Zimmer frei morgen?" → check_room_availability({ startDate: "tomorrow" })\n';
