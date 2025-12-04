@@ -631,11 +631,14 @@ export class LobbyPmsService {
         }
 
         // OPTIMIERUNG: Filtere sofort nach check_out_date (statt erst am Ende)
+        // WICHTIG: API gibt end_date zurück, nicht check_out_date - verwende Fallback
         const recentReservations = pageReservations.filter((reservation: LobbyPmsReservation) => {
-          if (!reservation.check_out_date) {
-            return false; // Kein checkout_date = ignoriere
+          // Verwende check_out_date oder end_date (API gibt end_date zurück)
+          const checkOutDateString = reservation.check_out_date || reservation.end_date;
+          if (!checkOutDateString) {
+            return false; // Kein checkout_date/end_date = ignoriere
           }
-          const checkOutDate = new Date(reservation.check_out_date);
+          const checkOutDate = new Date(checkOutDateString);
           // Nur Reservierungen mit checkout >= gestern
           return checkOutDate >= yesterday;
         });
