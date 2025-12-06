@@ -590,14 +590,13 @@ export class LobbyPmsService {
         params.property_id = this.propertyId;
       }
 
-      // OPTIMIERUNG: Hole Seiten mit Pagination und stoppe früher wenn keine neuen Reservierungen mehr kommen
+      // OPTIMIERUNG: Hole Seiten mit Pagination
+      // WICHTIG: Für vollständigen Sync müssen ALLE Seiten durchsucht werden, auch wenn dazwischen Seiten ohne passende Reservierungen sind
       let allReservations: LobbyPmsReservation[] = [];
       let page = 1;
       let hasMore = true;
       const maxPages = 200; // Sicherheitslimit (20.000 Reservierungen max) - für ersten Sync müssen alle Seiten durchsucht werden
       let knownTotalPages: number | undefined = undefined;
-      let consecutiveOldPages = 0; // Zähler für aufeinanderfolgende "alte" Seiten
-      const MAX_CONSECUTIVE_OLD_PAGES = 3; // Stoppe nach 3 Seiten ohne passende Reservierungen
 
       while (hasMore && page <= maxPages) {
         const response = await this.axiosInstance.get<any>('/api/v1/bookings', {
@@ -647,19 +646,12 @@ export class LobbyPmsService {
         if (recentReservations.length > 0) {
           // Passende Reservierungen gefunden - füge hinzu
           allReservations = allReservations.concat(recentReservations);
-          consecutiveOldPages = 0; // Reset Counter
           console.log(`[LobbyPMS] Seite ${page}: ${recentReservations.length} Reservierungen mit check_out_date >= gestern (von ${pageReservations.length} insgesamt)`);
         } else {
           // Keine passenden Reservierungen auf dieser Seite
-          consecutiveOldPages++;
-          console.log(`[LobbyPMS] Seite ${page}: 0 Reservierungen mit check_out_date >= gestern (${consecutiveOldPages}/${MAX_CONSECUTIVE_OLD_PAGES} aufeinanderfolgende "alte" Seiten)`);
-          
-          // OPTIMIERUNG: Stoppe nach X Seiten ohne passende Reservierungen
-          if (consecutiveOldPages >= MAX_CONSECUTIVE_OLD_PAGES) {
-            console.log(`[LobbyPMS] Stoppe Pagination: ${MAX_CONSECUTIVE_OLD_PAGES} aufeinanderfolgende Seiten ohne Reservierungen mit check_out_date >= gestern`);
-            hasMore = false;
-            break;
-          }
+          console.log(`[LobbyPMS] Seite ${page}: 0 Reservierungen mit check_out_date >= gestern (von ${pageReservations.length} insgesamt)`);
+          // WICHTIG: Stoppe NICHT hier - Reservierungen können auf späteren Seiten sein!
+          // Die API sortiert nicht nach check_out_date, daher können passende Reservierungen überall sein
         }
 
         // Prüfe ob es weitere Seiten gibt
