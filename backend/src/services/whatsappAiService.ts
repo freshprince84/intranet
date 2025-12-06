@@ -174,7 +174,7 @@ export class WhatsAppAiService {
             orderBy: {
               sentAt: 'desc'
             },
-            take: 10, // Letzte 10 Nachrichten
+            take: (aiConfig.model || 'gpt-4o').includes('gpt-4o') ? 10 : 5, // Weniger History für gpt-4 (8192 Tokens Limit)
             select: {
               direction: true,
               message: true,
