@@ -200,15 +200,15 @@ export class WhatsAppAiService {
       
       // Erster API Call (mit Function Definitions, falls aktiviert)
       const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
+          {
+            role: 'system',
+            content: systemPrompt
+          },
         ...messageHistory, // Füge Message History hinzu
-        {
-          role: 'user',
-          content: message
-        }
+          {
+            role: 'user',
+            content: message
+          }
       ];
       
       const requestPayload: any = {
@@ -341,20 +341,20 @@ export class WhatsAppAiService {
         
         // Erstelle Messages-Array mit History, aktueller Nachricht, Function Calls und Results
         const finalMessages: Array<any> = [
-          {
-            role: 'system',
-            content: systemPromptWithLanguage
-          },
+              {
+                role: 'system',
+                content: systemPromptWithLanguage
+              },
           ...messageHistory, // Message History
-          {
-            role: 'user',
-            content: message
-          },
-          {
-            role: 'assistant',
-            content: null,
-            tool_calls: responseMessage.tool_calls
-          },
+              {
+                role: 'user',
+                content: message
+              },
+              {
+                role: 'assistant',
+                content: null,
+                tool_calls: responseMessage.tool_calls
+              },
           ...toolResults
         ];
         
@@ -931,7 +931,7 @@ export class WhatsAppAiService {
 
     // Füge Informationen zu verfügbaren Funktionen hinzu
     // WICHTIG: check_room_availability und Tour-Funktionen sind für ALLE verfügbar (auch Gäste)!
-    prompt += '\n\nVerfügbare Funktionen:\n';
+      prompt += '\n\nVerfügbare Funktionen:\n';
     
     // Zimmerverfügbarkeit - IMMER verfügbar
     prompt += '- check_room_availability: Prüfe Zimmerverfügbarkeit für einen Zeitraum (startDate, endDate, roomType)\n';
