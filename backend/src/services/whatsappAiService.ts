@@ -97,12 +97,40 @@ export class WhatsAppAiService {
       aiConfig = whatsappSettings?.ai;
     }
 
+    // DEBUG: Log AI-Konfiguration für Diagnose
+    console.log('[WhatsApp AI Service] AI-Konfiguration:', {
+      branchId,
+      hasWhatsappSettings: !!whatsappSettings,
+      hasAiConfig: !!aiConfig,
+      aiConfigEnabled: aiConfig?.enabled,
+      aiConfigKeys: aiConfig ? Object.keys(aiConfig) : [],
+      whatsappSettingsKeys: whatsappSettings ? Object.keys(whatsappSettings) : []
+    });
+
     if (!aiConfig) {
+      console.error('[WhatsApp AI Service] KI-Konfiguration nicht gefunden:', {
+        branchId,
+        whatsappSettingsKeys: whatsappSettings ? Object.keys(whatsappSettings) : [],
+        whatsappSettingsAi: whatsappSettings?.ai
+      });
       throw new Error('KI-Konfiguration nicht gefunden für diesen Branch');
     }
 
-    if (!aiConfig.enabled) {
+    // Prüfe ob enabled explizit auf false gesetzt ist (undefined = aktiviert, false = deaktiviert)
+    if (aiConfig.enabled === false) {
+      console.error('[WhatsApp AI Service] KI ist explizit deaktiviert:', {
+        branchId,
+        aiConfigEnabled: aiConfig.enabled,
+        aiConfig: JSON.stringify(aiConfig, null, 2)
+      });
       throw new Error('KI ist für diesen Branch nicht aktiviert');
+    }
+    
+    // Wenn enabled undefined ist, behandeln wir es als aktiviert (Rückwärtskompatibilität)
+    if (aiConfig.enabled === undefined) {
+      console.warn('[WhatsApp AI Service] KI enabled ist undefined, behandle als aktiviert (Rückwärtskompatibilität):', {
+        branchId
+      });
     }
 
     // 2. Erkenne Sprache aus Nachricht (primär) oder Telefonnummer (Fallback)
