@@ -15,8 +15,8 @@ async function checkAiConfig() {
     console.log('AI-Konfiguration für alle Branches:\n');
     
     for (const branch of branches) {
-      const settings = branch.whatsappSettings as any;
-      const aiConfig = settings?.ai;
+      const settings = branch.whatsappSettings || {};
+      const aiConfig = settings.ai;
       
       console.log(`Branch ${branch.id} (${branch.name}):`);
       console.log(`  - AI Config vorhanden: ${!!aiConfig}`);
@@ -24,7 +24,7 @@ async function checkAiConfig() {
         console.log(`  - enabled: ${aiConfig.enabled}`);
         console.log(`  - model: ${aiConfig.model || 'nicht gesetzt'}`);
         console.log(`  - systemPrompt vorhanden: ${!!aiConfig.systemPrompt}`);
-        console.log(`  - rules: ${aiConfig.rules?.length || 0}`);
+        console.log(`  - rules: ${(aiConfig.rules && aiConfig.rules.length) || 0}`);
       } else {
         console.log(`  - ❌ KEINE AI-KONFIGURATION!`);
       }
