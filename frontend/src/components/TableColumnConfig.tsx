@@ -16,9 +16,9 @@ interface TableColumnConfigProps {
   onClose: () => void;
   buttonTitle?: string; // Optional: Custom Button-Titel
   modalTitle?: string; // Optional: Custom Modal-Titel
-  sortDirections?: Record<string, 'asc' | 'desc'>; // Optional: Sortierrichtungen pro Spalte (für Cards-Mode)
-  onSortDirectionChange?: (columnId: string, direction: 'asc' | 'desc') => void; // Optional: Callback für Sortierrichtung pro Spalte
-  showSortDirection?: boolean; // Optional: Sortierrichtung anzeigen
+  mainSortConfig?: { key: string; direction: 'asc' | 'desc' }; // Optional: Hauptsortierung (für Table & Cards synchron)
+  onMainSortChange?: (key: string, direction: 'asc' | 'desc') => void; // Optional: Callback für Hauptsortierung
+  showMainSort?: boolean; // Optional: Hauptsortierung anzeigen
 }
 
 interface DraggableItemProps {
@@ -32,10 +32,10 @@ interface DraggableItemProps {
   onDragOver: (index: number) => void; // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3)
   onDragEnd: () => void; // ❌ ENTFERNT: Wird nicht mehr verwendet (Phase 3)
   onToggleVisibility: (id: string) => void;
-  sortDirection?: 'asc' | 'desc'; // Optional: Sortierrichtung für diese Spalte
-  onSortDirectionChange?: (id: string, direction: 'asc' | 'desc') => void; // Optional: Callback für Sortierrichtung
-  showSortDirection?: boolean; // Optional: Sortierrichtung anzeigen
-  sortOrder?: number; // Optional: Sortierreihenfolge (1, 2, 3, etc.)
+  sortDirection?: 'asc' | 'desc'; // Optional: Sortierrichtung für diese Spalte (wenn diese Spalte die Hauptsortierung ist)
+  onSortDirectionChange?: (id: string, direction: 'asc' | 'desc') => void; // Optional: Callback für Hauptsortierung
+  showMainSort?: boolean; // Optional: Hauptsortierung anzeigen
+  isMainSort?: boolean; // Optional: Ist diese Spalte die Hauptsortierung?
 }
 
 // Komponente für eine einzelne Spalte (ohne Drag & Drop im Modal)
@@ -50,8 +50,8 @@ const DraggableColumnItem: React.FC<DraggableItemProps> = ({
   onToggleVisibility,
   sortDirection,
   onSortDirectionChange,
-  showSortDirection = false,
-  sortOrder
+  showMainSort = false,
+  isMainSort = false
 }) => {
   const { t } = useTranslation();
   
@@ -64,29 +64,45 @@ const DraggableColumnItem: React.FC<DraggableItemProps> = ({
       <div className="flex items-center flex-1 min-w-0">
         {/* ❌ ENTFERNT: Bars2Icon - Drag-Handle wurde entfernt (Phase 3) */}
         <span className="text-sm dark:text-gray-300 flex items-center gap-2">
-          {showSortDirection && sortOrder !== undefined && isVisible && (
+          {showMainSort && isMainSort && isVisible && (
             <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
-              {sortOrder}
+              {t('tableColumn.mainSort')}
             </span>
           )}
           <span>{label}</span>
         </span>
       </div>
       <div className="flex items-center gap-1">
-        {/* Sortierrichtung-Toggle */}
-        {showSortDirection && isVisible && sortDirection !== undefined && onSortDirectionChange && (
+        {/* Hauptsortierung-Toggle (nur wenn diese Spalte die Hauptsortierung ist oder wenn keine Hauptsortierung gesetzt ist) */}
+        {showMainSort && isVisible && onSortDirectionChange && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onSortDirectionChange(id, sortDirection === 'asc' ? 'desc' : 'asc');
+              // Wenn diese Spalte bereits die Hauptsortierung ist, toggle die Richtung
+              // Sonst setze diese Spalte als neue Hauptsortierung (Standard: 'asc')
+              if (isMainSort && sortDirection !== undefined) {
+                onSortDirectionChange(id, sortDirection === 'asc' ? 'desc' : 'asc');
+              } else {
+                onSortDirectionChange(id, 'asc');
+              }
             }}
-            className="inline-flex items-center justify-center p-1.5 rounded-md bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-300 transition-colors duration-150"
-            title={`${t('tableColumn.sortDirection')}: ${sortDirection === 'asc' ? t('tableColumn.ascending') : t('tableColumn.descending')} (${t('tableColumn.clickToToggle')})`}
+            className={`inline-flex items-center justify-center p-1.5 rounded-md transition-colors duration-150 ${
+              isMainSort
+                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                : 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-300'
+            }`}
+            title={
+              isMainSort && sortDirection !== undefined
+                ? `${t('tableColumn.mainSort')}: ${sortDirection === 'asc' ? t('tableColumn.ascending') : t('tableColumn.descending')} (${t('tableColumn.clickToToggle')})`
+                : `${t('tableColumn.setMainSort')} (${t('tableColumn.clickToSet')})`
+            }
           >
-            {sortDirection === 'asc' ? (
+            {isMainSort && sortDirection === 'asc' ? (
               <ArrowUpIcon className="h-4 w-4" />
-            ) : (
+            ) : isMainSort && sortDirection === 'desc' ? (
               <ArrowDownIcon className="h-4 w-4" />
+            ) : (
+              <ArrowsUpDownIcon className="h-4 w-4" />
             )}
           </button>
         )}
@@ -115,9 +131,9 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
   onClose,
   buttonTitle,
   modalTitle,
-  sortDirections = {},
-  onSortDirectionChange,
-  showSortDirection = false
+  mainSortConfig,
+  onMainSortChange,
+  showMainSort = false
 }) => {
   const { t } = useTranslation();
   const defaultButtonTitle = buttonTitle || t('tableColumn.configure');
@@ -166,7 +182,7 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         title={defaultButtonTitle}
       >
-        {showSortDirection ? (
+        {showMainSort ? (
           <ArrowsUpDownIcon className="w-5 h-5" />
         ) : (
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
@@ -192,10 +208,10 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
           </div>
           <ul className="px-2 py-1 max-h-64 overflow-y-auto">
             {sortedColumns.map((column, index) => {
-              // Bestimme Sortierreihenfolge (nur für sichtbare Spalten)
-              const visibleSortedColumns = sortedColumns.filter(col => visibleColumns.includes(col.id));
-              const sortOrder = visibleSortedColumns.findIndex(col => col.id === column.id) + 1;
               const isVisible = visibleColumns.includes(column.id);
+              // Prüfe ob diese Spalte die Hauptsortierung ist
+              const isMainSort = mainSortConfig?.key === column.id;
+              const sortDirection = isMainSort ? mainSortConfig.direction : undefined;
               
               return (
                 <DraggableColumnItem
@@ -210,10 +226,10 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
                   onDragOver={() => {}} // ❌ ENTFERNT: Drag & Drop wurde aus Modal entfernt (Phase 3)
                   onDragEnd={() => {}} // ❌ ENTFERNT: Drag & Drop wurde aus Modal entfernt (Phase 3)
                   onToggleVisibility={onToggleColumnVisibility}
-                  sortDirection={showSortDirection && isVisible ? (sortDirections[column.id] || 'asc') : undefined}
-                  onSortDirectionChange={showSortDirection ? onSortDirectionChange : undefined}
-                  showSortDirection={showSortDirection}
-                  sortOrder={showSortDirection && isVisible ? sortOrder : undefined}
+                  sortDirection={sortDirection}
+                  onSortDirectionChange={showMainSort ? onMainSortChange : undefined}
+                  showMainSort={showMainSort}
+                  isMainSort={isMainSort}
                 />
               );
             })}

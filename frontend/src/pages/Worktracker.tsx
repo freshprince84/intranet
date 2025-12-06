@@ -106,27 +106,8 @@ const RESERVATIONS_TABLE_ID = 'worktracker-reservations';
 // Card-Einstellungen Standardwerte
 const defaultCardMetadata = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
 const defaultCardColumnOrder = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
-const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
-  title: 'asc',
-  status: 'asc',
-  responsible: 'asc',
-  qualityControl: 'asc',
-  branch: 'asc',
-  dueDate: 'asc',
-  description: 'asc'
-};
-
-// Default Sortierrichtungen für Reservations Card-Metadaten
-const defaultReservationCardSortDirections: Record<string, 'asc' | 'desc'> = {
-  guestName: 'asc',
-  status: 'asc',
-  paymentStatus: 'asc',
-  checkInDate: 'desc',  // Neueste zuerst (wie aktuell hardcoded)
-  checkOutDate: 'desc',
-  roomNumber: 'asc',
-  branch: 'asc',
-  guestEmail: 'asc',
-  guestPhone: 'asc',
+// ❌ ENTFERNT: defaultCardSortDirections und defaultReservationCardSortDirections
+// Hauptsortierung wird jetzt aus Settings geladen (pro Benutzer gespeichert)
   amount: 'desc',
   arrivalTime: 'desc'
 };
@@ -397,11 +378,12 @@ const Worktracker: React.FC = () => {
     const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
     
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-    // Tabellen-Header-Sortierung (nur für Tabellen-Ansicht)
-    const [tableSortConfig, setTableSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
-    // Tabellen-Header-Sortierung für Reservations (nur für Tabellen-Ansicht)
-    const [reservationTableSortConfig, setReservationTableSortConfig] = useState<ReservationSortConfig>({ key: 'checkInDate', direction: 'desc' });
-    // Tabellen-Header-Sortierung für Tour Bookings (nur für Tabellen-Ansicht)
+    // Hauptsortierung aus Settings laden (für Table & Cards synchron)
+    // Tasks: Aus tasksSettings
+    const tableSortConfig: SortConfig = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
+    // Reservations: Aus reservationsSettings
+    const reservationTableSortConfig: ReservationSortConfig = reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };
+    // Tabellen-Header-Sortierung für Tour Bookings (nur für Tabellen-Ansicht) - TODO: Später auch aus Settings
     const [tourBookingsSortConfig, setTourBookingsSortConfig] = useState<TourBookingSortConfig>({ key: 'tourDate', direction: 'desc' });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -422,7 +404,8 @@ const Worktracker: React.FC = () => {
         updateHiddenColumns: updateTasksHiddenColumns,
         toggleColumnVisibility: toggleTasksColumnVisibility,
         isColumnVisible: isTasksColumnVisible,
-        updateViewMode: updateTasksViewMode
+        updateViewMode: updateTasksViewMode,
+        updateSortConfig: updateTasksSortConfig
     } = useTableSettings('worktracker_tasks', {
         defaultColumnOrder,
         defaultHiddenColumns: [],
@@ -438,7 +421,8 @@ const Worktracker: React.FC = () => {
         updateHiddenColumns: updateReservationsHiddenColumns,
         toggleColumnVisibility: toggleReservationsColumnVisibility,
         isColumnVisible: isReservationsColumnVisible,
-        updateViewMode: updateReservationsViewMode
+        updateViewMode: updateReservationsViewMode,
+        updateSortConfig: updateReservationsSortConfig
     } = useTableSettings('worktracker-reservations', {
         defaultColumnOrder: defaultReservationColumnOrder,
         defaultHiddenColumns: [],
@@ -453,6 +437,7 @@ const Worktracker: React.FC = () => {
     const toggleColumnVisibility = activeTab === 'todos' ? toggleTasksColumnVisibility : toggleReservationsColumnVisibility;
     const isColumnVisible = activeTab === 'todos' ? isTasksColumnVisible : isReservationsColumnVisible;
     const updateViewMode = activeTab === 'todos' ? updateTasksViewMode : updateReservationsViewMode;
+    const updateSortConfig = activeTab === 'todos' ? updateTasksSortConfig : updateReservationsSortConfig;
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -500,28 +485,13 @@ const Worktracker: React.FC = () => {
         return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
     }, [cardMetadataOrder, hiddenCardMetadata]);
 
-    // ✅ WIEDERHERGESTELLT: Card-Sortierung für TableColumnConfig Modal (nicht Filter-Sortierung!)
-    // Card-Sortierung ermöglicht Sortier-Pfeile im "Sortieren & Anzeigen" Modal (Card-Ansicht)
-    const [taskCardSortDirections, setTaskCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(
-      defaultCardSortDirections
-    );
-    const [reservationCardSortDirections, setReservationCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(
-      defaultReservationCardSortDirections
-    );
-    
-    // Handler für Card-Sortierung
-    const handleTaskCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
-      setTaskCardSortDirections(prev => ({
-        ...prev,
-        [columnId]: direction
-      }));
-    };
-    
-    const handleReservationCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
-      setReservationCardSortDirections(prev => ({
-        ...prev,
-        [columnId]: direction
-      }));
+    // Hauptsortierung Handler (für Table & Cards synchron)
+    const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
+      if (activeTab === 'todos') {
+        updateTasksSortConfig({ key: key as SortConfig['key'], direction });
+      } else if (activeTab === 'reservations') {
+        updateReservationsSortConfig({ key: key as ReservationSortConfig['key'], direction });
+      }
     };
 
 
@@ -1115,23 +1085,15 @@ const Worktracker: React.FC = () => {
     };
 
     const handleSort = (key: SortConfig['key']) => {
-        // Nur für Tabellen-Ansicht (Header-Sortierung)
-        if (viewMode === 'table') {
-            setTableSortConfig(current => ({
-                key,
-                direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-            }));
-        }
+        // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
+        const newDirection = tableSortConfig.key === key && tableSortConfig.direction === 'asc' ? 'desc' : 'asc';
+        updateTasksSortConfig({ key, direction: newDirection });
     };
 
     const handleReservationSort = (key: ReservationSortConfig['key']) => {
-        // Nur für Tabellen-Ansicht (Header-Sortierung)
-        if (viewMode === 'table' && activeTab === 'reservations') {
-            setReservationTableSortConfig(current => ({
-                key,
-                direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-            }));
-        }
+        // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
+        const newDirection = reservationTableSortConfig.key === key && reservationTableSortConfig.direction === 'asc' ? 'desc' : 'asc';
+        updateReservationsSortConfig({ key, direction: newDirection });
     };
 
     const handleTourBookingsSort = (key: TourBookingSortConfig['key']) => {
@@ -2267,9 +2229,9 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                                            sortDirections={viewMode === 'cards' && activeTab === 'todos' ? taskCardSortDirections : undefined}
-                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'todos' ? handleTaskCardSortDirectionChange : undefined}
-                                            showSortDirection={viewMode === 'cards' && activeTab === 'todos'}
+                                            mainSortConfig={activeTab === 'todos' ? tableSortConfig : undefined}
+                                            onMainSortChange={activeTab === 'todos' ? handleMainSortChange : undefined}
+                                            showMainSort={true}
                                             onClose={() => {}}
                                         />
                                     </div>
@@ -3596,9 +3558,9 @@ const Worktracker: React.FC = () => {
                                                 : handleMoveColumn}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                                            sortDirections={viewMode === 'cards' && activeTab === 'reservations' ? reservationCardSortDirections : undefined}
-                                            onSortDirectionChange={viewMode === 'cards' && activeTab === 'reservations' ? handleReservationCardSortDirectionChange : undefined}
-                                            showSortDirection={viewMode === 'cards' && activeTab === 'reservations'}
+                                            mainSortConfig={activeTab === 'reservations' ? reservationTableSortConfig : undefined}
+                                            onMainSortChange={activeTab === 'reservations' ? handleMainSortChange : undefined}
+                                            showMainSort={true}
                                             onClose={() => {}}
                                         />
                                     </div>

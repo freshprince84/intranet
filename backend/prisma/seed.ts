@@ -330,6 +330,9 @@ async function main() {
 
     await ensureAllPermissionsForRole(adminRole.id, adminPermissionMap);
 
+    // Branch-basierte Reservations-Berechtigungen für Admin (alle Branches)
+    await ensurePermission(adminRole.id, 'reservations_all_branches', 'table', 'read');
+
     // Cerebro-spezifische Berechtigungen für Admin (entityType: 'cerebro')
     await ensurePermission(adminRole.id, 'cerebro', 'cerebro', 'both');
     await ensurePermission(adminRole.id, 'cerebro_media', 'cerebro', 'both');
@@ -387,6 +390,9 @@ async function main() {
     // NICHT: todo_*, task_*, user_*, role_*, database_*, settings_system, payroll_*, worktime_edit/delete
 
     await ensureAllPermissionsForRole(userRole.id, userPermissionMap);
+
+    // Branch-basierte Reservations-Berechtigungen für User (nur eigene Branch)
+    await ensurePermission(userRole.id, 'reservations_own_branch', 'table', 'read');
 
     // Cerebro-spezifische Berechtigungen für User (entityType: 'cerebro')
     await ensurePermission(userRole.id, 'cerebro', 'cerebro', 'both');
@@ -920,10 +926,16 @@ async function main() {
     ALL_BUTTONS.forEach(button => org1AdminPermissionMap[`button_${button}`] = 'both');
     await ensureAllPermissionsForRole(org1AdminRole.id, org1AdminPermissionMap);
 
+    // Branch-basierte Reservations-Berechtigungen für Org 1 Admin (alle Branches)
+    await ensurePermission(org1AdminRole.id, 'reservations_all_branches', 'table', 'read');
+
     // Org 1 User: gleiche Berechtigungen wie User, ABER organization_management = 'none' (User MIT Organisation)
     const org1UserPermissionMap = { ...userPermissionMap };
     org1UserPermissionMap['page_organization_management'] = 'none'; // User MIT Organisation → nicht sichtbar
     await ensureAllPermissionsForRole(org1UserRole.id, org1UserPermissionMap);
+
+    // Branch-basierte Reservations-Berechtigungen für Org 1 User (nur eigene Branch)
+    await ensurePermission(org1UserRole.id, 'reservations_own_branch', 'table', 'read');
 
     // Org 1 Hamburger: gleiche Berechtigungen wie Hamburger
     await ensureAllPermissionsForRole(org1HamburgerRole.id, hamburgerPermissionMap);
@@ -943,10 +955,16 @@ async function main() {
     ALL_BUTTONS.forEach(button => org2AdminPermissionMap[`button_${button}`] = 'both');
     await ensureAllPermissionsForRole(org2AdminRole.id, org2AdminPermissionMap);
 
+    // Branch-basierte Reservations-Berechtigungen für Org 2 Admin (alle Branches)
+    await ensurePermission(org2AdminRole.id, 'reservations_all_branches', 'table', 'read');
+
     // Org 2 User: gleiche Berechtigungen wie User, ABER organization_management = 'none' (User MIT Organisation)
     const org2UserPermissionMap = { ...userPermissionMap };
     org2UserPermissionMap['page_organization_management'] = 'none'; // User MIT Organisation → nicht sichtbar
     await ensureAllPermissionsForRole(org2UserRole.id, org2UserPermissionMap);
+
+    // Branch-basierte Reservations-Berechtigungen für Org 2 User (nur eigene Branch)
+    await ensurePermission(org2UserRole.id, 'reservations_own_branch', 'table', 'read');
 
     // Org 2 Hamburger: gleiche Berechtigungen wie Hamburger
     await ensureAllPermissionsForRole(org2HamburgerRole.id, hamburgerPermissionMap);
@@ -960,6 +978,9 @@ async function main() {
     ALL_TABLES.forEach(table => orgAdminPermissionMap[`table_${table}`] = 'both');
     ALL_BUTTONS.forEach(button => orgAdminPermissionMap[`button_${button}`] = 'both');
     await ensureAllPermissionsForRole(orgAdminRole.id, orgAdminPermissionMap);
+
+    // Branch-basierte Reservations-Berechtigungen für Standard-Organisation Admin (alle Branches)
+    await ensurePermission(orgAdminRole.id, 'reservations_all_branches', 'table', 'read');
 
     // ========================================
     // 7. BENUTZER ERSTELLEN

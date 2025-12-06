@@ -11,6 +11,7 @@ interface TableSettingsRequest {
     columnOrder: string[];
     hiddenColumns: string[];
     viewMode?: 'table' | 'cards';
+    sortConfig?: { key: string; direction: 'asc' | 'desc' };
 }
 
 // Funktion zum Abrufen der Tabelleneinstellungen eines Benutzers für eine bestimmte Tabelle
@@ -58,6 +59,10 @@ export const getUserTableSettings = async (req: AuthenticatedRequest, res: Respo
             response.viewMode = settings.viewMode;
         }
 
+        if (settings.sortConfig) {
+            response.sortConfig = JSON.parse(settings.sortConfig);
+        }
+
         res.json(response);
     } catch (error) {
         console.error('Error in getUserTableSettings:', error);
@@ -72,7 +77,7 @@ export const getUserTableSettings = async (req: AuthenticatedRequest, res: Respo
 export const saveUserTableSettings = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const userId = parseInt(req.userId, 10);
-        const { tableId, columnOrder, hiddenColumns, viewMode } = req.body as TableSettingsRequest;
+        const { tableId, columnOrder, hiddenColumns, viewMode, sortConfig } = req.body as TableSettingsRequest;
 
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
@@ -85,6 +90,7 @@ export const saveUserTableSettings = async (req: AuthenticatedRequest, res: Resp
         // Konvertiere Arrays in JSON-Strings für die Datenbank
         const columnOrderJson = JSON.stringify(columnOrder || []);
         const hiddenColumnsJson = JSON.stringify(hiddenColumns || []);
+        const sortConfigJson = sortConfig ? JSON.stringify(sortConfig) : null;
 
         // Prüfe, ob bereits Einstellungen für diese Tabelle existieren
         const existingSettings = await prisma.userTableSettings.findUnique({
@@ -110,7 +116,8 @@ export const saveUserTableSettings = async (req: AuthenticatedRequest, res: Resp
                 data: {
                     columnOrder: columnOrderJson,
                     hiddenColumns: hiddenColumnsJson,
-                    viewMode: viewMode || null
+                    viewMode: viewMode || null,
+                    sortConfig: sortConfigJson
                 }
             });
         } else {
@@ -121,7 +128,8 @@ export const saveUserTableSettings = async (req: AuthenticatedRequest, res: Resp
                     tableId,
                     columnOrder: columnOrderJson,
                     hiddenColumns: hiddenColumnsJson,
-                    viewMode: viewMode || null
+                    viewMode: viewMode || null,
+                    sortConfig: sortConfigJson
                 }
             });
         }
@@ -136,6 +144,10 @@ export const saveUserTableSettings = async (req: AuthenticatedRequest, res: Resp
 
         if (settings.viewMode) {
             response.viewMode = settings.viewMode;
+        }
+
+        if (settings.sortConfig) {
+            response.sortConfig = JSON.parse(settings.sortConfig);
         }
 
         res.json(response);

@@ -7,6 +7,7 @@ export interface TableSettings {
   columnOrder: string[];
   hiddenColumns: string[];
   viewMode?: 'table' | 'cards';
+  sortConfig?: { key: string; direction: 'asc' | 'desc' };
 }
 
 // Helfer-Funktion, um den localStorage-Schlüssel für eine Tabelle zu generieren
