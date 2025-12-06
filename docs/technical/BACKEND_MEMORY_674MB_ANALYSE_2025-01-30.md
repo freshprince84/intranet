@@ -176,3 +176,4 @@ setTimeout(() => {
 **Ursache:** LobbyPmsReservationScheduler lädt beim Start alle Reservierungen in Memory  
 **Lösung:** Sofortigen Check deaktivieren, Memory-Begrenzung, Cleanup
 
+
