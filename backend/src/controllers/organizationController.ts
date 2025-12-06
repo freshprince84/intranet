@@ -328,6 +328,14 @@ export const createOrganization = async (req: Request, res: Response) => {
         });
       }
       
+      // Branch-basierte Reservations-Berechtigungen für Admin (alle Branches)
+      permissions.push({
+        entity: 'reservations_all_branches',
+        entityType: 'table',
+        accessLevel: 'read',
+        roleId: adminRole.id
+      });
+      
       await tx.permission.createMany({
         data: permissions
       });
@@ -418,6 +426,14 @@ export const createOrganization = async (req: Request, res: Response) => {
         entity: 'cerebro_links',
         entityType: 'cerebro',
         accessLevel: 'both',
+        roleId: userRole.id
+      });
+      
+      // Branch-basierte Reservations-Berechtigungen für User (nur eigene Branch)
+      userPermissions.push({
+        entity: 'reservations_own_branch',
+        entityType: 'table',
+        accessLevel: 'read',
         roleId: userRole.id
       });
       

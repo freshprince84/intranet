@@ -47,6 +47,9 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
           loadedSettings.viewMode = options.defaultViewMode;
         }
         
+        // sortConfig wird bereits vom Server geladen (falls vorhanden)
+        // Keine Initialisierung nötig, da optional
+        
         console.log('Finale Tabelleneinstellungen nach Initialisierung:', loadedSettings);
         setSettings(loadedSettings);
         setError(null);
@@ -126,6 +129,18 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
     }
   }, [settings]);
 
+  // Sortierung aktualisieren
+  const updateSortConfig = useCallback(async (newSortConfig: { key: string; direction: 'asc' | 'desc' }) => {
+    try {
+      const updatedSettings = { ...settings, sortConfig: newSortConfig };
+      setSettings(updatedSettings);
+      await tableSettingsApi.saveTableSettings(updatedSettings);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Fehler beim Speichern der Sortierung'));
+      console.error('Fehler beim Speichern der Sortierung:', err);
+    }
+  }, [settings]);
+
   return {
     settings,
     isLoading,
@@ -134,6 +149,7 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
     updateHiddenColumns,
     toggleColumnVisibility,
     isColumnVisible: (columnId: string) => !settings.hiddenColumns.includes(columnId),
-    updateViewMode
+    updateViewMode,
+    updateSortConfig
   };
 }; 

@@ -559,6 +559,75 @@ export class TTLockService {
   }
 
   /**
+   * Löscht einen Passcode anhand des doorPin (findet Passcode via /v3/keyboardPwd/list)
+   * 
+   * @param lockId - TTLock Lock ID
+   * @param doorPin - Der Passcode (PIN), der gelöscht werden soll
+   * @returns true wenn erfolgreich gelöscht, false wenn nicht gefunden
+   */
+  async deletePasscodeByPin(lockId: string, doorPin: string): Promise<boolean> {
+    try {
+      const accessToken = await this.getAccessToken();
+      const currentTimestamp = Date.now();
+
+      // 1. Liste alle Passcodes für den Lock ab
+      const listPayload = new URLSearchParams({
+        clientId: this.clientId || '',
+        accessToken: accessToken,
+        lockId: lockId,
+        pageNo: '1',
+        pageSize: '100',
+        date: currentTimestamp.toString()
+      });
+
+      const listResponse = await this.axiosInstance.post<TTLockResponse<any>>(
+        '/v3/keyboardPwd/list',
+        listPayload
+      );
+
+      const listData = listResponse.data as any;
+      
+      if (listData.errcode !== 0) {
+        throw new Error(listData.errmsg || 'Fehler beim Abrufen der Passcodes');
+      }
+
+      const passcodes = listData.list || [];
+      
+      // 2. Finde Passcode mit matching doorPin
+      const matchingPasscode = passcodes.find((code: any) => {
+        const codePin = code.keyboardPwd || code.passcode;
+        return codePin && codePin.toString() === doorPin.toString();
+      });
+
+      if (!matchingPasscode) {
+        console.log(`[TTLock] Passcode ${doorPin} nicht gefunden in Lock ${lockId}`);
+        return false;
+      }
+
+      const keyboardPwdId = matchingPasscode.keyboardPwdId;
+      if (!keyboardPwdId) {
+        console.warn(`[TTLock] Passcode ${doorPin} gefunden, aber keine keyboardPwdId vorhanden`);
+        return false;
+      }
+
+      // 3. Lösche Passcode mit keyboardPwdId
+      await this.deleteTemporaryPasscode(lockId, keyboardPwdId.toString());
+      
+      console.log(`[TTLock] ✅ Passcode ${doorPin} (keyboardPwdId: ${keyboardPwdId}) erfolgreich gelöscht`);
+      return true;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<TTLockResponse>;
+        throw new Error(
+          axiosError.response?.data?.errmsg ||
+          `TTLock API Fehler: ${axiosError.message}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Ruft alle verfügbaren Locks ab
    * 
    * @returns Array von Lock IDs

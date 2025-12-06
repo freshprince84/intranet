@@ -218,7 +218,8 @@ const Requests: React.FC = () => {
   const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
   
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
+  // Hauptsortierung aus Settings laden (für Table & Cards synchron)
+  const sortConfig: SortConfig = settings.sortConfig || { key: 'dueDate', direction: 'asc' };
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
@@ -247,7 +248,8 @@ const Requests: React.FC = () => {
     updateHiddenColumns,
     toggleColumnVisibility,
     isColumnVisible,
-    updateViewMode
+    updateViewMode,
+    updateSortConfig
   } = useTableSettings('dashboard_requests', {
     defaultColumnOrder,
     defaultHiddenColumns: [],
@@ -263,28 +265,9 @@ const Requests: React.FC = () => {
   // View-Mode aus Settings laden
   const viewMode = settings.viewMode || 'cards';
   
-  // ✅ WIEDERHERGESTELLT: Card-Sortierung für TableColumnConfig Modal (nicht Filter-Sortierung!)
-  // Card-Sortierung ermöglicht Sortier-Pfeile im "Sortieren & Anzeigen" Modal (Card-Ansicht)
-  const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
-    title: 'asc',
-    status: 'asc',
-    type: 'asc',
-    requestedBy: 'asc',
-    responsible: 'asc',
-    branch: 'asc',
-    dueDate: 'asc',
-    description: 'asc'
-  };
-  
-  const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(
-    defaultCardSortDirections
-  );
-  
-  const handleCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
-    setCardSortDirections(prev => ({
-      ...prev,
-      [columnId]: direction
-    }));
+  // Hauptsortierung Handler (für Table & Cards synchron)
+  const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
+    updateSortConfig({ key: key as SortConfig['key'], direction });
   };
 
   // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
@@ -615,10 +598,9 @@ const Requests: React.FC = () => {
   };
 
   const handleSort = (key: SortConfig['key']) => {
-    setSortConfig(current => ({
-      key,
-      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-    }));
+    // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
+    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    updateSortConfig({ key, direction: newDirection });
   };
 
   const handleStatusChange = async (requestId: number, newStatus: Request['status']) => {
@@ -710,7 +692,7 @@ const Requests: React.FC = () => {
     // ✅ FIX: Lade Daten mit Filter (server-seitig)
     setSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
     setActiveFilterName(''); // Kein Filter-Name
-    setSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
+    updateSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
     
     // ✅ FIX: Markiere initial load als versucht, wenn Filter angewendet wird
     initialLoadAttemptedRef.current = true;
@@ -1162,9 +1144,9 @@ const Requests: React.FC = () => {
                 onClose={() => {}}
                 buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                 modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
-                onSortDirectionChange={viewMode === 'cards' ? handleCardSortDirectionChange : undefined}
-                showSortDirection={viewMode === 'cards'}
+                mainSortConfig={sortConfig}
+                onMainSortChange={handleMainSortChange}
+                showMainSort={true}
               />
             </div>
           </div>
