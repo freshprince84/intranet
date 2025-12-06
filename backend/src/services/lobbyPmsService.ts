@@ -1015,10 +1015,12 @@ export class LobbyPmsService {
     // Indikatoren:
     // 1. checkin_online = true (sicherster Indikator)
     // 2. holder.type_document + holder.document gefüllt (sehr wahrscheinlich)
-    const hasCompletedCheckInLink = 
+    // WICHTIG: Stelle sicher, dass immer ein Boolean zurückgegeben wird
+    const hasCompletedCheckInLink = Boolean(
       lobbyReservation.checkin_online === true ||
       (holder.type_document && holder.type_document !== '' && 
-       holder.document && holder.document !== '');
+       holder.document && holder.document !== '')
+    );
     
     // Datum-Felder: API gibt start_date/end_date zurück
     // WICHTIG: Verwende parseLocalDate, um UTC-Konvertierung zu vermeiden
