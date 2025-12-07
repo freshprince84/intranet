@@ -8,20 +8,12 @@ import useMessage from '../hooks/useMessage.ts';
 import { useFilterContext } from '../contexts/FilterContext.tsx';
 import { logger } from '../utils/logger.ts';
 
-interface SortDirection {
-  column: string;
-  direction: 'asc' | 'desc';
-  priority: number;
-  conditionIndex: number;
-}
-
 interface SavedFilter {
   id: number;
   name: string;
   tableId: string;
   conditions: FilterCondition[];
   operators: ('AND' | 'OR')[];
-  sortDirections?: SortDirection[];
   groupId?: number | null;
   order?: number;
   createdAt?: string;
@@ -40,11 +32,11 @@ interface FilterGroup {
 
 interface SavedFilterTagsProps {
   tableId: string;
-  onSelectFilter: (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: SortDirection[]) => void;
+  onSelectFilter: (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => void;
   onReset: () => void;
   activeFilterName?: string;
   selectedFilterId?: number | null;
-  onFilterChange?: (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: SortDirection[]) => void;
+  onFilterChange?: (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => void;
   defaultFilterName?: string;
 }
 
@@ -286,13 +278,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         defaultFilterAppliedRef.current = true;
         
         // ✅ FIX: Einheitliches Format - immer Array (nicht undefined)
-        const validSortDirections = Array.isArray(defaultFilter.sortDirections) ? defaultFilter.sortDirections : [];
         if (onFilterChange) {
           // Controlled Mode: Verwende onFilterChange
-          onFilterChange(defaultFilter.name, defaultFilter.id, defaultFilter.conditions, defaultFilter.operators, validSortDirections);
+          onFilterChange(defaultFilter.name, defaultFilter.id, defaultFilter.conditions, defaultFilter.operators);
         } else {
           // Uncontrolled Mode: Verwende onSelectFilter
-          onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
+          onSelectFilter(defaultFilter.conditions, defaultFilter.operators);
         }
       } else if (defaultFilterName) {
         // ✅ FIX: Wenn Default-Filter nicht gefunden wurde, warnen und Fallback
@@ -341,26 +332,22 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         filterId: filter.id,
         conditionsCount: filter.conditions?.length || 0,
         operatorsCount: filter.operators?.length || 0,
-        sortDirectionsCount: filter.sortDirections?.length || 0,
         hasOnFilterChange: !!onFilterChange
       });
     }
-    
-    // ✅ FIX: Einheitliches Format - immer Array (nicht undefined)
-    const validSortDirections = Array.isArray(filter.sortDirections) ? filter.sortDirections : [];
     
     if (onFilterChange) {
       // Controlled component
       if (process.env.NODE_ENV === 'development') {
         logger.log('📋 SavedFilterTags: Calling onFilterChange (controlled)');
       }
-      onFilterChange(filter.name, filter.id, filter.conditions, filter.operators, validSortDirections);
+      onFilterChange(filter.name, filter.id, filter.conditions, filter.operators);
     } else {
       // Backward compatibility - uncontrolled component
       if (process.env.NODE_ENV === 'development') {
         logger.log('📋 SavedFilterTags: Calling onSelectFilter (uncontrolled)');
       }
-      onSelectFilter(filter.conditions, filter.operators, validSortDirections);
+      onSelectFilter(filter.conditions, filter.operators);
     }
   };
   
