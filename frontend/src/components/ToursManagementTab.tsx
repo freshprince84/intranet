@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { Tour, TourType } from '../types/tour.ts';
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { logger } from '../utils/logger.ts';
 
 const ToursManagementTab: React.FC = () => {
   const { t } = useTranslation();

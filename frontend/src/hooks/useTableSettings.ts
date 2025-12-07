@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { tableSettingsApi, TableSettings } from '../api/tableSettingsApi.ts';
+import { logger } from '../utils/logger.ts';
 
 interface UseTableSettingsOptions {
   defaultColumnOrder?: string[];

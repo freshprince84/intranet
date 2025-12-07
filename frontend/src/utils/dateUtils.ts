@@ -1,5 +1,6 @@
 import { format, parseISO, differenceInMinutes, parse, getWeek, getYear, addDays, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { logger } from './logger.ts';
 
 /**
  * Utility-Funktionen für die Datums- und Zeitverarbeitung im Frontend.

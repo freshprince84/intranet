@@ -22,6 +22,7 @@ import {
   ClockIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
+import { logger } from '../../utils/logger.ts';
 import { de, es, enUS } from 'date-fns/locale';
 
 const ReservationDetails: React.FC = () => {

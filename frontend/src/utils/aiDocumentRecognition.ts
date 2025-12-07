@@ -1,5 +1,6 @@
 import { IdentificationDocument } from '../types/interfaces.ts';
 import { API_URL } from '../config/api.ts';
+import { logger } from './logger.ts';
 
 /**
  * KI-basierte Dokumenterkennung

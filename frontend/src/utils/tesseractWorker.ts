@@ -4,6 +4,8 @@
  * - Eine Simulation für Testzwecke (wenn die Bibliothek noch fehlt)
  */
 
+import { logger } from './logger.ts';
+
 // Versuche, Tesseract zu importieren, aber fange Fehler ab, wenn es nicht installiert ist
 let tesseractAvailable = false;
 let createWorker: any;

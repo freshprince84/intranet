@@ -9,6 +9,7 @@ import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
 import { FilterCondition } from '../FilterRow.tsx';
 import axiosInstance from '../../config/axios.ts';
+import { logger } from '../../utils/logger.ts';
 
 // Status-Badge Funktionen
 const getStatusColor = (status: string) => {

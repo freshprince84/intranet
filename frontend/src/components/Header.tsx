@@ -9,6 +9,7 @@ import axiosInstance from '../config/axios.ts';
 import HeaderMessage from './HeaderMessage.tsx';
 import useMessage from '../hooks/useMessage.ts';
 import { useOnboarding } from '../contexts/OnboardingContext.tsx';
+import { logger } from '../utils/logger.ts';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
