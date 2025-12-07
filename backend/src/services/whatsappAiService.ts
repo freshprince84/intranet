@@ -218,7 +218,7 @@ export class WhatsAppAiService {
               if (existingReservation && msg.reservationId) {
                 return false; // Filtere Nachrichten, die zu einer Reservierung gehören
               }
-              return msg.content && msg.content.trim().length > 0; // Filtere leere Nachrichten
+              return msg.message && msg.message.trim().length > 0; // Filtere leere Nachrichten
             })
             .map(msg => ({
               role: msg.direction === 'incoming' ? 'user' as const : 'assistant' as const,
