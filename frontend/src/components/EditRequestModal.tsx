@@ -10,6 +10,39 @@ import MarkdownPreview from './MarkdownPreview.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import { logger } from '../utils/logger.ts';
 
+// ✅ MEMORY LEAK FIX: Komponente für Bildvorschau mit Cleanup
+interface ImagePreviewWithCleanupProps {
+  file: File;
+  alt: string;
+  blobUrlsRef: React.MutableRefObject<Set<string>>;
+  className?: string;
+}
+
+const ImagePreviewWithCleanup: React.FC<ImagePreviewWithCleanupProps> = ({ file, alt, blobUrlsRef, className = "max-w-[200px] max-h-[150px] object-contain" }) => {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const blobUrl = URL.createObjectURL(file);
+    blobUrlsRef.current.add(blobUrl);
+    setUrl(blobUrl);
+
+    return () => {
+      URL.revokeObjectURL(blobUrl);
+      blobUrlsRef.current.delete(blobUrl);
+    };
+  }, [file, blobUrlsRef]);
+
+  if (!url) return null;
+
+  return (
+    <img 
+      src={url}
+      alt={alt}
+      className={className}
+    />
+  );
+};
+
 interface Request {
   id: number;
   title: string;
