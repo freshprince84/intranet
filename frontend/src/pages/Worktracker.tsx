@@ -108,9 +108,6 @@ const defaultCardMetadata = ['title', 'status', 'responsible', 'qualityControl',
 const defaultCardColumnOrder = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
 // ❌ ENTFERNT: defaultCardSortDirections und defaultReservationCardSortDirections
 // Hauptsortierung wird jetzt aus Settings geladen (pro Benutzer gespeichert)
-  amount: 'desc',
-  arrivalTime: 'desc'
-};
 
 // Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
 // Tabellen-Spalte -> Card-Metadaten (kann Array sein für 1:N Mapping)
