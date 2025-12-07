@@ -78,7 +78,6 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     const [tourSearchTerm, setTourSearchTerm] = useState('');
     const [tourFilterConditions, setTourFilterConditions] = useState<FilterCondition[]>([]);
     const [tourFilterLogicalOperators, setTourFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-    const [tourFilterSortDirections, setTourFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
     const [tourActiveFilterName, setTourActiveFilterName] = useState<string>(t('tours.filters.current', 'Aktuell'));
     const [tourSelectedFilterId, setTourSelectedFilterId] = useState<number | null>(null);
     const [isCreateTourModalOpen, setIsCreateTourModalOpen] = useState(false);
@@ -451,30 +450,6 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                 if (!b) return -1;
             }
             
-            // 1. Priorität: Filter-Sortierung (höchste Priorität)
-            if (tourFilterSortDirections.length > 0) {
-                for (const sortDir of tourFilterSortDirections.sort((x, y) => x.priority - y.priority)) {
-                    const valueA = getTourSortValue(a, sortDir.column);
-                    const valueB = getTourSortValue(b, sortDir.column);
-                    
-                    let comparison = 0;
-                    if (typeof valueA === 'number' && typeof valueB === 'number') {
-                        comparison = valueA - valueB;
-                    } else {
-                        comparison = String(valueA).localeCompare(String(valueB));
-                    }
-                    
-                    if (sortDir.direction === 'desc') {
-                        comparison = -comparison;
-                    }
-                    
-                    if (comparison !== 0) {
-                        return comparison;
-                    }
-                }
-                return 0;
-            }
-            
             // 2. Priorität: Table-Header-Sortierung (temporäre Überschreibung, auch wenn Filter aktiv)
             if (viewMode === 'table' && tourTableSortConfig.key) {
                 const valueA = getTourSortValue(a, tourTableSortConfig.key);
@@ -502,7 +477,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
         });
         
         return sorted;
-    }, [tours, tourSearchTerm, tourFilterConditions, tourFilterLogicalOperators, tourFilterSortDirections, viewMode, tourTableSortConfig]);
+    }, [tours, tourSearchTerm, tourFilterConditions, tourFilterLogicalOperators, viewMode, tourTableSortConfig]);
 
     return (
         <div className="space-y-4">
@@ -648,8 +623,6 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                         onReset={resetTourFilterConditions}
                         savedConditions={tourFilterConditions}
                         savedOperators={tourFilterLogicalOperators}
-                        savedSortDirections={tourFilterSortDirections}
-                        onSortDirectionsChange={setTourFilterSortDirections}
                         tableId={TOURS_TABLE_ID}
                     />
                 </div>
