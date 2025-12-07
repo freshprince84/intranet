@@ -11,7 +11,7 @@ import { API_URL } from '../config/api.ts';
  */
 export const recognizeDocumentWithAI = async (imageData: string): Promise<Partial<IdentificationDocument>> => {
   try {
-    console.log('Starte KI-basierte Dokumentenerkennung...');
+    logger.log('Starte KI-basierte Dokumentenerkennung...');
     
     // Überprüfe das Bild-Format
     if (!imageData.startsWith('data:image')) {
@@ -34,7 +34,7 @@ export const recognizeDocumentWithAI = async (imageData: string): Promise<Partia
     
     // Die vollständige API-URL verwenden
     const apiEndpoint = `${API_URL}/document-recognition`;
-    console.log('Verwende API-Endpunkt:', apiEndpoint);
+    logger.log('Verwende API-Endpunkt:', apiEndpoint);
     
     // POST-Anfrage an den API-Endpunkt (ohne nachgestellten Schrägstrich)
     const response = await fetch(apiEndpoint, {
@@ -58,7 +58,7 @@ export const recognizeDocumentWithAI = async (imageData: string): Promise<Partia
     }
     
     const result = await response.json();
-    console.log('KI-Ergebnis:', result);
+    logger.log('KI-Ergebnis:', result);
     
     return result;
   } catch (error) {

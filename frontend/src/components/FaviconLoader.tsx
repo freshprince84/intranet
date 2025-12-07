@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { logger } from '../utils/logger.ts';
 import { API_URL } from '../config/api.ts';
 
 const FaviconLoader: React.FC = () => {
@@ -17,7 +18,7 @@ const FaviconLoader: React.FC = () => {
           const favicon = document.getElementById('favicon') as HTMLLinkElement;
           if (favicon && data.logo) {
             favicon.href = data.logo; // Das ist bereits eine vollständige data-URL
-            console.log('Favicon erfolgreich aktualisiert');
+            logger.log('Favicon erfolgreich aktualisiert');
           }
         } else {
           console.warn('Favicon konnte nicht geladen werden:', response.status);

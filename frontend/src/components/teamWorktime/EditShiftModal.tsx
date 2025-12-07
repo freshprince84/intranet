@@ -5,6 +5,7 @@ import { Dialog } from '@headlessui/react';
 import { XMarkIcon, TrashIcon, ArrowsRightLeftIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
+import { logger } from '../../utils/logger.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { format } from 'date-fns';
 import SwapRequestModal from './SwapRequestModal.tsx';
@@ -233,7 +234,7 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
 
       const response = await axiosInstance.put(API_ENDPOINTS.SHIFTS.BY_ID(shift.id), updateData);
 
-      console.log('Schicht erfolgreich aktualisiert:', response.data);
+      logger.log('Schicht erfolgreich aktualisiert:', response.data);
       onShiftUpdated(response.data.data || response.data);
       handleClose();
     } catch (err: any) {
@@ -259,7 +260,7 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
 
       await axiosInstance.delete(API_ENDPOINTS.SHIFTS.BY_ID(shift.id));
 
-      console.log('Schicht erfolgreich gelöscht');
+      logger.log('Schicht erfolgreich gelöscht');
       onShiftDeleted(shift.id);
       handleClose();
     } catch (err: any) {

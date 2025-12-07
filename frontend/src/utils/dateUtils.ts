@@ -141,7 +141,7 @@ export const convertWeekToDate = (weekString: string): string => {
         const formattedDate = format(monday, 'yyyy-MM-dd');
         
         // Protokolliere das berechnete Datum für Debug-Zwecke
-        console.log(`Konvertierte Woche ${weekString} zu Datum: ${formattedDate} (Wochentag: ${format(monday, 'EEEE', { locale: de })})`);
+        logger.log(`Konvertierte Woche ${weekString} zu Datum: ${formattedDate} (Wochentag: ${format(monday, 'EEEE', { locale: de })})`);
         
         // Zusätzliche Sicherheitsüberprüfung: Stelle sicher, dass es ein Montag ist
         if (format(monday, 'EEEE', { locale: de }) !== 'Montag') {

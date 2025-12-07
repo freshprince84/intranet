@@ -67,10 +67,10 @@ const MyJoinRequestsList: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    console.log('MyJoinRequestsList: useEffect called - component mounted');
+    logger.log('MyJoinRequestsList: useEffect called - component mounted');
     
     // WICHTIG: State beim Mount zurücksetzen, um Caching zwischen Usern zu vermeiden
-    console.log('MyJoinRequestsList: Resetting state on mount to prevent data leaks');
+    logger.log('MyJoinRequestsList: Resetting state on mount to prevent data leaks');
     setJoinRequests([]);
     setError(null);
     setLoading(true);
@@ -79,11 +79,11 @@ const MyJoinRequestsList: React.FC = () => {
     
     const fetchMyJoinRequests = async () => {
       if (!isMounted) {
-        console.log('MyJoinRequestsList: Component unmounted, skipping fetch');
+        logger.log('MyJoinRequestsList: Component unmounted, skipping fetch');
         return;
       }
       
-      console.log('MyJoinRequestsList: Starting fetch');
+      logger.log('MyJoinRequestsList: Starting fetch');
       
       // Timeout nach 10 Sekunden
       const timeoutId = setTimeout(() => {
@@ -95,19 +95,19 @@ const MyJoinRequestsList: React.FC = () => {
       }, 10000);
       
       try {
-        console.log('MyJoinRequestsList: Setting loading to true');
+        logger.log('MyJoinRequestsList: Setting loading to true');
         setLoading(true);
         setError(null);
         
         // Debug: Log die URL die aufgerufen wird
-        console.log('MyJoinRequestsList: Fetching my join requests from:', API_ENDPOINTS.ORGANIZATIONS.MY_JOIN_REQUESTS);
+        logger.log('MyJoinRequestsList: Fetching my join requests from:', API_ENDPOINTS.ORGANIZATIONS.MY_JOIN_REQUESTS);
         
         const requests = await organizationService.getMyJoinRequests();
         
-        console.log('MyJoinRequestsList: Received requests:', requests);
-        console.log('MyJoinRequestsList: Requests type:', typeof requests);
-        console.log('MyJoinRequestsList: Requests isArray:', Array.isArray(requests));
-        console.log('MyJoinRequestsList: Requests length:', requests?.length || 0);
+        logger.log('MyJoinRequestsList: Received requests:', requests);
+        logger.log('MyJoinRequestsList: Requests type:', typeof requests);
+        logger.log('MyJoinRequestsList: Requests isArray:', Array.isArray(requests));
+        logger.log('MyJoinRequestsList: Requests length:', requests?.length || 0);
         
         // SICHERHEIT: Validiere, dass alle Anfragen wirklich Arrays sind
         if (!Array.isArray(requests)) {
@@ -120,18 +120,18 @@ const MyJoinRequestsList: React.FC = () => {
         // State immer setzen, auch wenn Component unmounted ist
         // (React kann den State trotzdem setzen, wenn Component wieder gemountet wird)
         if (isMounted) {
-          console.log('MyJoinRequestsList: Setting joinRequests state');
+          logger.log('MyJoinRequestsList: Setting joinRequests state');
           setJoinRequests(requests);
-          console.log('MyJoinRequestsList: State updated with', requests.length, 'requests');
+          logger.log('MyJoinRequestsList: State updated with', requests.length, 'requests');
         } else {
-          console.log('MyJoinRequestsList: Component was unmounted, but setting state anyway');
+          logger.log('MyJoinRequestsList: Component was unmounted, but setting state anyway');
           setJoinRequests(requests);
         }
       } catch (err: any) {
         clearTimeout(timeoutId);
         
         if (!isMounted) {
-          console.log('MyJoinRequestsList: Component unmounted during error, skipping error handling');
+          logger.log('MyJoinRequestsList: Component unmounted during error, skipping error handling');
           return;
         }
         
@@ -147,11 +147,11 @@ const MyJoinRequestsList: React.FC = () => {
         }, 0);
       } finally {
         if (isMounted) {
-          console.log('MyJoinRequestsList: Setting loading to false');
+          logger.log('MyJoinRequestsList: Setting loading to false');
           setLoading(false);
         } else {
           // Auch wenn unmounted, loading auf false setzen
-          console.log('MyJoinRequestsList: Component unmounted, but setting loading to false anyway');
+          logger.log('MyJoinRequestsList: Component unmounted, but setting loading to false anyway');
           setLoading(false);
         }
       }
@@ -161,7 +161,7 @@ const MyJoinRequestsList: React.FC = () => {
     fetchMyJoinRequests();
     
     return () => {
-      console.log('MyJoinRequestsList: useEffect cleanup - component unmounting');
+      logger.log('MyJoinRequestsList: useEffect cleanup - component unmounting');
       isMounted = false;
       mountedRef.current = false;
       // State beim Unmount zurücksetzen
@@ -286,7 +286,7 @@ const MyJoinRequestsList: React.FC = () => {
             API_ENDPOINTS.SAVED_FILTERS.BASE,
             alleFilter
           );
-          console.log('Alle-Filter für Meine Beitrittsanfragen erstellt');
+          logger.log('Alle-Filter für Meine Beitrittsanfragen erstellt');
         }
       } catch (error) {
         console.error('Fehler beim Erstellen der Standard-Filter:', error);

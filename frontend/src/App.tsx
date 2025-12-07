@@ -13,6 +13,7 @@ import { MessageProvider } from './contexts/MessageContext.tsx';
 import { ErrorProvider } from './contexts/ErrorContext.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { initClaudeConsole } from './utils/claudeConsole.ts';
+import { logger } from './utils/logger.ts';
 import { OrganizationProvider } from './contexts/OrganizationContext.tsx';
 import { SidepaneProvider } from './contexts/SidepaneContext.tsx';
 import { LanguageProvider } from './contexts/LanguageContext.tsx';
@@ -45,7 +46,7 @@ const App: React.FC = () => {
     React.useEffect(() => {
         if (process.env.NODE_ENV === 'development') {
             initClaudeConsole();
-            console.log('🔍 Claude Console Bridge initialized');
+            logger.log('🔍 Claude Console Bridge initialized');
         }
     }, []);
 

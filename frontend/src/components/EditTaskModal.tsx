@@ -12,6 +12,7 @@ import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import TaskDataBox from './TaskDataBox.tsx';
 import EmailTemplateBox from './EmailTemplateBox.tsx';
 import SocialSecurityCompletionBox from './SocialSecurityCompletionBox.tsx';
+import { logger } from '../utils/logger.ts';
 
 // ✅ MEMORY LEAK FIX: Komponente für Bildvorschau mit Cleanup
 interface ImagePreviewWithCleanupProps {
@@ -203,7 +204,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                 for (const attachmentId of uploadedDuringEdit) {
                     try {
                         await axiosInstance.delete(API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachmentId));
-                        console.log(`Task Attachment ${attachmentId} gelöscht (Modal ohne Speichern geschlossen)`);
+                        logger.log(`Task Attachment ${attachmentId} gelöscht (Modal ohne Speichern geschlossen)`);
                     } catch (err) {
                         console.error(`Fehler beim Löschen von Task Attachment ${attachmentId}:`, err);
                     }
@@ -528,7 +529,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
             const response = await axiosInstance.put(`${API_ENDPOINTS.TASKS.BASE}/${task.id}`, taskData);
 
-            console.log('Task aktualisiert:', response.data);
+            logger.log('Task aktualisiert:', response.data);
             
             // Hole den aktualisierten Task vom Server (inkl. Attachments)
             const updatedTaskResponse = await axiosInstance.get(API_ENDPOINTS.TASKS.BY_ID(task.id));

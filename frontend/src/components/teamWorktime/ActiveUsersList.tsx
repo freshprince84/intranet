@@ -827,7 +827,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
             }
           );
           if (process.env.NODE_ENV === 'development') {
-          console.log('Aktive-Filter für Workcenter erstellt');
+          logger.log('Aktive-Filter für Workcenter erstellt');
           }
         }
 
@@ -851,7 +851,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
             }
           );
           if (process.env.NODE_ENV === 'development') {
-          console.log('Alle-Filter für Workcenter erstellt');
+          logger.log('Alle-Filter für Workcenter erstellt');
           }
         }
       } catch (error) {

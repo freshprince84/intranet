@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import CerebroArticleSelector from './CerebroArticleSelector.tsx';
 import MarkdownPreview from './MarkdownPreview.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
+import { logger } from '../utils/logger.ts';
 
 // ✅ MEMORY LEAK FIX: Komponente für Bildvorschau mit Cleanup
 interface ImagePreviewWithCleanupProps {
@@ -220,11 +221,11 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
                 return;
             }
 
-            console.log('Lade Benutzer für CreateTaskModal...');
+            logger.log('Lade Benutzer für CreateTaskModal...');
             
             const response = await axiosInstance.get(API_ENDPOINTS.USERS.DROPDOWN);
             
-            console.log('Benutzer geladen:', response.data.length);
+            logger.log('Benutzer geladen:', response.data.length);
             setUsers(response.data || []);
         } catch (err) {
             console.error('Fehler beim Laden der Benutzer:', err);
@@ -272,11 +273,11 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
                 return;
             }
 
-            console.log('Lade Niederlassungen für CreateTaskModal...');
+            logger.log('Lade Niederlassungen für CreateTaskModal...');
             
             const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
             
-            console.log('Niederlassungen geladen:', response.data.length);
+            logger.log('Niederlassungen geladen:', response.data.length);
             setBranches(response.data || []);
         } catch (err) {
             console.error('Fehler beim Laden der Niederlassungen:', err);
@@ -447,7 +448,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
                 );
             }
             
-            console.log(`${temporaryAttachments.length} Anhänge erfolgreich hochgeladen.`);
+            logger.log(`${temporaryAttachments.length} Anhänge erfolgreich hochgeladen.`);
         } catch (err) {
             console.error('Fehler beim Hochladen der Anhänge:', err);
             // Wir zeigen hier keinen Fehler, da der Task bereits erstellt wurde
@@ -530,7 +531,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             // Lade temporäre Anhänge hoch, falls vorhanden
             await uploadTemporaryAttachments(newTaskId);
             
-            console.log('Task erfolgreich erstellt:', response.data);
+            logger.log('Task erfolgreich erstellt:', response.data);
             // Übergebe den neuen Task an den Callback
             onTaskCreated(response.data);
             handleClose();

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CogIcon, UserIcon, BellIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { logger } from '../utils/logger.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useLanguage } from '../hooks/useLanguage.ts';
 import useMessage from '../hooks/useMessage.ts';
@@ -50,9 +51,9 @@ const Settings: React.FC = () => {
 
     // Debug-Ausgaben
     useEffect(() => {
-        console.log('User:', user);
-        console.log('Is Admin:', isAdmin());
-        console.log('User Roles:', user?.roles);
+        logger.log('User:', user);
+        logger.log('Is Admin:', isAdmin());
+        logger.log('User Roles:', user?.roles);
     }, [user, isAdmin]);
 
     // Monatsabrechnungs-Einstellungen laden
@@ -150,10 +151,10 @@ const Settings: React.FC = () => {
         formData.append('logo', file);
 
         try {
-            console.log('Starting upload...');
-            console.log('Selected file:', file);
+            logger.log('Starting upload...');
+            logger.log('Selected file:', file);
             const token = localStorage.getItem('token');
-            console.log('Token verfügbar:', !!token);
+            logger.log('Token verfügbar:', !!token);
 
             // Headers für die Authentifizierung, aber kein Content-Type
             const headers: HeadersInit = {};
@@ -168,9 +169,9 @@ const Settings: React.FC = () => {
                 // 'credentials: include' entfernt, um CORS-Probleme zu vermeiden
             });
 
-            console.log('Response Status:', response.status);
+            logger.log('Response Status:', response.status);
             const responseText = await response.text();
-            console.log('Response Text:', responseText);
+            logger.log('Response Text:', responseText);
 
             if (!response.ok) {
                 throw new Error(responseText || t('errors.uploadFailed'));
@@ -178,13 +179,13 @@ const Settings: React.FC = () => {
 
             try {
                 const responseData = JSON.parse(responseText);
-                console.log('Response Data:', responseData);
+                logger.log('Response Data:', responseData);
                 showMessage(t('settings.logoUploadSuccess'), 'success');
                 
                 // User-Daten neu laden, damit das Logo im Header aktualisiert wird
                 try {
                     await fetchCurrentUser();
-                    console.log('User-Daten nach Logo-Upload neu geladen');
+                    logger.log('User-Daten nach Logo-Upload neu geladen');
                 } catch (error) {
                     console.error('Fehler beim Neuladen der User-Daten:', error);
                 }

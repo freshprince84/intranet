@@ -1,5 +1,6 @@
 // import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
+import { logger } from '../utils/logger.ts';
 import { API_URL } from '../config/api.ts';
 
 export interface TableSettings {
@@ -72,7 +73,7 @@ export const tableSettingsApi = {
     try {
       const localStorageKey = getLocalStorageKey(tableId);
       localStorage.removeItem(localStorageKey);
-      console.log(`Tabelleneinstellungen für ${tableId} zurückgesetzt`);
+      logger.log(`Tabelleneinstellungen für ${tableId} zurückgesetzt`);
     } catch (error) {
       console.error('Fehler beim Zurücksetzen der Tabelleneinstellungen:', error);
     }

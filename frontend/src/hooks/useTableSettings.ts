@@ -35,7 +35,7 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
         
         if (!isMounted) return; // Component wurde bereits unmounted
         
-        console.log('Geladene Tabelleneinstellungen vom Server:', loadedSettings);
+        logger.log('Geladene Tabelleneinstellungen vom Server:', loadedSettings);
         
         // Wenn leere Einstellungen zurückgegeben werden, verwende die Standardwerte
         if (loadedSettings.columnOrder.length === 0 && options?.defaultColumnOrder) {
@@ -50,7 +50,7 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
         // sortConfig wird bereits vom Server geladen (falls vorhanden)
         // Keine Initialisierung nötig, da optional
         
-        console.log('Finale Tabelleneinstellungen nach Initialisierung:', loadedSettings);
+        logger.log('Finale Tabelleneinstellungen nach Initialisierung:', loadedSettings);
         setSettings(loadedSettings);
         setError(null);
       } catch (err) {

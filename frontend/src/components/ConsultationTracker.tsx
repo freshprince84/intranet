@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { formatTime, calculateDuration } from '../utils/dateUtils.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { logger } from '../utils/logger.ts';
 import { useBranch } from '../contexts/BranchContext.tsx';
 import { toast } from 'react-toastify';
 import ClientSelectModal from './ClientSelectModal.tsx';
@@ -78,9 +79,9 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
 
   const loadRecentClients = async () => {
     try {
-      console.log('=== FRONTEND: loadRecentClients() called ===');
+      logger.log('=== FRONTEND: loadRecentClients() called ===');
       const clients = await clientApi.getRecentClients();
-      console.log('=== FRONTEND: received clients:', clients);
+      logger.log('=== FRONTEND: received clients:', clients);
       setRecentClients(clients || []);
     } catch (error) {
       console.error('=== FRONTEND: loadRecentClients() ERROR ===', error);
@@ -155,7 +156,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       // Beratungsliste aktualisieren - übergebe die aktualisierte Consultation
       onConsultationChange?.(stoppedConsultation);
       // Sende Event für SavedFilterTags Aktualisierung
-      console.log('🛑 ConsultationTracker: Sending consultationChanged event (stop)');
+      logger.log('🛑 ConsultationTracker: Sending consultationChanged event (stop)');
       window.dispatchEvent(new CustomEvent('consultationChanged'));
     } catch (error: any) {
       toast.error(error.response?.data?.message || t('consultations.stopError'));
@@ -255,7 +256,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       setLastStartedClientId(selectedClient.id);
       
       // Sende Event für SavedFilterTags Aktualisierung
-      console.log('🚀 ConsultationTracker: Sending consultationChanged event (start)');
+      logger.log('🚀 ConsultationTracker: Sending consultationChanged event (start)');
       window.dispatchEvent(new CustomEvent('consultationChanged'));
       
       // Lade Recent Clients neu

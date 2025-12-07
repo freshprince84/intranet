@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { logger } from '../utils/logger.ts';
 import { ClockIcon, ListBulletIcon, ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -67,11 +68,11 @@ const WorktimeTracker: React.FC = () => {
             setIsLoading(true);
             setStatusError(null);
             
-            console.log('Prüfe aktive Zeiterfassung...');
-            console.log('Benutzer geladen:', user?.id);
+            logger.log('Prüfe aktive Zeiterfassung...');
+            logger.log('Benutzer geladen:', user?.id);
             
             const token = localStorage.getItem('token');
-            console.log('Token vorhanden:', token ? 'Ja' : 'Nein');
+            logger.log('Token vorhanden:', token ? 'Ja' : 'Nein');
             
             if (!token) {
                 console.error('Kein Authentifizierungstoken gefunden');
@@ -84,13 +85,13 @@ const WorktimeTracker: React.FC = () => {
                 // Verwende axiosInstance statt direktem axios
                 const response = await axiosInstance.get(API_ENDPOINTS.WORKTIME.ACTIVE);
                 
-                console.log('API-Antwort Status:', response.status);
+                logger.log('API-Antwort Status:', response.status);
                 
                 const data = response.data;
-                console.log('Aktive Zeiterfassung Daten:', data);
+                logger.log('Aktive Zeiterfassung Daten:', data);
                 
                 if (data && data.active === true) {
-                    console.log('Aktive Zeiterfassung gefunden:', data.id);
+                    logger.log('Aktive Zeiterfassung gefunden:', data.id);
                     // Startzeit setzen und Timer initialisieren
                     // Entferne das 'Z' am Ende des Strings, damit JS den Zeitstempel nicht als UTC interpretiert
                     const startISOString = data.startTime.endsWith('Z') 
@@ -124,7 +125,7 @@ const WorktimeTracker: React.FC = () => {
                     // Aktualisiere den globalen Tracking-Status
                     updateTrackingStatus(true);
                 } else {
-                    console.log('Keine aktive Zeiterfassung vorhanden');
+                    logger.log('Keine aktive Zeiterfassung vorhanden');
                     // Alle State-Updates in einem Batch zusammenfassen
                     setIsTracking(false);
                     setActiveWorktime(null);

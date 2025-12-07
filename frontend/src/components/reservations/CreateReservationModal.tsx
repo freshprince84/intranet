@@ -129,10 +129,10 @@ const CreateReservationModal: React.FC<CreateReservationModalProps> = ({
         currency: currency
       };
 
-      console.log('[CreateReservationModal] Sende Daten:', data);
-      console.log('[CreateReservationModal] API Endpoint:', '/api/reservations');
+      logger.log('[CreateReservationModal] Sende Daten:', data);
+      logger.log('[CreateReservationModal] API Endpoint:', '/api/reservations');
       const newReservation = await reservationService.create(data);
-      console.log('[CreateReservationModal] Reservierung erstellt:', newReservation);
+      logger.log('[CreateReservationModal] Reservierung erstellt:', newReservation);
       
       showMessage(
         t('reservations.createReservation.success', 'Reservierung erfolgreich erstellt'),

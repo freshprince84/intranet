@@ -11,6 +11,7 @@ import { FilterCondition } from '../components/FilterRow.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import RoomDescriptionsSection from './branches/RoomDescriptionsSection.tsx';
 import { useError } from '../contexts/ErrorContext.tsx';
+import { logger } from '../utils/logger.ts';
 
 interface Branch {
     id: number;
@@ -507,7 +508,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                         alleFilter
                     );
                     if (process.env.NODE_ENV === 'development') {
-                    console.log(t('branches.filterCreated'));
+                    logger.log(t('branches.filterCreated'));
                     }
                 }
             } catch (error) {

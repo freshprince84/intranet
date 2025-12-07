@@ -23,6 +23,7 @@ import {
   getInvoiceStatusColor 
 } from '../utils/dateUtils.ts';
 import { Consultation, Client } from '../types/client.ts';
+import { logger } from '../utils/logger.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { toast } from 'react-toastify';
 import LinkTaskModal from './LinkTaskModal.tsx';
@@ -211,7 +212,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         if (alleFilter) {
           try {
             await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(alleFilter.id));
-            console.log('Veralteter "Alle" Filter gelöscht');
+            logger.log('Veralteter "Alle" Filter gelöscht');
           } catch (error) {
             console.error('Fehler beim Löschen des "Alle" Filters:', error);
           }
@@ -222,7 +223,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         if (dieseWocheFilter) {
           try {
             await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(dieseWocheFilter.id));
-            console.log('Veralteter "Diese Woche" Filter gelöscht');
+            logger.log('Veralteter "Diese Woche" Filter gelöscht');
           } catch (error) {
             console.error('Fehler beim Löschen des "Diese Woche" Filters:', error);
           }
@@ -323,7 +324,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           const condition = heuteFilter.conditions[0];
           // Prüfe ob es ein statisches Datum ist (Format: YYYY-MM-DD) anstatt unseres Markers
           if (condition.value && condition.value !== '__TODAY__' && /^\d{4}-\d{2}-\d{2}$/.test(condition.value)) {
-            console.log('Aktualisiere Heute-Filter mit dynamischem Marker...');
+            logger.log('Aktualisiere Heute-Filter mit dynamischem Marker...');
             await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, {
               tableId: CONSULTATIONS_TABLE_ID,
               name: t('consultations.filters.today'),
@@ -349,7 +350,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           );
 
           if (hasStaticDates) {
-            console.log('Aktualisiere Woche-Filter mit dynamischen Markern...');
+            logger.log('Aktualisiere Woche-Filter mit dynamischen Markern...');
             await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, {
               tableId: CONSULTATIONS_TABLE_ID,
               name: t('consultations.filters.week'),
@@ -400,7 +401,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           if (!currentRecentClientNames.includes(existingFilter.name)) {
             try {
               await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(existingFilter.id));
-              console.log(`Veralteter Client-Filter gelöscht: ${existingFilter.name}`);
+              logger.log(`Veralteter Client-Filter gelöscht: ${existingFilter.name}`);
             } catch (error) {
               console.error(`Fehler beim Löschen des veralteten Client-Filters ${existingFilter.name}:`, error);
             }
@@ -422,7 +423,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
               operators: []
             };
             await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, clientFilter);
-            console.log(`Neuer Client-Filter erstellt: ${clientFilterName}`);
+            logger.log(`Neuer Client-Filter erstellt: ${clientFilterName}`);
           }
         }
       } catch (error) {
@@ -514,10 +515,10 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
       
       const inputValue = `${year}-${month}-${day}T${hours}:${minutes}`;
       
-      console.log('🔧 DEBUG handleTimeEdit (KORRIGIERT):');
-      console.log('- DB Zeit (UTC):', currentTime);
-      console.log('- Extrahierte UTC-Komponenten:', `${hours}:${minutes}`);
-      console.log('- inputValue für datetime-local:', inputValue);
+      logger.log('🔧 DEBUG handleTimeEdit (KORRIGIERT):');
+      logger.log('- DB Zeit (UTC):', currentTime);
+      logger.log('- Extrahierte UTC-Komponenten:', `${hours}:${minutes}`);
+      logger.log('- inputValue für datetime-local:', inputValue);
       
       setEditingTimeValue(inputValue);
     }
@@ -536,10 +537,10 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
       // ✅ KORREKT: Datetime-local Input direkt als UTC verwenden
       const timeString = `${editingTimeValue}:00.000Z`;  // "2025-05-31T11:35:00.000Z"
       
-      console.log('🔧 DEBUG handleTimeSave (REFACTORED):');
-      console.log('- editingTimeValue (Input):', editingTimeValue);
-      console.log('- timeString für API (UTC):', timeString);
-      console.log('- editingTimeType:', editingTimeType);
+      logger.log('🔧 DEBUG handleTimeSave (REFACTORED):');
+      logger.log('- editingTimeValue (Input):', editingTimeValue);
+      logger.log('- timeString für API (UTC):', timeString);
+      logger.log('- editingTimeType:', editingTimeType);
       
       // ✅ REFACTORED: Verwende zentralisierte API-Funktion
       const response = await consultationApi.updateConsultationTime(consultationId, {

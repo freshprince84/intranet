@@ -81,7 +81,7 @@ const DraggableColumnItem: React.FC<DraggableItemProps> = ({
               // Wenn diese Spalte bereits die Hauptsortierung ist, toggle die Richtung
               // Sonst setze diese Spalte als neue Hauptsortierung (Standard: 'asc')
               if (isMainSort && sortDirection !== undefined) {
-                onSortDirectionChange(id, sortDirection === 'asc' ? 'desc' : 'asc');
+              onSortDirectionChange(id, sortDirection === 'asc' ? 'desc' : 'asc');
               } else {
                 onSortDirectionChange(id, 'asc');
               }

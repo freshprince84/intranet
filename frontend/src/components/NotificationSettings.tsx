@@ -58,14 +58,14 @@ const NotificationSettingsComponent: React.FC = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      console.log('Starte Abruf der Benachrichtigungseinstellungen...');
+      logger.log('Starte Abruf der Benachrichtigungseinstellungen...');
       const response = await notificationSettingsApi.getUserSettings();
-      console.log('Erhaltene Einstellungen:', response.data);
+      logger.log('Erhaltene Einstellungen:', response.data);
       
       if (response?.data) {
         const newSettings: NotificationSettings = {...defaultSettings, ...response.data};
         setSettings(newSettings);
-        console.log('Einstellungen aktualisiert:', newSettings);
+        logger.log('Einstellungen aktualisiert:', newSettings);
       } else {
         console.warn('Keine Daten vom Server erhalten, verwende Standardeinstellungen');
         setSettings(defaultSettings);

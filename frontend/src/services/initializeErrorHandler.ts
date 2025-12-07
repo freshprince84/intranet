@@ -42,7 +42,7 @@ export function initializeErrorHandler() {
     return true;
   });
   
-  console.log('ErrorHandler erfolgreich initialisiert');
+  logger.log('ErrorHandler erfolgreich initialisiert');
 }
 
 export default initializeErrorHandler; 
