@@ -115,7 +115,7 @@ const detectDocumentType = (text: string): string | null => {
  * Extraktion für kolumbianische Ausweise
  */
 const extractColombianID = (text: string): Partial<IdentificationDocument> => {
-  console.log('Erkenne kolumbianischen Ausweis');
+  logger.log('Erkenne kolumbianischen Ausweis');
   
   const result: Partial<IdentificationDocument> = {
     documentType: 'residence_permit',
@@ -126,7 +126,7 @@ const extractColombianID = (text: string): Partial<IdentificationDocument> => {
   const numberMatch = text.match(/No\.\s*(\d+)/i) || text.match(/(\d{7,})/);
   if (numberMatch) {
     result.documentNumber = numberMatch[1];
-    console.log('Erkannte kolumbianische ID-Nummer:', result.documentNumber);
+    logger.log('Erkannte kolumbianische ID-Nummer:', result.documentNumber);
   }
   
   // Suche nach Ausstellungsdatum (F. EXPEDICIÓN)
@@ -137,7 +137,7 @@ const extractColombianID = (text: string): Partial<IdentificationDocument> => {
     const dateFormatted = recognizeDate(rawDate);
     if (dateFormatted) {
       result.issueDate = dateFormatted;
-      console.log('Erkanntes Ausstellungsdatum:', result.issueDate);
+      logger.log('Erkanntes Ausstellungsdatum:', result.issueDate);
     }
   }
   
@@ -148,7 +148,7 @@ const extractColombianID = (text: string): Partial<IdentificationDocument> => {
     const dateFormatted = recognizeDate(rawDate);
     if (dateFormatted) {
       result.expiryDate = dateFormatted;
-      console.log('Erkanntes Ablaufdatum:', result.expiryDate);
+      logger.log('Erkanntes Ablaufdatum:', result.expiryDate);
     }
   }
   
@@ -162,12 +162,12 @@ const extractColombianID = (text: string): Partial<IdentificationDocument> => {
 export const recognizeDocument = async (imageData: string): Promise<Partial<IdentificationDocument>> => {
   try {
     // Statusanzeige im Konsolenlog
-    console.log('Starte Dokumentenerkennung...');
+    logger.log('Starte Dokumentenerkennung...');
     
     // Bildanalyse direkt mit der neuen Funktion
     const data = await recognizeImage(imageData);
     
-    console.log('Bild verarbeitet. Erkannter Text:', data.text);
+    logger.log('Bild verarbeitet. Erkannter Text:', data.text);
     
     const text = data.text;
     
@@ -181,7 +181,7 @@ export const recognizeDocument = async (imageData: string): Promise<Partial<Iden
     
     // Dokumenttyp erkennen
     const documentType = detectDocumentType(text) || '';
-    console.log('Erkannter Dokumenttyp:', documentType);
+    logger.log('Erkannter Dokumenttyp:', documentType);
     
     // Leeres Ergebnisobjekt
     const result: Partial<IdentificationDocument> = {
@@ -196,21 +196,21 @@ export const recognizeDocument = async (imageData: string): Promise<Partial<Iden
       const documentNumber = extractValue(text, patterns.documentNumber);
       if (documentNumber) {
         result.documentNumber = documentNumber;
-        console.log('Erkannte Dokumentnummer:', documentNumber);
+        logger.log('Erkannte Dokumentnummer:', documentNumber);
       }
       
       // Extrahiere Ausstellungsland
       const issuingCountry = extractValue(text, patterns.issuingCountry);
       if (issuingCountry) {
         result.issuingCountry = issuingCountry;
-        console.log('Erkanntes Ausstellungsland:', issuingCountry);
+        logger.log('Erkanntes Ausstellungsland:', issuingCountry);
       }
       
       // Extrahiere ausstellende Behörde
       const issuingAuthority = extractValue(text, patterns.issuingAuthority);
       if (issuingAuthority) {
         result.issuingAuthority = issuingAuthority;
-        console.log('Erkannte ausstellende Behörde:', issuingAuthority);
+        logger.log('Erkannte ausstellende Behörde:', issuingAuthority);
       }
       
       // Extrahiere Ausstellungsdatum
@@ -219,7 +219,7 @@ export const recognizeDocument = async (imageData: string): Promise<Partial<Iden
         const issueDate = recognizeDate(issueDateText);
         if (issueDate) {
           result.issueDate = issueDate;
-          console.log('Erkanntes Ausstellungsdatum:', issueDate);
+          logger.log('Erkanntes Ausstellungsdatum:', issueDate);
         }
       }
       
@@ -229,7 +229,7 @@ export const recognizeDocument = async (imageData: string): Promise<Partial<Iden
         const expiryDate = recognizeDate(expiryDateText);
         if (expiryDate) {
           result.expiryDate = expiryDate;
-          console.log('Erkanntes Ablaufdatum:', expiryDate);
+          logger.log('Erkanntes Ablaufdatum:', expiryDate);
         }
       }
     }

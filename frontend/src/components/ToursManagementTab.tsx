@@ -56,7 +56,7 @@ const ToursManagementTab: React.FC = () => {
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             onClick={() => {
               // TODO: Modal öffnen
-              console.log('Create Tour');
+              logger.log('Create Tour');
             }}
           >
             <PlusIcon className="h-4 w-4 mr-2" />
@@ -111,7 +111,7 @@ const ToursManagementTab: React.FC = () => {
                     className="flex-1 flex items-center justify-center px-3 py-2 text-sm bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-500"
                     onClick={() => {
                       // TODO: Details anzeigen
-                      console.log('View Tour', tour.id);
+                      logger.log('View Tour', tour.id);
                     }}
                   >
                     <EyeIcon className="h-4 w-4 mr-1" />
@@ -123,7 +123,7 @@ const ToursManagementTab: React.FC = () => {
                     className="flex-1 flex items-center justify-center px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
                     onClick={() => {
                       // TODO: Edit Modal öffnen
-                      console.log('Edit Tour', tour.id);
+                      logger.log('Edit Tour', tour.id);
                     }}
                   >
                     <PencilIcon className="h-4 w-4 mr-1" />

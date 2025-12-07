@@ -11,6 +11,7 @@ import IdentificationDocumentForm from './IdentificationDocumentForm.tsx';
 import LifecycleView from './LifecycleView.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import { useError } from '../contexts/ErrorContext.tsx';
+import { logger } from '../utils/logger.ts';
 
 interface UserManagementTabProps {
 }
@@ -198,7 +199,7 @@ const UserManagementTab = (): JSX.Element => {
         const response = await roleApi.getAll();
         if (response.data && Array.isArray(response.data) && response.data.length > 0) {
           setRoles(response.data);
-          console.log(`${response.data.length} Rollen erfolgreich geladen`);
+          logger.log(`${response.data.length} Rollen erfolgreich geladen`);
         } else {
           console.warn('Keine Rollen vom Server erhalten, verwende Fallback');
           setRoles(fallbackRoles);
@@ -221,7 +222,7 @@ const UserManagementTab = (): JSX.Element => {
         const response = await branchApi.getAll();
         if (response.data && Array.isArray(response.data) && response.data.length > 0) {
           setBranches(response.data);
-          console.log(`${response.data.length} Branches erfolgreich geladen`);
+          logger.log(`${response.data.length} Branches erfolgreich geladen`);
         } else {
           console.warn('Keine Branches vom Server erhalten');
           setBranches([]);
@@ -243,7 +244,7 @@ const UserManagementTab = (): JSX.Element => {
         return;
       }
       
-      console.log('Lade Benutzerdetails für ID:', userId);
+      logger.log('Lade Benutzerdetails für ID:', userId);
       const response = await userApi.getById(userId);
       
       const userData = {
@@ -256,12 +257,12 @@ const UserManagementTab = (): JSX.Element => {
       let roleIds: number[] = [];
       
       if (response.data.roles && Array.isArray(response.data.roles)) {
-        console.log('Rollenstruktur (Typ):', typeof response.data.roles, 'Länge:', response.data.roles.length);
+        logger.log('Rollenstruktur (Typ):', typeof response.data.roles, 'Länge:', response.data.roles.length);
         
         // Struktur: roles: [{ role: { id, name, ... } }]
         if (response.data.roles.length > 0 && response.data.roles[0].role) {
           roleIds = response.data.roles.map(userRole => userRole.role.id);
-          console.log('Extrahierte Rollen-IDs aus verschachtelter Struktur:', roleIds);
+          logger.log('Extrahierte Rollen-IDs aus verschachtelter Struktur:', roleIds);
         }
         // Fallback für andere Formate
         else if (response.data.roles.length > 0) {
@@ -279,7 +280,7 @@ const UserManagementTab = (): JSX.Element => {
       
       // Wenn keine Rollen gefunden wurden, probieren wir, diese aus roles in der Response direkt zu extrahieren
       if (roleIds.length === 0 && response.data.role) {
-        console.log('Versuche Rollen aus role-Eigenschaft zu extrahieren:', response.data.role);
+        logger.log('Versuche Rollen aus role-Eigenschaft zu extrahieren:', response.data.role);
         if (Array.isArray(response.data.role)) {
           roleIds = response.data.role.map((r: any) => r.id);
         } else if (typeof response.data.role === 'object' && response.data.role !== null) {
@@ -287,18 +288,18 @@ const UserManagementTab = (): JSX.Element => {
         }
       }
       
-      console.log('Endgültige extrahierte Rollen-IDs:', roleIds);
+      logger.log('Endgültige extrahierte Rollen-IDs:', roleIds);
       
       // Extrahiere Branch-IDs aus der verschachtelten Struktur
       let branchIds: number[] = [];
       
       if (response.data.branches && Array.isArray(response.data.branches)) {
-        console.log('Branches-Struktur (Typ):', typeof response.data.branches, 'Länge:', response.data.branches.length);
+        logger.log('Branches-Struktur (Typ):', typeof response.data.branches, 'Länge:', response.data.branches.length);
         
         // Struktur: branches: [{ branch: { id, name, ... } }]
         if (response.data.branches.length > 0 && response.data.branches[0].branch) {
           branchIds = response.data.branches.map(userBranch => userBranch.branch.id);
-          console.log('Extrahierte Branch-IDs aus verschachtelter Struktur:', branchIds);
+          logger.log('Extrahierte Branch-IDs aus verschachtelter Struktur:', branchIds);
         }
         // Fallback für andere Formate
         else if (response.data.branches.length > 0) {
@@ -314,7 +315,7 @@ const UserManagementTab = (): JSX.Element => {
         console.warn('Branches fehlen oder sind kein Array:', response.data.branches);
       }
       
-      console.log('Endgültige extrahierte Branch-IDs:', branchIds);
+      logger.log('Endgültige extrahierte Branch-IDs:', branchIds);
       
       setSelectedUser(userData);
       setUserFormData(userData);
@@ -433,7 +434,7 @@ const UserManagementTab = (): JSX.Element => {
         contractType: userFormData.contractType || null,
       };
 
-      console.log('Sende Daten zum Server:', dataToSend);
+      logger.log('Sende Daten zum Server:', dataToSend);
 
       // Update Benutzerdaten
       const response = await userApi.update(selectedUser.id, dataToSend);
@@ -500,7 +501,7 @@ const UserManagementTab = (): JSX.Element => {
       const currentActiveStatus = selectedUser.active !== undefined ? selectedUser.active : true;
       const newActiveStatus = !currentActiveStatus;
       
-      console.log('Toggle active:', { 
+      logger.log('Toggle active:', { 
         currentActiveStatus, 
         newActiveStatus, 
         selectedUser,
@@ -509,12 +510,12 @@ const UserManagementTab = (): JSX.Element => {
       });
       
       const updatePayload = { active: newActiveStatus };
-      console.log('Sending update payload:', updatePayload, 'Type of active:', typeof newActiveStatus);
+      logger.log('Sending update payload:', updatePayload, 'Type of active:', typeof newActiveStatus);
       
       // Update Benutzer
       const response = await userApi.update(selectedUser.id, updatePayload);
       
-      console.log('Update response:', response.data);
+      logger.log('Update response:', response.data);
 
       if (response.data) {
         const updatedData = {
@@ -523,7 +524,7 @@ const UserManagementTab = (): JSX.Element => {
           birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null
         };
         
-        console.log('Updated user data:', updatedData);
+        logger.log('Updated user data:', updatedData);
         
         setSelectedUser(updatedData);
         setUserFormData({
@@ -573,8 +574,8 @@ const UserManagementTab = (): JSX.Element => {
     }
     
     try {
-      console.log('Toggle Rolle:', roleId, 'für Benutzer:', selectedUser.id);
-      console.log('Aktuelle ausgewählte Rollen:', selectedRoles);
+      logger.log('Toggle Rolle:', roleId, 'für Benutzer:', selectedUser.id);
+      logger.log('Aktuelle ausgewählte Rollen:', selectedRoles);
       
       // Überprüfen, ob die Rolle bereits zugewiesen ist
       const isRoleSelected = selectedRoles.includes(roleId);
@@ -583,15 +584,15 @@ const UserManagementTab = (): JSX.Element => {
         ? selectedRoles.filter(id => id !== roleId)
         : [...selectedRoles, roleId];
       
-      console.log('Neue ausgewählte Rollen:', newSelectedRoles);
+      logger.log('Neue ausgewählte Rollen:', newSelectedRoles);
       
       // Optimistisches UI-Update
       setSelectedRoles(newSelectedRoles);
       
       // API-Aufruf zur Aktualisierung der Rollen
-      console.log('Sende Rollenaktualisierung an API:', { userId: selectedUser.id, roleIds: newSelectedRoles });
+      logger.log('Sende Rollenaktualisierung an API:', { userId: selectedUser.id, roleIds: newSelectedRoles });
       const response = await userApi.updateRoles(selectedUser.id, newSelectedRoles);
-      console.log('API-Antwort bei Rollenaktualisierung:', response.data);
+      logger.log('API-Antwort bei Rollenaktualisierung:', response.data);
       
       // Benutzer nach dem Update neu laden
       await fetchUserDetails(selectedUser.id);
@@ -617,8 +618,8 @@ const UserManagementTab = (): JSX.Element => {
     if (!branchId || !selectedUser) return;
     
     try {
-      console.log('Toggle Branch:', branchId, 'für Benutzer:', selectedUser.id);
-      console.log('Aktuelle ausgewählte Branches:', selectedBranches);
+      logger.log('Toggle Branch:', branchId, 'für Benutzer:', selectedUser.id);
+      logger.log('Aktuelle ausgewählte Branches:', selectedBranches);
       
       // Überprüfen, ob die Branch bereits zugewiesen ist
       const isBranchSelected = selectedBranches.includes(branchId);
@@ -627,15 +628,15 @@ const UserManagementTab = (): JSX.Element => {
         ? selectedBranches.filter(id => id !== branchId)
         : [...selectedBranches, branchId];
       
-      console.log('Neue ausgewählte Branches:', newSelectedBranches);
+      logger.log('Neue ausgewählte Branches:', newSelectedBranches);
       
       // Optimistisches UI-Update
       setSelectedBranches(newSelectedBranches);
       
       // API-Aufruf zur Aktualisierung der Branches
-      console.log('Sende Branch-Aktualisierung an API:', { userId: selectedUser.id, branchIds: newSelectedBranches });
+      logger.log('Sende Branch-Aktualisierung an API:', { userId: selectedUser.id, branchIds: newSelectedBranches });
       const response = await userApi.updateBranches(selectedUser.id, newSelectedBranches);
-      console.log('API-Antwort bei Branch-Aktualisierung:', response.data);
+      logger.log('API-Antwort bei Branch-Aktualisierung:', response.data);
       
       // Benutzer nach dem Update neu laden
       await fetchUserDetails(selectedUser.id);

@@ -50,11 +50,11 @@ const NotificationBell: React.FC = () => {
     setLoading(true);
     try {
       if (process.env.NODE_ENV === 'development') {
-      console.log('Versuche, ungelesene Benachrichtigungen zu zählen...');
+      logger.log('Versuche, ungelesene Benachrichtigungen zu zählen...');
       }
       const response = await notificationApi.getUnreadCount();
       if (process.env.NODE_ENV === 'development') {
-      console.log('Antwort vom Server für ungelesene Benachrichtigungen:', response);
+      logger.log('Antwort vom Server für ungelesene Benachrichtigungen:', response);
       }
       
       // Prüfe verschiedene mögliche Antwortformate
@@ -68,7 +68,7 @@ const NotificationBell: React.FC = () => {
       }
       
       if (process.env.NODE_ENV === 'development') {
-      console.log('Setze ungelesene Benachrichtigungen auf:', count);
+      logger.log('Setze ungelesene Benachrichtigungen auf:', count);
       }
       setUnreadCount(count);
       setError(null);
@@ -89,7 +89,7 @@ const NotificationBell: React.FC = () => {
     try {
       const response = await notificationApi.getNotifications(1, 5);
       if (process.env.NODE_ENV === 'development') {
-      console.log('Benachrichtigungen Response:', response);
+      logger.log('Benachrichtigungen Response:', response);
       }
       
       // Prüfe verschiedene mögliche Antwortformate
@@ -103,7 +103,7 @@ const NotificationBell: React.FC = () => {
       }
       
       if (process.env.NODE_ENV === 'development') {
-      console.log('Verarbeitete Benachrichtigungen:', notifications);
+      logger.log('Verarbeitete Benachrichtigungen:', notifications);
       }
       setNotifications(notifications);
       setError(null);

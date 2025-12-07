@@ -102,7 +102,7 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
       // KI-basierte Dokumentenerkennung starten
       const recognizedData = await recognizeDocumentWithAI(documentImage);
       
-      console.log("Erkannte Daten:", recognizedData);
+      logger.log("Erkannte Daten:", recognizedData);
       
       // Formularfelder mit erkannten Daten befüllen
       if (recognizedData.documentType) {

@@ -1,4 +1,5 @@
 import axiosInstance from '../config/axios.ts';
+import { logger } from '../utils/logger.ts';
 import { Reservation } from '../types/reservation.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 
@@ -17,10 +18,10 @@ export const reservationService = {
    * Erstellt eine neue Reservierung
    */
   async create(data: CreateReservationData): Promise<Reservation> {
-    console.log('[reservationService] POST zu:', API_BASE);
-    console.log('[reservationService] Daten:', data);
+    logger.log('[reservationService] POST zu:', API_BASE);
+    logger.log('[reservationService] Daten:', data);
     const response = await axiosInstance.post(API_BASE, data);
-    console.log('[reservationService] Response:', response);
+    logger.log('[reservationService] Response:', response);
     return response.data.data || response.data;
   },
 

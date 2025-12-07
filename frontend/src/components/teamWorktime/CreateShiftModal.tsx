@@ -5,6 +5,7 @@ import { Dialog } from '@headlessui/react';
 import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
+import { logger } from '../../utils/logger.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { format } from 'date-fns';
 
@@ -228,7 +229,7 @@ const CreateShiftModal = ({
 
       const response = await axiosInstance.post(API_ENDPOINTS.SHIFTS.BASE, shiftData);
 
-      console.log('Schicht erfolgreich erstellt:', response.data);
+      logger.log('Schicht erfolgreich erstellt:', response.data);
       onShiftCreated(response.data.data || response.data);
       handleClose();
     } catch (err: any) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/apiClient.ts';
+import { logger } from '../utils/logger.ts';
 
 interface MarkdownPreviewProps {
   content: string;
@@ -38,12 +39,12 @@ const ExternalLinkPreview: React.FC<ExternalLinkPreviewProps> = ({ url, alt }) =
         setLoading(true);
         setError(false);
         if (process.env.NODE_ENV === 'development') {
-        console.log('🔗 Lade Link-Vorschau für URL:', url);
+        logger.log('🔗 Lade Link-Vorschau für URL:', url);
         }
         // Verwende Backend-API für Link-Preview
         const response = await api.get(`/cerebro/links/preview?url=${encodeURIComponent(url)}`);
         if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Link-Vorschau erhalten:', response.data);
+        logger.log('✅ Link-Vorschau erhalten:', response.data);
         }
         setPreview(response.data);
       } catch (err: any) {
@@ -437,7 +438,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     
     // DEBUG: Logging für Diagnose
     if (process.env.NODE_ENV === 'development') {
-    console.log('📦 renderInlineAttachments aufgerufen:', {
+    logger.log('📦 renderInlineAttachments aufgerufen:', {
       contentLength: content.length,
       attachmentsFound: attachments.length,
       attachmentMetadataCount: attachmentMetadata.length,
@@ -517,7 +518,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         
         // DEBUG: Logging für Diagnose
         if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Attachment Debug:', {
+        logger.log('🔍 Attachment Debug:', {
           alt: attachment.alt,
           fileName: fileName,
           url: url,
@@ -531,7 +532,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           isImage = metadata.fileType.startsWith('image/');
           isPdf = metadata.fileType === 'application/pdf';
           if (process.env.NODE_ENV === 'development') {
-          console.log('✅ Metadaten gefunden:', { fileType: metadata.fileType, isImage, isPdf });
+          logger.log('✅ Metadaten gefunden:', { fileType: metadata.fileType, isImage, isPdf });
           }
         }
         
@@ -551,7 +552,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           isPdf = urlEndsWithPdf || urlMatchesPdf || fileNameEndsWithPdf || isApiAttachmentPdf || isCerebroMediaPdf;
           
           if (process.env.NODE_ENV === 'development') {
-          console.log('🔍 PDF-Erkennung (ohne Metadaten):', {
+          logger.log('🔍 PDF-Erkennung (ohne Metadaten):', {
             urlEndsWithPdf,
             urlMatchesPdf,
             fileNameEndsWithPdf,
@@ -562,7 +563,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         }
         
         if (process.env.NODE_ENV === 'development') {
-        console.log('📄 Finale Entscheidung:', { isImage, isPdf, isExternalLink: url && url.match(/^https?:\/\//) && !isImage && !isPdf });
+        logger.log('📄 Finale Entscheidung:', { isImage, isPdf, isExternalLink: url && url.match(/^https?:\/\//) && !isImage && !isPdf });
         }
         
         const isExternalLink = url && url.match(/^https?:\/\//) && !isImage && !isPdf;
@@ -718,7 +719,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       
       // DEBUG: Logging für Diagnose
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Bild-Filterung:', {
+        logger.log('🔍 Bild-Filterung:', {
           alt: attachment.alt,
           url: attachment.url,
           metadata: metadata,
@@ -978,7 +979,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
             }
             
             if (process.env.NODE_ENV === 'development') {
-            console.log('🔗 Rendere ExternalLinkPreview:', { url, alt: attachment.alt });
+            logger.log('🔗 Rendere ExternalLinkPreview:', { url, alt: attachment.alt });
             }
             
             return (

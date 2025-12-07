@@ -236,7 +236,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       newSortDirections = renumberPriorities(newSortDirections);
       
       setSortDirections(newSortDirections);
-      onSortDirectionsChange(newSortDirections);
+        onSortDirectionsChange(newSortDirections);
     }
   };
   
@@ -271,22 +271,22 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     // ✅ OPTIONAL: Nur ausführen wenn Sort-Props vorhanden sind
     // Entferne Sortierrichtung für diese Zeile und aktualisiere Indizes
     if (onSortDirectionsChange) {
-      // Sicherstellen, dass sortDirections ein Array ist
-      const safeSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
-      let newSortDirections = safeSortDirections
-        .filter(sd => sd.conditionIndex !== index) // Entferne Sortierrichtung für gelöschte Zeile
-        .map(sd => {
-          // Aktualisiere conditionIndex für alle Zeilen nach der gelöschten
-          if (sd.conditionIndex > index) {
-            return { ...sd, conditionIndex: sd.conditionIndex - 1 };
-          }
-          return sd;
-        });
-      
-      // Prioritäten neu nummerieren
-      newSortDirections = renumberPriorities(newSortDirections);
-      
-      setSortDirections(newSortDirections);
+    // Sicherstellen, dass sortDirections ein Array ist
+    const safeSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+    let newSortDirections = safeSortDirections
+      .filter(sd => sd.conditionIndex !== index) // Entferne Sortierrichtung für gelöschte Zeile
+      .map(sd => {
+        // Aktualisiere conditionIndex für alle Zeilen nach der gelöschten
+        if (sd.conditionIndex > index) {
+          return { ...sd, conditionIndex: sd.conditionIndex - 1 };
+        }
+        return sd;
+      });
+    
+    // Prioritäten neu nummerieren
+    newSortDirections = renumberPriorities(newSortDirections);
+    
+    setSortDirections(newSortDirections);
       onSortDirectionsChange(newSortDirections);
     }
   };
@@ -324,7 +324,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       }
       
       setSortDirections(newSortDirections);
-      onSortDirectionsChange(newSortDirections);
+        onSortDirectionsChange(newSortDirections);
     }
   };
   
@@ -354,7 +354,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
         newSortDirections = renumberPriorities(newSortDirections);
         
         setSortDirections(newSortDirections);
-        onSortDirectionsChange(newSortDirections);
+          onSortDirectionsChange(newSortDirections);
       }
     }
   };

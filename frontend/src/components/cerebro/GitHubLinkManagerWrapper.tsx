@@ -15,11 +15,11 @@ const GitHubLinkManagerWrapper: React.FC = () => {
   
   // Callback-Funktionen für Hinzufügen/Entfernen von Links
   const handleLinkAdded = (link: CerebroExternalLink) => {
-    console.log('Link hinzugefügt:', link);
+    logger.log('Link hinzugefügt:', link);
   };
   
   const handleLinkRemoved = (id: string) => {
-    console.log('Link entfernt:', id);
+    logger.log('Link entfernt:', id);
   };
   
   // Prüfen, ob slug vorhanden ist

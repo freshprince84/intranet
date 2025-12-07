@@ -5,6 +5,7 @@ import axiosInstance from '../../config/axios.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, parse } from 'date-fns';
 import { useAuth } from '../../hooks/useAuth.tsx';
+import { logger } from '../../utils/logger.ts';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -104,14 +105,14 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
         endDate: format(weekEnd, 'yyyy-MM-dd')
       };
       
-      console.log('[ShiftPlanner] Fetching shifts from:', url);
-      console.log('[ShiftPlanner] Params:', params);
-      console.log('[ShiftPlanner] Full URL:', `${axiosInstance.defaults.baseURL}${url}`);
+      logger.log('[ShiftPlanner] Fetching shifts from:', url);
+      logger.log('[ShiftPlanner] Params:', params);
+      logger.log('[ShiftPlanner] Full URL:', `${axiosInstance.defaults.baseURL}${url}`);
       
       const response = await axiosInstance.get(url, { params });
       
-      console.log('[ShiftPlanner] Response status:', response.status);
-      console.log('[ShiftPlanner] Response data:', response.data);
+      logger.log('[ShiftPlanner] Response status:', response.status);
+      logger.log('[ShiftPlanner] Response data:', response.data);
       
       // Prüfe verschiedene Response-Formate
       if (response.data && response.data.success !== false) {
@@ -119,7 +120,7 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
         const shiftsData = response.data.data || response.data || [];
         const shiftsArray = Array.isArray(shiftsData) ? shiftsData : [];
         setAllShifts(shiftsArray); // Speichere alle Schichten
-        console.log('[ShiftPlanner] Loaded shifts:', shiftsArray.length);
+        logger.log('[ShiftPlanner] Loaded shifts:', shiftsArray.length);
       } else {
         const errorMsg = response.data?.message || t('teamWorktime.shifts.messages.loadError');
         console.error('[ShiftPlanner] Error in response:', errorMsg);
@@ -270,14 +271,14 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
   // Handler für Event-Klicks
   const handleEventClick = (clickInfo: any) => {
     const shift = clickInfo.event.extendedProps.shift;
-    console.log('Shift clicked:', shift);
+    logger.log('Shift clicked:', shift);
     setSelectedShift(shift);
     setIsEditModalOpen(true);
   };
   
   // Handler für Datum-Klicks (neue Schicht erstellen)
   const handleDateClick = (dateClickInfo: any) => {
-    console.log('Date clicked:', dateClickInfo.date);
+    logger.log('Date clicked:', dateClickInfo.date);
     setCreateModalInitialDate(dateClickInfo.date);
     setIsCreateModalOpen(true);
   };

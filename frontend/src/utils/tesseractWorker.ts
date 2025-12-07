@@ -15,7 +15,7 @@ try {
   createWorker = tesseract.createWorker;
   Worker = tesseract.Worker;
   tesseractAvailable = true;
-  console.log('Tesseract.js erfolgreich geladen');
+  logger.log('Tesseract.js erfolgreich geladen');
 } catch (error) {
   console.warn('Tesseract.js nicht verfügbar, verwende Simulationsmodus:', error);
   tesseractAvailable = false;
@@ -57,7 +57,7 @@ const prepareImage = (imageData: string): string => {
  * Gibt typische Dokumente-Daten zurück
  */
 const simulateOCR = async (imageData: string): Promise<TextRecognitionResult> => {
-  console.log('OCR-SIMULATION: Erkenne Dokument im Bild');
+  logger.log('OCR-SIMULATION: Erkenne Dokument im Bild');
   
   // Enthält das Bild eine kolumbianische ID?
   if (imageData.length % 7 === 0) { // Nur ein einfacher Weg, der Simulation etwas Zufall zu geben
@@ -80,14 +80,14 @@ const simulateOCR = async (imageData: string): Promise<TextRecognitionResult> =>
 export const getWorker = async (langs = 'eng+deu+spa') => {
   // Wenn Tesseract nicht verfügbar ist, verwende Simulation
   if (!tesseractAvailable) {
-    console.log('Verwende simulierten OCR-Worker');
+    logger.log('Verwende simulierten OCR-Worker');
     return {
       recognize: async (image: string): Promise<{ data: TextRecognitionResult }> => {
         const result = await simulateOCR(image);
         return { data: result };
       },
       terminate: async () => {
-        console.log('Simulierter Worker beendet');
+        logger.log('Simulierter Worker beendet');
       }
     };
   }
@@ -100,7 +100,7 @@ export const getWorker = async (langs = 'eng+deu+spa') => {
     }
     
     // Worker mit angegebener Sprache erstellen
-    console.log('Initialisiere Tesseract.js mit Sprachen:', langs);
+    logger.log('Initialisiere Tesseract.js mit Sprachen:', langs);
     cachedWorker = await createWorker(langs);
     return cachedWorker;
   } catch (error) {
@@ -113,7 +113,7 @@ export const getWorker = async (langs = 'eng+deu+spa') => {
         return { data: result };
       },
       terminate: async () => {
-        console.log('Simulierter Worker beendet (nach Fehler)');
+        logger.log('Simulierter Worker beendet (nach Fehler)');
       }
     };
   }
@@ -129,11 +129,11 @@ export const recognizeImage = async (imageData: string, langs = 'eng+deu+spa'): 
   try {
     // Verarbeite das Bild und gleiche Bildformat-Probleme aus
     const preparedImage = prepareImage(imageData);
-    console.log('Bildverarbeitung gestartet...');
+    logger.log('Bildverarbeitung gestartet...');
     
     // Echte oder simulierte Erkennung durchführen
     const result = await worker.recognize(preparedImage);
-    console.log('Bildverarbeitung abgeschlossen');
+    logger.log('Bildverarbeitung abgeschlossen');
     
     return result.data;
   } catch (error) {
@@ -155,7 +155,7 @@ export const terminateWorker = async (): Promise<void> => {
   if (cachedWorker && tesseractAvailable) {
     try {
       await cachedWorker.terminate();
-      console.log('Tesseract.js Worker beendet und Ressourcen freigegeben');
+      logger.log('Tesseract.js Worker beendet und Ressourcen freigegeben');
     } catch (error) {
       console.warn('Fehler beim Beenden des Workers:', error);
     }

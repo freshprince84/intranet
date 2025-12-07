@@ -154,28 +154,28 @@ const Header: React.FC = () => {
             return;
         }
         
-        console.log('=== LOGO-LOGIK DEBUG ===');
-        console.log('organization:', organization);
-        console.log('organization?.logo:', organization?.logo);
-        console.log('organization?.logo type:', typeof organization?.logo);
-        console.log('organization?.logo length:', organization?.logo?.length);
+        logger.log('=== LOGO-LOGIK DEBUG ===');
+        logger.log('organization:', organization);
+        logger.log('organization?.logo:', organization?.logo);
+        logger.log('organization?.logo type:', typeof organization?.logo);
+        logger.log('organization?.logo length:', organization?.logo?.length);
         
         // Prüfe ob User eine Organisation hat und ob diese ein Logo hat
         // Wichtig: Prüfe auch auf leeren String!
         if (organization && organization.logo && organization.logo.trim() !== '') {
-            console.log('✅ Verwende Organisationslogo');
+            logger.log('✅ Verwende Organisationslogo');
             // Wenn Logo als Base64-Data-URL gespeichert ist (beginnt mit "data:")
             if (organization.logo.startsWith('data:')) {
-                console.log('Logo ist Base64-Data-URL');
+                logger.log('Logo ist Base64-Data-URL');
                 setLogoSrc(organization.logo);
             } else {
                 // Wenn Logo als URL gespeichert ist
-                console.log('Logo ist URL:', organization.logo);
+                logger.log('Logo ist URL:', organization.logo);
                 setLogoSrc(organization.logo);
             }
         } else {
             // Keine Organisation oder kein Logo -> Standardlogo des Intranets verwenden (aus Mobile App)
-            console.log('❌ Verwende Standardlogo - organization:', !!organization, 'logo:', !!organization?.logo, 'logo value:', organization?.logo);
+            logger.log('❌ Verwende Standardlogo - organization:', !!organization, 'logo:', !!organization?.logo, 'logo value:', organization?.logo);
             setLogoSrc('/intranet-logo.png');
         }
     }, [user, organization, currentRole]);
@@ -184,10 +184,10 @@ const Header: React.FC = () => {
     useEffect(() => {
         // Nur für Standardlogo (nicht für Organisationslogo)
         if (logoLoadFailed && !organization?.logo) {
-            console.log("Versuche Logo über Base64-API zu laden...");
+            logger.log("Versuche Logo über Base64-API zu laden...");
             axiosInstance.get('/settings/logo/base64')
                 .then(response => {
-                    console.log("Base64-Logo geladen, Größe:", response.data.size, "Bytes");
+                    logger.log("Base64-Logo geladen, Größe:", response.data.size, "Bytes");
                     setLogoSrc(response.data.logo);
                 })
                 .catch(error => {
@@ -241,7 +241,7 @@ const Header: React.FC = () => {
                             alt="Intranet Logo" 
                             className="h-10 w-auto"
                             onLoad={(e) => {
-                                console.log("Logo wurde erfolgreich geladen:", e.currentTarget.src);
+                                logger.log("Logo wurde erfolgreich geladen:", e.currentTarget.src);
                                 setLogoLoadFailed(false);
                             }}
                             onError={(e) => {
@@ -250,11 +250,11 @@ const Header: React.FC = () => {
                                 
                                 // Wenn es das direkte Logo ist, versuche es über Base64
                                 if (!logoLoadFailed) {
-                                    console.log("Setze logoLoadFailed auf true, um Base64-Version zu verwenden");
+                                    logger.log("Setze logoLoadFailed auf true, um Base64-Version zu verwenden");
                                     setLogoLoadFailed(true);
                                 } else {
                                     // Bei beiden Methoden fehlgeschlagen, zeige Fallback-Text
-                                    console.log("Auch Base64-Version fehlgeschlagen, verwende Fallback-Text");
+                                    logger.log("Auch Base64-Version fehlgeschlagen, verwende Fallback-Text");
                                     
                                     // Verstecke das Bild und zeige stattdessen den Fallback-Text
                                     const target = e.target as HTMLImageElement;

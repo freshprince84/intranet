@@ -167,34 +167,34 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
 
   // Sortierte Reports (für Table & Cards synchron)
   const sortedReports = React.useMemo(() => {
-    const sorted = [...reports];
-    
+      const sorted = [...reports];
+      
     // Hauptsortierung anwenden
     if (sortConfig.key) {
-      let valueA: any, valueB: any;
-      
+          let valueA: any, valueB: any;
+          
       switch (sortConfig.key) {
-        case 'reportNumber':
+            case 'reportNumber':
           valueA = sorted[0]?.reportNumber?.toLowerCase() || '';
           valueB = sorted[1]?.reportNumber?.toLowerCase() || '';
-          break;
-        case 'period':
+              break;
+            case 'period':
           valueA = sorted[0]?.periodStart ? new Date(sorted[0].periodStart).getTime() : 0;
           valueB = sorted[1]?.periodStart ? new Date(sorted[1].periodStart).getTime() : 0;
-          break;
-        case 'recipient':
+              break;
+            case 'recipient':
           valueA = sorted[0]?.recipient?.toLowerCase() || '';
           valueB = sorted[1]?.recipient?.toLowerCase() || '';
-          break;
-        case 'totalHours':
+              break;
+            case 'totalHours':
           valueA = Number(sorted[0]?.totalHours) || 0;
           valueB = Number(sorted[1]?.totalHours) || 0;
-          break;
-        case 'status':
+              break;
+            case 'status':
           valueA = sorted[0]?.status?.toLowerCase() || '';
           valueB = sorted[1]?.status?.toLowerCase() || '';
-          break;
-        default:
+              break;
+            default:
           return sorted;
       }
       
@@ -226,18 +226,18 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
             return 0;
         }
         
-        let comparison = 0;
+          let comparison = 0;
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           comparison = aValue - bValue;
-        } else {
+          } else {
           comparison = String(aValue).localeCompare(String(bValue));
-        }
-        
+          }
+          
         return sortConfig.direction === 'asc' ? comparison : -comparison;
       });
-    }
-    
-    return sorted;
+          }
+      
+      return sorted;
   }, [reports, sortConfig]);
   
   // Sidepane States - Ersetzt durch Client-Beratungen-Sidepane
@@ -313,15 +313,15 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
   };
 
   const handleGenerateReport = async () => {
-    console.log('DEBUG: handleGenerateReport called');
+    logger.log('DEBUG: handleGenerateReport called');
     try {
       const response = await axiosInstance.post(API_ENDPOINTS.MONTHLY_CONSULTATION_REPORTS.GENERATE_AUTOMATIC);
-      console.log('DEBUG: API response:', response);
+      logger.log('DEBUG: API response:', response);
       await loadReports();
       toast.success(t('analytics.monthlyReports.generateSuccess'));
     } catch (error: any) {
       console.error('DEBUG: Error generating report:', error);
-      console.log('DEBUG: Error details:', {
+      logger.log('DEBUG: Error details:', {
         status: error.response?.status,
         data: error.response?.data,
         message: error.message

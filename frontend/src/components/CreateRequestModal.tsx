@@ -7,6 +7,7 @@ import { Dialog } from '@headlessui/react';
 import { XMarkIcon, ArrowPathIcon, CheckIcon } from '@heroicons/react/24/outline';
 import MarkdownPreview from './MarkdownPreview.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
+import { logger } from '../utils/logger.ts';
 
 // ✅ MEMORY LEAK FIX: Komponente für Bildvorschau mit Cleanup
 interface ImagePreviewWithCleanupProps {
@@ -132,7 +133,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
           return;
         }
 
-        console.log('Lade Daten für CreateRequestModal...');
+        logger.log('Lade Daten für CreateRequestModal...');
         
         try {
           const [usersResponse, branchesResponse] = await Promise.all([
@@ -140,8 +141,8 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE)
           ]);
 
-          console.log('Benutzer geladen:', usersResponse.data.length);
-          console.log('Niederlassungen geladen:', branchesResponse.data.length);
+          logger.log('Benutzer geladen:', usersResponse.data.length);
+          logger.log('Niederlassungen geladen:', branchesResponse.data.length);
           
           setUsers(usersResponse.data || []);
           setBranches(branchesResponse.data || []);
@@ -417,7 +418,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
         );
       }
       
-      console.log(t('createRequest.messages.attachmentsUploaded', { count: temporaryAttachments.length }));
+      logger.log(t('createRequest.messages.attachmentsUploaded', { count: temporaryAttachments.length }));
     } catch (err) {
       console.error('Fehler beim Hochladen der Anhänge:', err);
       // Wir zeigen hier keinen Fehler, da der Request bereits erstellt wurde

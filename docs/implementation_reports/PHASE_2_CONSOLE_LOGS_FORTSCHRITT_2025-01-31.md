@@ -49,7 +49,48 @@
 **Bereits bearbeitet:**
 - ✅ apiClient.ts: 31 Statements
 - ✅ SavedFilterTags.tsx: 14 Statements
-- **Gesamt:** 45 Statements (1.7% von 2702)
+- ✅ UserManagementTab.tsx: 25 Statements
+- ✅ RoleManagementTab.tsx: 20 Statements
+- ✅ ConsultationList.tsx: 14 Statements
+- ✅ CreateTaskModal.tsx: 6 Statements
+- ✅ NotificationBell.tsx: 5 Statements
+- ✅ EditTaskModal.tsx: 2 Statements
+- ✅ CreateRequestModal.tsx: 4 Statements
+- ✅ EditRequestModal.tsx: 6 Statements
+- ✅ MarkdownPreview.tsx: 9 Statements
+- ✅ WorktimeStats.tsx: 0 Statements (alle auskommentiert)
+- ✅ Header.tsx: 14 Statements
+- ✅ WorktimeTracker.tsx: 7 Statements
+- ✅ ConsultationTracker.tsx: 4 Statements
+- ✅ ToursManagementTab.tsx: 3 Statements
+- ✅ ShiftPlannerTab.tsx: 8 Statements
+- ✅ JoinRequestsList.tsx: 23 Statements
+- ✅ MyJoinRequestsList.tsx: 18 Statements
+- ✅ documentRecognition.ts: 12 Statements
+- ✅ tesseractWorker.ts: 9 Statements
+- ✅ aiDocumentRecognition.ts: 3 Statements
+- ✅ notificationApi.ts: 4 Statements
+- ✅ Settings.tsx: 10 Statements
+- ✅ Cerebro.tsx: 2 Statements
+- ✅ App.tsx: 1 Statement
+- ✅ MonthlyReportsTab.tsx: 3 Statements
+- ✅ BranchManagementTab.tsx: 1 Statement
+- ✅ ActiveUsersList.tsx: 2 Statements
+- ✅ ReservationDetails.tsx: 3 Statements
+- ✅ CreateReservationModal.tsx: 3 Statements
+- ✅ NotificationSettings.tsx: 3 Statements
+- ✅ CreateShiftModal.tsx: 1 Statement
+- ✅ EditShiftModal.tsx: 2 Statements
+- ✅ GitHubLinkManagerWrapper.tsx: 2 Statements
+- ✅ IdentificationDocumentForm.tsx: 1 Statement
+- ✅ FaviconLoader.tsx: 1 Statement
+- ✅ dateUtils.ts: 1 Statement
+- ✅ reservationService.ts: 3 Statements
+- ✅ initializeErrorHandler.ts: 1 Statement
+- ✅ useTableSettings.ts: 2 Statements
+- ✅ tableSettingsApi.ts: 1 Statement
+- ✅ Worktracker.tsx: 11 Statements
+- **Gesamt:** ~250+ Statements (~9% von 2702)
 
 **Noch zu bearbeiten:**
 - ⏸️ Worktracker.tsx: 0 Statements (bereits bereinigt)
@@ -65,9 +106,9 @@
 
 ### Priorität 1: Top 10 Frontend-Dateien
 1. ✅ apiClient.ts - **FERTIG**
-2. ⏸️ UserManagementTab.tsx - 25 Statements
-3. ⏸️ RoleManagementTab.tsx - 20 Statements
-4. ⏸️ ConsultationList.tsx - 14 Statements
+2. ✅ UserManagementTab.tsx - **FERTIG**
+3. ✅ RoleManagementTab.tsx - **FERTIG**
+4. ✅ ConsultationList.tsx - **FERTIG**
 5. ⏸️ CreateTaskModal.tsx - 12 Statements
 6. ⏸️ NotificationBell.tsx - 9 Statements
 7. ⏸️ Requests.tsx - 8 Statements
@@ -94,9 +135,9 @@
 - [x] Logger-Utility erstellen
 - [x] apiClient.ts wrappen
 - [x] SavedFilterTags.tsx wrappen
-- [ ] UserManagementTab.tsx wrappen
-- [ ] RoleManagementTab.tsx wrappen
-- [ ] ConsultationList.tsx wrappen
+- [x] UserManagementTab.tsx wrappen
+- [x] RoleManagementTab.tsx wrappen
+- [x] ConsultationList.tsx wrappen
 - [ ] Weitere Frontend-Dateien...
 - [ ] Backend-Logging einrichten
 - [ ] Backend-Dateien wrappen

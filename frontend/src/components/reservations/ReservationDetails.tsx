@@ -78,9 +78,9 @@ const ReservationDetails: React.FC = () => {
       setError(null);
       const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BY_ID(parseInt(id)));
       const reservationData = response.data?.data || response.data;
-      console.log('[ReservationDetails] Geladene Reservierung:', reservationData);
-      console.log('[ReservationDetails] Status:', reservationData?.status);
-      console.log('[ReservationDetails] PaymentStatus:', reservationData?.paymentStatus);
+      logger.log('[ReservationDetails] Geladene Reservierung:', reservationData);
+      logger.log('[ReservationDetails] Status:', reservationData?.status);
+      logger.log('[ReservationDetails] PaymentStatus:', reservationData?.paymentStatus);
       setReservation(reservationData);
       // Erhöhe Refresh-Key, damit Notification-Logs neu geladen werden
       setRefreshKey(prev => prev + 1);

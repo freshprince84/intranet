@@ -8,6 +8,7 @@ import { Dialog } from '@headlessui/react';
 import { XMarkIcon, TrashIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import MarkdownPreview from './MarkdownPreview.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
+import { logger } from '../utils/logger.ts';
 
 interface Request {
   id: number;
@@ -97,10 +98,10 @@ const EditRequestModal = ({
   // Debug: Log aktuelle Sprache und verfügbare Übersetzungen
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('EditRequestModal - Aktuelle Sprache:', i18n.language);
-      console.log('EditRequestModal - Verfügbare Sprachen:', i18n.languages);
-      console.log('EditRequestModal - createRequest.editRequest.title:', t('createRequest.editRequest.title'));
-      console.log('EditRequestModal - createRequest.editRequest.form.title:', t('createRequest.editRequest.form.title'));
+      logger.log('EditRequestModal - Aktuelle Sprache:', i18n.language);
+      logger.log('EditRequestModal - Verfügbare Sprachen:', i18n.languages);
+      logger.log('EditRequestModal - createRequest.editRequest.title:', t('createRequest.editRequest.title'));
+      logger.log('EditRequestModal - createRequest.editRequest.form.title:', t('createRequest.editRequest.form.title'));
     }
   }, [i18n.language, t]);
   const { openSidepane, closeSidepane } = useSidepane();
@@ -141,7 +142,7 @@ const EditRequestModal = ({
         for (const attachmentId of uploadedDuringEdit) {
           try {
             await axiosInstance.delete(API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachmentId));
-            console.log(`Attachment ${attachmentId} gelöscht (Modal ohne Speichern geschlossen)`);
+            logger.log(`Attachment ${attachmentId} gelöscht (Modal ohne Speichern geschlossen)`);
           } catch (err) {
             console.error(`Fehler beim Löschen von Attachment ${attachmentId}:`, err);
           }
@@ -718,7 +719,7 @@ const EditRequestModal = ({
         setDescription(updatedDescription);
       }
       
-      console.log(`${temporaryAttachments.length} Anhänge erfolgreich hochgeladen.`);
+      logger.log(`${temporaryAttachments.length} Anhänge erfolgreich hochgeladen.`);
       // Nach erfolgreichem Upload leeren wir die temporären Anhänge
       setTemporaryAttachments([]);
     } catch (err) {

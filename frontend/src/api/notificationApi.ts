@@ -50,7 +50,7 @@ export const notificationApi = {
   getNotifications: async (page: number = 1, limit: number = 10): Promise<NotificationResponse> => {
     try {
       const response = await axiosInstance.get(`/notifications?page=${page}&limit=${limit}`);
-      console.log('Notifications API Response:', response.data);
+      logger.log('Notifications API Response:', response.data);
       
       return response.data;
     } catch (error) {
@@ -63,7 +63,7 @@ export const notificationApi = {
   getUnreadCount: async (): Promise<number> => {
     try {
       const response = await axiosInstance.get(`/notifications/unread/count`);
-      console.log('Unread Count API Response:', response.data);
+      logger.log('Unread Count API Response:', response.data);
       
       if (response.data && typeof response.data.count === 'number') {
         return response.data.count;
@@ -126,7 +126,7 @@ export const notificationSettingsApi = {
   // System-weite Benachrichtigungseinstellungen abrufen
   getSystemSettings: async () => {
     try {
-      console.log('Rufe System-Einstellungen ab...');
+      logger.log('Rufe System-Einstellungen ab...');
       const response = await axiosInstance.get(`/settings/notifications`);
       return response.data;
     } catch (error) {
@@ -149,7 +149,7 @@ export const notificationSettingsApi = {
   // Benutzer-spezifische Benachrichtigungseinstellungen abrufen
   getUserSettings: async () => {
     try {
-      console.log('Rufe Benutzer-Einstellungen ab...');
+      logger.log('Rufe Benutzer-Einstellungen ab...');
       const response = await axiosInstance.get(`/settings/notifications/user`);
       return response.data;
     } catch (error) {

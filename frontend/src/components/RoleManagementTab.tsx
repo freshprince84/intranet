@@ -14,6 +14,7 @@ import { FilterCondition } from '../components/FilterRow.tsx';
 import { useError } from '../contexts/ErrorContext.tsx';
 import { ErrorCategory } from '../services/ErrorHandler.ts';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
+import { logger } from '../utils/logger.ts';
 
 interface RoleManagementTabProps {
   onRolesChange?: () => void;
@@ -619,11 +620,11 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   // Aktualisiere die fetchRoles-Funktion, um den neuen ErrorHandler zu nutzen
   const fetchRoles = useCallback(async () => {
     setLoading(true);
-    console.log('DEBUGAUSGABE: Hole Rollen vom Server...');
+    logger.log('DEBUGAUSGABE: Hole Rollen vom Server...');
     
     try {
       const response = await roleApi.getAll();
-      console.log('DEBUGAUSGABE: Rollen erfolgreich geholt:', response.data);
+      logger.log('DEBUGAUSGABE: Rollen erfolgreich geholt:', response.data);
       setRoles(response.data);
       setError(null);
     } catch (error) {
@@ -728,10 +729,10 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         return;
       }
       
-      console.log(`DEBUGAUSGABE: Bearbeite Rolle mit ID ${editingRole.id}`);
+      logger.log(`DEBUGAUSGABE: Bearbeite Rolle mit ID ${editingRole.id}`);
       
       try {
-        console.log('DEBUGAUSGABE: Sende Aktualisierung an API:', {
+        logger.log('DEBUGAUSGABE: Sende Aktualisierung an API:', {
           name: formData.name,
           description: formData.description,
           permissions: filteredPermissions
@@ -745,10 +746,10 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           branchIds: allBranches ? [] : selectedBranchIds
         };
         
-        console.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.update');
+        logger.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.update');
         const response = await roleApi.update(editingRole.id, dataToSend);
-        console.log('DEBUGAUSGABE: Nach dem API-Aufruf roleApi.update');
-        console.log('DEBUGAUSGABE: API-Antwort bei Rollenaktualisierung:', response);
+        logger.log('DEBUGAUSGABE: Nach dem API-Aufruf roleApi.update');
+        logger.log('DEBUGAUSGABE: API-Antwort bei Rollenaktualisierung:', response);
         await fetchRoles();
       } catch (updateError) {
         console.error('DEBUGAUSGABE: Fehler bei Rollenaktualisierung:', updateError);
@@ -796,7 +797,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
             accessLevel: permission.accessLevel
           }));
         
-        console.log('DEBUGAUSGABE: Sende Daten an API für neue Rolle:', {
+        logger.log('DEBUGAUSGABE: Sende Daten an API für neue Rolle:', {
           name: formData.name,
           description: formData.description,
           permissions: filteredPermissions
@@ -810,10 +811,10 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           branchIds: allBranches ? [] : selectedBranchIds
         };
         
-        console.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.create');
+        logger.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.create');
         const response = await roleApi.create(dataToSend);
-        console.log('DEBUGAUSGABE: Nach dem API-Aufruf roleApi.create');
-        console.log('DEBUGAUSGABE: API-Antwort beim Erstellen der Rolle:', response);
+        logger.log('DEBUGAUSGABE: Nach dem API-Aufruf roleApi.create');
+        logger.log('DEBUGAUSGABE: API-Antwort beim Erstellen der Rolle:', response);
         await fetchRoles();
       } catch (createError) {
         console.error('DEBUGAUSGABE: Fehler bei API-Anfrage zum Erstellen der Rolle:', createError);
@@ -863,7 +864,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     if (!window.confirm('Möchten Sie diese Rolle wirklich löschen?')) return;
     
     try {
-      console.log(`Starte Löschvorgang für Rolle mit ID ${roleId}`);
+      logger.log(`Starte Löschvorgang für Rolle mit ID ${roleId}`);
       
       // Überprüfen, ob die Rolle in der aktuellen Liste existiert
       const roleExists = roles.some(r => r.id === roleId);
@@ -880,19 +881,19 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       
       // Bei Mock-Daten lokales Löschen (wird nicht verwendet)
       if (false) {
-        console.log('Lösche Mock-Rolle');
+        logger.log('Lösche Mock-Rolle');
         const updatedRoles = roles.filter(role => role.id !== roleId);
         setRoles(updatedRoles);
       } else {
-        console.log('Sende Löschanfrage an API');
+        logger.log('Sende Löschanfrage an API');
         
         try {
           const response = await roleApi.delete(roleId);
-          console.log('API-Antwort beim Löschen der Rolle:', response);
+          logger.log('API-Antwort beim Löschen der Rolle:', response);
           
           // Nach erfolgreichem Löschen die Rollenliste aktualisieren
           await fetchRoles();
-          console.log('Rollenliste nach Löschen aktualisiert');
+          logger.log('Rollenliste nach Löschen aktualisiert');
         } catch (deleteError) {
           console.error('API-Fehler beim Löschen der Rolle:', deleteError);
           
@@ -923,7 +924,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         }
       }
       
-      console.log('Rolle erfolgreich gelöscht');
+      logger.log('Rolle erfolgreich gelöscht');
       if (onRolesChange) onRolesChange();
     } catch (err) {
       console.error(t('roleManagement.unhandledError'), err);
@@ -961,11 +962,11 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           }))
       };
 
-      console.log('DEBUGAUSGABE: Kopiere Rolle:', role.name, 'mit Daten:', copiedRoleData);
+      logger.log('DEBUGAUSGABE: Kopiere Rolle:', role.name, 'mit Daten:', copiedRoleData);
 
       // Rolle erstellen
       const response = await roleApi.create(copiedRoleData);
-      console.log('DEBUGAUSGABE: Rolle erfolgreich kopiert:', response.data);
+      logger.log('DEBUGAUSGABE: Rolle erfolgreich kopiert:', response.data);
 
       // Optimistisches Update: Neue Rolle zur Liste hinzufügen
       setRoles(prevRoles => [response.data, ...prevRoles]);
@@ -1342,7 +1343,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
             API_ENDPOINTS.SAVED_FILTERS.BASE,
             alleFilter
           );
-          console.log('Alle-Filter für Rollen erstellt');
+          logger.log('Alle-Filter für Rollen erstellt');
         }
       } catch (error) {
         console.error('Fehler beim Erstellen der Standard-Filter:', error);

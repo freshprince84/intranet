@@ -32,6 +32,7 @@ import { applyFilters, evaluateDateCondition, evaluateUserRoleCondition, evaluat
 import { toast } from 'react-toastify';
 import MarkdownPreview from '../components/MarkdownPreview.tsx';
 import { getExpiryStatus, getExpiryColorClasses, createDueDateMetadataItem } from '../utils/expiryUtils.ts';
+import { logger } from '../utils/logger.ts';
 import { getStatusText, getStatusColor } from '../utils/statusUtils.tsx';
 import DataCard, { MetadataItem } from '../components/shared/DataCard.tsx';
 import CardGrid from '../components/shared/CardGrid.tsx';
@@ -549,7 +550,7 @@ const Worktracker: React.FC = () => {
             
             // ✅ MEMORY: Debug-Logs nur in Development und reduziert
             if (process.env.NODE_ENV === 'development' && false) { // Deaktiviert um Memory zu sparen
-                console.log('[Worktracker Tasks] Response-Struktur:', {
+                logger.log('[Worktracker Tasks] Response-Struktur:', {
                     isObject: typeof responseData === 'object',
                     hasData: responseData?.data !== undefined,
                     dataIsArray: Array.isArray(responseData?.data),
@@ -1959,11 +1960,11 @@ const Worktracker: React.FC = () => {
 
             try {
                 if (process.env.NODE_ENV === 'development') {
-                console.log('📡 Sende Delete-Request...');
+                logger.log('📡 Sende Delete-Request...');
                 }
                 await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(taskId));
                 if (process.env.NODE_ENV === 'development') {
-                console.log('✅ Delete erfolgreich');
+                logger.log('✅ Delete erfolgreich');
                 }
                 // Erfolgs-Rückmeldung anzeigen
                 toast.success(t('worktime.messages.taskDeleted'));
