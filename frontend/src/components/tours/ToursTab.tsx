@@ -30,10 +30,8 @@ const TOURS_TABLE_ID = 'worktracker-tours';
 
 const defaultTourColumnOrder = ['title', 'type', 'price', 'location', 'duration', 'branch', 'isActive', 'actions'];
 
-const defaultTourCardSortDirections: Record<string, 'asc' | 'desc'> = {
-    title: 'asc',
-    type: 'asc',
-    price: 'asc',
+// ❌ ENTFERNT: defaultTourCardSortDirections
+// Hauptsortierung wird jetzt aus Settings geladen (pro Benutzer gespeichert)
     location: 'asc',
     duration: 'asc',
     branch: 'asc',
@@ -108,12 +106,21 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
         updateHiddenColumns,
         toggleColumnVisibility,
         isColumnVisible,
-        updateViewMode
+        updateViewMode,
+        updateSortConfig
     } = useTableSettings(TOURS_TABLE_ID, {
         defaultColumnOrder: defaultTourColumnOrder,
         defaultHiddenColumns: [],
         defaultViewMode: 'cards'
     });
+    
+    // Hauptsortierung aus Settings laden (für Table & Cards synchron)
+    const tourTableSortConfig: TourSortConfig = settings?.sortConfig || { key: 'title', direction: 'asc' };
+    
+    // Hauptsortierung Handler (für Table & Cards synchron)
+    const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
+        updateSortConfig({ key: key as TourSortConfig['key'], direction });
+    };
     
     // Tours-Spalten
     const availableTourColumns = useMemo(() => [
@@ -134,20 +141,8 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
         { id: 'minParticipants', label: t('tours.columns.minParticipants', 'Min. Teilnehmer'), shortLabel: t('tours.columns.minParticipants', 'Min. Teilnehmer').substring(0, 3) },
     ], [t]);
     
-    // Tabellen-Header-Sortierung für Tours
-    const [tourTableSortConfig, setTourTableSortConfig] = useState<TourSortConfig>({ key: 'title', direction: 'asc' });
-    
-    // Lokale Sortierrichtungen für Tours Cards
-    const [tourCardSortDirections, setTourCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
-        return defaultTourCardSortDirections;
-    });
-    
-    const handleTourCardSortDirectionChange = (columnId: string, direction: 'asc' | 'desc') => {
-        setTourCardSortDirections(prev => ({
-            ...prev,
-            [columnId]: direction
-        }));
-    };
+    // ❌ ENTFERNT: tourCardSortDirections und handleTourCardSortDirectionChange
+    // Hauptsortierung wird jetzt aus Settings geladen (pro Benutzer gespeichert)
     
     const viewMode = settings?.viewMode || 'cards';
     
@@ -262,12 +257,9 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
     };
     
     const handleTourSort = (key: TourSortConfig['key']) => {
-        if (viewMode === 'table') {
-            setTourTableSortConfig(current => ({
-                key,
-                direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-            }));
-        }
+        // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
+        const newDirection = tourTableSortConfig.key === key && tourTableSortConfig.direction === 'asc' ? 'desc' : 'asc';
+        updateSortConfig({ key, direction: newDirection });
     };
     
     // Drag & Drop Handler
@@ -506,32 +498,8 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                 }
             }
             
-            // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
-            if (viewMode === 'cards' && tourFilterConditions.length === 0) {
-                const sortableColumns = ['title', 'type', 'price', 'location', 'duration', 'branch', 'createdBy', 'isActive'];
-                
-                for (const columnId of sortableColumns) {
-                    const direction = tourCardSortDirections[columnId] || 'asc';
-                    const valueA = getTourSortValue(a, columnId);
-                    const valueB = getTourSortValue(b, columnId);
-                    
-                    let comparison = 0;
-                    if (typeof valueA === 'number' && typeof valueB === 'number') {
-                        comparison = valueA - valueB;
-                    } else {
-                        comparison = String(valueA).localeCompare(String(valueB));
-                    }
-                    
-                    if (direction === 'desc') {
-                        comparison = -comparison;
-                    }
-                    
-                    if (comparison !== 0) {
-                        return comparison;
-                    }
-                }
-                return 0;
-            }
+            // 3. Hauptsortierung (tourTableSortConfig) - für Table & Cards synchron
+            // (wird bereits oben in Priorität 2 behandelt)
             
             // 4. Fallback: Titel (alphabetisch)
             const titleA = (a?.title || '').toLowerCase();
@@ -540,7 +508,7 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
         });
         
         return sorted;
-    }, [tours, tourSearchTerm, tourFilterConditions, tourFilterLogicalOperators, tourFilterSortDirections, viewMode, tourTableSortConfig, tourCardSortDirections]);
+    }, [tours, tourSearchTerm, tourFilterConditions, tourFilterLogicalOperators, tourFilterSortDirections, viewMode, tourTableSortConfig]);
 
     return (
         <div className="space-y-4">
@@ -651,9 +619,9 @@ const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
                                 }
                             }}
                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                            sortDirections={viewMode === 'cards' ? tourCardSortDirections : undefined}
-                            onSortDirectionChange={viewMode === 'cards' ? handleTourCardSortDirectionChange : undefined}
-                            showSortDirection={viewMode === 'cards'}
+                            mainSortConfig={tourTableSortConfig}
+                            onMainSortChange={handleMainSortChange}
+                            showMainSort={true}
                             onClose={() => {}}
                         />
                     </div>

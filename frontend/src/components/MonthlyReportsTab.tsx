@@ -41,13 +41,8 @@ const MONTHLY_REPORTS_TABLE_ID = 'monthly-reports-table';
 // Card-Einstellungen Standardwerte
 const defaultCardMetadata = ['reportNumber', 'period', 'recipient', 'totalHours', 'status'];
 const defaultCardColumnOrder = ['reportNumber', 'period', 'recipient', 'totalHours', 'status'];
-const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
-  reportNumber: 'asc',
-  period: 'desc',
-  recipient: 'asc',
-  totalHours: 'desc',
-  status: 'asc'
-};
+// ❌ ENTFERNT: defaultCardSortDirections
+// Hauptsortierung wird jetzt aus Settings geladen (pro Benutzer gespeichert)
 
 // Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
 const tableToCardMapping: Record<string, string[]> = {
@@ -123,7 +118,8 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
     updateHiddenColumns,
     toggleColumnVisibility,
     isColumnVisible,
-    updateViewMode
+    updateViewMode,
+    updateSortConfig
   } = useTableSettings(MONTHLY_REPORTS_TABLE_ID, {
     defaultColumnOrder,
     defaultHiddenColumns: [],
@@ -133,10 +129,14 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
   // View-Mode aus Settings laden
   const viewMode = settings.viewMode || 'cards';
   
-  // Lokale Sortierrichtungen für Cards (nicht persistiert)
-  const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
-    return defaultCardSortDirections;
-  });
+  // Hauptsortierung aus Settings laden (für Table & Cards synchron)
+  type MonthlyReportSortConfig = { key: string; direction: 'asc' | 'desc' };
+  const sortConfig: MonthlyReportSortConfig = settings.sortConfig || { key: 'period', direction: 'desc' };
+  
+  // Hauptsortierung Handler (für Table & Cards synchron)
+  const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
+    updateSortConfig({ key, direction });
+  };
 
   // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
   const cardMetadataOrder = React.useMemo(() => {
@@ -165,67 +165,80 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
     }
   }, [viewMode]);
 
-  // Sortierte Reports für Cards-Mode
+  // Sortierte Reports (für Table & Cards synchron)
   const sortedReports = React.useMemo(() => {
-    if (viewMode === 'cards') {
-      const sorted = [...reports];
-      const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+    const sorted = [...reports];
+    
+    // Hauptsortierung anwenden
+    if (sortConfig.key) {
+      let valueA: any, valueB: any;
+      
+      switch (sortConfig.key) {
+        case 'reportNumber':
+          valueA = sorted[0]?.reportNumber?.toLowerCase() || '';
+          valueB = sorted[1]?.reportNumber?.toLowerCase() || '';
+          break;
+        case 'period':
+          valueA = sorted[0]?.periodStart ? new Date(sorted[0].periodStart).getTime() : 0;
+          valueB = sorted[1]?.periodStart ? new Date(sorted[1].periodStart).getTime() : 0;
+          break;
+        case 'recipient':
+          valueA = sorted[0]?.recipient?.toLowerCase() || '';
+          valueB = sorted[1]?.recipient?.toLowerCase() || '';
+          break;
+        case 'totalHours':
+          valueA = Number(sorted[0]?.totalHours) || 0;
+          valueB = Number(sorted[1]?.totalHours) || 0;
+          break;
+        case 'status':
+          valueA = sorted[0]?.status?.toLowerCase() || '';
+          valueB = sorted[1]?.status?.toLowerCase() || '';
+          break;
+        default:
+          return sorted;
+      }
       
       sorted.sort((a, b) => {
-        for (const columnId of sortableColumns) {
-          const direction = cardSortDirections[columnId] || 'asc';
-          let valueA: any, valueB: any;
-          
-          switch (columnId) {
-            case 'reportNumber':
-              valueA = a.reportNumber.toLowerCase();
-              valueB = b.reportNumber.toLowerCase();
-              break;
-            case 'period':
-              valueA = new Date(a.periodStart).getTime();
-              valueB = new Date(b.periodStart).getTime();
-              break;
-            case 'recipient':
-              valueA = a.recipient.toLowerCase();
-              valueB = b.recipient.toLowerCase();
-              break;
-            case 'totalHours':
-              valueA = Number(a.totalHours);
-              valueB = Number(b.totalHours);
-              break;
-            case 'status':
-              valueA = a.status.toLowerCase();
-              valueB = b.status.toLowerCase();
-              break;
-            default:
-              continue; // Überspringe unbekannte Spalten
-          }
-          
-          // Vergleich basierend auf Typ
-          let comparison = 0;
-          if (typeof valueA === 'number' && typeof valueB === 'number') {
-            comparison = valueA - valueB;
-          } else {
-            comparison = String(valueA).localeCompare(String(valueB));
-          }
-          
-          // Sortierrichtung anwenden
-          if (direction === 'desc') {
-            comparison = -comparison;
-          }
-          
-          // Wenn unterschiedlich, gebe Vergleich zurück
-          if (comparison !== 0) {
-            return comparison;
-          }
+        let aValue: any, bValue: any;
+        
+        switch (sortConfig.key) {
+          case 'reportNumber':
+            aValue = a.reportNumber?.toLowerCase() || '';
+            bValue = b.reportNumber?.toLowerCase() || '';
+            break;
+          case 'period':
+            aValue = a.periodStart ? new Date(a.periodStart).getTime() : 0;
+            bValue = b.periodStart ? new Date(b.periodStart).getTime() : 0;
+            break;
+          case 'recipient':
+            aValue = a.recipient?.toLowerCase() || '';
+            bValue = b.recipient?.toLowerCase() || '';
+            break;
+          case 'totalHours':
+            aValue = Number(a.totalHours) || 0;
+            bValue = Number(b.totalHours) || 0;
+            break;
+          case 'status':
+            aValue = a.status?.toLowerCase() || '';
+            bValue = b.status?.toLowerCase() || '';
+            break;
+          default:
+            return 0;
         }
-        return 0; // Alle Spalten identisch
+        
+        let comparison = 0;
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          comparison = aValue - bValue;
+        } else {
+          comparison = String(aValue).localeCompare(String(bValue));
+        }
+        
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
       });
-      
-      return sorted;
     }
-    return reports;
-  }, [reports, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+    
+    return sorted;
+  }, [reports, sortConfig]);
   
   // Sidepane States - Ersetzt durch Client-Beratungen-Sidepane
   const [isClientConsultationsSidepaneOpen, setIsClientConsultationsSidepaneOpen] = useState(false);
