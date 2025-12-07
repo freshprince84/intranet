@@ -217,13 +217,11 @@ const PasswordManagerTab: React.FC = () => {
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
-    // ❌ ENTFERNT: sortDirections Parameter - Filter-Sortierung wurde entfernt (Phase 1)
   };
 
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
-    setFilterSortDirections([]);
     setActiveFilterName('');
     setSelectedFilterId(null);
   };
@@ -232,7 +230,6 @@ const PasswordManagerTab: React.FC = () => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     applyFilterConditions(conditions, operators);
-    // ❌ ENTFERNT: sortDirections Parameter - Filter-Sortierung wurde entfernt (Phase 1)
   };
 
   // Column Evaluators für Filter
