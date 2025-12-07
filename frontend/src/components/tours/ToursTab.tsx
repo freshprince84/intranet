@@ -223,17 +223,15 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     }, [loadTours, hasPermission]);
     
     // Tour-Filter-Funktionen
-    const applyTourFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    const applyTourFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         setTourFilterConditions(conditions);
         setTourFilterLogicalOperators(operators);
-        setTourFilterSortDirections(sortDirections);
         loadTours(undefined, conditions, false);
     };
     
     const resetTourFilterConditions = () => {
         setTourFilterConditions([]);
         setTourFilterLogicalOperators([]);
-        setTourFilterSortDirections([]);
         setTourActiveFilterName(t('tours.filters.current', 'Aktuell'));
         setTourSelectedFilterId(null);
         loadTours();

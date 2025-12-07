@@ -16,7 +16,6 @@ interface SavedFilter {
   tableId: string;
   conditions: FilterCondition[];
   operators: ('AND' | 'OR')[];
-  sortDirections?: SortDirection[];
   groupId?: number | null;
   order?: number;
   createdAt?: string;

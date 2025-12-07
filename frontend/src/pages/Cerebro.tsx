@@ -115,15 +115,10 @@ const CerebroLayout: React.FC = () => {
   // Filter-Handler
   const applyFilterConditions = (
     conditions: FilterCondition[], 
-    operators: ('AND' | 'OR')[],
-    sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>
+    operators: ('AND' | 'OR')[]
   ) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
-    if (sortDirections && sortDirections.length > 0) {
-      const firstSort = sortDirections[0];
-      setSortConfig({ key: firstSort.column, direction: firstSort.direction });
-    }
   };
   
   const resetFilterConditions = () => {
@@ -138,12 +133,11 @@ const CerebroLayout: React.FC = () => {
     name: string, 
     id: number | null, 
     conditions: FilterCondition[], 
-    operators: ('AND' | 'OR')[],
-    sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>
+    operators: ('AND' | 'OR')[]
   ) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
-    applyFilterConditions(conditions, operators, sortDirections);
+    applyFilterConditions(conditions, operators);
   };
   
   // Sortier-Handler

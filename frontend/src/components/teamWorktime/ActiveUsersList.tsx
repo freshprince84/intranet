@@ -854,7 +854,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         if (aktiveFilter) {
           setActiveFilterName(t('teamWorktime.filters.active'));
           setSelectedFilterId(aktiveFilter.id);
-          applyFilterConditions(aktiveFilter.conditions, aktiveFilter.operators, aktiveFilter.sortDirections);
+          applyFilterConditions(aktiveFilter.conditions, aktiveFilter.operators);
         }
       } catch (error) {
         console.error('Fehler beim Setzen des initialen Filters:', error);
@@ -882,7 +882,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
-    applyFilterConditions(conditions, operators, undefined);
+    applyFilterConditions(conditions, operators);
   };
 
   // Datum zu vorherigem Tag ändern
@@ -1034,16 +1034,16 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                 : columnOrder}
               onToggleColumnVisibility={handleToggleColumnVisibility}
               onMoveColumn={handleMoveColumn}
-              sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
-              onSortDirectionChange={viewMode === 'cards'
-                ? (columnId: string, direction: 'asc' | 'desc') => {
+              mainSortConfig={viewMode === 'cards' ? Object.keys(cardSortDirections).length > 0 ? { key: Object.keys(cardSortDirections)[0], direction: Object.values(cardSortDirections)[0] } : undefined : undefined}
+              onMainSortChange={viewMode === 'cards'
+                ? (key: string, direction: 'asc' | 'desc') => {
                     setCardSortDirections(prev => ({
                       ...prev,
-                      [columnId]: direction
+                      [key]: direction
                     }));
                   }
                 : undefined}
-              showSortDirection={viewMode === 'cards'}
+              showMainSort={viewMode === 'cards'}
               buttonTitle={viewMode === 'cards' ? t('teamWorktime.sortAndDisplay') : t('teamWorktime.configureColumns')}
               modalTitle={viewMode === 'cards' ? t('teamWorktime.sortAndDisplay') : t('teamWorktime.configureColumns')}
               onClose={() => {}}
@@ -1075,7 +1075,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
         <SavedFilterTags
         tableId={WORKCENTER_TABLE_ID}
-        onSelectFilter={(conditions, operators, sortDirections) => applyFilterConditions(conditions, operators, sortDirections)}
+        onSelectFilter={(conditions, operators) => applyFilterConditions(conditions, operators)}
         onReset={resetFilterConditions}
         activeFilterName={activeFilterName}
         selectedFilterId={selectedFilterId}

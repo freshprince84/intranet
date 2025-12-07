@@ -402,7 +402,7 @@ const PasswordManagerTab: React.FC = () => {
       <div className="px-3 sm:px-4 md:px-6">
         <SavedFilterTags
           tableId={PASSWORD_MANAGER_TABLE_ID}
-          onSelectFilter={(conditions, operators) => applyFilterConditions(conditions, operators)} // ✅ sortDirections Parameter entfernt (Phase 1)
+          onSelectFilter={(conditions, operators) => applyFilterConditions(conditions, operators)}
           onReset={resetFilterConditions}
           activeFilterName={activeFilterName}
           selectedFilterId={selectedFilterId}
