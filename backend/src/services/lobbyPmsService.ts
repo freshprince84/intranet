@@ -1050,8 +1050,10 @@ export class LobbyPmsService {
       roomDescription = dormName;
     } else {
       // Für Privatzimmer: assigned_room.name = Zimmername
-      roomNumber = assignedRoom?.name || lobbyReservation.room_number || null;
-      roomDescription = assignedRoom?.type || lobbyReservation.room_description || lobbyReservation.category?.name || null;
+      // roomNumber bleibt leer (nur bei Dorms gefüllt)
+      roomNumber = null;
+      // roomDescription = Zimmername
+      roomDescription = assignedRoom?.name || lobbyReservation.room_number || null;
     }
     
     // Status: API gibt checked_in/checked_out Booleans zurück

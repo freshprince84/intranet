@@ -232,8 +232,11 @@ async function importReservationsByCheckInDate() {
               roomNumber = bedNumber;
               roomDescription = dormName;
             } else {
-              roomNumber = assignedRoom?.name || reservation.room_number || null;
-              roomDescription = assignedRoom?.type || reservation.room_description || reservation.category?.name || null;
+              // Für Privatzimmer: assigned_room.name = Zimmername
+              // roomNumber bleibt leer (nur bei Dorms gefüllt)
+              roomNumber = null;
+              // roomDescription = Zimmername
+              roomDescription = assignedRoom?.name || reservation.room_number || null;
             }
             
             // Erstelle Reservation DIREKT in DB (OHNE Tasks, OHNE Notifications)
