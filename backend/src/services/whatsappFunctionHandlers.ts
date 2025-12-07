@@ -1998,26 +1998,7 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 10. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
-      let linksSent = false;
-      if (guestPhone || reservation.guestPhone) {
-        try {
-          await ReservationNotificationService.sendReservationInvitation(
-            reservation.id,
-            {
-              guestPhone: guestPhone || reservation.guestPhone || undefined,
-              amount: estimatedAmount,
-              currency: 'COP'
-            }
-          );
-          linksSent = true;
-        } catch (error) {
-          console.error('[create_room_reservation] Fehler beim Versand der Links:', error);
-          // Nicht abbrechen, nur loggen
-        }
-      }
-
-      // 11. Generiere Check-in Link (falls Email vorhanden)
+      // 10. Generiere Check-in Link (falls Email vorhanden)
       // WICHTIG: Check-in Link kann erst nach erfolgreicher LobbyPMS-Buchung erstellt werden!
       let checkInLink: string | null = null;
       if (reservation.guestEmail && reservation.lobbyReservationId) {
@@ -2032,7 +2013,9 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 12. Return Ergebnis
+      // 11. Return Ergebnis
+      // WICHTIG: Die AI generiert die Nachricht mit paymentLink und checkInLink
+      // sendReservationInvitation wird NICHT aufgerufen - die AI sendet die Nachricht
       return {
         success: true,
         reservationId: reservation.id,
@@ -2047,12 +2030,10 @@ export class WhatsAppFunctionHandlers {
         amount: estimatedAmount,
         currency: 'COP',
         paymentLink: paymentLink,
-        checkInLink: checkInLink,
+        checkInLink: checkInLink, // Kann null sein, wenn keine Email vorhanden
         paymentDeadline: paymentDeadline.toISOString(),
-        linksSent: linksSent,
-        message: linksSent 
-          ? `Reservierung erstellt. Zahlungslink und Check-in-Link wurden per WhatsApp gesendet. Bitte zahlen Sie innerhalb von ${paymentDeadlineHours} Stunde(n), sonst wird die Reservierung automatisch storniert.`
-          : `Reservierung erstellt. Bitte Zahlungslink und Check-in-Link manuell senden. Bitte zahlen Sie innerhalb von ${paymentDeadlineHours} Stunde(n), sonst wird die Reservierung automatisch storniert.`
+        linksSent: false, // WICHTIG: AI generiert die Nachricht, nicht sendReservationInvitation
+        message: `Reservierung erfolgreich erstellt. Die AI generiert die Nachricht mit Payment-Link und Check-in-Link.`
       };
     } catch (error: any) {
       console.error('[WhatsApp Function Handlers] create_room_reservation Fehler:', error);

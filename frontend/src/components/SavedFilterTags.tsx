@@ -6,6 +6,7 @@ import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import useMessage from '../hooks/useMessage.ts';
 import { useFilterContext } from '../contexts/FilterContext.tsx';
+import { logger } from '../utils/logger.ts';
 
 interface SortDirection {
   column: string;
@@ -171,13 +172,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     if (tableId === 'consultations-table') {
       try {
         if (process.env.NODE_ENV === 'development') {
-          console.log('🔄 SavedFilterTags: Loading recent clients...');
+          logger.log('🔄 SavedFilterTags: Loading recent clients...');
         }
         const response = await axiosInstance.get(API_ENDPOINTS.CLIENTS.RECENT);
         // Verwende die Reihenfolge der API-Antwort direkt (Backend sortiert bereits richtig)
         const clientNames = response.data.map((client: any) => client.name);
         if (process.env.NODE_ENV === 'development') {
-          console.log('📋 SavedFilterTags: Recent client names:', clientNames);
+          logger.log('📋 SavedFilterTags: Recent client names:', clientNames);
         }
         setRecentClientNames(clientNames);
         
@@ -196,7 +197,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   useEffect(() => {
     const handleConsultationChanged = () => {
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔔 SavedFilterTags: Received consultationChanged event');
+        logger.log('🔔 SavedFilterTags: Received consultationChanged event');
       }
       loadRecentClients();
     };
@@ -262,7 +263,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       // ✅ Suche nach Default-Filter
       // ✅ DEBUG: Log verfügbare Filter (nur in Development)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[SavedFilterTags] Suche Default-Filter "${defaultFilterName}". Verfügbare Filter:`, savedFilters.map(f => f?.name));
+        logger.log(`[SavedFilterTags] Suche Default-Filter "${defaultFilterName}". Verfügbare Filter:`, savedFilters.map(f => f?.name));
       }
       
       const defaultFilter = savedFilters.find((filter: SavedFilter) => {
@@ -279,7 +280,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       if (defaultFilter) {
         // ✅ DEBUG: Log gefundenen Filter (nur in Development)
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[SavedFilterTags] Default-Filter gefunden:`, defaultFilter.name, defaultFilter.id);
+          logger.log(`[SavedFilterTags] Default-Filter gefunden:`, defaultFilter.name, defaultFilter.id);
         }
         // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
         defaultFilterAppliedRef.current = true;
@@ -335,7 +336,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   // Wähle einen gespeicherten Filter aus
   const handleSelectFilter = (filter: SavedFilter) => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔄 SavedFilterTags: handleSelectFilter called', {
+      logger.log('🔄 SavedFilterTags: handleSelectFilter called', {
         filterName: filter.name,
         filterId: filter.id,
         conditionsCount: filter.conditions?.length || 0,
@@ -351,13 +352,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     if (onFilterChange) {
       // Controlled component
       if (process.env.NODE_ENV === 'development') {
-        console.log('📋 SavedFilterTags: Calling onFilterChange (controlled)');
+        logger.log('📋 SavedFilterTags: Calling onFilterChange (controlled)');
       }
       onFilterChange(filter.name, filter.id, filter.conditions, filter.operators, validSortDirections);
     } else {
       // Backward compatibility - uncontrolled component
       if (process.env.NODE_ENV === 'development') {
-        console.log('📋 SavedFilterTags: Calling onSelectFilter (uncontrolled)');
+        logger.log('📋 SavedFilterTags: Calling onSelectFilter (uncontrolled)');
       }
       onSelectFilter(filter.conditions, filter.operators, validSortDirections);
     }
@@ -439,9 +440,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     // Sortierung für Consultations
     if (tableId === 'consultations-table') {
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 SavedFilterTags: Sorting filters...');
-        console.log('📋 SavedFilterTags: recentClientNames:', recentClientNames);
-        console.log('🗂️ SavedFilterTags: savedFilters:', ungroupedFilters.map(f => f.name));
+        logger.log('🔧 SavedFilterTags: Sorting filters...');
+        logger.log('📋 SavedFilterTags: recentClientNames:', recentClientNames);
+        logger.log('🗂️ SavedFilterTags: savedFilters:', ungroupedFilters.map(f => f.name));
       }
 
       const heute = ungroupedFilters.find(f => f != null && f.name === 'Heute');
@@ -454,7 +455,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         .filter(filter => filter != null) as SavedFilter[];
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('✅ SavedFilterTags: sortedRecentClientFilters:', sortedRecentClientFilters.map(f => f.name));
+        logger.log('✅ SavedFilterTags: sortedRecentClientFilters:', sortedRecentClientFilters.map(f => f.name));
       }
       
       const customFilters = ungroupedFilters.filter(f => 
@@ -464,7 +465,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       );
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 SavedFilterTags: customFilters:', customFilters.map(f => f.name));
+        logger.log('🔧 SavedFilterTags: customFilters:', customFilters.map(f => f.name));
       }
 
       const orderedFilters: SavedFilter[] = [];
@@ -476,7 +477,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       if (archiv) orderedFilters.push(archiv);
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('🎯 SavedFilterTags: Final filter order:', orderedFilters.map(f => f.name));
+        logger.log('🎯 SavedFilterTags: Final filter order:', orderedFilters.map(f => f.name));
       }
       
       return orderedFilters;

@@ -9,6 +9,39 @@ import CerebroArticleSelector from './CerebroArticleSelector.tsx';
 import MarkdownPreview from './MarkdownPreview.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
+// ✅ MEMORY LEAK FIX: Komponente für Bildvorschau mit Cleanup
+interface ImagePreviewWithCleanupProps {
+    file: File;
+    alt: string;
+    blobUrlsRef: React.MutableRefObject<Set<string>>;
+    className?: string;
+}
+
+const ImagePreviewWithCleanup: React.FC<ImagePreviewWithCleanupProps> = ({ file, alt, blobUrlsRef, className = "max-w-[200px] max-h-[150px] object-contain" }) => {
+    const [url, setUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        const blobUrl = URL.createObjectURL(file);
+        blobUrlsRef.current.add(blobUrl);
+        setUrl(blobUrl);
+
+        return () => {
+            URL.revokeObjectURL(blobUrl);
+            blobUrlsRef.current.delete(blobUrl);
+        };
+    }, [file, blobUrlsRef]);
+
+    if (!url) return null;
+
+    return (
+        <img 
+            src={url}
+            alt={alt}
+            className={className}
+        />
+    );
+};
+
 interface User {
     id: number;
     firstName: string;
@@ -103,6 +136,8 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    // ✅ MEMORY LEAK FIX: Track Blob-URLs für Cleanup
+    const blobUrlsRef = useRef<Set<string>>(new Set());
 
     const getDefaultDueDate = () => {
         const date = new Date();
@@ -150,6 +185,16 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
         // Cleanup
         return () => {
             window.removeEventListener('resize', checkScreenSize);
+        };
+    }, []);
+
+    // ✅ MEMORY LEAK FIX: Cleanup Blob-URLs beim Unmount
+    useEffect(() => {
+        return () => {
+            blobUrlsRef.current.forEach(url => {
+                URL.revokeObjectURL(url);
+            });
+            blobUrlsRef.current.clear();
         };
     }, []);
 
@@ -875,11 +920,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                                 {/* Tooltip für Bildvorschau bei Bild-Dateien */}
                                                 {attachment.fileType.startsWith('image/') && attachment.file && (
                                                     <div className="absolute z-10 bg-white dark:bg-gray-800 p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 dark:border-gray-700 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                                                        <img 
-                                                            src={URL.createObjectURL(attachment.file)}
-                                                            alt={attachment.fileName}
-                                                            className="max-w-[200px] max-h-[150px] object-contain"
-                                                        />
+                                                        <ImagePreviewWithCleanup file={attachment.file} alt={attachment.fileName} blobUrlsRef={blobUrlsRef} />
                                                     </div>
                                                 )}
                                             </li>

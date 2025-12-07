@@ -1,9 +1,45 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cerebroApi } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+
+// ✅ MEMORY LEAK FIX: Komponente für Medien-Vorschau mit Cleanup
+interface MediaPreviewWithCleanupProps {
+  file: File;
+  alt: string;
+  blobUrlsRef: React.MutableRefObject<Set<string>>;
+  type: 'image' | 'video';
+  className?: string;
+}
+
+const MediaPreviewWithCleanup: React.FC<MediaPreviewWithCleanupProps> = ({ file, alt, blobUrlsRef, type, className = "w-full h-auto object-contain max-h-60" }) => {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const blobUrl = URL.createObjectURL(file);
+    blobUrlsRef.current.add(blobUrl);
+    setUrl(blobUrl);
+
+    return () => {
+      URL.revokeObjectURL(blobUrl);
+      blobUrlsRef.current.delete(blobUrl);
+    };
+  }, [file, blobUrlsRef]);
+
+  if (!url) return null;
+
+  if (type === 'image') {
+    return <img src={url} alt={alt} className={className} />;
+  }
+
+  return (
+    <video src={url} controls className={className}>
+      {alt}
+    </video>
+  );
+};
 
 const AddMedia: React.FC = () => {
   const { t } = useTranslation();
@@ -11,6 +47,8 @@ const AddMedia: React.FC = () => {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // ✅ MEMORY LEAK FIX: Track Blob-URLs für Cleanup
+  const blobUrlsRef = useRef<Set<string>>(new Set());
   
   // Zustand
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -149,9 +187,11 @@ const AddMedia: React.FC = () => {
     if (fileType.startsWith('image/')) {
       return (
         <div className="w-full max-h-60 overflow-hidden bg-gray-100 border rounded mb-4">
-          <img 
-            src={URL.createObjectURL(selectedFile)} 
+          <MediaPreviewWithCleanup 
+            file={selectedFile} 
             alt="Vorschau" 
+            blobUrlsRef={blobUrlsRef}
+            type="image"
             className="w-full h-auto object-contain max-h-60"
           />
         </div>
@@ -172,13 +212,13 @@ const AddMedia: React.FC = () => {
     if (fileType.startsWith('video/')) {
       return (
         <div className="w-full max-h-60 overflow-hidden bg-gray-100 border rounded mb-4">
-          <video 
-            src={URL.createObjectURL(selectedFile)} 
-            controls
+          <MediaPreviewWithCleanup 
+            file={selectedFile} 
+            alt={t('cerebroMedia.videoNotSupported')} 
+            blobUrlsRef={blobUrlsRef}
+            type="video"
             className="w-full h-auto max-h-60"
-          >
-            {t('cerebroMedia.videoNotSupported')}
-          </video>
+          />
         </div>
       );
     }

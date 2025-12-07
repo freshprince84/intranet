@@ -102,6 +102,10 @@ const TODOS_TABLE_ID = 'worktracker-todos';
 // Definiere eine tableId für die Reservations Tabelle
 const RESERVATIONS_TABLE_ID = 'worktracker-reservations';
 
+// Maximale Anzahl Items im Memory (verhindert Memory Leaks bei Infinite Scroll)
+const MAX_TASKS = 1000;
+const MAX_RESERVATIONS = 1000;
+
 
 // Card-Einstellungen Standardwerte
 const defaultCardMetadata = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
@@ -626,7 +630,15 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                setTasks(prev => [...prev, ...tasksWithAttachments]);
+                // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Tasks im Memory
+                setTasks(prev => {
+                    const newTasks = [...prev, ...tasksWithAttachments];
+                    // Wenn Maximum überschritten, entferne älteste Items (behalte nur die letzten MAX_TASKS)
+                    if (newTasks.length > MAX_TASKS) {
+                        return newTasks.slice(-MAX_TASKS);
+                    }
+                    return newTasks;
+                });
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
                 // ✅ PERFORMANCE: Direktes Setzen überschreibt alte Referenz (React macht automatisches Cleanup)
@@ -747,7 +759,15 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                setReservations(prev => [...prev, ...reservationsData]);
+                // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Reservations im Memory
+                setReservations(prev => {
+                    const newReservations = [...prev, ...reservationsData];
+                    // Wenn Maximum überschritten, entferne älteste Items (behalte nur die letzten MAX_RESERVATIONS)
+                    if (newReservations.length > MAX_RESERVATIONS) {
+                        return newReservations.slice(-MAX_RESERVATIONS);
+                    }
+                    return newReservations;
+                });
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
                 // ✅ PERFORMANCE: Direktes Setzen überschreibt alte Referenz (React macht automatisches Cleanup)
@@ -772,7 +792,7 @@ const Worktracker: React.FC = () => {
                 setReservationsLoadingMore(false);
             }
         }
-    }, [t, showMessage]); // ✅ FIX: reservationFilterLogicalOperators entfernt - wird als Parameter übergeben
+    }, [showMessage]); // ✅ MEMORY LEAK FIX: t aus Dependencies entfernt (verursacht Neuladen bei jedem Render)
 
     // ✅ KRITISCH: useCallback für Stabilität - MUSS VOR useEffect sein, der es verwendet
     const applyReservationFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
@@ -1894,7 +1914,15 @@ const Worktracker: React.FC = () => {
             );
 
             // Optimistisches Update: Neuen Task zur Liste hinzufügen statt vollständigem Reload
-            setTasks(prevTasks => [response.data, ...prevTasks]);
+            // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Tasks im Memory
+            setTasks(prevTasks => {
+                const newTasks = [response.data, ...prevTasks];
+                // Wenn Maximum überschritten, entferne älteste Items (behalte nur die letzten MAX_TASKS)
+                if (newTasks.length > MAX_TASKS) {
+                    return newTasks.slice(0, MAX_TASKS);
+                }
+                return newTasks;
+            });
             
             // Bearbeitungsmodal für den kopierten Task öffnen
             setSelectedTask(response.data);

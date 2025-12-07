@@ -109,6 +109,9 @@ const defaultColumnOrder = ['title', 'requestedByResponsible', 'status', 'type',
 // TableID für gespeicherte Filter
 const REQUESTS_TABLE_ID = 'requests-table';
 
+// Maximale Anzahl Requests im Memory (verhindert Memory Leaks bei Infinite Scroll)
+const MAX_REQUESTS = 1000;
+
 // Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
 // Tabellen-Spalte -> Card-Metadaten (kann Array sein für 1:N Mapping)
 const tableToCardMapping: Record<string, string[]> = {
@@ -474,7 +477,15 @@ const Requests: React.FC = () => {
       
       if (append) {
         // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-        setRequests(prev => [...prev, ...requestsWithAttachments]);
+        // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Requests im Memory
+        setRequests(prev => {
+          const newRequests = [...prev, ...requestsWithAttachments];
+          // Wenn Maximum überschritten, entferne älteste Items (behalte nur die letzten MAX_REQUESTS)
+          if (newRequests.length > MAX_REQUESTS) {
+            return newRequests.slice(-MAX_REQUESTS);
+          }
+          return newRequests;
+        });
       } else {
         // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
         // ✅ PERFORMANCE: Direktes Setzen überschreibt alte Referenz (React macht automatisches Cleanup)
@@ -888,7 +899,15 @@ const Requests: React.FC = () => {
       );
 
       // Optimistisches Update: Neuen Request zur Liste hinzufügen statt vollständigem Reload
-      setRequests(prevRequests => [response.data, ...prevRequests]);
+      // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Requests im Memory
+      setRequests(prevRequests => {
+        const newRequests = [response.data, ...prevRequests];
+        // Wenn Maximum überschritten, entferne älteste Items (behalte nur die ersten MAX_REQUESTS)
+        if (newRequests.length > MAX_REQUESTS) {
+          return newRequests.slice(0, MAX_REQUESTS);
+        }
+        return newRequests;
+      });
       
       // Bearbeitungsmodal für den kopierten Request öffnen
       setSelectedRequest(response.data);
@@ -944,7 +963,15 @@ const Requests: React.FC = () => {
         onClose={() => setIsCreateModalOpen(false)}
         onRequestCreated={(newRequest) => {
           // Optimistisches Update: Neuen Request zur Liste hinzufügen statt vollständigem Reload
-          setRequests(prevRequests => [newRequest, ...prevRequests]);
+          // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Requests im Memory
+          setRequests(prevRequests => {
+            const newRequests = [newRequest, ...prevRequests];
+            // Wenn Maximum überschritten, entferne älteste Items (behalte nur die ersten MAX_REQUESTS)
+            if (newRequests.length > MAX_REQUESTS) {
+              return newRequests.slice(0, MAX_REQUESTS);
+            }
+            return newRequests;
+          });
           setIsEditModalOpen(true);
           setSelectedRequest(newRequest);
         }}

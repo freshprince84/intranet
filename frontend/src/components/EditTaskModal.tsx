@@ -13,6 +13,39 @@ import TaskDataBox from './TaskDataBox.tsx';
 import EmailTemplateBox from './EmailTemplateBox.tsx';
 import SocialSecurityCompletionBox from './SocialSecurityCompletionBox.tsx';
 
+// ✅ MEMORY LEAK FIX: Komponente für Bildvorschau mit Cleanup
+interface ImagePreviewWithCleanupProps {
+    file: File;
+    alt: string;
+    blobUrlsRef: React.MutableRefObject<Set<string>>;
+    className?: string;
+}
+
+const ImagePreviewWithCleanup: React.FC<ImagePreviewWithCleanupProps> = ({ file, alt, blobUrlsRef, className = "max-w-[200px] max-h-[150px] object-contain" }) => {
+    const [url, setUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        const blobUrl = URL.createObjectURL(file);
+        blobUrlsRef.current.add(blobUrl);
+        setUrl(blobUrl);
+
+        return () => {
+            URL.revokeObjectURL(blobUrl);
+            blobUrlsRef.current.delete(blobUrl);
+        };
+    }, [file, blobUrlsRef]);
+
+    if (!url) return null;
+
+    return (
+        <img 
+            src={url}
+            alt={alt}
+            className={className}
+        />
+    );
+};
+
 interface User {
     id: number;
     firstName: string;
@@ -114,6 +147,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
     const [uploadedDuringEdit, setUploadedDuringEdit] = useState<number[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    // ✅ MEMORY LEAK FIX: Track Blob-URLs für Cleanup
+    const blobUrlsRef = useRef<Set<string>>(new Set());
 
     // Formatiere das Datum im Format YYYY-MM-DD für das HTML-Datumseingabefeld
     const formatDate = (dateString: string | null): string | null => {
@@ -148,6 +183,16 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // ✅ MEMORY LEAK FIX: Cleanup Blob-URLs beim Unmount
+    useEffect(() => {
+        return () => {
+            blobUrlsRef.current.forEach(url => {
+                URL.revokeObjectURL(url);
+            });
+            blobUrlsRef.current.clear();
+        };
     }, []);
 
     // Cleanup: Lösche hochgeladene Attachments wenn Modal ohne Speichern geschlossen wird
@@ -640,6 +685,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             document.body.appendChild(link);
             link.click();
             link.remove();
+            // ✅ MEMORY LEAK FIX: URL nach Verwendung freigeben
+            window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error('Fehler beim Herunterladen des Anhangs:', err);
             
@@ -1135,11 +1182,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             {/* Tooltip für Bildvorschau bei Bild-Dateien */}
                             {attachment.fileType?.startsWith('image/') && attachment.file && (
                                 <div className="absolute z-10 bg-white dark:bg-gray-800 p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 dark:border-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                                    <img 
-                                        src={URL.createObjectURL(attachment.file)}
-                                        alt={attachment.fileName}
-                                        className="max-w-[200px] max-h-[150px] object-contain"
-                                    />
+                                    <ImagePreviewWithCleanup file={attachment.file} alt={attachment.fileName} blobUrlsRef={blobUrlsRef} />
                                 </div>
                             )}
                         </li>

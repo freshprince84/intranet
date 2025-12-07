@@ -127,6 +127,8 @@ const EditRequestModal = ({
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // ✅ MEMORY LEAK FIX: Track Blob-URLs für Cleanup
+  const blobUrlsRef = useRef<Set<string>>(new Set());
   
   const { hasPermission } = usePermissions();
   const canDeleteRequest = hasPermission('requests', 'both', 'table');
@@ -166,6 +168,16 @@ const EditRequestModal = ({
     // Cleanup
     return () => {
       window.removeEventListener('resize', checkScreenSize);
+    };
+  }, []);
+
+  // ✅ MEMORY LEAK FIX: Cleanup Blob-URLs beim Unmount
+  useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+      blobUrlsRef.current.clear();
     };
   }, []);
 
@@ -428,6 +440,8 @@ const EditRequestModal = ({
       document.body.appendChild(link);
       link.click();
       link.remove();
+      // ✅ MEMORY LEAK FIX: URL nach Verwendung freigeben
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Fehler beim Herunterladen des Anhangs:', err);
       // Einfachere Fehlerbehandlung ohne axios-Import
@@ -804,11 +818,7 @@ const EditRequestModal = ({
               {/* Tooltip für Bildvorschau bei Bild-Dateien */}
               {attachment.fileType.startsWith('image/') && attachment.file && (
                 <div className="absolute z-10 bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                  <img 
-                    src={URL.createObjectURL(attachment.file)}
-                    alt={attachment.fileName}
-                    className="max-w-[200px] max-h-[150px] object-contain"
-                  />
+                  <ImagePreviewWithCleanup file={attachment.file} alt={attachment.fileName} blobUrlsRef={blobUrlsRef} />
                 </div>
               )}
             </li>
