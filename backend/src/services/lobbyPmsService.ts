@@ -1045,12 +1045,9 @@ export class LobbyPmsService {
       // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
       const dormName = lobbyReservation.category?.name || null;
       const bedNumber = assignedRoom?.name || null;
-      // Kombiniere Zimmername + Bettnummer für roomNumber
-      roomNumber = dormName && bedNumber 
-        ? `${dormName} (${bedNumber})` 
-        : bedNumber || dormName || null;
-      // roomDescription wird später aus Branch-Settings geladen (siehe Phase 5)
-      roomDescription = null; // Wird beim Versenden der Nachricht aus Branch-Settings geladen
+      // Für Dorms: roomNumber = Bettnummer, roomDescription = Zimmername
+      roomNumber = bedNumber;
+      roomDescription = dormName;
     } else {
       // Für Privatzimmer: assigned_room.name = Zimmername
       roomNumber = assignedRoom?.name || lobbyReservation.room_number || null;

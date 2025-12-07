@@ -218,8 +218,6 @@ const Requests: React.FC = () => {
   const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
   
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  // Hauptsortierung aus Settings laden (für Table & Cards synchron)
-  const sortConfig: SortConfig = settings.sortConfig || { key: 'dueDate', direction: 'asc' };
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
@@ -264,6 +262,9 @@ const Requests: React.FC = () => {
 
   // View-Mode aus Settings laden
   const viewMode = settings.viewMode || 'cards';
+  
+  // Hauptsortierung aus Settings laden (für Table & Cards synchron)
+  const sortConfig: SortConfig = settings.sortConfig || { key: 'dueDate', direction: 'asc' };
   
   // Hauptsortierung Handler (für Table & Cards synchron)
   const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
