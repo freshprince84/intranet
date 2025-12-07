@@ -1,4 +1,5 @@
 import errorHandler from './ErrorHandler.ts';
+import { logger } from '../utils/logger.ts';
 
 /**
  * Initialisiert den ErrorHandler mit globalen Einstellungen
