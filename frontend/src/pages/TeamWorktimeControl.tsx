@@ -82,7 +82,7 @@ const TeamWorktimeControl: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   // Funktion zum Abrufen aller Zeiterfassungen für ein Datum
   const fetchAllWorktimes = useCallback(async () => {
@@ -98,7 +98,7 @@ const TeamWorktimeControl: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, t]);
+  }, [selectedDate]);
   
   // Stoppe die Zeiterfassung eines Benutzers
   const stopUserWorktime = async (userId: number, endTime: string) => {

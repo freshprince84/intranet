@@ -97,8 +97,6 @@ const defaultCardMetadata = ['invoiceNumber', 'client', 'issueDate', 'dueDate', 
 const defaultCardColumnOrder = ['invoiceNumber', 'client', 'issueDate', 'dueDate', 'total', 'status'];
 // ❌ ENTFERNT: defaultCardSortDirections
 // Hauptsortierung wird jetzt aus Settings geladen (pro Benutzer gespeichert)
-  status: 'asc'
-};
 
 // Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
 const tableToCardMapping: Record<string, string[]> = {

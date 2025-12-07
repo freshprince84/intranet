@@ -8,9 +8,9 @@ import { TourProvider } from '../../types/tour.ts';
 import CreateTourProviderModal from './CreateTourProviderModal.tsx';
 import EditTourProviderModal from './EditTourProviderModal.tsx';
 import useMessage from '../../hooks/useMessage.ts';
+import { useError } from '../../contexts/ErrorContext.tsx';
 
 interface TourProvidersTabProps {
-    onError: (error: string) => void;
 }
 
 // ProviderCard-Komponente für mobile und Desktop-Ansicht
@@ -90,9 +90,10 @@ const ProviderCard: React.FC<{
     );
 };
 
-const TourProvidersTab: React.FC<TourProvidersTabProps> = ({ onError }) => {
+const TourProvidersTab: React.FC<TourProvidersTabProps> = () => {
     const { t } = useTranslation();
     const { showMessage } = useMessage();
+    const { handleError: handleErrorContext } = useError();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingProvider, setEditingProvider] = useState<TourProvider | null>(null);
@@ -115,13 +116,13 @@ const TourProvidersTab: React.FC<TourProvidersTabProps> = ({ onError }) => {
             setProviders(Array.isArray(data) ? data : []);
         } catch (error: any) {
             console.error('Fehler beim Laden der Tour-Provider:', error);
+            handleErrorContext(error);
             const errorMessage = error.response?.data?.message || t('tours.providers.loadError', { defaultValue: 'Fehler beim Laden der Provider' });
-            onError(errorMessage);
             showMessage(errorMessage, 'error');
         } finally {
             setLoading(false);
         }
-    }, [onError, t, showMessage]);
+    }, [handleErrorContext]);
 
     useEffect(() => {
         fetchProviders();
@@ -166,8 +167,8 @@ const TourProvidersTab: React.FC<TourProvidersTabProps> = ({ onError }) => {
             fetchProviders();
         } catch (error: any) {
             console.error('Fehler beim Löschen des Providers:', error);
+            handleErrorContext(error);
             const errorMessage = error.response?.data?.message || t('errors.unknownError');
-            onError(errorMessage);
             showMessage(errorMessage, 'error');
         }
     };

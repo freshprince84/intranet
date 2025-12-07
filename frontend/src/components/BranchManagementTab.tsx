@@ -10,6 +10,7 @@ import SavedFilterTags from '../components/SavedFilterTags.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import RoomDescriptionsSection from './branches/RoomDescriptionsSection.tsx';
+import { useError } from '../contexts/ErrorContext.tsx';
 
 interface Branch {
     id: number;
@@ -22,7 +23,6 @@ interface Branch {
 }
 
 interface BranchManagementTabProps {
-    onError: (error: string) => void;
 }
 
 // BranchCard-Komponente für mobile und Desktop-Ansicht
@@ -77,7 +77,7 @@ const BranchCard: React.FC<{
 // TableID für gespeicherte Filter
 const BRANCHES_TABLE_ID = 'branches-table';
 
-const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) => {
+const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
     const { t } = useTranslation();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
@@ -153,6 +153,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
     const [displayLimit, setDisplayLimit] = useState(10);
     const { hasPermission } = usePermissions();
     const { openSidepane, closeSidepane } = useSidepane();
+    const { handleError: handleErrorContext } = useError();
 
     // Berechtigungen prüfen
     const canCreate = hasPermission('branches', 'write', 'table');
@@ -167,12 +168,11 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
             setBranches(response.data);
         } catch (error: any) {
             console.error('Fehler beim Laden der Niederlassungen:', error);
-            const errorMessage = error.response?.data?.message || t('branches.loadError');
-            onError(errorMessage);
+            handleErrorContext(error);
         } finally {
             setLoading(false);
         }
-    }, [onError]);
+    }, [handleErrorContext]);
 
     useEffect(() => {
         fetchBranches();
@@ -352,7 +352,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
         e.preventDefault();
         
         if (!formData.name.trim()) {
-            onError(t('branches.nameRequired'));
+            handleErrorContext({ message: t('branches.nameRequired') });
             return;
         }
 
@@ -378,8 +378,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
             handleCloseModal();
         } catch (error: any) {
             console.error('Fehler beim Speichern der Niederlassung:', error);
-            const errorMessage = error.response?.data?.message || t('branches.saveError');
-            onError(errorMessage);
+            handleErrorContext(error);
         }
     };
 
@@ -394,8 +393,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
             await fetchBranches();
         } catch (error: any) {
             console.error('Fehler beim Löschen der Niederlassung:', error);
-            const errorMessage = error.response?.data?.message || t('branches.deleteError');
-            onError(errorMessage);
+            handleErrorContext(error);
         }
     };
 

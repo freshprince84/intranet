@@ -618,34 +618,34 @@ export class TaskAutomationService {
         return null;
       }
 
-      // Bestimme zuständige Rolle (z.B. "Rezeption")
-      let receptionRoleId: number | null = null;
+      // Bestimme zuständige Rolle (Cleaning)
+      let cleaningRoleId: number | null = null;
 
-      // Suche nach "Rezeption" oder ähnlicher Rolle
-      const receptionRole = await prisma.role.findFirst({
+      // Suche nach "Cleaning" oder ähnlicher Rolle
+      const cleaningRole = await prisma.role.findFirst({
         where: {
           organizationId,
           name: {
-            in: ['Rezeption', 'Reception', 'Front Desk', 'Recepcion'],
+            in: ['Cleaning', 'Limpieza', 'Reinigung'],
             mode: 'insensitive'
           }
         }
       });
 
-      if (receptionRole) {
-        receptionRoleId = receptionRole.id;
+      if (cleaningRole) {
+        cleaningRoleId = cleaningRole.id;
       } else {
         // Fallback: Verwende erste verfügbare Rolle der Organisation
         const firstRole = await prisma.role.findFirst({
           where: { organizationId }
         });
         if (firstRole) {
-          receptionRoleId = firstRole.id;
+          cleaningRoleId = firstRole.id;
         }
       }
 
-      if (!receptionRoleId) {
-        console.warn(`[TaskAutomation] Keine Rolle gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
+      if (!cleaningRoleId) {
+        console.warn(`[TaskAutomation] Keine Cleaning-Rolle gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
         return null;
       }
 
@@ -679,8 +679,15 @@ export class TaskAutomationService {
         return existingTask;
       }
 
+      // Prüfe ob checkOutDate vorhanden ist
+      if (!reservation.checkOutDate) {
+        console.error(`[TaskAutomation] Reservation ${reservation.id} hat kein checkOutDate. Task wird nicht erstellt.`);
+        return null;
+      }
+
       // Erstelle Task
-      const taskTitle = `Check-in: ${reservation.guestName} - ${reservation.checkInDate.toLocaleDateString('de-DE')}`;
+      // Titel: Zimmername (bei Dorms: "Zimmername (Bettnummer)", bei Privates: "Zimmername")
+      const taskTitle = reservation.roomNumber || `Reservation ${reservation.id}`;
       const taskDescription = `
 Reservierungsdetails:
 - Gast: ${reservation.guestName}
@@ -699,11 +706,11 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
           title: taskTitle,
           description: taskDescription,
           status: 'open',
-          roleId: receptionRoleId,
+          roleId: cleaningRoleId,
           branchId: branchId,
           organizationId: organizationId,
           reservationId: reservation.id,
-          dueDate: reservation.checkInDate,
+          dueDate: reservation.checkOutDate,
           qualityControlId: 1 // TODO: Bestimme Quality Control User
         } as any,
         include: {
@@ -717,25 +724,25 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
         }
       });
 
-      console.log(`[TaskAutomation] Task ${task.id} für Reservierung ${reservation.id} erstellt`);
+      console.log(`[TaskAutomation] Cleaning-Task ${task.id} für Reservierung ${reservation.id} erstellt (Check-out: ${reservation.checkOutDate.toLocaleDateString('de-DE')})`);
 
-      // Benachrichtigung für alle User mit Rezeption-Rolle
-      const receptionUsers = await prisma.user.findMany({
+      // Benachrichtigung für alle User mit Cleaning-Rolle
+      const cleaningUsers = await prisma.user.findMany({
         where: {
           roles: {
             some: {
-              roleId: receptionRoleId,
+              roleId: cleaningRoleId,
               lastUsed: true
             }
           }
         }
       });
 
-      for (const receptionUser of receptionUsers) {
-        const userLang = await getUserLanguage(receptionUser.id);
+      for (const cleaningUser of cleaningUsers) {
+        const userLang = await getUserLanguage(cleaningUser.id);
         const notificationText = getTaskNotificationText(userLang, 'check_in_started', task.title, undefined, undefined, reservation.guestName);
         await createNotificationIfEnabled({
-          userId: receptionUser.id,
+          userId: cleaningUser.id,
           title: notificationText.title,
           message: notificationText.message,
           type: NotificationType.task,

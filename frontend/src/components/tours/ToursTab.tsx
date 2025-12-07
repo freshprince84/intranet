@@ -18,7 +18,6 @@ import { FilterCondition } from '../FilterRow.tsx';
 import { applyFilters, evaluateUserRoleCondition } from '../../utils/filterLogic.ts';
 
 interface ToursTabProps {
-    onError: (error: string) => void;
 }
 
 interface TourSortConfig {
@@ -72,10 +71,11 @@ const getTourHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> =>
     return hiddenCardMetadata;
 };
 
-const ToursTab: React.FC<ToursTabProps> = ({ onError }) => {
+const ToursTab: React.FC<ToursTabProps> = () => {
     const { t } = useTranslation();
     const { hasPermission } = usePermissions();
     const { showMessage } = useMessage();
+    const { handleError: handleErrorContext } = useError();
     
     // Tour-States
     const [tours, setTours] = useState<Tour[]>([]);

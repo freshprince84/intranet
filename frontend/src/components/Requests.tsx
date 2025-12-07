@@ -535,6 +535,7 @@ const Requests: React.FC = () => {
 
   // ✅ FIX: Initiales Laden von Requests (wenn keine Filter existieren oder wenn Filter geladen wurden)
   const filterContext = useFilterContext();
+  const { loadFilters } = filterContext;
   const filtersLoading = filterContext.isLoading(REQUESTS_TABLE_ID);
   
   // ✅ FIX: Ref verhindert doppeltes Laden (initial load attempted)
@@ -542,8 +543,8 @@ const Requests: React.FC = () => {
   
   useEffect(() => {
     // Lade Filter für Requests-Tabelle
-    filterContext.loadFilters(REQUESTS_TABLE_ID);
-  }, [filterContext]);
+    loadFilters(REQUESTS_TABLE_ID);
+  }, [loadFilters]);
   
   // ✅ FIX: Initiales Laden von Requests (wenn Filter geladen wurden, aber kein Default-Filter angewendet wurde)
   useEffect(() => {

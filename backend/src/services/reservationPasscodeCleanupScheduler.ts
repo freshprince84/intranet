@@ -6,15 +6,19 @@ import { fromZonedTime } from 'date-fns-tz';
 /**
  * Scheduler für automatische Löschung von TTLock Passcodes nach Checkout
  * 
- * Prüft regelmäßig Reservations mit abgelaufenem Checkout (11:00 lokale Zeit)
+ * Prüft täglich um 11:00 Uhr (lokale Zeit der Organisation) Reservations mit abgelaufenem Checkout
  * und löscht die Passcodes per TTLock API
  */
 export class ReservationPasscodeCleanupScheduler {
   private static checkInterval: NodeJS.Timeout | null = null;
-  private static readonly CHECK_INTERVAL = 5 * 60 * 1000; // Alle 5 Minuten prüfen
+  private static lastCheckDate: string = '';
+  private static readonly CHECK_INTERVAL = 60 * 60 * 1000; // Alle 1 Stunde prüfen ob es 11:00 ist
 
   /**
    * Startet den Scheduler
+   * 
+   * Prüft alle 1 Stunde, ob es 11:00 Uhr ist
+   * Wenn ja, löscht Passcodes von Reservations mit abgelaufenem Checkout
    */
   static start(): void {
     if (this.checkInterval) {
@@ -23,16 +27,29 @@ export class ReservationPasscodeCleanupScheduler {
     }
 
     console.log('[ReservationPasscodeCleanup] Starte Scheduler...');
-    
-    // Sofortige Prüfung beim Start
-    this.checkAndCleanupPasscodes();
 
-    // Regelmäßige Prüfung
-    this.checkInterval = setInterval(() => {
-      this.checkAndCleanupPasscodes();
+    // Prüfe alle 1 Stunde, ob es 11:00 Uhr ist
+    this.checkInterval = setInterval(async () => {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentDate = now.toDateString();
+
+      // Prüfe ob es 11:00 Uhr ist
+      // Und ob wir heute noch nicht geprüft haben
+      if (currentHour === 11 && this.lastCheckDate !== currentDate) {
+        console.log('[ReservationPasscodeCleanup] Starte tägliche Passcode-Löschung (11:00 Uhr)...');
+        this.lastCheckDate = currentDate;
+
+        try {
+          await this.checkAndCleanupPasscodes();
+          console.log('[ReservationPasscodeCleanup] Passcode-Löschung erfolgreich abgeschlossen');
+        } catch (error) {
+          console.error('[ReservationPasscodeCleanup] Fehler beim Löschen der Passcodes:', error);
+        }
+      }
     }, this.CHECK_INTERVAL);
 
-    console.log('[ReservationPasscodeCleanup] Scheduler gestartet (alle 5 Minuten)');
+    console.log('[ReservationPasscodeCleanup] Scheduler gestartet (prüft täglich um 11:00 Uhr)');
   }
 
   /**
@@ -42,6 +59,7 @@ export class ReservationPasscodeCleanupScheduler {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
+      this.lastCheckDate = '';
       console.log('[ReservationPasscodeCleanup] Scheduler gestoppt');
     }
   }
