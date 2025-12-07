@@ -44,7 +44,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       ? savedOperators
       : []
   );
-  
+
   // Zustand für das Speichern von Filtern
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [filterName, setFilterName] = useState('');
@@ -98,7 +98,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     if (a.length !== b.length) return false;
     return a.every((item, index) => item === b[index]);
   };
-
+  
   useEffect(() => {
     // ✅ MEMORY: Verwende shallow comparison statt JSON.stringify
     const conditionsChanged = !areConditionsEqual(prevSavedConditionsRef.current, savedConditions);

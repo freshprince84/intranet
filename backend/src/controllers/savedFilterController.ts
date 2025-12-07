@@ -121,7 +121,7 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
         // Cache invalidieren
         filterListCache.invalidate(userId, tableId);
       }
-
+      
       const parsedFilter = {
         id: filter.id,
         userId: filter.userId,
