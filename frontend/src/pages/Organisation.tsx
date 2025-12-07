@@ -82,17 +82,7 @@ const Organisation: React.FC = () => {
     setError(null);
   };
 
-  // Gemeinsame Fehlerbehandlung
-  const handleError = (err: any) => {
-    let message = t('errors.unknownError');
-    if (err.response?.data?.message) {
-      message = err.response.data.message;
-    } else if (err instanceof Error) {
-      message = err.message;
-    }
-    setError(message);
-    showMessage(message, 'error');
-  };
+  // Gemeinsame Fehlerbehandlung entfernt - ErrorContext wird jetzt verwendet
 
   // Keine Berechtigung für die Seite
   if (!canViewOrganisation) {
@@ -226,7 +216,7 @@ const Organisation: React.FC = () => {
           <div className="mt-6">
             {activeTabState === 'users' ? (
               canViewUsers ? (
-                <UserManagementTab onError={handleError} />
+                <UserManagementTab />
               ) : (
                 <div className="p-8 text-center">
                   <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
@@ -256,7 +246,7 @@ const Organisation: React.FC = () => {
               )
             ) : activeTabState === 'branches' ? (
               canViewBranches ? (
-                <BranchManagementTab onError={handleError} />
+                <BranchManagementTab />
               ) : (
                 <div className="p-8 text-center">
                   <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
@@ -300,9 +290,9 @@ const Organisation: React.FC = () => {
                   
                   {/* Bedingtes Rendering */}
                   {providersViewMode === 'tours' ? (
-                    <ToursTab onError={handleError} />
+                    <ToursTab />
                   ) : (
-                    <TourProvidersTab onError={handleError} />
+                    <TourProvidersTab />
                   )}
                 </div>
               ) : (

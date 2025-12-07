@@ -10,9 +10,9 @@ import IdentificationDocumentList from './IdentificationDocumentList.tsx';
 import IdentificationDocumentForm from './IdentificationDocumentForm.tsx';
 import LifecycleView from './LifecycleView.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
+import { useError } from '../contexts/ErrorContext.tsx';
 
 interface UserManagementTabProps {
-  onError: (error: string) => void;
 }
 
 // Länder und Sprachen werden dynamisch aus Übersetzungen geladen
@@ -40,8 +40,9 @@ const RoleDebugInfo = ({ title, data }: { title: string, data: any }) => (
   </div>
 );
 
-const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => {
+const UserManagementTab = (): JSX.Element => {
   const { t } = useTranslation();
+  const { handleError: handleErrorContext } = useError();
   
   // Länder für die Auswahl (dynamisch aus Übersetzungen)
   const COUNTRIES = [
@@ -350,7 +351,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       return;
     }
     
-    onError(message);
+    handleErrorContext({ message });
   };
 
   // Handler für Auswahl eines Benutzers
@@ -396,7 +397,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     e.preventDefault();
 
     if (!selectedUser || !selectedUser.id) {
-      onError('Kein Benutzer ausgewählt');
+      handleErrorContext({ message: 'Kein Benutzer ausgewählt' });
       showMessage('Kein Benutzer ausgewählt', 'error');
       return;
     }
@@ -469,10 +470,10 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       await fetchAllUsers();
       if (err.response?.status === 400) {
         const errorMsg = `Validierungsfehler: ${err.response?.data?.message || 'Bitte überprüfe die eingegebenen Daten'}`;
-        onError(errorMsg);
+        handleErrorContext({ message: errorMsg });
         showMessage(errorMsg, 'error');
       } else if (err.response?.status === 404) {
-        onError('Benutzer wurde nicht gefunden');
+        handleErrorContext({ message: 'Benutzer wurde nicht gefunden' });
         showMessage('Benutzer wurde nicht gefunden', 'error');
       } else {
         handleError(err);
@@ -718,7 +719,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       await fetchAllUsers();
       const errorMessage = err.response?.data?.message || 'Fehler beim Erstellen des Benutzers';
       showMessage(errorMessage, 'error');
-      onError(errorMessage);
+      handleErrorContext({ message: errorMessage });
     }
   };
 

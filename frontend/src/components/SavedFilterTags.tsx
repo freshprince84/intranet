@@ -215,14 +215,16 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
 
   // ✅ PERFORMANCE: Lade Filter über Filter-Context (verhindert doppelte Ladung)
   // ✅ KRITISCH: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
+  const { loadFilters } = filterContext;
+  
   useEffect(() => {
     // ✅ Reset Ref und State wenn tableId sich ändert
     defaultFilterAppliedRef.current = false;
     setFilterLoadState('idle');
     
     // Lade Filter über Filter-Context
-    filterContext.loadFilters(tableId);
-  }, [tableId, filterContext]);
+    loadFilters(tableId);
+  }, [tableId, loadFilters]);
   
   // ✅ FIX: Überwache Filter-Load-Status
   useEffect(() => {

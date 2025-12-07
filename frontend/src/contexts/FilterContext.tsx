@@ -73,7 +73,7 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
   const loadedTablesRef = useRef<Set<string>>(new Set());
   
   // ✅ MEMORY: TTL und Limits für Filter-Cache
-  const FILTER_CACHE_TTL_MS = 10 * 60 * 1000; // 10 Minuten
+  const FILTER_CACHE_TTL_MS = 60 * 60 * 1000; // 60 Minuten (erhöht von 10 auf 60 Minuten, damit Filter nicht verschwinden)
   const MAX_FILTERS_PER_TABLE = 50; // Max 50 Filter pro Tabelle
   const MAX_TABLES_IN_CACHE = 20; // Max 20 Tabellen im Cache
   

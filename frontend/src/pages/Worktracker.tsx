@@ -661,7 +661,7 @@ const Worktracker: React.FC = () => {
                 setTasksLoadingMore(false);
             }
         }
-    }, [filterLogicalOperators, t]);
+    }, [filterLogicalOperators]);
     
     // ❌ loadMoreTasks entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
