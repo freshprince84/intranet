@@ -201,25 +201,23 @@
 - ✅ Nur für Requests und To Do's
 - ✅ Filter-Gruppen "Rollen" und "Benutzer"
 
-### Was fehlt noch:
+### Was fehlt noch (Phase 4):
 
 **Requests:**
-- ❌ "Alle" Filter fehlt (sollte: `status != approved AND branch = aktueller branch`)
-- ❌ "Name des Benutzers" Filter fehlt (sollte: `status != approved AND branch = aktueller branch AND (requestedBy = user OR responsible = user)`)
-- ❌ Branch-Filter fehlt in allen Filtern
-- ❌ Rollen-basierte Filter fehlen (sollten nur für Admin sein)
+- ❌ "Alle" Filter fehlt (sollte: `status != approved AND branch = __CURRENT_BRANCH__` mit Placeholder)
+- ❌ "Meine Anfragen" Filter fehlt (sollte: `status != approved AND (requestedBy = __CURRENT_USER__ OR responsible = __CURRENT_USER__)` mit Placeholder)
+- ❌ Branch-Filter fehlt in allen Filtern (sollte `__CURRENT_BRANCH__` Placeholder verwenden)
+- ❌ Filtergruppe "Benutzer" sollte entfernt werden (stattdessen "Meine Anfragen" Filter für alle User)
 
 **To Do's:**
-- ❌ Branch-Filter fehlt in allen Filtern
-- ❌ Responsible/QC-Filter fehlt (sollte: `(responsible = user OR qc = user OR responsible = rolle OR qc = rolle)`)
-- ❌ Rollen-basierte Filter fehlen (sollten nur für Admin sein)
-- ❌ "status != done" fehlt in Rollen/User-Filtern
+- ❌ Branch-Filter fehlt in allen Filtern (sollte `__CURRENT_BRANCH__` Placeholder verwenden)
+- ❌ "Meine Aufgaben" Filter fehlt (sollte: `(responsible = __CURRENT_USER__ OR qc = __CURRENT_USER__ OR responsible = __CURRENT_ROLE__ OR qc = __CURRENT_ROLE__)` mit Placeholders)
+- ❌ Filtergruppe "Benutzer" sollte entfernt werden (stattdessen "Meine Aufgaben" Filter für alle User)
+- ✅ Rollen-basierte Filter bleiben (nützlich für Admin)
 
 **Reservations:**
-- ❌ "Morgen" Filter fehlt
-- ❌ "Gestern" Filter fehlt
-- ❌ Branch-Filter fehlt in allen Filtern
-- ❌ Admin-Filter-Gruppen fehlen (Manila, Parque Poblado, Alle)
+- ✅ "Hoy" Filter bereits vorhanden (funktioniert korrekt)
+- **Hinweis:** Branch-Filter wird automatisch für User hinzugefügt (durch `validateFilterAgainstIsolation`), Admin sieht alle Reservations
 
 ---
 
@@ -460,12 +458,22 @@ const handleSort = (key: SortConfig['key']) => {
 
 ### Phase 4: Standardfilter korrekt implementieren
 
+**⚠️ WICHTIG: Berechtigungs-Funktionalität nutzen!**
+
+Die bestehende Berechtigungs-Funktionalität unterstützt bereits Placeholder (`__CURRENT_USER__`, `__CURRENT_ROLE__`, `__CURRENT_BRANCH__`), die beim Anwenden des Filters automatisch durch echte Werte ersetzt werden. `validateFilterAgainstIsolation` entfernt automatisch Branch/Organization-Filter für Nicht-Admin-User. **Keine neuen Berechtigungs-Checks nötig!**
+
+**Prinzip:**
+- Filter werden mit Placeholders erstellt (funktionieren für alle User)
+- Beim Anwenden werden Placeholders durch echte Werte ersetzt (`convertFilterConditionsToPrismaWhere`)
+- Berechtigungsprüfung läuft automatisch (`validateFilterAgainstIsolation`)
+- Filter können auch im Frontend erstellt werden (mit Placeholders)
+
 #### 4.1 Requests Standardfilter
 
 **Berechtigungs-Prüfung:**
-- **User-Rolle:** Alle Rollen einer Organisation + alle Rollen von Org 1, AUSSER Admin & Owner
-- **Admin-Rolle:** Admin & Owner einer Organisation + Admin & Owner von Org 1
-- Prüfung über Funktion `isAdminOrOwner(req)` oder über Berechtigungen & DB-Einträge
+- **User-Rolle:** Sieht nur eigene Daten (wo sie in `requestedBy` ODER `responsible` sind) + nur Branch-Daten
+- **Admin-Rolle:** Sieht alle Daten (keine Branch-Filter)
+- Prüfung über bestehende Funktion `isAdminOrOwner(req)` und `validateFilterAgainstIsolation`
 
 **Für User-Rolle:**
 
@@ -480,43 +488,81 @@ const handleSort = (key: SortConfig['key']) => {
 }
 ```
 - **Bedeutung:** `status != approved AND branch = aktueller branch`
+- **Wird automatisch validiert:** Branch-Filter wird für Nicht-Admin entfernt (durch `validateFilterAgainstIsolation`)
 
-**"Name des Benutzers" Filter:**
+**"Meine Anfragen" Filter (statt Filtergruppe "Benutzer"):**
 ```json
 {
   "conditions": [
     { "column": "status", "operator": "notEquals", "value": "approved" },
-    { "column": "branch", "operator": "equals", "value": "__CURRENT_BRANCH__" },
-    { "column": "requestedBy", "operator": "equals", "value": "__CURRENT_USER__" }
-  ],
-  "operators": ["AND", "OR"],
-  "OR_conditions": [
+    { "column": "requestedBy", "operator": "equals", "value": "__CURRENT_USER__" },
     { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" }
-  ]
+  ],
+  "operators": ["AND", "OR"]
 }
 ```
-- **Bedeutung:** `status != approved AND branch = aktueller branch AND (requestedBy = aktueller user OR responsible = aktueller user)`
+- **Bedeutung:** `status != approved AND (requestedBy = aktueller user OR responsible = aktueller user)`
+- **WICHTIG:** Statt Filtergruppe "Benutzer" mit vielen Filtern → nur dieser eine Filter für alle User
+- **Placeholder:** `__CURRENT_USER__` wird beim Anwenden durch echten User-ID ersetzt
 
 **"Archiv" Filter:**
 ```json
 {
   "conditions": [
-    { "column": "status", "operator": "equals", "value": "done" },
+    { "column": "status", "operator": "equals", "value": "approved" },
+    { "column": "status", "operator": "equals", "value": "denied" },
     { "column": "branch", "operator": "equals", "value": "__CURRENT_BRANCH__" }
   ],
-  "operators": ["AND"]
+  "operators": ["OR", "AND"]
 }
 ```
-- **Bedeutung:** `status = done AND branch = aktueller branch`
+- **Bedeutung:** `(status = approved OR status = denied) AND branch = aktueller branch`
 
-**Hinweis:** `__CURRENT_BRANCH__` und `__CURRENT_USER__` sind Placeholder, die beim Anwenden des Filters durch echte Werte ersetzt werden müssen.
+**Für Admin-Rolle:**
+
+**"Alle" Filter:**
+```json
+{
+  "conditions": [
+    { "column": "status", "operator": "notEquals", "value": "approved" }
+  ],
+  "operators": []
+}
+```
+- **Bedeutung:** `status != approved` (OHNE Branch-Filter)
+- **Wird automatisch validiert:** Admin sieht alle Daten (durch `isAdminOrOwner`)
+
+**"Meine Anfragen" Filter:**
+```json
+{
+  "conditions": [
+    { "column": "status", "operator": "notEquals", "value": "approved" },
+    { "column": "requestedBy", "operator": "equals", "value": "__CURRENT_USER__" },
+    { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" }
+  ],
+  "operators": ["AND", "OR"]
+}
+```
+- **Bedeutung:** `status != approved AND (requestedBy = aktueller user OR responsible = aktueller user)` (OHNE Branch-Filter)
+
+**"Archiv" Filter:**
+```json
+{
+  "conditions": [
+    { "column": "status", "operator": "equals", "value": "approved" },
+    { "column": "status", "operator": "equals", "value": "denied" }
+  ],
+  "operators": ["OR"]
+}
+```
+- **Bedeutung:** `status = approved OR status = denied` (OHNE Branch-Filter)
 
 #### 4.2 To Do's Standardfilter
 
 **Berechtigungs-Prüfung:**
-- **User-Rolle:** Alle Rollen einer Organisation + alle Rollen von Org 1, AUSSER Admin & Owner
-- **Admin-Rolle:** Admin & Owner einer Organisation + Admin & Owner von Org 1
-- Prüfung über Funktion `isAdminOrOwner(req)` oder über Berechtigungen & DB-Einträge
+- **User-Rolle:** Sieht nur eigene Daten (wo sie in `responsible` ODER `qc` sind, als User ODER als Rolle) + nur Branch-Daten
+- **Admin-Rolle:** Sieht alle Daten (keine Branch-Filter)
+- Prüfung über bestehende Funktion `isAdminOrOwner(req)` und `validateFilterAgainstIsolation`
 
 **Für User-Rolle:**
 
@@ -526,17 +572,33 @@ const handleSort = (key: SortConfig['key']) => {
   "conditions": [
     { "column": "status", "operator": "notEquals", "value": "done" },
     { "column": "branch", "operator": "equals", "value": "__CURRENT_BRANCH__" },
-    { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" }
-  ],
-  "operators": ["AND", "OR"],
-  "OR_conditions": [
+    { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" },
     { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_USER__" },
     { "column": "responsible", "operator": "equals", "value": "__CURRENT_ROLE__" },
     { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_ROLE__" }
-  ]
+  ],
+  "operators": ["AND", "AND", "OR", "OR", "OR", "OR"]
 }
 ```
 - **Bedeutung:** `((responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle) AND status != done AND branch = aktueller branch)`
+- **Wird automatisch validiert:** Branch-Filter wird für Nicht-Admin entfernt (durch `validateFilterAgainstIsolation`)
+
+**"Meine Aufgaben" Filter (statt Filtergruppe "Benutzer"):**
+```json
+{
+  "conditions": [
+    { "column": "status", "operator": "notEquals", "value": "done" },
+    { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" },
+    { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_USER__" },
+    { "column": "responsible", "operator": "equals", "value": "__CURRENT_ROLE__" },
+    { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_ROLE__" }
+  ],
+  "operators": ["AND", "OR", "OR", "OR", "OR"]
+}
+```
+- **Bedeutung:** `status != done AND (responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle)`
+- **WICHTIG:** Statt Filtergruppe "Benutzer" mit vielen Filtern → nur dieser eine Filter für alle User
+- **Placeholder:** `__CURRENT_USER__` und `__CURRENT_ROLE__` werden beim Anwenden durch echte Werte ersetzt
 
 **"Archiv" Filter:**
 ```json
@@ -544,14 +606,12 @@ const handleSort = (key: SortConfig['key']) => {
   "conditions": [
     { "column": "status", "operator": "equals", "value": "done" },
     { "column": "branch", "operator": "equals", "value": "__CURRENT_BRANCH__" },
-    { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" }
-  ],
-  "operators": ["AND", "OR"],
-  "OR_conditions": [
+    { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" },
     { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_USER__" },
     { "column": "responsible", "operator": "equals", "value": "__CURRENT_ROLE__" },
     { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_ROLE__" }
-  ]
+  ],
+  "operators": ["AND", "AND", "OR", "OR", "OR", "OR"]
 }
 ```
 - **Bedeutung:** `((responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle) AND status = done AND branch = aktueller branch)`
@@ -562,40 +622,44 @@ const handleSort = (key: SortConfig['key']) => {
 ```json
 {
   "conditions": [
-    { "column": "status", "operator": "notEquals", "value": "done" },
-    { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" }
+    { "column": "status", "operator": "notEquals", "value": "done" }
   ],
-  "operators": ["OR"],
-  "OR_conditions": [
+  "operators": []
+}
+```
+- **Bedeutung:** `status != done` (OHNE Branch-Filter, OHNE User/Role-Filter)
+- **Wird automatisch validiert:** Admin sieht alle Daten (durch `isAdminOrOwner`)
+
+**"Meine Aufgaben" Filter:**
+```json
+{
+  "conditions": [
+    { "column": "status", "operator": "notEquals", "value": "done" },
+    { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" },
     { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_USER__" },
     { "column": "responsible", "operator": "equals", "value": "__CURRENT_ROLE__" },
     { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_ROLE__" }
-  ]
+  ],
+  "operators": ["AND", "OR", "OR", "OR", "OR"]
 }
 ```
-- **Bedeutung:** `((responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle) AND status != done)` - **OHNE Branch-Filter**
+- **Bedeutung:** `status != done AND (responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle)` (OHNE Branch-Filter)
 
 **"Archiv" Filter:**
 ```json
 {
   "conditions": [
-    { "column": "status", "operator": "equals", "value": "done" },
-    { "column": "responsible", "operator": "equals", "value": "__CURRENT_USER__" }
+    { "column": "status", "operator": "equals", "value": "done" }
   ],
-  "operators": ["OR"],
-  "OR_conditions": [
-    { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_USER__" },
-    { "column": "responsible", "operator": "equals", "value": "__CURRENT_ROLE__" },
-    { "column": "qualityControl", "operator": "equals", "value": "__CURRENT_ROLE__" }
-  ]
+  "operators": []
 }
 ```
-- **Bedeutung:** `((responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle) AND status = done)` - **OHNE Branch-Filter**
+- **Bedeutung:** `status = done` (OHNE Branch-Filter, OHNE User/Role-Filter)
 
 **Filter-Gruppen (nur für Admin):**
 
 **"Rollen" Gruppe:**
-- Für jede Rolle einen Filter:
+- Für jede Rolle einen Filter (bleibt wie gehabt):
   ```json
   {
     "conditions": [
@@ -606,183 +670,60 @@ const handleSort = (key: SortConfig['key']) => {
   }
   ```
   - **Bedeutung:** `responsible = rolle-{id} AND status != done`
+  - **Hinweis:** Diese Filter bleiben, da sie für Admin nützlich sind (nach spezifischen Rollen filtern)
 
 **"Benutzer" Gruppe:**
-- Für jeden Benutzer einen Filter:
-  ```json
-  {
-    "conditions": [
-      { "column": "responsible", "operator": "equals", "value": "user-{id}" },
-      { "column": "status", "operator": "notEquals", "value": "done" }
-    ],
-    "operators": ["OR"],
-    "OR_conditions": [
-      { "column": "qualityControl", "operator": "equals", "value": "user-{id}" }
-    ]
-  }
-  ```
-  - **Bedeutung:** `(responsible = user-{id} OR qc = user-{id}) AND status != done`
+- **ENTFERNT:** Statt Filtergruppe "Benutzer" mit vielen Filtern → nur "Meine Aufgaben" Filter (siehe oben)
+- **Grund:** Filter mit `__CURRENT_USER__` und `__CURRENT_ROLE__` funktionieren für alle User, keine separaten Filter nötig
 
 #### 4.3 Reservations Standardfilter
 
 **Berechtigungs-Prüfung:**
-- **User-Rolle:** Alle Rollen einer Organisation + alle Rollen von Org 1, AUSSER Admin & Owner
-- **Admin-Rolle:** Admin & Owner einer Organisation + Admin & Owner von Org 1
-- Prüfung über Funktion `isAdminOrOwner(req)` oder über Berechtigungen & DB-Einträge
+- **User-Rolle:** Sieht nur Branch-Daten (automatisch durch `validateFilterAgainstIsolation`)
+- **Admin-Rolle:** Sieht alle Daten (automatisch durch `isAdminOrOwner`)
+- Prüfung über bestehende Funktion `isAdminOrOwner(req)` und `validateFilterAgainstIsolation`
 
-**Für User-Rolle:**
-
-**"Heute" Filter:**
+**Für alle Rollen:**
+- **"Hoy" Filter:**
 ```json
 {
   "conditions": [
-    { "column": "checkInDate", "operator": "equals", "value": "__TODAY__" },
-    { "column": "branch", "operator": "equals", "value": "__CURRENT_BRANCH__" }
+    { "column": "checkInDate", "operator": "equals", "value": "__TODAY__" }
   ],
-  "operators": ["AND"]
+  "operators": []
 }
 ```
-- **Bedeutung:** `checkInDate = aktueller tag AND branch = aktueller branch`
-
-**"Morgen" Filter:**
-```json
-{
-  "conditions": [
-    { "column": "checkInDate", "operator": "after", "value": "__TODAY__" },
-    { "column": "branch", "operator": "equals", "value": "__CURRENT_BRANCH__" }
-  ],
-  "operators": ["AND"]
-}
-```
-- **Bedeutung:** `checkInDate > aktueller tag AND branch = aktueller branch`
-
-**"Gestern" Filter:**
-```json
-{
-  "conditions": [
-    { "column": "checkInDate", "operator": "before", "value": "__TODAY__" },
-    { "column": "branch", "operator": "equals", "value": "__CURRENT_BRANCH__" }
-  ],
-  "operators": ["AND"]
-}
-```
-- **Bedeutung:** `checkInDate < aktueller tag AND branch = aktueller branch`
-
-**Für Admin-Rolle:**
-
-**Filter-Gruppen (3 Gruppen mit je 3 Filtern):**
-
-**"Heute" Gruppe:**
-- "Manila":
-  ```json
-  {
-    "conditions": [
-      { "column": "checkInDate", "operator": "equals", "value": "__TODAY__" },
-      { "column": "branch", "operator": "equals", "value": "Manila" }
-    ],
-    "operators": ["AND"]
-  }
-  ```
-- "Parque Poblado":
-  ```json
-  {
-    "conditions": [
-      { "column": "checkInDate", "operator": "equals", "value": "__TODAY__" },
-      { "column": "branch", "operator": "equals", "value": "Parque Poblado" }
-    ],
-    "operators": ["AND"]
-  }
-  ```
-- "Alle":
-  ```json
-  {
-    "conditions": [
-      { "column": "checkInDate", "operator": "equals", "value": "__TODAY__" }
-    ],
-    "operators": []
-  }
-  ```
-  - **Bedeutung:** `checkInDate = aktueller tag` (ohne Branch-Filter)
-
-**"Morgen" Gruppe:**
-- "Manila":
-  ```json
-  {
-    "conditions": [
-      { "column": "checkInDate", "operator": "after", "value": "__TODAY__" },
-      { "column": "branch", "operator": "equals", "value": "Manila" }
-    ],
-    "operators": ["AND"]
-  }
-  ```
-- "Parque Poblado":
-  ```json
-  {
-    "conditions": [
-      { "column": "checkInDate", "operator": "after", "value": "__TODAY__" },
-      { "column": "branch", "operator": "equals", "value": "Parque Poblado" }
-    ],
-    "operators": ["AND"]
-  }
-  ```
-- "Alle":
-  ```json
-  {
-    "conditions": [
-      { "column": "checkInDate", "operator": "after", "value": "__TODAY__" }
-    ],
-    "operators": []
-  }
-  ```
-  - **Bedeutung:** `checkInDate > aktueller tag` (ohne Branch-Filter)
-
-**"Gestern" Gruppe:**
-- "Manila":
-  ```json
-  {
-    "conditions": [
-      { "column": "checkInDate", "operator": "before", "value": "__TODAY__" },
-      { "column": "branch", "operator": "equals", "value": "Manila" }
-    ],
-    "operators": ["AND"]
-  }
-  ```
-- "Parque Poblado":
-  ```json
-  {
-    "conditions": [
-      { "column": "checkInDate", "operator": "before", "value": "__TODAY__" },
-      { "column": "branch", "operator": "equals", "value": "Parque Poblado" }
-    ],
-    "operators": ["AND"]
-  }
-  ```
-- "Alle":
-  ```json
-  {
-    "conditions": [
-      { "column": "checkInDate", "operator": "before", "value": "__TODAY__" }
-    ],
-    "operators": []
-  }
-  ```
-  - **Bedeutung:** `checkInDate < aktueller tag` (ohne Branch-Filter)
-
-**Hinweis:** Branch-Namen müssen aus der Datenbank geholt werden (nicht hardcodiert). Manila und Parque Poblado sind Beispiele.
+- **Bedeutung:** `checkInDate = heute`
+- **Wird automatisch validiert:** User sehen nur Branch-Daten, Admin sieht alle Daten (durch bestehende Berechtigungs-Funktionalität)
+- **Hinweis:** Branch-Filter wird automatisch für User hinzugefügt (durch `validateFilterAgainstIsolation`), Admin sieht alle Reservations
 
 #### 4.4 Seed-Implementierung
 
 **Datei:** `backend/prisma/seed.ts`
 
-**Schritte:**
-1. `createStandardFilters` Funktion erweitern
-2. Rollen-Prüfung hinzufügen: `isAdminOrOwner(userId)`
-3. Branch-Informationen aus User-Kontext holen
-4. Filter-Gruppen für Admin erstellen
-5. Placeholder (`__CURRENT_BRANCH__`, `__CURRENT_USER__`, `__CURRENT_ROLE__`) verwenden
-6. Backend muss Placeholder beim Anwenden ersetzen
+**WICHTIG:**
+- Filter werden mit Placeholders (`__CURRENT_USER__`, `__CURRENT_ROLE__`, `__CURRENT_BRANCH__`) erstellt
+- Placeholder werden beim Anwenden automatisch durch echte Werte ersetzt (`convertFilterConditionsToPrismaWhere`)
+- Berechtigungsprüfung läuft automatisch (`validateFilterAgainstIsolation`, `isAdminOrOwner`)
+- **Keine Rollen-Prüfung im Seed nötig!** Filter funktionieren für alle User automatisch
 
-**Hinweis:** Placeholder müssen im Backend beim Anwenden des Filters durch echte Werte ersetzt werden (nicht im Seed).
+**Schritte:**
+1. `createStandardFilters` Funktion erweitern:
+   - "Alle" Filter für Requests hinzufügen (mit `__CURRENT_BRANCH__`)
+   - "Meine Anfragen" Filter für Requests hinzufügen (mit `__CURRENT_USER__`, statt Filtergruppe "Benutzer")
+   - "Meine Aufgaben" Filter für To Do's hinzufügen (mit `__CURRENT_USER__` und `__CURRENT_ROLE__`, statt Filtergruppe "Benutzer")
+   - Branch-Filter zu bestehenden Filtern hinzufügen (mit `__CURRENT_BRANCH__`)
+
+2. `createRoleAndUserFilters` Funktion anpassen:
+   - **ENTFERNEN:** Filtergruppe "Benutzer" mit vielen Filtern (für jeden User einen Filter)
+   - **HINZUFÜGEN:** "Meine Anfragen" / "Meine Aufgaben" Filter (ein Filter für alle User mit Placeholders)
+   - **BEHALTEN:** Filtergruppe "Rollen" für Admin (nützlich für Admin)
+
+3. Bestehende Filter aktualisieren:
+   - "Aktuell" Filter: Branch-Filter hinzufügen (mit `__CURRENT_BRANCH__`)
+   - "Archiv" Filter: Branch-Filter hinzufügen (mit `__CURRENT_BRANCH__`)
+
+**Hinweis:** Placeholder werden im Backend beim Anwenden automatisch durch echte Werte ersetzt (`convertFilterConditionsToPrismaWhere`). Berechtigungsprüfung läuft automatisch (`validateFilterAgainstIsolation`).
 
 ---
 

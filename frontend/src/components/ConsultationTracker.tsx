@@ -350,35 +350,45 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
     setVisibleTagCount(Math.min(maxPossibleTags, recentClients.length));
   }, [recentClients, averageTagWidth, containerWidth]);
 
-  // Debounced ResizeObserver für bessere Performance
-  const handleResize = useCallback(() => {
-    if (resizeTimeoutRef.current) {
-      clearTimeout(resizeTimeoutRef.current);
-    }
-    
-    resizeTimeoutRef.current = setTimeout(() => {
-      calculateVisibleTags();
-    }, 150); // 150ms Debounce für smooth responsive behavior
+  // ✅ MEMORY FIX: useRef für handleResize (verhindert Re-Erstellung von ResizeObserver)
+  const handleResizeRef = useRef<() => void>();
+
+  // ✅ MEMORY FIX: Aktualisiere Ref wenn calculateVisibleTags sich ändert
+  useEffect(() => {
+    handleResizeRef.current = () => {
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      resizeTimeoutRef.current = setTimeout(() => {
+        calculateVisibleTags();
+      }, 150);
+    };
   }, [calculateVisibleTags]);
 
-  // Optimierter ResizeObserver
+  // ✅ MEMORY FIX: ResizeObserver nur EINMAL erstellen (keine Dependencies!)
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const resizeObserver = new ResizeObserver(handleResize);
+    // ✅ MEMORY FIX: Verwende Ref statt direkter Funktion
+    const resizeObserver = new ResizeObserver(() => {
+      handleResizeRef.current?.();
+    });
     resizeObserver.observe(containerRef.current);
     
-    // Auch Window-Resize überwachen für bessere Abdeckung
-    window.addEventListener('resize', handleResize);
+    // ✅ MEMORY FIX: Window-Resize Event-Listener mit Ref
+    const handleWindowResize = () => {
+      handleResizeRef.current?.();
+    };
+    window.addEventListener('resize', handleWindowResize);
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', handleWindowResize);
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
       }
     };
-  }, [handleResize]);
+  }, []); // ← KEINE Dependencies! Observer wird nur EINMAL erstellt
 
   // Initial calculation nach Client-Änderungen
   useLayoutEffect(() => {

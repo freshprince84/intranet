@@ -638,18 +638,22 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }
   }, [sortedFilters, averageTagWidth, containerWidth, isMeasuring, measuredTagWidths, getAvailableWidth]);
 
-  // Debounced ResizeObserver für bessere Performance
-  const handleResize = useCallback(() => {
-    if (resizeTimeoutRef.current) {
-      clearTimeout(resizeTimeoutRef.current);
-    }
-    
-    resizeTimeoutRef.current = setTimeout(() => {
-      calculateVisibleTags();
-    }, 100); // 100ms Debounce für Filter-Tags (schneller als Client-Tags)
+  // ✅ MEMORY FIX: useRef für handleResize (verhindert Re-Erstellung von ResizeObserver)
+  const handleResizeRef = useRef<() => void>();
+
+  // ✅ MEMORY FIX: Aktualisiere Ref wenn calculateVisibleTags sich ändert
+  useEffect(() => {
+    handleResizeRef.current = () => {
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      resizeTimeoutRef.current = setTimeout(() => {
+        calculateVisibleTags();
+      }, 100);
+    };
   }, [calculateVisibleTags]);
 
-  // ✅ FIX: Initialisiere grandParentRef und setze ResizeObserver auf beide Container
+  // ✅ MEMORY FIX: ResizeObserver nur EINMAL erstellen (keine Dependencies!)
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -670,7 +674,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       }
     }
 
-    const resizeObserver = new ResizeObserver(handleResize);
+    // ✅ MEMORY FIX: Verwende Ref statt direkter Funktion
+    const resizeObserver = new ResizeObserver(() => {
+      handleResizeRef.current?.();
+    });
     resizeObserver.observe(container);
     
     // ✅ FIX: Beobachte auch den Großeltern-Container, wenn vorhanden
@@ -678,18 +685,21 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       resizeObserver.observe(grandParentRef.current);
     }
     
-    // Auch Window-Resize überwachen für bessere Abdeckung
-    window.addEventListener('resize', handleResize);
+    // ✅ MEMORY FIX: Window-Resize Event-Listener mit Ref
+    const handleWindowResize = () => {
+      handleResizeRef.current?.();
+    };
+    window.addEventListener('resize', handleWindowResize);
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', handleWindowResize);
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
       }
       grandParentRef.current = null; // Cleanup
     };
-  }, [handleResize]);
+  }, []); // ← KEINE Dependencies! Observer wird nur EINMAL erstellt
 
   // Messung der tatsächlichen Tag-Breiten nach Render
   useLayoutEffect(() => {
