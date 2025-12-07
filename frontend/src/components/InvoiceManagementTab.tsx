@@ -95,12 +95,8 @@ const INVOICES_TABLE_ID = 'invoice-management';
 // Card-Einstellungen Standardwerte
 const defaultCardMetadata = ['invoiceNumber', 'client', 'issueDate', 'dueDate', 'total', 'status'];
 const defaultCardColumnOrder = ['invoiceNumber', 'client', 'issueDate', 'dueDate', 'total', 'status'];
-const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
-  invoiceNumber: 'asc',
-  client: 'asc',
-  issueDate: 'desc',
-  dueDate: 'asc',
-  total: 'asc',
+// ❌ ENTFERNT: defaultCardSortDirections
+// Hauptsortierung wird jetzt aus Settings geladen (pro Benutzer gespeichert)
   status: 'asc'
 };
 
@@ -162,10 +158,13 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ 
-    key: 'issueDate', 
-    direction: 'desc' 
-  });
+  // Hauptsortierung aus Settings laden (für Table & Cards synchron)
+  const sortConfig: SortConfig = settings.sortConfig || { key: 'issueDate', direction: 'desc' };
+  
+  // Hauptsortierung Handler (für Table & Cards synchron)
+  const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
+    updateSortConfig({ key: key as SortConfig['key'], direction });
+  };
   
   // Filter States
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -203,7 +202,8 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
     updateHiddenColumns,
     toggleColumnVisibility,
     isColumnVisible,
-    updateViewMode
+    updateViewMode,
+    updateSortConfig
   } = useTableSettings(INVOICES_TABLE_ID, {
     defaultColumnOrder,
     defaultHiddenColumns: [],
@@ -244,11 +244,6 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
 
   // View-Mode aus Settings laden
   const viewMode = settings.viewMode || 'cards';
-  
-  // Lokale Sortierrichtungen für Cards (nicht persistiert)
-  const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
-    return defaultCardSortDirections;
-  });
 
   // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
   const cardMetadataOrder = useMemo(() => {
@@ -307,10 +302,9 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
   };
 
   const handleSort = (key: SortConfig['key']) => {
-    setSortConfig(current => ({
-      key,
-      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-    }));
+    // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
+    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    updateSortConfig({ key, direction: newDirection });
   };
 
   const handleDownloadPdf = async (invoiceId: number, invoiceNumber: string) => {
@@ -586,7 +580,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
     }
 
     return filtered;
-  }, [invoices, searchTerm, filterConditions, filterLogicalOperators, sortConfig, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+  }, [invoices, searchTerm, filterConditions, filterLogicalOperators, sortConfig, viewMode, cardMetadataOrder, visibleCardMetadata]);
 
   const renderSortableHeader = (columnId: string, label: string, sortKey?: SortConfig['key']) => (
     <th
@@ -1293,9 +1287,11 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
           onClose={() => setIsColumnConfigOpen(false)}
           columns={availableColumns}
           columnOrder={settings.columnOrder}
-          hiddenColumns={settings.hiddenColumns}
-          onToggleVisibility={(columnId) => toggleColumnVisibility(columnId)}
-          onReorderColumns={(newOrder) => updateColumnOrder(newOrder)}
+          visibleColumns={availableColumns.filter(col => !settings.hiddenColumns.includes(col.id)).map(col => col.id)}
+          onToggleColumnVisibility={(columnId) => toggleColumnVisibility(columnId)}
+          mainSortConfig={sortConfig}
+          onMainSortChange={handleMainSortChange}
+          showMainSort={true}
         />
       )}
 

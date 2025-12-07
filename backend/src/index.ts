@@ -97,4 +97,16 @@ setInterval(async () => {
 
 console.log('✅ Tour-Booking-Scheduler Timer gestartet (prüft alle 5 Minuten)');
 
+// Timer für automatische Löschung von TTLock Passcodes nach Checkout (alle 5 Minuten)
+setInterval(async () => {
+  try {
+    const { ReservationPasscodeCleanupScheduler } = await import('./services/reservationPasscodeCleanupScheduler');
+    await ReservationPasscodeCleanupScheduler.checkAndCleanupPasscodes();
+  } catch (error) {
+    console.error('[Timer] Fehler beim Prüfen abgelaufener Passcodes:', error);
+  }
+}, 5 * 60 * 1000); // 5 Minuten
+
+console.log('✅ Reservation-Passcode-Cleanup-Scheduler Timer gestartet (prüft alle 5 Minuten)');
+
 export default server;

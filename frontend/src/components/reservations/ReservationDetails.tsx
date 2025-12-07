@@ -290,22 +290,39 @@ const ReservationDetails: React.FC = () => {
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {reservation.doorPin && (
-                <div className="flex items-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <KeyIcon className="h-5 w-5 mr-3 text-purple-600 dark:text-purple-400" />
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('reservations.doorPin', 'Tür-PIN')}</p>
-                    <p className="text-lg font-mono font-bold text-purple-900 dark:text-purple-100">
-                      {reservation.doorPin}
-                    </p>
-                    {reservation.doorAppName && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {t('reservations.app', 'App')}: {reservation.doorAppName}
+              {reservation.doorPin && (() => {
+                // Prüfe ob Passcode abgelaufen ist (Checkout + 11:00 lokale Zeit)
+                const isPasscodeExpired = reservation.checkOutDate && (() => {
+                  const checkoutDate = new Date(reservation.checkOutDate);
+                  const now = new Date();
+                  // Checkout-Datum auf 11:00 setzen (lokale Zeit)
+                  const checkoutAt11 = new Date(checkoutDate);
+                  checkoutAt11.setHours(11, 0, 0, 0);
+                  return now >= checkoutAt11;
+                })();
+
+                return (
+                  <div className={`flex items-center p-3 rounded-lg ${isPasscodeExpired ? 'bg-red-50 dark:bg-red-900/20' : 'bg-purple-50 dark:bg-purple-900/20'}`}>
+                    <KeyIcon className={`h-5 w-5 mr-3 ${isPasscodeExpired ? 'text-red-600 dark:text-red-400' : 'text-purple-600 dark:text-purple-400'}`} />
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('reservations.doorPin', 'Tür-PIN')}</p>
+                      <p className={`text-lg font-mono font-bold ${isPasscodeExpired ? 'text-red-900 dark:text-red-100 line-through' : 'text-purple-900 dark:text-purple-100'}`}>
+                        {reservation.doorPin}
                       </p>
-                    )}
+                      {isPasscodeExpired && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          {t('reservations.passcodeExpired', 'Passcode abgelaufen und gelöscht')}
+                        </p>
+                      )}
+                      {reservation.doorAppName && !isPasscodeExpired && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {t('reservations.app', 'App')}: {reservation.doorAppName}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {reservation.paymentLink && (
                 <div className="flex items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">

@@ -207,12 +207,19 @@ const fetchData = useCallback(async () => {
   } finally {
     setLoading(false);
   }
-}, []); // ← NUR echte Dependencies (z.B. filterId, selectedDate), KEIN t, KEIN onError!
+}, [filterLogicalOperators, selectedDate]); // ← NUR echte State-Dependencies, KEIN t, KEIN onError, KEIN showMessage!
 
 useEffect(() => {
   fetchData();
 }, [fetchData]); // ← ODER: Direkte Dependencies statt fetchData
 ```
+
+**WICHTIG: State-Dependencies MÜSSEN bleiben!**
+- ✅ `filterLogicalOperators` (State) → MUSS in Dependencies
+- ✅ `selectedDate` (State) → MUSS in Dependencies
+- ❌ `t` (useTranslation) → NICHT in Dependencies
+- ❌ `onError` (Prop) → NICHT in Dependencies (sollte ErrorContext verwenden)
+- ❌ `showMessage` (MessageContext) → NICHT in Dependencies (ist stabil, aber nicht nötig)
 
 **Betroffene Komponenten:**
 1. `BranchManagementTab.tsx` - `fetchBranches` Dependencies korrigieren
@@ -229,7 +236,43 @@ useEffect(() => {
 
 ---
 
-### Phase 4: Custom Hook für Daten laden
+### Phase 4: Filter-Problem beheben
+
+**Ziel:** Filter werden nicht mehr automatisch neu geladen und verschwinden nicht
+
+**Aktueller Zustand:**
+- ❌ `filterContext` in Dependencies: Requests.tsx, SavedFilterTags.tsx
+- ❌ Filter verschwinden nach 10 Minuten (Cleanup-Intervall)
+- ❌ Filter werden bei jedem Render neu geladen
+
+**Standard Pattern:**
+```typescript
+// ❌ FALSCH: filterContext in Dependencies
+useEffect(() => {
+  filterContext.loadFilters(tableId);
+}, [tableId, filterContext]); // ← VERURSACHT AUTOMATISCHES NEULADEN!
+
+// ✅ RICHTIG: loadFilters direkt verwenden
+const { loadFilters } = useFilterContext();
+
+useEffect(() => {
+  loadFilters(tableId);
+}, [tableId]); // ← ODER: [], da loadFilters stabil ist
+```
+
+**Betroffene Komponenten:**
+1. `Requests.tsx` - `filterContext` aus Dependencies entfernen
+2. `SavedFilterTags.tsx` - `filterContext` aus Dependencies entfernen
+3. `FilterContext.tsx` - Cleanup-Intervall anpassen (TTL erhöhen)
+
+**Vorteil:**
+- ✅ Keine automatischen Neuladungen mehr
+- ✅ Filter verschwinden nicht mehr nach 10 Minuten
+- ✅ Einheitliches Pattern überall
+
+---
+
+### Phase 5: Custom Hook für Daten laden
 
 **Ziel:** Wiederverwendbarer Hook für alle Daten-Lade-Operationen
 
@@ -309,7 +352,11 @@ const { data: branches, loading } = useDataLoader<Branch[]>(
 - Alle `fetch`/`load` Funktionen standardisieren
 - Dependencies auf echte Abhängigkeiten beschränken
 
-### Schritt 4: Custom Hook erstellen
+### Schritt 4: Filter-Problem beheben
+- `filterContext` aus Dependencies entfernen
+- Cleanup-Intervall anpassen (TTL erhöhen)
+
+### Schritt 5: Custom Hook erstellen
 - `useDataLoader` Hook implementieren
 - Nach und nach alle Komponenten migrieren
 
