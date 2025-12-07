@@ -20,6 +20,7 @@ import { de, es, enUS } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage.ts';
+import { logger } from '../utils/logger.ts';
 
 const NotificationBell: React.FC = () => {
   const { t, i18n } = useTranslation();

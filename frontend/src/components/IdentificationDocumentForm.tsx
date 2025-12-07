@@ -8,6 +8,7 @@ import CameraCapture from './CameraCapture.tsx';
 import { recognizeDocument } from '../utils/documentRecognition.ts';
 import { recognizeDocumentWithAI } from '../utils/aiDocumentRecognition.ts';
 import { CameraIcon, DocumentTextIcon, ArrowPathIcon as SpinnerIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { logger } from '../utils/logger.ts';
 
 interface IdentificationDocumentFormProps {
   userId: number;

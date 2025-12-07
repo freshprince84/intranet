@@ -18,6 +18,7 @@ import axiosInstance from '../../config/axios.ts';
 import TableColumnConfig from '../TableColumnConfig.tsx';
 import DataCard, { MetadataItem } from '../shared/DataCard.tsx';
 import CardGrid from '../shared/CardGrid.tsx';
+import { logger } from '../../utils/logger.ts';
 
 interface ActiveUsersListProps {
   activeUsers: any[];

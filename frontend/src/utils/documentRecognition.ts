@@ -1,5 +1,6 @@
 import { IdentificationDocument } from '../types/interfaces.ts';
 import { getWorker, terminateWorker, recognizeImage } from './tesseractWorker.ts';
+import { logger } from './logger.ts';
 
 // Zeitliche Muster für verschiedene Länder
 const DATE_PATTERNS = [

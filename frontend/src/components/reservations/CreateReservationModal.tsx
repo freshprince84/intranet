@@ -6,6 +6,7 @@ import { reservationService, CreateReservationData } from '../../services/reserv
 import { Reservation } from '../../types/reservation.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
+import { logger } from '../../utils/logger.ts';
 
 interface CreateReservationModalProps {
   isOpen: boolean;

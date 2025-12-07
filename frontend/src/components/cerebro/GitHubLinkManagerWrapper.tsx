@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import GitHubLinkManager from './GitHubLinkManager.tsx';
 import { CerebroExternalLink } from '../../api/cerebroApi.ts';
+import { logger } from '../../utils/logger.ts';
 
 /**
  * Diese Komponente dient als Wrapper für den GitHubLinkManager.

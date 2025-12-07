@@ -11,6 +11,7 @@ import { FilterCondition } from '../FilterRow.tsx';
 import ProcessJoinRequestModal from './ProcessJoinRequestModal.tsx';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
+import { logger } from '../../utils/logger.ts';
 
 // Status-Badge Funktionen
 const getStatusColor = (status: string) => {

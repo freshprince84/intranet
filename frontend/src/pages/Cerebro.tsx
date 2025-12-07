@@ -19,6 +19,7 @@ import { applyFilters, GetFieldValue, ColumnEvaluator } from '../utils/filterLog
 import ReactMarkdown from 'react-markdown';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { logger } from '../utils/logger.ts';
 
 // GitHub Repository-Informationen
 const GITHUB_OWNER = 'freshprince84';

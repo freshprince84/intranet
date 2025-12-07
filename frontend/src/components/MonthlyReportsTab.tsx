@@ -27,6 +27,7 @@ import { MonthlyConsultationReport, UnbilledConsultationsCheck } from '../types/
 import { calculateDuration } from '../utils/dateUtils.ts';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
+import { logger } from '../utils/logger.ts';
 import DataCard, { MetadataItem } from './shared/DataCard.tsx';
 import CardGrid from './shared/CardGrid.tsx';
 
