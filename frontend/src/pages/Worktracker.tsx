@@ -375,11 +375,6 @@ const Worktracker: React.FC = () => {
     const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
     
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-    // Hauptsortierung aus Settings laden (für Table & Cards synchron)
-    // Tasks: Aus tasksSettings
-    const tableSortConfig: SortConfig = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
-    // Reservations: Aus reservationsSettings
-    const reservationTableSortConfig: ReservationSortConfig = reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };
     // Tabellen-Header-Sortierung für Tour Bookings (nur für Tabellen-Ansicht) - TODO: Später auch aus Settings
     const [tourBookingsSortConfig, setTourBookingsSortConfig] = useState<TourBookingSortConfig>({ key: 'tourDate', direction: 'desc' });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -435,6 +430,12 @@ const Worktracker: React.FC = () => {
     const isColumnVisible = activeTab === 'todos' ? isTasksColumnVisible : isReservationsColumnVisible;
     const updateViewMode = activeTab === 'todos' ? updateTasksViewMode : updateReservationsViewMode;
     const updateSortConfig = activeTab === 'todos' ? updateTasksSortConfig : updateReservationsSortConfig;
+
+    // Hauptsortierung aus Settings laden (für Table & Cards synchron)
+    // Tasks: Aus tasksSettings
+    const tableSortConfig: SortConfig = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
+    // Reservations: Aus reservationsSettings
+    const reservationTableSortConfig: ReservationSortConfig = reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -671,7 +672,7 @@ const Worktracker: React.FC = () => {
         // ✅ FIX: Lade Daten mit Filter (server-seitig)
         setSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
         setActiveFilterName(''); // Kein Filter-Name
-        setTableSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
+        updateTasksSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
         
         if (conditions.length > 0) {
             await loadTasks(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
@@ -782,7 +783,7 @@ const Worktracker: React.FC = () => {
         // ✅ FIX: Lade Daten mit Filter (server-seitig)
         setReservationSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
         setReservationActiveFilterName(''); // Kein Filter-Name
-        setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' }); // Reset Sortierung
+        updateReservationsSortConfig({ key: 'checkInDate', direction: 'desc' }); // Reset Sortierung
         
         if (conditions.length > 0) {
             await loadReservations(undefined, conditions, operators, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
@@ -798,7 +799,7 @@ const Worktracker: React.FC = () => {
             // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
             setActiveFilterName(name);
             setSelectedFilterId(id);
-            setTableSortConfig({ key: 'dueDate', direction: 'asc' });
+            updateTasksSortConfig({ key: 'dueDate', direction: 'asc' });
             
             // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
             // ✅ Sonst: Setze nur State (applyFilterConditions würde doppelt laden)
@@ -817,7 +818,7 @@ const Worktracker: React.FC = () => {
             // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
             setReservationActiveFilterName(name);
             setReservationSelectedFilterId(id);
-            setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
+            updateReservationsSortConfig({ key: 'checkInDate', direction: 'desc' });
             
             // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
             // ✅ Sonst: Setze nur State (applyReservationFilterConditions würde doppelt laden)
@@ -840,7 +841,7 @@ const Worktracker: React.FC = () => {
         // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
         setReservationActiveFilterName(name);
         setReservationSelectedFilterId(id);
-        setReservationTableSortConfig({ key: 'checkInDate', direction: 'desc' });
+        updateReservationsSortConfig({ key: 'checkInDate', direction: 'desc' });
         
         // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
         // ✅ Sonst: Setze nur State (applyReservationFilterConditions würde doppelt laden)

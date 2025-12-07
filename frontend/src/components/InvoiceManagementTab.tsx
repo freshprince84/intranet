@@ -156,13 +156,6 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  // Hauptsortierung aus Settings laden (für Table & Cards synchron)
-  const sortConfig: SortConfig = settings.sortConfig || { key: 'issueDate', direction: 'desc' };
-  
-  // Hauptsortierung Handler (für Table & Cards synchron)
-  const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
-    updateSortConfig({ key: key as SortConfig['key'], direction });
-  };
   
   // Filter States
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -221,6 +214,14 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
     { id: 'status', label: t('invoices.columns.status'), shortLabel: t('invoices.columns.status') },
     { id: 'actions', label: t('common.actions'), shortLabel: t('common.actions').substring(0, 3) }
   ], [t]);
+  
+  // Hauptsortierung aus Settings laden (für Table & Cards synchron)
+  const sortConfig: SortConfig = settings.sortConfig || { key: 'issueDate', direction: 'desc' };
+  
+  // Hauptsortierung Handler (für Table & Cards synchron)
+  const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
+    updateSortConfig({ key: key as SortConfig['key'], direction });
+  };
   
   // Status-Konfiguration (mit Übersetzungen)
   const statusConfig = useMemo(() => ({
