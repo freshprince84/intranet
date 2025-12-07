@@ -65,7 +65,6 @@ class FilterListCache {
       });
 
       // 3. Parse die JSON-Strings zurück in Arrays
-      // ❌ ENTFERNT: sortDirections Migration - Filter-Sortierung wurde entfernt (Phase 1)
       const parsedFilters = savedFilters.map(filter => {
         return {
           id: filter.id,
@@ -74,7 +73,6 @@ class FilterListCache {
           name: filter.name,
           conditions: JSON.parse(filter.conditions),
           operators: JSON.parse(filter.operators),
-          // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
           groupId: filter.groupId,
           order: filter.order,
           createdAt: filter.createdAt,
@@ -135,7 +133,6 @@ class FilterListCache {
 
       // 3. Parse die JSON-Strings der Filter zurück in Arrays
       // ✅ FIX: Filtere User-Filter-Gruppen nach aktiven Usern
-      // ❌ ENTFERNT: sortDirections Parsing - Filter-Sortierung wurde entfernt (Phase 1)
       const parsedGroups = await Promise.all(groups.map(async (group) => {
         let filters = group.filters.map(filter => {
           return {
@@ -145,7 +142,6 @@ class FilterListCache {
             name: filter.name,
             conditions: JSON.parse(filter.conditions),
             operators: JSON.parse(filter.operators),
-            // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
             groupId: filter.groupId,
             order: filter.order,
             createdAt: filter.createdAt,

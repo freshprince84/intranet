@@ -111,7 +111,6 @@ const MAX_RESERVATIONS = 1000;
 // Card-Einstellungen Standardwerte
 const defaultCardMetadata = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
 const defaultCardColumnOrder = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
-// ❌ ENTFERNT: defaultCardSortDirections und defaultReservationCardSortDirections
 // Hauptsortierung wird jetzt aus Settings geladen (pro Benutzer gespeichert)
 
 // Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
@@ -678,7 +677,6 @@ const Worktracker: React.FC = () => {
     const applyFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         setFilterConditions(conditions);
         setFilterLogicalOperators(operators);
-        // ❌ ENTFERNT: sortDirections Parameter und setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         
         // ✅ FIX: Lade Daten mit Filter (server-seitig)
         setSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
@@ -797,7 +795,6 @@ const Worktracker: React.FC = () => {
     const applyReservationFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         setReservationFilterConditions(conditions);
         setReservationFilterLogicalOperators(operators);
-        // ❌ ENTFERNT: sortDirections Parameter und setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         
         // ✅ FIX: Lade Daten mit Filter (server-seitig)
         setReservationSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
@@ -826,7 +823,6 @@ const Worktracker: React.FC = () => {
                 // Gespeicherter Filter: Setze State und lade mit id
                 setFilterConditions(conditions);
                 setFilterLogicalOperators(operators);
-                // ❌ ENTFERNT: sortDirections Parameter und setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                 await loadTasks(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             } else {
                 // Direkte Bedingungen: applyFilterConditions lädt bereits
@@ -845,7 +841,6 @@ const Worktracker: React.FC = () => {
                 // Gespeicherter Filter: Setze State und lade mit id
                 setReservationFilterConditions(conditions);
                 setReservationFilterLogicalOperators(operators);
-                // ❌ ENTFERNT: sortDirections Parameter und setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                 await loadReservations(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
             } else {
                 // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
@@ -868,7 +863,6 @@ const Worktracker: React.FC = () => {
             // Gespeicherter Filter: Setze State und lade mit id
             setReservationFilterConditions(conditions);
             setReservationFilterLogicalOperators(operators);
-            // ❌ ENTFERNT: sortDirections Parameter und setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
             await loadReservations(id, undefined, operators, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
         } else {
             // Direkte Bedingungen: applyReservationFilterConditions lädt bereits
@@ -1243,7 +1237,6 @@ const Worktracker: React.FC = () => {
     const resetFilterConditions = () => {
         setFilterConditions([]);
         setFilterLogicalOperators([]);
-        // ❌ ENTFERNT: setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         setActiveFilterName('');
         setSelectedFilterId(null);
     };
@@ -1251,7 +1244,6 @@ const Worktracker: React.FC = () => {
     const resetReservationFilterConditions = () => {
         setReservationFilterConditions([]);
         setReservationFilterLogicalOperators([]);
-        // ❌ ENTFERNT: setReservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
         setReservationActiveFilterName('');
         setReservationSelectedFilterId(null);
     };

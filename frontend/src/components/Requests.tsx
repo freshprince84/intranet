@@ -699,7 +699,6 @@ const Requests: React.FC = () => {
   const applyFilterConditions = async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
-    // ❌ ENTFERNT: sortDirections Parameter und setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
     
     // ✅ FIX: Lade Daten mit Filter (server-seitig)
     setSelectedFilterId(null); // Kein gespeicherter Filter, nur direkte Bedingungen
@@ -719,26 +718,22 @@ const Requests: React.FC = () => {
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
-    // ❌ ENTFERNT: setFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
     setActiveFilterName('');
     setSelectedFilterId(null);
   };
   
   // Filter Change Handler (Controlled Mode)
-  // ✅ FIX: sortDirections Parameter hinzugefügt (wird ignoriert, aber für Kompatibilität mit SavedFilterTags nötig)
-  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: any) => {
+  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     // Table-Header-Sortierung zurücksetzen
-    setSortConfig({ key: 'dueDate', direction: 'asc' });
+    updateSortConfig({ key: 'dueDate', direction: 'asc' });
     
     // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
     // ✅ Sonst: Verwende applyFilterConditions (setzt auch selectedFilterId = null, activeFilterName = '')
     if (id) {
       setFilterConditions(conditions);
       setFilterLogicalOperators(operators);
-      // ❌ ENTFERNT: sortDirections Parameter wird ignoriert - Filter-Sortierung wurde entfernt (Phase 1)
-      // ✅ FIX: Flag wird in fetchRequests gesetzt (wenn offset === 0)
       await fetchRequests(id, undefined, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
     } else {
       // ✅ Direkte Bedingungen: applyFilterConditions lädt bereits und setzt State korrekt
@@ -1206,11 +1201,11 @@ const Requests: React.FC = () => {
         <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
           <SavedFilterTags
           tableId={REQUESTS_TABLE_ID}
-          onSelectFilter={(conditions, operators, sortDirections) => applyFilterConditions(conditions, operators, sortDirections)}
+          onSelectFilter={(conditions, operators) => applyFilterConditions(conditions, operators)}
           onReset={resetFilterConditions}
           activeFilterName={activeFilterName}
           selectedFilterId={selectedFilterId}
-          onFilterChange={(name, id, conditions, operators, sortDirections) => handleFilterChange(name, id, conditions, operators, sortDirections)}
+          onFilterChange={(name, id, conditions, operators) => handleFilterChange(name, id, conditions, operators)}
           defaultFilterName="Aktuell"
           />
         </div>

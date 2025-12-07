@@ -395,7 +395,6 @@ model SavedFilter {
   name       String
   conditions String
   operators  String
-  // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
   groupId    Int?
   order      Int          @default(0)
   createdAt  DateTime     @default(now())
