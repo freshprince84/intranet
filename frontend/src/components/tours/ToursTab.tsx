@@ -31,12 +31,6 @@ const defaultTourColumnOrder = ['title', 'type', 'price', 'location', 'duration'
 
 // ❌ ENTFERNT: defaultTourCardSortDirections
 // Hauptsortierung wird jetzt aus Settings geladen (pro Benutzer gespeichert)
-    location: 'asc',
-    duration: 'asc',
-    branch: 'asc',
-    createdBy: 'asc',
-    isActive: 'asc'
-};
 
 const tourCardToTableMapping: Record<string, string> = {
     'title': 'title',
