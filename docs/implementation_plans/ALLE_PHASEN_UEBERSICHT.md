@@ -68,41 +68,41 @@
 ### 📋 PHASE 4: Standardfilter korrekt implementieren
 **Status:** 📋 **GEPLANT**  
 **Datum:** Nach Phase 3  
-**Dokument:** `docs/implementation_plans/VEREINFACHUNG_FILTER_SORTIERUNG_AUFRÄUMPLAN.md` (Zeile 461-574)
+**Dokument:** `docs/implementation_plans/VEREINFACHUNG_FILTER_SORTIERUNG_AUFRÄUMPLAN.md` (Zeile 461-650)
+
+**⚠️ WICHTIG: Berechtigungs-Funktionalität nutzen!**
+
+Die bestehende Berechtigungs-Funktionalität unterstützt bereits Placeholder (`__CURRENT_USER__`, `__CURRENT_ROLE__`, `__CURRENT_BRANCH__`), die beim Anwenden automatisch durch echte Werte ersetzt werden. `validateFilterAgainstIsolation` entfernt automatisch Branch/Organization-Filter für Nicht-Admin-User. **Keine neuen Berechtigungs-Checks nötig!**
 
 **Was wird gemacht:**
 
 #### 4.1 Requests Standardfilter
-**Berechtigungs-Prüfung:**
-- **User-Rolle:** Alle Rollen einer Organisation + alle Rollen von Org 1, AUSSER Admin & Owner
-- **Admin-Rolle:** Admin & Owner einer Organisation + Admin & Owner von Org 1
-
 **Für User-Rolle:**
-- **"Alle" Filter:** `status != approved AND branch = aktueller branch`
-- **"Name des Benutzers" Filter:** `status != approved AND branch = aktueller branch AND (requestedBy = aktueller user OR responsible = aktueller user)`
-- **"Archiv" Filter:** `status = done AND branch = aktueller branch`
+- **"Alle" Filter:** `status != approved AND branch = __CURRENT_BRANCH__` (mit Placeholder)
+- **"Meine Anfragen" Filter:** `status != approved AND (requestedBy = __CURRENT_USER__ OR responsible = __CURRENT_USER__)` (mit Placeholder, statt Filtergruppe "Benutzer")
+- **"Archiv" Filter:** `(status = approved OR status = denied) AND branch = __CURRENT_BRANCH__` (mit Placeholder)
 
 **Für Admin-Rolle:**
-- **"Alle" Filter:** `status != approved` (ohne Branch-Filter)
-- **"Name des Benutzers" Filter:** `status != approved AND (requestedBy = aktueller user OR responsible = aktueller user)` (ohne Branch-Filter)
-- **"Archiv" Filter:** `status = done` (ohne Branch-Filter)
+- **"Alle" Filter:** `status != approved` (ohne Branch-Filter, automatisch durch `isAdminOrOwner`)
+- **"Meine Anfragen" Filter:** `status != approved AND (requestedBy = __CURRENT_USER__ OR responsible = __CURRENT_USER__)` (ohne Branch-Filter)
+- **"Archiv" Filter:** `status = approved OR status = denied` (ohne Branch-Filter)
 
 #### 4.2 To Do's Standardfilter
-**Berechtigungs-Prüfung:**
-- **User-Rolle:** Alle Rollen einer Organisation + alle Rollen von Org 1, AUSSER Admin & Owner
-- **Admin-Rolle:** Admin & Owner einer Organisation + Admin & Owner von Org 1
-
 **Für User-Rolle:**
-- **"Aktuell" Filter:** `((responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle) AND status != done AND branch = aktueller branch)`
-- **"Archiv" Filter:** `((responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle) AND status = done AND branch = aktueller branch)`
+- **"Aktuell" Filter:** `((responsible = __CURRENT_USER__ OR qc = __CURRENT_USER__ OR responsible = __CURRENT_ROLE__ OR qc = __CURRENT_ROLE__) AND status != done AND branch = __CURRENT_BRANCH__)` (mit Placeholders)
+- **"Meine Aufgaben" Filter:** `status != done AND (responsible = __CURRENT_USER__ OR qc = __CURRENT_USER__ OR responsible = __CURRENT_ROLE__ OR qc = __CURRENT_ROLE__)` (mit Placeholders, statt Filtergruppe "Benutzer")
+- **"Archiv" Filter:** `((responsible = __CURRENT_USER__ OR qc = __CURRENT_USER__ OR responsible = __CURRENT_ROLE__ OR qc = __CURRENT_ROLE__) AND status = done AND branch = __CURRENT_BRANCH__)` (mit Placeholders)
 
 **Für Admin-Rolle:**
-- **"Aktuell" Filter:** `((responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle) AND status != done)` (ohne Branch-Filter)
-- **"Archiv" Filter:** `((responsible = aktueller user OR qc = aktueller user OR responsible = aktuelle rolle OR qc = aktuelle rolle) AND status = done)` (ohne Branch-Filter)
+- **"Aktuell" Filter:** `status != done` (ohne Branch-Filter, automatisch durch `isAdminOrOwner`)
+- **"Meine Aufgaben" Filter:** `status != done AND (responsible = __CURRENT_USER__ OR qc = __CURRENT_USER__ OR responsible = __CURRENT_ROLE__ OR qc = __CURRENT_ROLE__)` (ohne Branch-Filter)
+- **"Archiv" Filter:** `status = done` (ohne Branch-Filter)
+- **"Rollen" Filtergruppe:** Bleibt erhalten (nützlich für Admin)
 
 #### 4.3 Reservations Standardfilter
 **Für alle Rollen:**
-- **"Hoy" Filter:** `checkInDate = heute`
+- **"Hoy" Filter:** `checkInDate = __TODAY__` (bereits vorhanden)
+- **Berechtigung:** User sehen nur Branch-Daten, Admin sieht alles (automatisch durch bestehende Funktionalität)
 
 **Ergebnis:** 📋 Noch nicht begonnen
 
