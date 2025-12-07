@@ -214,7 +214,6 @@ const Requests: React.FC = () => {
   // State-Variablen für erweiterte Filterbedingungen
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-  // ❌ ENTFERNT: filterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
   
   // Filter State Management (Controlled Mode)
   const [activeFilterName, setActiveFilterName] = useState<string>('');
@@ -1198,7 +1197,6 @@ const Requests: React.FC = () => {
             onReset={resetFilterConditions}
             savedConditions={filterConditions}
             savedOperators={filterLogicalOperators}
-            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
             tableId={REQUESTS_TABLE_ID}
             />
           </div>

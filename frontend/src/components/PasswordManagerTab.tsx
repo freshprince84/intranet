@@ -44,7 +44,6 @@ const PasswordManagerTab: React.FC = () => {
   // Filter State Management (Controlled Mode)
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-  // ❌ ENTFERNT: filterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
   const [isFilterPaneOpen, setIsFilterPaneOpen] = useState(false);
   const [activeFilterName, setActiveFilterName] = useState<string>('');
   const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
@@ -331,7 +330,7 @@ const PasswordManagerTab: React.FC = () => {
       });
 
     return filtered;
-  }, [entries, filterConditions, filterLogicalOperators]); // ✅ filterSortDirections entfernt (Phase 1)
+  }, [entries, filterConditions, filterLogicalOperators]);
 
   if (!canView) {
     return (
@@ -397,7 +396,6 @@ const PasswordManagerTab: React.FC = () => {
             onReset={resetFilterConditions}
             savedConditions={filterConditions}
             savedOperators={filterLogicalOperators}
-            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
             tableId={PASSWORD_MANAGER_TABLE_ID}
           />
         </div>

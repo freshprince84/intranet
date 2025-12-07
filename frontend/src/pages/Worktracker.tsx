@@ -366,14 +366,12 @@ const Worktracker: React.FC = () => {
     // Reservations Filter States (analog zu Tasks)
     const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
     const [reservationFilterLogicalOperators, setReservationFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-    // ❌ ENTFERNT: reservationFilterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
     const [reservationActiveFilterName, setReservationActiveFilterName] = useState<string>('');
     const [reservationSelectedFilterId, setReservationSelectedFilterId] = useState<number | null>(null);
     
     // State für erweiterte Filterbedingungen
     const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
     const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-    // ❌ ENTFERNT: filterSortDirections - Filter-Sortierung wurde entfernt (Phase 1)
     
     // Filter State Management (Controlled Mode)
     const [activeFilterName, setActiveFilterName] = useState<string>('');
@@ -2275,7 +2273,6 @@ const Worktracker: React.FC = () => {
                                             onReset={resetFilterConditions}
                                             savedConditions={filterConditions}
                                             savedOperators={filterLogicalOperators}
-                                            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
                                             tableId={TODOS_TABLE_ID}
                                         />
                                     ) : (
@@ -2292,7 +2289,6 @@ const Worktracker: React.FC = () => {
                                             onReset={resetReservationFilterConditions}
                                             savedConditions={reservationFilterConditions}
                                             savedOperators={reservationFilterLogicalOperators}
-                                            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
                                             tableId={RESERVATIONS_TABLE_ID}
                                         />
                                     )}
@@ -3604,7 +3600,6 @@ const Worktracker: React.FC = () => {
                                             onReset={resetFilterConditions}
                                             savedConditions={filterConditions}
                                             savedOperators={filterLogicalOperators}
-                                            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
                                             tableId={TODOS_TABLE_ID}
                                         />
                                     ) : (
@@ -3621,7 +3616,6 @@ const Worktracker: React.FC = () => {
                                             onReset={resetReservationFilterConditions}
                                             savedConditions={reservationFilterConditions}
                                             savedOperators={reservationFilterLogicalOperators}
-                                            // ❌ ENTFERNT: savedSortDirections und onSortDirectionsChange - Filter-Sortierung wurde entfernt (Phase 1)
                                             tableId={RESERVATIONS_TABLE_ID}
                                         />
                                     )}

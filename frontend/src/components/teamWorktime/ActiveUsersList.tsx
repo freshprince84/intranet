@@ -155,7 +155,6 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   // Neue State-Variablen für erweiterte Filterbedingungen
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-  const [filterSortDirections, setFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
   
   // Filter State Management (Controlled Mode)
   const [activeFilterName, setActiveFilterName] = useState<string>(t('teamWorktime.filters.active'));
@@ -570,33 +569,6 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         }
       }
       
-      // 2. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
-      if (filterSortDirections.length > 0 && filterConditions.length > 0) {
-        // Sortiere nach Priorität (1, 2, 3, ...)
-        const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
-        
-        for (const sortDir of sortedByPriority) {
-          const valueA = getSortValue(a, sortDir.column);
-          const valueB = getSortValue(b, sortDir.column);
-          
-          let comparison = 0;
-          if (typeof valueA === 'number' && typeof valueB === 'number') {
-            comparison = valueA - valueB;
-          } else {
-            comparison = String(valueA).localeCompare(String(valueB));
-          }
-          
-          if (sortDir.direction === 'desc') {
-            comparison = -comparison;
-          }
-          
-          if (comparison !== 0) {
-            return comparison;
-          }
-        }
-        return 0;
-      }
-      
       // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
       if (viewMode === 'cards' && filterConditions.length === 0) {
         const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
@@ -646,7 +618,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     });
     
     return filtered;
-  }, [allWorktimes, activeUsers, searchTerm, sortConfig, selectedDate, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+  }, [allWorktimes, activeUsers, searchTerm, sortConfig, selectedDate, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
 
   // Render-Methode für Spaltenheader
   const renderSortableHeader = (columnId: string, label: string) => {
@@ -1094,8 +1066,6 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
           onReset={resetFilterConditions}
           savedConditions={filterConditions}
           savedOperators={filterLogicalOperators}
-          savedSortDirections={filterSortDirections}
-          onSortDirectionsChange={setFilterSortDirections}
           tableId={WORKCENTER_TABLE_ID}
         />
         </div>
