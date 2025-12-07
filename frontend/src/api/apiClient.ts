@@ -1,9 +1,10 @@
 import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { API_URL } from '../config/api.ts';
+import { logger } from '../utils/logger.ts';
 
 // Debugausgaben für die API-Konfiguration
-console.log('DEBUGAUSGABE API-Client: API_URL ist:', API_URL);
+logger.log('DEBUGAUSGABE API-Client: API_URL ist:', API_URL);
 
 // Verwende die konfigurierte Instanz aus config/axios.ts
 const apiClient = axiosInstance;
@@ -13,18 +14,18 @@ apiClient.interceptors.request.use(
   (config) => {
     // Vollständige URL ausgeben
     const fullUrl = `${config.baseURL}${config.url}`;
-    console.log('DEBUGAUSGABE API-Client: Vollständige Request URL:', fullUrl);
-    console.log('DEBUGAUSGABE API-Client: Request-Methode:', config.method?.toUpperCase());
-    console.log('DEBUGAUSGABE API-Client: Request-Headers:', config.headers);
-    console.log('DEBUGAUSGABE API-Client: Request-Daten:', config.data);
+    logger.log('DEBUGAUSGABE API-Client: Vollständige Request URL:', fullUrl);
+    logger.log('DEBUGAUSGABE API-Client: Request-Methode:', config.method?.toUpperCase());
+    logger.log('DEBUGAUSGABE API-Client: Request-Headers:', config.headers);
+    logger.log('DEBUGAUSGABE API-Client: Request-Daten:', config.data);
     
     const token = localStorage.getItem('token');
-    console.log('DEBUGAUSGABE API-Client: Token vorhanden:', !!token);
+    logger.log('DEBUGAUSGABE API-Client: Token vorhanden:', !!token);
     
     return config;
   },
   (error) => {
-    console.error('DEBUGAUSGABE API-Client: Fehler im Request Interceptor:', error);
+    logger.error('DEBUGAUSGABE API-Client: Fehler im Request Interceptor:', error);
     return Promise.reject(error);
   }
 );
@@ -32,17 +33,17 @@ apiClient.interceptors.request.use(
 // Response Interceptor für Debugging (zusätzlich zu dem in axios.ts)
 apiClient.interceptors.response.use(
   (response) => {
-    console.log('DEBUGAUSGABE API-Client: Response erhalten:', response.status, response.config.url);
+    logger.log('DEBUGAUSGABE API-Client: Response erhalten:', response.status, response.config.url);
     return response;
   },
   (error) => {
-    console.error('DEBUGAUSGABE API-Client: Fehler im Response Interceptor:', error.message);
+    logger.error('DEBUGAUSGABE API-Client: Fehler im Response Interceptor:', error.message);
     
     if (error.response) {
-      console.error('DEBUGAUSGABE API-Client: Response Status:', error.response.status);
-      console.error('DEBUGAUSGABE API-Client: Response Daten:', error.response.data);
+      logger.error('DEBUGAUSGABE API-Client: Response Status:', error.response.status);
+      logger.error('DEBUGAUSGABE API-Client: Response Daten:', error.response.data);
     } else {
-      console.error('DEBUGAUSGABE API-Client: Keine Response erhalten');
+      logger.error('DEBUGAUSGABE API-Client: Keine Response erhalten');
     }
     
     return Promise.reject(error);
@@ -54,19 +55,19 @@ export const userApi = {
   getAll: () => apiClient.get('/users'),
   getById: (id: number) => apiClient.get(`/users/${id}`),
   create: (data: any) => {
-    console.log('DEBUGAUSGABE API-Client: userApi.create wird aufgerufen mit Daten:', data);
+    logger.log('DEBUGAUSGABE API-Client: userApi.create wird aufgerufen mit Daten:', data);
     try {
       return apiClient.post('/users', data)
         .then(response => {
-          console.log('DEBUGAUSGABE API-Client: userApi.create Antwort:', response);
+          logger.log('DEBUGAUSGABE API-Client: userApi.create Antwort:', response);
           return response;
         })
         .catch(error => {
-          console.error('DEBUGAUSGABE API-Client: userApi.create Fehler:', error.response || error);
+          logger.error('DEBUGAUSGABE API-Client: userApi.create Fehler:', error.response || error);
           throw error;
         });
     } catch (initError) {
-      console.error('DEBUGAUSGABE API-Client: Fehler vor dem API-Aufruf in userApi.create:', initError);
+      logger.error('DEBUGAUSGABE API-Client: Fehler vor dem API-Aufruf in userApi.create:', initError);
       throw initError;
     }
   },
@@ -78,66 +79,66 @@ export const userApi = {
 // Role API
 export const roleApi = {
   getAll: (branchId?: number) => {
-    console.log('DEBUGAUSGABE API-Client: roleApi.getAll wird aufgerufen', branchId ? `mit branchId=${branchId}` : '');
+    logger.log('DEBUGAUSGABE API-Client: roleApi.getAll wird aufgerufen', branchId ? `mit branchId=${branchId}` : '');
     const url = branchId ? `/roles?branchId=${branchId}` : '/roles';
     return apiClient.get(url)
       .then(response => {
-        console.log('DEBUGAUSGABE API-Client: roleApi.getAll erfolgreich:', response.data.length, 'Rollen geladen');
+        logger.log('DEBUGAUSGABE API-Client: roleApi.getAll erfolgreich:', response.data.length, 'Rollen geladen');
         return response;
       })
       .catch(error => {
-        console.error('DEBUGAUSGABE API-Client: roleApi.getAll Fehler:', error.message);
+        logger.error('DEBUGAUSGABE API-Client: roleApi.getAll Fehler:', error.message);
         throw error;
       });
   },
   getById: (id: number) => {
-    console.log(`DEBUGAUSGABE API-Client: roleApi.getById(${id}) wird aufgerufen`);
+    logger.log(`DEBUGAUSGABE API-Client: roleApi.getById(${id}) wird aufgerufen`);
     return apiClient.get(`/roles/${id}`);
   },
   create: (data: any) => {
-    console.log('DEBUGAUSGABE API-Client: roleApi.create wird aufgerufen mit Daten:', data);
+    logger.log('DEBUGAUSGABE API-Client: roleApi.create wird aufgerufen mit Daten:', data);
     try {
       return apiClient.post('/roles', data)
         .then(response => {
-          console.log('DEBUGAUSGABE API-Client: roleApi.create Antwort:', response);
+          logger.log('DEBUGAUSGABE API-Client: roleApi.create Antwort:', response);
           return response;
         })
         .catch(error => {
-          console.error('DEBUGAUSGABE API-Client: roleApi.create Fehler:', error.response || error);
+          logger.error('DEBUGAUSGABE API-Client: roleApi.create Fehler:', error.response || error);
           throw error;
         });
     } catch (initError) {
-      console.error('DEBUGAUSGABE API-Client: Fehler vor dem API-Aufruf in roleApi.create:', initError);
+      logger.error('DEBUGAUSGABE API-Client: Fehler vor dem API-Aufruf in roleApi.create:', initError);
       throw initError;
     }
   },
   update: (id: number, data: any) => {
-    console.log(`DEBUGAUSGABE API-Client: roleApi.update für ID ${id} wird aufgerufen mit Daten:`, data);
+    logger.log(`DEBUGAUSGABE API-Client: roleApi.update für ID ${id} wird aufgerufen mit Daten:`, data);
     try {
       return apiClient.put(`/roles/${id}`, data)
         .then(response => {
-          console.log('DEBUGAUSGABE API-Client: roleApi.update Antwort:', response);
+          logger.log('DEBUGAUSGABE API-Client: roleApi.update Antwort:', response);
           return response;
         })
         .catch(error => {
-          console.error('DEBUGAUSGABE API-Client: roleApi.update Fehler:', error.response || error);
+          logger.error('DEBUGAUSGABE API-Client: roleApi.update Fehler:', error.response || error);
           throw error;
         });
     } catch (initError) {
-      console.error('DEBUGAUSGABE API-Client: Fehler vor dem API-Aufruf in roleApi.update:', initError);
+      logger.error('DEBUGAUSGABE API-Client: Fehler vor dem API-Aufruf in roleApi.update:', initError);
       throw initError;
     }
   },
   delete: (id: number) => {
-    console.log(`DEBUGAUSGABE API-Client: roleApi.delete(${id}) wird aufgerufen`);
+    logger.log(`DEBUGAUSGABE API-Client: roleApi.delete(${id}) wird aufgerufen`);
     return apiClient.delete(`/roles/${id}`);
   },
   getRoleBranches: (id: number) => {
-    console.log(`DEBUGAUSGABE API-Client: roleApi.getRoleBranches(${id}) wird aufgerufen`);
+    logger.log(`DEBUGAUSGABE API-Client: roleApi.getRoleBranches(${id}) wird aufgerufen`);
     return apiClient.get(`/roles/${id}/branches`);
   },
   updateRoleBranches: (id: number, data: { allBranches?: boolean; branchIds?: number[] }) => {
-    console.log(`DEBUGAUSGABE API-Client: roleApi.updateRoleBranches(${id}) wird aufgerufen mit:`, data);
+    logger.log(`DEBUGAUSGABE API-Client: roleApi.updateRoleBranches(${id}) wird aufgerufen mit:`, data);
     return apiClient.put(`/roles/${id}/branches`, data);
   }
 };

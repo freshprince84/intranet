@@ -61,7 +61,7 @@ export class ReservationNotificationService {
    * Sendet Check-in-Einladungen an Gäste mit späten Ankünften
    * 
    * Wird täglich um 20:00 Uhr ausgeführt
-   * Sendet an Gäste mit Ankunft am nächsten Tag nach 22:00 Uhr
+   * Sendet an Gäste mit Ankunft am nächsten Tag nach 18:00 Uhr
    */
   static async sendLateCheckInInvitations(): Promise<void> {
     console.log('[ReservationNotification] Starte Versand von Check-in-Einladungen...');
@@ -86,7 +86,7 @@ export class ReservationNotificationService {
             continue;
           }
 
-          const lateCheckInThreshold = lobbyPmsSettings.lateCheckInThreshold || '22:00';
+          const lateCheckInThreshold = lobbyPmsSettings.lateCheckInThreshold || '18:00';
           const notificationChannels = lobbyPmsSettings.notificationChannels || ['email'];
 
           console.log(`[ReservationNotification] Verarbeite Organisation ${organization.id}...`);
@@ -354,7 +354,7 @@ export class ReservationNotificationService {
 
 We are pleased to welcome you to La Familia Hostel!
 
-As you will arrive after 22:00, you can complete the online check-in now:
+As you will arrive after 18:00, you can complete the online check-in now:
 ${checkInLink}
 
 Please make the payment in advance:
@@ -369,7 +369,7 @@ We look forward to seeing you tomorrow!`;
 
 ¡Nos complace darte la bienvenida a La Familia Hostel!
 
-Como llegarás después de las 22:00, puedes realizar el check-in en línea ahora:
+Como llegarás después de las 18:00, puedes realizar el check-in en línea ahora:
 ${checkInLink}
 
 Por favor, realiza el pago por adelantado:
@@ -512,7 +512,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
 
 We are pleased to welcome you to La Familia Hostel!
 
-As you will arrive after 22:00, you can complete the online check-in now:
+As you will arrive after 18:00, you can complete the online check-in now:
 ${checkInLink}
 
 Please make the payment in advance:
@@ -527,7 +527,7 @@ We look forward to seeing you tomorrow!`;
 
 ¡Nos complace darte la bienvenida a La Familia Hostel!
 
-Como llegarás después de las 22:00, puedes realizar el check-in en línea ahora:
+Como llegarás después de las 18:00, puedes realizar el check-in en línea ahora:
 ${checkInLink}
 
 Por favor, realiza el pago por adelantado:

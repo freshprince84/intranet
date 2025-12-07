@@ -163,13 +163,39 @@ export class WhatsAppAiService {
 
     try {
       // Lade Message History (letzte 10 Nachrichten) falls conversationId vorhanden
+      // WICHTIG: Prüfe zuerst, ob bereits eine Reservierung für diese Conversation existiert
       let messageHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
       if (conversationId) {
         try {
+          // Prüfe, ob bereits eine Reservierung für diese Conversation existiert
+          const existingReservation = await prisma.whatsAppMessage.findFirst({
+            where: {
+              conversationId: conversationId,
+              branchId: branchId,
+              reservationId: { not: null }
+            },
+            select: {
+              reservationId: true,
+              sentAt: true
+            },
+            orderBy: {
+              sentAt: 'desc'
+            }
+          });
+
+          if (existingReservation) {
+            console.log(`[WhatsApp AI Service] ⚠️ Bereits existierende Reservierung ${existingReservation.reservationId} für Conversation ${conversationId} gefunden. Filtere alte Buchungs-Nachrichten aus History.`);
+          }
+
+          // Prüfe Altersgrenze: Nur Nachrichten der letzten 24 Stunden
+          const maxAge = new Date();
+          maxAge.setHours(maxAge.getHours() - 24);
+
           const recentMessages = await prisma.whatsAppMessage.findMany({
             where: {
               conversationId: conversationId,
-              branchId: branchId
+              branchId: branchId,
+              sentAt: { gte: maxAge } // Nur Nachrichten der letzten 24 Stunden
             },
             orderBy: {
               sentAt: 'desc'
@@ -178,20 +204,28 @@ export class WhatsAppAiService {
             select: {
               direction: true,
               message: true,
-              sentAt: true
+              sentAt: true,
+              reservationId: true
             }
           });
           
           // Konvertiere zu OpenAI-Format (neueste zuerst, dann umdrehen für chronologische Reihenfolge)
+          // WICHTIG: Filtere Nachrichten, die zu einer bereits existierenden Reservierung gehören
           messageHistory = recentMessages
             .reverse() // Älteste zuerst
+            .filter(msg => {
+              // Wenn bereits eine Reservierung existiert, filtere Nachrichten mit reservationId
+              if (existingReservation && msg.reservationId) {
+                return false; // Filtere Nachrichten, die zu einer Reservierung gehören
+              }
+              return msg.content && msg.content.trim().length > 0; // Filtere leere Nachrichten
+            })
             .map(msg => ({
               role: msg.direction === 'incoming' ? 'user' as const : 'assistant' as const,
               content: msg.message
-            }))
-            .filter(msg => msg.content && msg.content.trim().length > 0); // Filtere leere Nachrichten
+            }));
           
-          console.log(`[WhatsApp AI Service] Message History geladen: ${messageHistory.length} Nachrichten`);
+          console.log(`[WhatsApp AI Service] Message History geladen: ${messageHistory.length} Nachrichten (gefiltert: ${recentMessages.length - messageHistory.length} alte/Reservierungs-Nachrichten entfernt)`);
         } catch (historyError) {
           console.error('[WhatsApp AI Service] Fehler beim Laden der Message History:', historyError);
           // Weiter ohne History
@@ -686,7 +720,7 @@ export class WhatsAppAiService {
         type: 'function',
         function: {
           name: 'create_room_reservation',
-          description: 'Erstellt oder bestätigt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! WICHTIG: Diese Function darf NUR aufgerufen werden, wenn ALLE erforderlichen Daten vorhanden sind: checkInDate, checkOutDate, guestName (vollständiger Name), roomType, categoryId. WICHTIG: Wenn Daten fehlen (z.B. kein Name), rufe NICHT diese Function auf, sondern create_potential_reservation() und FRAGE dann nach fehlenden Daten! WICHTIG: Wenn bereits eine "potential" Reservation existiert, wird diese bestätigt (Status "potential" → "confirmed") und LobbyPMS-Buchung erstellt. Wenn keine "potential" Reservation existiert, wird eine neue Reservation erstellt. WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende "today" als checkInDate. Wenn User Zimmer-Namen sagt (z.B. "la tia artista"), finde categoryId aus vorheriger check_room_availability Response. Benötigt: checkInDate, checkOutDate, guestName (ERFORDERLICH - vollständiger Name), roomType (compartida/privada), categoryId (optional, wird automatisch gefunden). Optional: guestPhone (optional, WhatsApp-Nummer als Fallback), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
+          description: 'Erstellt oder bestätigt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! WICHTIG: Diese Function darf NUR aufgerufen werden, wenn ALLE erforderlichen Daten vorhanden sind: checkInDate, checkOutDate, guestName (vollständiger Name), roomType, categoryId. WICHTIG: Wenn Daten fehlen (z.B. kein Name), rufe NICHT diese Function auf, sondern create_potential_reservation() und FRAGE dann nach fehlenden Daten! WICHTIG: Wenn bereits eine "potential" Reservation existiert, wird diese bestätigt (Status "potential" → "confirmed") und LobbyPMS-Buchung erstellt. Wenn keine "potential" Reservation existiert, wird eine neue Reservation erstellt. WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende "today" als checkInDate. Wenn User Zimmer-Namen sagt (z.B. "la tia artista"), finde categoryId aus vorheriger check_room_availability Response. Benötigt: checkInDate, checkOutDate, guestName (ERFORDERLICH - vollständiger Name), roomType (compartida/privada), categoryId (optional, wird automatisch gefunden). Optional: guestPhone (optional, WhatsApp-Nummer als Fallback), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link (falls Email vorhanden). Setzt Payment-Deadline auf 1 Stunde. WICHTIG: Nach dem Aufruf dieser Function MUSS DU eine vollständige Nachricht generieren mit paymentLink, checkInLink (falls nicht null), Hinweis für 18:00 (NICHT 22:00!) und PIN-Code-Hinweis. Die Function sendet KEINE Nachricht automatisch - DU musst die Nachricht generieren!',
           parameters: {
             type: 'object',
             properties: {
@@ -1029,7 +1063,6 @@ export class WhatsAppAiService {
     prompt += '  WICHTIG: Wenn User "para mañana" + "1 noche" sagt, dann: checkInDate="tomorrow", checkOutDate="day after tomorrow"!\n';
     prompt += '  WICHTIG: Wenn User "04/12" oder "04.12" sagt, erkenne dies als Datum (04. Dezember, aktuelles Jahr)!\n';
     prompt += '  WICHTIG: Wenn User nach Buchung Daten gibt (z.B. "01.dez bis 02.dez") → rufe create_room_reservation auf, NICHT check_room_availability!\n';
-    prompt += '  WICHTIG: Generiert automatisch Payment Link und Check-in-Link, setzt Zahlungsfrist (1 Stunde)\n';
     prompt += '  WICHTIG: Alle Reservierungen sind Branch-spezifisch (Branch wird automatisch aus Context verwendet)\n';
     prompt += '  WICHTIG: Reservierungsablauf - KRITISCH BEACHTEN:\n';
     prompt += '    1. Wenn User erste Buchungsinformationen gibt (Check-in, Check-out, Zimmer) ABER noch nicht ALLE Daten hat (z.B. kein Name, keine categoryId) → rufe create_potential_reservation() auf\n';
@@ -1039,9 +1072,20 @@ export class WhatsAppAiService {
     prompt += '    5. Wenn categoryId fehlt → rufe create_potential_reservation() auf und FRAGE nach dem Zimmer!\n';
     prompt += '  WICHTIG: create_potential_reservation() erstellt sofort eine Reservation mit Status "potential" (ohne LobbyPMS-Buchung, guestName optional)\n';
     prompt += '  WICHTIG: create_room_reservation() ändert Status von "potential" auf "confirmed" (keine neue Reservation) und erstellt LobbyPMS-Buchung (guestName ERFORDERLICH!)\n';
-    prompt += '  WICHTIG: Payment-Link wird mit Betrag + 5% erstellt und versendet (automatisch in boldPaymentService)\n';
+    prompt += '  WICHTIG: Payment-Link wird mit Betrag + 5% erstellt (automatisch in boldPaymentService)\n';
     prompt += '  WICHTIG: Wenn User direkt ALLE Daten gibt (Check-in, Check-out, Zimmer, Name) → rufe SOFORT create_room_reservation() auf (keine "potential" Reservation nötig)\n';
     prompt += '  WICHTIG: NIEMALS create_room_reservation() aufrufen, wenn guestName fehlt! Immer erst create_potential_reservation() und dann nachfragen!\n';
+    prompt += '  WICHTIG: Nach create_room_reservation() - KRITISCH BEACHTEN:\n';
+    prompt += '    1. Das Return-Objekt enthält: paymentLink, checkInLink (kann null sein), checkInDate, checkOutDate, guestName, amount, currency\n';
+    prompt += '    2. DU MUSST eine vollständige Nachricht generieren mit:\n';
+    prompt += '       - Reservierungsbestätigung (Gast-Name, Zimmer, Check-in/Check-out Datum)\n';
+    prompt += '       - Payment-Link (immer vorhanden, aus paymentLink)\n';
+    prompt += '       - Check-in-Link (nur wenn checkInLink nicht null ist!)\n';
+    prompt += '       - Hinweis: "Falls Ankunft nach 18:00 (NICHT 22:00!), bitte Check-in-Link vor Ankunft erledigen, damit PIN-Code zugesendet wird"\n';
+    prompt += '       - Zahlungsfrist: "Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Reservierung automatisch storniert"\n';
+    prompt += '    3. Verwende IMMER 18:00 (NICHT 22:00!) für den Ankunfts-Hinweis!\n';
+    prompt += '    4. Wenn checkInLink null ist, erwähne den Check-in-Link NICHT in der Nachricht!\n';
+    prompt += '    5. Die Nachricht muss in der erkannten Sprache sein (Spanisch/Deutsch/Englisch)\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "reservame 1 cama en el primo aventurero für heute, 1 nacht" → create_room_reservation({ checkInDate: "today", checkOutDate: "tomorrow", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34280 })\n';
     prompt += '    - "ich möchte das Zimmer 2 buchen vom 1.12. bis 3.12." → create_room_reservation({ checkInDate: "2025-12-01", checkOutDate: "2025-12-04", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34281 })\n';
