@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from '../config/api.ts';
 import useMessage from '../hooks/useMessage.ts';
 import { useFilterContext } from '../contexts/FilterContext.tsx';
 import { logger } from '../utils/logger.ts';
+import { useResizeObserver } from '../hooks/useResizeObserver.ts';
 
 interface SavedFilter {
   id: number;
@@ -106,7 +107,6 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const [containerWidth, setContainerWidth] = useState(0);
   const [measuredTagWidths, setMeasuredTagWidths] = useState<Map<number, number>>(new Map());
   const [isMeasuring, setIsMeasuring] = useState(true); // Initial alle Tags rendern für Messung
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Dropdown State für überlaufende Tags
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -638,29 +638,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }
   }, [sortedFilters, averageTagWidth, containerWidth, isMeasuring, measuredTagWidths, getAvailableWidth]);
 
-  // ✅ MEMORY FIX: useRef für handleResize (verhindert Re-Erstellung von ResizeObserver)
-  const handleResizeRef = useRef<() => void>();
-
-  // ✅ MEMORY FIX: Aktualisiere Ref wenn calculateVisibleTags sich ändert
-  useEffect(() => {
-    handleResizeRef.current = () => {
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
-      resizeTimeoutRef.current = setTimeout(() => {
-        calculateVisibleTags();
-      }, 100);
-    };
-  }, [calculateVisibleTags]);
-
-  // ✅ MEMORY FIX: ResizeObserver nur EINMAL erstellen (keine Dependencies!)
+  // ✅ PHASE 3: Prüfe ob Parent negative Margins hat und setze grandParentRef
   useEffect(() => {
     if (!containerRef.current) return;
 
     const container = containerRef.current;
     const parentElement = container.parentElement;
     
-    // Prüfe ob Parent negative Margins hat und setze grandParentRef
     if (parentElement) {
       const parentStyles = window.getComputedStyle(parentElement);
       const parentMarginLeft = parseFloat(parentStyles.marginLeft) || 0;
@@ -674,32 +658,20 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       }
     }
 
-    // ✅ MEMORY FIX: Verwende Ref statt direkter Funktion
-    const resizeObserver = new ResizeObserver(() => {
-      handleResizeRef.current?.();
-    });
-    resizeObserver.observe(container);
-    
-    // ✅ FIX: Beobachte auch den Großeltern-Container, wenn vorhanden
-    if (grandParentRef.current) {
-      resizeObserver.observe(grandParentRef.current);
-    }
-    
-    // ✅ MEMORY FIX: Window-Resize Event-Listener mit Ref
-    const handleWindowResize = () => {
-      handleResizeRef.current?.();
-    };
-    window.addEventListener('resize', handleWindowResize);
-
     return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', handleWindowResize);
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
       grandParentRef.current = null; // Cleanup
     };
-  }, []); // ← KEINE Dependencies! Observer wird nur EINMAL erstellt
+  }, []);
+
+  // ✅ PHASE 3: Verwende Custom Hook für ResizeObserver (Memory-Leak Prevention)
+  useResizeObserver(
+    containerRef,
+    calculateVisibleTags,
+    {
+      debounceMs: 100, // 100ms Debounce für Filter-Tags (schneller als Client-Tags)
+      additionalElementRef: grandParentRef, // Beobachte auch grandParent für negative Margins
+    }
+  );
 
   // Messung der tatsächlichen Tag-Breiten nach Render
   useLayoutEffect(() => {

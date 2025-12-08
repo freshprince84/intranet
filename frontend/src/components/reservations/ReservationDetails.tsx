@@ -247,14 +247,14 @@ const ReservationDetails: React.FC = () => {
                 </div>
               </div>
 
-              {reservation.roomNumber && (
+              {reservation.roomDescription && (
                 <div className="flex items-center">
                   <HomeIcon className="h-5 w-5 mr-3 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{t('reservations.room', 'Zimmer')}</p>
                     <p className="text-gray-900 dark:text-white">
-                      {reservation.roomNumber}
-                      {reservation.roomDescription && ` - ${reservation.roomDescription}`}
+                      {reservation.roomDescription}
+                      {reservation.roomNumber && ` (${reservation.roomNumber})`}
                     </p>
                   </div>
                 </div>

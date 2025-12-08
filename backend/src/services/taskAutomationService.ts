@@ -687,7 +687,28 @@ export class TaskAutomationService {
 
       // Erstelle Task
       // Titel: Zimmername (bei Dorms: "Zimmername (Bettnummer)", bei Privates: "Zimmername")
-      const taskTitle = reservation.roomNumber || `Reservation ${reservation.id}`;
+      const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
+      let taskTitle: string;
+      if (isDorm) {
+        // Dorm: "Zimmername (Bettnummer)"
+        const roomName = reservation.roomDescription?.trim() || '';
+        const bedNumber = reservation.roomNumber?.trim() || '';
+        taskTitle = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || `Reservation ${reservation.id}`);
+      } else {
+        // Private: "Zimmername"
+        taskTitle = reservation.roomDescription?.trim() || `Reservation ${reservation.id}`;
+      }
+      
+      // Zimmer-Anzeige für Beschreibung
+      let roomDisplay: string;
+      if (isDorm) {
+        const roomName = reservation.roomDescription?.trim() || '';
+        const bedNumber = reservation.roomNumber?.trim() || '';
+        roomDisplay = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || 'Noch nicht zugewiesen');
+      } else {
+        roomDisplay = reservation.roomDescription?.trim() || 'Noch nicht zugewiesen';
+      }
+      
       const taskDescription = `
 Reservierungsdetails:
 - Gast: ${reservation.guestName}
@@ -695,7 +716,7 @@ Reservierungsdetails:
 - Telefon: ${reservation.guestPhone || 'N/A'}
 - Check-in: ${reservation.checkInDate.toLocaleDateString('de-DE')}
 - Check-out: ${reservation.checkOutDate.toLocaleDateString('de-DE')}
-- Zimmer: ${reservation.roomNumber || 'Noch nicht zugewiesen'}
+- Zimmer: ${roomDisplay}
 - Status: ${reservation.status}
 - Zahlungsstatus: ${reservation.paymentStatus}
 ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleTimeString('de-DE')}` : ''}

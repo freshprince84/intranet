@@ -92,8 +92,10 @@ Acceso:
     if (customMessage) {
       // Verwende bestehenden Passcode oder Platzhalter
       const passcode = reservation.doorPin || reservation.ttlLockPassword || '[Passcode wird generiert]';
-      const roomNumber = reservation.roomNumber || '[Zimmernummer]';
-      const roomDescription = reservation.roomDescription || '[Zimmerbeschreibung]';
+      // roomNumber: Bei Dorms = Bettnummer, bei Privates = null
+      // roomDescription: Immer Zimmername
+      const roomNumber = reservation.roomNumber || '[Bettnummer]';
+      const roomDescription = reservation.roomDescription || '[Zimmername]';
       const doorAppName = reservation.doorAppName || 'TTLock';
       
       // Ersetze Variablen in der Nachricht

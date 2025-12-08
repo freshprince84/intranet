@@ -2690,10 +2690,10 @@ const Worktracker: React.FC = () => {
                                     ) : (
                                         <CardGrid>
                                             {filteredAndSortedReservations.map(reservation => {
-                                                // ✅ FIX: Hilfsfunktion: Erkenne Dorm vs. Private und formatiere Zimmername-Anzeige
+                                                // Hilfsfunktion: Erkenne Dorm vs. Private und formatiere Zimmername-Anzeige
                                                 const getRoomDisplayText = (reservation: Reservation): string | null => {
-                                                    const isDorm = reservation.roomNumber?.toLowerCase().startsWith('cama') || 
-                                                                   (reservation.roomDescription && reservation.roomDescription.trim() !== '');
+                                                    // Vereinfachte Erkennung: roomNumber gefüllt = Dorm, leer = Private
+                                                    const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
                                                     
                                                     if (isDorm) {
                                                         // Dorm: Zeige "Zimmername (Bettnummer)"
@@ -2707,8 +2707,8 @@ const Worktracker: React.FC = () => {
                                                             return bedNumber;
                                                         }
                                                     } else {
-                                                        // Private: Zeige nur Zimmername
-                                                        return reservation.roomNumber?.trim() || null;
+                                                        // Private: Zeige nur Zimmername (aus roomDescription)
+                                                        return reservation.roomDescription?.trim() || null;
                                                     }
                                                     return null;
                                                 };
@@ -3102,10 +3102,10 @@ const Worktracker: React.FC = () => {
                                                                                 </td>
                                                                             );
                                                                         case 'roomNumber':
-                                                                            // ✅ FIX: Tabellen-Anzeige: Dorms zeigen "Zimmername (Bettnummer)", Privates zeigen nur "Zimmername"
+                                                                            // Tabellen-Anzeige: Dorms zeigen "Zimmername (Bettnummer)", Privates zeigen nur "Zimmername"
                                                                             const getRoomDisplayTextForTable = (reservation: Reservation): string => {
-                                                                                const isDorm = reservation.roomNumber?.toLowerCase().startsWith('cama') || 
-                                                                                               (reservation.roomDescription && reservation.roomDescription.trim() !== '');
+                                                                                // Vereinfachte Erkennung: roomNumber gefüllt = Dorm, leer = Private
+                                                                                const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
                                                                                 
                                                                                 if (isDorm) {
                                                                                     // Dorm: Zeige "Zimmername (Bettnummer)"
@@ -3119,8 +3119,8 @@ const Worktracker: React.FC = () => {
                                                                                         return bedNumber;
                                                                                     }
                                                                                 } else {
-                                                                                    // Private: Zeige nur Zimmername
-                                                                                    return reservation.roomNumber?.trim() || '-';
+                                                                                    // Private: Zeige nur Zimmername (aus roomDescription)
+                                                                                    return reservation.roomDescription?.trim() || '-';
                                                                                 }
                                                                                 return '-';
                                                                             };
@@ -4013,10 +4013,10 @@ const Worktracker: React.FC = () => {
                                     ) : (
                                         <CardGrid>
                                             {filteredAndSortedReservations.map(reservation => {
-                                                // ✅ FIX: Hilfsfunktion: Erkenne Dorm vs. Private und formatiere Zimmername-Anzeige
+                                                // Hilfsfunktion: Erkenne Dorm vs. Private und formatiere Zimmername-Anzeige
                                                 const getRoomDisplayText = (reservation: Reservation): string | null => {
-                                                    const isDorm = reservation.roomNumber?.toLowerCase().startsWith('cama') || 
-                                                                   (reservation.roomDescription && reservation.roomDescription.trim() !== '');
+                                                    // Vereinfachte Erkennung: roomNumber gefüllt = Dorm, leer = Private
+                                                    const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
                                                     
                                                     if (isDorm) {
                                                         // Dorm: Zeige "Zimmername (Bettnummer)"
@@ -4030,8 +4030,8 @@ const Worktracker: React.FC = () => {
                                                             return bedNumber;
                                                         }
                                                     } else {
-                                                        // Private: Zeige nur Zimmername
-                                                        return reservation.roomNumber?.trim() || null;
+                                                        // Private: Zeige nur Zimmername (aus roomDescription)
+                                                        return reservation.roomDescription?.trim() || null;
                                                     }
                                                     return null;
                                                 };
@@ -4413,10 +4413,10 @@ const Worktracker: React.FC = () => {
                                                                                 </td>
                                                                             );
                                                                         case 'roomNumber':
-                                                                            // ✅ FIX: Tabellen-Anzeige: Dorms zeigen "Zimmername (Bettnummer)", Privates zeigen nur "Zimmername"
+                                                                            // Tabellen-Anzeige: Dorms zeigen "Zimmername (Bettnummer)", Privates zeigen nur "Zimmername"
                                                                             const getRoomDisplayTextForTable = (reservation: Reservation): string => {
-                                                                                const isDorm = reservation.roomNumber?.toLowerCase().startsWith('cama') || 
-                                                                                               (reservation.roomDescription && reservation.roomDescription.trim() !== '');
+                                                                                // Vereinfachte Erkennung: roomNumber gefüllt = Dorm, leer = Private
+                                                                                const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
                                                                                 
                                                                                 if (isDorm) {
                                                                                     // Dorm: Zeige "Zimmername (Bettnummer)"
@@ -4430,8 +4430,8 @@ const Worktracker: React.FC = () => {
                                                                                         return bedNumber;
                                                                                     }
                                                                                 } else {
-                                                                                    // Private: Zeige nur Zimmername
-                                                                                    return reservation.roomNumber?.trim() || '-';
+                                                                                    // Private: Zeige nur Zimmername (aus roomDescription)
+                                                                                    return reservation.roomDescription?.trim() || '-';
                                                                                 }
                                                                                 return '-';
                                                                             };

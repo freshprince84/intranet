@@ -257,3 +257,5 @@ Diese Anleitung erklärt, wie du dem WhatsApp-Bot ein Profilbild und einen Namen
 **Wichtig:** Die Konfiguration erfolgt **nicht im Code**, sondern über die **Meta Business Suite**!
 
 
+
+
