@@ -1133,38 +1133,6 @@ const Requests: React.FC = () => {
                     toggleColumnVisibility(columnId);
                   }
                 }}
-                onMoveColumn={viewMode === 'cards' 
-                  ? (dragIndex: number, hoverIndex: number) => {
-                      // Card-Metadaten-Reihenfolge ändern = Tabellen-Spalten-Reihenfolge ändern
-                      const newCardOrder = [...cardMetadataOrder];
-                      const movingCardMeta = newCardOrder[dragIndex];
-                      newCardOrder.splice(dragIndex, 1);
-                      newCardOrder.splice(hoverIndex, 0, movingCardMeta);
-                      
-                      // Konvertiere Card-Metadaten-Reihenfolge zurück zu Tabellen-Spalten-Reihenfolge
-                      // Finde die ursprüngliche Tabellen-Spalte für jedes Card-Metadatum
-                      const newTableOrder: string[] = [];
-                      const processedTableCols = new Set<string>();
-                      
-                      newCardOrder.forEach(cardMeta => {
-                        const tableCol = cardToTableMapping[cardMeta];
-                        if (tableCol && !processedTableCols.has(tableCol)) {
-                          newTableOrder.push(tableCol);
-                          processedTableCols.add(tableCol);
-                        }
-                      });
-                      
-                      // Fehlende Tabellen-Spalten hinzufügen (actions, etc.)
-                      settings.columnOrder.forEach(tableCol => {
-                        if (!newTableOrder.includes(tableCol)) {
-                          newTableOrder.push(tableCol);
-                        }
-                      });
-                      
-                      updateColumnOrder(newTableOrder);
-                    }
-                  : handleMoveColumn}
-                onClose={() => {}}
                 buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                 modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                 mainSortConfig={sortConfig}

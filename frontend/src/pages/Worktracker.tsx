@@ -2249,7 +2249,6 @@ const Worktracker: React.FC = () => {
                                             mainSortConfig={activeTab === 'todos' ? tableSortConfig : undefined}
                                             onMainSortChange={activeTab === 'todos' ? handleMainSortChange : undefined}
                                             showMainSort={true}
-                                            onClose={() => {}}
                                         />
                                     </div>
                                 </div>
@@ -2746,6 +2745,7 @@ const Worktracker: React.FC = () => {
                                                 if (roomDisplayText) {
                                                     metadata.push({
                                                         icon: <HomeIcon className="h-4 w-4" />,
+                                                        label: t('reservations.room', 'Zimmer'),
                                                         value: roomDisplayText,
                                                         section: 'main-second'
                                                     });
@@ -3576,7 +3576,6 @@ const Worktracker: React.FC = () => {
                                             mainSortConfig={activeTab === 'reservations' ? reservationTableSortConfig : undefined}
                                             onMainSortChange={activeTab === 'reservations' ? handleMainSortChange : undefined}
                                             showMainSort={true}
-                                            onClose={() => {}}
                                         />
                                     </div>
                                 </div>
@@ -4069,6 +4068,7 @@ const Worktracker: React.FC = () => {
                                                 if (roomDisplayText) {
                                                     metadata.push({
                                                         icon: <HomeIcon className="h-4 w-4" />,
+                                                        label: t('reservations.room', 'Zimmer'),
                                                         value: roomDisplayText,
                                                         section: 'main-second'
                                                     });
