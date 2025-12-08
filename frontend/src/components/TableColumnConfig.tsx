@@ -54,13 +54,8 @@ const DraggableColumnItem: React.FC<DraggableItemProps> = ({
       className="flex items-center justify-between px-2.5 py-2 rounded-md transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-700"
     >
       <div className="flex items-center flex-1 min-w-0">
-        <span className="text-sm dark:text-gray-300 flex items-center gap-2">
-          {showMainSort && isMainSort && isVisible && (
-            <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
-              {t('tableColumn.mainSort')}
-            </span>
-          )}
-          <span>{label}</span>
+        <span className="text-sm dark:text-gray-300">
+          {label}
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -245,8 +240,8 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
               // Prüfe ob diese Spalte die Hauptsortierung ist
               const isMainSort = mainSortConfig?.key === column.id;
               const sortDirection = isMainSort ? mainSortConfig.direction : undefined;
-              // Sort-Button anzeigen: Wenn keine Hauptsortierung gesetzt ist → für alle Spalten, sonst nur für aktive
-              const showSortButton = showMainSort && isVisible && onMainSortChange && (mainSortConfig === undefined || isMainSort);
+              // Sort-Button für alle sichtbaren Spalten anzeigen
+              const showSortButton = showMainSort && isVisible && onMainSortChange;
               
               return (
                 <DraggableColumnItem

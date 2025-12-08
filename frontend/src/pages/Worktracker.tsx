@@ -2732,24 +2732,24 @@ const Worktracker: React.FC = () => {
                                                 // Metadaten für Reservation-Card
                                                 const metadata: MetadataItem[] = [];
                                                 
-                                                // Haupt-Metadaten: Check-in/Check-out (rechts oben, unverändert)
-                                                metadata.push({
-                                                    icon: <CalendarIcon className="h-4 w-4" />,
-                                                    label: t('reservations.checkInOut', 'Check-in/Check-out'),
-                                                    value: `${formatDate(reservation.checkInDate)} - ${formatDate(reservation.checkOutDate)}`,
-                                                    section: 'main'
-                                                });
-                                                
-                                                // ✅ FIX: Zweite Zeile: Zimmername (Dorms: "Zimmername (Bettnummer)", Privates: "Zimmername")
+                                                // Haupt-Metadaten: Zimmername VOR Check-in/Check-out (Dorms: "Zimmername (Bettnummer)", Privates: "Zimmername")
                                                 const roomDisplayText = getRoomDisplayText(reservation);
                                                 if (roomDisplayText) {
                                                     metadata.push({
                                                         icon: <HomeIcon className="h-4 w-4" />,
                                                         label: t('reservations.room', 'Zimmer'),
                                                         value: roomDisplayText,
-                                                        section: 'main-second'
+                                                        section: 'main'
                                                     });
                                                 }
+                                                
+                                                // Check-in/Check-out (rechts oben, nach Zimmer)
+                                                metadata.push({
+                                                    icon: <CalendarIcon className="h-4 w-4" />,
+                                                    label: t('reservations.checkInOut', 'Check-in/Check-out'),
+                                                    value: `${formatDate(reservation.checkInDate)} - ${formatDate(reservation.checkOutDate)}`,
+                                                    section: 'main'
+                                                });
                                                 
                                                 // Links: Telefon/Email unter Titel (gleiche Zeile wie Status)
                                                 if (reservation.guestEmail) {
@@ -4055,24 +4055,24 @@ const Worktracker: React.FC = () => {
                                                 // Metadaten für Reservation-Card
                                                 const metadata: MetadataItem[] = [];
                                                 
-                                                // Haupt-Metadaten: Check-in/Check-out (rechts oben, unverändert)
-                                                metadata.push({
-                                                    icon: <CalendarIcon className="h-4 w-4" />,
-                                                    label: t('reservations.checkInOut', 'Check-in/Check-out'),
-                                                    value: `${formatDate(reservation.checkInDate)} - ${formatDate(reservation.checkOutDate)}`,
-                                                    section: 'main'
-                                                });
-                                                
-                                                // ✅ FIX: Zweite Zeile: Zimmername (Dorms: "Zimmername (Bettnummer)", Privates: "Zimmername")
+                                                // Haupt-Metadaten: Zimmername VOR Check-in/Check-out (Dorms: "Zimmername (Bettnummer)", Privates: "Zimmername")
                                                 const roomDisplayText = getRoomDisplayText(reservation);
                                                 if (roomDisplayText) {
                                                     metadata.push({
                                                         icon: <HomeIcon className="h-4 w-4" />,
                                                         label: t('reservations.room', 'Zimmer'),
                                                         value: roomDisplayText,
-                                                        section: 'main-second'
+                                                        section: 'main'
                                                     });
                                                 }
+                                                
+                                                // Check-in/Check-out (rechts oben, nach Zimmer)
+                                                metadata.push({
+                                                    icon: <CalendarIcon className="h-4 w-4" />,
+                                                    label: t('reservations.checkInOut', 'Check-in/Check-out'),
+                                                    value: `${formatDate(reservation.checkInDate)} - ${formatDate(reservation.checkOutDate)}`,
+                                                    section: 'main'
+                                                });
                                                 
                                                 // Links: Telefon/Email unter Titel (gleiche Zeile wie Status)
                                                 if (reservation.guestEmail) {
