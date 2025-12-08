@@ -257,6 +257,7 @@ const PasswordManagerTab: React.FC = () => {
       return evaluateDateCondition(new Date(item.updatedAt), cond);
     },
     'createdBy': (item: PasswordEntry, cond: FilterCondition) => {
+      // ✅ OPTIMIERUNG: Template-String nur wenn vorhanden
       const value = item.createdBy ? `${item.createdBy.firstName} ${item.createdBy.lastName}`.toLowerCase() : '';
       return evaluateTextCondition(value, cond);
     }

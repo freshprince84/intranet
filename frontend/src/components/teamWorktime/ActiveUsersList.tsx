@@ -442,21 +442,19 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
 
     // Globale Suchfunktion - zuerst einfache Suche anwenden
     let filtered = grouped.filter((group: WorktimeGroup) => {
-      const fullName = `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
-      const username = group.user.username.toLowerCase();
-      const branch = group.branch.name.toLowerCase();
+      if (!searchTerm) return true;
+      
       const searchTermLower = searchTerm.toLowerCase();
       
-      // Prüfe, ob der Suchbegriff in irgendeinem relevanten Feld vorhanden ist
-      if (searchTerm && !(
-        fullName.includes(searchTermLower) || 
-        username.includes(searchTermLower) || 
-        branch.includes(searchTermLower)
-      )) {
-        return false;
-      }
+      // ✅ OPTIMIERUNG: Frühes Beenden bei Match
+      if (group.user.username.toLowerCase().includes(searchTermLower)) return true;
+      if (group.branch.name.toLowerCase().includes(searchTermLower)) return true;
       
-      return true;
+      // ✅ OPTIMIERUNG: Template-String nur wenn nötig
+      const fullName = `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
+      if (fullName.includes(searchTermLower)) return true;
+      
+      return false; // Kein Match gefunden
     });
 
     // Wenn erweiterte Filterbedingungen definiert sind, wende diese an (außerhalb des filter-Callbacks)
@@ -464,6 +462,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       // Column-Evaluatoren für WorktimeGroups
       const columnEvaluators: any = {
         'name': (group: WorktimeGroup, cond: FilterCondition) => {
+          // ✅ OPTIMIERUNG: Template-String nur einmal erstellen
           const fullName = `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
           const value = (cond.value as string || '').toLowerCase();
           if (cond.operator === 'equals') return fullName === value;
@@ -550,7 +549,10 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         if (typeof valueA === 'number' && typeof valueB === 'number') {
           comparison = valueA - valueB;
         } else {
-          comparison = String(valueA).localeCompare(String(valueB));
+          // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+          const strA = typeof valueA === 'string' ? valueA : String(valueA);
+          const strB = typeof valueB === 'string' ? valueB : String(valueB);
+          comparison = strA.localeCompare(strB);
         }
         
         if (comparison !== 0) {
@@ -567,7 +569,10 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         if (typeof valueA === 'number' && typeof valueB === 'number') {
           comparison = valueA - valueB;
         } else {
-          comparison = String(valueA).localeCompare(String(valueB));
+          // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+          const strA = typeof valueA === 'string' ? valueA : String(valueA);
+          const strB = typeof valueB === 'string' ? valueB : String(valueB);
+          comparison = strA.localeCompare(strB);
         }
         
         if (comparison !== 0) {
@@ -584,7 +589,10 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         if (typeof valueA === 'number' && typeof valueB === 'number') {
           comparison = valueA - valueB;
         } else {
-          comparison = String(valueA).localeCompare(String(valueB));
+          // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+          const strA = typeof valueA === 'string' ? valueA : String(valueA);
+          const strB = typeof valueB === 'string' ? valueB : String(valueB);
+          comparison = strA.localeCompare(strB);
         }
         
         if (comparison !== 0) {

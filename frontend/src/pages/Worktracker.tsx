@@ -1313,15 +1313,27 @@ const Worktracker: React.FC = () => {
                 // ✅ NUR Globale Suchfunktion (searchTerm) wird client-seitig angewendet
                 if (searchTerm) {
                     const searchLower = searchTerm.toLowerCase();
-                    const matchesSearch = 
-                        task.title.toLowerCase().includes(searchLower) ||
-                        (task.description && task.description.toLowerCase().includes(searchLower)) ||
-                        (task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase().includes(searchLower) : false) ||
-                        (task.role ? task.role.name.toLowerCase().includes(searchLower) : false) ||
-                        (task.qualityControl && `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase().includes(searchLower)) ||
-                        task.branch.name.toLowerCase().includes(searchLower);
                     
-                    if (!matchesSearch) return false;
+                    // ✅ OPTIMIERUNG: Frühes Beenden bei Match - Prüfe zuerst die häufigsten Felder
+                    if (task.title.toLowerCase().includes(searchLower)) return true;
+                    if (task.branch.name.toLowerCase().includes(searchLower)) return true;
+                    
+                    // ✅ OPTIMIERUNG: Vermeide Template-Strings wenn nicht nötig - Prüfe einzelne Felder zuerst
+                    if (task.description && task.description.toLowerCase().includes(searchLower)) return true;
+                    if (task.role && task.role.name.toLowerCase().includes(searchLower)) return true;
+                    
+                    // ✅ OPTIMIERUNG: Template-String nur wenn nötig
+                    if (task.responsible) {
+                        const responsibleName = `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase();
+                        if (responsibleName.includes(searchLower)) return true;
+                    }
+                    
+                    if (task.qualityControl) {
+                        const qcName = `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase();
+                        if (qcName.includes(searchLower)) return true;
+                    }
+                    
+                    return false; // Kein Match gefunden
                 }
                 
                 // ❌ ENTFERNEN: Client-seitige Filterung wenn selectedFilterId oder filterConditions gesetzt sind
@@ -1345,8 +1357,13 @@ const Worktracker: React.FC = () => {
                     return getStatusPriority(task.status);
                 case 'responsible':
                 case 'responsibleAndQualityControl':
-                    return task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase() : (task.role ? `Rolle: ${task.role.name}`.toLowerCase() : '');
+                    // ✅ OPTIMIERUNG: Template-String nur einmal erstellen
+                    if (task.responsible) {
+                        return `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase();
+                    }
+                    return task.role ? `Rolle: ${task.role.name}`.toLowerCase() : '';
                 case 'qualityControl':
+                    // ✅ OPTIMIERUNG: Template-String nur wenn vorhanden
                     return task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase() : '';
                 case 'branch':
                     return task.branch.name.toLowerCase();
@@ -1373,7 +1390,10 @@ const Worktracker: React.FC = () => {
                 if (typeof valueA === 'number' && typeof valueB === 'number') {
                     comparison = valueA - valueB;
                 } else {
-                    comparison = String(valueA).localeCompare(String(valueB));
+                    // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+                    const strA = typeof valueA === 'string' ? valueA : String(valueA);
+                    const strB = typeof valueB === 'string' ? valueB : String(valueB);
+                    comparison = strA.localeCompare(strB);
                 }
                 
                 if (comparison !== 0) {
@@ -1396,7 +1416,8 @@ const Worktracker: React.FC = () => {
                 return aStatusPrio - bStatusPrio;
             }
             
-            return a.title.localeCompare(b.title);
+            // ✅ OPTIMIERUNG: toLowerCase() für konsistente Sortierung
+            return a.title.toLowerCase().localeCompare(b.title.toLowerCase());
         });
         
         if (process.env.NODE_ENV === 'development') {
@@ -1427,14 +1448,15 @@ const Worktracker: React.FC = () => {
             // ✅ Such-Filter (client-seitig, nicht server-seitig)
             if (reservationSearchTerm) {
                 const searchLower = reservationSearchTerm.toLowerCase();
-                const matchesSearch = 
-                    (reservation.guestName && reservation.guestName.toLowerCase().includes(searchLower)) ||
-                    (reservation.guestEmail && reservation.guestEmail.toLowerCase().includes(searchLower)) ||
-                    (reservation.guestPhone && reservation.guestPhone.toLowerCase().includes(searchLower)) ||
-                    (reservation.roomNumber && reservation.roomNumber.toLowerCase().includes(searchLower)) ||
-                    (reservation.lobbyReservationId && reservation.lobbyReservationId.toLowerCase().includes(searchLower));
                 
-                if (!matchesSearch) return false;
+                // ✅ OPTIMIERUNG: Frühes Beenden bei Match
+                if (reservation.guestName && reservation.guestName.toLowerCase().includes(searchLower)) return true;
+                if (reservation.guestEmail && reservation.guestEmail.toLowerCase().includes(searchLower)) return true;
+                if (reservation.roomNumber && reservation.roomNumber.toLowerCase().includes(searchLower)) return true;
+                if (reservation.guestPhone && reservation.guestPhone.toLowerCase().includes(searchLower)) return true;
+                if (reservation.lobbyReservationId && reservation.lobbyReservationId.toLowerCase().includes(searchLower)) return true;
+                
+                return false; // Kein Match gefunden
             }
             
             return true;
@@ -1617,7 +1639,10 @@ const Worktracker: React.FC = () => {
                 if (typeof valueA === 'number' && typeof valueB === 'number') {
                     comparison = valueA - valueB;
                 } else {
-                    comparison = String(valueA).localeCompare(String(valueB));
+                    // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+                    const strA = typeof valueA === 'string' ? valueA : String(valueA);
+                    const strB = typeof valueB === 'string' ? valueB : String(valueB);
+                    comparison = strA.localeCompare(strB);
                 }
                 
                 if (comparison !== 0) {
@@ -1645,14 +1670,15 @@ const Worktracker: React.FC = () => {
             // ✅ Such-Filter (client-seitig)
             if (tourBookingsSearchTerm) {
                 const searchLower = tourBookingsSearchTerm.toLowerCase();
-                const matchesSearch = 
-                    (booking.customerName && booking.customerName.toLowerCase().includes(searchLower)) ||
-                    (booking.customerEmail && booking.customerEmail.toLowerCase().includes(searchLower)) ||
-                    (booking.tour?.title && booking.tour.title.toLowerCase().includes(searchLower)) ||
-                    (booking.customerPhone && booking.customerPhone.includes(searchLower));
                 
-                if (!matchesSearch) return false;
-                    }
+                // ✅ OPTIMIERUNG: Frühes Beenden bei Match
+                if (booking.customerName && booking.customerName.toLowerCase().includes(searchLower)) return true;
+                if (booking.customerEmail && booking.customerEmail.toLowerCase().includes(searchLower)) return true;
+                if (booking.tour?.title && booking.tour.title.toLowerCase().includes(searchLower)) return true;
+                if (booking.customerPhone && booking.customerPhone.includes(searchLower)) return true;
+                
+                return false; // Kein Match gefunden
+            }
             
             return true;
         });
@@ -1687,6 +1713,7 @@ const Worktracker: React.FC = () => {
                     };
                     return statusOrder[booking.status] ?? 999;
                 case 'bookedBy':
+                    // ✅ OPTIMIERUNG: Template-String nur wenn vorhanden
                     return booking.bookedBy ? `${booking.bookedBy.firstName} ${booking.bookedBy.lastName}`.toLowerCase() : '';
                 case 'branch.name':
                     return booking.branch?.name?.toLowerCase() || '';
@@ -1705,7 +1732,10 @@ const Worktracker: React.FC = () => {
                 if (typeof valueA === 'number' && typeof valueB === 'number') {
                     comparison = valueA - valueB;
                 } else {
-                    comparison = String(valueA).localeCompare(String(valueB));
+                    // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+                    const strA = typeof valueA === 'string' ? valueA : String(valueA);
+                    const strB = typeof valueB === 'string' ? valueB : String(valueB);
+                    comparison = strA.localeCompare(strB);
                 }
                 
                 if (comparison !== 0) {

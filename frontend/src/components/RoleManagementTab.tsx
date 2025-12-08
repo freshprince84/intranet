@@ -1150,11 +1150,12 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         // Globale Suche
         if (searchTerm) {
           const searchLower = searchTerm.toLowerCase();
-          const matchesSearch = 
-            role.name.toLowerCase().includes(searchLower) ||
-            (role.description && role.description.toLowerCase().includes(searchLower));
           
-          if (!matchesSearch) return false;
+          // ✅ OPTIMIERUNG: Frühes Beenden bei Match
+          if (role.name.toLowerCase().includes(searchLower)) return true;
+          if (role.description && role.description.toLowerCase().includes(searchLower)) return true;
+          
+          return false; // Kein Match gefunden
         }
         
         // Prüfe erweiterte Filterbedingungen, wenn vorhanden
@@ -1168,27 +1169,33 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
             
             switch (condition.column) {
               case 'name':
+                // ✅ OPTIMIERUNG: toLowerCase() nur einmal pro Wert
+                const roleNameLower = role.name.toLowerCase();
+                const nameConditionValueLower = (condition.value as string || '').toLowerCase();
                 if (condition.operator === 'equals') {
-                  conditionMet = role.name.toLowerCase() === (condition.value as string || '').toLowerCase();
+                  conditionMet = roleNameLower === nameConditionValueLower;
                 } else if (condition.operator === 'contains') {
-                  conditionMet = role.name.toLowerCase().includes((condition.value as string || '').toLowerCase());
+                  conditionMet = roleNameLower.includes(nameConditionValueLower);
                 } else if (condition.operator === 'startsWith') {
-                  conditionMet = role.name.toLowerCase().startsWith((condition.value as string || '').toLowerCase());
+                  conditionMet = roleNameLower.startsWith(nameConditionValueLower);
                 }
                 break;
-              
+
               case 'description':
                 if (!role.description) {
                   conditionMet = false;
                   break;
                 }
-                
+
+                // ✅ OPTIMIERUNG: toLowerCase() nur einmal pro Wert
+                const roleDescLower = role.description.toLowerCase();
+                const descConditionValueLower = (condition.value as string || '').toLowerCase();
                 if (condition.operator === 'equals') {
-                  conditionMet = role.description.toLowerCase() === (condition.value as string || '').toLowerCase();
+                  conditionMet = roleDescLower === descConditionValueLower;
                 } else if (condition.operator === 'contains') {
-                  conditionMet = role.description.toLowerCase().includes((condition.value as string || '').toLowerCase());
+                  conditionMet = roleDescLower.includes(descConditionValueLower);
                 } else if (condition.operator === 'startsWith') {
-                  conditionMet = role.description.toLowerCase().startsWith((condition.value as string || '').toLowerCase());
+                  conditionMet = roleDescLower.startsWith(descConditionValueLower);
                 }
                 break;
               
@@ -1220,7 +1227,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         return true;
       })
       .sort((a, b) => {
-        return a.name.localeCompare(b.name);
+        // ✅ OPTIMIERUNG: toLowerCase() für konsistente Sortierung
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
       });
   }, [roles, searchTerm, filterConditions, filterLogicalOperators]);
 

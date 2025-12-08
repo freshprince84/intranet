@@ -430,12 +430,18 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
     // Globale Suche
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(invoice => 
-        invoice.invoiceNumber.toLowerCase().includes(searchLower) ||
-        invoice.client.name.toLowerCase().includes(searchLower) ||
-        (invoice.client.company && invoice.client.company.toLowerCase().includes(searchLower)) ||
-        `${invoice.user.firstName} ${invoice.user.lastName}`.toLowerCase().includes(searchLower)
-      );
+      filtered = filtered.filter(invoice => {
+        // ✅ OPTIMIERUNG: Frühes Beenden bei Match
+        if (invoice.invoiceNumber.toLowerCase().includes(searchLower)) return true;
+        if (invoice.client.name.toLowerCase().includes(searchLower)) return true;
+        if (invoice.client.company && invoice.client.company.toLowerCase().includes(searchLower)) return true;
+        
+        // ✅ OPTIMIERUNG: Template-String nur wenn nötig
+        const userName = `${invoice.user.firstName} ${invoice.user.lastName}`.toLowerCase();
+        if (userName.includes(searchLower)) return true;
+        
+        return false; // Kein Match gefunden
+      });
     }
 
     // Erweiterte Filter anwenden mit zentraler Filter-Logik
@@ -526,7 +532,10 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
           if (typeof valueA === 'number' && typeof valueB === 'number') {
             comparison = valueA - valueB;
           } else {
-            comparison = String(valueA).localeCompare(String(valueB));
+            // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+            const strA = typeof valueA === 'string' ? valueA : String(valueA);
+            const strB = typeof valueB === 'string' ? valueB : String(valueB);
+            comparison = strA.localeCompare(strB);
           }
           
           // Sortierrichtung anwenden

@@ -243,8 +243,9 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
         const bValue = b[sortConfig.key];
         
         if (sortConfig.key === 'branch') {
-          const aName = a.branch?.name || '';
-          const bName = b.branch?.name || '';
+          // ✅ OPTIMIERUNG: toLowerCase() für konsistente Sortierung
+          const aName = (a.branch?.name || '').toLowerCase();
+          const bName = (b.branch?.name || '').toLowerCase();
           return sortConfig.direction === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName);
         }
         
@@ -268,9 +269,12 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
           return sortConfig.direction === 'asc' ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
         }
         
+        // ✅ OPTIMIERUNG: Vermeide toString() wenn bereits String
+        const strA = typeof aValue === 'string' ? aValue : String(aValue);
+        const strB = typeof bValue === 'string' ? bValue : String(bValue);
         return sortConfig.direction === 'asc'
-          ? aValue.toString().localeCompare(bValue.toString())
-          : bValue.toString().localeCompare(aValue.toString());
+          ? strA.localeCompare(strB)
+          : strB.localeCompare(strA);
       });
   }, [worktimes, searchTerm, filterState, sortConfig]);
 

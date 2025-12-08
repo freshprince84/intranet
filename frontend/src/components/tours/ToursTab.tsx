@@ -316,12 +316,13 @@ const ToursTab: React.FC<ToursTabProps> = () => {
             // Such-Filter
             if (tourSearchTerm) {
                 const searchLower = tourSearchTerm.toLowerCase();
-                const matchesSearch = 
-                    (tour.title && tour.title.toLowerCase().includes(searchLower)) ||
-                    (tour.description && tour.description.toLowerCase().includes(searchLower)) ||
-                    (tour.location && tour.location.toLowerCase().includes(searchLower));
                 
-                if (!matchesSearch) return false;
+                // ✅ OPTIMIERUNG: Frühes Beenden bei Match
+                if (tour.title && tour.title.toLowerCase().includes(searchLower)) return true;
+                if (tour.location && tour.location.toLowerCase().includes(searchLower)) return true;
+                if (tour.description && tour.description.toLowerCase().includes(searchLower)) return true;
+                
+                return false; // Kein Match gefunden
             }
             
             return true;
@@ -457,7 +458,10 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                 if (typeof valueA === 'number' && typeof valueB === 'number') {
                     comparison = valueA - valueB;
                 } else {
-                    comparison = String(valueA).localeCompare(String(valueB));
+                    // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+                    const strA = typeof valueA === 'string' ? valueA : String(valueA);
+                    const strB = typeof valueB === 'string' ? valueB : String(valueB);
+                    comparison = strA.localeCompare(strB);
                 }
                 
                 if (comparison !== 0) {
@@ -469,6 +473,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
             // (wird bereits oben in Priorität 2 behandelt)
             
             // 4. Fallback: Titel (alphabetisch)
+            // ✅ OPTIMIERUNG: toLowerCase() bereits in getTourSortValue, aber hier für Fallback
             const titleA = (a?.title || '').toLowerCase();
             const titleB = (b?.title || '').toLowerCase();
             return titleA.localeCompare(titleB);

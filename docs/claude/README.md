@@ -52,7 +52,8 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 
 **⚠️ ABSOLUTE REGEL FÜR CLAUDE - KEINE AUSNAHMEN:**
 - **VERMUTUNGEN SIND ABSOLUT STRENGSTENS VERBOTEN** bei allen Analysen, Planungen und Dokumentationen
-- **KEIN Konjunktiv** (sollte, könnte, würde, müsste, etc.)
+- **KEIN Konjunktiv** (sollte, könnte, würde, müsste, etc.) - **ABSOLUT STRENGSTENS VERBOTEN**
+- **WÖRTER WIE "SOLLTE" UND "KÖNNTE" SIND ABSOLUT STRENGSTENS VERBOTEN** - Verwendung führt zur Löschung
 - **KEINE Vermutungen** (vielleicht, evtl., möglicherweise, vermutlich, etc.)
 - **KEINE Schätzungen** ohne konkrete Fakten
 - **NUR FAKTEN** - Nur das dokumentieren, was tatsächlich im Code steht oder nachweisbar ist
