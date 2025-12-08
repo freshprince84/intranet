@@ -353,16 +353,14 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
             Spalten
           </button>
           
-          {isColumnConfigOpen && (
-            <TableColumnConfig
-              columns={availableColumns}
-              visibleColumns={columnOrder.filter(id => !hiddenColumns.includes(id))}
-              columnOrder={columnOrder}
-              onToggleColumnVisibility={handleToggleColumnVisibility}
-              onMoveColumn={handleMoveColumn}
-              onClose={() => setIsColumnConfigOpen(false)}
-            />
-          )}
+          <TableColumnConfig
+            isOpen={isColumnConfigOpen}
+            onOpenChange={setIsColumnConfigOpen}
+            columns={availableColumns}
+            visibleColumns={columnOrder.filter(id => !hiddenColumns.includes(id))}
+            columnOrder={columnOrder}
+            onToggleColumnVisibility={handleToggleColumnVisibility}
+          />
         </div>
       </div>
       

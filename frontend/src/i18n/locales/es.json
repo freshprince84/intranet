@@ -1075,7 +1075,10 @@
     "descending": "Descendente",
     "clickToToggle": "clic para cambiar",
     "showColumn": "Mostrar columna",
-    "hideColumn": "Ocultar columna"
+    "hideColumn": "Ocultar columna",
+    "mainSort": "Orden principal",
+    "setMainSort": "Establecer orden principal",
+    "clickToSet": "clic para establecer"
   },
   "payroll": {
     "title": "Nómina",

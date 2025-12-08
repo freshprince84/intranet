@@ -934,7 +934,10 @@
     "descending": "Absteigend",
     "clickToToggle": "Klicken zum Umschalten",
     "hideColumn": "Spalte ausblenden",
-    "showColumn": "Spalte anzeigen"
+    "showColumn": "Spalte anzeigen",
+    "mainSort": "Hauptsortierung",
+    "setMainSort": "Hauptsortierung setzen",
+    "clickToSet": "Klicken zum Setzen"
   },
   "invoices": {
     "title": "Rechnungen",

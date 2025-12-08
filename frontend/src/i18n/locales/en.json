@@ -1062,7 +1062,10 @@
     "descending": "Descending",
     "clickToToggle": "click to toggle",
     "showColumn": "Show column",
-    "hideColumn": "Hide column"
+    "hideColumn": "Hide column",
+    "mainSort": "Main sort",
+    "setMainSort": "Set main sort",
+    "clickToSet": "click to set"
   },
   "payroll": {
     "title": "Payroll",

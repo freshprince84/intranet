@@ -1280,19 +1280,17 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
       )}
 
       {/* Column Config Modal */}
-      {isColumnConfigOpen && (
-        <TableColumnConfig
-          isOpen={isColumnConfigOpen}
-          onClose={() => setIsColumnConfigOpen(false)}
-          columns={availableColumns}
-          columnOrder={settings.columnOrder}
-          visibleColumns={availableColumns.filter(col => !settings.hiddenColumns.includes(col.id)).map(col => col.id)}
-          onToggleColumnVisibility={(columnId) => toggleColumnVisibility(columnId)}
-          mainSortConfig={sortConfig}
-          onMainSortChange={handleMainSortChange}
-          showMainSort={true}
-        />
-      )}
+      <TableColumnConfig
+        isOpen={isColumnConfigOpen}
+        onOpenChange={setIsColumnConfigOpen}
+        columns={availableColumns}
+        columnOrder={settings.columnOrder}
+        visibleColumns={availableColumns.filter(col => !settings.hiddenColumns.includes(col.id)).map(col => col.id)}
+        onToggleColumnVisibility={(columnId) => toggleColumnVisibility(columnId)}
+        mainSortConfig={sortConfig}
+        onMainSortChange={handleMainSortChange}
+        showMainSort={true}
+      />
 
       {/* Detail Modal */}
       {isDetailModalOpen && selectedInvoiceId && (

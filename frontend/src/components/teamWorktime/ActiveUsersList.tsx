@@ -146,7 +146,6 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'startTime', direction: 'asc' });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [isColumnConfigOpen, setIsColumnConfigOpen] = useState(false);
@@ -254,7 +253,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     updateColumnOrder,
     updateHiddenColumns,
     isColumnVisible,
-    updateViewMode
+    updateViewMode,
+    updateSortConfig
   } = useTableSettings('team_worktime_active', {
     defaultColumnOrder: defaultColumnOrder,
     defaultHiddenColumns: [],
@@ -268,10 +268,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   // View-Mode aus Settings laden
   const viewMode = settings.viewMode || 'cards';
   
-  // Lokale Sortierrichtungen für Cards (nicht persistiert)
-  const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
-    return defaultCardSortDirections;
-  });
+  // sortConfig aus settings verwenden (für Table & Cards synchron)
+  const sortConfig = settings.sortConfig || { key: 'startTime', direction: 'asc' };
 
   // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
   // Card-Metadaten-Reihenfolge aus columnOrder ableiten
@@ -349,10 +347,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
 
   // Sortieren
   const handleSort = (key: string) => {
-    setSortConfig(prevConfig => ({
-      key,
-      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
-    }));
+    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    updateSortConfig({ key, direction: newDirection });
   };
 
   // Drag & Drop für Spalten
@@ -569,31 +565,21 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         }
       }
       
-      // 3. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv, Cards-Mode)
-      if (viewMode === 'cards' && filterConditions.length === 0) {
-        const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+      // 3. Priorität: Cards-Mode Hauptsortierung (wenn kein Filter aktiv, Cards-Mode)
+      if (viewMode === 'cards' && filterConditions.length === 0 && sortConfig.key) {
+        const valueA = getSortValue(a, sortConfig.key);
+        const valueB = getSortValue(b, sortConfig.key);
         
-        for (const columnId of sortableColumns) {
-          const direction = cardSortDirections[columnId] || 'asc';
-          const valueA = getSortValue(a, columnId);
-          const valueB = getSortValue(b, columnId);
-          
-          let comparison = 0;
-          if (typeof valueA === 'number' && typeof valueB === 'number') {
-            comparison = valueA - valueB;
-          } else {
-            comparison = String(valueA).localeCompare(String(valueB));
-          }
-          
-          if (direction === 'desc') {
-            comparison = -comparison;
-          }
-          
-          if (comparison !== 0) {
-            return comparison;
-          }
+        let comparison = 0;
+        if (typeof valueA === 'number' && typeof valueB === 'number') {
+          comparison = valueA - valueB;
+        } else {
+          comparison = String(valueA).localeCompare(String(valueB));
         }
-        return 0;
+        
+        if (comparison !== 0) {
+          return sortConfig.direction === 'asc' ? comparison : -comparison;
+        }
       }
       
       // 4. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv, Table-Mode)
