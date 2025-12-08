@@ -161,3 +161,5 @@ async syncReservations(startDate: Date, endDate?: Date): Promise<number> {
    - Aktualisiere `LOBBYPMS_RESERVATION_DELETE_SYNC_PLAN.md` - Entferne falsche Behauptung über `syncReservation()`
    - Erweitere `LOBBYPMS_SYNC_STATUS_UPDATE.md` um Erklärung, warum Status-Updates manchmal nicht funktionieren
 
+
+

@@ -7,6 +7,7 @@ import { formatTime, calculateDuration } from '../utils/dateUtils.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { logger } from '../utils/logger.ts';
 import { useBranch } from '../contexts/BranchContext.tsx';
+import { useResizeObserver } from '../hooks/useResizeObserver.ts';
 import { toast } from 'react-toastify';
 import ClientSelectModal from './ClientSelectModal.tsx';
 import CreateClientModal from './CreateClientModal.tsx';
@@ -51,7 +52,6 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
   const containerRef = useRef<HTMLDivElement>(null);
   const [visibleTagCount, setVisibleTagCount] = useState(3); // Fallback für SSR
   const [containerWidth, setContainerWidth] = useState(0);
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Manuelle Erfassung States
   const [isManualEntry, setIsManualEntry] = useState(false);
@@ -350,45 +350,14 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
     setVisibleTagCount(Math.min(maxPossibleTags, recentClients.length));
   }, [recentClients, averageTagWidth, containerWidth]);
 
-  // ✅ MEMORY FIX: useRef für handleResize (verhindert Re-Erstellung von ResizeObserver)
-  const handleResizeRef = useRef<() => void>();
-
-  // ✅ MEMORY FIX: Aktualisiere Ref wenn calculateVisibleTags sich ändert
-  useEffect(() => {
-    handleResizeRef.current = () => {
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
-      resizeTimeoutRef.current = setTimeout(() => {
-        calculateVisibleTags();
-      }, 150);
-    };
-  }, [calculateVisibleTags]);
-
-  // ✅ MEMORY FIX: ResizeObserver nur EINMAL erstellen (keine Dependencies!)
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    // ✅ MEMORY FIX: Verwende Ref statt direkter Funktion
-    const resizeObserver = new ResizeObserver(() => {
-      handleResizeRef.current?.();
-    });
-    resizeObserver.observe(containerRef.current);
-    
-    // ✅ MEMORY FIX: Window-Resize Event-Listener mit Ref
-    const handleWindowResize = () => {
-      handleResizeRef.current?.();
-    };
-    window.addEventListener('resize', handleWindowResize);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', handleWindowResize);
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
-    };
-  }, []); // ← KEINE Dependencies! Observer wird nur EINMAL erstellt
+  // ✅ PHASE 3: Verwende Custom Hook für ResizeObserver (Memory-Leak Prevention)
+  useResizeObserver(
+    containerRef,
+    calculateVisibleTags,
+    {
+      debounceMs: 150, // 150ms Debounce für smooth responsive behavior
+    }
+  );
 
   // Initial calculation nach Client-Änderungen
   useLayoutEffect(() => {

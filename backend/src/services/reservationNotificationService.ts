@@ -964,11 +964,24 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           const whatsappService = reservation.branchId
             ? new WhatsAppService(undefined, reservation.branchId)
             : new WhatsAppService(reservation.organizationId);
+          // Formatiere Zimmer-Anzeige: Dorm = "Zimmername (Bettnummer)", Private = "Zimmername"
+          const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
+          let roomDisplay: string;
+          if (isDorm) {
+            // Dorm: "Zimmername (Bettnummer)"
+            const roomName = reservation.roomDescription?.trim() || '';
+            const bedNumber = reservation.roomNumber?.trim() || '';
+            roomDisplay = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || 'N/A');
+          } else {
+            // Private: "Zimmername"
+            roomDisplay = reservation.roomDescription?.trim() || 'N/A';
+          }
+          
           const whatsappSuccessResult = await whatsappService.sendCheckInConfirmation(
             reservation.guestName,
             reservation.guestPhone,
-            reservation.roomNumber || 'N/A',
-            reservation.roomDescription || 'N/A',
+            roomDisplay, // Formatierte Zimmer-Anzeige
+            '', // roomDescription wird nicht mehr separat benötigt
             doorPin || 'N/A',
             doorAppName || 'TTLock',
             {
@@ -1213,52 +1226,23 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           guestPhone: reservation.guestPhone
         });
 
-        const roomNumber = reservation.roomNumber || 'N/A';
-        
-        // Lade roomDescription aus Branch-Settings (falls categoryId vorhanden)
-        let roomDescription: string = 'N/A';
-        if (reservation.categoryId && reservation.branchId) {
-          try {
-            const branch = await prisma.branch.findUnique({
-              where: { id: reservation.branchId },
-              select: { lobbyPmsSettings: true }
-            });
-            
-            if (branch?.lobbyPmsSettings) {
-              const { decryptBranchApiSettings } = require('../utils/encryption');
-              const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
-              const lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings;
-              const roomDesc = lobbyPmsSettings?.roomDescriptions?.[reservation.categoryId];
-              
-              if (roomDesc) {
-                // Formatiere Beschreibung: Text, Bild-Link, Video-Link
-                const parts: string[] = [];
-                if (roomDesc.text) {
-                  parts.push(roomDesc.text);
-                }
-                if (roomDesc.imageUrl) {
-                  parts.push(`Bild: ${roomDesc.imageUrl}`);
-                }
-                if (roomDesc.videoUrl) {
-                  parts.push(`Video: ${roomDesc.videoUrl}`);
-                }
-                roomDescription = parts.length > 0 ? parts.join('\n') : 'N/A';
-              }
-            }
-          } catch (error) {
-            console.warn(`[ReservationNotification] Fehler beim Laden der Zimmer-Beschreibung:`, error);
-            // Fallback auf reservation.roomDescription
-            roomDescription = reservation.roomDescription || 'N/A';
-          }
+        // Formatiere Zimmer-Anzeige: Dorm = "Zimmername (Bettnummer)", Private = "Zimmername"
+        const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
+        let roomDisplay: string;
+        if (isDorm) {
+          // Dorm: "Zimmername (Bettnummer)"
+          const roomName = reservation.roomDescription?.trim() || '';
+          const bedNumber = reservation.roomNumber?.trim() || '';
+          roomDisplay = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || 'N/A');
         } else {
-          // Fallback: Verwende reservation.roomDescription (für alte Reservierungen oder ohne categoryId)
-          roomDescription = reservation.roomDescription || 'N/A';
+          // Private: "Zimmername"
+          roomDisplay = reservation.roomDescription?.trim() || 'N/A';
         }
 
         if (languageCode === 'en') {
           // Englische Version
           const greeting = `Hello ${reservation.guestName},`;
-          const contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomNumber} - Description: ${roomDescription} Access: - Door PIN: ${doorPin || 'N/A'}`;
+          const contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomDisplay} Access: - Door PIN: ${doorPin || 'N/A'}`;
           
           messageText = `Welcome,
 
@@ -1270,7 +1254,7 @@ We wish you a pleasant stay!`;
         } else {
           // Spanische Version
           const greeting = `Hola ${reservation.guestName},`;
-          const contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomNumber} - Descripción: ${roomDescription} Acceso: - PIN de la puerta: ${doorPin || 'N/A'}`;
+          const contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomDisplay} Acceso: - PIN de la puerta: ${doorPin || 'N/A'}`;
           
           messageText = `Bienvenido,
 
@@ -1376,53 +1360,24 @@ ${contentText}
               ? `Hello ${reservation.guestName},`
               : `Hola ${reservation.guestName},`;
             
-            const roomNumber = reservation.roomNumber || 'N/A';
-            
-            // Lade roomDescription aus Branch-Settings (falls categoryId vorhanden)
-            let roomDescription: string = 'N/A';
-            if (reservation.categoryId && reservation.branchId) {
-              try {
-                const branch = await prisma.branch.findUnique({
-                  where: { id: reservation.branchId },
-                  select: { lobbyPmsSettings: true }
-                });
-                
-                if (branch?.lobbyPmsSettings) {
-                  const { decryptBranchApiSettings } = require('../utils/encryption');
-                  const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
-                  const lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings;
-                  const roomDesc = lobbyPmsSettings?.roomDescriptions?.[reservation.categoryId];
-                  
-                  if (roomDesc) {
-                    // Formatiere Beschreibung: Text, Bild-Link, Video-Link
-                    const parts: string[] = [];
-                    if (roomDesc.text) {
-                      parts.push(roomDesc.text);
-                    }
-                    if (roomDesc.imageUrl) {
-                      parts.push(`Bild: ${roomDesc.imageUrl}`);
-                    }
-                    if (roomDesc.videoUrl) {
-                      parts.push(`Video: ${roomDesc.videoUrl}`);
-                    }
-                    roomDescription = parts.length > 0 ? parts.join('\n') : 'N/A';
-                  }
-                }
-              } catch (error) {
-                console.warn(`[ReservationNotification] Fehler beim Laden der Zimmer-Beschreibung:`, error);
-                // Fallback auf reservation.roomDescription
-                roomDescription = reservation.roomDescription || 'N/A';
-              }
+            // Formatiere Zimmer-Anzeige: Dorm = "Zimmername (Bettnummer)", Private = "Zimmername"
+            const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
+            let roomDisplay: string;
+            if (isDorm) {
+              // Dorm: "Zimmername (Bettnummer)"
+              const roomName = reservation.roomDescription?.trim() || '';
+              const bedNumber = reservation.roomNumber?.trim() || '';
+              roomDisplay = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || 'N/A');
             } else {
-              // Fallback: Verwende reservation.roomDescription (für alte Reservierungen oder ohne categoryId)
-              roomDescription = reservation.roomDescription || 'N/A';
+              // Private: "Zimmername"
+              roomDisplay = reservation.roomDescription?.trim() || 'N/A';
             }
             
             let contentText: string;
             if (languageCode === 'en') {
-              contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomNumber} - Description: ${roomDescription} Access: - Door PIN: ${doorPin}`;
+              contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomDisplay} Access: - Door PIN: ${doorPin}`;
             } else {
-              contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomNumber} - Descripción: ${roomDescription} Acceso: - PIN de la puerta: ${doorPin}`;
+              contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomDisplay} Acceso: - PIN de la puerta: ${doorPin}`;
             }
             
             const templateParams = [greeting, contentText];
@@ -1929,8 +1884,16 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           <p>¡Tu check-in se ha completado exitosamente!</p>
           <div class="info-box">
             <h3>Información de tu habitación:</h3>
-            <p><strong>Habitación:</strong> ${reservation.roomNumber || 'N/A'}</p>
-            <p><strong>Descripción:</strong> ${roomDescription}</p>
+            <p><strong>Habitación:</strong> ${(() => {
+              const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
+              if (isDorm) {
+                const roomName = reservation.roomDescription?.trim() || '';
+                const bedNumber = reservation.roomNumber?.trim() || '';
+                return roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || 'N/A');
+              } else {
+                return reservation.roomDescription?.trim() || 'N/A';
+              }
+            })()}</p>
           </div>
           ${doorPin ? `
           <div class="info-box">
@@ -1950,8 +1913,16 @@ Hola ${reservation.guestName},
 ¡Tu check-in se ha completado exitosamente!
 
 Información de tu habitación:
-- Habitación: ${reservation.roomNumber || 'N/A'}
-- Descripción: ${roomDescription}
+- Habitación: ${(() => {
+              const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
+              if (isDorm) {
+                const roomName = reservation.roomDescription?.trim() || '';
+                const bedNumber = reservation.roomNumber?.trim() || '';
+                return roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || 'N/A');
+              } else {
+                return reservation.roomDescription?.trim() || 'N/A';
+              }
+            })()}
 
 ${doorPin ? `Acceso:
 - PIN de la puerta: ${doorPin}
