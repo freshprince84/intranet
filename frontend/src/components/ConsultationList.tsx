@@ -640,11 +640,13 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
     // Suchterm-Filter
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(consultation => 
-        consultation.client?.name?.toLowerCase().includes(search) ||
-        consultation.notes?.toLowerCase().includes(search) ||
-        consultation.branch?.name?.toLowerCase().includes(search)
-      );
+      filtered = filtered.filter(consultation => {
+        // ✅ OPTIMIERUNG: Frühes Beenden bei Match
+        if (consultation.client?.name?.toLowerCase().includes(search)) return true;
+        if (consultation.branch?.name?.toLowerCase().includes(search)) return true;
+        if (consultation.notes?.toLowerCase().includes(search)) return true;
+        return false; // Kein Match gefunden
+      });
     }
 
     // Erweiterte Filter mit zentraler Filter-Logik

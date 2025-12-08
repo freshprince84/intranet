@@ -231,7 +231,10 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
         if (typeof aValue === 'number' && typeof bValue === 'number') {
           comparison = aValue - bValue;
           } else {
-          comparison = String(aValue).localeCompare(String(bValue));
+          // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+          const strA = typeof aValue === 'string' ? aValue : String(aValue);
+          const strB = typeof bValue === 'string' ? bValue : String(bValue);
+          comparison = strA.localeCompare(strB);
           }
           
         return sortConfig.direction === 'asc' ? comparison : -comparison;

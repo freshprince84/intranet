@@ -425,12 +425,15 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                         
                         switch (condition.column) {
                             case 'name':
+                                // ✅ OPTIMIERUNG: toLowerCase() nur einmal pro Wert
+                                const branchNameLower = branch.name.toLowerCase();
+                                const conditionValueLower = (condition.value as string || '').toLowerCase();
                                 if (condition.operator === 'equals') {
-                                    conditionMet = branch.name.toLowerCase() === (condition.value as string || '').toLowerCase();
+                                    conditionMet = branchNameLower === conditionValueLower;
                                 } else if (condition.operator === 'contains') {
-                                    conditionMet = branch.name.toLowerCase().includes((condition.value as string || '').toLowerCase());
+                                    conditionMet = branchNameLower.includes(conditionValueLower);
                                 } else if (condition.operator === 'startsWith') {
-                                    conditionMet = branch.name.toLowerCase().startsWith((condition.value as string || '').toLowerCase());
+                                    conditionMet = branchNameLower.startsWith(conditionValueLower);
                                 }
                                 break;
                         }
@@ -450,7 +453,8 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                 return true;
             })
             .sort((a, b) => {
-                return a.name.localeCompare(b.name);
+                // ✅ OPTIMIERUNG: toLowerCase() für konsistente Sortierung
+                return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
             });
     }, [branches, searchTerm, filterConditions, filterLogicalOperators]);
 

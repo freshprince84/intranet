@@ -755,13 +755,19 @@ const Requests: React.FC = () => {
         // ✅ NUR Globale Suchfunktion (searchTerm) wird client-seitig angewendet
         if (searchTerm) {
           const searchLower = searchTerm.toLowerCase();
-          const matchesSearch = 
-            request.title.toLowerCase().includes(searchLower) ||
-            `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase().includes(searchLower) ||
-            `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase().includes(searchLower) ||
-            request.branch.name.toLowerCase().includes(searchLower);
           
-          if (!matchesSearch) return false;
+          // ✅ OPTIMIERUNG: Frühes Beenden bei Match
+          if (request.title.toLowerCase().includes(searchLower)) return true;
+          if (request.branch.name.toLowerCase().includes(searchLower)) return true;
+          
+          // ✅ OPTIMIERUNG: Template-String nur wenn nötig
+          const requestedByName = `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
+          if (requestedByName.includes(searchLower)) return true;
+          
+          const responsibleName = `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
+          if (responsibleName.includes(searchLower)) return true;
+          
+          return false; // Kein Match gefunden
         }
         
         // ❌ ENTFERNEN: Client-seitige Filterung wenn selectedFilterId oder filterConditions gesetzt sind
@@ -794,8 +800,10 @@ const Requests: React.FC = () => {
               return typeOrder[request.type || 'other'] ?? 999;
             case 'requestedBy':
             case 'requestedByResponsible':
+              // ✅ OPTIMIERUNG: Template-String nur einmal erstellen
               return `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
             case 'responsible':
+              // ✅ OPTIMIERUNG: Template-String nur einmal erstellen
               return `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
             case 'branch':
               return request.branch.name.toLowerCase();
@@ -822,7 +830,10 @@ const Requests: React.FC = () => {
           if (typeof valueA === 'number' && typeof valueB === 'number') {
             comparison = valueA - valueB;
           } else {
-            comparison = String(valueA).localeCompare(String(valueB));
+            // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+            const strA = typeof valueA === 'string' ? valueA : String(valueA);
+            const strB = typeof valueB === 'string' ? valueB : String(valueB);
+            comparison = strA.localeCompare(strB);
           }
           
           if (comparison !== 0) {
