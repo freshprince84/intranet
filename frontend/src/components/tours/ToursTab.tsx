@@ -589,7 +589,6 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                             mainSortConfig={tourTableSortConfig}
                             onMainSortChange={handleMainSortChange}
                             showMainSort={true}
-                            onClose={() => {}}
                         />
                     </div>
                     

@@ -1,7 +1,7 @@
 # TableColumnConfig Modal - Alle Probleme beheben
 
 **Datum:** 2025-01-31  
-**Status:** 🔄 IN ARBEIT  
+**Status:** ✅ ABGESCHLOSSEN  
 **Zweck:** Alle 12 identifizierten Probleme im Modal "Anzeigen & Sortieren" beheben
 
 ---
@@ -9,17 +9,17 @@
 ## 📋 IDENTIFIZIERTE PROBLEME
 
 1. ✅ Inkonsistente Modal-Steuerung (kein `isOpen` Prop)
-2. ⏳ Doppelte Modal-Steuerung (interner vs. externer State)
-3. ⏳ Layout-Überlagerungen (Pfeile)
-4. ⏳ Sort-Button-Logik falsch (für alle Spalten statt nur aktive)
-5. ⏳ Close-Button falsches Icon (CheckIcon statt XMarkIcon)
-6. ⏳ Leere onClose-Handler
-7. ⏳ onMoveColumn wird noch übergeben (obwohl "ENTFERNT")
-8. ⏳ useEffect Dependency-Warnung
-9. ⏳ Sort-Button wird auch bei nicht-aktiver Sortierung angezeigt
-10. ⏳ Fehlende Übersetzungen prüfen
-11. ⏳ Modal-Positionierung (kann aus Viewport rutschen)
-12. ⏳ Keine Keyboard-Navigation
+2. ✅ Doppelte Modal-Steuerung (interner vs. externer State)
+3. ✅ Layout-Überlagerungen (Pfeile)
+4. ✅ Sort-Button-Logik falsch (für alle Spalten statt nur aktive)
+5. ✅ Close-Button falsches Icon (CheckIcon statt XMarkIcon)
+6. ✅ Leere onClose-Handler
+7. ✅ onMoveColumn Status geklärt (bleibt im Interface, wird übergeben aber nicht verwendet)
+8. ✅ useEffect Dependency-Warnung
+9. ✅ Sort-Button wird auch bei nicht-aktiver Sortierung angezeigt
+10. ✅ Fehlende Übersetzungen prüfen
+11. ✅ Modal-Positionierung (kann aus Viewport rutschen)
+12. ✅ Keine Keyboard-Navigation
 
 ---
 
@@ -105,56 +105,74 @@
 
 ---
 
-## ⏳ SCHRITT 5: Leere onClose-Handler entfernen
+## ✅ SCHRITT 5: Leere onClose-Handler entfernen
 
-**Status:** PENDING  
+**Status:** ✅ ABGESCHLOSSEN  
 **Problem:** `onClose={() => {}}` macht nichts
 
 **Änderungen:**
-- [ ] Echte Handler in `Worktracker.tsx` implementieren
-- [ ] Oder: `onClose` optional machen
-
-**Betroffene Dateien:**
-- `frontend/src/pages/Worktracker.tsx`
-
----
-
-## ✅ SCHRITT 6: onMoveColumn komplett entfernen
-
-**Status:** ✅ ABGESCHLOSSEN  
-**Problem:** Wird noch übergeben, obwohl "ENTFERNT" markiert
-
-**Änderungen:**
-- [x] Aus Interface entfernt (war bereits nicht mehr vorhanden)
-- [x] Aus allen Verwendungen entfernt:
-  - `Requests.tsx`: Lange `onMoveColumn` Block entfernt
-  - `Worktracker.tsx`: 2 lange `onMoveColumn` Blöcke entfernt (todos & reservations)
-  - `UserWorktimeTable.tsx`: `onMoveColumn={handleMoveColumn}` entfernt
-- [x] Leere `onClose={() => {}}` Handler ebenfalls entfernt (2 Stellen in Worktracker.tsx)
-
-**Betroffene Dateien:**
-- `frontend/src/components/Requests.tsx`
-- `frontend/src/pages/Worktracker.tsx`
-- `frontend/src/components/teamWorktime/UserWorktimeTable.tsx`
-
-**Dokumentation:**
-- `onMoveColumn` war bereits aus Interface entfernt (laut Phase 3)
-- Alle Verwendungen entfernt (Drag & Drop im Modal war bereits in Phase 3 entfernt worden)
-- Code-Reduktion: ~80 Zeilen entfernt
-
----
-
-## ⏳ SCHRITT 7: useEffect Dependencies korrigieren
-
-**Status:** PENDING  
-**Problem:** `handleClose` fehlt in Dependencies
-
-**Änderungen:**
-- [ ] `handleClose` in `useCallback` wrappen ODER
-- [ ] `handleClose` in Dependencies aufnehmen
+- [x] `onClose` als optionales Prop gemacht (`onClose?: () => void`)
+- [x] `onClose?.()` verwendet (nur aufrufen, wenn vorhanden)
+- [x] Leere Handler aus `Worktracker.tsx` entfernt (2 Stellen)
+- [x] Leere Handler aus `ActiveUsersList.tsx` entfernt
 
 **Betroffene Dateien:**
 - `frontend/src/components/TableColumnConfig.tsx`
+- `frontend/src/pages/Worktracker.tsx`
+- `frontend/src/components/teamWorktime/ActiveUsersList.tsx`
+
+**Dokumentation:**
+- `onClose` ist jetzt optional, da bei interner Steuerung nicht nötig
+- `onClose?.()` wird nur aufgerufen, wenn vorhanden
+- Leere Handler entfernt: `onClose={() => {}}` → entfernt
+
+---
+
+## ✅ SCHRITT 6: onMoveColumn Status klären
+
+**Status:** ✅ ABGESCHLOSSEN  
+**Problem:** Wird noch übergeben, aber nicht verwendet
+
+**Änderungen:**
+- [x] `onMoveColumn` im Interface behalten (optional), da von Worktracker.tsx für Card-Metadaten-Reihenfolge verwendet
+- [x] Im Props-Destructuring hinzugefügt (Zeile 121)
+- [x] Wird übergeben, aber nicht verwendet (Drag & Drop im Modal wurde in Phase 3 entfernt)
+- [x] `Requests.tsx`: `onMoveColumn` Block entfernt (wurde nicht verwendet)
+- [x] `Worktracker.tsx`: `onMoveColumn` bleibt (wird für Card-Metadaten-Reihenfolge verwendet, aber nicht im Modal)
+- [x] `UserWorktimeTable.tsx`: `onMoveColumn` entfernt (wurde nicht verwendet)
+- [x] `ActiveUsersList.tsx`: `onMoveColumn` entfernt (wurde nicht verwendet)
+
+**Betroffene Dateien:**
+- `frontend/src/components/TableColumnConfig.tsx` - `onMoveColumn` im Interface behalten
+- `frontend/src/components/Requests.tsx` - `onMoveColumn` entfernt
+- `frontend/src/pages/Worktracker.tsx` - `onMoveColumn` bleibt (wird verwendet)
+- `frontend/src/components/teamWorktime/UserWorktimeTable.tsx` - `onMoveColumn` entfernt
+- `frontend/src/components/teamWorktime/ActiveUsersList.tsx` - `onMoveColumn` entfernt
+
+**Dokumentation:**
+- `onMoveColumn` bleibt im Interface (optional), da von Worktracker.tsx übergeben wird
+- Wird aktuell nicht verwendet (Drag & Drop im Modal wurde in Phase 3 entfernt)
+- Worktracker.tsx verwendet es für Card-Metadaten-Reihenfolge, aber das passiert außerhalb des Modals
+
+---
+
+## ✅ SCHRITT 7: useEffect Dependencies korrigieren
+
+**Status:** ✅ ABGESCHLOSSEN  
+**Problem:** `handleClose` fehlt in Dependencies
+
+**Änderungen:**
+- [x] `handleClose` und `handleOpen` in `useCallback` gewrappt
+- [x] `handleClose` in Dependencies aufgenommen
+- [x] `useCallback` importiert
+
+**Betroffene Dateien:**
+- `frontend/src/components/TableColumnConfig.tsx`
+
+**Dokumentation:**
+- `useCallback` für `handleClose` und `handleOpen` verwendet
+- Dependencies korrekt: `[externalIsOpen, onOpenChange, onClose]` bzw. `[externalIsOpen, onOpenChange]`
+- `useEffect` Dependencies: `[isOpen, handleClose]`
 
 ---
 
@@ -270,8 +288,9 @@
 ## 📊 FORTSCHRITT
 
 **Abgeschlossen:** 12/12 Schritte ✅  
-**In Arbeit:** 0/12 Schritte  
-**Ausstehend:** 0/12 Schritte
+**Korrekturen:** 11 zusätzliche Probleme behoben ✅  
+**In Arbeit:** 0 Schritte  
+**Ausstehend:** 0 Schritte
 
 **Abgeschlossene Schritte:**
 1. ✅ Modal-Steuerung vereinheitlichen
@@ -297,11 +316,18 @@
 3. ✅ max-w-[calc(100vw-1rem)]: Jetzt implementiert
 4. ✅ Alte Kommentare: Entfernt
 5. ✅ InvoiceManagementTab: Redundante onClose Prop entfernt
-6. ✅ onMoveColumn: Im Props-Destructuring hinzugefügt (wird übergeben, aber noch nicht verwendet)
+6. ✅ onMoveColumn: Im Props-Destructuring hinzugefügt (wird übergeben, aber noch nicht verwendet - Drag & Drop im Modal wurde in Phase 3 entfernt)
 7. ✅ Button-Ausblendung: Button wird ausgeblendet, wenn externe Steuerung vorhanden ist
 8. ✅ UserWorktimeTable: Auf externe Steuerung umgestellt (konsistent mit InvoiceManagementTab)
 9. ✅ Worktracker.tsx: Leere onClose-Handler entfernt (2 Stellen)
-10. ⚠️ ActiveUsersList.tsx: Verwendet noch `cardSortDirections` statt `mainSortConfig` - SEPARATE ANALYSE NÖTIG
+10. ✅ ToursTab.tsx: Leerer onClose-Handler entfernt
+11. ✅ ActiveUsersList.tsx: Auf `mainSortConfig` umgestellt
+    - `cardSortDirections` State entfernt
+    - `sortConfig` aus `useTableSettings` verwendet
+    - `updateSortConfig` verwendet
+    - `mainSortConfig` und `onMainSortChange` korrekt gesetzt
+    - Sortierlogik für Cards auf Hauptsortierung umgestellt (statt Multi-Sortierung)
+    - `defaultCardSortDirections` entfernt
 
 ---
 

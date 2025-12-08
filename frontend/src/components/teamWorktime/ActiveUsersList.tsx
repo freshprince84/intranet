@@ -40,13 +40,6 @@ const defaultColumnOrder = ['name', 'startTime', 'duration', 'pauseTime', 'branc
 // Card-Einstellungen Standardwerte
 const defaultCardMetadata = ['name', 'startTime', 'duration', 'pauseTime', 'branch'];
 const defaultCardColumnOrder = ['name', 'startTime', 'duration', 'pauseTime', 'branch'];
-const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
-  name: 'asc',
-  startTime: 'asc',
-  duration: 'asc',
-  pauseTime: 'asc',
-  branch: 'asc'
-};
 
 // Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
 // Tabellen-Spalte -> Card-Metadaten (kann Array sein für 1:N Mapping)
@@ -604,7 +597,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     });
     
     return filtered;
-  }, [allWorktimes, activeUsers, searchTerm, sortConfig, selectedDate, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+  }, [allWorktimes, activeUsers, searchTerm, sortConfig, selectedDate, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata]);
 
   // Render-Methode für Spaltenheader
   const renderSortableHeader = (columnId: string, label: string) => {
@@ -1020,19 +1013,11 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                 : columnOrder}
               onToggleColumnVisibility={handleToggleColumnVisibility}
               onMoveColumn={handleMoveColumn}
-              mainSortConfig={viewMode === 'cards' ? Object.keys(cardSortDirections).length > 0 ? { key: Object.keys(cardSortDirections)[0], direction: Object.values(cardSortDirections)[0] } : undefined : undefined}
-              onMainSortChange={viewMode === 'cards'
-                ? (key: string, direction: 'asc' | 'desc') => {
-                    setCardSortDirections(prev => ({
-                      ...prev,
-                      [key]: direction
-                    }));
-                  }
-                : undefined}
-              showMainSort={viewMode === 'cards'}
+              mainSortConfig={sortConfig}
+              onMainSortChange={updateSortConfig}
+              showMainSort={true}
               buttonTitle={viewMode === 'cards' ? t('teamWorktime.sortAndDisplay') : t('teamWorktime.configureColumns')}
               modalTitle={viewMode === 'cards' ? t('teamWorktime.sortAndDisplay') : t('teamWorktime.configureColumns')}
-              onClose={() => {}}
             />
           </div>
         </div>
