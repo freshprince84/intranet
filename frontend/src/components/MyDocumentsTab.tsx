@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -63,25 +63,37 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
   const [certPreviewUrls, setCertPreviewUrls] = useState<Record<number, string>>({});
   const [contractPreviewUrls, setContractPreviewUrls] = useState<Record<number, string>>({});
   const [loadingPreviews, setLoadingPreviews] = useState<Record<number, boolean>>({});
+  
+  // ✅ MEMORY: Refs für Cleanup (verhindert Closure-Problem)
+  const certPreviewUrlsRef = useRef<Record<number, string>>({});
+  const contractPreviewUrlsRef = useRef<Record<number, string>>({});
 
   useEffect(() => {
     fetchDocuments();
   }, [userId]);
 
-  // ✅ MEMORY: Cleanup Blob-URLs beim Unmount (nur einmal, nicht bei jeder State-Änderung)
+  // ✅ MEMORY: Aktualisiere Refs bei State-Änderungen
+  useEffect(() => {
+    certPreviewUrlsRef.current = certPreviewUrls;
+  }, [certPreviewUrls]);
+
+  useEffect(() => {
+    contractPreviewUrlsRef.current = contractPreviewUrls;
+  }, [contractPreviewUrls]);
+
+  // ✅ MEMORY: Cleanup Blob-URLs beim Unmount (verwendet Refs statt State)
   useEffect(() => {
     return () => {
       // Revoke alle Certificate Preview URLs
-      Object.values(certPreviewUrls).forEach(url => {
+      Object.values(certPreviewUrlsRef.current).forEach(url => {
         if (url) URL.revokeObjectURL(url);
       });
       // Revoke alle Contract Preview URLs
-      Object.values(contractPreviewUrls).forEach(url => {
+      Object.values(contractPreviewUrlsRef.current).forEach(url => {
         if (url) URL.revokeObjectURL(url);
       });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Nur beim Unmount, nicht bei jeder State-Änderung
+  }, []); // Nur beim Unmount
 
   const fetchDocuments = async () => {
     try {

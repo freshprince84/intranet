@@ -9,7 +9,7 @@ import app, { cleanupTimers as cleanupAppTimers } from './app';
 import { cleanupRateLimiter } from './middleware/rateLimiter';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { stopWorkers } from './queues';
-import { prisma, getAllPrismaPools } from './utils/prisma';
+import { prisma } from './utils/prisma';
 
 // ENCRYPTION_KEY-Prüfung beim Start
 const encryptionKey = process.env.ENCRYPTION_KEY;
@@ -68,9 +68,8 @@ process.on('SIGTERM', async () => {
   cleanupTimers(); // index.ts Timer
   cleanupAppTimers(); // app.ts Timer
   cleanupRateLimiter(); // rateLimiter Timer
-  // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
-  const pools = getAllPrismaPools();
-  await Promise.all(pools.map(pool => pool.$disconnect()));
+  // ✅ PERFORMANCE: Prisma-Instanz disconnecten
+  await prisma.$disconnect();
   server.close(() => {
     console.log('Server erfolgreich heruntergefahren.');
     process.exit(0);
@@ -84,9 +83,8 @@ process.on('SIGINT', async () => {
   cleanupTimers(); // index.ts Timer
   cleanupAppTimers(); // app.ts Timer
   cleanupRateLimiter(); // rateLimiter Timer
-  // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
-  const pools = getAllPrismaPools();
-  await Promise.all(pools.map(pool => pool.$disconnect()));
+  // ✅ PERFORMANCE: Prisma-Instanz disconnecten
+  await prisma.$disconnect();
   server.close(() => {
     console.log('Server erfolgreich heruntergefahren.');
     process.exit(0);
