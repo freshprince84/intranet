@@ -45,8 +45,15 @@ const App: React.FC = () => {
     // Claude Console nur im Development-Modus initialisieren
     React.useEffect(() => {
         if (process.env.NODE_ENV === 'development') {
-            initClaudeConsole();
+            const claudeConsole = initClaudeConsole();
             logger.log('🔍 Claude Console Bridge initialized');
+            
+            // ✅ MEMORY: Cleanup beim Unmount
+            return () => {
+                if (claudeConsole) {
+                    claudeConsole.destroy();
+                }
+            };
         }
     }, []);
 

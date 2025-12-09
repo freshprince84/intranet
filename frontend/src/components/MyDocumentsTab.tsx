@@ -62,43 +62,26 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
   const [downloadingContractId, setDownloadingContractId] = useState<number | null>(null);
   const [certPreviewUrls, setCertPreviewUrls] = useState<Record<number, string>>({});
   const [contractPreviewUrls, setContractPreviewUrls] = useState<Record<number, string>>({});
-  
-  // ✅ MEMORY: Cleanup Blob-URLs beim Unmount
-  useEffect(() => {
-    return () => {
-      // Revoke alle Certificate Preview URLs
-      Object.values(certPreviewUrls).forEach(url => {
-        URL.revokeObjectURL(url);
-      });
-      // Revoke alle Contract Preview URLs
-      Object.values(contractPreviewUrls).forEach(url => {
-        URL.revokeObjectURL(url);
-      });
-    };
-  }, [certPreviewUrls, contractPreviewUrls]);
   const [loadingPreviews, setLoadingPreviews] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     fetchDocuments();
   }, [userId]);
 
-  // Cleanup: Revoke Object URLs when component unmounts
+  // ✅ MEMORY: Cleanup Blob-URLs beim Unmount (nur einmal, nicht bei jeder State-Änderung)
   useEffect(() => {
     return () => {
-      setCertPreviewUrls(prev => {
-        Object.values(prev).forEach(url => {
-          if (url) window.URL.revokeObjectURL(url);
-        });
-        return {};
+      // Revoke alle Certificate Preview URLs
+      Object.values(certPreviewUrls).forEach(url => {
+        if (url) URL.revokeObjectURL(url);
       });
-      setContractPreviewUrls(prev => {
-        Object.values(prev).forEach(url => {
-          if (url) window.URL.revokeObjectURL(url);
-        });
-        return {};
+      // Revoke alle Contract Preview URLs
+      Object.values(contractPreviewUrls).forEach(url => {
+        if (url) URL.revokeObjectURL(url);
       });
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Nur beim Unmount, nicht bei jeder State-Änderung
 
   const fetchDocuments = async () => {
     try {

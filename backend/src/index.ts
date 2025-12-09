@@ -5,7 +5,8 @@ import path from 'path';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 import http from 'http';
-import app from './app';
+import app, { cleanupTimers as cleanupAppTimers } from './app';
+import { cleanupRateLimiter } from './middleware/rateLimiter';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { stopWorkers } from './queues';
 import { prisma, getAllPrismaPools } from './utils/prisma';
@@ -63,6 +64,10 @@ server.listen(PORT, () => {
 process.on('SIGTERM', async () => {
   console.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
   await stopWorkers();
+  // ✅ MEMORY: Cleanup Timer
+  cleanupTimers(); // index.ts Timer
+  cleanupAppTimers(); // app.ts Timer
+  cleanupRateLimiter(); // rateLimiter Timer
   // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
   const pools = getAllPrismaPools();
   await Promise.all(pools.map(pool => pool.$disconnect()));
@@ -75,6 +80,10 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   console.log('SIGINT signal empfangen. Server wird heruntergefahren...');
   await stopWorkers();
+  // ✅ MEMORY: Cleanup Timer
+  cleanupTimers(); // index.ts Timer
+  cleanupAppTimers(); // app.ts Timer
+  cleanupRateLimiter(); // rateLimiter Timer
   // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
   const pools = getAllPrismaPools();
   await Promise.all(pools.map(pool => pool.$disconnect()));
