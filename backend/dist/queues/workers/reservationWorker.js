@@ -13,6 +13,7 @@ exports.createReservationWorker = createReservationWorker;
 const bullmq_1 = require("bullmq");
 const reservationNotificationService_1 = require("../../services/reservationNotificationService");
 const prisma_1 = require("../../utils/prisma");
+const logger_1 = require("../../utils/logger");
 /**
  * Erstellt einen Worker für Reservation-Jobs
  * Verarbeitet Payment-Link-Erstellung und WhatsApp-Versand im Hintergrund
@@ -23,7 +24,7 @@ const prisma_1 = require("../../utils/prisma");
 function createReservationWorker(connection) {
     return new bullmq_1.Worker('reservation', (job) => __awaiter(this, void 0, void 0, function* () {
         const { reservationId, organizationId, amount, currency, contactType, guestPhone, guestEmail, guestName, } = job.data;
-        console.log(`[Reservation Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
+        logger_1.logger.log(`[Reservation Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
         // Prüfe ob Reservierung existiert
         const reservation = yield prisma_1.prisma.reservation.findUnique({
             where: { id: reservationId }
@@ -33,7 +34,7 @@ function createReservationWorker(connection) {
         }
         // Prüfe ob bereits verarbeitet (Idempotenz)
         if (reservation.sentMessage && reservation.paymentLink) {
-            console.log(`[Reservation Worker] Reservierung ${reservationId} wurde bereits verarbeitet, überspringe`);
+            logger_1.logger.log(`[Reservation Worker] Reservierung ${reservationId} wurde bereits verarbeitet, überspringe`);
             return {
                 success: true,
                 skipped: true,
@@ -51,10 +52,10 @@ function createReservationWorker(connection) {
                     currency
                 });
                 if (result.success) {
-                    console.log(`[Reservation Worker] ✅ Einladung erfolgreich versendet für Reservierung ${reservationId}`);
+                    logger_1.logger.log(`[Reservation Worker] ✅ Einladung erfolgreich versendet für Reservierung ${reservationId}`);
                 }
                 else {
-                    console.warn(`[Reservation Worker] ⚠️ Einladung teilweise fehlgeschlagen für Reservierung ${reservationId}: ${result.error}`);
+                    logger_1.logger.warn(`[Reservation Worker] ⚠️ Einladung teilweise fehlgeschlagen für Reservierung ${reservationId}: ${result.error}`);
                     // Bei teilweisem Fehler: Fehler weiterwerfen, damit BullMQ retried
                     throw new Error(result.error || 'Einladung konnte nicht vollständig versendet werden');
                 }
@@ -66,12 +67,12 @@ function createReservationWorker(connection) {
                 };
             }
             catch (error) {
-                console.error(`[Reservation Worker] ❌ Fehler beim Versenden der Einladung:`, error);
+                logger_1.logger.error(`[Reservation Worker] ❌ Fehler beim Versenden der Einladung:`, error);
                 throw error; // Wird von BullMQ automatisch retried
             }
         }
         // Wenn keine Telefonnummer vorhanden, überspringe
-        console.log(`[Reservation Worker] Keine Telefonnummer vorhanden, überspringe Einladung`);
+        logger_1.logger.log(`[Reservation Worker] Keine Telefonnummer vorhanden, überspringe Einladung`);
         return {
             success: true,
             skipped: true,

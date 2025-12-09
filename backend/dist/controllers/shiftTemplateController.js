@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteShiftTemplate = exports.updateShiftTemplate = exports.createShiftTemplate = exports.getShiftTemplateById = exports.getAllShiftTemplates = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * GET /api/shifts/templates
  * Holt alle ShiftTemplates (optional gefiltert nach branchId, roleId)
@@ -59,7 +60,7 @@ const getAllShiftTemplates = (req, res) => __awaiter(void 0, void 0, void 0, fun
         });
     }
     catch (error) {
-        console.error('[ShiftTemplate] Fehler beim Abrufen der Templates:', error);
+        logger_1.logger.error('[ShiftTemplate] Fehler beim Abrufen der Templates:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Templates'
@@ -111,7 +112,7 @@ const getShiftTemplateById = (req, res) => __awaiter(void 0, void 0, void 0, fun
         });
     }
     catch (error) {
-        console.error('[ShiftTemplate] Fehler beim Abrufen des Templates:', error);
+        logger_1.logger.error('[ShiftTemplate] Fehler beim Abrufen des Templates:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen des Templates'
@@ -227,7 +228,7 @@ const createShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        console.error('[ShiftTemplate] Fehler beim Erstellen des Templates:', error);
+        logger_1.logger.error('[ShiftTemplate] Fehler beim Erstellen des Templates:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Erstellen des Templates'
@@ -346,7 +347,7 @@ const updateShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        console.error('[ShiftTemplate] Fehler beim Aktualisieren des Templates:', error);
+        logger_1.logger.error('[ShiftTemplate] Fehler beim Aktualisieren des Templates:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren des Templates'
@@ -399,7 +400,7 @@ const deleteShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        console.error('[ShiftTemplate] Fehler beim Löschen des Templates:', error);
+        logger_1.logger.error('[ShiftTemplate] Fehler beim Löschen des Templates:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Löschen des Templates'

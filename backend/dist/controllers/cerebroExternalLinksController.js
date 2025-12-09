@@ -49,6 +49,7 @@ exports.fixGitHubLinks = exports.deleteLink = exports.updateLink = exports.getLi
 const axios_1 = __importDefault(require("axios"));
 const cheerio = __importStar(require("cheerio"));
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Hilfsfunktion zum Extrahieren von Metadaten aus einer URL
  */
@@ -68,7 +69,7 @@ const extractMetadata = (url) => __awaiter(void 0, void 0, void 0, function* () 
         }
         catch (urlError) {
             // URL ist ungültig
-            console.warn('[extractMetadata] Ungültige URL:', url);
+            logger_1.logger.warn('[extractMetadata] Ungültige URL:', url);
             return { type: 'link', title: url, thumbnail: '' };
         }
         // Standardwerte
@@ -124,11 +125,11 @@ const extractMetadata = (url) => __awaiter(void 0, void 0, void 0, function* () 
                     thumbnail = new URL(thumbnail, `${urlObj.protocol}//${urlObj.host}`).toString();
                 }
                 catch (e) {
-                    console.error('[extractMetadata] Fehler beim Konvertieren der Thumbnail-URL:', e);
+                    logger_1.logger.error('[extractMetadata] Fehler beim Konvertieren der Thumbnail-URL:', e);
                 }
             }
         }
-        console.log('[extractMetadata] Extrahierte Metadaten:', {
+        logger_1.logger.log('[extractMetadata] Extrahierte Metadaten:', {
             url,
             title,
             thumbnail: thumbnail || '(kein Thumbnail)',
@@ -137,8 +138,8 @@ const extractMetadata = (url) => __awaiter(void 0, void 0, void 0, function* () 
         return { type, title, thumbnail };
     }
     catch (error) {
-        console.error('[extractMetadata] Fehler beim Extrahieren der Metadaten:', (error === null || error === void 0 ? void 0 : error.message) || error);
-        console.error('[extractMetadata] Stack:', error === null || error === void 0 ? void 0 : error.stack);
+        logger_1.logger.error('[extractMetadata] Fehler beim Extrahieren der Metadaten:', (error === null || error === void 0 ? void 0 : error.message) || error);
+        logger_1.logger.error('[extractMetadata] Stack:', error === null || error === void 0 ? void 0 : error.stack);
         return { type: 'link', title: url, thumbnail: '' };
     }
 });
@@ -221,7 +222,7 @@ const createExternalLink = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.status(201).json(Object.assign(Object.assign({}, linkData), { metadata }));
     }
     catch (error) {
-        console.error('Fehler beim Erstellen des externen Links:', error);
+        logger_1.logger.error('Fehler beim Erstellen des externen Links:', error);
         res.status(500).json({ message: 'Fehler beim Erstellen des externen Links' });
     }
 });
@@ -254,7 +255,7 @@ const getLinksByArticle = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.status(200).json(links);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der externen Links:', error);
+        logger_1.logger.error('Fehler beim Abrufen der externen Links:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der externen Links' });
     }
 });
@@ -283,7 +284,7 @@ const getLinkById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.status(200).json(link[0]);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen des Links:', error);
+        logger_1.logger.error('Fehler beim Abrufen des Links:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Links' });
     }
 });
@@ -297,10 +298,10 @@ const getLinkPreview = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!url || typeof url !== 'string') {
             return res.status(400).json({ message: 'URL ist erforderlich' });
         }
-        console.log('[getLinkPreview] Lade Metadaten für URL:', url);
+        logger_1.logger.log('[getLinkPreview] Lade Metadaten für URL:', url);
         // Metadaten extrahieren
         const metadata = yield extractMetadata(url);
-        console.log('[getLinkPreview] Metadaten erhalten:', {
+        logger_1.logger.log('[getLinkPreview] Metadaten erhalten:', {
             title: metadata.title,
             thumbnail: metadata.thumbnail,
             type: metadata.type
@@ -308,7 +309,7 @@ const getLinkPreview = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(200).json(metadata);
     }
     catch (error) {
-        console.error('[getLinkPreview] Fehler beim Generieren der Link-Vorschau:', error);
+        logger_1.logger.error('[getLinkPreview] Fehler beim Generieren der Link-Vorschau:', error);
         res.status(500).json({ message: 'Fehler beim Generieren der Link-Vorschau' });
     }
 });
@@ -344,7 +345,7 @@ const updateLink = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.status(200).json(updatedLink[0]);
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren des Links:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren des Links:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren des Links' });
     }
 });
@@ -373,7 +374,7 @@ const deleteLink = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.status(200).json({ message: 'Link erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Fehler beim Löschen des Links:', error);
+        logger_1.logger.error('Fehler beim Löschen des Links:', error);
         res.status(500).json({ message: 'Fehler beim Löschen des Links' });
     }
 });
@@ -405,7 +406,7 @@ const extractPathFromGitHubUrl = (url) => {
         return null;
     }
     catch (error) {
-        console.error('[extractPathFromGitHubUrl] Fehler beim Extrahieren des Pfads:', error);
+        logger_1.logger.error('[extractPathFromGitHubUrl] Fehler beim Extrahieren des Pfads:', error);
         return null;
     }
 };
@@ -414,21 +415,21 @@ const extractPathFromGitHubUrl = (url) => {
  */
 const fixGitHubLinks = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log('[fixGitHubLinks] Starte Korrektur der GitHub-Links...');
+        logger_1.logger.log('[fixGitHubLinks] Starte Korrektur der GitHub-Links...');
         // Alle GitHub-Links abrufen
         const allLinks = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroExternalLink"
             WHERE type = 'github_markdown'
             ORDER BY id
         `;
-        console.log(`[fixGitHubLinks] Gefunden: ${allLinks.length} GitHub-Links`);
+        logger_1.logger.log(`[fixGitHubLinks] Gefunden: ${allLinks.length} GitHub-Links`);
         // Alle Artikel mit githubPath abrufen
         const articlesWithGithubPath = yield prisma_1.prisma.$queryRaw `
             SELECT id, slug, title, "githubPath" FROM "CerebroCarticle"
             WHERE "githubPath" IS NOT NULL AND "githubPath" != ''
             ORDER BY id
         `;
-        console.log(`[fixGitHubLinks] Gefunden: ${articlesWithGithubPath.length} Artikel mit githubPath`);
+        logger_1.logger.log(`[fixGitHubLinks] Gefunden: ${articlesWithGithubPath.length} Artikel mit githubPath`);
         let corrected = 0;
         let notFound = 0;
         const corrections = [];
@@ -436,7 +437,7 @@ const fixGitHubLinks = (req, res) => __awaiter(void 0, void 0, void 0, function*
         for (const link of allLinks) {
             const pathFromUrl = extractPathFromGitHubUrl(link.url);
             if (!pathFromUrl) {
-                console.log(`[fixGitHubLinks] Link ${link.id}: Konnte Pfad nicht aus URL extrahieren: ${link.url}`);
+                logger_1.logger.log(`[fixGitHubLinks] Link ${link.id}: Konnte Pfad nicht aus URL extrahieren: ${link.url}`);
                 notFound++;
                 continue;
             }
@@ -455,9 +456,9 @@ const fixGitHubLinks = (req, res) => __awaiter(void 0, void 0, void 0, function*
             });
             if (matchingArticle && matchingArticle.id !== link.carticleId) {
                 // Link ist falsch zugeordnet - korrigiere
-                console.log(`[fixGitHubLinks] Link ${link.id}: Korrigiere von Artikel ${link.carticleId} zu Artikel ${matchingArticle.id} (${matchingArticle.slug})`);
-                console.log(`  URL-Pfad: ${pathFromUrl}`);
-                console.log(`  Artikel githubPath: ${matchingArticle.githubPath}`);
+                logger_1.logger.log(`[fixGitHubLinks] Link ${link.id}: Korrigiere von Artikel ${link.carticleId} zu Artikel ${matchingArticle.id} (${matchingArticle.slug})`);
+                logger_1.logger.log(`  URL-Pfad: ${pathFromUrl}`);
+                logger_1.logger.log(`  Artikel githubPath: ${matchingArticle.githubPath}`);
                 yield prisma_1.prisma.$queryRaw `
                     UPDATE "CerebroExternalLink"
                     SET "carticleId" = ${matchingArticle.id}, "updatedAt" = NOW()
@@ -472,11 +473,11 @@ const fixGitHubLinks = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 });
             }
             else if (!matchingArticle) {
-                console.log(`[fixGitHubLinks] Link ${link.id}: Kein passender Artikel gefunden für Pfad: ${pathFromUrl}`);
+                logger_1.logger.log(`[fixGitHubLinks] Link ${link.id}: Kein passender Artikel gefunden für Pfad: ${pathFromUrl}`);
                 notFound++;
             }
         }
-        console.log(`[fixGitHubLinks] Abgeschlossen: ${corrected} Links korrigiert, ${notFound} Links ohne passenden Artikel`);
+        logger_1.logger.log(`[fixGitHubLinks] Abgeschlossen: ${corrected} Links korrigiert, ${notFound} Links ohne passenden Artikel`);
         res.status(200).json({
             message: 'GitHub-Links erfolgreich korrigiert',
             totalLinks: allLinks.length,
@@ -486,7 +487,7 @@ const fixGitHubLinks = (req, res) => __awaiter(void 0, void 0, void 0, function*
         });
     }
     catch (error) {
-        console.error('[fixGitHubLinks] Fehler beim Korrigieren der GitHub-Links:', error);
+        logger_1.logger.error('[fixGitHubLinks] Fehler beim Korrigieren der GitHub-Links:', error);
         res.status(500).json({ message: 'Fehler beim Korrigieren der GitHub-Links' });
     }
 });

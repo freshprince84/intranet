@@ -4,6 +4,7 @@ import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getSystemNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Ruft alle Benutzer mit aktiver Zeiterfassung ab
@@ -59,7 +60,7 @@ export const getActiveTeamWorktimes = async (req: Request, res: Response) => {
 
     res.json(activeWorktimes);
   } catch (error) {
-    console.error('Fehler beim Abrufen der aktiven Team-Zeiterfassungen:', error);
+    logger.error('Fehler beim Abrufen der aktiven Team-Zeiterfassungen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -131,7 +132,7 @@ export const stopUserWorktime = async (req: Request, res: Response) => {
 
     res.json(worktime);
   } catch (error) {
-    console.error('Fehler beim Stoppen der Benutzer-Zeiterfassung:', error);
+    logger.error('Fehler beim Stoppen der Benutzer-Zeiterfassung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -210,7 +211,7 @@ export const getUserWorktimesByDay = async (req: Request, res: Response) => {
 
     res.json(worktimes);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Zeiterfassungen:', error);
+    logger.error('Fehler beim Abrufen der Zeiterfassungen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -277,7 +278,7 @@ export const updateUserWorktime = async (req: Request, res: Response) => {
 
     res.json(updatedWorktime);
   } catch (error) {
-    console.error('Fehler beim Aktualisieren der Zeiterfassung:', error);
+    logger.error('Fehler beim Aktualisieren der Zeiterfassung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -347,7 +348,7 @@ export const updateApprovedOvertimeHours = async (req: Request, res: Response) =
 
     res.json(updatedUser);
   } catch (error) {
-    console.error('Fehler beim Aktualisieren der bewilligten Überstunden:', error);
+    logger.error('Fehler beim Aktualisieren der bewilligten Überstunden:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 }; 

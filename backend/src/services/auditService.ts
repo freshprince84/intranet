@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Audit-Log Service
@@ -29,7 +30,7 @@ export const logAuditEvent = async (entry: AuditLogEntry): Promise<void> => {
   try {
     // Aktuell: Console-Logging
     // Später: In AuditLog-Tabelle speichern
-    console.log('[AUDIT]', JSON.stringify({
+    logger.log('[AUDIT]', JSON.stringify({
       timestamp: new Date().toISOString(),
       organizationId: entry.organizationId,
       userId: entry.userId,
@@ -44,7 +45,7 @@ export const logAuditEvent = async (entry: AuditLogEntry): Promise<void> => {
     // TODO: Wenn AuditLog-Model existiert:
     // await prisma.auditLog.create({ data: { ... } });
   } catch (error) {
-    console.error('Error logging audit event:', error);
+    logger.error('Error logging audit event:', error);
     // Fehler beim Logging sollten die Hauptoperation nicht blockieren
   }
 };

@@ -52,6 +52,7 @@ const reservationNotificationService_1 = require("../services/reservationNotific
 const queueService_1 = require("../services/queueService");
 const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
+const logger_1 = require("../utils/logger");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
 const organization_1 = require("../middleware/organization");
 const filterCache_1 = require("../services/filterCache");
@@ -149,7 +150,7 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     priority: 1, // Hohe Priorität für manuelle Updates
                     jobId: `update-guest-contact-${updatedReservation.id}`, // Eindeutige ID für Idempotenz
                 });
-                console.log(`[Reservation] ✅ Job zur Queue hinzugefügt für Guest Contact Update ${updatedReservation.id}`);
+                logger_1.logger.log(`[Reservation] ✅ Job zur Queue hinzugefügt für Guest Contact Update ${updatedReservation.id}`);
                 // Sofortige Antwort - Job läuft im Hintergrund
                 // Frontend lädt Reservierung neu (onSuccess), daher sind sentMessage/sentMessageAt null ok
                 return res.json({
@@ -159,7 +160,7 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 });
             }
             catch (queueError) {
-                console.error('[Reservation] Fehler beim Hinzufügen zur Queue, verwende Fallback:', queueError);
+                logger_1.logger.error('[Reservation] Fehler beim Hinzufügen zur Queue, verwende Fallback:', queueError);
                 // Fallback auf synchrone Logik
             }
         }
@@ -209,7 +210,7 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     }
                 }
                 catch (ttlockError) {
-                    console.error('[Reservation] Fehler beim Erstellen des TTLock Passcodes:', ttlockError);
+                    logger_1.logger.error('[Reservation] Fehler beim Erstellen des TTLock Passcodes:', ttlockError);
                     // Weiter ohne TTLock Code
                 }
                 // Erstelle Nachrichtentext
@@ -263,10 +264,10 @@ ${ttlockCode}
                         paymentLink,
                     },
                 });
-                console.log(`[Reservation] WhatsApp-Nachricht versendet für Reservierung ${reservationId}`);
+                logger_1.logger.log(`[Reservation] WhatsApp-Nachricht versendet für Reservierung ${reservationId}`);
             }
             catch (whatsappError) {
-                console.error('[Reservation] Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+                logger_1.logger.error('[Reservation] Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
                 // Fehler nicht weiterwerfen, Status wurde bereits aktualisiert
             }
         }
@@ -277,7 +278,7 @@ ${ttlockCode}
         });
     }
     catch (error) {
-        console.error('[Reservation] Fehler beim Aktualisieren der Kontaktinformation:', error);
+        logger_1.logger.error('[Reservation] Fehler beim Aktualisieren der Kontaktinformation:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren der Kontaktinformation'
@@ -292,9 +293,9 @@ exports.updateGuestContact = updateGuestContact;
 const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
-        console.log('[Reservation] createReservation aufgerufen');
-        console.log('[Reservation] organizationId:', req.organizationId);
-        console.log('[Reservation] Body:', req.body);
+        logger_1.logger.log('[Reservation] createReservation aufgerufen');
+        logger_1.logger.log('[Reservation] organizationId:', req.organizationId);
+        logger_1.logger.log('[Reservation] Body:', req.body);
         const { guestName, contact, amount, currency = 'COP' } = req.body;
         // Validierung
         if (!guestName || typeof guestName !== 'string' || guestName.trim().length === 0) {
@@ -390,7 +391,7 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
                     priority: 1, // Hohe Priorität für manuelle Reservierungen
                     jobId: `reservation-${reservation.id}`, // Eindeutige ID für Idempotenz
                 });
-                console.log(`[Reservation] ✅ Job zur Queue hinzugefügt für Reservierung ${reservation.id}`);
+                logger_1.logger.log(`[Reservation] ✅ Job zur Queue hinzugefügt für Reservierung ${reservation.id}`);
                 // Hole aktuelle Reservierung (ohne Updates)
                 const finalReservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservation.id },
@@ -414,13 +415,13 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 });
             }
             catch (queueError) {
-                console.error('[Reservation] Fehler beim Hinzufügen zur Queue, verwende Fallback:', queueError);
+                logger_1.logger.error('[Reservation] Fehler beim Hinzufügen zur Queue, verwende Fallback:', queueError);
                 // Fallback auf synchrone Logik
             }
         }
         // Wenn autoSend = false, überspringe automatischen Versand
         if (!autoSend) {
-            console.log(`[Reservation] Automatischer Versand ist deaktiviert für Organisation ${reservation.organizationId}`);
+            logger_1.logger.log(`[Reservation] Automatischer Versand ist deaktiviert für Organisation ${reservation.organizationId}`);
             // Hole aktuelle Reservierung
             const finalReservation = yield prisma_1.prisma.reservation.findUnique({
                 where: { id: reservation.id },
@@ -451,14 +452,14 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
                     currency
                 });
                 if (result.success) {
-                    console.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht erfolgreich versendet`);
+                    logger_1.logger.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht erfolgreich versendet`);
                 }
                 else {
-                    console.warn(`[Reservation] ⚠️ Reservierung ${reservation.id} erstellt, aber WhatsApp-Nachricht fehlgeschlagen: ${result.error}`);
+                    logger_1.logger.warn(`[Reservation] ⚠️ Reservierung ${reservation.id} erstellt, aber WhatsApp-Nachricht fehlgeschlagen: ${result.error}`);
                 }
             }
             catch (error) {
-                console.error('[Reservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', error);
+                logger_1.logger.error('[Reservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', error);
                 // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
             }
         }
@@ -483,7 +484,7 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error('[Reservation] Fehler beim Erstellen der Reservierung:', error);
+        logger_1.logger.error('[Reservation] Fehler beim Erstellen der Reservierung:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Erstellen der Reservierung'
@@ -497,7 +498,7 @@ exports.createReservation = createReservation;
  */
 const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log('[Reservation] getAllReservations aufgerufen, organizationId:', req.organizationId);
+        logger_1.logger.log('[Reservation] getAllReservations aufgerufen, organizationId:', req.organizationId);
         if (!req.organizationId) {
             return res.status(400).json({
                 success: false,
@@ -546,7 +547,7 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Admin/Owner: Alle Reservations der Organisation (kein Branch-Filter)
         if ((0, organization_1.isAdminOrOwner)(req)) {
             // Kein Branch-Filter für Admin/Owner
-            console.log(`[Reservation] Admin/Owner: Zeige alle Reservations der Organisation`);
+            logger_1.logger.log(`[Reservation] Admin/Owner: Zeige alle Reservations der Organisation`);
         }
         else {
             // User/Andere Rollen: Nur Reservations der eigenen Branch
@@ -557,7 +558,7 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 const branchId = req.branchId;
                 if (branchId) {
                     whereClause.branchId = branchId;
-                    console.log(`[Reservation] Filtere nach Branch ${branchId} (own_branch Berechtigung)`);
+                    logger_1.logger.log(`[Reservation] Filtere nach Branch ${branchId} (own_branch Berechtigung)`);
                 }
                 else {
                     // Fallback: Hole branchId aus UsersBranches (falls nicht im Request-Kontext)
@@ -574,11 +575,11 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     });
                     if (userBranch === null || userBranch === void 0 ? void 0 : userBranch.branchId) {
                         whereClause.branchId = userBranch.branchId;
-                        console.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung, aus DB)`);
+                        logger_1.logger.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung, aus DB)`);
                     }
                     else {
                         // User hat keine aktive Branch → keine Reservierungen
-                        console.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
+                        logger_1.logger.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
                         return res.json({
                             success: true,
                             data: [],
@@ -590,15 +591,15 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
             else if (hasAllBranchesPermission) {
                 // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
-                console.log(`[Reservation] User hat all_branches Berechtigung, zeige alle Reservations`);
+                logger_1.logger.log(`[Reservation] User hat all_branches Berechtigung, zeige alle Reservations`);
             }
             else if (hasReservationsPermission) {
                 // ✅ FIX: Alte "reservations" Berechtigung → Zeige alle Reservierungen der Organisation
-                console.log(`[Reservation] User hat alte 'reservations' Berechtigung, zeige alle Reservations der Organisation`);
+                logger_1.logger.log(`[Reservation] User hat alte 'reservations' Berechtigung, zeige alle Reservations der Organisation`);
             }
             else {
                 // Keine Berechtigung → keine Reservierungen
-                console.log(`[Reservation] User hat keine Berechtigung, gebe leeres Array zurück`);
+                logger_1.logger.log(`[Reservation] User hat keine Berechtigung, gebe leeres Array zurück`);
                 return res.json({
                     success: true,
                     data: [],
@@ -674,7 +675,7 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[Reservation] Fehler beim Abrufen der Reservierungen:', error);
+        logger_1.logger.error('[Reservation] Fehler beim Abrufen der Reservierungen:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Reservierungen'
@@ -717,9 +718,9 @@ const sendReservationInvitation = (req, res) => __awaiter(void 0, void 0, void 0
                 message: 'Reservierung nicht gefunden oder gehört nicht zur Organisation'
             });
         }
-        console.log(`[Reservation] Sende Einladung für Reservierung ${reservationId}`);
-        console.log(`[Reservation] Organization ID: ${organizationId}`);
-        console.log(`[Reservation] Optionale Parameter:`, { guestPhone, guestEmail, customMessage, amount, currency });
+        logger_1.logger.log(`[Reservation] Sende Einladung für Reservierung ${reservationId}`);
+        logger_1.logger.log(`[Reservation] Organization ID: ${organizationId}`);
+        logger_1.logger.log(`[Reservation] Optionale Parameter:`, { guestPhone, guestEmail, customMessage, amount, currency });
         // Rufe Service-Methode auf
         try {
             const result = yield reservationNotificationService_1.ReservationNotificationService.sendReservationInvitation(reservationId, {
@@ -730,7 +731,7 @@ const sendReservationInvitation = (req, res) => __awaiter(void 0, void 0, void 0
                 currency
             });
             if (result.success) {
-                console.log(`[Reservation] ✅ Einladung erfolgreich versendet für Reservierung ${reservationId}`);
+                logger_1.logger.log(`[Reservation] ✅ Einladung erfolgreich versendet für Reservierung ${reservationId}`);
                 return res.json({
                     success: true,
                     data: {
@@ -744,7 +745,7 @@ const sendReservationInvitation = (req, res) => __awaiter(void 0, void 0, void 0
                 });
             }
             else {
-                console.warn(`[Reservation] ⚠️ Einladung teilweise fehlgeschlagen für Reservierung ${reservationId}: ${result.error}`);
+                logger_1.logger.warn(`[Reservation] ⚠️ Einladung teilweise fehlgeschlagen für Reservierung ${reservationId}: ${result.error}`);
                 return res.status(207).json({
                     success: false,
                     data: {
@@ -760,7 +761,7 @@ const sendReservationInvitation = (req, res) => __awaiter(void 0, void 0, void 0
             }
         }
         catch (error) {
-            console.error(`[Reservation] ❌ Fehler bei Einladung für Reservierung ${reservationId}:`, error);
+            logger_1.logger.error(`[Reservation] ❌ Fehler bei Einladung für Reservierung ${reservationId}:`, error);
             const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler';
             return res.status(500).json({
                 success: false,
@@ -769,7 +770,7 @@ const sendReservationInvitation = (req, res) => __awaiter(void 0, void 0, void 0
         }
     }
     catch (error) {
-        console.error('[Reservation] Fehler in sendReservationInvitation:', error);
+        logger_1.logger.error('[Reservation] Fehler in sendReservationInvitation:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Versenden der Einladung'
@@ -811,18 +812,18 @@ const generatePinAndSendNotification = (req, res) => __awaiter(void 0, void 0, v
                 message: 'Reservierung nicht gefunden oder gehört nicht zur Organisation'
             });
         }
-        console.log(`[Reservation] Generiere PIN und sende Mitteilung für Reservierung ${reservationId}`);
-        console.log(`[Reservation] Organization ID: ${organizationId}`);
+        logger_1.logger.log(`[Reservation] Generiere PIN und sende Mitteilung für Reservierung ${reservationId}`);
+        logger_1.logger.log(`[Reservation] Organization ID: ${organizationId}`);
         // Rufe Service-Methode auf, die unabhängig vom Check-in-Status funktioniert
         try {
             yield reservationNotificationService_1.ReservationNotificationService.generatePinAndSendNotification(reservationId);
-            console.log(`[Reservation] ✅ PIN-Generierung abgeschlossen für Reservierung ${reservationId}`);
+            logger_1.logger.log(`[Reservation] ✅ PIN-Generierung abgeschlossen für Reservierung ${reservationId}`);
         }
         catch (error) {
-            console.error(`[Reservation] ❌ Fehler bei PIN-Generierung für Reservierung ${reservationId}:`, error);
+            logger_1.logger.error(`[Reservation] ❌ Fehler bei PIN-Generierung für Reservierung ${reservationId}:`, error);
             if (error instanceof Error) {
-                console.error(`[Reservation] Fehlermeldung: ${error.message}`);
-                console.error(`[Reservation] Stack: ${error.stack}`);
+                logger_1.logger.error(`[Reservation] Fehlermeldung: ${error.message}`);
+                logger_1.logger.error(`[Reservation] Stack: ${error.stack}`);
             }
             throw error;
         }
@@ -850,7 +851,7 @@ const generatePinAndSendNotification = (req, res) => __awaiter(void 0, void 0, v
         });
     }
     catch (error) {
-        console.error('[Reservation] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
+        logger_1.logger.error('[Reservation] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung'
@@ -906,9 +907,9 @@ const sendPasscode = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 message: 'Mindestens eine Telefonnummer oder E-Mail-Adresse ist erforderlich'
             });
         }
-        console.log(`[Reservation] Sende Passcode für Reservierung ${reservationId}`);
-        console.log(`[Reservation] Guest Phone: ${finalGuestPhone || 'N/A'}`);
-        console.log(`[Reservation] Guest Email: ${finalGuestEmail || 'N/A'}`);
+        logger_1.logger.log(`[Reservation] Sende Passcode für Reservierung ${reservationId}`);
+        logger_1.logger.log(`[Reservation] Guest Phone: ${finalGuestPhone || 'N/A'}`);
+        logger_1.logger.log(`[Reservation] Guest Email: ${finalGuestEmail || 'N/A'}`);
         // Rufe Service-Methode auf
         try {
             yield reservationNotificationService_1.ReservationNotificationService.sendPasscodeNotification(reservationId, {
@@ -916,13 +917,13 @@ const sendPasscode = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 guestEmail: finalGuestEmail || undefined,
                 customMessage: customMessage || undefined
             });
-            console.log(`[Reservation] ✅ Passcode-Versendung abgeschlossen für Reservierung ${reservationId}`);
+            logger_1.logger.log(`[Reservation] ✅ Passcode-Versendung abgeschlossen für Reservierung ${reservationId}`);
         }
         catch (error) {
-            console.error(`[Reservation] ❌ Fehler bei Passcode-Versendung für Reservierung ${reservationId}:`, error);
+            logger_1.logger.error(`[Reservation] ❌ Fehler bei Passcode-Versendung für Reservierung ${reservationId}:`, error);
             if (error instanceof Error) {
-                console.error(`[Reservation] Fehlermeldung: ${error.message}`);
-                console.error(`[Reservation] Stack: ${error.stack}`);
+                logger_1.logger.error(`[Reservation] Fehlermeldung: ${error.message}`);
+                logger_1.logger.error(`[Reservation] Stack: ${error.stack}`);
             }
             throw error;
         }
@@ -950,7 +951,7 @@ const sendPasscode = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         });
     }
     catch (error) {
-        console.error('[Reservation] Fehler beim Versenden des Passcodes:', error);
+        logger_1.logger.error('[Reservation] Fehler beim Versenden des Passcodes:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Versenden des Passcodes'
@@ -1020,7 +1021,7 @@ const getReservationNotificationLogs = (req, res) => __awaiter(void 0, void 0, v
         });
     }
     catch (error) {
-        console.error('[Reservation] Fehler beim Laden der Notification-Logs:', error);
+        logger_1.logger.error('[Reservation] Fehler beim Laden der Notification-Logs:', error);
         return res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Notification-Logs'
@@ -1063,15 +1064,15 @@ const getReservationById = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 message: 'Reservierung nicht gefunden'
             });
         }
-        console.log('[Reservation] getReservationById - Status:', reservation.status);
-        console.log('[Reservation] getReservationById - PaymentStatus:', reservation.paymentStatus);
+        logger_1.logger.log('[Reservation] getReservationById - Status:', reservation.status);
+        logger_1.logger.log('[Reservation] getReservationById - PaymentStatus:', reservation.paymentStatus);
         res.json({
             success: true,
             data: reservation
         });
     }
     catch (error) {
-        console.error('[Reservation] Fehler beim Abrufen der Reservierung:', error);
+        logger_1.logger.error('[Reservation] Fehler beim Abrufen der Reservierung:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Reservierung'

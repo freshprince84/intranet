@@ -16,6 +16,7 @@ exports.EmailReadingService = void 0;
 const imap_1 = __importDefault(require("imap"));
 const mailparser_1 = require("mailparser");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Service für das Lesen von Emails via IMAP
  */
@@ -39,11 +40,11 @@ class EmailReadingService {
                     tlsOptions: { rejectUnauthorized: false } // Für selbst-signierte Zertifikate
                 });
                 this.imap.once('ready', () => {
-                    console.log('[EmailReading] IMAP-Verbindung erfolgreich');
+                    logger_1.logger.log('[EmailReading] IMAP-Verbindung erfolgreich');
                     resolve();
                 });
                 this.imap.once('error', (err) => {
-                    console.error('[EmailReading] IMAP-Fehler:', err);
+                    logger_1.logger.error('[EmailReading] IMAP-Fehler:', err);
                     reject(err);
                 });
                 this.imap.connect();
@@ -57,7 +58,7 @@ class EmailReadingService {
         if (this.imap) {
             this.imap.end();
             this.imap = null;
-            console.log('[EmailReading] IMAP-Verbindung getrennt');
+            logger_1.logger.log('[EmailReading] IMAP-Verbindung getrennt');
         }
     }
     /**
@@ -115,11 +116,11 @@ class EmailReadingService {
                             return;
                         }
                         if (!results || results.length === 0) {
-                            console.log('[EmailReading] Keine neuen Emails gefunden');
+                            logger_1.logger.log('[EmailReading] Keine neuen Emails gefunden');
                             resolve([]);
                             return;
                         }
-                        console.log(`[EmailReading] ${results.length} ungelesene Email(s) gefunden`);
+                        logger_1.logger.log(`[EmailReading] ${results.length} ungelesene Email(s) gefunden`);
                         const fetch = this.imap.fetch(results, {
                             bodies: '',
                             struct: true
@@ -153,7 +154,7 @@ class EmailReadingService {
                                     }
                                 }
                                 catch (err) {
-                                    console.error(`[EmailReading] Fehler beim Parsen der Email ${seqno}:`, err);
+                                    logger_1.logger.error(`[EmailReading] Fehler beim Parsen der Email ${seqno}:`, err);
                                 }
                             }));
                         });
@@ -161,7 +162,7 @@ class EmailReadingService {
                             reject(err);
                         });
                         fetch.once('end', () => {
-                            console.log(`[EmailReading] ${emails.length} Email(s) erfolgreich geladen`);
+                            logger_1.logger.log(`[EmailReading] ${emails.length} Email(s) erfolgreich geladen`);
                             resolve(emails);
                         });
                     });
@@ -191,7 +192,7 @@ class EmailReadingService {
                             return;
                         }
                         if (!results || results.length === 0) {
-                            console.warn(`[EmailReading] Email mit Message-ID ${messageId} nicht gefunden`);
+                            logger_1.logger.warn(`[EmailReading] Email mit Message-ID ${messageId} nicht gefunden`);
                             resolve();
                             return;
                         }
@@ -201,7 +202,7 @@ class EmailReadingService {
                                 reject(err);
                                 return;
                             }
-                            console.log(`[EmailReading] Email ${messageId} als gelesen markiert`);
+                            logger_1.logger.log(`[EmailReading] Email ${messageId} als gelesen markiert`);
                             resolve();
                         });
                     });
@@ -215,7 +216,7 @@ class EmailReadingService {
     moveToFolder(messageId, targetFolder) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this.config.processedFolder) {
-                console.warn('[EmailReading] processedFolder nicht konfiguriert, Email wird nicht verschoben');
+                logger_1.logger.warn('[EmailReading] processedFolder nicht konfiguriert, Email wird nicht verschoben');
                 return;
             }
             if (!this.imap) {
@@ -235,7 +236,7 @@ class EmailReadingService {
                             return;
                         }
                         if (!results || results.length === 0) {
-                            console.warn(`[EmailReading] Email mit Message-ID ${messageId} nicht gefunden`);
+                            logger_1.logger.warn(`[EmailReading] Email mit Message-ID ${messageId} nicht gefunden`);
                             resolve();
                             return;
                         }
@@ -250,7 +251,7 @@ class EmailReadingService {
                                 this.imap.addBox(fullFolderName, (addErr) => {
                                     if (addErr && !addErr.message.includes('already exists')) {
                                         // Fehler beim Erstellen des Ordners - ignoriere und markiere nur als gelesen
-                                        console.warn(`[EmailReading] Konnte Ordner ${fullFolderName} nicht erstellen, Email wird nur als gelesen markiert`);
+                                        logger_1.logger.warn(`[EmailReading] Konnte Ordner ${fullFolderName} nicht erstellen, Email wird nur als gelesen markiert`);
                                         resolve();
                                         return;
                                     }
@@ -258,17 +259,17 @@ class EmailReadingService {
                                     this.imap.move(results, fullFolderName, (moveErr) => {
                                         if (moveErr) {
                                             // Fehler beim Verschieben - ignoriere und markiere nur als gelesen
-                                            console.warn(`[EmailReading] Konnte Email nicht nach ${fullFolderName} verschieben, Email wird nur als gelesen markiert`);
+                                            logger_1.logger.warn(`[EmailReading] Konnte Email nicht nach ${fullFolderName} verschieben, Email wird nur als gelesen markiert`);
                                             resolve();
                                             return;
                                         }
-                                        console.log(`[EmailReading] Email ${messageId} nach ${fullFolderName} verschoben`);
+                                        logger_1.logger.log(`[EmailReading] Email ${messageId} nach ${fullFolderName} verschoben`);
                                         resolve();
                                     });
                                 });
                                 return;
                             }
-                            console.log(`[EmailReading] Email ${messageId} nach ${fullFolderName} verschoben`);
+                            logger_1.logger.log(`[EmailReading] Email ${messageId} nach ${fullFolderName} verschoben`);
                             resolve();
                         });
                     });
@@ -297,7 +298,7 @@ class EmailReadingService {
                 const imapConfig = emailReading.imap;
                 // Validiere erforderliche Felder
                 if (!imapConfig.host || !imapConfig.user || !imapConfig.password) {
-                    console.warn(`[EmailReading] Unvollständige IMAP-Konfiguration für Organisation ${organizationId}`);
+                    logger_1.logger.warn(`[EmailReading] Unvollständige IMAP-Konfiguration für Organisation ${organizationId}`);
                     return null;
                 }
                 return {
@@ -311,7 +312,7 @@ class EmailReadingService {
                 };
             }
             catch (error) {
-                console.error(`[EmailReading] Fehler beim Laden der Konfiguration für Organisation ${organizationId}:`, error);
+                logger_1.logger.error(`[EmailReading] Fehler beim Laden der Konfiguration für Organisation ${organizationId}:`, error);
                 return null;
             }
         });

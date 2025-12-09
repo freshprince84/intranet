@@ -42,11 +42,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateConnection = exports.handleWebhook = exports.checkInReservation = exports.syncReservations = exports.getReservationById = exports.getReservations = void 0;
+exports.syncFullReservations = exports.validateConnection = exports.handleWebhook = exports.checkInReservation = exports.syncReservations = exports.getReservationById = exports.getReservations = void 0;
 const lobbyPmsService_1 = require("../services/lobbyPmsService");
 const reservationTaskService_1 = require("../services/reservationTaskService");
 const reservationNotificationService_1 = require("../services/reservationNotificationService");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * GET /api/lobby-pms/reservations
  * Ruft Reservierungen ab (mit optionalen Filtern)
@@ -112,7 +113,7 @@ const getReservations = (req, res) => __awaiter(void 0, void 0, void 0, function
         });
     }
     catch (error) {
-        console.error('Error fetching reservations:', error);
+        logger_1.logger.error('Error fetching reservations:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Reservierungen'
@@ -151,7 +152,7 @@ const getReservationById = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('Error fetching reservation:', error);
+        logger_1.logger.error('Error fetching reservation:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Reservierung'
@@ -284,7 +285,7 @@ const syncReservations = (req, res) => __awaiter(void 0, void 0, void 0, functio
         });
     }
     catch (error) {
-        console.error('Error syncing reservations:', error);
+        logger_1.logger.error('Error syncing reservations:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Synchronisieren der Reservierungen'
@@ -319,7 +320,7 @@ const checkInReservation = (req, res) => __awaiter(void 0, void 0, void 0, funct
             yield service.updateReservationStatus(id, 'checked_in');
         }
         catch (error) {
-            console.error('Fehler beim Aktualisieren des Status in LobbyPMS:', error);
+            logger_1.logger.error('Fehler beim Aktualisieren des Status in LobbyPMS:', error);
             // Weiter mit lokaler Aktualisierung, auch wenn LobbyPMS-Update fehlschlägt
         }
         // WICHTIG: Setze Status direkt auf checked_in in lokaler DB
@@ -351,7 +352,7 @@ const checkInReservation = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         catch (syncError) {
             // Ignoriere Sync-Fehler, da Status bereits korrekt gesetzt ist
-            console.log('Hinweis: Synchronisation mit LobbyPMS fehlgeschlagen, aber Status ist bereits korrekt gesetzt:', syncError);
+            logger_1.logger.log('Hinweis: Synchronisation mit LobbyPMS fehlgeschlagen, aber Status ist bereits korrekt gesetzt:', syncError);
         }
         // Aktualisiere verknüpften Task falls vorhanden
         const userId = parseInt(req.userId);
@@ -361,7 +362,7 @@ const checkInReservation = (req, res) => __awaiter(void 0, void 0, void 0, funct
             yield reservationNotificationService_1.ReservationNotificationService.sendCheckInConfirmation(localReservation.id);
         }
         catch (error) {
-            console.error('Fehler beim Versenden der Check-in-Bestätigung:', error);
+            logger_1.logger.error('Fehler beim Versenden der Check-in-Bestätigung:', error);
             // Fehler nicht weiterwerfen, da Bestätigung optional ist
         }
         res.json({
@@ -370,7 +371,7 @@ const checkInReservation = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('Error checking in reservation:', error);
+        logger_1.logger.error('Error checking in reservation:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Check-in'
@@ -393,7 +394,7 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const { event, data } = req.body;
         // Validiere Webhook-Secret (falls konfiguriert)
         // TODO: Implementiere Webhook-Secret-Validierung
-        console.log(`[LobbyPMS Webhook] Event: ${event}`, data);
+        logger_1.logger.log(`[LobbyPMS Webhook] Event: ${event}`, data);
         // Bestimme Organisation aus Webhook-Daten
         // TODO: Wie identifizieren wir die Organisation aus dem Webhook?
         // Mögliche Ansätze:
@@ -417,7 +418,7 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             }
         });
         if (!organization) {
-            console.warn(`[LobbyPMS Webhook] Organisation nicht gefunden für Property ID: ${propertyId}`);
+            logger_1.logger.warn(`[LobbyPMS Webhook] Organisation nicht gefunden für Property ID: ${propertyId}`);
             return res.status(404).json({
                 success: false,
                 message: 'Organisation nicht gefunden'
@@ -432,7 +433,7 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const branchId = yield findBranchByPropertyId(propertyId, tempService.apiKey, // API Key aus Service
         organization.id);
         if (!branchId) {
-            console.warn(`[LobbyPMS Webhook] Keine Branch gefunden für Property ID: ${propertyId}`);
+            logger_1.logger.warn(`[LobbyPMS Webhook] Keine Branch gefunden für Property ID: ${propertyId}`);
             return res.status(404).json({
                 success: false,
                 message: 'Branch nicht gefunden'
@@ -469,13 +470,13 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
                 break;
             default:
-                console.log(`[LobbyPMS Webhook] Unbekanntes Event: ${event}`);
+                logger_1.logger.log(`[LobbyPMS Webhook] Unbekanntes Event: ${event}`);
         }
         // Bestätige Webhook-Empfang
         res.json({ success: true, message: 'Webhook verarbeitet' });
     }
     catch (error) {
-        console.error('Error handling webhook:', error);
+        logger_1.logger.error('Error handling webhook:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Verarbeiten des Webhooks'
@@ -505,4 +506,96 @@ const validateConnection = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.validateConnection = validateConnection;
+/**
+ * POST /api/lobby-pms/sync-full
+ * Vollständiger manueller Sync (nach check_out_date)
+ *
+ * Synchronisiert alle Reservierungen mit check_out_date >= gestern
+ * Für ersten Sync oder manuelle Synchronisation aller aktuellen Reservierungen
+ */
+const syncFullReservations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const organizationId = req.organizationId;
+        // Hole alle Branches der Organisation
+        const branches = yield prisma_1.prisma.branch.findMany({
+            where: {
+                organizationId: organizationId
+            },
+            include: {
+                organization: {
+                    select: {
+                        id: true,
+                        name: true,
+                        settings: true
+                    }
+                }
+            }
+        });
+        let totalSynced = 0;
+        const branchResults = [];
+        // Sync jede Branch mit check_out_date Filter
+        for (const branch of branches) {
+            try {
+                // Prüfe ob LobbyPMS Sync aktiviert ist
+                const branchSettings = branch.lobbyPmsSettings;
+                const orgSettings = (_a = branch.organization) === null || _a === void 0 ? void 0 : _a.settings;
+                const { decryptBranchApiSettings, decryptApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                const decryptedBranchSettings = branchSettings ? decryptBranchApiSettings(branchSettings) : null;
+                const decryptedOrgSettings = orgSettings ? decryptApiSettings(orgSettings) : null;
+                const lobbyPmsSettings = decryptedBranchSettings || (decryptedOrgSettings === null || decryptedOrgSettings === void 0 ? void 0 : decryptedOrgSettings.lobbyPms);
+                if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiKey)) {
+                    branchResults.push({
+                        branchId: branch.id,
+                        branchName: branch.name,
+                        syncedCount: 0,
+                        error: 'Kein LobbyPMS API Key konfiguriert'
+                    });
+                    continue;
+                }
+                if (lobbyPmsSettings.syncEnabled === false) {
+                    branchResults.push({
+                        branchId: branch.id,
+                        branchName: branch.name,
+                        syncedCount: 0,
+                        error: 'LobbyPMS Sync ist deaktiviert'
+                    });
+                    continue;
+                }
+                // Erstelle Service für Branch und führe vollständigen Sync durch
+                const service = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branch.id);
+                const syncedCount = yield service.syncReservationsByCheckoutDate();
+                totalSynced += syncedCount;
+                branchResults.push({
+                    branchId: branch.id,
+                    branchName: branch.name,
+                    syncedCount: syncedCount
+                });
+            }
+            catch (error) {
+                branchResults.push({
+                    branchId: branch.id,
+                    branchName: branch.name,
+                    syncedCount: 0,
+                    error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+                });
+                // Weiter mit nächster Branch
+            }
+        }
+        res.json({
+            success: true,
+            syncedCount: totalSynced,
+            branchResults: branchResults,
+            errors: branchResults.filter(r => r.error).map(r => `${r.branchName}: ${r.error}`)
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Error in full sync:', error);
+        res.status(500).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Fehler beim vollständigen Sync'
+        });
+    }
+});
+exports.syncFullReservations = syncFullReservations;
 //# sourceMappingURL=lobbyPmsController.js.map

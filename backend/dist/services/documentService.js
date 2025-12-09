@@ -52,6 +52,7 @@ const fs = __importStar(require("fs"));
 const date_fns_1 = require("date-fns");
 const locale_1 = require("date-fns/locale");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Upload-Verzeichnisse
 const CERTIFICATES_DIR = path.join(__dirname, '../../uploads/certificates');
 const CONTRACTS_DIR = path.join(__dirname, '../../uploads/contracts');
@@ -107,14 +108,14 @@ class DocumentService {
                 }
                 const organization = lifecycle.organization;
                 // Prüfe ob Template verwendet werden soll
-                console.log(`🔍 Prüfe Template-Verwendung: templateUsed=${data.templateUsed}, templateVersion=${data.templateVersion}`);
+                logger_1.logger.log(`🔍 Prüfe Template-Verwendung: templateUsed=${data.templateUsed}, templateVersion=${data.templateVersion}`);
                 if (data.templateUsed && data.templateVersion) {
                     const templateBuffer = yield this.loadTemplatePDF(organization, 'employmentCertificate', data.templateVersion);
                     if (templateBuffer) {
-                        console.log(`✅ Template gefunden für Certificate: ${data.templateUsed} v${data.templateVersion}, starte fillTemplatePDF`);
+                        logger_1.logger.log(`✅ Template gefunden für Certificate: ${data.templateUsed} v${data.templateVersion}, starte fillTemplatePDF`);
                         // Verwende Template-basierte Generierung
                         const pdfBuffer = yield this.fillTemplatePDF(templateBuffer, user, organization, lifecycle, data, 'certificate');
-                        console.log(`✅ Neues PDF generiert: ${pdfBuffer.length} Bytes`);
+                        logger_1.logger.log(`✅ Neues PDF generiert: ${pdfBuffer.length} Bytes`);
                         // Speichere PDF
                         const fileName = `certificate-${data.userId}-${Date.now()}.pdf`;
                         const filePath = path.join(CERTIFICATES_DIR, fileName);
@@ -122,11 +123,11 @@ class DocumentService {
                         return fileName;
                     }
                     else {
-                        console.warn(`⚠️ Template nicht gefunden: ${data.templateUsed} v${data.templateVersion}, verwende Standard-Generierung`);
+                        logger_1.logger.warn(`⚠️ Template nicht gefunden: ${data.templateUsed} v${data.templateVersion}, verwende Standard-Generierung`);
                     }
                 }
                 else {
-                    console.warn(`⚠️ Keine Template-Parameter: templateUsed=${data.templateUsed}, templateVersion=${data.templateVersion}, verwende Standard-Generierung`);
+                    logger_1.logger.warn(`⚠️ Keine Template-Parameter: templateUsed=${data.templateUsed}, templateVersion=${data.templateVersion}, verwende Standard-Generierung`);
                 }
                 // Fallback: Standard-PDF-Generierung
                 const pdfBuffer = yield this.createCertificatePDF(user, organization, lifecycle, data, generatedBy);
@@ -137,7 +138,7 @@ class DocumentService {
                 return fileName; // Relativer Pfad für Datenbank
             }
             catch (error) {
-                console.error('Error in generateCertificate:', error);
+                logger_1.logger.error('Error in generateCertificate:', error);
                 throw error;
             }
         });
@@ -203,7 +204,7 @@ class DocumentService {
                 return fileName; // Relativer Pfad für Datenbank
             }
             catch (error) {
-                console.error('Error in generateContract:', error);
+                logger_1.logger.error('Error in generateContract:', error);
                 throw error;
             }
         });
@@ -421,7 +422,7 @@ class DocumentService {
                 }
             }
             catch (error) {
-                console.error('Fehler beim Laden der Signatur:', error);
+                logger_1.logger.error('Fehler beim Laden der Signatur:', error);
                 // Fallback: Text-Unterschrift mit vollständiger Info
                 this.drawTextSignatureWithInfo(doc, margin, yPos, pageWidth, signature, orgName, orgNIT);
             }
@@ -503,7 +504,7 @@ class DocumentService {
             return settings.documentSignatures[type] || null;
         }
         catch (error) {
-            console.error('Fehler beim Laden der Signatur-Einstellungen:', error);
+            logger_1.logger.error('Fehler beim Laden der Signatur-Einstellungen:', error);
             return null;
         }
     }
@@ -629,7 +630,7 @@ class DocumentService {
                 }
             }
             catch (error) {
-                console.error('Fehler beim Laden der Signatur:', error);
+                logger_1.logger.error('Fehler beim Laden der Signatur:', error);
                 // Fallback: Text-Unterschriften
                 this.drawContractTextSignatures(doc, margin, yPos, pageWidth);
             }
@@ -671,34 +672,34 @@ class DocumentService {
             try {
                 const settings = organization.settings;
                 if (!settings || !settings.documentTemplates) {
-                    console.warn(`⚠️ Keine documentTemplates in Settings gefunden für ${templateType}`);
+                    logger_1.logger.warn(`⚠️ Keine documentTemplates in Settings gefunden für ${templateType}`);
                     return null;
                 }
                 const template = settings.documentTemplates[templateType];
                 if (!template || !template.path) {
-                    console.warn(`⚠️ Kein Template gefunden für ${templateType} in Settings`);
+                    logger_1.logger.warn(`⚠️ Kein Template gefunden für ${templateType} in Settings`);
                     return null;
                 }
-                console.log(`📋 Template gefunden: ${templateType}, Version: ${template.version}, Pfad: ${template.path}`);
+                logger_1.logger.log(`📋 Template gefunden: ${templateType}, Version: ${template.version}, Pfad: ${template.path}`);
                 // Wenn Version angegeben ist, prüfe ob sie übereinstimmt (aber lade trotzdem)
                 if (templateVersion && template.version !== templateVersion) {
-                    console.warn(`⚠️ Template-Version mismatch: requested ${templateVersion}, found ${template.version} - verwende gefundene Version`);
+                    logger_1.logger.warn(`⚠️ Template-Version mismatch: requested ${templateVersion}, found ${template.version} - verwende gefundene Version`);
                 }
                 // Lade Template-PDF
                 const templatePath = path.join(__dirname, '../../uploads', template.path);
-                console.log(`📂 Versuche Template zu laden von: ${templatePath}`);
+                logger_1.logger.log(`📂 Versuche Template zu laden von: ${templatePath}`);
                 if (fs.existsSync(templatePath)) {
                     const templateBuffer = fs.readFileSync(templatePath);
-                    console.log(`✅ Template erfolgreich geladen: ${templateBuffer.length} Bytes`);
+                    logger_1.logger.log(`✅ Template erfolgreich geladen: ${templateBuffer.length} Bytes`);
                     return templateBuffer;
                 }
                 else {
-                    console.error(`❌ Template-Pfad existiert nicht: ${templatePath}`);
+                    logger_1.logger.error(`❌ Template-Pfad existiert nicht: ${templatePath}`);
                     return null;
                 }
             }
             catch (error) {
-                console.error('❌ Error loading template PDF:', error);
+                logger_1.logger.error('❌ Error loading template PDF:', error);
                 return null;
             }
         });
@@ -746,7 +747,7 @@ class DocumentService {
     static drawTextAtPosition(page, position, text, pageWidth, pageHeight) {
         if (!position || !text) {
             if (!position) {
-                console.warn(`⚠️ Position fehlt für Text "${text}"`);
+                logger_1.logger.warn(`⚠️ Position fehlt für Text "${text}"`);
             }
             return;
         }
@@ -758,7 +759,7 @@ class DocumentService {
             const pdfLibY = pageHeight - position.y;
             // Prüfe ob Position innerhalb der Seite liegt
             if (position.x < 0 || position.x > pageWidth || pdfLibY < 0 || pdfLibY > pageHeight) {
-                console.warn(`⚠️ Position außerhalb der Seite für Text "${text}": (${position.x}, ${position.y}) -> (${position.x}, ${pdfLibY})`);
+                logger_1.logger.warn(`⚠️ Position außerhalb der Seite für Text "${text}": (${position.x}, ${position.y}) -> (${position.x}, ${pdfLibY})`);
             }
             // Schätze Textbreite (ca. 0.6 * fontSize pro Zeichen für Helvetica)
             const estimatedTextWidth = text.length * fontSize * 0.6;
@@ -782,10 +783,10 @@ class DocumentService {
                 // Optionale Formatierung
                 color: { r: 0, g: 0, b: 0 } // Schwarz
             });
-            console.log(`✅ Text "${text}" erfolgreich an Position (${position.x}, ${position.y}) -> (${position.x}, ${pdfLibY}) gezeichnet`);
+            logger_1.logger.log(`✅ Text "${text}" erfolgreich an Position (${position.x}, ${position.y}) -> (${position.x}, ${pdfLibY}) gezeichnet`);
         }
         catch (error) {
-            console.error(`❌ Fehler beim Zeichnen von Text "${text}" an Position (${position.x}, ${position.y}):`, error);
+            logger_1.logger.error(`❌ Fehler beim Zeichnen von Text "${text}" an Position (${position.x}, ${position.y}):`, error);
             // Fehler wird ignoriert, damit andere Felder weiterhin eingefügt werden können
         }
     }
@@ -816,10 +817,10 @@ class DocumentService {
                         textParts.push(pageText);
                     }
                     templateText = textParts.join('\n');
-                    console.log(`📄 Template-Text extrahiert: ${templateText.length} Zeichen`);
+                    logger_1.logger.log(`📄 Template-Text extrahiert: ${templateText.length} Zeichen`);
                 }
                 catch (parseError) {
-                    console.error('❌ Fehler bei Text-Extraktion:', parseError.message);
+                    logger_1.logger.error('❌ Fehler bei Text-Extraktion:', parseError.message);
                     // Fallback: Verwende Standard-Generierung auf Spanisch
                     throw new Error('Text-Extraktion nicht möglich - verwende Standard-Generierung');
                 }
@@ -923,7 +924,7 @@ class DocumentService {
                         .replace(/hasta el\s+\d{1,2}\s+de\s+\w+\s+\d{4}/gi, 'hasta hoy')
                         .replace(/hasta\s+\d{1,2}\s+de\s+\w+\s+\d{4}/gi, 'hasta hoy');
                 }
-                console.log(`✅ Variablen ersetzt. Neuer Text: ${templateText.substring(0, 200)}...`);
+                logger_1.logger.log(`✅ Variablen ersetzt. Neuer Text: ${templateText.substring(0, 200)}...`);
                 // Generiere NEUES, FRISCHES PDF mit dem ersetzten Text
                 return new Promise((resolve, reject) => {
                     var _a, _b;
@@ -1003,19 +1004,19 @@ class DocumentService {
                                 }
                             }
                             catch (error) {
-                                console.error('Fehler beim Laden der Signatur:', error);
+                                logger_1.logger.error('Fehler beim Laden der Signatur:', error);
                             }
                         }
                         doc.end();
                     }
                     catch (err) {
-                        console.error('Error generating PDF from template text:', err);
+                        logger_1.logger.error('Error generating PDF from template text:', err);
                         reject(err);
                     }
                 });
             }
             catch (error) {
-                console.error('Error filling template PDF:', error);
+                logger_1.logger.error('Error filling template PDF:', error);
                 // Fallback: Verwende Standard-Generierung
                 return new Promise((resolve, reject) => {
                     try {
@@ -1057,7 +1058,7 @@ class DocumentService {
                 return null;
             }
             catch (error) {
-                console.error('Error loading template:', error);
+                logger_1.logger.error('Error loading template:', error);
                 return null;
             }
         });
@@ -1074,7 +1075,7 @@ class DocumentService {
                 return fileName;
             }
             catch (error) {
-                console.error('Error saving template:', error);
+                logger_1.logger.error('Error saving template:', error);
                 throw error;
             }
         });

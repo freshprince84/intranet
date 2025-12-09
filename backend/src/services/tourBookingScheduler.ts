@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Tour Booking Scheduler
@@ -42,7 +43,7 @@ export class TourBookingScheduler {
         }
       });
       
-      console.log(`[TourBookingScheduler] Gefunden ${expiredBookings.length} abgelaufene Buchungen`);
+      logger.log(`[TourBookingScheduler] Gefunden ${expiredBookings.length} abgelaufene Buchungen`);
       
       for (const booking of expiredBookings) {
         try {
@@ -68,17 +69,17 @@ export class TourBookingScheduler {
                 'Automatische Stornierung: Zahlung nicht innerhalb der Frist erhalten'
               );
             } catch (whatsappError) {
-              console.error(`[TourBookingScheduler] Fehler beim Senden der WhatsApp-Nachricht für Buchung ${booking.id}:`, whatsappError);
+              logger.error(`[TourBookingScheduler] Fehler beim Senden der WhatsApp-Nachricht für Buchung ${booking.id}:`, whatsappError);
             }
           }
           
-          console.log(`[TourBookingScheduler] ✅ Buchung ${booking.id} automatisch storniert`);
+          logger.log(`[TourBookingScheduler] ✅ Buchung ${booking.id} automatisch storniert`);
         } catch (error) {
-          console.error(`[TourBookingScheduler] Fehler beim Stornieren der Buchung ${booking.id}:`, error);
+          logger.error(`[TourBookingScheduler] Fehler beim Stornieren der Buchung ${booking.id}:`, error);
         }
       }
     } catch (error) {
-      console.error('[TourBookingScheduler] Fehler:', error);
+      logger.error('[TourBookingScheduler] Fehler:', error);
     }
   }
 }

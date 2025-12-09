@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { encryptSecret, decryptSecret } from '../utils/encryption';
+import { logger } from '../utils/logger';
 
 /**
  * Validiert URL für Passwort-Manager (SSRF-Schutz)
@@ -94,7 +95,7 @@ const checkPasswordEntryPermission = async (
 
         return false;
     } catch (error) {
-        console.error('Error checking password entry permission:', error);
+        logger.error('Error checking password entry permission:', error);
         return false;
     }
 };
@@ -122,7 +123,7 @@ const createAuditLog = async (
             }
         });
     } catch (error) {
-        console.error('Error creating audit log:', error);
+        logger.error('Error creating audit log:', error);
         // Nicht kritisch, weiter machen
     }
 };
@@ -222,7 +223,7 @@ export const getAllPasswordEntries = async (req: PasswordManagerRequest, res: Re
 
         res.json(visibleEntries);
     } catch (error) {
-        console.error('Error getting password entries:', error);
+        logger.error('Error getting password entries:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Passwort-Einträge' });
     }
 };
@@ -288,7 +289,7 @@ export const getPasswordEntry = async (req: PasswordManagerRequest, res: Respons
         try {
             decryptedPassword = decryptSecret(entry.password);
         } catch (error) {
-            console.error('Error decrypting password:', error);
+            logger.error('Error decrypting password:', error);
             return res.status(500).json({ message: 'Fehler beim Entschlüsseln des Passworts' });
         }
 
@@ -307,7 +308,7 @@ export const getPasswordEntry = async (req: PasswordManagerRequest, res: Respons
             password: decryptedPassword
         });
     } catch (error) {
-        console.error('Error getting password entry:', error);
+        logger.error('Error getting password entry:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Passwort-Eintrags' });
     }
 };
@@ -347,7 +348,7 @@ export const getPasswordEntryPassword = async (req: PasswordManagerRequest, res:
         try {
             decryptedPassword = decryptSecret(entry.password);
         } catch (error) {
-            console.error('Error decrypting password:', error);
+            logger.error('Error decrypting password:', error);
             return res.status(500).json({ message: 'Fehler beim Entschlüsseln des Passworts' });
         }
 
@@ -365,7 +366,7 @@ export const getPasswordEntryPassword = async (req: PasswordManagerRequest, res:
             password: decryptedPassword
         });
     } catch (error) {
-        console.error('Error getting password:', error);
+        logger.error('Error getting password:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Passworts' });
     }
 };
@@ -410,7 +411,7 @@ export const logPasswordCopy = async (req: PasswordManagerRequest, res: Response
 
         res.json({ message: 'Audit-Log erstellt' });
     } catch (error) {
-        console.error('Error logging password copy:', error);
+        logger.error('Error logging password copy:', error);
         res.status(500).json({ message: 'Fehler beim Erstellen des Audit-Logs' });
     }
 };
@@ -442,7 +443,7 @@ export const createPasswordEntry = async (req: PasswordManagerRequest, res: Resp
         try {
             encryptedPassword = encryptSecret(password);
         } catch (error) {
-            console.error('Error encrypting password:', error);
+            logger.error('Error encrypting password:', error);
             return res.status(500).json({ message: 'Fehler beim Verschlüsseln des Passworts' });
         }
 
@@ -499,7 +500,7 @@ export const createPasswordEntry = async (req: PasswordManagerRequest, res: Resp
             password: undefined // Passwort nicht zurückgeben
         });
     } catch (error) {
-        console.error('Error creating password entry:', error);
+        logger.error('Error creating password entry:', error);
         res.status(500).json({ message: 'Fehler beim Erstellen des Passwort-Eintrags' });
     }
 };
@@ -549,7 +550,7 @@ export const updatePasswordEntry = async (req: PasswordManagerRequest, res: Resp
             try {
                 updateData.password = encryptSecret(password);
             } catch (error) {
-                console.error('Error encrypting password:', error);
+                logger.error('Error encrypting password:', error);
                 return res.status(500).json({ message: 'Fehler beim Verschlüsseln des Passworts' });
             }
         }
@@ -591,7 +592,7 @@ export const updatePasswordEntry = async (req: PasswordManagerRequest, res: Resp
             password: undefined // Passwort nicht zurückgeben
         });
     } catch (error) {
-        console.error('Error updating password entry:', error);
+        logger.error('Error updating password entry:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren des Passwort-Eintrags' });
     }
 };
@@ -640,7 +641,7 @@ export const deletePasswordEntry = async (req: PasswordManagerRequest, res: Resp
 
         res.json({ message: 'Eintrag erfolgreich gelöscht' });
     } catch (error) {
-        console.error('Error deleting password entry:', error);
+        logger.error('Error deleting password entry:', error);
         res.status(500).json({ message: 'Fehler beim Löschen des Passwort-Eintrags' });
     }
 };
@@ -674,7 +675,7 @@ export const generatePassword = async (req: Request, res: Response) => {
 
         res.json({ password });
     } catch (error) {
-        console.error('Error generating password:', error);
+        logger.error('Error generating password:', error);
         res.status(500).json({ message: 'Fehler beim Generieren des Passworts' });
     }
 };
@@ -736,7 +737,7 @@ export const getPasswordEntryAuditLogs = async (req: PasswordManagerRequest, res
 
         res.json(auditLogs);
     } catch (error) {
-        console.error('Error getting audit logs:', error);
+        logger.error('Error getting audit logs:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Audit-Logs' });
     }
 };
@@ -799,7 +800,7 @@ export const getPasswordEntryPermissions = async (req: PasswordManagerRequest, r
             userPermissions
         });
     } catch (error) {
-        console.error('Error getting password entry permissions:', error);
+        logger.error('Error getting password entry permissions:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Berechtigungen' });
     }
 };
@@ -877,7 +878,7 @@ export const updatePasswordEntryPermissions = async (req: PasswordManagerRequest
 
         res.json({ message: 'Berechtigungen erfolgreich aktualisiert' });
     } catch (error) {
-        console.error('Error updating password entry permissions:', error);
+        logger.error('Error updating password entry permissions:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren der Berechtigungen' });
     }
 };

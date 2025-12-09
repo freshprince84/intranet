@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTourReservationsByBooking = exports.getTourReservationsByReservation = exports.deleteTourReservation = exports.updateTourReservation = exports.createTourReservation = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // POST /api/tour-reservations - Tour mit Reservation verknüpfen
 const createTourReservation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -109,7 +110,7 @@ const createTourReservation = (req, res) => __awaiter(void 0, void 0, void 0, fu
         });
     }
     catch (error) {
-        console.error('[createTourReservation] Fehler:', error);
+        logger_1.logger.error('[createTourReservation] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Erstellen der Verknüpfung'
@@ -214,7 +215,7 @@ const updateTourReservation = (req, res) => __awaiter(void 0, void 0, void 0, fu
         });
     }
     catch (error) {
-        console.error('[updateTourReservation] Fehler:', error);
+        logger_1.logger.error('[updateTourReservation] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Aktualisieren der Verknüpfung'
@@ -242,7 +243,7 @@ const deleteTourReservation = (req, res) => __awaiter(void 0, void 0, void 0, fu
         });
     }
     catch (error) {
-        console.error('[deleteTourReservation] Fehler:', error);
+        logger_1.logger.error('[deleteTourReservation] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Löschen der Verknüpfung'
@@ -286,7 +287,7 @@ const getTourReservationsByReservation = (req, res) => __awaiter(void 0, void 0,
         });
     }
     catch (error) {
-        console.error('[getTourReservationsByReservation] Fehler:', error);
+        logger_1.logger.error('[getTourReservationsByReservation] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Verknüpfungen'
@@ -331,7 +332,7 @@ const getTourReservationsByBooking = (req, res) => __awaiter(void 0, void 0, voi
         });
     }
     catch (error) {
-        console.error('[getTourReservationsByBooking] Fehler:', error);
+        logger_1.logger.error('[getTourReservationsByBooking] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Verknüpfungen'

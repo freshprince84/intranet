@@ -45,6 +45,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LobbyPmsReservationScheduler = void 0;
 const lobbyPmsReservationSyncService_1 = require("./lobbyPmsReservationSyncService");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Scheduler für automatische LobbyPMS-Reservation-Synchronisation
  *
@@ -59,17 +60,18 @@ class LobbyPmsReservationScheduler {
      */
     static start() {
         if (this.isRunning) {
-            console.log('[LobbyPmsReservationScheduler] Scheduler läuft bereits');
+            logger_1.logger.log('[LobbyPmsReservationScheduler] Scheduler läuft bereits');
             return;
         }
-        console.log('[LobbyPmsReservationScheduler] Scheduler gestartet');
+        logger_1.logger.log('[LobbyPmsReservationScheduler] Scheduler gestartet');
         // Prüfe alle 10 Minuten
         const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten
         this.checkInterval = setInterval(() => __awaiter(this, void 0, void 0, function* () {
             yield this.checkAllBranches();
         }), CHECK_INTERVAL_MS);
-        // Führe sofort einen Check aus beim Start
-        this.checkAllBranches();
+        // ✅ MEMORY: Sofortigen Check beim Start entfernt (verhindert 674MB Memory-Verbrauch beim Server-Start)
+        // Stattdessen: Manueller Sync über Settings/System Tab verfügbar
+        // this.checkAllBranches();
         this.isRunning = true;
     }
     /**
@@ -80,7 +82,7 @@ class LobbyPmsReservationScheduler {
             clearInterval(this.checkInterval);
             this.checkInterval = null;
             this.isRunning = false;
-            console.log('[LobbyPmsReservationScheduler] Scheduler gestoppt');
+            logger_1.logger.log('[LobbyPmsReservationScheduler] Scheduler gestoppt');
         }
     }
     /**
@@ -94,7 +96,7 @@ class LobbyPmsReservationScheduler {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
             try {
-                console.log('[LobbyPmsReservationScheduler] Starte Sync für eingerichtete Branches...');
+                logger_1.logger.log('[LobbyPmsReservationScheduler] Starte Sync für eingerichtete Branches...');
                 // Hole nur eingerichtete Branches von Organisation 1 (Manila und Parque Poblado)
                 const branches = yield prisma_1.prisma.branch.findMany({
                     where: {
@@ -129,28 +131,28 @@ class LobbyPmsReservationScheduler {
                         if (lobbyPmsSettings.syncEnabled === false) {
                             continue; // Sync deaktiviert
                         }
-                        console.log(`[LobbyPmsReservationScheduler] Prüfe Branch ${branch.id} (${branch.name})...`);
+                        logger_1.logger.log(`[LobbyPmsReservationScheduler] Prüfe Branch ${branch.id} (${branch.name})...`);
                         // Synchronisiere Reservierungen für diesen Branch
                         const syncedCount = yield lobbyPmsReservationSyncService_1.LobbyPmsReservationSyncService.syncReservationsForBranch(branch.id);
                         totalProcessed += syncedCount;
                         if (syncedCount > 0) {
-                            console.log(`[LobbyPmsReservationScheduler] ✅ Branch ${branch.id}: ${syncedCount} Reservation(s) synchronisiert`);
+                            logger_1.logger.log(`[LobbyPmsReservationScheduler] ✅ Branch ${branch.id}: ${syncedCount} Reservation(s) synchronisiert`);
                         }
                     }
                     catch (error) {
-                        console.error(`[LobbyPmsReservationScheduler] Fehler bei Branch ${branch.id}:`, error);
+                        logger_1.logger.error(`[LobbyPmsReservationScheduler] Fehler bei Branch ${branch.id}:`, error);
                         // Weiter mit nächster Branch
                     }
                 }
                 if (totalProcessed > 0) {
-                    console.log(`[LobbyPmsReservationScheduler] ✅ Insgesamt ${totalProcessed} Reservation(s) synchronisiert`);
+                    logger_1.logger.log(`[LobbyPmsReservationScheduler] ✅ Insgesamt ${totalProcessed} Reservation(s) synchronisiert`);
                 }
                 else {
-                    console.log('[LobbyPmsReservationScheduler] Keine neuen Reservierungen gefunden');
+                    logger_1.logger.log('[LobbyPmsReservationScheduler] Keine neuen Reservierungen gefunden');
                 }
             }
             catch (error) {
-                console.error('[LobbyPmsReservationScheduler] Fehler beim Branch-Check:', error);
+                logger_1.logger.error('[LobbyPmsReservationScheduler] Fehler beim Branch-Check:', error);
             }
         });
     }
@@ -159,16 +161,16 @@ class LobbyPmsReservationScheduler {
      */
     static triggerManually(branchId) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('[LobbyPmsReservationScheduler] Manueller Trigger...');
+            logger_1.logger.log('[LobbyPmsReservationScheduler] Manueller Trigger...');
             if (branchId) {
                 // Prüfe nur eine Branch
                 try {
                     const syncedCount = yield lobbyPmsReservationSyncService_1.LobbyPmsReservationSyncService.syncReservationsForBranch(branchId);
-                    console.log(`[LobbyPmsReservationScheduler] Manueller Sync für Branch ${branchId}: ${syncedCount} Reservation(s) synchronisiert`);
+                    logger_1.logger.log(`[LobbyPmsReservationScheduler] Manueller Sync für Branch ${branchId}: ${syncedCount} Reservation(s) synchronisiert`);
                     return syncedCount;
                 }
                 catch (error) {
-                    console.error(`[LobbyPmsReservationScheduler] Fehler beim manuellen Sync für Branch ${branchId}:`, error);
+                    logger_1.logger.error(`[LobbyPmsReservationScheduler] Fehler beim manuellen Sync für Branch ${branchId}:`, error);
                     throw error;
                 }
             }

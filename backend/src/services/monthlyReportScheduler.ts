@@ -3,6 +3,7 @@ import { createNotificationIfEnabled } from '../controllers/notificationControll
 import { NotificationType } from '../validation/notificationValidation';
 import { getUserLanguage, getSystemNotificationText } from '../utils/translations';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface MockRequest {
   userId: string;
@@ -20,7 +21,7 @@ interface MockResponse {
  */
 export const checkAndGenerateMonthlyReports = async (): Promise<void> => {
   try {
-    console.log('Starte automatische Überprüfung für Monatsabrechnungen...');
+    logger.log('Starte automatische Überprüfung für Monatsabrechnungen...');
     
     const today = new Date();
     const currentDay = today.getDate();
@@ -47,11 +48,11 @@ export const checkAndGenerateMonthlyReports = async (): Promise<void> => {
       }
     });
 
-    console.log(`${usersWithActiveReports.length} Benutzer haben heute (${currentDay}.) ihre Monatsstichtag-Konfiguration`);
+    logger.log(`${usersWithActiveReports.length} Benutzer haben heute (${currentDay}.) ihre Monatsstichtag-Konfiguration`);
 
     for (const userSettings of usersWithActiveReports) {
       try {
-        console.log(`Verarbeite automatische Monatsabrechnung für Benutzer ${userSettings.user.firstName} ${userSettings.user.lastName} (ID: ${userSettings.userId})`);
+        logger.log(`Verarbeite automatische Monatsabrechnung für Benutzer ${userSettings.user.firstName} ${userSettings.user.lastName} (ID: ${userSettings.userId})`);
         
         // Prüfe, ob bereits ein Bericht für den aktuellen Zeitraum existiert
         const { periodStart, periodEnd } = calculateReportPeriod(currentDay, today);
@@ -67,7 +68,7 @@ export const checkAndGenerateMonthlyReports = async (): Promise<void> => {
         });
 
         if (existingReport) {
-          console.log(`Bericht für Benutzer ${userSettings.userId} existiert bereits (ID: ${existingReport.id})`);
+          logger.log(`Bericht für Benutzer ${userSettings.userId} existiert bereits (ID: ${existingReport.id})`);
           continue;
         }
 
@@ -86,7 +87,7 @@ export const checkAndGenerateMonthlyReports = async (): Promise<void> => {
           },
           json: async (data: any) => {
             if (data.message && !data.message.includes('Für diesen Zeitraum existiert bereits')) {
-              console.log(`Automatische Monatsabrechnung für Benutzer ${userSettings.userId}: ${data.message}`);
+              logger.log(`Automatische Monatsabrechnung für Benutzer ${userSettings.userId}: ${data.message}`);
               
               // Bei Erfolg: Benachrichtigung senden
               if (lastStatusCode === 201 || lastStatusCode === 200) {
@@ -104,7 +105,7 @@ export const checkAndGenerateMonthlyReports = async (): Promise<void> => {
                   type: NotificationType.system,
                   relatedEntityId: data.id || null,
                   relatedEntityType: 'monthly_report_generated'
-                }).catch(err => console.error('Fehler beim Erstellen der Benachrichtigung:', err));
+                }).catch(err => logger.error('Fehler beim Erstellen der Benachrichtigung:', err));
               }
             }
             return mockRes;
@@ -115,7 +116,7 @@ export const checkAndGenerateMonthlyReports = async (): Promise<void> => {
         await generateAutomaticMonthlyReport(mockReq as any, mockRes as any);
 
       } catch (userError) {
-        console.error(`Fehler bei automatischer Monatsabrechnung für Benutzer ${userSettings.userId}:`, userError);
+        logger.error(`Fehler bei automatischer Monatsabrechnung für Benutzer ${userSettings.userId}:`, userError);
         
         // Fehler-Benachrichtigung senden
         try {
@@ -129,15 +130,15 @@ export const checkAndGenerateMonthlyReports = async (): Promise<void> => {
             relatedEntityType: 'monthly_report_error'
           });
         } catch (notificationError) {
-          console.error('Fehler beim Erstellen der Fehler-Benachrichtigung:', notificationError);
+          logger.error('Fehler beim Erstellen der Fehler-Benachrichtigung:', notificationError);
         }
       }
     }
 
-    console.log('Automatische Überprüfung für Monatsabrechnungen abgeschlossen.');
+    logger.log('Automatische Überprüfung für Monatsabrechnungen abgeschlossen.');
 
   } catch (error) {
-    console.error('Fehler bei der automatischen Monatsabrechnungsgenerierung:', error);
+    logger.error('Fehler bei der automatischen Monatsabrechnungsgenerierung:', error);
   }
 };
 

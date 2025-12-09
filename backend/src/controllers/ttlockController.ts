@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { TTLockService } from '../services/ttlockService';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -23,7 +24,7 @@ export const getLocks = async (req: AuthenticatedRequest, res: Response) => {
       locks: locks.map(lockId => ({ lockId, name: lockId })) // lockId ist bereits ein String
     });
   } catch (error) {
-    console.error('Error getting TTLock locks:', error);
+    logger.error('Error getting TTLock locks:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Locks'
@@ -48,7 +49,7 @@ export const getLockInfo = async (req: AuthenticatedRequest, res: Response) => {
       message: 'Lock-Info-Endpoint noch nicht implementiert'
     });
   } catch (error) {
-    console.error('Error getting lock info:', error);
+    logger.error('Error getting lock info:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Lock-Informationen'
@@ -86,7 +87,7 @@ export const createPasscode = async (req: AuthenticatedRequest, res: Response) =
       message: 'Passcode erfolgreich erstellt'
     });
   } catch (error) {
-    console.error('Error creating passcode:', error);
+    logger.error('Error creating passcode:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Erstellen des Passcodes'
@@ -119,7 +120,7 @@ export const deletePasscode = async (req: AuthenticatedRequest, res: Response) =
       message: 'Passcode erfolgreich gelöscht'
     });
   } catch (error) {
-    console.error('Error deleting passcode:', error);
+    logger.error('Error deleting passcode:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Löschen des Passcodes'

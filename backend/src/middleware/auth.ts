@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../utils/prisma';
 import { userCache } from '../services/userCache';
+import { logger } from '../utils/logger';
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
 
 // Erweitere den Request-Typ, um den Benutzer hinzuzufügen
@@ -76,17 +77,17 @@ export const authMiddleware = async (
         req.roleId = String(activeRole.role.id);
       } else {
         // Nur bei Fehlern loggen (wenn keine aktive Rolle gefunden)
-        console.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
-        console.error(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
+        logger.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
+        logger.error(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
         user.roles.forEach(r => {
-          console.error(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
+          logger.error(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
         });
       }
     }
     
     next();
   } catch (error) {
-    console.error('Fehler in der Auth-Middleware:', error);
+    logger.error('Fehler in der Auth-Middleware:', error);
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ message: 'Ungültiger Token' });
     } else if (error.name === 'TokenExpiredError') {

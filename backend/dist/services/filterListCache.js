@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.filterListCache = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * In-Memory Cache für Filter-Listen und Filter-Gruppen
  *
@@ -47,7 +48,7 @@ class FilterListCache {
             // 1. Prüfe Cache
             const cached = this.filterListCache.get(cacheKey);
             if (this.isCacheValid(cached)) {
-                console.log(`[FilterListCache] ✅ Cache-Hit für Filter-Liste ${cacheKey}`);
+                logger_1.logger.log(`[FilterListCache] ✅ Cache-Hit für Filter-Liste ${cacheKey}`);
                 return cached.filters;
             }
             // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
@@ -59,7 +60,6 @@ class FilterListCache {
                     }
                 });
                 // 3. Parse die JSON-Strings zurück in Arrays
-                // ❌ ENTFERNT: sortDirections Migration - Filter-Sortierung wurde entfernt (Phase 1)
                 const parsedFilters = savedFilters.map(filter => {
                     return {
                         id: filter.id,
@@ -68,7 +68,6 @@ class FilterListCache {
                         name: filter.name,
                         conditions: JSON.parse(filter.conditions),
                         operators: JSON.parse(filter.operators),
-                        // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                         groupId: filter.groupId,
                         order: filter.order,
                         createdAt: filter.createdAt,
@@ -80,11 +79,11 @@ class FilterListCache {
                     filters: parsedFilters,
                     timestamp: Date.now()
                 });
-                console.log(`[FilterListCache] 💾 Cache-Miss für Filter-Liste ${cacheKey} - aus DB geladen und gecacht`);
+                logger_1.logger.log(`[FilterListCache] 💾 Cache-Miss für Filter-Liste ${cacheKey} - aus DB geladen und gecacht`);
                 return parsedFilters;
             }
             catch (error) {
-                console.error(`[FilterListCache] Fehler beim Laden von Filter-Liste ${cacheKey}:`, error);
+                logger_1.logger.error(`[FilterListCache] Fehler beim Laden von Filter-Liste ${cacheKey}:`, error);
                 return null;
             }
         });
@@ -102,7 +101,7 @@ class FilterListCache {
             // 1. Prüfe Cache
             const cached = this.filterGroupListCache.get(cacheKey);
             if (this.isCacheValid(cached)) {
-                console.log(`[FilterListCache] ✅ Cache-Hit für Filter-Gruppen ${cacheKey}`);
+                logger_1.logger.log(`[FilterListCache] ✅ Cache-Hit für Filter-Gruppen ${cacheKey}`);
                 return cached.groups;
             }
             // 2. ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
@@ -125,7 +124,6 @@ class FilterListCache {
                 });
                 // 3. Parse die JSON-Strings der Filter zurück in Arrays
                 // ✅ FIX: Filtere User-Filter-Gruppen nach aktiven Usern
-                // ❌ ENTFERNT: sortDirections Parsing - Filter-Sortierung wurde entfernt (Phase 1)
                 const parsedGroups = yield Promise.all(groups.map((group) => __awaiter(this, void 0, void 0, function* () {
                     let filters = group.filters.map(filter => {
                         return {
@@ -135,7 +133,6 @@ class FilterListCache {
                             name: filter.name,
                             conditions: JSON.parse(filter.conditions),
                             operators: JSON.parse(filter.operators),
-                            // ❌ ENTFERNT: sortDirections - Filter-Sortierung wurde entfernt (Phase 1)
                             groupId: filter.groupId,
                             order: filter.order,
                             createdAt: filter.createdAt,
@@ -199,11 +196,11 @@ class FilterListCache {
                     groups: parsedGroups,
                     timestamp: Date.now()
                 });
-                console.log(`[FilterListCache] 💾 Cache-Miss für Filter-Gruppen ${cacheKey} - aus DB geladen und gecacht`);
+                logger_1.logger.log(`[FilterListCache] 💾 Cache-Miss für Filter-Gruppen ${cacheKey} - aus DB geladen und gecacht`);
                 return parsedGroups;
             }
             catch (error) {
-                console.error(`[FilterListCache] Fehler beim Laden von Filter-Gruppen ${cacheKey}:`, error);
+                logger_1.logger.error(`[FilterListCache] Fehler beim Laden von Filter-Gruppen ${cacheKey}:`, error);
                 return null;
             }
         });
@@ -219,7 +216,7 @@ class FilterListCache {
         const cacheKey = `${userId}:${tableId}`;
         this.filterListCache.delete(cacheKey);
         this.filterGroupListCache.delete(cacheKey);
-        console.log(`[FilterListCache] 🗑️ Cache invalidiert für ${cacheKey}`);
+        logger_1.logger.log(`[FilterListCache] 🗑️ Cache invalidiert für ${cacheKey}`);
     }
     /**
      * Leert den gesamten Cache

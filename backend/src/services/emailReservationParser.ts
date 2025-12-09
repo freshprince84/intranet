@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger';
+
 /**
  * Email Reservation Parser für LobbyPMS Reservation-Emails
  * 
@@ -67,7 +69,7 @@ export class EmailReservationParser {
 
       // Ignoriere Stornierungen
       if (emailText.includes('cancelada') || emailText.includes('cancelled') || emailText.includes('cancelada en')) {
-        console.log('[EmailReservationParser] Email ist eine Stornierung, wird übersprungen');
+        logger.log('[EmailReservationParser] Email ist eine Stornierung, wird übersprungen');
         return null;
       }
 
@@ -100,14 +102,14 @@ export class EmailReservationParser {
       // Extrahiere Reservation Code
       data.reservationCode = this.extractReservationCode(textToParse);
       if (!data.reservationCode) {
-        console.warn('[EmailReservationParser] Reservation Code nicht gefunden');
+        logger.warn('[EmailReservationParser] Reservation Code nicht gefunden');
         return null;
       }
 
       // Extrahiere Gast-Name
       data.guestName = this.extractGuestName(textToParse);
       if (!data.guestName) {
-        console.warn('[EmailReservationParser] Gast-Name nicht gefunden');
+        logger.warn('[EmailReservationParser] Gast-Name nicht gefunden');
         return null;
       }
 
@@ -122,7 +124,7 @@ export class EmailReservationParser {
       // Extrahiere Daten
       const dates = this.extractDates(textToParse);
       if (!dates) {
-        console.warn('[EmailReservationParser] Daten nicht gefunden');
+        logger.warn('[EmailReservationParser] Daten nicht gefunden');
         return null;
       }
       data.checkInDate = dates.checkIn;
@@ -131,7 +133,7 @@ export class EmailReservationParser {
       // Extrahiere Betrag
       const amountInfo = this.extractAmount(textToParse);
       if (!amountInfo) {
-        console.warn('[EmailReservationParser] Betrag nicht gefunden');
+        logger.warn('[EmailReservationParser] Betrag nicht gefunden');
         return null;
       }
       data.amount = amountInfo.amount;
@@ -160,7 +162,7 @@ export class EmailReservationParser {
         commission: data.commission
       };
     } catch (error) {
-      console.error('[EmailReservationParser] Fehler beim Parsen:', error);
+      logger.error('[EmailReservationParser] Fehler beim Parsen:', error);
       return null;
     }
   }

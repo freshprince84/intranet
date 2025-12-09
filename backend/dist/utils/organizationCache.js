@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.organizationCache = void 0;
 const prisma_1 = require("./prisma");
+const logger_1 = require("./logger");
 class OrganizationCache {
     constructor() {
         this.cache = new Map();
@@ -87,7 +88,7 @@ class OrganizationCache {
                 return data;
             }
             catch (error) {
-                console.error(`[OrganizationCache] Fehler beim Laden für User ${userId}:`, error);
+                logger_1.logger.error(`[OrganizationCache] Fehler beim Laden für User ${userId}:`, error);
                 return null;
             }
         });

@@ -18,6 +18,7 @@ const child_process_1 = require("child_process");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Logger für Database Operations
 const logDatabaseOperation = (operation, userId, status, error) => {
     const logEntry = {
@@ -34,7 +35,7 @@ const logDatabaseOperation = (operation, userId, status, error) => {
         fs_1.default.mkdirSync(logDir, { recursive: true });
     }
     fs_1.default.appendFileSync(logPath, JSON.stringify(logEntry) + '\n');
-    console.log('Database Operation:', logEntry);
+    logger_1.logger.log('Database Operation:', logEntry);
 };
 /**
  * Alle Daten aus einer spezifischen Tabelle löschen und Seeds neu laden
@@ -130,7 +131,7 @@ const resetTable = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
     catch (error) {
         logDatabaseOperation(`reset_table_${req.body.tableName}`, req.userId, 'error', error instanceof Error ? error.message : 'Unbekannter Fehler');
-        console.error('Fehler beim Zurücksetzen der Tabelle:', error);
+        logger_1.logger.error('Fehler beim Zurücksetzen der Tabelle:', error);
         res.status(500).json({
             message: 'Fehler beim Zurücksetzen der Tabelle',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -177,7 +178,7 @@ const getResetableTables = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.json(allowedTables);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Tabellen:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Tabellen:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Tabellen' });
     }
 });
@@ -195,9 +196,9 @@ function runSeedForTable(tableName) {
                     return;
                 }
                 if (stderr) {
-                    console.warn('Seed stderr:', stderr);
+                    logger_1.logger.warn('Seed stderr:', stderr);
                 }
-                console.log('Seed stdout:', stdout);
+                logger_1.logger.log('Seed stdout:', stdout);
                 resolve();
             });
         });
@@ -254,7 +255,7 @@ const deleteDemoClients = (req, res) => __awaiter(void 0, void 0, void 0, functi
         const demoClientIds = allClients
             .filter(client => demoClientNames.includes(client.name))
             .map(client => client.id);
-        console.log(`Gefundene Demo-Clients: ${demoClientIds.length}`, demoClientIds);
+        logger_1.logger.log(`Gefundene Demo-Clients: ${demoClientIds.length}`, demoClientIds);
         // 5. Lösche nur Demo-Clients in einer Transaction
         let deletedCount = 0;
         if (demoClientIds.length > 0) {
@@ -268,7 +269,7 @@ const deleteDemoClients = (req, res) => __awaiter(void 0, void 0, void 0, functi
                         deletedCount++;
                     }
                     catch (deleteError) {
-                        console.error(`Fehler beim Löschen von Client ID ${clientId}:`, deleteError);
+                        logger_1.logger.error(`Fehler beim Löschen von Client ID ${clientId}:`, deleteError);
                         // Weiter mit den anderen Clients in der Transaction
                     }
                 }
@@ -285,7 +286,7 @@ const deleteDemoClients = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     catch (error) {
         logDatabaseOperation('delete_demo_clients', req.userId, 'error', error instanceof Error ? error.message : 'Unbekannter Fehler');
-        console.error('Fehler beim Löschen der Demo-Clients:', error);
+        logger_1.logger.error('Fehler beim Löschen der Demo-Clients:', error);
         res.status(500).json({
             message: 'Fehler beim Löschen der Demo-Clients',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -320,7 +321,7 @@ const getDatabaseLogs = (req, res) => __awaiter(void 0, void 0, void 0, function
         res.json(logs);
     }
     catch (error) {
-        console.error('Fehler beim Lesen der Database-Logs:', error);
+        logger_1.logger.error('Fehler beim Lesen der Database-Logs:', error);
         res.status(500).json({ message: 'Fehler beim Lesen der Logs' });
     }
 });

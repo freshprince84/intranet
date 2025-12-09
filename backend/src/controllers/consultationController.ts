@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 // Beratung starten (erweiterte Version von worktime/start)
 export const startConsultation = async (req: Request, res: Response) => {
@@ -60,7 +61,7 @@ export const startConsultation = async (req: Request, res: Response) => {
 
     res.status(201).json(consultation);
   } catch (error) {
-    console.error('Fehler beim Starten der Beratung:', error);
+    logger.error('Fehler beim Starten der Beratung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -105,7 +106,7 @@ export const stopConsultation = async (req: Request, res: Response) => {
 
     res.json(consultation);
   } catch (error) {
-    console.error('Fehler beim Beenden der Beratung:', error);
+    logger.error('Fehler beim Beenden der Beratung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -177,7 +178,7 @@ export const getConsultations = async (req: Request, res: Response) => {
 
     res.json(consultations);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Beratungen:', error);
+    logger.error('Fehler beim Abrufen der Beratungen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -222,7 +223,7 @@ export const linkTaskToConsultation = async (req: Request, res: Response) => {
 
     res.status(201).json(link);
   } catch (error) {
-    console.error('Fehler beim Verknüpfen von Task mit Beratung:', error);
+    logger.error('Fehler beim Verknüpfen von Task mit Beratung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -281,7 +282,7 @@ export const createTaskForConsultation = async (req: Request, res: Response) => 
 
     res.status(201).json(result);
   } catch (error) {
-    console.error('Fehler beim Erstellen von Task für Beratung:', error);
+    logger.error('Fehler beim Erstellen von Task für Beratung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -311,7 +312,7 @@ export const updateConsultationNotes = async (req: Request, res: Response) => {
 
     res.json(consultation);
   } catch (error) {
-    console.error('Fehler beim Aktualisieren der Notizen:', error);
+    logger.error('Fehler beim Aktualisieren der Notizen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -360,7 +361,7 @@ export const deleteConsultation = async (req: Request, res: Response) => {
 
     res.json({ message: 'Beratung erfolgreich gelöscht' });
   } catch (error) {
-    console.error('Fehler beim Löschen der Beratung:', error);
+    logger.error('Fehler beim Löschen der Beratung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 }; 

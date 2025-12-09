@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AvailabilityType } from '@prisma/client';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * GET /api/shifts/availabilities
@@ -97,7 +98,7 @@ export const getAllAvailabilities = async (req: Request, res: Response) => {
       data: availabilities
     });
   } catch (error) {
-    console.error('[UserAvailability] Fehler beim Abrufen der Verfügbarkeiten:', error);
+    logger.error('[UserAvailability] Fehler beim Abrufen der Verfügbarkeiten:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Verfügbarkeiten'
@@ -188,7 +189,7 @@ export const getAvailabilityById = async (req: Request, res: Response) => {
       data: availability
     });
   } catch (error) {
-    console.error('[UserAvailability] Fehler beim Abrufen der Verfügbarkeit:', error);
+    logger.error('[UserAvailability] Fehler beim Abrufen der Verfügbarkeit:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Verfügbarkeit'
@@ -397,7 +398,7 @@ export const createAvailability = async (req: Request, res: Response) => {
       data: availability
     });
   } catch (error) {
-    console.error('[UserAvailability] Fehler beim Erstellen der Verfügbarkeit:', error);
+    logger.error('[UserAvailability] Fehler beim Erstellen der Verfügbarkeit:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Erstellen der Verfügbarkeit'
@@ -608,7 +609,7 @@ export const updateAvailability = async (req: Request, res: Response) => {
       data: availability
     });
   } catch (error) {
-    console.error('[UserAvailability] Fehler beim Aktualisieren der Verfügbarkeit:', error);
+    logger.error('[UserAvailability] Fehler beim Aktualisieren der Verfügbarkeit:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren der Verfügbarkeit'
@@ -681,7 +682,7 @@ export const deleteAvailability = async (req: Request, res: Response) => {
       message: 'Verfügbarkeit erfolgreich gelöscht'
     });
   } catch (error) {
-    console.error('[UserAvailability] Fehler beim Löschen der Verfügbarkeit:', error);
+    logger.error('[UserAvailability] Fehler beim Löschen der Verfügbarkeit:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Löschen der Verfügbarkeit'

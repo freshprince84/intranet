@@ -17,6 +17,7 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Upload-Verzeichnis für Anhänge
 const UPLOAD_DIR = path_1.default.join(__dirname, '../../uploads/request-attachments');
 // Stelle sicher, dass das Upload-Verzeichnis existiert
@@ -58,7 +59,7 @@ const addAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.status(201).json(attachment);
     }
     catch (error) {
-        console.error('Fehler beim Hochladen der Datei:', error);
+        logger_1.logger.error('Fehler beim Hochladen der Datei:', error);
         res.status(500).json({ message: 'Fehler beim Hochladen der Datei' });
     }
 });
@@ -87,7 +88,7 @@ const getRequestAttachments = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.json(attachments);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Anhänge:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Anhänge:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Anhänge' });
     }
 });
@@ -132,7 +133,7 @@ const getAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
     }
     catch (error) {
-        console.error('Fehler beim Abrufen des Anhangs:', error);
+        logger_1.logger.error('Fehler beim Abrufen des Anhangs:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Anhangs' });
     }
 });
@@ -164,7 +165,7 @@ const deleteAttachment = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.json({ message: 'Anhang erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Fehler beim Löschen des Anhangs:', error);
+        logger_1.logger.error('Fehler beim Löschen des Anhangs:', error);
         res.status(500).json({ message: 'Fehler beim Löschen des Anhangs' });
     }
 });

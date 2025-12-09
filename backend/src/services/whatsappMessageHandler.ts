@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * WhatsApp Message Handler
@@ -31,14 +32,14 @@ export class WhatsAppMessageHandler {
     try {
       // 1. Normalisiere Telefonnummer
       const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
-      console.log('[WhatsApp Message Handler] Telefonnummer:', {
+      logger.log('[WhatsApp Message Handler] Telefonnummer:', {
         original: phoneNumber,
         normalized: normalizedPhone
       });
 
       // 2. Identifiziere User via phoneNumber
       const user = await this.identifyUser(normalizedPhone, branchId);
-      console.log('[WhatsApp Message Handler] User-Identifikation:', {
+      logger.log('[WhatsApp Message Handler] User-Identifikation:', {
         phoneNumber: normalizedPhone,
         branchId: branchId,
         userFound: !!user,
@@ -76,7 +77,7 @@ export class WhatsAppMessageHandler {
             }
           });
           
-          console.log('[WhatsApp Message Handler] User mit Rollen geladen:', {
+          logger.log('[WhatsApp Message Handler] User mit Rollen geladen:', {
             userId: userWithRoles?.id,
             rolesCount: userWithRoles?.roles?.length || 0,
             roles: userWithRoles?.roles?.map(r => ({ roleId: r.roleId, name: r.role.name })) || []
@@ -84,9 +85,9 @@ export class WhatsAppMessageHandler {
           
           if (userWithRoles?.roles && userWithRoles.roles.length > 0) {
             roleId = userWithRoles.roles[0].roleId;
-            console.log('[WhatsApp Message Handler] roleId gesetzt:', roleId);
+            logger.log('[WhatsApp Message Handler] roleId gesetzt:', roleId);
           } else {
-            console.error('[WhatsApp Message Handler] ⚠️ WARNUNG: User hat KEINE Rollen!', {
+            logger.error('[WhatsApp Message Handler] ⚠️ WARNUNG: User hat KEINE Rollen!', {
               userId: user.id,
               userName: `${user.firstName} ${user.lastName}`
             });
@@ -109,11 +110,11 @@ export class WhatsAppMessageHandler {
             
             if (userWithAllRoles?.roles && userWithAllRoles.roles.length > 0) {
               roleId = userWithAllRoles.roles[0].roleId;
-              console.log('[WhatsApp Message Handler] Fallback: roleId aus include-Query:', roleId);
+              logger.log('[WhatsApp Message Handler] Fallback: roleId aus include-Query:', roleId);
             }
           }
         } catch (error) {
-          console.error('[WhatsApp Message Handler] Fehler beim Laden der Rollen:', error);
+          logger.error('[WhatsApp Message Handler] Fehler beim Laden der Rollen:', error);
         }
       }
 
@@ -168,7 +169,7 @@ export class WhatsAppMessageHandler {
             };
             return translations[language] || translations.es;
           } catch (error) {
-            console.error('[WhatsApp Message Handler] Fehler bei Tour-Anbieter-Antwort:', error);
+            logger.error('[WhatsApp Message Handler] Fehler bei Tour-Anbieter-Antwort:', error);
             // Weiter mit normaler Verarbeitung
           }
         }
@@ -228,7 +229,7 @@ export class WhatsAppMessageHandler {
       // 6. Prüfe ob alle Buchungsinformationen vorhanden sind (explizite Logik)
       const bookingContext = await this.checkBookingContext(conversation, messageText, branchId, normalizedPhone);
       if (bookingContext.shouldBook) {
-        console.log('[WhatsApp Message Handler] Alle Buchungsinformationen vorhanden, rufe create_room_reservation auf');
+        logger.log('[WhatsApp Message Handler] Alle Buchungsinformationen vorhanden, rufe create_room_reservation auf');
         try {
           const { WhatsAppFunctionHandlers } = await import('./whatsappFunctionHandlers');
           // WICHTIG: Übergebe WhatsApp-Telefonnummer als Fallback für Kontaktdaten
@@ -250,7 +251,7 @@ export class WhatsAppMessageHandler {
           
           return bookingResult.message || 'Reservierung erfolgreich erstellt!';
         } catch (bookingError: any) {
-          console.error('[WhatsApp Message Handler] Fehler bei automatischer Buchung:', bookingError);
+          logger.error('[WhatsApp Message Handler] Fehler bei automatischer Buchung:', bookingError);
           // Weiter mit normaler KI-Antwort
         }
       }
@@ -276,7 +277,7 @@ export class WhatsAppMessageHandler {
         );
         return aiResponse.message;
       } catch (error: any) {
-        console.error('[WhatsApp Message Handler] KI-Fehler:', {
+        logger.error('[WhatsApp Message Handler] KI-Fehler:', {
           error: error.message,
           stack: error.stack,
           messageText: messageText.substring(0, 50),
@@ -313,7 +314,7 @@ export class WhatsAppMessageHandler {
         return await this.getLanguageResponse(branchId, normalizedPhone, 'ai_error', messageText);
       }
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler:', error);
+      logger.error('[WhatsApp Message Handler] Fehler:', error);
       return await this.getLanguageResponse(branchId, phoneNumber, 'error', messageText);
     }
   }
@@ -323,7 +324,7 @@ export class WhatsAppMessageHandler {
    */
   private static async identifyUser(phoneNumber: string, branchId: number): Promise<any | null> {
     try {
-      console.log('[WhatsApp Message Handler] Suche User:', { phoneNumber, branchId });
+      logger.log('[WhatsApp Message Handler] Suche User:', { phoneNumber, branchId });
       
       // Normalisiere Telefonnummer für Suche (verschiedene Formate)
       const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
@@ -342,7 +343,7 @@ export class WhatsAppMessageHandler {
       // Entferne Duplikate
       const uniqueFormats = [...new Set(searchFormats)];
       
-      console.log('[WhatsApp Message Handler] Suche mit Formaten:', uniqueFormats);
+      logger.log('[WhatsApp Message Handler] Suche mit Formaten:', uniqueFormats);
       
       // Versuche exakte Übereinstimmung mit allen Formaten
       let user = await prisma.user.findFirst({
@@ -364,12 +365,12 @@ export class WhatsAppMessageHandler {
       });
 
       if (user) {
-        console.log('[WhatsApp Message Handler] User gefunden (exakt):', user.id);
+        logger.log('[WhatsApp Message Handler] User gefunden (exakt):', user.id);
         return user;
       }
 
       // Fallback: Suche ohne Branch-Filter (falls User in anderem Branch ist)
-      console.log('[WhatsApp Message Handler] Exakte Suche fehlgeschlagen, versuche ohne Branch-Filter...');
+      logger.log('[WhatsApp Message Handler] Exakte Suche fehlgeschlagen, versuche ohne Branch-Filter...');
       const userWithBranches = await prisma.user.findFirst({
         where: {
           OR: uniqueFormats.map(format => ({ phoneNumber: format }))
@@ -395,7 +396,7 @@ export class WhatsAppMessageHandler {
       });
 
       if (userWithBranches) {
-        console.log('[WhatsApp Message Handler] User gefunden (ohne Branch-Filter):', {
+        logger.log('[WhatsApp Message Handler] User gefunden (ohne Branch-Filter):', {
           userId: userWithBranches.id,
           userName: `${userWithBranches.firstName} ${userWithBranches.lastName}`,
           userBranches: userWithBranches.branches.map(b => ({ id: b.branchId, name: b.branch.name })),
@@ -405,7 +406,7 @@ export class WhatsAppMessageHandler {
         // Prüfe ob User im Branch ist
         const isInBranch = userWithBranches.branches.some(b => b.branchId === branchId);
         if (!isInBranch) {
-          console.warn('[WhatsApp Message Handler] User ist nicht im Branch!', {
+          logger.warn('[WhatsApp Message Handler] User ist nicht im Branch!', {
             userId: userWithBranches.id,
             targetBranchId: branchId,
             userBranches: userWithBranches.branches.map(b => b.branchId)
@@ -423,7 +424,7 @@ export class WhatsAppMessageHandler {
           phoneNumber: userWithBranches.phoneNumber
         };
       } else {
-        console.warn('[WhatsApp Message Handler] Kein User gefunden für Telefonnummer:', phoneNumber);
+        logger.warn('[WhatsApp Message Handler] Kein User gefunden für Telefonnummer:', phoneNumber);
         
         // Debug: Zeige alle User mit ähnlichen Telefonnummern
         const allUsers = await prisma.user.findMany({
@@ -439,7 +440,7 @@ export class WhatsAppMessageHandler {
           take: 10
         });
         
-        console.log('[WhatsApp Message Handler] Verfügbare User mit Telefonnummer:', allUsers.map(u => ({
+        logger.log('[WhatsApp Message Handler] Verfügbare User mit Telefonnummer:', allUsers.map(u => ({
           id: u.id,
           name: `${u.firstName} ${u.lastName}`,
           phone: u.phoneNumber
@@ -448,10 +449,10 @@ export class WhatsAppMessageHandler {
 
       return user;
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler bei User-Identifikation:', error);
+      logger.error('[WhatsApp Message Handler] Fehler bei User-Identifikation:', error);
       if (error instanceof Error) {
-        console.error('[WhatsApp Message Handler] Fehlermeldung:', error.message);
-        console.error('[WhatsApp Message Handler] Stack:', error.stack);
+        logger.error('[WhatsApp Message Handler] Fehlermeldung:', error.message);
+        logger.error('[WhatsApp Message Handler] Stack:', error.stack);
       }
       return null;
     }
@@ -497,7 +498,7 @@ export class WhatsAppMessageHandler {
 
       return conversation;
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler bei Conversation:', error);
+      logger.error('[WhatsApp Message Handler] Fehler bei Conversation:', error);
       throw error;
     }
   }
@@ -584,7 +585,7 @@ export class WhatsAppMessageHandler {
 
       return message;
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler bei Requests:', error);
+      logger.error('[WhatsApp Message Handler] Fehler bei Requests:', error);
       return await this.getLanguageResponse(conversation.branchId, conversation.phoneNumber, 'error');
     }
   }
@@ -673,7 +674,7 @@ export class WhatsAppMessageHandler {
 
       return message;
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler bei Todos:', error);
+      logger.error('[WhatsApp Message Handler] Fehler bei Todos:', error);
       return await this.getLanguageResponse(conversation.branchId, conversation.phoneNumber, 'error');
     }
   }
@@ -706,7 +707,7 @@ export class WhatsAppMessageHandler {
 
       return translations[language] || translations.es;
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler beim Starten der Request-Erstellung:', error);
+      logger.error('[WhatsApp Message Handler] Fehler beim Starten der Request-Erstellung:', error);
       return await this.getLanguageResponse(branchId, phoneNumber, 'error');
     }
   }
@@ -739,7 +740,7 @@ export class WhatsAppMessageHandler {
 
       return translations[language] || translations.es;
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler beim Starten der Task-Erstellung:', error);
+      logger.error('[WhatsApp Message Handler] Fehler beim Starten der Task-Erstellung:', error);
       return await this.getLanguageResponse(branchId, phoneNumber, 'error');
     }
   }
@@ -828,7 +829,7 @@ export class WhatsAppMessageHandler {
           // Lade und speichere Media, falls vorhanden
           if (mediaUrl) {
             try {
-              console.log(`[WhatsApp Message Handler] Lade Media ${mediaUrl} für Request ${request.id}...`);
+              logger.log(`[WhatsApp Message Handler] Lade Media ${mediaUrl} für Request ${request.id}...`);
               
               const whatsappService = await WhatsAppService.getServiceForBranch(branchId);
               const mediaData = await whatsappService.downloadMedia(mediaUrl);
@@ -854,7 +855,7 @@ export class WhatsAppMessageHandler {
                 }
               });
 
-              console.log(`[WhatsApp Message Handler] Media erfolgreich als Attachment gespeichert für Request ${request.id}, Attachment ID: ${attachment.id}`);
+              logger.log(`[WhatsApp Message Handler] Media erfolgreich als Attachment gespeichert für Request ${request.id}, Attachment ID: ${attachment.id}`);
 
               // Aktualisiere Beschreibung mit Markdown-Link zum Attachment
               // Format: ![filename](/api/requests/{requestId}/attachments/{attachmentId})
@@ -868,7 +869,7 @@ export class WhatsAppMessageHandler {
                 }
               });
             } catch (error) {
-              console.error(`[WhatsApp Message Handler] Fehler beim Herunterladen/Speichern von Media:`, error);
+              logger.error(`[WhatsApp Message Handler] Fehler beim Herunterladen/Speichern von Media:`, error);
               // Weiter ohne Media - Request wurde bereits erstellt
             }
           }
@@ -982,7 +983,7 @@ export class WhatsAppMessageHandler {
           // Lade und speichere Media, falls vorhanden
           if (mediaUrl) {
             try {
-              console.log(`[WhatsApp Message Handler] Lade Media ${mediaUrl} für Task ${task.id}...`);
+              logger.log(`[WhatsApp Message Handler] Lade Media ${mediaUrl} für Task ${task.id}...`);
               
               const whatsappService = await WhatsAppService.getServiceForBranch(branchId);
               const mediaData = await whatsappService.downloadMedia(mediaUrl);
@@ -1008,7 +1009,7 @@ export class WhatsAppMessageHandler {
                 }
               });
 
-              console.log(`[WhatsApp Message Handler] Media erfolgreich als Attachment gespeichert für Task ${task.id}, Attachment ID: ${attachment.id}`);
+              logger.log(`[WhatsApp Message Handler] Media erfolgreich als Attachment gespeichert für Task ${task.id}, Attachment ID: ${attachment.id}`);
 
               // Aktualisiere Beschreibung mit Markdown-Link zum Attachment
               // Format: ![filename](/api/tasks/{taskId}/attachments/{attachmentId})
@@ -1022,7 +1023,7 @@ export class WhatsAppMessageHandler {
                 }
               });
             } catch (error) {
-              console.error(`[WhatsApp Message Handler] Fehler beim Herunterladen/Speichern von Media:`, error);
+              logger.error(`[WhatsApp Message Handler] Fehler beim Herunterladen/Speichern von Media:`, error);
               // Weiter ohne Media - Task wurde bereits erstellt
             }
           }
@@ -1054,7 +1055,7 @@ export class WhatsAppMessageHandler {
 
       return await this.getLanguageResponse(branchId, phoneNumber, 'unknown_state');
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler bei Conversation-Continuation:', error);
+      logger.error('[WhatsApp Message Handler] Fehler bei Conversation-Continuation:', error);
       // Reset State bei Fehler
       try {
         await prisma.whatsAppConversation.update({
@@ -1124,7 +1125,7 @@ export class WhatsAppMessageHandler {
       // Wenn mehrere gefunden, return null (User muss spezifischer sein)
       return null;
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler bei User-Suche:', error);
+      logger.error('[WhatsApp Message Handler] Fehler bei User-Suche:', error);
       return null;
     }
   }
@@ -1157,7 +1158,7 @@ export class WhatsAppMessageHandler {
       ? await this.detectLanguageForResponse(messageText, phoneNumber)
       : LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
     
-    console.log(`[getLanguageResponse] Sprache erkannt: ${language} (Nachricht: "${messageText?.substring(0, 50) || 'keine'}")`);
+    logger.log(`[getLanguageResponse] Sprache erkannt: ${language} (Nachricht: "${messageText?.substring(0, 50) || 'keine'}")`);
     
     const responses: Record<string, Record<string, string>> = {
       requests_require_auth: {
@@ -1265,7 +1266,7 @@ export class WhatsAppMessageHandler {
 
       return translations[language] || translations.es;
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler bei Gast-Code-Anfrage:', error);
+      logger.error('[WhatsApp Message Handler] Fehler bei Gast-Code-Anfrage:', error);
       return await this.getLanguageResponse(branchId, phoneNumber, 'error');
     }
   }
@@ -1551,7 +1552,7 @@ export class WhatsAppMessageHandler {
 
       return await this.getLanguageResponse(branchId, phoneNumber, 'unknown_state');
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler bei Gast-Identifikation:', error);
+      logger.error('[WhatsApp Message Handler] Fehler bei Gast-Identifikation:', error);
       await prisma.whatsAppConversation.update({
         where: { id: conversation.id },
         data: {
@@ -1606,7 +1607,7 @@ export class WhatsAppMessageHandler {
           });
           
           if (existingPotentialReservation) {
-            console.log(`[checkBookingContext] Bestehende "potential" Reservation gefunden: ${existingPotentialReservation.id}`);
+            logger.log(`[checkBookingContext] Bestehende "potential" Reservation gefunden: ${existingPotentialReservation.id}`);
             // Verwende Daten aus bestehender Reservation
             if (!bookingContext.checkInDate) {
               bookingContext.checkInDate = existingPotentialReservation.checkInDate.toISOString().split('T')[0];
@@ -1625,7 +1626,7 @@ export class WhatsAppMessageHandler {
             }
           }
         } catch (error) {
-          console.error('[checkBookingContext] Fehler beim Prüfen auf "potential" Reservation:', error);
+          logger.error('[checkBookingContext] Fehler beim Prüfen auf "potential" Reservation:', error);
           // Weiter ohne Fehler
         }
       }
@@ -1732,7 +1733,7 @@ export class WhatsAppMessageHandler {
             categoryId = room.categoryId;
             roomType = room.type as 'compartida' | 'privada';
             foundMatch = true;
-            console.log(`[checkBookingContext] Zimmer gefunden (exakt): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+            logger.log(`[checkBookingContext] Zimmer gefunden (exakt): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
             break;
           }
           
@@ -1748,7 +1749,7 @@ export class WhatsAppMessageHandler {
             categoryId = room.categoryId;
             roomType = room.type as 'compartida' | 'privada';
             foundMatch = true;
-            console.log(`[checkBookingContext] Zimmer gefunden (Teilübereinstimmung, ${matchingParts.length} Wörter): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+            logger.log(`[checkBookingContext] Zimmer gefunden (Teilübereinstimmung, ${matchingParts.length} Wörter): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
             break;
           }
           
@@ -1762,7 +1763,7 @@ export class WhatsAppMessageHandler {
             categoryId = room.categoryId;
             roomType = room.type as 'compartida' | 'privada';
             foundMatch = true;
-            console.log(`[checkBookingContext] Zimmer gefunden (fuzzy): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+            logger.log(`[checkBookingContext] Zimmer gefunden (fuzzy): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
             break;
           }
         }
@@ -1777,7 +1778,7 @@ export class WhatsAppMessageHandler {
             if (availableRoomsOfType.length === 1) {
               roomName = availableRoomsOfType[0].name;
               categoryId = availableRoomsOfType[0].categoryId;
-              console.log(`[checkBookingContext] Fallback: Einzige verfügbare ${roomType} Kategorie verwendet: ${roomName} (categoryId: ${categoryId})`);
+              logger.log(`[checkBookingContext] Fallback: Einzige verfügbare ${roomType} Kategorie verwendet: ${roomName} (categoryId: ${categoryId})`);
             } else {
               // Mehrere Kategorien verfügbar - versuche nach Kategorie-Namen zu suchen
               // (z.B. "doble básica", "apartamento doble")
@@ -1792,7 +1793,7 @@ export class WhatsAppMessageHandler {
                 if (matchingCategory) {
                   roomName = matchingCategory.name;
                   categoryId = matchingCategory.categoryId;
-                  console.log(`[checkBookingContext] Fallback: Kategorie gefunden durch Keyword "${messageCategoryMatch}": ${roomName} (categoryId: ${categoryId})`);
+                  logger.log(`[checkBookingContext] Fallback: Kategorie gefunden durch Keyword "${messageCategoryMatch}": ${roomName} (categoryId: ${categoryId})`);
                 }
               }
               
@@ -1800,7 +1801,7 @@ export class WhatsAppMessageHandler {
               if (!categoryId && availableRoomsOfType.length > 0) {
                 roomName = availableRoomsOfType[0].name;
                 categoryId = availableRoomsOfType[0].categoryId;
-                console.log(`[checkBookingContext] Fallback: Erste verfügbare ${roomType} Kategorie verwendet: ${roomName} (categoryId: ${categoryId})`);
+                logger.log(`[checkBookingContext] Fallback: Erste verfügbare ${roomType} Kategorie verwendet: ${roomName} (categoryId: ${categoryId})`);
               }
             }
           }
@@ -1837,7 +1838,7 @@ export class WhatsAppMessageHandler {
             roomName = room.name;
             categoryId = room.categoryId;
             roomType = room.type as 'compartida' | 'privada';
-            console.log(`[checkBookingContext] Zimmer gefunden (erweiterte Suche, ${matchCount} Übereinstimmungen): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+            logger.log(`[checkBookingContext] Zimmer gefunden (erweiterte Suche, ${matchCount} Übereinstimmungen): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
             break;
           }
         }
@@ -1898,7 +1899,7 @@ export class WhatsAppMessageHandler {
           if (matchingRoom) {
             updatedContext.categoryId = matchingRoom.categoryId;
             updatedContext.roomType = matchingRoom.type as 'compartida' | 'privada';
-            console.log(`[checkBookingContext] categoryId aus lastAvailabilityCheck gefunden: ${matchingRoom.categoryId} für ${matchingRoom.name}`);
+            logger.log(`[checkBookingContext] categoryId aus lastAvailabilityCheck gefunden: ${matchingRoom.categoryId} für ${matchingRoom.name}`);
           }
         }
       }
@@ -1932,7 +1933,7 @@ export class WhatsAppMessageHandler {
       
       return { shouldBook: false, context: updatedContext };
     } catch (error) {
-      console.error('[WhatsApp Message Handler] Fehler bei checkBookingContext:', error);
+      logger.error('[WhatsApp Message Handler] Fehler bei checkBookingContext:', error);
       return { shouldBook: false, context: {} };
     }
   }

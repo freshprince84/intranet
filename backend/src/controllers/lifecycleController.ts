@@ -4,6 +4,7 @@ import { isHROrAdmin, isLegalOrAdmin } from '../utils/lifecycleRoles';
 import * as path from 'path';
 import * as fs from 'fs';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 // Upload-Verzeichnis für Certificates/Contracts
 const CERTIFICATES_DIR = path.join(__dirname, '../../uploads/certificates');
@@ -67,7 +68,7 @@ export const getLifecycle = async (req: Request, res: Response) => {
           }
         }
       } catch (createError) {
-        console.error('Error creating lifecycle:', createError);
+        logger.error('Error creating lifecycle:', createError);
         // Fall through to return 404
       }
     }
@@ -78,7 +79,7 @@ export const getLifecycle = async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Error in getLifecycle:', error);
+    logger.error('Error in getLifecycle:', error);
     res.status(500).json({
       message: 'Fehler beim Abrufen des Lebenszyklus',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -122,7 +123,7 @@ export const updateStatus = async (req: Request, res: Response) => {
 
     res.json(updated);
   } catch (error) {
-    console.error('Error in updateStatus:', error);
+    logger.error('Error in updateStatus:', error);
     res.status(500).json({
       message: 'Fehler beim Aktualisieren des Status',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -162,7 +163,7 @@ export const getSocialSecurity = async (req: Request, res: Response) => {
 
     res.json(status);
   } catch (error) {
-    console.error('Error in getSocialSecurity:', error);
+    logger.error('Error in getSocialSecurity:', error);
     res.status(500).json({
       message: 'Fehler beim Abrufen des Sozialversicherungs-Status',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -212,7 +213,7 @@ export const updateSocialSecurity = async (req: Request, res: Response) => {
 
     res.json(updated);
   } catch (error) {
-    console.error('Error in updateSocialSecurity:', error);
+    logger.error('Error in updateSocialSecurity:', error);
     res.status(500).json({
       message: 'Fehler beim Aktualisieren des Sozialversicherungs-Status',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -269,7 +270,7 @@ export const getCertificates = async (req: Request, res: Response) => {
           }
         }
       } catch (createError) {
-        console.error('Error creating lifecycle:', createError);
+        logger.error('Error creating lifecycle:', createError);
       }
     }
 
@@ -279,7 +280,7 @@ export const getCertificates = async (req: Request, res: Response) => {
 
     res.json({ certificates });
   } catch (error) {
-    console.error('Error in getCertificates:', error);
+    logger.error('Error in getCertificates:', error);
     res.status(500).json({
       message: 'Fehler beim Abrufen der Arbeitszeugnisse',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -313,7 +314,7 @@ export const getCertificate = async (req: Request, res: Response) => {
 
     res.json(certificate);
   } catch (error) {
-    console.error('Error in getCertificate:', error);
+    logger.error('Error in getCertificate:', error);
     res.status(500).json({
       message: 'Fehler beim Abrufen des Arbeitszeugnisses',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -353,7 +354,7 @@ export const createCertificate = async (req: Request, res: Response) => {
 
     res.status(201).json(certificate);
   } catch (error) {
-    console.error('Error in createCertificate:', error);
+    logger.error('Error in createCertificate:', error);
     res.status(500).json({
       message: 'Fehler beim Erstellen des Arbeitszeugnisses',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -391,7 +392,7 @@ export const updateCertificate = async (req: Request, res: Response) => {
 
     res.json(updated);
   } catch (error) {
-    console.error('Error in updateCertificate:', error);
+    logger.error('Error in updateCertificate:', error);
     res.status(500).json({
       message: 'Fehler beim Aktualisieren des Arbeitszeugnisses',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -438,7 +439,7 @@ export const downloadCertificate = async (req: Request, res: Response) => {
     }
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
-    console.error('Error in downloadCertificate:', error);
+    logger.error('Error in downloadCertificate:', error);
     res.status(500).json({
       message: 'Fehler beim Herunterladen des Arbeitszeugnisses',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -495,7 +496,7 @@ export const getContracts = async (req: Request, res: Response) => {
           }
         }
       } catch (createError) {
-        console.error('Error creating lifecycle:', createError);
+        logger.error('Error creating lifecycle:', createError);
       }
     }
 
@@ -505,7 +506,7 @@ export const getContracts = async (req: Request, res: Response) => {
 
     res.json({ contracts });
   } catch (error) {
-    console.error('Error in getContracts:', error);
+    logger.error('Error in getContracts:', error);
     res.status(500).json({
       message: 'Fehler beim Abrufen der Arbeitsverträge',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -539,7 +540,7 @@ export const getContract = async (req: Request, res: Response) => {
 
     res.json(contract);
   } catch (error) {
-    console.error('Error in getContract:', error);
+    logger.error('Error in getContract:', error);
     res.status(500).json({
       message: 'Fehler beim Abrufen des Arbeitsvertrags',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -599,7 +600,7 @@ export const createContract = async (req: Request, res: Response) => {
 
     res.status(201).json(contract);
   } catch (error) {
-    console.error('Error in createContract:', error);
+    logger.error('Error in createContract:', error);
     res.status(500).json({
       message: 'Fehler beim Erstellen des Arbeitsvertrags',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -650,7 +651,7 @@ export const updateContract = async (req: Request, res: Response) => {
 
     res.json(updated);
   } catch (error) {
-    console.error('Error in updateContract:', error);
+    logger.error('Error in updateContract:', error);
     res.status(500).json({
       message: 'Fehler beim Aktualisieren des Arbeitsvertrags',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -697,7 +698,7 @@ export const downloadContract = async (req: Request, res: Response) => {
     }
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
-    console.error('Error in downloadContract:', error);
+    logger.error('Error in downloadContract:', error);
     res.status(500).json({
       message: 'Fehler beim Herunterladen des Arbeitsvertrags',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'

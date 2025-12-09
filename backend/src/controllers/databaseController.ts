@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -28,7 +29,7 @@ const logDatabaseOperation = (operation: string, userId: string, status: 'start'
   }
   
   fs.appendFileSync(logPath, JSON.stringify(logEntry) + '\n');
-  console.log('Database Operation:', logEntry);
+  logger.log('Database Operation:', logEntry);
 };
 
 /**
@@ -134,7 +135,7 @@ export const resetTable = async (req: AuthenticatedRequest, res: Response) => {
 
   } catch (error) {
     logDatabaseOperation(`reset_table_${req.body.tableName}`, req.userId, 'error', error instanceof Error ? error.message : 'Unbekannter Fehler');
-    console.error('Fehler beim Zurücksetzen der Tabelle:', error);
+    logger.error('Fehler beim Zurücksetzen der Tabelle:', error);
     res.status(500).json({ 
       message: 'Fehler beim Zurücksetzen der Tabelle',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -181,7 +182,7 @@ export const getResetableTables = async (req: AuthenticatedRequest, res: Respons
 
     res.json(allowedTables);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Tabellen:', error);
+    logger.error('Fehler beim Abrufen der Tabellen:', error);
     res.status(500).json({ message: 'Fehler beim Abrufen der Tabellen' });
   }
 };
@@ -198,9 +199,9 @@ async function runSeedForTable(tableName: string): Promise<void> {
         return;
       }
       if (stderr) {
-        console.warn('Seed stderr:', stderr);
+        logger.warn('Seed stderr:', stderr);
       }
-      console.log('Seed stdout:', stdout);
+      logger.log('Seed stdout:', stdout);
       resolve();
     });
   });
@@ -266,7 +267,7 @@ export const deleteDemoClients = async (req: AuthenticatedRequest, res: Response
       .filter(client => demoClientNames.includes(client.name))
       .map(client => client.id);
 
-    console.log(`Gefundene Demo-Clients: ${demoClientIds.length}`, demoClientIds);
+    logger.log(`Gefundene Demo-Clients: ${demoClientIds.length}`, demoClientIds);
 
     // 5. Lösche nur Demo-Clients in einer Transaction
     let deletedCount = 0;
@@ -281,7 +282,7 @@ export const deleteDemoClients = async (req: AuthenticatedRequest, res: Response
             });
             deletedCount++;
           } catch (deleteError) {
-            console.error(`Fehler beim Löschen von Client ID ${clientId}:`, deleteError);
+            logger.error(`Fehler beim Löschen von Client ID ${clientId}:`, deleteError);
             // Weiter mit den anderen Clients in der Transaction
           }
         }
@@ -299,7 +300,7 @@ export const deleteDemoClients = async (req: AuthenticatedRequest, res: Response
 
   } catch (error) {
     logDatabaseOperation('delete_demo_clients', req.userId, 'error', error instanceof Error ? error.message : 'Unbekannter Fehler');
-    console.error('Fehler beim Löschen der Demo-Clients:', error);
+    logger.error('Fehler beim Löschen der Demo-Clients:', error);
     res.status(500).json({ 
       message: 'Fehler beim Löschen der Demo-Clients',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -335,7 +336,7 @@ export const getDatabaseLogs = async (req: AuthenticatedRequest, res: Response) 
 
     res.json(logs);
   } catch (error) {
-    console.error('Fehler beim Lesen der Database-Logs:', error);
+    logger.error('Fehler beim Lesen der Database-Logs:', error);
     res.status(500).json({ message: 'Fehler beim Lesen der Logs' });
   }
 }; 

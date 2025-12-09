@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 // Invoice Settings abrufen
 export const getInvoiceSettings = async (req: Request, res: Response) => {
@@ -36,7 +37,7 @@ export const getInvoiceSettings = async (req: Request, res: Response) => {
 
     res.json(settings);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Invoice Settings:', error);
+    logger.error('Fehler beim Abrufen der Invoice Settings:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -119,7 +120,7 @@ export const createOrUpdateInvoiceSettings = async (req: Request, res: Response)
 
     res.json(settings);
   } catch (error) {
-    console.error('Fehler beim Speichern der Invoice Settings:', error);
+    logger.error('Fehler beim Speichern der Invoice Settings:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -152,7 +153,7 @@ export const getNextInvoiceNumber = async (req: Request, res: Response) => {
 
     res.json({ invoiceNumber, nextNumber });
   } catch (error) {
-    console.error('Fehler beim Generieren der Rechnungsnummer:', error);
+    logger.error('Fehler beim Generieren der Rechnungsnummer:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 }; 

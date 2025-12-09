@@ -1961,11 +1961,9 @@ const Worktracker: React.FC = () => {
 
     const handleDeleteTask = async (taskId: number) => {
         if (window.confirm(t('worktime.messages.taskDeleteConfirm'))) {
-            if (process.env.NODE_ENV === 'development') {
-            console.log('🗑️ Starte Löschung von Task:', taskId);
+            logger.log('🗑️ Starte Löschung von Task:', taskId);
             // ✅ MEMORY: Debug-Logs deaktiviert um Memory zu sparen
             // console.log('📋 Aktuelle Tasks vor Löschung:', tasks.length);
-            }
             
             // Optimistisches Update: Task sofort aus Liste entfernen für sofortiges Feedback
             // Sicherstellen, dass keine undefined/null Werte im Array bleiben

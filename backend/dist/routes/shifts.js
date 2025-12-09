@@ -16,27 +16,28 @@ const shiftController_1 = require("../controllers/shiftController");
 const shiftSwapController_1 = require("../controllers/shiftSwapController");
 const auth_1 = require("../middleware/auth");
 const organization_1 = require("../middleware/organization");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 // Test-Endpunkt (vor Middleware, um zu prüfen, ob Route erreichbar ist)
 router.get('/test', (req, res) => {
-    console.log('[Shifts Route] /test Endpunkt aufgerufen!');
+    logger_1.logger.log('[Shifts Route] /test Endpunkt aufgerufen!');
     res.json({ message: 'Shift-Route ist erreichbar!', timestamp: new Date().toISOString() });
 });
 // Alle Routen mit Authentifizierung schützen
 router.use((req, res, next) => {
-    console.log('[Shifts Route] 🔐 Vor authMiddleware, Path:', req.path);
+    logger_1.logger.log('[Shifts Route] 🔐 Vor authMiddleware, Path:', req.path);
     next();
 }, auth_1.authMiddleware);
 router.use((req, res, next) => {
-    console.log('[Shifts Route] 🔐 Nach authMiddleware, Path:', req.path, 'userId:', req.userId);
+    logger_1.logger.log('[Shifts Route] 🔐 Nach authMiddleware, Path:', req.path, 'userId:', req.userId);
     next();
 });
 router.use((req, res, next) => {
-    console.log('[Shifts Route] 🏢 Vor organizationMiddleware, Path:', req.path, 'userId:', req.userId);
+    logger_1.logger.log('[Shifts Route] 🏢 Vor organizationMiddleware, Path:', req.path, 'userId:', req.userId);
     next();
 }, organization_1.organizationMiddleware);
 router.use((req, res, next) => {
-    console.log('[Shifts Route] 🏢 Nach organizationMiddleware, Path:', req.path, 'organizationId:', req.organizationId);
+    logger_1.logger.log('[Shifts Route] 🏢 Nach organizationMiddleware, Path:', req.path, 'organizationId:', req.organizationId);
     next();
 });
 // ShiftTemplate-Routen
@@ -54,16 +55,16 @@ router.delete('/availabilities/:id', userAvailabilityController_1.deleteAvailabi
 // Shift-Routen
 // WICHTIG: GET / muss VOR GET /:id kommen, sonst wird / als :id interpretiert!
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('[Shifts Route] 📥 GET / aufgerufen');
-    console.log('[Shifts Route] Query:', req.query);
-    console.log('[Shifts Route] OrganizationId:', req.organizationId);
-    console.log('[Shifts Route] Rufe getAllShifts auf...');
+    logger_1.logger.log('[Shifts Route] 📥 GET / aufgerufen');
+    logger_1.logger.log('[Shifts Route] Query:', req.query);
+    logger_1.logger.log('[Shifts Route] OrganizationId:', req.organizationId);
+    logger_1.logger.log('[Shifts Route] Rufe getAllShifts auf...');
     try {
         yield (0, shiftController_1.getAllShifts)(req, res);
-        console.log('[Shifts Route] ✅ getAllShifts erfolgreich');
+        logger_1.logger.log('[Shifts Route] ✅ getAllShifts erfolgreich');
     }
     catch (error) {
-        console.error('[Shifts Route] ❌ Fehler in getAllShifts:', error);
+        logger_1.logger.error('[Shifts Route] ❌ Fehler in getAllShifts:', error);
         res.status(500).json({ error: 'Fehler beim Laden der Schichten' });
     }
 }));

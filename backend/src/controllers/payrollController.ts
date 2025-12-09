@@ -5,6 +5,7 @@ import path from 'path';
 import { getUserLanguage, getPayrollPDFTranslations } from '../utils/translations';
 import { isSameDay } from 'date-fns';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 export const saveWorkHours = async (req: Request, res: Response) => {
   try {
@@ -81,7 +82,7 @@ export const saveWorkHours = async (req: Request, res: Response) => {
     
     res.json(payroll);
   } catch (error) {
-    console.error('Fehler beim Speichern der Stunden:', error);
+    logger.error('Fehler beim Speichern der Stunden:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };
@@ -124,7 +125,7 @@ export const calculatePayroll = async (req: Request, res: Response) => {
 
     res.json(updatedPayroll);
   } catch (error) {
-    console.error('Fehler bei der Lohnberechnung:', error);
+    logger.error('Fehler bei der Lohnberechnung:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };
@@ -141,7 +142,7 @@ export const getPayrolls = async (req: Request, res: Response) => {
     
     res.json(payrolls);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Lohnabrechnungen:', error);
+    logger.error('Fehler beim Abrufen der Lohnabrechnungen:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };
@@ -180,7 +181,7 @@ export const getPrefilledHours = async (req: Request, res: Response) => {
 
     res.json(categorizedHours);
   } catch (error) {
-    console.error('Fehler beim Abrufen der vorausgefüllten Stunden:', error);
+    logger.error('Fehler beim Abrufen der vorausgefüllten Stunden:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };
@@ -262,7 +263,7 @@ export const generatePayrollPDF = async (req: Request, res: Response) => {
       });
     });
   } catch (error) {
-    console.error('Fehler beim Generieren des PDFs:', error);
+    logger.error('Fehler beim Generieren des PDFs:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };

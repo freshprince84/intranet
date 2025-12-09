@@ -5,6 +5,7 @@
  */
 
 import { LobbyPmsReservation } from './lobbyPmsService';
+import { logger } from '../utils/logger';
 
 /**
  * Mock-Daten für Reservierungen
@@ -82,7 +83,7 @@ export class MockLobbyPmsService {
    * Ruft Mock-Reservierungen ab
    */
   async fetchReservations(startDate: Date, endDate: Date): Promise<LobbyPmsReservation[]> {
-    console.log('[MockLobbyPms] fetchReservations:', { startDate, endDate });
+    logger.log('[MockLobbyPms] fetchReservations:', { startDate, endDate });
     
     // Filtere nach Datum
     return MOCK_RESERVATIONS.filter(res => {
@@ -95,7 +96,7 @@ export class MockLobbyPmsService {
    * Ruft Mock-Reservierungen für morgen ab
    */
   async fetchTomorrowReservations(arrivalTimeThreshold?: string): Promise<LobbyPmsReservation[]> {
-    console.log('[MockLobbyPms] fetchTomorrowReservations:', { arrivalTimeThreshold });
+    logger.log('[MockLobbyPms] fetchTomorrowReservations:', { arrivalTimeThreshold });
     
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -130,7 +131,7 @@ export class MockLobbyPmsService {
    * Ruft Mock-Reservierung nach ID ab
    */
   async fetchReservationById(reservationId: string): Promise<LobbyPmsReservation> {
-    console.log('[MockLobbyPms] fetchReservationById:', reservationId);
+    logger.log('[MockLobbyPms] fetchReservationById:', reservationId);
     
     const reservation = MOCK_RESERVATIONS.find(r => r.id === reservationId);
     if (!reservation) {
@@ -143,7 +144,7 @@ export class MockLobbyPmsService {
    * Validiert Verbindung (Mock - immer erfolgreich)
    */
   async validateConnection(): Promise<boolean> {
-    console.log('[MockLobbyPms] validateConnection');
+    logger.log('[MockLobbyPms] validateConnection');
     return true;
   }
 
@@ -151,7 +152,7 @@ export class MockLobbyPmsService {
    * Synchronisiert Reservierung (Mock - gibt Reservierung zurück)
    */
   async syncReservation(lobbyReservation: LobbyPmsReservation): Promise<any> {
-    console.log('[MockLobbyPms] syncReservation:', lobbyReservation.id);
+    logger.log('[MockLobbyPms] syncReservation:', lobbyReservation.id);
     
     // Simuliere Synchronisation - gibt einfach die Reservierung zurück
     // In der echten Implementierung würde hier die DB aktualisiert

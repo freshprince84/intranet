@@ -18,6 +18,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runOrganizationMiddlewareTests = runOrganizationMiddlewareTests;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Test 1: Gültige Organisation-Zuordnung
  */
@@ -215,7 +216,7 @@ function testMultiOrgUsers() {
  */
 function runOrganizationMiddlewareTests() {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log('🔧 Starting Organization Middleware Integration Tests...\n');
+        logger_1.logger.log('🔧 Starting Organization Middleware Integration Tests...\n');
         const tests = [
             testValidOrganizationAssignment,
             testOrphanedRolesDetection,
@@ -224,34 +225,34 @@ function runOrganizationMiddlewareTests() {
         ];
         const results = [];
         for (const test of tests) {
-            console.log(`⏳ Running ${test.name}...`);
+            logger_1.logger.log(`⏳ Running ${test.name}...`);
             const result = yield test();
             results.push(result);
             const status = result.success ? '✅ PASSED' : '❌ FAILED';
-            console.log(`${status}: ${result.testName}`);
-            console.log(`   ${result.message}`);
+            logger_1.logger.log(`${status}: ${result.testName}`);
+            logger_1.logger.log(`   ${result.message}`);
             if (result.organizationId) {
-                console.log(`   Organization ID: ${result.organizationId}`);
+                logger_1.logger.log(`   Organization ID: ${result.organizationId}`);
             }
-            console.log('');
+            logger_1.logger.log('');
         }
         // Zusammenfassung
         const passed = results.filter(r => r.success).length;
         const total = results.length;
-        console.log('📊 Test Summary:');
-        console.log(`   Passed: ${passed}/${total}`);
-        console.log(`   Failed: ${total - passed}/${total}`);
+        logger_1.logger.log('📊 Test Summary:');
+        logger_1.logger.log(`   Passed: ${passed}/${total}`);
+        logger_1.logger.log(`   Failed: ${total - passed}/${total}`);
         if (passed === total) {
-            console.log('🎉 All Organization Middleware tests passed!');
+            logger_1.logger.log('🎉 All Organization Middleware tests passed!');
         }
         else {
-            console.log('⚠️  Some tests failed. Please review the issues above.');
+            logger_1.logger.log('⚠️  Some tests failed. Please review the issues above.');
         }
     });
 }
 // Ausführen falls direkt aufgerufen
 if (require.main === module) {
     runOrganizationMiddlewareTests()
-        .catch(console.error);
+        .catch(logger_1.logger.error);
 }
 //# sourceMappingURL=organization-integration-test.js.map

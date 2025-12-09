@@ -3,6 +3,7 @@ import { getDataIsolationFilter } from '../middleware/organization';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -34,7 +35,7 @@ export const getMonthlyReports = async (req: AuthenticatedRequest, res: Response
 
     res.json(reports);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Monatsberichte:', error);
+    logger.error('Fehler beim Abrufen der Monatsberichte:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -76,7 +77,7 @@ export const getMonthlyReportById = async (req: AuthenticatedRequest, res: Respo
 
     res.json(report);
   } catch (error) {
-    console.error('Fehler beim Abrufen des Monatsberichts:', error);
+    logger.error('Fehler beim Abrufen des Monatsberichts:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -234,7 +235,7 @@ export const generateMonthlyReport = async (req: AuthenticatedRequest, res: Resp
 
     res.status(201).json(fullReport);
   } catch (error) {
-    console.error('Fehler beim Generieren des Monatsberichts:', error);
+    logger.error('Fehler beim Generieren des Monatsberichts:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -311,7 +312,7 @@ export const generateAutomaticMonthlyReport = async (req: AuthenticatedRequest, 
 
     return generateMonthlyReport(generateRequest as AuthenticatedRequest, res);
   } catch (error) {
-    console.error('Fehler beim automatischen Generieren des Monatsberichts:', error);
+    logger.error('Fehler beim automatischen Generieren des Monatsberichts:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -345,7 +346,7 @@ export const updateReportStatus = async (req: AuthenticatedRequest, res: Respons
 
     res.json({ message: 'Status erfolgreich aktualisiert' });
   } catch (error) {
-    console.error('Fehler beim Aktualisieren des Report-Status:', error);
+    logger.error('Fehler beim Aktualisieren des Report-Status:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -373,7 +374,7 @@ export const deleteMonthlyReport = async (req: AuthenticatedRequest, res: Respon
 
     res.json({ message: 'Monatsbericht erfolgreich gelöscht' });
   } catch (error) {
-    console.error('Fehler beim Löschen des Monatsberichts:', error);
+    logger.error('Fehler beim Löschen des Monatsberichts:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -430,7 +431,7 @@ export const checkUnbilledConsultations = async (req: AuthenticatedRequest, res:
       preview: consultations
     });
   } catch (error) {
-    console.error('Fehler beim Prüfen nicht-abgerechneter Beratungen:', error);
+    logger.error('Fehler beim Prüfen nicht-abgerechneter Beratungen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -506,7 +507,7 @@ export const generateMonthlyReportPDF = async (req: AuthenticatedRequest, res: R
     res.setHeader('Content-Disposition', `attachment; filename="${report.reportNumber}.pdf"`);
     res.send(pdfBuffer);
   } catch (error) {
-    console.error('Fehler beim Generieren des PDFs:', error);
+    logger.error('Fehler beim Generieren des PDFs:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 }; 

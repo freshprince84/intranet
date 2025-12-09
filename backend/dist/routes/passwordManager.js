@@ -42,11 +42,12 @@ const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const organization_1 = require("../middleware/organization");
 const passwordManagerController = __importStar(require("../controllers/passwordManagerController"));
+const logger_1 = require("../utils/logger");
 const router = express_1.default.Router();
 // Debug-Middleware (optional)
 router.use((req, res, next) => {
     var _a;
-    console.log('Password Manager Router aufgerufen:', {
+    logger_1.logger.log('Password Manager Router aufgerufen:', {
         method: req.method,
         path: req.path,
         userId: req.userId || ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || 'nicht verfügbar'

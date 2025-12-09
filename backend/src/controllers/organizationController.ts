@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import { encryptApiSettings, decryptApiSettings } from '../utils/encryption';
 import { validateAllApiUrls } from '../utils/urlValidation';
 import { validateApiSettings } from '../validation/organizationSettingsSchema';
+import { logger } from '../utils/logger';
 import { logSettingsChange } from '../services/auditService';
 
 // Definiere AccessLevel als String-Literale entsprechend dem Enum in schema.prisma
@@ -62,7 +63,7 @@ export const getAllOrganizations = async (_req: Request, res: Response) => {
 
     res.json(organizations);
   } catch (error) {
-    console.error('Error in getAllOrganizations:', error);
+    logger.error('Error in getAllOrganizations:', error);
     res.status(500).json({ 
       message: 'Fehler beim Abrufen der Organisationen', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -142,7 +143,7 @@ export const getOrganizationById = async (req: Request, res: Response) => {
 
     res.json(organization);
   } catch (error) {
-    console.error('Error in getOrganizationById:', error);
+    logger.error('Error in getOrganizationById:', error);
     res.status(500).json({ 
       message: 'Fehler beim Abrufen der Organisation', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -554,7 +555,7 @@ export const createOrganization = async (req: Request, res: Response) => {
       };
     });
 
-    console.log(`✅ Organisation "${result.organization.displayName}" erstellt. Ersteller (User ${userId}) ist jetzt Admin.`);
+    logger.log(`✅ Organisation "${result.organization.displayName}" erstellt. Ersteller (User ${userId}) ist jetzt Admin.`);
 
     res.status(201).json(result.organization);
   } catch (error) {
@@ -565,7 +566,7 @@ export const createOrganization = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Error in createOrganization:', error);
+    logger.error('Error in createOrganization:', error);
     res.status(500).json({ 
       message: 'Fehler beim Erstellen der Organisation', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -618,7 +619,7 @@ export const updateOrganization = async (req: Request, res: Response) => {
       });
     }
 
-    console.error('Error in updateOrganization:', error);
+    logger.error('Error in updateOrganization:', error);
     res.status(500).json({ 
       message: 'Fehler beim Aktualisieren der Organisation', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -686,7 +687,7 @@ export const deleteOrganization = async (req: Request, res: Response) => {
 
     res.json({ message: 'Organisation erfolgreich gelöscht' });
   } catch (error) {
-    console.error('Error in deleteOrganization:', error);
+    logger.error('Error in deleteOrganization:', error);
     res.status(500).json({ 
       message: 'Fehler beim Löschen der Organisation', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -743,7 +744,7 @@ export const getOrganizationStats = async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Error in getOrganizationStats:', error);
+    logger.error('Error in getOrganizationStats:', error);
     res.status(500).json({ 
       message: 'Fehler beim Abrufen der Organisations-Statistiken', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -811,7 +812,7 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
         
         // ✅ MONITORING: Settings-Größe und Performance loggen
         const settingsSize = JSON.stringify(orgWithSettings.settings || {}).length;
-        console.log(`[getCurrentOrganization] ⏱️ Settings-Query: ${settingsDuration}ms | Decrypt: ${decryptDuration}ms | Size: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
+        logger.log(`[getCurrentOrganization] ⏱️ Settings-Query: ${settingsDuration}ms | Decrypt: ${decryptDuration}ms | Size: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
       }
     } else {
       // Settings nicht geladen - setze auf null für Frontend
@@ -836,7 +837,7 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
 
     res.json(organization);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Organisation:', error);
+    logger.error('Fehler beim Abrufen der Organisation:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -892,7 +893,7 @@ export const createJoinRequest = async (req: Request, res: Response) => {
 
     res.status(201).json(joinRequest);
   } catch (error) {
-    console.error('Fehler beim Erstellen der Beitrittsanfrage:', error);
+    logger.error('Fehler beim Erstellen der Beitrittsanfrage:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -900,25 +901,25 @@ export const createJoinRequest = async (req: Request, res: Response) => {
 // Beitrittsanfragen abrufen
 export const getJoinRequests = async (req: Request, res: Response) => {
   try {
-    console.log('=== getJoinRequests CALLED ===');
+    logger.log('=== getJoinRequests CALLED ===');
     const userId = req.userId;
-    console.log('userId:', userId);
-    console.log('req.organizationId:', req.organizationId);
+    logger.log('userId:', userId);
+    logger.log('req.organizationId:', req.organizationId);
 
     if (!userId) {
-      console.log('❌ No userId, returning 401');
+      logger.log('❌ No userId, returning 401');
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
     // Verwende req.organizationId aus Middleware (wie getOrganizationStats)
     if (!req.organizationId) {
-      console.log('❌ No organizationId, returning 400');
+      logger.log('❌ No organizationId, returning 400');
       return res.status(400).json({ 
         message: 'Diese Funktion ist nur für Benutzer mit Organisation verfügbar' 
       });
     }
 
-    console.log('✅ Fetching join requests for organizationId:', req.organizationId);
+    logger.log('✅ Fetching join requests for organizationId:', req.organizationId);
     const joinRequests = await prisma.organizationJoinRequest.findMany({
       where: { organizationId: req.organizationId },
       include: {
@@ -941,11 +942,11 @@ export const getJoinRequests = async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    console.log('✅ Found join requests:', joinRequests.length);
-    console.log('✅ Returning join requests to frontend');
+    logger.log('✅ Found join requests:', joinRequests.length);
+    logger.log('✅ Returning join requests to frontend');
     res.json(joinRequests);
   } catch (error) {
-    console.error('❌ Error in getJoinRequests:', error);
+    logger.error('❌ Error in getJoinRequests:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -1040,7 +1041,7 @@ export const processJoinRequest = async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Fehler beim Bearbeiten der Beitrittsanfrage:', error);
+    logger.error('Fehler beim Bearbeiten der Beitrittsanfrage:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -1077,7 +1078,7 @@ export const searchOrganizations = async (req: Request, res: Response) => {
 
     res.json(organizations);
   } catch (error) {
-    console.error('Fehler beim Suchen von Organisationen:', error);
+    logger.error('Fehler beim Suchen von Organisationen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -1118,7 +1119,7 @@ export const getOrganizationLanguage = async (req: Request, res: Response) => {
 
     res.json({ language });
   } catch (error) {
-    console.error('Fehler beim Abrufen der Organisation-Sprache:', error);
+    logger.error('Fehler beim Abrufen der Organisation-Sprache:', error);
     res.status(500).json({ 
       message: 'Fehler beim Abrufen der Organisation-Sprache', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -1192,7 +1193,7 @@ export const updateOrganizationLanguage = async (req: Request, res: Response) =>
       });
     }
 
-    console.error('Fehler beim Aktualisieren der Organisation-Sprache:', error);
+    logger.error('Fehler beim Aktualisieren der Organisation-Sprache:', error);
     res.status(500).json({ 
       message: 'Fehler beim Aktualisieren der Organisation-Sprache', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -1210,11 +1211,11 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
     }
 
     // Debug: Logge Request-Body
-    console.log('=== REQUEST BODY DEBUG ===');
-    console.log('req.body.logo vorhanden:', !!req.body.logo);
-    console.log('req.body.logo type:', typeof req.body.logo);
-    console.log('req.body.logo length:', req.body.logo?.length);
-    console.log('req.body keys:', Object.keys(req.body));
+    logger.log('=== REQUEST BODY DEBUG ===');
+    logger.log('req.body.logo vorhanden:', !!req.body.logo);
+    logger.log('req.body.logo type:', typeof req.body.logo);
+    logger.log('req.body.logo length:', req.body.logo?.length);
+    logger.log('req.body keys:', Object.keys(req.body));
     
     // Validiere Eingabedaten
     const validatedData = updateOrganizationSchema.parse(req.body);
@@ -1255,12 +1256,12 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
     let updateData = { ...validatedData };
     
     // Debug: Logge Logo-Daten
-    console.log('=== ORGANIZATION UPDATE DEBUG ===');
-    console.log('validatedData.logo:', validatedData.logo ? (validatedData.logo === 'null' ? 'String "null"' : `${validatedData.logo.substring(0, 50)}...`) : 'null/undefined');
-    console.log('validatedData.logo type:', typeof validatedData.logo);
-    console.log('validatedData.logo length:', validatedData.logo?.length);
-    console.log('validatedData.logo === "null":', validatedData.logo === 'null');
-    console.log('updateData.logo:', updateData.logo ? (updateData.logo === 'null' ? 'String "null"' : `${updateData.logo.substring(0, 50)}...`) : 'null/undefined');
+    logger.log('=== ORGANIZATION UPDATE DEBUG ===');
+    logger.log('validatedData.logo:', validatedData.logo ? (validatedData.logo === 'null' ? 'String "null"' : `${validatedData.logo.substring(0, 50)}...`) : 'null/undefined');
+    logger.log('validatedData.logo type:', typeof validatedData.logo);
+    logger.log('validatedData.logo length:', validatedData.logo?.length);
+    logger.log('validatedData.logo === "null":', validatedData.logo === 'null');
+    logger.log('updateData.logo:', updateData.logo ? (updateData.logo === 'null' ? 'String "null"' : `${updateData.logo.substring(0, 50)}...`) : 'null/undefined');
     if (validatedData.settings !== undefined) {
       const currentSettings = (organization.settings as any) || {};
         const newSettings = { ...currentSettings, ...validatedData.settings };
@@ -1297,7 +1298,7 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
         // Password ist noch nicht gehasht (32-stelliger MD5-Hash)
         const crypto = require('crypto');
         newSettings.doorSystem.password = crypto.createHash('md5').update(newSettings.doorSystem.password).digest('hex');
-        console.log('[TTLock] Password wurde MD5-gehasht');
+        logger.log('[TTLock] Password wurde MD5-gehasht');
       }
 
       // ✅ VERSCHLÜSSELUNG: Verschlüssele alle API-Keys vor dem Speichern
@@ -1308,17 +1309,17 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
         // ✅ PERFORMANCE: Validiere Settings-Größe (Warnung bei > 1 MB)
         const settingsSize = JSON.stringify(encryptedSettings).length;
         if (settingsSize > 1024 * 1024) { // > 1 MB
-          console.warn(`[updateCurrentOrganization] ⚠️ Settings sind sehr groß: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
-          console.warn(`[updateCurrentOrganization] ⚠️ Möglicherweise mehrfach verschlüsselte API-Keys vorhanden!`);
+          logger.warn(`[updateCurrentOrganization] ⚠️ Settings sind sehr groß: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
+          logger.warn(`[updateCurrentOrganization] ⚠️ Möglicherweise mehrfach verschlüsselte API-Keys vorhanden!`);
         }
         
         updateData.settings = encryptedSettings;
       } catch (encryptionError) {
-        console.error('Error encrypting API settings:', encryptionError);
+        logger.error('Error encrypting API settings:', encryptionError);
         // Wenn ENCRYPTION_KEY nicht gesetzt ist, speichere unverschlüsselt (für Migration)
         // TODO: Später sollte dies ein Fehler sein
         if (encryptionError instanceof Error && encryptionError.message.includes('ENCRYPTION_KEY')) {
-          console.warn('⚠️ ENCRYPTION_KEY nicht gesetzt - speichere unverschlüsselt (nur für Migration!)');
+          logger.warn('⚠️ ENCRYPTION_KEY nicht gesetzt - speichere unverschlüsselt (nur für Migration!)');
           updateData.settings = newSettings;
         } else {
           throw encryptionError;
@@ -1331,7 +1332,7 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
       if (organization.id === 1 && newSettings.emailReading) {
         // Stelle sicher, dass Email-Reading für Organisation 1 aktiviert bleibt
         if (newSettings.emailReading.enabled === false) {
-          console.warn('[OrganizationController] ⚠️ Email-Reading für Organisation 1 wurde deaktiviert - wird beim nächsten Seed wieder aktiviert');
+          logger.warn('[OrganizationController] ⚠️ Email-Reading für Organisation 1 wurde deaktiviert - wird beim nächsten Seed wieder aktiviert');
         }
       }
 
@@ -1347,7 +1348,7 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
     }
 
     // Debug: Logge updateData vor dem Speichern
-    console.log('updateData vor Prisma Update:', {
+    logger.log('updateData vor Prisma Update:', {
       ...updateData,
       logo: updateData.logo ? `${updateData.logo.substring(0, 50)}...` : updateData.logo
     });
@@ -1359,7 +1360,7 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
           updateData.logo === 'null' ||
           updateData.logo === null) {
         updateData.logo = null;
-        console.log('Logo ist leerer String oder String "null", setze auf null');
+        logger.log('Logo ist leerer String oder String "null", setze auf null');
       }
     }
     
@@ -1389,15 +1390,15 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
       try {
         updatedOrganization.settings = decryptApiSettings(updatedOrganization.settings as any);
       } catch (decryptionError) {
-        console.error('Error decrypting API settings:', decryptionError);
+        logger.error('Error decrypting API settings:', decryptionError);
         // Bei Fehler: Settings bleiben verschlüsselt (für Migration)
         // Frontend zeigt dann verschlüsselte Werte, aber das ist OK für Migration
       }
     }
     
     // Debug: Logge gespeichertes Logo
-    console.log('Gespeichertes Logo in DB:', updatedOrganization.logo ? `${updatedOrganization.logo.substring(0, 50)}...` : 'null');
-    console.log('Logo length:', updatedOrganization.logo?.length);
+    logger.log('Gespeichertes Logo in DB:', updatedOrganization.logo ? `${updatedOrganization.logo.substring(0, 50)}...` : 'null');
+    logger.log('Logo length:', updatedOrganization.logo?.length);
 
     res.json(updatedOrganization);
   } catch (error) {
@@ -1408,8 +1409,8 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
       });
     }
 
-    console.error('Error in updateCurrentOrganization:', error);
-    console.error('Error details:', {
+    logger.error('Error in updateCurrentOrganization:', error);
+    logger.error('Error details:', {
       message: error instanceof Error ? error.message : 'Unbekannter Fehler',
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : undefined
@@ -1457,7 +1458,7 @@ export const getLifecycleRoles = async (req: Request, res: Response) => {
       availableRoles: roles
     });
   } catch (error) {
-    console.error('Error in getLifecycleRoles:', error);
+    logger.error('Error in getLifecycleRoles:', error);
     res.status(500).json({
       message: 'Fehler beim Abrufen der Lebenszyklus-Rollen',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1474,8 +1475,8 @@ export const updateLifecycleRoles = async (req: Request, res: Response) => {
 
     const { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds } = req.body;
 
-    console.log('[updateLifecycleRoles] Request body:', { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds });
-    console.log('[updateLifecycleRoles] Organization ID:', req.organizationId);
+    logger.log('[updateLifecycleRoles] Request body:', { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds });
+    logger.log('[updateLifecycleRoles] Organization ID:', req.organizationId);
 
     // Validiere Rollen-IDs (nur wenn sie gesetzt sind und > 0)
     // Konvertiere zu Number und prüfe, ob gültig
@@ -1492,7 +1493,7 @@ export const updateLifecycleRoles = async (req: Request, res: Response) => {
     const parsedLegalRoleId = parseRoleId(legalRoleId);
     const parsedEmployeeRoleIds = (employeeRoleIds || []).map(parseRoleId).filter((id): id is number => id !== null);
 
-    console.log('[updateLifecycleRoles] Parsed role IDs:', { 
+    logger.log('[updateLifecycleRoles] Parsed role IDs:', { 
       admin: parsedAdminRoleId, 
       hr: parsedHrRoleId, 
       legal: parsedLegalRoleId, 
@@ -1544,7 +1545,7 @@ export const updateLifecycleRoles = async (req: Request, res: Response) => {
         where: { organizationId: req.organizationId },
         select: { id: true, name: true }
       });
-      console.log('[updateLifecycleRoles] All roles in organization:', allOrgRoles);
+      logger.log('[updateLifecycleRoles] All roles in organization:', allOrgRoles);
 
       const validRoles = await prisma.role.findMany({
         where: {
@@ -1554,12 +1555,12 @@ export const updateLifecycleRoles = async (req: Request, res: Response) => {
         select: { id: true, name: true, organizationId: true }
       });
 
-      console.log('[updateLifecycleRoles] Valid roles found:', validRoles);
-      console.log('[updateLifecycleRoles] Requested role IDs:', roleIds);
+      logger.log('[updateLifecycleRoles] Valid roles found:', validRoles);
+      logger.log('[updateLifecycleRoles] Requested role IDs:', roleIds);
 
       if (validRoles.length !== roleIds.length) {
         const missingRoleIds = roleIds.filter(id => !validRoles.some(r => r.id === id));
-        console.error('[updateLifecycleRoles] Missing roles:', missingRoleIds);
+        logger.error('[updateLifecycleRoles] Missing roles:', missingRoleIds);
         return res.status(400).json({ 
           message: 'Eine oder mehrere Rollen gehören nicht zu dieser Organisation',
           details: { 
@@ -1599,7 +1600,7 @@ export const updateLifecycleRoles = async (req: Request, res: Response) => {
     const normalizedLegalRoleId = normalizeRoleId(legalRoleId);
     const normalizedEmployeeRoleIds = (employeeRoleIds || []).map(normalizeRoleId).filter((id): id is number => id !== null);
 
-    console.log('[updateLifecycleRoles] Normalized role IDs:', {
+    logger.log('[updateLifecycleRoles] Normalized role IDs:', {
       admin: normalizedAdminRoleId,
       hr: normalizedHrRoleId,
       legal: normalizedLegalRoleId,
@@ -1613,7 +1614,7 @@ export const updateLifecycleRoles = async (req: Request, res: Response) => {
       employeeRoleIds: normalizedEmployeeRoleIds
     };
 
-    console.log('[updateLifecycleRoles] Settings to save:', JSON.stringify(settings.lifecycleRoles, null, 2));
+    logger.log('[updateLifecycleRoles] Settings to save:', JSON.stringify(settings.lifecycleRoles, null, 2));
 
     // Aktualisiere Organisation
     const updated = await prisma.organization.update({
@@ -1627,14 +1628,14 @@ export const updateLifecycleRoles = async (req: Request, res: Response) => {
       }
     });
 
-    console.log('[updateLifecycleRoles] Organization updated successfully. Saved lifecycleRoles:', (updated.settings as any)?.lifecycleRoles);
+    logger.log('[updateLifecycleRoles] Organization updated successfully. Saved lifecycleRoles:', (updated.settings as any)?.lifecycleRoles);
 
     res.json({
       lifecycleRoles: (updated.settings as any)?.lifecycleRoles,
       message: 'Lebenszyklus-Rollen erfolgreich aktualisiert'
     });
   } catch (error) {
-    console.error('Error in updateLifecycleRoles:', error);
+    logger.error('Error in updateLifecycleRoles:', error);
     res.status(500).json({
       message: 'Fehler beim Aktualisieren der Lebenszyklus-Rollen',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1727,7 +1728,7 @@ export const getDocumentTemplates = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error in getDocumentTemplates:', error);
+    logger.error('Error in getDocumentTemplates:', error);
     res.status(500).json({
       message: 'Fehler beim Abrufen der Dokumenten-Templates',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1791,7 +1792,7 @@ export const uploadDocumentTemplate = async (req: Request, res: Response) => {
       template: settings.documentTemplates[type]
     });
   } catch (error) {
-    console.error('Error in uploadDocumentTemplate:', error);
+    logger.error('Error in uploadDocumentTemplate:', error);
     res.status(500).json({
       message: 'Fehler beim Hochladen des Templates',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1825,7 +1826,7 @@ export const getDocumentSignatures = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error in getDocumentSignatures:', error);
+    logger.error('Error in getDocumentSignatures:', error);
     res.status(500).json({
       message: 'Fehler beim Abrufen der Dokumenten-Signaturen',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1894,7 +1895,7 @@ export const uploadDocumentSignature = async (req: Request, res: Response) => {
       signature: settings.documentSignatures[type]
     });
   } catch (error) {
-    console.error('Error in uploadDocumentSignature:', error);
+    logger.error('Error in uploadDocumentSignature:', error);
     res.status(500).json({
       message: 'Fehler beim Hochladen der Signatur',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'

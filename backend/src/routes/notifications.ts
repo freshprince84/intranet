@@ -10,12 +10,13 @@ import {
     deleteAllNotifications
 } from '../controllers/notificationController';
 import { checkRole } from '../middleware/roleCheck';
+import { logger } from '../utils/logger';
 
 const router = express.Router();
 
 // Debug-Middleware
 router.use((req, res, next) => {
-    console.log('Notifications Router aufgerufen:', {
+    logger.log('Notifications Router aufgerufen:', {
         method: req.method,
         path: req.path,
         originalUrl: req.originalUrl,

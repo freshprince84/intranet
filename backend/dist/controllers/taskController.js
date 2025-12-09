@@ -18,6 +18,7 @@ const prisma_1 = require("../utils/prisma");
 const taskValidation_1 = require("../validation/taskValidation");
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
+const logger_1 = require("../utils/logger");
 const lifecycleService_1 = require("../services/lifecycleService");
 const translations_1 = require("../utils/translations");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
@@ -136,7 +137,7 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
         }
         catch (countError) {
-            console.error('[getAllTasks] Fehler beim Zählen der Tasks:', countError);
+            logger_1.logger.error('[getAllTasks] Fehler beim Zählen der Tasks:', countError);
             // Fallback: Verwende 0, wird später durch tatsächliche Anzahl ersetzt
             totalCount = 0;
         }
@@ -166,7 +167,7 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         const queryDuration = Date.now() - queryStartTime;
         // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
         if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
-            console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
+            logger_1.logger.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
         }
         // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
         if (totalCount === 0 && tasks.length > 0) {
@@ -175,7 +176,7 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         // ✅ Sicherstellen, dass tasks ein Array ist
         if (!Array.isArray(tasks)) {
-            console.error('[getAllTasks] ❌ FEHLER: tasks ist kein Array!', {
+            logger_1.logger.error('[getAllTasks] ❌ FEHLER: tasks ist kein Array!', {
                 tasks,
                 type: typeof tasks
             });
@@ -191,7 +192,7 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         };
         // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
         if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
-            console.log('[getAllTasks] ✅ Response vorbereitet:', {
+            logger_1.logger.log('[getAllTasks] ✅ Response vorbereitet:', {
                 dataLength: response.data.length,
                 totalCount: response.totalCount,
                 hasMore: response.hasMore,
@@ -201,7 +202,7 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.json(response);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Tasks:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Tasks:', error);
         res.status(500).json({
             error: 'Interner Serverfehler',
             details: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -246,7 +247,7 @@ const getTaskById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.json(task);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen des Tasks:', error);
+        logger_1.logger.error('Fehler beim Abrufen des Tasks:', error);
         res.status(500).json({
             error: 'Interner Serverfehler',
             details: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -347,7 +348,7 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.status(201).json(task);
     }
     catch (error) {
-        console.error('Fehler beim Erstellen des Tasks:', error);
+        logger_1.logger.error('Fehler beim Erstellen des Tasks:', error);
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
             res.status(400).json({
                 error: 'Fehler beim Erstellen des Tasks',
@@ -540,7 +541,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     // Extrahiere userId aus description (Link: /organization?tab=users&userId=XXX)
                     const userIdMatch = (_a = task.description) === null || _a === void 0 ? void 0 : _a.match(/userId=(\d+)/);
                     if (!userIdMatch) {
-                        console.log('[updateTask] Konnte userId nicht aus Task-Description extrahieren');
+                        logger_1.logger.log('[updateTask] Konnte userId nicht aus Task-Description extrahieren');
                     }
                     else {
                         const onboardingUserId = parseInt(userIdMatch[1], 10);
@@ -561,7 +562,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                             const hasNormalWorkingHours = onboardingUser.normalWorkingHours !== null && onboardingUser.normalWorkingHours !== undefined;
                             // Nur wenn Status "done" UND alle Felder ausgefüllt sind, starte Lifecycle
                             if (updateData.status === 'done' && hasContract && hasSalary && hasNormalWorkingHours) {
-                                console.log(`[updateTask] Starte Lifecycle für User ${onboardingUserId} nach Admin-Onboarding`);
+                                logger_1.logger.log(`[updateTask] Starte Lifecycle für User ${onboardingUserId} nach Admin-Onboarding`);
                                 yield lifecycleService_1.LifecycleService.startLifecycleAfterOnboarding(onboardingUserId, task.organizationId);
                                 // Benachrichtigung an User
                                 const userLang = yield (0, translations_1.getUserLanguage)(onboardingUserId);
@@ -576,13 +577,13 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                                 });
                             }
                             else if (updateData.status === 'quality_control' && (!hasContract || !hasSalary || !hasNormalWorkingHours)) {
-                                console.log(`[updateTask] Quality-Control-Status gesetzt, aber nicht alle Felder ausgefüllt für User ${onboardingUserId}`);
+                                logger_1.logger.log(`[updateTask] Quality-Control-Status gesetzt, aber nicht alle Felder ausgefüllt für User ${onboardingUserId}`);
                             }
                         }
                     }
                 }
                 catch (lifecycleError) {
-                    console.error('[updateTask] Fehler beim Starten des Lifecycle:', lifecycleError);
+                    logger_1.logger.error('[updateTask] Fehler beim Starten des Lifecycle:', lifecycleError);
                     // Fehler blockiert nicht die Task-Aktualisierung
                 }
             }
@@ -607,16 +608,16 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         const hasBankDetails = bankDetailsUser.bankDetails && bankDetailsUser.bankDetails.trim() !== '';
                         // Nur wenn Status "done" UND bankDetails ausgefüllt ist, Task als erledigt markieren
                         if (updateData.status === 'done' && hasBankDetails) {
-                            console.log(`[updateTask] BankDetails-To-Do erledigt für User ${bankDetailsUserId}`);
+                            logger_1.logger.log(`[updateTask] BankDetails-To-Do erledigt für User ${bankDetailsUserId}`);
                             // Task ist bereits auf "done" gesetzt, keine weitere Aktion nötig
                         }
                         else if (updateData.status === 'quality_control' && !hasBankDetails) {
-                            console.log(`[updateTask] Quality-Control-Status gesetzt, aber bankDetails nicht ausgefüllt für User ${bankDetailsUserId}`);
+                            logger_1.logger.log(`[updateTask] Quality-Control-Status gesetzt, aber bankDetails nicht ausgefüllt für User ${bankDetailsUserId}`);
                         }
                     }
                 }
                 catch (bankDetailsError) {
-                    console.error('[updateTask] Fehler bei BankDetails-To-Do-Prüfung:', bankDetailsError);
+                    logger_1.logger.error('[updateTask] Fehler bei BankDetails-To-Do-Prüfung:', bankDetailsError);
                     // Fehler blockiert nicht die Task-Aktualisierung
                 }
             }
@@ -643,16 +644,16 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         const hasIdentificationDocument = identificationDocumentUser.identificationDocuments && identificationDocumentUser.identificationDocuments.length > 0;
                         // Nur wenn Status "done" UND Identitätsdokument vorhanden ist, Task als erledigt markieren
                         if (updateData.status === 'done' && hasIdentificationDocument) {
-                            console.log(`[updateTask] Identitätsdokument-To-Do erledigt für User ${identificationDocumentUserId}`);
+                            logger_1.logger.log(`[updateTask] Identitätsdokument-To-Do erledigt für User ${identificationDocumentUserId}`);
                             // Task ist bereits auf "done" gesetzt, keine weitere Aktion nötig
                         }
                         else if (updateData.status === 'quality_control' && !hasIdentificationDocument) {
-                            console.log(`[updateTask] Quality-Control-Status gesetzt, aber Identitätsdokument nicht vorhanden für User ${identificationDocumentUserId}`);
+                            logger_1.logger.log(`[updateTask] Quality-Control-Status gesetzt, aber Identitätsdokument nicht vorhanden für User ${identificationDocumentUserId}`);
                         }
                     }
                 }
                 catch (identificationDocumentError) {
-                    console.error('[updateTask] Fehler bei Identitätsdokument-To-Do-Prüfung:', identificationDocumentError);
+                    logger_1.logger.error('[updateTask] Fehler bei Identitätsdokument-To-Do-Prüfung:', identificationDocumentError);
                     // Fehler blockiert nicht die Task-Aktualisierung
                 }
             }
@@ -741,7 +742,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.json(task);
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren des Tasks:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren des Tasks:', error);
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
             res.status(400).json({
                 error: 'Fehler beim Aktualisieren des Tasks',
@@ -822,7 +823,7 @@ const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.status(204).send();
     }
     catch (error) {
-        console.error('Fehler beim Löschen des Tasks:', error);
+        logger_1.logger.error('Fehler beim Löschen des Tasks:', error);
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
             res.status(400).json({
                 error: 'Fehler beim Löschen des Tasks',
@@ -886,7 +887,7 @@ const getTaskCarticles = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.json(carticles);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der verknüpften Artikel:', error);
+        logger_1.logger.error('Fehler beim Abrufen der verknüpften Artikel:', error);
         res.status(500).json({
             error: 'Interner Serverfehler',
             details: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -941,7 +942,7 @@ const linkTaskToCarticle = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.status(201).json(link.carticle);
     }
     catch (error) {
-        console.error('Fehler beim Verknüpfen des Artikels:', error);
+        logger_1.logger.error('Fehler beim Verknüpfen des Artikels:', error);
         // Behandlung von einzigartigen Einschränkungsverletzungen
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
             return res.status(409).json({ error: 'Diese Verknüpfung existiert bereits' });
@@ -985,7 +986,7 @@ const unlinkTaskFromCarticle = (req, res) => __awaiter(void 0, void 0, void 0, f
         res.status(200).json({ message: 'Verknüpfung erfolgreich entfernt' });
     }
     catch (error) {
-        console.error('Fehler beim Entfernen der Verknüpfung:', error);
+        logger_1.logger.error('Fehler beim Entfernen der Verknüpfung:', error);
         res.status(500).json({
             error: 'Interner Serverfehler',
             details: error instanceof Error ? error.message : 'Unbekannter Fehler'

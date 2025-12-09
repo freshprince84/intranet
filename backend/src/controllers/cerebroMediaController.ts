@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 // Konfiguration für Multer (Datei-Upload)
 const storage = multer.diskStorage({
@@ -151,7 +152,7 @@ export const uploadMedia = async (req: Request, res: Response) => {
         
         res.status(201).json(mediaData);
     } catch (error) {
-        console.error('Fehler beim Hochladen der Mediendatei:', error);
+        logger.error('Fehler beim Hochladen der Mediendatei:', error);
         
         // Lösche die Datei bei einem Fehler
         if (req.file) {
@@ -194,7 +195,7 @@ export const getMediaByArticle = async (req: Request, res: Response) => {
         
         res.status(200).json(media);
     } catch (error) {
-        console.error('Fehler beim Abrufen der Mediendateien:', error);
+        logger.error('Fehler beim Abrufen der Mediendateien:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Mediendateien' });
     }
 };
@@ -226,7 +227,7 @@ export const getMediaById = async (req: Request, res: Response) => {
         
         res.status(200).json(media[0]);
     } catch (error) {
-        console.error('Fehler beim Abrufen der Mediendatei:', error);
+        logger.error('Fehler beim Abrufen der Mediendatei:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Mediendatei' });
     }
 };
@@ -283,7 +284,7 @@ export const getMediaFile = async (req: Request, res: Response) => {
             res.download(filePath, mediaData.filename);
         }
     } catch (error) {
-        console.error('Fehler beim Abrufen der Mediendatei:', error);
+        logger.error('Fehler beim Abrufen der Mediendatei:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Mediendatei' });
     }
 };
@@ -322,7 +323,7 @@ export const deleteMedia = async (req: Request, res: Response) => {
         
         res.status(200).json({ message: 'Mediendatei erfolgreich gelöscht' });
     } catch (error) {
-        console.error('Fehler beim Löschen der Mediendatei:', error);
+        logger.error('Fehler beim Löschen der Mediendatei:', error);
         res.status(500).json({ message: 'Fehler beim Löschen der Mediendatei' });
     }
 };
@@ -363,7 +364,7 @@ export const updateMedia = async (req: Request, res: Response) => {
         
         res.status(200).json(updatedMedia[0]);
     } catch (error) {
-        console.error('Fehler beim Aktualisieren der Mediendatei:', error);
+        logger.error('Fehler beim Aktualisieren der Mediendatei:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren der Mediendatei' });
     }
 }; 

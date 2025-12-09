@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkRole = void 0;
+const logger_1 = require("../utils/logger");
 // Middleware zur Überprüfung der Benutzerrolle
 const checkRole = (allowedRoles) => {
     return (req, res, next) => {
@@ -21,7 +22,7 @@ const checkRole = (allowedRoles) => {
             next();
         }
         catch (error) {
-            console.error('Fehler bei der Rollenprüfung:', error);
+            logger_1.logger.error('Fehler bei der Rollenprüfung:', error);
             res.status(500).json({ message: 'Interner Server-Fehler' });
         }
     };

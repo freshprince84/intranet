@@ -14,6 +14,7 @@ const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
 const date_fns_1 = require("date-fns");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Hilfsfunktion: Prüft, ob zwei Zeitfenster sich überschneiden
  */
@@ -202,9 +203,9 @@ function checkOverlap(userId, date, startTime, endTime) {
  * Holt alle Schichten (mit Filtern)
  */
 const getAllShifts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('[getAllShifts] 🚀 Controller aufgerufen');
-    console.log('[getAllShifts] Query:', req.query);
-    console.log('[getAllShifts] organizationId:', req.organizationId);
+    logger_1.logger.log('[getAllShifts] 🚀 Controller aufgerufen');
+    logger_1.logger.log('[getAllShifts] Query:', req.query);
+    logger_1.logger.log('[getAllShifts] organizationId:', req.organizationId);
     try {
         const branchId = req.query.branchId ? parseInt(req.query.branchId, 10) : null;
         const roleId = req.query.roleId ? parseInt(req.query.roleId, 10) : null;
@@ -212,7 +213,7 @@ const getAllShifts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
         const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
         const status = req.query.status;
-        console.log('[getAllShifts] Filter:', { branchId, roleId, userId, startDate, endDate, status });
+        logger_1.logger.log('[getAllShifts] Filter:', { branchId, roleId, userId, startDate, endDate, status });
         const where = {};
         if (branchId && !isNaN(branchId)) {
             where.branchId = branchId;
@@ -235,7 +236,7 @@ const getAllShifts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (status) {
             where.status = status;
         }
-        console.log('[getAllShifts] 🔍 Führe Prisma-Query aus...');
+        logger_1.logger.log('[getAllShifts] 🔍 Führe Prisma-Query aus...');
         const shifts = yield prisma_1.prisma.shift.findMany({
             where,
             include: {
@@ -288,15 +289,15 @@ const getAllShifts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 { startTime: 'asc' }
             ]
         });
-        console.log('[getAllShifts] ✅ Gefunden:', shifts.length, 'Schichten');
+        logger_1.logger.log('[getAllShifts] ✅ Gefunden:', shifts.length, 'Schichten');
         res.json({
             success: true,
             data: shifts
         });
-        console.log('[getAllShifts] ✅ Response gesendet');
+        logger_1.logger.log('[getAllShifts] ✅ Response gesendet');
     }
     catch (error) {
-        console.error('[Shift] Fehler beim Abrufen der Schichten:', error);
+        logger_1.logger.error('[Shift] Fehler beim Abrufen der Schichten:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Schichten'
@@ -378,7 +379,7 @@ const getShiftById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         });
     }
     catch (error) {
-        console.error('[Shift] Fehler beim Abrufen der Schicht:', error);
+        logger_1.logger.error('[Shift] Fehler beim Abrufen der Schicht:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Schicht'
@@ -534,7 +535,7 @@ const createShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
     catch (error) {
-        console.error('[Shift] Fehler beim Erstellen der Schicht:', error);
+        logger_1.logger.error('[Shift] Fehler beim Erstellen der Schicht:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Erstellen der Schicht'
@@ -723,7 +724,7 @@ const updateShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
     catch (error) {
-        console.error('[Shift] Fehler beim Aktualisieren der Schicht:', error);
+        logger_1.logger.error('[Shift] Fehler beim Aktualisieren der Schicht:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren der Schicht'
@@ -774,7 +775,7 @@ const deleteShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
     catch (error) {
-        console.error('[Shift] Fehler beim Löschen der Schicht:', error);
+        logger_1.logger.error('[Shift] Fehler beim Löschen der Schicht:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Löschen der Schicht'
@@ -1068,7 +1069,7 @@ const generateShiftPlan = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error('[Shift] Fehler beim Generieren des Schichtplans:', error);
+        logger_1.logger.error('[Shift] Fehler beim Generieren des Schichtplans:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Generieren des Schichtplans'

@@ -2,6 +2,7 @@ import { Reservation, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from '../controllers/notificationController';
 import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Service für automatische Task-Erstellung bei Lebenszyklus-Events
@@ -66,20 +67,20 @@ export class TaskAutomationService {
 
       // Wenn keine Legal-Rolle gefunden, keine Tasks erstellen
       if (!legalRoleId) {
-        console.warn(`[createOnboardingTasks] Keine Legal-Rolle gefunden für Organisation ${organizationId}. Onboarding-Tasks werden nicht erstellt.`);
-        console.warn(`[createOnboardingTasks] LifecycleRoles config:`, JSON.stringify(lifecycleRoles, null, 2));
+        logger.warn(`[createOnboardingTasks] Keine Legal-Rolle gefunden für Organisation ${organizationId}. Onboarding-Tasks werden nicht erstellt.`);
+        logger.warn(`[createOnboardingTasks] LifecycleRoles config:`, JSON.stringify(lifecycleRoles, null, 2));
         
         // Debug: Zeige alle Rollen der Organisation
         const allRoles = await prisma.role.findMany({
           where: { organizationId },
           select: { id: true, name: true }
         });
-        console.warn(`[createOnboardingTasks] Verfügbare Rollen in Organisation ${organizationId}:`, allRoles);
+        logger.warn(`[createOnboardingTasks] Verfügbare Rollen in Organisation ${organizationId}:`, allRoles);
         
         return [];
       }
 
-      console.log(`[createOnboardingTasks] Legal-Rolle gefunden: ID=${legalRoleId} für Organisation ${organizationId}`);
+      logger.log(`[createOnboardingTasks] Legal-Rolle gefunden: ID=${legalRoleId} für Organisation ${organizationId}`);
 
       // Bestimme Admin-User für Quality Control
       let adminUserId: number | null = null;
@@ -132,19 +133,19 @@ export class TaskAutomationService {
       
       // Fallback: Wenn User keine Branch hat, verwende erste Branch der Organisation
       if (!userBranch) {
-        console.warn(`[createOnboardingTasks] User ${userId} hat keine Niederlassung zugewiesen. Verwende erste Branch der Organisation.`);
+        logger.warn(`[createOnboardingTasks] User ${userId} hat keine Niederlassung zugewiesen. Verwende erste Branch der Organisation.`);
         const firstOrgBranch = await prisma.branch.findFirst({
           where: { organizationId },
           orderBy: { id: 'asc' }
         });
         
         if (!firstOrgBranch) {
-          console.error(`[createOnboardingTasks] Keine Branch in Organisation ${organizationId} gefunden. Tasks können nicht erstellt werden.`);
+          logger.error(`[createOnboardingTasks] Keine Branch in Organisation ${organizationId} gefunden. Tasks können nicht erstellt werden.`);
           throw new Error('Organisation hat keine Niederlassung. Bitte erstellen Sie zuerst eine Niederlassung.');
         }
         
         userBranch = firstOrgBranch;
-        console.log(`[createOnboardingTasks] Verwende Branch "${userBranch.name}" (ID: ${userBranch.id}) als Fallback.`);
+        logger.log(`[createOnboardingTasks] Verwende Branch "${userBranch.name}" (ID: ${userBranch.id}) als Fallback.`);
       }
 
       // Definiere Tasks für Sozialversicherungen (Kolumbien)
@@ -192,7 +193,7 @@ export class TaskAutomationService {
             taskDataToCreate.qualityControlId = adminUserId;
           }
 
-          console.log(`[createOnboardingTasks] Erstelle Task "${taskData.title}" mit Daten:`, {
+          logger.log(`[createOnboardingTasks] Erstelle Task "${taskData.title}" mit Daten:`, {
             roleId: legalRoleId,
             qualityControlId: adminUserId,
             organizationId: organizationId,
@@ -211,7 +212,7 @@ export class TaskAutomationService {
             }
           });
 
-          console.log(`[createOnboardingTasks] Task erstellt: ID=${task.id}, Title="${task.title}", RoleId=${task.roleId}, OrganizationId=${task.organizationId}`);
+          logger.log(`[createOnboardingTasks] Task erstellt: ID=${task.id}, Title="${task.title}", RoleId=${task.roleId}, OrganizationId=${task.organizationId}`);
 
           createdTasks.push(task);
 
@@ -259,14 +260,14 @@ export class TaskAutomationService {
             });
           }
         } catch (error) {
-          console.error(`Fehler beim Erstellen des Tasks "${taskData.title}":`, error);
+          logger.error(`Fehler beim Erstellen des Tasks "${taskData.title}":`, error);
           // Weiter mit nächstem Task
         }
       }
 
       return createdTasks;
     } catch (error) {
-      console.error('Fehler beim Erstellen der Onboarding-Tasks:', error);
+      logger.error('Fehler beim Erstellen der Onboarding-Tasks:', error);
       throw error;
     }
   }
@@ -332,7 +333,7 @@ export class TaskAutomationService {
       }
 
       if (!hrRoleId) {
-        console.warn(`Keine HR-Rolle gefunden für Organisation ${organizationId}. Offboarding-Tasks werden nicht erstellt.`);
+        logger.warn(`Keine HR-Rolle gefunden für Organisation ${organizationId}. Offboarding-Tasks werden nicht erstellt.`);
         return [];
       }
 
@@ -431,14 +432,14 @@ export class TaskAutomationService {
             });
           }
         } catch (error) {
-          console.error(`Fehler beim Erstellen des Tasks "${taskData.title}":`, error);
+          logger.error(`Fehler beim Erstellen des Tasks "${taskData.title}":`, error);
           // Weiter mit nächstem Task
         }
       }
 
       return createdTasks;
     } catch (error) {
-      console.error('Fehler beim Erstellen der Offboarding-Tasks:', error);
+      logger.error('Fehler beim Erstellen der Offboarding-Tasks:', error);
       throw error;
     }
   }
@@ -584,7 +585,7 @@ export class TaskAutomationService {
 
       return task;
     } catch (error) {
-      console.error(`Fehler beim Erstellen des Sozialversicherungs-Tasks (${type}):`, error);
+      logger.error(`Fehler beim Erstellen des Sozialversicherungs-Tasks (${type}):`, error);
       throw error;
     }
   }
@@ -614,7 +615,7 @@ export class TaskAutomationService {
 
       // Prüfe ob automatische Task-Erstellung aktiviert ist
       if (!lobbyPmsSettings?.autoCreateTasks) {
-        console.log(`[TaskAutomation] Automatische Task-Erstellung ist für Organisation ${organizationId} deaktiviert`);
+        logger.log(`[TaskAutomation] Automatische Task-Erstellung ist für Organisation ${organizationId} deaktiviert`);
         return null;
       }
 
@@ -645,7 +646,7 @@ export class TaskAutomationService {
       }
 
       if (!cleaningRoleId) {
-        console.warn(`[TaskAutomation] Keine Cleaning-Rolle gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
+        logger.warn(`[TaskAutomation] Keine Cleaning-Rolle gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
         return null;
       }
 
@@ -654,7 +655,7 @@ export class TaskAutomationService {
       
       if (reservation.branchId) {
         branchId = reservation.branchId;
-        console.log(`[TaskAutomation] Verwende Branch ${branchId} aus Reservation`);
+        logger.log(`[TaskAutomation] Verwende Branch ${branchId} aus Reservation`);
       } else {
         // Fallback: Hole erste Branch der Organisation
       const branch = await prisma.branch.findFirst({
@@ -662,11 +663,11 @@ export class TaskAutomationService {
       });
 
       if (!branch) {
-        console.warn(`[TaskAutomation] Keine Branch gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
+        logger.warn(`[TaskAutomation] Keine Branch gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
         return null;
         }
         branchId = branch.id;
-        console.log(`[TaskAutomation] Verwende erste Branch ${branchId} der Organisation (Reservation hat keine branchId)`);
+        logger.log(`[TaskAutomation] Verwende erste Branch ${branchId} der Organisation (Reservation hat keine branchId)`);
       }
 
       // Prüfe ob bereits ein Task für diese Reservierung existiert
@@ -675,13 +676,13 @@ export class TaskAutomationService {
       });
 
       if (existingTask) {
-        console.log(`[TaskAutomation] Task für Reservierung ${reservation.id} existiert bereits`);
+        logger.log(`[TaskAutomation] Task für Reservierung ${reservation.id} existiert bereits`);
         return existingTask;
       }
 
       // Prüfe ob checkOutDate vorhanden ist
       if (!reservation.checkOutDate) {
-        console.error(`[TaskAutomation] Reservation ${reservation.id} hat kein checkOutDate. Task wird nicht erstellt.`);
+        logger.error(`[TaskAutomation] Reservation ${reservation.id} hat kein checkOutDate. Task wird nicht erstellt.`);
         return null;
       }
 
@@ -745,7 +746,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
         }
       });
 
-      console.log(`[TaskAutomation] Cleaning-Task ${task.id} für Reservierung ${reservation.id} erstellt (Check-out: ${reservation.checkOutDate.toLocaleDateString('de-DE')})`);
+      logger.log(`[TaskAutomation] Cleaning-Task ${task.id} für Reservierung ${reservation.id} erstellt (Check-out: ${reservation.checkOutDate.toLocaleDateString('de-DE')})`);
 
       // Benachrichtigung für alle User mit Cleaning-Rolle
       const cleaningUsers = await prisma.user.findMany({
@@ -774,7 +775,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
 
       return task;
     } catch (error) {
-      console.error(`[TaskAutomation] Fehler beim Erstellen des Reservierungs-Tasks:`, error);
+      logger.error(`[TaskAutomation] Fehler beim Erstellen des Reservierungs-Tasks:`, error);
       throw error;
     }
   }
@@ -796,7 +797,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       });
       
       if (organization?.country !== 'CO') {
-        console.log(`[createAdminOnboardingTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
+        logger.log(`[createAdminOnboardingTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
         return null; // Nur für Kolumbien
       }
       
@@ -834,7 +835,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       }
       
       if (!adminRoleId) {
-        console.warn(`[createAdminOnboardingTask] Keine Admin-Rolle gefunden für Organisation ${organizationId}`);
+        logger.warn(`[createAdminOnboardingTask] Keine Admin-Rolle gefunden für Organisation ${organizationId}`);
         return null;
       }
       
@@ -880,7 +881,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       });
       
       if (existingTask) {
-        console.log(`[createAdminOnboardingTask] Admin-Onboarding-Task existiert bereits für User ${userId}`);
+        logger.log(`[createAdminOnboardingTask] Admin-Onboarding-Task existiert bereits für User ${userId}`);
         return existingTask;
       }
       
@@ -911,10 +912,10 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
         });
       }
       
-      console.log(`[createAdminOnboardingTask] Admin-Onboarding-Task erstellt: Task ID ${task.id} für User ${userId}`);
+      logger.log(`[createAdminOnboardingTask] Admin-Onboarding-Task erstellt: Task ID ${task.id} für User ${userId}`);
       return task;
     } catch (error) {
-      console.error('[createAdminOnboardingTask] Fehler:', error);
+      logger.error('[createAdminOnboardingTask] Fehler:', error);
       // Logge Fehler, aber breche nicht ab
       return null;
     }
@@ -944,7 +945,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
 
       // Prüfe ob User bereits bankDetails hat
       if (user.bankDetails && user.bankDetails.trim() !== '') {
-        console.log(`[createUserBankDetailsTask] User ${userId} hat bereits bankDetails, überspringe Task-Erstellung`);
+        logger.log(`[createUserBankDetailsTask] User ${userId} hat bereits bankDetails, überspringe Task-Erstellung`);
         return null;
       }
 
@@ -1014,7 +1015,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       });
       
       if (existingTask) {
-        console.log(`[createUserBankDetailsTask] BankDetails-Task existiert bereits für User ${userId}`);
+        logger.log(`[createUserBankDetailsTask] BankDetails-Task existiert bereits für User ${userId}`);
         return existingTask;
       }
       
@@ -1042,10 +1043,10 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
         relatedEntityType: 'task'
       });
       
-      console.log(`[createUserBankDetailsTask] BankDetails-Task erstellt: Task ID ${task.id} für User ${userId}`);
+      logger.log(`[createUserBankDetailsTask] BankDetails-Task erstellt: Task ID ${task.id} für User ${userId}`);
       return task;
     } catch (error) {
-      console.error('[createUserBankDetailsTask] Fehler:', error);
+      logger.error('[createUserBankDetailsTask] Fehler:', error);
       // Logge Fehler, aber breche nicht ab
       return null;
     }
@@ -1065,7 +1066,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       });
       
       if (organization?.country !== 'CO') {
-        console.log(`[createUserIdentificationDocumentTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
+        logger.log(`[createUserIdentificationDocumentTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
         return null; // Nur für Kolumbien
       }
 
@@ -1090,7 +1091,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
 
       // Prüfe ob User bereits ein Identitätsdokument hat
       if (user.identificationDocuments && user.identificationDocuments.length > 0) {
-        console.log(`[createUserIdentificationDocumentTask] User ${userId} hat bereits ein Identitätsdokument, überspringe Task-Erstellung`);
+        logger.log(`[createUserIdentificationDocumentTask] User ${userId} hat bereits ein Identitätsdokument, überspringe Task-Erstellung`);
         return null;
       }
 
@@ -1155,7 +1156,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       });
       
       if (existingTask) {
-        console.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task existiert bereits für User ${userId}`);
+        logger.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task existiert bereits für User ${userId}`);
         return existingTask;
       }
       
@@ -1183,10 +1184,10 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
         relatedEntityType: 'task'
       });
       
-      console.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task erstellt: Task ID ${task.id} für User ${userId}`);
+      logger.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task erstellt: Task ID ${task.id} für User ${userId}`);
       return task;
     } catch (error) {
-      console.error('[createUserIdentificationDocumentTask] Fehler:', error);
+      logger.error('[createUserIdentificationDocumentTask] Fehler:', error);
       // Logge Fehler, aber breche nicht ab
       return null;
     }

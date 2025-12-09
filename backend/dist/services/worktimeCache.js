@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.worktimeCache = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * In-Memory Cache für aktive Worktime
  *
@@ -73,7 +74,7 @@ class WorktimeCache {
                 return data;
             }
             catch (error) {
-                console.error(`[WorktimeCache] Fehler beim Laden für User ${userId}:`, error);
+                logger_1.logger.error(`[WorktimeCache] Fehler beim Laden für User ${userId}:`, error);
                 return null;
             }
         });

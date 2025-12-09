@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deletePasscode = exports.createPasscode = exports.getLockInfo = exports.getLocks = void 0;
 const ttlockService_1 = require("../services/ttlockService");
+const logger_1 = require("../utils/logger");
 /**
  * GET /api/ttlock/locks
  * Ruft alle verfügbaren TTLock Locks ab
@@ -26,7 +27,7 @@ const getLocks = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     catch (error) {
-        console.error('Error getting TTLock locks:', error);
+        logger_1.logger.error('Error getting TTLock locks:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Locks'
@@ -51,7 +52,7 @@ const getLockInfo = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
     catch (error) {
-        console.error('Error getting lock info:', error);
+        logger_1.logger.error('Error getting lock info:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Lock-Informationen'
@@ -82,7 +83,7 @@ const createPasscode = (req, res) => __awaiter(void 0, void 0, void 0, function*
         });
     }
     catch (error) {
-        console.error('Error creating passcode:', error);
+        logger_1.logger.error('Error creating passcode:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Erstellen des Passcodes'
@@ -113,7 +114,7 @@ const deletePasscode = (req, res) => __awaiter(void 0, void 0, void 0, function*
         });
     }
     catch (error) {
-        console.error('Error deleting passcode:', error);
+        logger_1.logger.error('Error deleting passcode:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Löschen des Passcodes'

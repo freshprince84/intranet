@@ -17,6 +17,7 @@ const nodemailer_1 = __importDefault(require("nodemailer"));
 const axios_1 = __importDefault(require("axios"));
 const encryption_1 = require("../utils/encryption");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // SMTP-Konfiguration aus Umgebungsvariablen, Branch-Settings oder Organisation-Settings
 const createTransporter = (organizationId, branchId) => __awaiter(void 0, void 0, void 0, function* () {
     let smtpHost;
@@ -43,12 +44,12 @@ const createTransporter = (organizationId, branchId) => __awaiter(void 0, void 0
                         smtpPort = typeof portValue === 'number' ? portValue : (portValue ? parseInt(String(portValue)) : 587);
                         smtpUser = emailSettings.smtpUser;
                         smtpPass = emailSettings.smtpPass; // Bereits entschlüsselt
-                        console.log(`📧 Nutze Branch-spezifische SMTP-Einstellungen für Branch ${branchId}`);
+                        logger_1.logger.log(`📧 Nutze Branch-spezifische SMTP-Einstellungen für Branch ${branchId}`);
                         // Weiter zu Transporter-Erstellung
                     }
                 }
                 catch (error) {
-                    console.warn(`[EMAIL] Fehler beim Laden der Branch Settings:`, error);
+                    logger_1.logger.warn(`[EMAIL] Fehler beim Laden der Branch Settings:`, error);
                     // Fallback auf Organisation Settings
                 }
                 // Fallback: Lade Organization Settings
@@ -62,7 +63,7 @@ const createTransporter = (organizationId, branchId) => __awaiter(void 0, void 0
             }
         }
         catch (error) {
-            console.warn(`[EMAIL] Fehler beim Laden der Branch Settings:`, error);
+            logger_1.logger.warn(`[EMAIL] Fehler beim Laden der Branch Settings:`, error);
             // Fallback auf Organisation Settings
         }
     }
@@ -75,7 +76,7 @@ const createTransporter = (organizationId, branchId) => __awaiter(void 0, void 0
             });
             if ((organization === null || organization === void 0 ? void 0 : organization.settings) && typeof organization.settings === 'object') {
                 const orgSettings = organization.settings;
-                console.log(`[EMAIL] Org ${organizationId} Settings gefunden:`, JSON.stringify(orgSettings, null, 2));
+                logger_1.logger.log(`[EMAIL] Org ${organizationId} Settings gefunden:`, JSON.stringify(orgSettings, null, 2));
                 if (orgSettings.smtpHost && orgSettings.smtpUser && orgSettings.smtpPass) {
                     smtpHost = orgSettings.smtpHost;
                     // Port kann als String oder Number gespeichert sein
@@ -83,26 +84,26 @@ const createTransporter = (organizationId, branchId) => __awaiter(void 0, void 0
                     smtpPort = typeof portValue === 'number' ? portValue : (portValue ? parseInt(String(portValue)) : 587);
                     smtpUser = orgSettings.smtpUser;
                     smtpPass = orgSettings.smtpPass;
-                    console.log(`📧 Nutze Organisation-spezifische SMTP-Einstellungen für Org ${organizationId}`);
-                    console.log(`📧 SMTP Host: ${smtpHost}, Port: ${smtpPort}, User: ${smtpUser}`);
+                    logger_1.logger.log(`📧 Nutze Organisation-spezifische SMTP-Einstellungen für Org ${organizationId}`);
+                    logger_1.logger.log(`📧 SMTP Host: ${smtpHost}, Port: ${smtpPort}, User: ${smtpUser}`);
                     // Speichere auch From-Einstellungen für späteren Gebrauch
                     if (orgSettings.smtpFromEmail || orgSettings.smtpFromName) {
-                        console.log(`📧 Org ${organizationId} hat From-Einstellungen: ${orgSettings.smtpFromEmail || 'nicht gesetzt'}, ${orgSettings.smtpFromName || 'nicht gesetzt'}`);
+                        logger_1.logger.log(`📧 Org ${organizationId} hat From-Einstellungen: ${orgSettings.smtpFromEmail || 'nicht gesetzt'}, ${orgSettings.smtpFromName || 'nicht gesetzt'}`);
                     }
                 }
                 else {
-                    console.log(`⚠️ Org ${organizationId} hat SMTP-Einstellungen, aber nicht alle erforderlichen Felder sind gesetzt:`);
-                    console.log(`   smtpHost: ${orgSettings.smtpHost ? '✅' : '❌'}`);
-                    console.log(`   smtpUser: ${orgSettings.smtpUser ? '✅' : '❌'}`);
-                    console.log(`   smtpPass: ${orgSettings.smtpPass ? '✅' : '❌'}`);
+                    logger_1.logger.log(`⚠️ Org ${organizationId} hat SMTP-Einstellungen, aber nicht alle erforderlichen Felder sind gesetzt:`);
+                    logger_1.logger.log(`   smtpHost: ${orgSettings.smtpHost ? '✅' : '❌'}`);
+                    logger_1.logger.log(`   smtpUser: ${orgSettings.smtpUser ? '✅' : '❌'}`);
+                    logger_1.logger.log(`   smtpPass: ${orgSettings.smtpPass ? '✅' : '❌'}`);
                 }
             }
             else {
-                console.log(`⚠️ Org ${organizationId} hat keine Settings oder Settings sind kein Objekt`);
+                logger_1.logger.log(`⚠️ Org ${organizationId} hat keine Settings oder Settings sind kein Objekt`);
             }
         }
         catch (error) {
-            console.warn('⚠️ Fehler beim Laden der Organisation-SMTP-Einstellungen:', error);
+            logger_1.logger.warn('⚠️ Fehler beim Laden der Organisation-SMTP-Einstellungen:', error);
         }
     }
     // Fallback zu globalen Umgebungsvariablen
@@ -114,7 +115,7 @@ const createTransporter = (organizationId, branchId) => __awaiter(void 0, void 0
     }
     // Wenn immer noch keine SMTP-Konfiguration vorhanden, gibt es keinen Transporter
     if (!smtpHost || !smtpUser || !smtpPass) {
-        console.warn('⚠️ SMTP-Konfiguration fehlt. E-Mails können nicht versendet werden.');
+        logger_1.logger.warn('⚠️ SMTP-Konfiguration fehlt. E-Mails können nicht versendet werden.');
         return null;
     }
     return nodemailer_1.default.createTransport({
@@ -314,7 +315,7 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
         return true;
     }
     catch (error) {
-        console.error('❌ Fehler beim Versenden über Mailtrap API:', error);
+        logger_1.logger.error('❌ Fehler beim Versenden über Mailtrap API:', error);
         return false;
     }
 });
@@ -337,7 +338,7 @@ organizationId // Optional: für org-spezifische SMTP-Einstellungen
     try {
         const transporter = yield createTransporter(organizationId);
         if (!transporter) {
-            console.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
+            logger_1.logger.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
             return false;
         }
         const mailOptions = {
@@ -475,11 +476,11 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
       `,
         };
         const info = yield transporter.sendMail(mailOptions);
-        console.log('✅ Registrierungs-E-Mail versendet:', info.messageId);
+        logger_1.logger.log('✅ Registrierungs-E-Mail versendet:', info.messageId);
         return true;
     }
     catch (error) {
-        console.error('❌ Fehler beim Versenden der Registrierungs-E-Mail:', error);
+        logger_1.logger.error('❌ Fehler beim Versenden der Registrierungs-E-Mail:', error);
         return false;
     }
 });
@@ -505,7 +506,7 @@ const sendEmail = (email, subject, html, text, organizationId, branchId) => __aw
     try {
         const transporter = yield createTransporter(organizationId, branchId);
         if (!transporter) {
-            console.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
+            logger_1.logger.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
             return false;
         }
         // Lade From-Einstellungen aus Branch oder Organisation-Settings (falls vorhanden)
@@ -539,7 +540,7 @@ const sendEmail = (email, subject, html, text, organizationId, branchId) => __aw
                         }
                     }
                     catch (error) {
-                        console.warn('⚠️ Fehler beim Laden der Branch-From-Einstellungen:', error);
+                        logger_1.logger.warn('⚠️ Fehler beim Laden der Branch-From-Einstellungen:', error);
                         // Fallback auf Organisation
                         if (branch.organizationId) {
                             organizationId = branch.organizationId;
@@ -551,7 +552,7 @@ const sendEmail = (email, subject, html, text, organizationId, branchId) => __aw
                 }
             }
             catch (error) {
-                console.warn('⚠️ Fehler beim Laden der Branch-From-Einstellungen:', error);
+                logger_1.logger.warn('⚠️ Fehler beim Laden der Branch-From-Einstellungen:', error);
             }
         }
         // 2. Fallback: Lade From-Einstellungen aus Organisation-Settings
@@ -575,7 +576,7 @@ const sendEmail = (email, subject, html, text, organizationId, branchId) => __aw
                 }
             }
             catch (error) {
-                console.warn('⚠️ Fehler beim Laden der Organisation-From-Einstellungen:', error);
+                logger_1.logger.warn('⚠️ Fehler beim Laden der Organisation-From-Einstellungen:', error);
             }
         }
         const mailOptions = {
@@ -586,32 +587,32 @@ const sendEmail = (email, subject, html, text, organizationId, branchId) => __aw
             text: text || html.replace(/<[^>]*>/g, ''), // Fallback: HTML ohne Tags
         };
         const info = yield transporter.sendMail(mailOptions);
-        console.log('✅ E-Mail versendet:', info.messageId);
+        logger_1.logger.log('✅ E-Mail versendet:', info.messageId);
         return true;
     }
     catch (error) {
-        console.error('❌ Fehler beim Versenden der E-Mail:', error);
+        logger_1.logger.error('❌ Fehler beim Versenden der E-Mail:', error);
         return false;
     }
 });
 exports.sendEmail = sendEmail;
 const sendPasswordResetEmail = (email, username, resetLink, organizationId) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(`[EMAIL] Starte Versand der Passwort-Reset-E-Mail für: ${username} (${email})`);
+    logger_1.logger.log(`[EMAIL] Starte Versand der Passwort-Reset-E-Mail für: ${username} (${email})`);
     if (organizationId) {
-        console.log(`[EMAIL] Verwende Organisation-ID: ${organizationId}`);
+        logger_1.logger.log(`[EMAIL] Verwende Organisation-ID: ${organizationId}`);
     }
     // Versuche zuerst Mailtrap API (falls konfiguriert)
     const apiSuccess = yield sendPasswordResetViaMailtrapAPI(email, username, resetLink, organizationId);
     if (apiSuccess) {
-        console.log(`[EMAIL] E-Mail erfolgreich über Mailtrap API versendet`);
+        logger_1.logger.log(`[EMAIL] E-Mail erfolgreich über Mailtrap API versendet`);
         return true;
     }
-    console.log(`[EMAIL] Mailtrap API nicht verfügbar oder fehlgeschlagen, versuche SMTP...`);
+    logger_1.logger.log(`[EMAIL] Mailtrap API nicht verfügbar oder fehlgeschlagen, versuche SMTP...`);
     // Fallback zu SMTP
     try {
         const transporter = yield createTransporter(organizationId);
         if (!transporter) {
-            console.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
+            logger_1.logger.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
             return false;
         }
         // Lade From-Einstellungen aus Organisation-Settings (falls vorhanden)
@@ -637,12 +638,12 @@ const sendPasswordResetEmail = (email, username, resetLink, organizationId) => _
                 }
             }
             catch (error) {
-                console.warn('⚠️ Fehler beim Laden der From-Einstellungen:', error);
+                logger_1.logger.warn('⚠️ Fehler beim Laden der From-Einstellungen:', error);
             }
         }
         // Formatiere From-String für nodemailer
         const fromString = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
-        console.log(`[EMAIL] 📧 Versende E-Mail von: ${fromString} an: ${email}`);
+        logger_1.logger.log(`[EMAIL] 📧 Versende E-Mail von: ${fromString} an: ${email}`);
         const mailOptions = {
             from: fromString,
             to: email,
@@ -761,33 +762,33 @@ Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
       `,
         };
-        console.log(`[EMAIL] Sende E-Mail über SMTP...`);
+        logger_1.logger.log(`[EMAIL] Sende E-Mail über SMTP...`);
         const info = yield transporter.sendMail(mailOptions);
-        console.log('✅ Passwort-Reset-E-Mail erfolgreich über SMTP versendet!');
-        console.log(`[EMAIL] Message ID: ${info.messageId}`);
-        console.log(`[EMAIL] E-Mail gesendet an: ${email}`);
-        console.log(`[EMAIL] Von: ${fromString}`);
+        logger_1.logger.log('✅ Passwort-Reset-E-Mail erfolgreich über SMTP versendet!');
+        logger_1.logger.log(`[EMAIL] Message ID: ${info.messageId}`);
+        logger_1.logger.log(`[EMAIL] E-Mail gesendet an: ${email}`);
+        logger_1.logger.log(`[EMAIL] Von: ${fromString}`);
         return true;
     }
     catch (error) {
-        console.error('❌ Fehler beim Versenden der Passwort-Reset-E-Mail über SMTP:');
-        console.error(`[EMAIL] Fehler-Typ: ${error.constructor.name}`);
+        logger_1.logger.error('❌ Fehler beim Versenden der Passwort-Reset-E-Mail über SMTP:');
+        logger_1.logger.error(`[EMAIL] Fehler-Typ: ${error.constructor.name}`);
         if (error.response) {
-            console.error(`[EMAIL] SMTP Fehler-Response: ${error.response.status}`, error.response.data);
+            logger_1.logger.error(`[EMAIL] SMTP Fehler-Response: ${error.response.status}`, error.response.data);
         }
         if (error.code) {
-            console.error(`[EMAIL] SMTP Fehler-Code: ${error.code}`);
+            logger_1.logger.error(`[EMAIL] SMTP Fehler-Code: ${error.code}`);
         }
         if (error.message) {
-            console.error(`[EMAIL] SMTP Fehler-Message: ${error.message}`);
+            logger_1.logger.error(`[EMAIL] SMTP Fehler-Message: ${error.message}`);
         }
         if (error.command) {
-            console.error(`[EMAIL] SMTP Fehler-Command: ${error.command}`);
+            logger_1.logger.error(`[EMAIL] SMTP Fehler-Command: ${error.command}`);
         }
         if (error.responseCode) {
-            console.error(`[EMAIL] SMTP Response-Code: ${error.responseCode}`);
+            logger_1.logger.error(`[EMAIL] SMTP Response-Code: ${error.responseCode}`);
         }
-        console.error(`[EMAIL] Vollständiger Fehler:`, error);
+        logger_1.logger.error(`[EMAIL] Vollständiger Fehler:`, error);
         return false;
     }
 });
@@ -800,15 +801,15 @@ const sendPasswordResetViaMailtrapAPI = (email, username, resetLink, organizatio
     const mailtrapApiToken = process.env.MAILTRAP_API_TOKEN;
     const mailtrapTestInboxId = process.env.MAILTRAP_TEST_INBOX_ID;
     if (!mailtrapApiToken || !mailtrapTestInboxId) {
-        console.log('[EMAIL] Mailtrap API nicht konfiguriert (Token oder Inbox-ID fehlt), versuche SMTP');
+        logger_1.logger.log('[EMAIL] Mailtrap API nicht konfiguriert (Token oder Inbox-ID fehlt), versuche SMTP');
         return false; // API nicht konfiguriert
     }
     // Wenn Organisation-ID vorhanden ist, sollte SMTP verwendet werden, nicht Mailtrap
     if (organizationId) {
-        console.log(`[EMAIL] Organisation-ID vorhanden (${organizationId}), überspringe Mailtrap API und verwende SMTP`);
+        logger_1.logger.log(`[EMAIL] Organisation-ID vorhanden (${organizationId}), überspringe Mailtrap API und verwende SMTP`);
         return false;
     }
-    console.log(`[EMAIL] Versuche Passwort-Reset-E-Mail über Mailtrap API zu senden an: ${email}`);
+    logger_1.logger.log(`[EMAIL] Versuche Passwort-Reset-E-Mail über Mailtrap API zu senden an: ${email}`);
     // Lade From-Einstellungen aus Organisation-Settings (falls vorhanden)
     let fromEmail = 'noreply@intranet.local';
     let fromName = 'Intranet';
@@ -832,7 +833,7 @@ const sendPasswordResetViaMailtrapAPI = (email, username, resetLink, organizatio
             }
         }
         catch (error) {
-            console.warn('⚠️ Fehler beim Laden der From-Einstellungen für Mailtrap:', error);
+            logger_1.logger.warn('⚠️ Fehler beim Laden der From-Einstellungen für Mailtrap:', error);
         }
     }
     try {
@@ -988,7 +989,7 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
         return true;
     }
     catch (error) {
-        console.error('❌ Fehler beim Versenden über Mailtrap API:', error);
+        logger_1.logger.error('❌ Fehler beim Versenden über Mailtrap API:', error);
         return false;
     }
 });

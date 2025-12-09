@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.branchCache = void 0;
 const prisma_1 = require("../utils/prisma");
 const organization_1 = require("../middleware/organization");
+const logger_1 = require("../utils/logger");
 /**
  * In-Memory Cache für User-Branches
  *
@@ -92,7 +93,7 @@ class BranchCache {
                 return branches;
             }
             catch (error) {
-                console.error(`[BranchCache] Fehler beim Laden für User ${userId}:`, error);
+                logger_1.logger.error(`[BranchCache] Fehler beim Laden für User ${userId}:`, error);
                 return null;
             }
         });

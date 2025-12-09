@@ -50,6 +50,7 @@ const axios_1 = __importDefault(require("axios"));
 const encryption_1 = require("../utils/encryption");
 const ttlockService_1 = require("./ttlockService");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Service für Bold Payment Integration
  *
@@ -101,12 +102,12 @@ class BoldPaymentService {
                             this.environment = boldPaymentSettings.environment || 'sandbox';
                             this.apiUrl = 'https://integrations.api.bold.co';
                             this.axiosInstance = this.createAxiosInstance();
-                            console.log(`[BoldPayment] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
+                            logger_1.logger.log(`[BoldPayment] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
                             return; // Erfolgreich geladen
                         }
                     }
                     catch (error) {
-                        console.warn(`[BoldPayment] Fehler beim Laden der Branch Settings:`, error);
+                        logger_1.logger.warn(`[BoldPayment] Fehler beim Laden der Branch Settings:`, error);
                         // Fallback auf Organization Settings
                     }
                     // Fallback: Lade Organization Settings
@@ -193,43 +194,43 @@ class BoldPaymentService {
             config.headers.Authorization = authHeaderValue;
             // KRITISCH: Prüfe NACH dem Setzen, ob Header wirklich gesetzt ist
             if (!config.headers.Authorization || config.headers.Authorization !== authHeaderValue) {
-                console.error('[Bold Payment] KRITISCH: Header wurde nach dem Setzen überschrieben!');
-                console.error('[Bold Payment] Erwartet:', authHeaderValue);
-                console.error('[Bold Payment] Tatsächlich:', config.headers.Authorization);
+                logger_1.logger.error('[Bold Payment] KRITISCH: Header wurde nach dem Setzen überschrieben!');
+                logger_1.logger.error('[Bold Payment] Erwartet:', authHeaderValue);
+                logger_1.logger.error('[Bold Payment] Tatsächlich:', config.headers.Authorization);
                 config.headers.Authorization = authHeaderValue;
             }
             // Debug: Prüfe ob Header korrekt gesetzt wurde
-            console.log(`[Bold Payment] ${(_a = config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()} ${config.url}`);
-            console.log(`[Bold Payment] Authorization Header: ${config.headers.Authorization}`);
-            console.log(`[Bold Payment] Header Länge: ${(_b = config.headers.Authorization) === null || _b === void 0 ? void 0 : _b.length}`);
-            console.log(`[Bold Payment] merchantId Wert: "${this.merchantId}"`);
-            console.log(`[Bold Payment] merchantId Länge: ${(_c = this.merchantId) === null || _c === void 0 ? void 0 : _c.length}`);
+            logger_1.logger.log(`[Bold Payment] ${(_a = config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()} ${config.url}`);
+            logger_1.logger.log(`[Bold Payment] Authorization Header: ${config.headers.Authorization}`);
+            logger_1.logger.log(`[Bold Payment] Header Länge: ${(_b = config.headers.Authorization) === null || _b === void 0 ? void 0 : _b.length}`);
+            logger_1.logger.log(`[Bold Payment] merchantId Wert: "${this.merchantId}"`);
+            logger_1.logger.log(`[Bold Payment] merchantId Länge: ${(_c = this.merchantId) === null || _c === void 0 ? void 0 : _c.length}`);
             // KRITISCH: Zeige Authorization Header EXPLIZIT (nicht in JSON.stringify, da abgeschnitten werden könnte)
-            console.log(`[Bold Payment] Authorization Header EXPLIZIT:`, config.headers.Authorization);
-            console.log(`[Bold Payment] Authorization Header vorhanden:`, !!config.headers.Authorization);
-            console.log(`[Bold Payment] Authorization Header Typ:`, typeof config.headers.Authorization);
+            logger_1.logger.log(`[Bold Payment] Authorization Header EXPLIZIT:`, config.headers.Authorization);
+            logger_1.logger.log(`[Bold Payment] Authorization Header vorhanden:`, !!config.headers.Authorization);
+            logger_1.logger.log(`[Bold Payment] Authorization Header Typ:`, typeof config.headers.Authorization);
             // Zeige alle Header-Keys
-            console.log(`[Bold Payment] Header Keys:`, Object.keys(config.headers));
+            logger_1.logger.log(`[Bold Payment] Header Keys:`, Object.keys(config.headers));
             // Zeige Full Headers (kann abgeschnitten sein, daher auch einzeln)
             const headersObj = {};
             Object.keys(config.headers).forEach(key => {
                 headersObj[key] = config.headers[key];
             });
-            console.log(`[Bold Payment] Full Headers:`, JSON.stringify(headersObj, null, 2));
+            logger_1.logger.log(`[Bold Payment] Full Headers:`, JSON.stringify(headersObj, null, 2));
             // KRITISCH: Prüfe NOCHMAL direkt vor dem Return
             if (!config.headers.Authorization || config.headers.Authorization !== authHeaderValue) {
-                console.error('[Bold Payment] KRITISCH: Header wurde VOR dem Return überschrieben!');
+                logger_1.logger.error('[Bold Payment] KRITISCH: Header wurde VOR dem Return überschrieben!');
                 config.headers.Authorization = authHeaderValue;
             }
             return config;
         }), (error) => {
-            console.error('[Bold Payment] Request Error:', error);
+            logger_1.logger.error('[Bold Payment] Request Error:', error);
             return Promise.reject(error);
         });
         // Response Interceptor für Error Handling
         instance.interceptors.response.use((response) => {
             var _a;
-            console.log('[Bold Payment] API Success:', {
+            logger_1.logger.log('[Bold Payment] API Success:', {
                 status: response.status,
                 statusText: response.statusText,
                 url: (_a = response.config) === null || _a === void 0 ? void 0 : _a.url,
@@ -239,18 +240,18 @@ class BoldPaymentService {
         }, (error) => {
             var _a, _b, _c, _d, _e, _f, _g, _h;
             // KRITISCH: Zeige auch die REQUEST-Headers, die tatsächlich gesendet wurden
-            console.error('[Bold Payment] API Error Details:');
-            console.error('[Bold Payment] Request URL:', (_a = error.config) === null || _a === void 0 ? void 0 : _a.url);
-            console.error('[Bold Payment] Request Method:', (_b = error.config) === null || _b === void 0 ? void 0 : _b.method);
-            console.error('[Bold Payment] Request Headers (die tatsächlich gesendet wurden):', JSON.stringify((_c = error.config) === null || _c === void 0 ? void 0 : _c.headers, null, 2));
-            console.error('[Bold Payment] Response Status:', (_d = error.response) === null || _d === void 0 ? void 0 : _d.status);
-            console.error('[Bold Payment] Response StatusText:', (_e = error.response) === null || _e === void 0 ? void 0 : _e.statusText);
-            console.error('[Bold Payment] Response Data:', JSON.stringify((_f = error.response) === null || _f === void 0 ? void 0 : _f.data, null, 2));
-            console.error('[Bold Payment] Response Headers:', JSON.stringify((_g = error.response) === null || _g === void 0 ? void 0 : _g.headers, null, 2));
+            logger_1.logger.error('[Bold Payment] API Error Details:');
+            logger_1.logger.error('[Bold Payment] Request URL:', (_a = error.config) === null || _a === void 0 ? void 0 : _a.url);
+            logger_1.logger.error('[Bold Payment] Request Method:', (_b = error.config) === null || _b === void 0 ? void 0 : _b.method);
+            logger_1.logger.error('[Bold Payment] Request Headers (die tatsächlich gesendet wurden):', JSON.stringify((_c = error.config) === null || _c === void 0 ? void 0 : _c.headers, null, 2));
+            logger_1.logger.error('[Bold Payment] Response Status:', (_d = error.response) === null || _d === void 0 ? void 0 : _d.status);
+            logger_1.logger.error('[Bold Payment] Response StatusText:', (_e = error.response) === null || _e === void 0 ? void 0 : _e.statusText);
+            logger_1.logger.error('[Bold Payment] Response Data:', JSON.stringify((_f = error.response) === null || _f === void 0 ? void 0 : _f.data, null, 2));
+            logger_1.logger.error('[Bold Payment] Response Headers:', JSON.stringify((_g = error.response) === null || _g === void 0 ? void 0 : _g.headers, null, 2));
             // Prüfe ob Authorization Header wirklich im Request war
             const requestHeaders = (((_h = error.config) === null || _h === void 0 ? void 0 : _h.headers) || {});
-            console.error('[Bold Payment] Authorization Header im Request vorhanden:', !!requestHeaders.Authorization);
-            console.error('[Bold Payment] Authorization Header Wert:', requestHeaders.Authorization);
+            logger_1.logger.error('[Bold Payment] Authorization Header im Request vorhanden:', !!requestHeaders.Authorization);
+            logger_1.logger.error('[Bold Payment] Authorization Header Wert:', requestHeaders.Authorization);
             return Promise.reject(error);
         });
         return instance;
@@ -278,12 +279,12 @@ class BoldPaymentService {
                 !this.merchantId ||
                 (this.axiosInstance && this.axiosInstance.defaults.baseURL === 'https://sandbox.bold.co');
             if (needsLoadSettings) {
-                console.log('[Bold Payment] Lade Settings (createPaymentLink) - apiUrl:', this.apiUrl, 'merchantId:', !!this.merchantId, 'baseURL:', (_a = this.axiosInstance) === null || _a === void 0 ? void 0 : _a.defaults.baseURL);
+                logger_1.logger.log('[Bold Payment] Lade Settings (createPaymentLink) - apiUrl:', this.apiUrl, 'merchantId:', !!this.merchantId, 'baseURL:', (_a = this.axiosInstance) === null || _a === void 0 ? void 0 : _a.defaults.baseURL);
                 yield this.loadSettings();
                 // NACH loadSettings() PRÜFEN: Wurde createAxiosInstance() wirklich aufgerufen?
                 if (!this.apiUrl || this.apiUrl === 'https://sandbox.bold.co' ||
                     (this.axiosInstance && this.axiosInstance.defaults.baseURL === 'https://sandbox.bold.co')) {
-                    console.error('[Bold Payment] KRITISCH: loadSettings() wurde aufgerufen, aber createAxiosInstance() wurde NICHT aufgerufen!');
+                    logger_1.logger.error('[Bold Payment] KRITISCH: loadSettings() wurde aufgerufen, aber createAxiosInstance() wurde NICHT aufgerufen!');
                     throw new Error('Bold Payment Settings konnten nicht geladen werden - createAxiosInstance() wurde nicht aufgerufen');
                 }
             }
@@ -351,7 +352,7 @@ class BoldPaymentService {
                 }
                 // Für Sandbox/Development ohne https:// URL wird callback_url weggelassen
                 // Logge Payload für Debugging
-                console.log('[Bold Payment] Payload:', JSON.stringify(payload, null, 2));
+                logger_1.logger.log('[Bold Payment] Payload:', JSON.stringify(payload, null, 2));
                 // Endpoint: POST /online/link/v1
                 const response = yield this.axiosInstance.post('/online/link/v1', payload);
                 // Response-Struktur: { payload: { payment_link: "LNK_...", url: "https://..." }, errors: [] }
@@ -381,10 +382,10 @@ class BoldPaymentService {
                     const status = (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.status;
                     const responseData = (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.data;
                     // Detailliertes Logging
-                    console.error('[Bold Payment] API Error Details:');
-                    console.error('  Status:', status);
-                    console.error('  Status Text:', (_f = axiosError.response) === null || _f === void 0 ? void 0 : _f.statusText);
-                    console.error('  Response Data:', JSON.stringify(responseData, null, 2));
+                    logger_1.logger.error('[Bold Payment] API Error Details:');
+                    logger_1.logger.error('  Status:', status);
+                    logger_1.logger.error('  Status Text:', (_f = axiosError.response) === null || _f === void 0 ? void 0 : _f.statusText);
+                    logger_1.logger.error('  Response Data:', JSON.stringify(responseData, null, 2));
                     // Extrahiere Fehlermeldungen
                     let errorMessage = 'Unbekannter Fehler';
                     if ((responseData === null || responseData === void 0 ? void 0 : responseData.errors) && Array.isArray(responseData.errors) && responseData.errors.length > 0) {
@@ -398,7 +399,7 @@ class BoldPaymentService {
                             return JSON.stringify(e);
                         });
                         errorMessage = errors.join('; ');
-                        console.error('  Errors:', errors);
+                        logger_1.logger.error('  Errors:', errors);
                     }
                     else if (responseData === null || responseData === void 0 ? void 0 : responseData.message) {
                         errorMessage = responseData.message;
@@ -477,7 +478,7 @@ class BoldPaymentService {
             var _a, _b, _c;
             try {
                 const { event, data } = payload;
-                console.log(`[Bold Payment Webhook] Event: ${event}`, data);
+                logger_1.logger.log(`[Bold Payment Webhook] Event: ${event}`, data);
                 // Finde Reservierung basierend auf Metadata oder Reference
                 // Reference-Format: "RES-{id}-{timestamp}" → extrahiere nur die ID
                 let reservationId = null;
@@ -492,14 +493,14 @@ class BoldPaymentService {
                     }
                 }
                 if (!reservationId) {
-                    console.warn('[Bold Payment Webhook] Reservierungs-ID nicht gefunden im Webhook');
+                    logger_1.logger.warn('[Bold Payment Webhook] Reservierungs-ID nicht gefunden im Webhook');
                     return;
                 }
                 const reservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservationId }
                 });
                 if (!reservation) {
-                    console.warn(`[Bold Payment Webhook] Reservierung ${reservationId} nicht gefunden`);
+                    logger_1.logger.warn(`[Bold Payment Webhook] Reservierung ${reservationId} nicht gefunden`);
                     return;
                 }
                 // Prüfe ob es eine TourBooking gibt, die mit diesem Payment Link verknüpft ist
@@ -542,16 +543,16 @@ class BoldPaymentService {
                                     amountPending: 0
                                 }
                             });
-                            console.log(`[Bold Payment Webhook] ✅ TourBooking ${tourBooking.id} als bezahlt markiert`);
+                            logger_1.logger.log(`[Bold Payment Webhook] ✅ TourBooking ${tourBooking.id} als bezahlt markiert`);
                             // Sende Bestätigung via WhatsApp
                             if (tourBooking.customerPhone && tourBooking.tour) {
                                 try {
                                     const { TourWhatsAppService } = yield Promise.resolve().then(() => __importStar(require('./tourWhatsAppService')));
                                     yield TourWhatsAppService.sendConfirmationToCustomer(tourBooking.id, tourBooking.tour.organizationId, tourBooking.branchId || null);
-                                    console.log(`[Bold Payment Webhook] ✅ Bestätigung an Kunden gesendet für TourBooking ${tourBooking.id}`);
+                                    logger_1.logger.log(`[Bold Payment Webhook] ✅ Bestätigung an Kunden gesendet für TourBooking ${tourBooking.id}`);
                                 }
                                 catch (whatsappError) {
-                                    console.error(`[Bold Payment Webhook] Fehler beim Senden der Bestätigung für TourBooking ${tourBooking.id}:`, whatsappError);
+                                    logger_1.logger.error(`[Bold Payment Webhook] Fehler beim Senden der Bestätigung für TourBooking ${tourBooking.id}:`, whatsappError);
                                 }
                             }
                             // Prüfe ob TourReservation Verknüpfung existiert und aktualisiere tourPricePaid
@@ -570,11 +571,11 @@ class BoldPaymentService {
                                             tourPricePending: 0
                                         }
                                     });
-                                    console.log(`[Bold Payment Webhook] ✅ TourReservation ${tourReservation.id} aktualisiert (tourPricePaid: ${paidAmount})`);
+                                    logger_1.logger.log(`[Bold Payment Webhook] ✅ TourReservation ${tourReservation.id} aktualisiert (tourPricePaid: ${paidAmount})`);
                                 }
                             }
                             catch (tourReservationError) {
-                                console.error('[Bold Payment Webhook] Fehler beim Aktualisieren der TourReservation:', tourReservationError);
+                                logger_1.logger.error('[Bold Payment Webhook] Fehler beim Aktualisieren der TourReservation:', tourReservationError);
                                 // Nicht abbrechen, nur loggen
                             }
                         }
@@ -590,7 +591,7 @@ class BoldPaymentService {
                                 include: { organization: true, branch: true }
                             });
                             if (!updatedReservation) {
-                                console.warn(`[Bold Payment Webhook] Reservierung ${reservation.id} nicht gefunden nach Update`);
+                                logger_1.logger.warn(`[Bold Payment Webhook] Reservierung ${reservation.id} nicht gefunden nach Update`);
                                 break;
                             }
                             // Wenn noch nicht eingecheckt und Check-in-Datum erreicht/überschritten, setze Status auf checked_in
@@ -606,10 +607,14 @@ class BoldPaymentService {
                                         onlineCheckInCompletedAt: new Date()
                                     }
                                 });
-                                console.log(`[Bold Payment Webhook] ✅ Auto-Check-in durchgeführt für Reservierung ${reservation.id} (Zahlung erhalten)`);
+                                logger_1.logger.log(`[Bold Payment Webhook] ✅ Auto-Check-in durchgeführt für Reservierung ${reservation.id} (Zahlung erhalten)`);
                             }
                             // Erstelle TTLock Passcode (wenn konfiguriert und Kontaktinfo vorhanden)
                             // TTLock-Code sollte auch erstellt werden, wenn nur Email vorhanden ist
+                            // WICHTIG: Versende PIN nur wenn:
+                            // 1. Check-in-Link abgeschlossen (checkInDataUploaded = true) ODER
+                            // 2. Bereits eingecheckt (status = checked_in)
+                            const shouldSendPin = updatedReservation.checkInDataUploaded || isAlreadyCheckedIn;
                             if (updatedReservation.guestPhone || updatedReservation.guestEmail) {
                                 let ttlockCode = null;
                                 try {
@@ -645,7 +650,7 @@ class BoldPaymentService {
                                                 ttlLockPassword: ttlockCode
                                             }
                                         });
-                                        console.log(`[Bold Payment Webhook] TTLock Code erstellt für Reservierung ${reservation.id}`);
+                                        logger_1.logger.log(`[Bold Payment Webhook] TTLock Code erstellt für Reservierung ${reservation.id}`);
                                         // Log erfolgreiche TTLock-Code-Erstellung
                                         try {
                                             yield prisma_1.prisma.reservationNotificationLog.create({
@@ -660,7 +665,7 @@ class BoldPaymentService {
                                             });
                                         }
                                         catch (logError) {
-                                            console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für TTLock-Code:', logError);
+                                            logger_1.logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für TTLock-Code:', logError);
                                         }
                                     }
                                     else {
@@ -678,12 +683,12 @@ class BoldPaymentService {
                                             });
                                         }
                                         catch (logError) {
-                                            console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags (keine Lock IDs):', logError);
+                                            logger_1.logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags (keine Lock IDs):', logError);
                                         }
                                     }
                                 }
                                 catch (ttlockError) {
-                                    console.error('[Bold Payment Webhook] Fehler beim Erstellen des TTLock Passcodes:', ttlockError);
+                                    logger_1.logger.error('[Bold Payment Webhook] Fehler beim Erstellen des TTLock Passcodes:', ttlockError);
                                     const errorMessage = ttlockError instanceof Error ? ttlockError.message : 'Unbekannter Fehler beim Erstellen des TTLock Passcodes';
                                     // Log fehlgeschlagene TTLock-Code-Erstellung
                                     try {
@@ -699,29 +704,42 @@ class BoldPaymentService {
                                         });
                                     }
                                     catch (logError) {
-                                        console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für TTLock-Fehler:', logError);
+                                        logger_1.logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für TTLock-Fehler:', logError);
                                     }
                                     // Weiter ohne TTLock Code
                                 }
-                                // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
-                                // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
-                                console.log(`[Bold Payment Webhook] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${ttlockCode ? `(${ttlockCode})` : ''} wird nur im Frontend angezeigt`);
-                                // Log: Versendung deaktiviert
-                                try {
-                                    yield prisma_1.prisma.reservationNotificationLog.create({
-                                        data: {
-                                            reservationId: reservation.id,
-                                            notificationType: 'pin',
-                                            channel: 'whatsapp',
-                                            success: false,
-                                            sentAt: new Date(),
-                                            sentTo: updatedReservation.guestPhone || null,
-                                            errorMessage: 'WhatsApp-Versendung temporär deaktiviert - Code wird nur im Frontend angezeigt'
-                                        }
-                                    });
+                                // Versende PIN nur wenn Check-in-Link abgeschlossen ODER bereits eingecheckt
+                                if (shouldSendPin && ttlockCode) {
+                                    try {
+                                        logger_1.logger.log(`[Bold Payment Webhook] Check-in-Link abgeschlossen/Check-in durchgeführt → versende PIN für Reservierung ${reservation.id}`);
+                                        const { ReservationNotificationService } = yield Promise.resolve().then(() => __importStar(require('./reservationNotificationService')));
+                                        yield ReservationNotificationService.generatePinAndSendNotification(reservation.id);
+                                    }
+                                    catch (error) {
+                                        logger_1.logger.error(`[Bold Payment Webhook] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
+                                        // Fehler nicht weiterwerfen, da PIN-Versand optional ist
+                                    }
                                 }
-                                catch (logError) {
-                                    console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags:', logError);
+                                else if (!shouldSendPin) {
+                                    // ⚠️ Check-in-Link noch nicht abgeschlossen - PIN wird nicht versendet
+                                    logger_1.logger.log(`[Bold Payment Webhook] ⚠️ Check-in-Link noch nicht abgeschlossen - TTLock-Code ${ttlockCode ? `(${ttlockCode})` : ''} wird nur im Frontend angezeigt`);
+                                    // Log: Versendung deaktiviert (Check-in-Link noch nicht abgeschlossen)
+                                    try {
+                                        yield prisma_1.prisma.reservationNotificationLog.create({
+                                            data: {
+                                                reservationId: reservation.id,
+                                                notificationType: 'pin',
+                                                channel: 'whatsapp',
+                                                success: false,
+                                                sentAt: new Date(),
+                                                sentTo: updatedReservation.guestPhone || null,
+                                                errorMessage: 'PIN nicht versendet - Check-in-Link noch nicht abgeschlossen (Dokumente noch nicht hochgeladen)'
+                                            }
+                                        });
+                                    }
+                                    catch (logError) {
+                                        logger_1.logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags:', logError);
+                                    }
                                 }
                                 // ⚠️ TEMPORÄR AUSKOMMENTIERT - WhatsApp-Versendung nach TTLock-Webhook
                                 // TODO: Wieder aktivieren, wenn gewünscht
@@ -737,7 +755,7 @@ class BoldPaymentService {
                                     const roomNumber = updatedReservation.roomNumber || 'N/A';
                                     const roomDescription = updatedReservation.roomDescription || 'N/A';
                                     
-                                    console.log(`[Bold Payment Webhook] Versende Check-in-Bestätigung mit PIN für Reservierung ${reservation.id}...`);
+                                    logger.log(`[Bold Payment Webhook] Versende Check-in-Bestätigung mit PIN für Reservierung ${reservation.id}...`);
                                     const whatsappSuccess = await whatsappService.sendCheckInConfirmation(
                                       updatedReservation.guestName,
                                       updatedReservation.guestPhone,
@@ -770,7 +788,7 @@ class BoldPaymentService {
                                         }
                                       });
                   
-                                      console.log(`[Bold Payment Webhook] ✅ WhatsApp-Nachricht mit TTLock Code erfolgreich versendet für Reservierung ${reservation.id}`);
+                                      logger.log(`[Bold Payment Webhook] ✅ WhatsApp-Nachricht mit TTLock Code erfolgreich versendet für Reservierung ${reservation.id}`);
                                       
                                       // Log erfolgreiche WhatsApp-Notification
                                       try {
@@ -786,10 +804,10 @@ class BoldPaymentService {
                                           }
                                         });
                                       } catch (logError) {
-                                        console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für WhatsApp:', logError);
+                                        logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für WhatsApp:', logError);
                                       }
                                     } else {
-                                      console.error(`[Bold Payment Webhook] ❌ WhatsApp-Nachricht konnte nicht versendet werden (sendCheckInConfirmation gab false zurück)`);
+                                      logger.error(`[Bold Payment Webhook] ❌ WhatsApp-Nachricht konnte nicht versendet werden (sendCheckInConfirmation gab false zurück)`);
                                       
                                       // Log fehlgeschlagene WhatsApp-Notification
                                       try {
@@ -806,7 +824,7 @@ class BoldPaymentService {
                                           }
                                         });
                                       } catch (logError) {
-                                        console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp:', logError);
+                                        logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp:', logError);
                                       }
                                     }
                                   } else {
@@ -817,7 +835,7 @@ class BoldPaymentService {
                   
                   ¡Te esperamos!`;
                   
-                                    console.log(`[Bold Payment Webhook] Versende einfache Zahlungsbestätigung (ohne PIN) für Reservierung ${reservation.id}...`);
+                                    logger.log(`[Bold Payment Webhook] Versende einfache Zahlungsbestätigung (ohne PIN) für Reservierung ${reservation.id}...`);
                                     // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
                                     // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
                                     const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
@@ -844,7 +862,7 @@ class BoldPaymentService {
                                         }
                                       });
                                       
-                                      console.log(`[Bold Payment Webhook] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservation.id}`);
+                                      logger.log(`[Bold Payment Webhook] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservation.id}`);
                                       
                                       // Log erfolgreiche WhatsApp-Notification (ohne PIN)
                                       try {
@@ -860,10 +878,10 @@ class BoldPaymentService {
                                           }
                                         });
                                       } catch (logError) {
-                                        console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für WhatsApp:', logError);
+                                        logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für WhatsApp:', logError);
                                       }
                                     } else {
-                                      console.error(`[Bold Payment Webhook] ❌ WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)`);
+                                      logger.error(`[Bold Payment Webhook] ❌ WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)`);
                                       
                                       // Log fehlgeschlagene WhatsApp-Notification
                                       try {
@@ -880,16 +898,16 @@ class BoldPaymentService {
                                           }
                                         });
                                       } catch (logError) {
-                                        console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp:', logError);
+                                        logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp:', logError);
                                       }
                                     }
                                   }
                                 } catch (whatsappError) {
-                                  console.error('[Bold Payment Webhook] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+                                  logger.error('[Bold Payment Webhook] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
                                   const errorMessage = whatsappError instanceof Error ? whatsappError.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
                                   if (whatsappError instanceof Error) {
-                                    console.error('[Bold Payment Webhook] Fehlermeldung:', whatsappError.message);
-                                    console.error('[Bold Payment Webhook] Stack:', whatsappError.stack);
+                                    logger.error('[Bold Payment Webhook] Fehlermeldung:', whatsappError.message);
+                                    logger.error('[Bold Payment Webhook] Stack:', whatsappError.stack);
                                   }
                                   
                                   // Log fehlgeschlagene WhatsApp-Notification
@@ -906,7 +924,7 @@ class BoldPaymentService {
                                       }
                                     });
                                   } catch (logError) {
-                                    console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für WhatsApp-Fehler:', logError);
+                                    logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags für WhatsApp-Fehler:', logError);
                                   }
                                   // Fehler nicht weiterwerfen
                                 }
@@ -927,12 +945,12 @@ class BoldPaymentService {
                                     });
                                 }
                                 catch (logError) {
-                                    console.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags (keine Kontaktinfo):', logError);
+                                    logger_1.logger.error('[Bold Payment Webhook] ⚠️ Fehler beim Erstellen des Log-Eintrags (keine Kontaktinfo):', logError);
                                 }
                             }
                         }
                         catch (error) {
-                            console.error('[Bold Payment Webhook] Fehler beim Verarbeiten der Zahlung (TTLock/WhatsApp):', error);
+                            logger_1.logger.error('[Bold Payment Webhook] Fehler beim Verarbeiten der Zahlung (TTLock/WhatsApp):', error);
                             // Fehler nicht weiterwerfen, Payment Status wurde bereits aktualisiert
                         }
                         break;
@@ -953,11 +971,11 @@ class BoldPaymentService {
                         // Status bleibt "pending"
                         break;
                     default:
-                        console.log(`[Bold Payment Webhook] Unbekanntes Event: ${event}`);
+                        logger_1.logger.log(`[Bold Payment Webhook] Unbekanntes Event: ${event}`);
                 }
             }
             catch (error) {
-                console.error('[Bold Payment Webhook] Fehler beim Verarbeiten:', error);
+                logger_1.logger.error('[Bold Payment Webhook] Fehler beim Verarbeiten:', error);
                 throw error;
             }
         });

@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminMiddleware = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 const adminMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.userId; // Von der authMiddleware gesetzt
@@ -34,7 +35,7 @@ const adminMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
         next();
     }
     catch (error) {
-        console.error('Fehler in der Admin-Middleware:', error);
+        logger_1.logger.error('Fehler in der Admin-Middleware:', error);
         res.status(500).json({ message: 'Interner Server-Fehler' });
     }
 });

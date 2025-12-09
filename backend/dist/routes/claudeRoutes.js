@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const claudeConsoleService_1 = require("../services/claudeConsoleService");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 // Sicherheits-Middleware für Claude-Endpunkte
 const claudeAuth = (req, res, next) => {
@@ -43,7 +44,7 @@ router.get('/tables', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.json(tables);
     }
     catch (error) {
-        console.error('Claude DB Error:', error);
+        logger_1.logger.error('Claude DB Error:', error);
         res.status(500).json({ error: 'Database query failed' });
     }
 }));
@@ -78,7 +79,7 @@ router.post('/query', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
     }
     catch (error) {
-        console.error('Claude Query Error:', error);
+        logger_1.logger.error('Claude Query Error:', error);
         res.status(500).json({
             error: 'Query execution failed',
             details: error instanceof Error ? error.message : 'Unknown error'
@@ -102,7 +103,7 @@ router.get('/stats', (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.json(stats);
     }
     catch (error) {
-        console.error('Claude Stats Error:', error);
+        logger_1.logger.error('Claude Stats Error:', error);
         res.status(500).json({ error: 'Failed to get database stats' });
     }
 }));
@@ -145,7 +146,7 @@ router.get('/table/:tableName', (req, res) => __awaiter(void 0, void 0, void 0, 
         });
     }
     catch (error) {
-        console.error('Claude Table Error:', error);
+        logger_1.logger.error('Claude Table Error:', error);
         res.status(500).json({
             error: 'Failed to fetch table data',
             details: error instanceof Error ? error.message : 'Unknown error'
@@ -176,7 +177,7 @@ router.get('/console/logs', (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        console.error('Claude Console Logs Error:', error);
+        logger_1.logger.error('Claude Console Logs Error:', error);
         res.status(500).json({ error: 'Failed to fetch console logs' });
     }
 }));
@@ -188,7 +189,7 @@ router.get('/console/stats', (req, res) => __awaiter(void 0, void 0, void 0, fun
         res.json(stats);
     }
     catch (error) {
-        console.error('Claude Console Stats Error:', error);
+        logger_1.logger.error('Claude Console Stats Error:', error);
         res.status(500).json({ error: 'Failed to get console stats' });
     }
 }));
@@ -216,7 +217,7 @@ router.get('/console/timerange', (req, res) => __awaiter(void 0, void 0, void 0,
         });
     }
     catch (error) {
-        console.error('Claude Console Timerange Error:', error);
+        logger_1.logger.error('Claude Console Timerange Error:', error);
         res.status(500).json({ error: 'Failed to fetch logs by time range' });
     }
 }));
@@ -243,7 +244,7 @@ router.get('/console/stream', (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.write('event: connected\ndata: Claude Console Stream connected\n\n');
     }
     catch (error) {
-        console.error('Claude Console Stream Error:', error);
+        logger_1.logger.error('Claude Console Stream Error:', error);
         res.status(500).json({ error: 'Failed to start console stream' });
     }
 }));
@@ -259,7 +260,7 @@ router.post('/console/cleanup', (req, res) => __awaiter(void 0, void 0, void 0, 
         });
     }
     catch (error) {
-        console.error('Fehler beim manuellen Log-Housekeeping:', error);
+        logger_1.logger.error('Fehler beim manuellen Log-Housekeeping:', error);
         res.status(500).json({
             error: 'Fehler beim Log-Housekeeping',
             message: error instanceof Error ? error.message : 'Unbekannter Fehler'

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Role } from '@prisma/client';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 export const adminMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -35,7 +36,7 @@ export const adminMiddleware = async (req: Request, res: Response, next: NextFun
 
         next();
     } catch (error: unknown) {
-        console.error('Fehler in der Admin-Middleware:', error);
+        logger.error('Fehler in der Admin-Middleware:', error);
         res.status(500).json({ message: 'Interner Server-Fehler' });
     }
 }; 

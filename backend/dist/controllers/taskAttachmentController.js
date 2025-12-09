@@ -17,6 +17,7 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Upload-Verzeichnis für Attachments
 const UPLOAD_DIR = path_1.default.join(__dirname, '../../uploads/task-attachments');
 // Stelle sicher, dass das Upload-Verzeichnis existiert
@@ -49,7 +50,7 @@ const addAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.status(201).json(attachment);
     }
     catch (error) {
-        console.error('Fehler beim Hochladen der Datei:', error);
+        logger_1.logger.error('Fehler beim Hochladen der Datei:', error);
         res.status(500).json({ message: 'Fehler beim Hochladen der Datei' });
     }
 });
@@ -69,7 +70,7 @@ const getTaskAttachments = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.json(attachments);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Attachments:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Attachments:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Attachments' });
     }
 });
@@ -114,7 +115,7 @@ const getAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
     }
     catch (error) {
-        console.error('Fehler beim Abrufen des Attachments:', error);
+        logger_1.logger.error('Fehler beim Abrufen des Attachments:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Attachments' });
     }
 });
@@ -146,7 +147,7 @@ const deleteAttachment = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.json({ message: 'Attachment erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Fehler beim Löschen des Attachments:', error);
+        logger_1.logger.error('Fehler beim Löschen des Attachments:', error);
         res.status(500).json({ message: 'Fehler beim Löschen des Attachments' });
     }
 });

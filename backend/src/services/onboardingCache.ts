@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface OnboardingStatus {
   onboardingCompleted: boolean;
@@ -72,7 +73,7 @@ class OnboardingCache {
 
       return status;
     } catch (error) {
-      console.error(`[OnboardingCache] Fehler beim Laden für User ${userId}:`, error);
+      logger.error(`[OnboardingCache] Fehler beim Laden für User ${userId}:`, error);
       return null;
     }
   }

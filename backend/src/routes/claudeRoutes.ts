@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getClaudeConsoleService } from '../services/claudeConsoleService';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get('/tables', async (req: Request, res: Response) => {
     `;
     res.json(tables);
   } catch (error) {
-    console.error('Claude DB Error:', error);
+    logger.error('Claude DB Error:', error);
     res.status(500).json({ error: 'Database query failed' });
   }
 });
@@ -80,7 +81,7 @@ router.post('/query', async (req: Request, res: Response) => {
       rowCount: Array.isArray(result) ? result.length : 1
     });
   } catch (error) {
-    console.error('Claude Query Error:', error);
+    logger.error('Claude Query Error:', error);
     res.status(500).json({ 
       error: 'Query execution failed',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -106,7 +107,7 @@ router.get('/stats', async (req: Request, res: Response) => {
     
     res.json(stats);
   } catch (error) {
-    console.error('Claude Stats Error:', error);
+    logger.error('Claude Stats Error:', error);
     res.status(500).json({ error: 'Failed to get database stats' });
   }
 });
@@ -156,7 +157,7 @@ router.get('/table/:tableName', async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Claude Table Error:', error);
+    logger.error('Claude Table Error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch table data',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -187,7 +188,7 @@ router.get('/console/logs', async (req: Request, res: Response) => {
       total: logs.length
     });
   } catch (error) {
-    console.error('Claude Console Logs Error:', error);
+    logger.error('Claude Console Logs Error:', error);
     res.status(500).json({ error: 'Failed to fetch console logs' });
   }
 });
@@ -200,7 +201,7 @@ router.get('/console/stats', async (req: Request, res: Response) => {
     
     res.json(stats);
   } catch (error) {
-    console.error('Claude Console Stats Error:', error);
+    logger.error('Claude Console Stats Error:', error);
     res.status(500).json({ error: 'Failed to get console stats' });
   }
 });
@@ -233,7 +234,7 @@ router.get('/console/timerange', async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Claude Console Timerange Error:', error);
+    logger.error('Claude Console Timerange Error:', error);
     res.status(500).json({ error: 'Failed to fetch logs by time range' });
   }
 });
@@ -264,7 +265,7 @@ router.get('/console/stream', async (req: Request, res: Response) => {
     res.write('event: connected\ndata: Claude Console Stream connected\n\n');
     
   } catch (error) {
-    console.error('Claude Console Stream Error:', error);
+    logger.error('Claude Console Stream Error:', error);
     res.status(500).json({ error: 'Failed to start console stream' });
   }
 });
@@ -281,7 +282,7 @@ router.post('/console/cleanup', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Fehler beim manuellen Log-Housekeeping:', error);
+    logger.error('Fehler beim manuellen Log-Housekeeping:', error);
     res.status(500).json({
       error: 'Fehler beim Log-Housekeeping',
       message: error instanceof Error ? error.message : 'Unbekannter Fehler'

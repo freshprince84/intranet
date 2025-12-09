@@ -16,6 +16,7 @@ exports.searchArticles = exports.deleteArticle = exports.updateArticle = exports
 const organization_1 = require("../middleware/organization");
 const slugify_1 = __importDefault(require("slugify"));
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Hilfsfunktion zum Erstellen eines eindeutigen Slugs
  */
@@ -91,7 +92,7 @@ const getAllArticles = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(200).json(formattedArticles);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Artikel:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Artikel:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Artikel' });
     }
 });
@@ -159,7 +160,7 @@ const getArticleById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(200).json(result);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen des Artikels:', error);
+        logger_1.logger.error('Fehler beim Abrufen des Artikels:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Artikels' });
     }
 });
@@ -223,7 +224,7 @@ const getArticleBySlug = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.status(200).json(result);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen des Artikels:', error);
+        logger_1.logger.error('Fehler beim Abrufen des Artikels:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Artikels' });
     }
 });
@@ -291,7 +292,7 @@ const getArticlesStructure = (req, res) => __awaiter(void 0, void 0, void 0, fun
         res.status(200).json(structure);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Artikelstruktur:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Artikelstruktur:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Artikelstruktur' });
     }
 });
@@ -360,8 +361,8 @@ const createArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.status(201).json(newArticle[0]);
     }
     catch (error) {
-        console.error('[createArticle] ❌ Fehler beim Erstellen des Artikels:', error);
-        console.error('[createArticle] Error details:', {
+        logger_1.logger.error('[createArticle] ❌ Fehler beim Erstellen des Artikels:', error);
+        logger_1.logger.error('[createArticle] Error details:', {
             message: error === null || error === void 0 ? void 0 : error.message,
             code: error === null || error === void 0 ? void 0 : error.code,
             stack: error === null || error === void 0 ? void 0 : error.stack
@@ -456,7 +457,7 @@ const updateArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.status(200).json(updatedArticle[0]);
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren des Artikels:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren des Artikels:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren des Artikels' });
     }
 });
@@ -542,7 +543,7 @@ const deleteArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.status(200).json({ message: 'Artikel erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Fehler beim Löschen des Artikels:', error);
+        logger_1.logger.error('Fehler beim Löschen des Artikels:', error);
         res.status(500).json({ message: 'Fehler beim Löschen des Artikels' });
     }
 });
@@ -614,7 +615,7 @@ const searchArticles = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(200).json(articles);
     }
     catch (error) {
-        console.error('Fehler bei der Suche nach Artikeln:', error);
+        logger_1.logger.error('Fehler bei der Suche nach Artikeln:', error);
         res.status(500).json({ message: 'Fehler bei der Suche nach Artikeln' });
     }
 });

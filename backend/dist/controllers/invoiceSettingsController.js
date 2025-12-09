@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNextInvoiceNumber = exports.createOrUpdateInvoiceSettings = exports.getInvoiceSettings = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Invoice Settings abrufen
 const getInvoiceSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -43,7 +44,7 @@ const getInvoiceSettings = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.json(settings);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Invoice Settings:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Invoice Settings:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -106,7 +107,7 @@ const createOrUpdateInvoiceSettings = (req, res) => __awaiter(void 0, void 0, vo
         res.json(settings);
     }
     catch (error) {
-        console.error('Fehler beim Speichern der Invoice Settings:', error);
+        logger_1.logger.error('Fehler beim Speichern der Invoice Settings:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -134,7 +135,7 @@ const getNextInvoiceNumber = (req, res) => __awaiter(void 0, void 0, void 0, fun
         res.json({ invoiceNumber, nextNumber });
     }
     catch (error) {
-        console.error('Fehler beim Generieren der Rechnungsnummer:', error);
+        logger_1.logger.error('Fehler beim Generieren der Rechnungsnummer:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Middleware zur Überprüfung, ob ein Benutzer die Berechtigung hat, als Team-Manager zu agieren
@@ -57,7 +58,7 @@ export const isTeamManager = async (req: Request, res: Response, next: NextFunct
     // Benutzer hat die erforderlichen Berechtigungen
     next();
   } catch (error) {
-    console.error('Fehler bei der Überprüfung der Team-Manager-Berechtigung:', error);
+    logger.error('Fehler bei der Überprüfung der Team-Manager-Berechtigung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 }; 

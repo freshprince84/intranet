@@ -20,6 +20,7 @@ const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const logger_1 = require("../utils/logger");
 const userSelect = {
     id: true,
     username: true,
@@ -92,7 +93,7 @@ const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 }
             }
             catch (filterError) {
-                console.error(`[getAllTours] Fehler beim Laden von Filter ${filterId}:`, filterError);
+                logger_1.logger.error(`[getAllTours] Fehler beim Laden von Filter ${filterId}:`, filterError);
             }
         }
         else if (filterConditions) {
@@ -163,10 +164,10 @@ const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
     catch (error) {
-        console.error('[getAllTours] Fehler:', error);
+        logger_1.logger.error('[getAllTours] Fehler:', error);
         if (error instanceof Error) {
-            console.error('[getAllTours] Fehlermeldung:', error.message);
-            console.error('[getAllTours] Stack:', error.stack);
+            logger_1.logger.error('[getAllTours] Fehlermeldung:', error.message);
+            logger_1.logger.error('[getAllTours] Stack:', error.stack);
         }
         res.status(500).json({
             success: false,
@@ -228,7 +229,7 @@ const getTourById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
     catch (error) {
-        console.error('[getTourById] Fehler:', error);
+        logger_1.logger.error('[getTourById] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Tour'
@@ -331,7 +332,7 @@ const createTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         });
     }
     catch (error) {
-        console.error('[createTour] Fehler:', error);
+        logger_1.logger.error('[createTour] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Erstellen der Tour'
@@ -392,7 +393,7 @@ const uploadTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function
         });
     }
     catch (error) {
-        console.error('[uploadTourImage] Fehler:', error);
+        logger_1.logger.error('[uploadTourImage] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Hochladen des Bildes'
@@ -448,7 +449,7 @@ const uploadTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, f
         });
     }
     catch (error) {
-        console.error('[uploadTourGalleryImage] Fehler:', error);
+        logger_1.logger.error('[uploadTourGalleryImage] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Hochladen des Galerie-Bildes'
@@ -502,7 +503,7 @@ const getTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.sendFile(imagePath);
     }
     catch (error) {
-        console.error('[getTourImage] Fehler:', error);
+        logger_1.logger.error('[getTourImage] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden des Bildes'
@@ -564,7 +565,7 @@ const getTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, func
         res.sendFile(imagePath);
     }
     catch (error) {
-        console.error('[getTourGalleryImage] Fehler:', error);
+        logger_1.logger.error('[getTourGalleryImage] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden des Galerie-Bildes'
@@ -627,7 +628,7 @@ const deleteTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, f
         });
     }
     catch (error) {
-        console.error('[deleteTourGalleryImage] Fehler:', error);
+        logger_1.logger.error('[deleteTourGalleryImage] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Löschen des Galerie-Bildes'
@@ -745,7 +746,7 @@ const updateTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         });
     }
     catch (error) {
-        console.error('[updateTour] Fehler:', error);
+        logger_1.logger.error('[updateTour] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Aktualisieren der Tour'
@@ -798,7 +799,7 @@ const toggleTourActive = (req, res) => __awaiter(void 0, void 0, void 0, functio
         });
     }
     catch (error) {
-        console.error('[toggleTourActive] Fehler:', error);
+        logger_1.logger.error('[toggleTourActive] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Aktualisieren der Tour'
@@ -857,7 +858,7 @@ const getTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, function
         });
     }
     catch (error) {
-        console.error('[getTourBookings] Fehler:', error);
+        logger_1.logger.error('[getTourBookings] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Buchungen'
@@ -941,7 +942,7 @@ const exportTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
     catch (error) {
-        console.error('[exportTours] Fehler:', error);
+        logger_1.logger.error('[exportTours] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Exportieren der Touren'

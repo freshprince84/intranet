@@ -1,6 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { ReservationNotificationService } from '../../services/reservationNotificationService';
 import { prisma } from '../../utils/prisma';
+import { logger } from '../../utils/logger';
 
 /**
  * Job-Daten für Reservation-Verarbeitung
@@ -38,7 +39,7 @@ export function createReservationWorker(connection: any): Worker {
         guestName,
       } = job.data;
 
-      console.log(`[Reservation Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
+      logger.log(`[Reservation Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
 
       // Prüfe ob Reservierung existiert
       const reservation = await prisma.reservation.findUnique({
@@ -51,7 +52,7 @@ export function createReservationWorker(connection: any): Worker {
 
       // Prüfe ob bereits verarbeitet (Idempotenz)
       if (reservation.sentMessage && reservation.paymentLink) {
-        console.log(`[Reservation Worker] Reservierung ${reservationId} wurde bereits verarbeitet, überspringe`);
+        logger.log(`[Reservation Worker] Reservierung ${reservationId} wurde bereits verarbeitet, überspringe`);
         return {
           success: true,
           skipped: true,
@@ -74,9 +75,9 @@ export function createReservationWorker(connection: any): Worker {
           );
 
           if (result.success) {
-            console.log(`[Reservation Worker] ✅ Einladung erfolgreich versendet für Reservierung ${reservationId}`);
+            logger.log(`[Reservation Worker] ✅ Einladung erfolgreich versendet für Reservierung ${reservationId}`);
           } else {
-            console.warn(`[Reservation Worker] ⚠️ Einladung teilweise fehlgeschlagen für Reservierung ${reservationId}: ${result.error}`);
+            logger.warn(`[Reservation Worker] ⚠️ Einladung teilweise fehlgeschlagen für Reservierung ${reservationId}: ${result.error}`);
             // Bei teilweisem Fehler: Fehler weiterwerfen, damit BullMQ retried
             throw new Error(result.error || 'Einladung konnte nicht vollständig versendet werden');
           }
@@ -88,13 +89,13 @@ export function createReservationWorker(connection: any): Worker {
             reservationId,
           };
         } catch (error) {
-          console.error(`[Reservation Worker] ❌ Fehler beim Versenden der Einladung:`, error);
+          logger.error(`[Reservation Worker] ❌ Fehler beim Versenden der Einladung:`, error);
           throw error; // Wird von BullMQ automatisch retried
         }
       }
 
       // Wenn keine Telefonnummer vorhanden, überspringe
-      console.log(`[Reservation Worker] Keine Telefonnummer vorhanden, überspringe Einladung`);
+      logger.log(`[Reservation Worker] Keine Telefonnummer vorhanden, überspringe Einladung`);
       return {
         success: true,
         skipped: true,

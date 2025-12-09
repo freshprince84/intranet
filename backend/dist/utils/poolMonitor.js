@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.monitorConnectionPool = monitorConnectionPool;
 exports.getConnectionPoolStatus = getConnectionPoolStatus;
 const prisma_1 = require("./prisma");
+const logger_1 = require("./logger");
 /**
  * ✅ MONITORING: Connection Pool-Nutzung überwachen
  *
@@ -39,15 +40,15 @@ function monitorConnectionPool() {
             const utilizationPercent = (activeConnections / maxConnections) * 100;
             // Warnung wenn Pool zu voll (> 80%)
             if (utilizationPercent > 80) {
-                console.warn(`[PoolMonitor] ⚠️ Connection Pool hoch ausgelastet: ${activeConnections}/${maxConnections} (${utilizationPercent.toFixed(1)}%)`);
+                logger_1.logger.warn(`[PoolMonitor] ⚠️ Connection Pool hoch ausgelastet: ${activeConnections}/${maxConnections} (${utilizationPercent.toFixed(1)}%)`);
             }
             else if (utilizationPercent > 50) {
-                console.log(`[PoolMonitor] ℹ️ Connection Pool: ${activeConnections}/${maxConnections} (${utilizationPercent.toFixed(1)}%)`);
+                logger_1.logger.log(`[PoolMonitor] ℹ️ Connection Pool: ${activeConnections}/${maxConnections} (${utilizationPercent.toFixed(1)}%)`);
             }
         }
         catch (error) {
             // Fehler beim Monitoring nicht kritisch - nur loggen
-            console.error('[PoolMonitor] Fehler beim Überwachen des Connection Pools:', error);
+            logger_1.logger.error('[PoolMonitor] Fehler beim Überwachen des Connection Pools:', error);
         }
     });
 }
@@ -87,7 +88,7 @@ function getConnectionPoolStatus() {
             };
         }
         catch (error) {
-            console.error('[PoolMonitor] Fehler beim Abrufen des Pool-Status:', error);
+            logger_1.logger.error('[PoolMonitor] Fehler beim Abrufen des Pool-Status:', error);
             return {
                 activeConnections: 0,
                 maxConnections: 0,

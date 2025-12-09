@@ -14,6 +14,7 @@ const client_1 = require("@prisma/client");
 const notificationController_1 = require("../controllers/notificationController");
 const translations_1 = require("../utils/translations");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Service für Reservierungs-Task-Management
  *
@@ -39,7 +40,7 @@ class ReservationTaskService {
                     }
                 });
                 if (!task) {
-                    console.log(`[ReservationTaskService] Kein Task gefunden für Reservierung ${reservationId}`);
+                    logger_1.logger.log(`[ReservationTaskService] Kein Task gefunden für Reservierung ${reservationId}`);
                     return;
                 }
                 // Setze verantwortlichen User
@@ -50,7 +51,7 @@ class ReservationTaskService {
                         responsibleId: userId
                     }
                 });
-                console.log(`[ReservationTaskService] Task ${task.id} auf "in_progress" gesetzt für Check-in`);
+                logger_1.logger.log(`[ReservationTaskService] Task ${task.id} auf "in_progress" gesetzt für Check-in`);
                 // Erstelle WorkTime-Eintrag (Start)
                 // TODO: Implementiere WorkTime-Erfassung für Check-in-Prozess
                 // await this.startWorkTime(task.id, userId);
@@ -78,7 +79,7 @@ class ReservationTaskService {
                 }
             }
             catch (error) {
-                console.error(`[ReservationTaskService] Fehler beim Aktualisieren des Tasks:`, error);
+                logger_1.logger.error(`[ReservationTaskService] Fehler beim Aktualisieren des Tasks:`, error);
                 throw error;
             }
         });
@@ -102,7 +103,7 @@ class ReservationTaskService {
                     }
                 });
                 if (!task) {
-                    console.log(`[ReservationTaskService] Kein Task gefunden für Reservierung ${reservationId}`);
+                    logger_1.logger.log(`[ReservationTaskService] Kein Task gefunden für Reservierung ${reservationId}`);
                     return;
                 }
                 // Aktualisiere Task-Status auf "done"
@@ -113,7 +114,7 @@ class ReservationTaskService {
                         responsibleId: userId
                     }
                 });
-                console.log(`[ReservationTaskService] Task ${task.id} auf "done" gesetzt`);
+                logger_1.logger.log(`[ReservationTaskService] Task ${task.id} auf "done" gesetzt`);
                 // Erstelle WorkTime-Eintrag (Ende)
                 if (durationMinutes) {
                     // TODO: Implementiere WorkTime-Erfassung
@@ -145,7 +146,7 @@ class ReservationTaskService {
                 }
             }
             catch (error) {
-                console.error(`[ReservationTaskService] Fehler beim Abschließen des Tasks:`, error);
+                logger_1.logger.error(`[ReservationTaskService] Fehler beim Abschließen des Tasks:`, error);
                 throw error;
             }
         });
@@ -195,11 +196,11 @@ class ReservationTaskService {
                         where: { id: reservation.task.id },
                         data: { status: newTaskStatus }
                     });
-                    console.log(`[ReservationTaskService] Task ${reservation.task.id} Status synchronisiert: ${newTaskStatus}`);
+                    logger_1.logger.log(`[ReservationTaskService] Task ${reservation.task.id} Status synchronisiert: ${newTaskStatus}`);
                 }
             }
             catch (error) {
-                console.error(`[ReservationTaskService] Fehler beim Synchronisieren des Task-Status:`, error);
+                logger_1.logger.error(`[ReservationTaskService] Fehler beim Synchronisieren des Task-Status:`, error);
                 throw error;
             }
         });

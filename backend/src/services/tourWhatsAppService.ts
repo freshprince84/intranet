@@ -1,6 +1,7 @@
 import { prisma } from '../utils/prisma';
 import { WhatsAppService } from './whatsappService';
 import { TourBooking, TourBookingStatus } from '@prisma/client';
+import { logger } from '../utils/logger';
 
 /**
  * Service für Tour-WhatsApp-Automatisierung
@@ -27,13 +28,13 @@ export class TourWhatsAppService {
       });
 
       if (!booking || !booking.tour || booking.tour.type !== 'external' || !booking.tour.externalProvider) {
-        console.log('[TourWhatsApp] Kein externer Anbieter für Buchung', bookingId);
+        logger.log('[TourWhatsApp] Kein externer Anbieter für Buchung', bookingId);
         return false;
       }
 
       const provider = booking.tour.externalProvider;
       if (!provider.phone) {
-        console.log('[TourWhatsApp] Keine Telefonnummer für Anbieter', provider.id);
+        logger.log('[TourWhatsApp] Keine Telefonnummer für Anbieter', provider.id);
         return false;
       }
 
@@ -68,12 +69,12 @@ export class TourWhatsAppService {
             message
           }
         });
-        console.log(`[TourWhatsApp] ✅ Buchungsanfrage gesendet an Anbieter ${provider.phone}`);
+        logger.log(`[TourWhatsApp] ✅ Buchungsanfrage gesendet an Anbieter ${provider.phone}`);
       }
 
       return success;
     } catch (error) {
-      console.error('[TourWhatsApp] Fehler beim Senden der Buchungsanfrage:', error);
+      logger.error('[TourWhatsApp] Fehler beim Senden der Buchungsanfrage:', error);
       return false;
     }
   }
@@ -100,7 +101,7 @@ export class TourWhatsAppService {
       });
 
       if (!booking || !booking.customerPhone) {
-        console.log('[TourWhatsApp] Keine Kunden-Telefonnummer für Buchung', bookingId);
+        logger.log('[TourWhatsApp] Keine Kunden-Telefonnummer für Buchung', bookingId);
         return;
       }
 
@@ -168,7 +169,7 @@ export class TourWhatsAppService {
           }
         });
 
-        console.log(`[TourWhatsApp] ✅ Bestätigung an Kunde gesendet`);
+        logger.log(`[TourWhatsApp] ✅ Bestätigung an Kunde gesendet`);
       } else if (isCancelled) {
         // Absage: Aktualisiere Status und sende Absage
         await prisma.tourBooking.update({
@@ -196,14 +197,14 @@ export class TourWhatsAppService {
           }
         });
 
-        console.log(`[TourWhatsApp] ✅ Absage an Kunde gesendet`);
+        logger.log(`[TourWhatsApp] ✅ Absage an Kunde gesendet`);
       } else {
         // Unklare Antwort: Manuelle Bearbeitung erforderlich
-        console.log(`[TourWhatsApp] ⚠️ Unklare Antwort vom Anbieter, manuelle Bearbeitung erforderlich`);
+        logger.log(`[TourWhatsApp] ⚠️ Unklare Antwort vom Anbieter, manuelle Bearbeitung erforderlich`);
         // TODO: Notification an definierte Rolle senden
       }
     } catch (error) {
-      console.error('[TourWhatsApp] Fehler beim Verarbeiten der Anbieter-Antwort:', error);
+      logger.error('[TourWhatsApp] Fehler beim Verarbeiten der Anbieter-Antwort:', error);
     }
   }
 
@@ -230,7 +231,7 @@ export class TourWhatsAppService {
       });
 
       if (!booking || !booking.customerPhone) {
-        console.log('[TourWhatsApp] Keine Kunden-Telefonnummer für Buchung', bookingId);
+        logger.log('[TourWhatsApp] Keine Kunden-Telefonnummer für Buchung', bookingId);
         return false;
       }
 
@@ -297,12 +298,12 @@ export class TourWhatsAppService {
             message
           }
         });
-        console.log(`[TourWhatsApp] ✅ Buchungsbestätigung mit Payment Link gesendet an Kunden für Buchung ${bookingId}`);
+        logger.log(`[TourWhatsApp] ✅ Buchungsbestätigung mit Payment Link gesendet an Kunden für Buchung ${bookingId}`);
       }
 
       return success;
     } catch (error) {
-      console.error('[TourWhatsApp] Fehler beim Senden der Buchungsbestätigung:', error);
+      logger.error('[TourWhatsApp] Fehler beim Senden der Buchungsbestätigung:', error);
       return false;
     }
   }
@@ -357,12 +358,12 @@ export class TourWhatsAppService {
             message
           }
         });
-        console.log(`[TourWhatsApp] ✅ Bestätigung gesendet an Kunden für Buchung ${bookingId}`);
+        logger.log(`[TourWhatsApp] ✅ Bestätigung gesendet an Kunden für Buchung ${bookingId}`);
       }
 
       return success;
     } catch (error) {
-      console.error('[TourWhatsApp] Fehler beim Senden der Bestätigung:', error);
+      logger.error('[TourWhatsApp] Fehler beim Senden der Bestätigung:', error);
       return false;
     }
   }
@@ -409,7 +410,7 @@ export class TourWhatsAppService {
 
       return success;
     } catch (error) {
-      console.error('[TourWhatsApp] Fehler beim Senden der Stornierungs-Benachrichtigung:', error);
+      logger.error('[TourWhatsApp] Fehler beim Senden der Stornierungs-Benachrichtigung:', error);
       return false;
     }
   }

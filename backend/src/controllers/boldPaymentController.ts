@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { BoldPaymentService } from '../services/boldPaymentService';
+import { logger } from '../utils/logger';
 
 /**
  * POST /api/bold-payment/webhook
@@ -16,7 +17,7 @@ import { BoldPaymentService } from '../services/boldPaymentService';
 export const handleWebhook = async (req: Request, res: Response) => {
   try {
     // Logge ALLE Requests für Debugging
-    console.log('[Bold Payment Webhook] Request erhalten:', {
+    logger.log('[Bold Payment Webhook] Request erhalten:', {
       method: req.method,
       url: req.url,
       path: req.path,
@@ -32,7 +33,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
     // OPTIONS-Request für CORS Preflight
     if (req.method === 'OPTIONS') {
-      console.log('[Bold Payment Webhook] OPTIONS Request - CORS Preflight');
+      logger.log('[Bold Payment Webhook] OPTIONS Request - CORS Preflight');
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
       res.header('Access-Control-Allow-Headers', 'Content-Type, x-bold-signature');
@@ -42,7 +43,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
     // GET-Request für Webhook-Validierung (wie WhatsApp)
     // Bold Payment könnte einen GET-Request senden beim Erstellen des Webhooks
     if (req.method === 'GET') {
-      console.log('[Bold Payment Webhook] GET Request - Validierung:', {
+      logger.log('[Bold Payment Webhook] GET Request - Validierung:', {
         query: req.query,
         headers: {
           'user-agent': req.headers['user-agent'],
@@ -54,7 +55,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
       const challenge = req.query.challenge || req.query.challenge_token || req.query.token;
       
       if (challenge) {
-        console.log('[Bold Payment Webhook] Challenge-Response:', challenge);
+        logger.log('[Bold Payment Webhook] Challenge-Response:', challenge);
         return res.status(200).send(String(challenge));
       }
 
@@ -71,7 +72,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
     // WICHTIG: Bold Payment erfordert Antwort innerhalb von 2 Sekunden!
     // Deshalb: Sofort mit 200 antworten, Verarbeitung asynchron machen
-    console.log('[Bold Payment Webhook] POST Request - Empfangen:', JSON.stringify(payload).substring(0, 200));
+    logger.log('[Bold Payment Webhook] POST Request - Empfangen:', JSON.stringify(payload).substring(0, 200));
 
     // Sofortige Antwort (innerhalb von 2 Sekunden erforderlich)
     res.status(200).json({ success: true, message: 'Webhook received' });
@@ -84,7 +85,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
         // TODO: Implementiere Webhook-Secret-Validierung
         // const webhookSecret = req.headers['x-bold-webhook-secret'];
         // if (webhookSecret !== process.env.BOLD_PAYMENT_WEBHOOK_SECRET) {
-        //   console.error('[Bold Payment Webhook] Ungültiges Webhook-Secret');
+        //   logger.error('[Bold Payment Webhook] Ungültiges Webhook-Secret');
         //   return;
         // }
 
@@ -94,7 +95,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
                               payload.data?.metadata?.organization_id;
 
         if (!organizationId) {
-          console.warn('[Bold Payment Webhook] Organisation-ID nicht gefunden im Webhook');
+          logger.warn('[Bold Payment Webhook] Organisation-ID nicht gefunden im Webhook');
           // Versuche über Reservation-ID zu finden
           const reservationId = payload.metadata?.reservation_id || 
                               payload.data?.metadata?.reservation_id ||
@@ -114,28 +115,28 @@ export const handleWebhook = async (req: Request, res: Response) => {
                 ? await BoldPaymentService.createForBranch(reservation.branchId)
                 : new BoldPaymentService(reservation.organizationId);
               await boldPaymentService.handleWebhook(payload);
-              console.log('[Bold Payment Webhook] ✅ Webhook verarbeitet (via Reservation-ID)');
+              logger.log('[Bold Payment Webhook] ✅ Webhook verarbeitet (via Reservation-ID)');
               return;
             }
           }
 
           // Bei fehlenden Daten: Loggen, aber nicht fehlschlagen
-          console.warn('[Bold Payment Webhook] Organisation-ID oder Reservierungs-ID fehlt im Webhook');
+          logger.warn('[Bold Payment Webhook] Organisation-ID oder Reservierungs-ID fehlt im Webhook');
           return;
         }
 
         // Verarbeite Webhook
         const boldPaymentService = new BoldPaymentService(parseInt(organizationId));
         await boldPaymentService.handleWebhook(payload);
-        console.log('[Bold Payment Webhook] ✅ Webhook verarbeitet');
+        logger.log('[Bold Payment Webhook] ✅ Webhook verarbeitet');
       } catch (error) {
-        console.error('[Bold Payment Webhook] Fehler beim Verarbeiten (asynchron):', error);
+        logger.error('[Bold Payment Webhook] Fehler beim Verarbeiten (asynchron):', error);
         // Fehler wird geloggt, aber Response wurde bereits gesendet
       }
     });
   } catch (error) {
     // Nur für Fehler beim Senden der Response
-    console.error('[Bold Payment Webhook] Fehler beim Senden der Response:', error);
+    logger.error('[Bold Payment Webhook] Fehler beim Senden der Response:', error);
     if (!res.headersSent) {
       res.status(500).json({
         success: false,

@@ -3,6 +3,7 @@ import { LanguageDetectionService } from './languageDetectionService';
 import { BoldPaymentService } from './boldPaymentService';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 import { ReservationStatus, PaymentStatus } from '@prisma/client';
+import { logger } from '../utils/logger';
 
 /**
  * WhatsApp Guest Service
@@ -39,7 +40,7 @@ export class WhatsAppGuestService {
 
       return reservation;
     } catch (error) {
-      console.error('[WhatsApp Guest Service] Fehler bei Gast-Identifikation via Telefonnummer:', error);
+      logger.error('[WhatsApp Guest Service] Fehler bei Gast-Identifikation via Telefonnummer:', error);
       return null;
     }
   }
@@ -111,7 +112,7 @@ export class WhatsAppGuestService {
 
       return filtered;
     } catch (error) {
-      console.error('[WhatsApp Guest Service] Fehler bei Suche nach Gast-Details:', error);
+      logger.error('[WhatsApp Guest Service] Fehler bei Suche nach Gast-Details:', error);
       return [];
     }
   }
@@ -166,7 +167,7 @@ export class WhatsAppGuestService {
 
       return null;
     } catch (error) {
-      console.error('[WhatsApp Guest Service] Fehler beim Erstellen des Payment Links:', error);
+      logger.error('[WhatsApp Guest Service] Fehler beim Erstellen des Payment Links:', error);
       return null;
     }
   }
@@ -189,7 +190,7 @@ export class WhatsAppGuestService {
 
       return checkInLink;
     } catch (error) {
-      console.error('[WhatsApp Guest Service] Fehler beim Generieren des Check-in Links:', error);
+      logger.error('[WhatsApp Guest Service] Fehler beim Generieren des Check-in Links:', error);
       return null;
     }
   }

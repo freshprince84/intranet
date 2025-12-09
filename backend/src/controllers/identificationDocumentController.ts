@@ -5,6 +5,7 @@ import fs from 'fs';
 import axios from 'axios';
 import { TaskAutomationService } from '../services/taskAutomationService';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 // Konfiguration für Datei-Upload
 const storage = multer.diskStorage({
@@ -81,7 +82,7 @@ export const addDocument = async (req: Request, res: Response) => {
           fs.writeFileSync(filePath, buffer);
           documentFilePath = filePath.replace(/\\/g, '/');
         } catch (error) {
-          console.error('Fehler beim Speichern des Kamerabilds:', error);
+          logger.error('Fehler beim Speichern des Kamerabilds:', error);
           return res.status(500).json({ error: 'Fehler beim Speichern des Bildes' });
         }
       }
@@ -164,7 +165,7 @@ export const addDocument = async (req: Request, res: Response) => {
                     }
                   }
                 } catch (parseError) {
-                  console.error('Fehler beim Parsen der KI-Antwort:', parseError);
+                  logger.error('Fehler beim Parsen der KI-Antwort:', parseError);
                 }
 
                 // Update User-Felder mit erkannten Daten
@@ -202,7 +203,7 @@ export const addDocument = async (req: Request, res: Response) => {
                   // Validiere, dass es ein gültiger Country-Code ist
                   if (['CO', 'CH', 'DE', 'AT'].includes(mappedCountry)) {
                     userUpdateData.country = mappedCountry;
-                    console.log(`[addDocument] Country aus issuingCountry erkannt: ${issuingCountryStr} -> ${mappedCountry}`);
+                    logger.log(`[addDocument] Country aus issuingCountry erkannt: ${issuingCountryStr} -> ${mappedCountry}`);
                   }
                 }
 
@@ -212,7 +213,7 @@ export const addDocument = async (req: Request, res: Response) => {
                     where: { id: userId },
                     data: userUpdateData
                   });
-                  console.log(`[addDocument] User ${userId} aktualisiert mit erkannten Daten:`, userUpdateData);
+                  logger.log(`[addDocument] User ${userId} aktualisiert mit erkannten Daten:`, userUpdateData);
                 }
 
                 // Prüfe Organisation und erstelle Admin-Task für Kolumbien
@@ -258,21 +259,21 @@ export const addDocument = async (req: Request, res: Response) => {
                         where: { id: identificationDocumentTask.id },
                         data: { status: 'done' }
                       });
-                      console.log(`[addDocument] Identitätsdokument-To-Do als erledigt markiert: Task ID ${identificationDocumentTask.id} für User ${userId}`);
+                      logger.log(`[addDocument] Identitätsdokument-To-Do als erledigt markiert: Task ID ${identificationDocumentTask.id} für User ${userId}`);
                     }
                   } catch (taskUpdateError) {
-                    console.error('[addDocument] Fehler beim Markieren des Identitätsdokument-To-Dos als erledigt:', taskUpdateError);
+                    logger.error('[addDocument] Fehler beim Markieren des Identitätsdokument-To-Dos als erledigt:', taskUpdateError);
                     // Fehler blockiert nicht die Dokumentenerstellung
                   }
                 }
               } catch (recognitionError) {
-                console.error('[addDocument] Fehler bei automatischer Dokumentenerkennung:', recognitionError);
+                logger.error('[addDocument] Fehler bei automatischer Dokumentenerkennung:', recognitionError);
                 // Fehler blockiert nicht die Dokumentenerstellung
               }
             }
           }
         } catch (error) {
-          console.error('[addDocument] Fehler bei automatischer Verarbeitung:', error);
+          logger.error('[addDocument] Fehler bei automatischer Verarbeitung:', error);
           // Fehler blockiert nicht die Dokumentenerstellung
         }
       }
@@ -280,7 +281,7 @@ export const addDocument = async (req: Request, res: Response) => {
       res.status(201).json(document);
     });
   } catch (error) {
-    console.error('Fehler beim Hinzufügen eines Dokuments:', error);
+    logger.error('Fehler beim Hinzufügen eines Dokuments:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };
@@ -296,7 +297,7 @@ export const getUserDocuments = async (req: Request, res: Response) => {
     
     res.json(documents);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Dokumente:', error);
+    logger.error('Fehler beim Abrufen der Dokumente:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };
@@ -344,7 +345,7 @@ export const updateDocument = async (req: Request, res: Response) => {
           fs.writeFileSync(filePath, buffer);
           updateData.documentFile = filePath.replace(/\\/g, '/');
         } catch (error) {
-          console.error('Fehler beim Speichern des Kamerabilds:', error);
+          logger.error('Fehler beim Speichern des Kamerabilds:', error);
           return res.status(500).json({ error: 'Fehler beim Speichern des Bildes' });
         }
       }
@@ -364,7 +365,7 @@ export const updateDocument = async (req: Request, res: Response) => {
       res.json(document);
     });
   } catch (error) {
-    console.error('Fehler beim Aktualisieren des Dokuments:', error);
+    logger.error('Fehler beim Aktualisieren des Dokuments:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };
@@ -396,7 +397,7 @@ export const deleteDocument = async (req: Request, res: Response) => {
     
     res.json({ message: 'Dokument erfolgreich gelöscht' });
   } catch (error) {
-    console.error('Fehler beim Löschen des Dokuments:', error);
+    logger.error('Fehler beim Löschen des Dokuments:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };
@@ -426,7 +427,7 @@ export const verifyDocument = async (req: Request, res: Response) => {
     
     res.json({ message: 'Dokument erfolgreich verifiziert' });
   } catch (error) {
-    console.error('Fehler bei der Dokumentenverifizierung:', error);
+    logger.error('Fehler bei der Dokumentenverifizierung:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 };
@@ -452,7 +453,7 @@ export const downloadDocument = async (req: Request, res: Response) => {
     
     res.download(filePath);
   } catch (error) {
-    console.error('Fehler beim Herunterladen des Dokuments:', error);
+    logger.error('Fehler beim Herunterladen des Dokuments:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
   }
 }; 

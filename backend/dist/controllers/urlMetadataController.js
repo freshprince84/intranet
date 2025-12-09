@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUrlMetadata = void 0;
 const axios_1 = __importDefault(require("axios"));
 const cheerio_1 = __importDefault(require("cheerio"));
+const logger_1 = require("../utils/logger");
 /**
  * Extrahiert Metadaten einer URL (Titel, Beschreibung, Bild)
  * Verwendet Open Graph und Twitter Card Tags
@@ -68,7 +69,7 @@ const getUrlMetadata = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der URL-Metadaten:', error);
+        logger_1.logger.error('Fehler beim Abrufen der URL-Metadaten:', error);
         // Fallback-Antwort mit begrenzten Informationen
         try {
             const domain = new URL(req.query.url).hostname;

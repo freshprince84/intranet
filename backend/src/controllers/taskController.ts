@@ -8,6 +8,7 @@ import { prisma, executeWithRetry } from '../utils/prisma';
 import { validateTask, TaskData } from '../validation/taskValidation';
 import { createNotificationIfEnabled } from './notificationController';
 import { getDataIsolationFilter, getUserOrganizationFilter, isAdminOrOwner } from '../middleware/organization';
+import { logger } from '../utils/logger';
 import { LifecycleService } from '../services/lifecycleService';
 import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
 import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } from '../utils/filterToPrisma';
@@ -148,7 +149,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
                 where: whereClause
             });
         } catch (countError) {
-            console.error('[getAllTasks] Fehler beim Zählen der Tasks:', countError);
+            logger.error('[getAllTasks] Fehler beim Zählen der Tasks:', countError);
             // Fallback: Verwende 0, wird später durch tatsächliche Anzahl ersetzt
             totalCount = 0;
         }
@@ -186,7 +187,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
         const queryDuration = Date.now() - queryStartTime;
         // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
         if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
-        console.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
+        logger.log(`[getAllTasks] ✅ Query abgeschlossen: ${tasks.length} Tasks (${offset}-${offset + tasks.length} von ${totalCount}) in ${queryDuration}ms`);
         }
         
         // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
@@ -197,7 +198,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
         
         // ✅ Sicherstellen, dass tasks ein Array ist
         if (!Array.isArray(tasks)) {
-            console.error('[getAllTasks] ❌ FEHLER: tasks ist kein Array!', {
+            logger.error('[getAllTasks] ❌ FEHLER: tasks ist kein Array!', {
                 tasks,
                 type: typeof tasks
             });
@@ -215,7 +216,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
         
         // ✅ PERFORMANCE: Logging nur bei langsamen Queries (>500ms) oder Fehlern
         if (queryDuration > 500 || process.env.NODE_ENV === 'development') {
-        console.log('[getAllTasks] ✅ Response vorbereitet:', {
+        logger.log('[getAllTasks] ✅ Response vorbereitet:', {
             dataLength: response.data.length,
             totalCount: response.totalCount,
             hasMore: response.hasMore,
@@ -225,7 +226,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
         
         res.json(response);
     } catch (error) {
-        console.error('Fehler beim Abrufen der Tasks:', error);
+        logger.error('Fehler beim Abrufen der Tasks:', error);
         res.status(500).json({ 
             error: 'Interner Serverfehler',
             details: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -276,7 +277,7 @@ export const getTaskById = async (req: Request<TaskParams>, res: Response) => {
         
         res.json(task);
     } catch (error) {
-        console.error('Fehler beim Abrufen des Tasks:', error);
+        logger.error('Fehler beim Abrufen des Tasks:', error);
         res.status(500).json({ 
             error: 'Interner Serverfehler',
             details: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -395,7 +396,7 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
         
         res.status(201).json(task);
     } catch (error) {
-        console.error('Fehler beim Erstellen des Tasks:', error);
+        logger.error('Fehler beim Erstellen des Tasks:', error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             res.status(400).json({ 
                 error: 'Fehler beim Erstellen des Tasks',
@@ -608,7 +609,7 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
                     // Extrahiere userId aus description (Link: /organization?tab=users&userId=XXX)
                     const userIdMatch = task.description?.match(/userId=(\d+)/);
                     if (!userIdMatch) {
-                        console.log('[updateTask] Konnte userId nicht aus Task-Description extrahieren');
+                        logger.log('[updateTask] Konnte userId nicht aus Task-Description extrahieren');
                     } else {
                         const onboardingUserId = parseInt(userIdMatch[1], 10);
                     
@@ -631,7 +632,7 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
 
                         // Nur wenn Status "done" UND alle Felder ausgefüllt sind, starte Lifecycle
                         if (updateData.status === 'done' && hasContract && hasSalary && hasNormalWorkingHours) {
-                            console.log(`[updateTask] Starte Lifecycle für User ${onboardingUserId} nach Admin-Onboarding`);
+                            logger.log(`[updateTask] Starte Lifecycle für User ${onboardingUserId} nach Admin-Onboarding`);
                             await LifecycleService.startLifecycleAfterOnboarding(onboardingUserId, task.organizationId);
                             
                             // Benachrichtigung an User
@@ -646,12 +647,12 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
                                 relatedEntityType: 'update'
                             });
                         } else if (updateData.status === 'quality_control' && (!hasContract || !hasSalary || !hasNormalWorkingHours)) {
-                            console.log(`[updateTask] Quality-Control-Status gesetzt, aber nicht alle Felder ausgefüllt für User ${onboardingUserId}`);
+                            logger.log(`[updateTask] Quality-Control-Status gesetzt, aber nicht alle Felder ausgefüllt für User ${onboardingUserId}`);
                         }
                     }
                     }
                 } catch (lifecycleError) {
-                    console.error('[updateTask] Fehler beim Starten des Lifecycle:', lifecycleError);
+                    logger.error('[updateTask] Fehler beim Starten des Lifecycle:', lifecycleError);
                     // Fehler blockiert nicht die Task-Aktualisierung
                 }
             }
@@ -680,14 +681,14 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
 
                         // Nur wenn Status "done" UND bankDetails ausgefüllt ist, Task als erledigt markieren
                         if (updateData.status === 'done' && hasBankDetails) {
-                            console.log(`[updateTask] BankDetails-To-Do erledigt für User ${bankDetailsUserId}`);
+                            logger.log(`[updateTask] BankDetails-To-Do erledigt für User ${bankDetailsUserId}`);
                             // Task ist bereits auf "done" gesetzt, keine weitere Aktion nötig
                         } else if (updateData.status === 'quality_control' && !hasBankDetails) {
-                            console.log(`[updateTask] Quality-Control-Status gesetzt, aber bankDetails nicht ausgefüllt für User ${bankDetailsUserId}`);
+                            logger.log(`[updateTask] Quality-Control-Status gesetzt, aber bankDetails nicht ausgefüllt für User ${bankDetailsUserId}`);
                         }
                     }
                 } catch (bankDetailsError) {
-                    console.error('[updateTask] Fehler bei BankDetails-To-Do-Prüfung:', bankDetailsError);
+                    logger.error('[updateTask] Fehler bei BankDetails-To-Do-Prüfung:', bankDetailsError);
                     // Fehler blockiert nicht die Task-Aktualisierung
                 }
             }
@@ -718,14 +719,14 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
 
                         // Nur wenn Status "done" UND Identitätsdokument vorhanden ist, Task als erledigt markieren
                         if (updateData.status === 'done' && hasIdentificationDocument) {
-                            console.log(`[updateTask] Identitätsdokument-To-Do erledigt für User ${identificationDocumentUserId}`);
+                            logger.log(`[updateTask] Identitätsdokument-To-Do erledigt für User ${identificationDocumentUserId}`);
                             // Task ist bereits auf "done" gesetzt, keine weitere Aktion nötig
                         } else if (updateData.status === 'quality_control' && !hasIdentificationDocument) {
-                            console.log(`[updateTask] Quality-Control-Status gesetzt, aber Identitätsdokument nicht vorhanden für User ${identificationDocumentUserId}`);
+                            logger.log(`[updateTask] Quality-Control-Status gesetzt, aber Identitätsdokument nicht vorhanden für User ${identificationDocumentUserId}`);
                         }
                     }
                 } catch (identificationDocumentError) {
-                    console.error('[updateTask] Fehler bei Identitätsdokument-To-Do-Prüfung:', identificationDocumentError);
+                    logger.error('[updateTask] Fehler bei Identitätsdokument-To-Do-Prüfung:', identificationDocumentError);
                     // Fehler blockiert nicht die Task-Aktualisierung
                 }
             }
@@ -817,7 +818,7 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         
         res.json(task);
     } catch (error) {
-        console.error('Fehler beim Aktualisieren des Tasks:', error);
+        logger.error('Fehler beim Aktualisieren des Tasks:', error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             res.status(400).json({ 
                 error: 'Fehler beim Aktualisieren des Tasks',
@@ -908,7 +909,7 @@ export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
 
         res.status(204).send();
     } catch (error) {
-        console.error('Fehler beim Löschen des Tasks:', error);
+        logger.error('Fehler beim Löschen des Tasks:', error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             res.status(400).json({ 
                 error: 'Fehler beim Löschen des Tasks',
@@ -978,7 +979,7 @@ export const getTaskCarticles = async (req: Request<TaskParams>, res: Response) 
         
         res.json(carticles);
     } catch (error) {
-        console.error('Fehler beim Abrufen der verknüpften Artikel:', error);
+        logger.error('Fehler beim Abrufen der verknüpften Artikel:', error);
         res.status(500).json({ 
             error: 'Interner Serverfehler',
             details: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1041,7 +1042,7 @@ export const linkTaskToCarticle = async (req: Request, res: Response) => {
         
         res.status(201).json(link.carticle);
     } catch (error) {
-        console.error('Fehler beim Verknüpfen des Artikels:', error);
+        logger.error('Fehler beim Verknüpfen des Artikels:', error);
         
         // Behandlung von einzigartigen Einschränkungsverletzungen
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -1091,7 +1092,7 @@ export const unlinkTaskFromCarticle = async (req: Request, res: Response) => {
         
         res.status(200).json({ message: 'Verknüpfung erfolgreich entfernt' });
     } catch (error) {
-        console.error('Fehler beim Entfernen der Verknüpfung:', error);
+        logger.error('Fehler beim Entfernen der Verknüpfung:', error);
         res.status(500).json({ 
             error: 'Interner Serverfehler',
             details: error instanceof Error ? error.message : 'Unbekannter Fehler'

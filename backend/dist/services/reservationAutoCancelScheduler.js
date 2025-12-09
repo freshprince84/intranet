@@ -13,6 +13,7 @@ exports.ReservationAutoCancelScheduler = void 0;
 const prisma_1 = require("../utils/prisma");
 const client_1 = require("@prisma/client");
 const lobbyPmsService_1 = require("./lobbyPmsService");
+const logger_1 = require("../utils/logger");
 /**
  * Scheduler für automatische Stornierung von nicht bezahlten Reservierungen
  */
@@ -22,17 +23,17 @@ class ReservationAutoCancelScheduler {
      */
     static start() {
         if (this.checkInterval) {
-            console.log('[ReservationAutoCancel] Scheduler läuft bereits');
+            logger_1.logger.log('[ReservationAutoCancel] Scheduler läuft bereits');
             return;
         }
-        console.log('[ReservationAutoCancel] Starte Scheduler...');
+        logger_1.logger.log('[ReservationAutoCancel] Starte Scheduler...');
         // Sofortige Prüfung beim Start
         this.checkAndCancelReservations();
         // Regelmäßige Prüfung
         this.checkInterval = setInterval(() => {
             this.checkAndCancelReservations();
         }, this.CHECK_INTERVAL);
-        console.log('[ReservationAutoCancel] Scheduler gestartet (alle 5 Minuten)');
+        logger_1.logger.log('[ReservationAutoCancel] Scheduler gestartet (alle 5 Minuten)');
     }
     /**
      * Stoppt den Scheduler
@@ -41,7 +42,7 @@ class ReservationAutoCancelScheduler {
         if (this.checkInterval) {
             clearInterval(this.checkInterval);
             this.checkInterval = null;
-            console.log('[ReservationAutoCancel] Scheduler gestoppt');
+            logger_1.logger.log('[ReservationAutoCancel] Scheduler gestoppt');
         }
     }
     /**
@@ -79,19 +80,19 @@ class ReservationAutoCancelScheduler {
                 if (expiredReservations.length === 0) {
                     return; // Keine abgelaufenen Reservierungen
                 }
-                console.log(`[ReservationAutoCancel] ${expiredReservations.length} Reservierungen gefunden, die storniert werden müssen`);
+                logger_1.logger.log(`[ReservationAutoCancel] ${expiredReservations.length} Reservierungen gefunden, die storniert werden müssen`);
                 for (const reservation of expiredReservations) {
                     try {
                         yield this.cancelReservation(reservation);
                     }
                     catch (error) {
-                        console.error(`[ReservationAutoCancel] Fehler beim Stornieren der Reservierung ${reservation.id}:`, error);
+                        logger_1.logger.error(`[ReservationAutoCancel] Fehler beim Stornieren der Reservierung ${reservation.id}:`, error);
                         // Weiter mit nächster Reservierung
                     }
                 }
             }
             catch (error) {
-                console.error('[ReservationAutoCancel] Fehler beim Prüfen der Reservierungen:', error);
+                logger_1.logger.error('[ReservationAutoCancel] Fehler beim Prüfen der Reservierungen:', error);
             }
         });
     }
@@ -101,16 +102,16 @@ class ReservationAutoCancelScheduler {
     static cancelReservation(reservation) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
-            console.log(`[ReservationAutoCancel] Storniere Reservierung ${reservation.id} (Gast: ${reservation.guestName})`);
+            logger_1.logger.log(`[ReservationAutoCancel] Storniere Reservierung ${reservation.id} (Gast: ${reservation.guestName})`);
             // 1. Storniere in LobbyPMS (falls lobbyReservationId vorhanden)
             if (reservation.lobbyReservationId && reservation.branchId && ((_a = reservation.branch) === null || _a === void 0 ? void 0 : _a.lobbyPmsSettings)) {
                 try {
                     const service = yield lobbyPmsService_1.LobbyPmsService.createForBranch(reservation.branchId);
                     yield service.updateReservationStatus(reservation.lobbyReservationId, 'cancelled');
-                    console.log(`[ReservationAutoCancel] Reservierung ${reservation.id} in LobbyPMS storniert`);
+                    logger_1.logger.log(`[ReservationAutoCancel] Reservierung ${reservation.id} in LobbyPMS storniert`);
                 }
                 catch (error) {
-                    console.error(`[ReservationAutoCancel] Fehler beim Stornieren in LobbyPMS:`, error);
+                    logger_1.logger.error(`[ReservationAutoCancel] Fehler beim Stornieren in LobbyPMS:`, error);
                     // Weiter mit lokaler Stornierung
                 }
             }
@@ -124,7 +125,7 @@ class ReservationAutoCancelScheduler {
                     cancellationReason: 'Zahlung nicht innerhalb der Frist erfolgt'
                 }
             });
-            console.log(`[ReservationAutoCancel] Reservierung ${reservation.id} erfolgreich storniert`);
+            logger_1.logger.log(`[ReservationAutoCancel] Reservierung ${reservation.id} erfolgreich storniert`);
             // 3. Optional: Benachrichtigung an Gast senden (wenn gewünscht)
             // TODO: Implementieren wenn gewünscht
         });

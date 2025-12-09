@@ -21,6 +21,7 @@ const prisma_1 = require("../utils/prisma");
 const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
+const logger_1 = require("../utils/logger");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
 const filterCache_1 = require("../services/filterCache");
 const path_1 = __importDefault(require("path"));
@@ -68,11 +69,11 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'request');
                 }
                 else {
-                    console.warn(`[getAllRequests] Filter ${filterId} nicht gefunden`);
+                    logger_1.logger.warn(`[getAllRequests] Filter ${filterId} nicht gefunden`);
                 }
             }
             catch (filterError) {
-                console.error(`[getAllRequests] Fehler beim Laden von Filter ${filterId}:`, filterError);
+                logger_1.logger.error(`[getAllRequests] Fehler beim Laden von Filter ${filterId}:`, filterError);
                 // Fallback: Versuche ohne Filter weiter
             }
         }
@@ -173,7 +174,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             });
         }
         catch (countError) {
-            console.error('[getAllRequests] Fehler beim Zählen der Requests:', countError);
+            logger_1.logger.error('[getAllRequests] Fehler beim Zählen der Requests:', countError);
             // Fallback: Verwende 0, wird später durch tatsächliche Anzahl ersetzt
             totalCount = 0;
         }
@@ -201,7 +202,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             }
         });
         const queryDuration = Date.now() - queryStartTime;
-        console.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests (${offset}-${offset + requests.length} von ${totalCount}) in ${queryDuration}ms`);
+        logger_1.logger.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests (${offset}-${offset + requests.length} von ${totalCount}) in ${queryDuration}ms`);
         // ✅ PAGINATION: Wenn totalCount noch 0 ist (z.B. bei Fehler), verwende tatsächliche Anzahl
         if (totalCount === 0 && requests.length > 0) {
             // Fallback: Wenn wir Items haben, aber totalCount fehlt, schätze basierend auf offset + length
@@ -211,7 +212,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Formatiere die Daten für die Frontend-Nutzung
         // ✅ Sicherstellen, dass requests ein Array ist
         if (!Array.isArray(requests)) {
-            console.error('[getAllRequests] ❌ FEHLER: requests ist kein Array!', {
+            logger_1.logger.error('[getAllRequests] ❌ FEHLER: requests ist kein Array!', {
                 requests,
                 type: typeof requests
             });
@@ -246,7 +247,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
         // ✅ Sicherstellen, dass formattedRequests ein Array ist
         if (!Array.isArray(formattedRequests)) {
-            console.error('[getAllRequests] ❌ FEHLER: formattedRequests ist kein Array!', {
+            logger_1.logger.error('[getAllRequests] ❌ FEHLER: formattedRequests ist kein Array!', {
                 formattedRequests,
                 type: typeof formattedRequests
             });
@@ -259,7 +260,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             offset: offset,
             hasMore: offset + formattedRequests.length < totalCount
         };
-        console.log('[getAllRequests] ✅ Response vorbereitet:', {
+        logger_1.logger.log('[getAllRequests] ✅ Response vorbereitet:', {
             dataLength: response.data.length,
             totalCount: response.totalCount,
             hasMore: response.hasMore,
@@ -268,8 +269,8 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.json(response);
     }
     catch (error) {
-        console.error('[getAllRequests] Error fetching requests:', error);
-        console.error('[getAllRequests] Error details:', {
+        logger_1.logger.error('[getAllRequests] Error fetching requests:', error);
+        logger_1.logger.error('[getAllRequests] Error details:', {
             message: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
             filterId: req.query.filterId,
@@ -361,7 +362,7 @@ const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.json(formattedRequest);
     }
     catch (error) {
-        console.error('Error fetching request:', error);
+        logger_1.logger.error('Error fetching request:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Requests' });
     }
 });
@@ -449,13 +450,13 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         };
         // Benachrichtigungen erstellen
         // 1. Für den Verantwortlichen
-        console.log(`[createRequest] RequesterId: ${requesterId}, ResponsibleId: ${responsibleId}`);
+        logger_1.logger.log(`[createRequest] RequesterId: ${requesterId}, ResponsibleId: ${responsibleId}`);
         if (requesterId !== responsibleId) {
             try {
                 const requesterLang = yield (0, translations_1.getUserLanguage)(request.requesterId);
-                console.log(`[createRequest] Requester Sprache: ${requesterLang}`);
+                logger_1.logger.log(`[createRequest] Requester Sprache: ${requesterLang}`);
                 const requesterNotificationText = (0, translations_1.getRequestNotificationText)(requesterLang, 'created', request.title, true);
-                console.log(`[createRequest] Erstelle Notification für Requester ${request.requesterId}: ${requesterNotificationText.title}`);
+                logger_1.logger.log(`[createRequest] Erstelle Notification für Requester ${request.requesterId}: ${requesterNotificationText.title}`);
                 const requesterCreated = yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: request.requesterId,
                     relatedEntityId: request.id,
@@ -464,11 +465,11 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     title: requesterNotificationText.title,
                     message: requesterNotificationText.message
                 });
-                console.log(`[createRequest] Requester Notification erstellt: ${requesterCreated}`);
+                logger_1.logger.log(`[createRequest] Requester Notification erstellt: ${requesterCreated}`);
                 const responsibleLang = yield (0, translations_1.getUserLanguage)(request.responsibleId);
-                console.log(`[createRequest] Responsible Sprache: ${responsibleLang}`);
+                logger_1.logger.log(`[createRequest] Responsible Sprache: ${responsibleLang}`);
                 const responsibleNotificationText = (0, translations_1.getRequestNotificationText)(responsibleLang, 'created', request.title, false);
-                console.log(`[createRequest] Erstelle Notification für Responsible ${request.responsibleId}: ${responsibleNotificationText.title}`);
+                logger_1.logger.log(`[createRequest] Erstelle Notification für Responsible ${request.responsibleId}: ${responsibleNotificationText.title}`);
                 const responsibleCreated = yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: request.responsibleId,
                     relatedEntityId: request.id,
@@ -477,19 +478,19 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     title: responsibleNotificationText.title,
                     message: responsibleNotificationText.message
                 });
-                console.log(`[createRequest] Responsible Notification erstellt: ${responsibleCreated}`);
+                logger_1.logger.log(`[createRequest] Responsible Notification erstellt: ${responsibleCreated}`);
             }
             catch (notificationError) {
-                console.error('[createRequest] Fehler beim Erstellen der Notifications:', notificationError);
+                logger_1.logger.error('[createRequest] Fehler beim Erstellen der Notifications:', notificationError);
             }
         }
         else {
-            console.log(`[createRequest] Requester und Responsible sind identisch, keine Notifications erstellt`);
+            logger_1.logger.log(`[createRequest] Requester und Responsible sind identisch, keine Notifications erstellt`);
         }
         res.status(201).json(formattedRequest);
     }
     catch (error) {
-        console.error('Error creating request:', error);
+        logger_1.logger.error('Error creating request:', error);
         res.status(500).json({ message: 'Fehler beim Erstellen des Requests' });
     }
 });
@@ -675,7 +676,7 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.json(formattedRequest);
     }
     catch (error) {
-        console.error('Error updating request:', error);
+        logger_1.logger.error('Error updating request:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren des Requests' });
     }
 });
@@ -720,10 +721,10 @@ const copyRequestAttachmentsToTask = (requestId, taskId) => __awaiter(void 0, vo
                 });
             }
         }
-        console.log(`${requestAttachments.length} Anhänge erfolgreich kopiert von Request ${requestId} zu Task ${taskId}`);
+        logger_1.logger.log(`${requestAttachments.length} Anhänge erfolgreich kopiert von Request ${requestId} zu Task ${taskId}`);
     }
     catch (error) {
-        console.error('Fehler beim Kopieren der Anhänge:', error);
+        logger_1.logger.error('Fehler beim Kopieren der Anhänge:', error);
     }
 });
 // Request löschen
@@ -764,7 +765,7 @@ const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.json({ message: 'Request erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Error deleting request:', error);
+        logger_1.logger.error('Error deleting request:', error);
         res.status(500).json({ message: 'Fehler beim Löschen des Requests' });
     }
 });

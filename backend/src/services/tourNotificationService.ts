@@ -2,6 +2,7 @@ import { prisma } from '../utils/prisma';
 import { NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from '../controllers/notificationController';
 import { getUserLanguage, getTourNotificationText } from '../utils/translations';
+import { logger } from '../utils/logger';
 
 /**
  * Service für Tour-Benachrichtigungen
@@ -67,9 +68,9 @@ export class TourNotificationService {
         });
       }
 
-      console.log(`[TourNotification] ✅ Tour-Buchung Notification gesendet an ${users.length} User in Org ${organizationId}`);
+      logger.log(`[TourNotification] ✅ Tour-Buchung Notification gesendet an ${users.length} User in Org ${organizationId}`);
     } catch (error) {
-      console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Buchung Notification:', error);
+      logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Buchung Notification:', error);
     }
   }
 
@@ -131,7 +132,7 @@ export class TourNotificationService {
       });
 
       if (!role) {
-        console.log(`[TourNotification] ⚠️ Rolle "${tourRequestRoleName}" nicht gefunden, verwende Admin-Rolle`);
+        logger.log(`[TourNotification] ⚠️ Rolle "${tourRequestRoleName}" nicht gefunden, verwende Admin-Rolle`);
         // Fallback: Admin-Rolle
         const adminRole = await prisma.role.findFirst({
           where: {
@@ -142,7 +143,7 @@ export class TourNotificationService {
         });
 
         if (!adminRole) {
-          console.log(`[TourNotification] ⚠️ Admin-Rolle nicht gefunden, überspringe Notification`);
+          logger.log(`[TourNotification] ⚠️ Admin-Rolle nicht gefunden, überspringe Notification`);
           return;
         }
 
@@ -211,9 +212,9 @@ export class TourNotificationService {
         }
       }
 
-      console.log(`[TourNotification] ✅ Tour-Anfrage Notification gesendet`);
+      logger.log(`[TourNotification] ✅ Tour-Anfrage Notification gesendet`);
     } catch (error) {
-      console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Anfrage Notification:', error);
+      logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Anfrage Notification:', error);
     }
   }
 
@@ -252,9 +253,9 @@ export class TourNotificationService {
         relatedEntityType: 'tour_booking_paid'
       });
 
-      console.log(`[TourNotification] ✅ Tour-Bezahlung Notification gesendet`);
+      logger.log(`[TourNotification] ✅ Tour-Bezahlung Notification gesendet`);
     } catch (error) {
-      console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Bezahlung Notification:', error);
+      logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Bezahlung Notification:', error);
     }
   }
 
@@ -318,9 +319,9 @@ export class TourNotificationService {
         });
       }
 
-      console.log(`[TourNotification] ✅ Tour-Stornierung (Kunde) Notification gesendet an ${users.length} User`);
+      logger.log(`[TourNotification] ✅ Tour-Stornierung (Kunde) Notification gesendet an ${users.length} User`);
     } catch (error) {
-      console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Stornierung Notification:', error);
+      logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Stornierung Notification:', error);
     }
   }
 
@@ -398,9 +399,9 @@ export class TourNotificationService {
         }
       }
 
-      console.log(`[TourNotification] ✅ Tour-Stornierung (Anbieter) Notification gesendet`);
+      logger.log(`[TourNotification] ✅ Tour-Stornierung (Anbieter) Notification gesendet`);
     } catch (error) {
-      console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Stornierung (Anbieter) Notification:', error);
+      logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Stornierung (Anbieter) Notification:', error);
     }
   }
 }

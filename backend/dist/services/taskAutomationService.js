@@ -14,6 +14,7 @@ const client_1 = require("@prisma/client");
 const notificationController_1 = require("../controllers/notificationController");
 const translations_1 = require("../utils/translations");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Service für automatische Task-Erstellung bei Lebenszyklus-Events
  */
@@ -73,17 +74,17 @@ class TaskAutomationService {
                 }
                 // Wenn keine Legal-Rolle gefunden, keine Tasks erstellen
                 if (!legalRoleId) {
-                    console.warn(`[createOnboardingTasks] Keine Legal-Rolle gefunden für Organisation ${organizationId}. Onboarding-Tasks werden nicht erstellt.`);
-                    console.warn(`[createOnboardingTasks] LifecycleRoles config:`, JSON.stringify(lifecycleRoles, null, 2));
+                    logger_1.logger.warn(`[createOnboardingTasks] Keine Legal-Rolle gefunden für Organisation ${organizationId}. Onboarding-Tasks werden nicht erstellt.`);
+                    logger_1.logger.warn(`[createOnboardingTasks] LifecycleRoles config:`, JSON.stringify(lifecycleRoles, null, 2));
                     // Debug: Zeige alle Rollen der Organisation
                     const allRoles = yield prisma_1.prisma.role.findMany({
                         where: { organizationId },
                         select: { id: true, name: true }
                     });
-                    console.warn(`[createOnboardingTasks] Verfügbare Rollen in Organisation ${organizationId}:`, allRoles);
+                    logger_1.logger.warn(`[createOnboardingTasks] Verfügbare Rollen in Organisation ${organizationId}:`, allRoles);
                     return [];
                 }
-                console.log(`[createOnboardingTasks] Legal-Rolle gefunden: ID=${legalRoleId} für Organisation ${organizationId}`);
+                logger_1.logger.log(`[createOnboardingTasks] Legal-Rolle gefunden: ID=${legalRoleId} für Organisation ${organizationId}`);
                 // Bestimme Admin-User für Quality Control
                 let adminUserId = null;
                 if (lifecycleRoles === null || lifecycleRoles === void 0 ? void 0 : lifecycleRoles.adminRoleId) {
@@ -132,17 +133,17 @@ class TaskAutomationService {
                 let userBranch = (_a = user.branches[0]) === null || _a === void 0 ? void 0 : _a.branch;
                 // Fallback: Wenn User keine Branch hat, verwende erste Branch der Organisation
                 if (!userBranch) {
-                    console.warn(`[createOnboardingTasks] User ${userId} hat keine Niederlassung zugewiesen. Verwende erste Branch der Organisation.`);
+                    logger_1.logger.warn(`[createOnboardingTasks] User ${userId} hat keine Niederlassung zugewiesen. Verwende erste Branch der Organisation.`);
                     const firstOrgBranch = yield prisma_1.prisma.branch.findFirst({
                         where: { organizationId },
                         orderBy: { id: 'asc' }
                     });
                     if (!firstOrgBranch) {
-                        console.error(`[createOnboardingTasks] Keine Branch in Organisation ${organizationId} gefunden. Tasks können nicht erstellt werden.`);
+                        logger_1.logger.error(`[createOnboardingTasks] Keine Branch in Organisation ${organizationId} gefunden. Tasks können nicht erstellt werden.`);
                         throw new Error('Organisation hat keine Niederlassung. Bitte erstellen Sie zuerst eine Niederlassung.');
                     }
                     userBranch = firstOrgBranch;
-                    console.log(`[createOnboardingTasks] Verwende Branch "${userBranch.name}" (ID: ${userBranch.id}) als Fallback.`);
+                    logger_1.logger.log(`[createOnboardingTasks] Verwende Branch "${userBranch.name}" (ID: ${userBranch.id}) als Fallback.`);
                 }
                 // Definiere Tasks für Sozialversicherungen (Kolumbien)
                 const socialSecurityTasks = [
@@ -185,7 +186,7 @@ class TaskAutomationService {
                         if (adminUserId) {
                             taskDataToCreate.qualityControlId = adminUserId;
                         }
-                        console.log(`[createOnboardingTasks] Erstelle Task "${taskData.title}" mit Daten:`, {
+                        logger_1.logger.log(`[createOnboardingTasks] Erstelle Task "${taskData.title}" mit Daten:`, {
                             roleId: legalRoleId,
                             qualityControlId: adminUserId,
                             organizationId: organizationId,
@@ -202,7 +203,7 @@ class TaskAutomationService {
                                 }
                             }
                         });
-                        console.log(`[createOnboardingTasks] Task erstellt: ID=${task.id}, Title="${task.title}", RoleId=${task.roleId}, OrganizationId=${task.organizationId}`);
+                        logger_1.logger.log(`[createOnboardingTasks] Task erstellt: ID=${task.id}, Title="${task.title}", RoleId=${task.roleId}, OrganizationId=${task.organizationId}`);
                         createdTasks.push(task);
                         // Erstelle Lifecycle-Event
                         const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
@@ -246,14 +247,14 @@ class TaskAutomationService {
                         }
                     }
                     catch (error) {
-                        console.error(`Fehler beim Erstellen des Tasks "${taskData.title}":`, error);
+                        logger_1.logger.error(`Fehler beim Erstellen des Tasks "${taskData.title}":`, error);
                         // Weiter mit nächstem Task
                     }
                 }
                 return createdTasks;
             }
             catch (error) {
-                console.error('Fehler beim Erstellen der Onboarding-Tasks:', error);
+                logger_1.logger.error('Fehler beim Erstellen der Onboarding-Tasks:', error);
                 throw error;
             }
         });
@@ -316,7 +317,7 @@ class TaskAutomationService {
                     }
                 }
                 if (!hrRoleId) {
-                    console.warn(`Keine HR-Rolle gefunden für Organisation ${organizationId}. Offboarding-Tasks werden nicht erstellt.`);
+                    logger_1.logger.warn(`Keine HR-Rolle gefunden für Organisation ${organizationId}. Offboarding-Tasks werden nicht erstellt.`);
                     return [];
                 }
                 // Hole erste Branch des Users
@@ -407,14 +408,14 @@ class TaskAutomationService {
                         }
                     }
                     catch (error) {
-                        console.error(`Fehler beim Erstellen des Tasks "${taskData.title}":`, error);
+                        logger_1.logger.error(`Fehler beim Erstellen des Tasks "${taskData.title}":`, error);
                         // Weiter mit nächstem Task
                     }
                 }
                 return createdTasks;
             }
             catch (error) {
-                console.error('Fehler beim Erstellen der Offboarding-Tasks:', error);
+                logger_1.logger.error('Fehler beim Erstellen der Offboarding-Tasks:', error);
                 throw error;
             }
         });
@@ -545,7 +546,7 @@ class TaskAutomationService {
                 return task;
             }
             catch (error) {
-                console.error(`Fehler beim Erstellen des Sozialversicherungs-Tasks (${type}):`, error);
+                logger_1.logger.error(`Fehler beim Erstellen des Sozialversicherungs-Tasks (${type}):`, error);
                 throw error;
             }
         });
@@ -560,6 +561,7 @@ class TaskAutomationService {
      */
     static createReservationTask(reservation, organizationId) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c, _d, _e, _f;
             try {
                 // Hole Organisation Settings
                 const organization = yield prisma_1.prisma.organization.findUnique({
@@ -573,23 +575,23 @@ class TaskAutomationService {
                 const lobbyPmsSettings = settings === null || settings === void 0 ? void 0 : settings.lobbyPms;
                 // Prüfe ob automatische Task-Erstellung aktiviert ist
                 if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.autoCreateTasks)) {
-                    console.log(`[TaskAutomation] Automatische Task-Erstellung ist für Organisation ${organizationId} deaktiviert`);
+                    logger_1.logger.log(`[TaskAutomation] Automatische Task-Erstellung ist für Organisation ${organizationId} deaktiviert`);
                     return null;
                 }
-                // Bestimme zuständige Rolle (z.B. "Rezeption")
-                let receptionRoleId = null;
-                // Suche nach "Rezeption" oder ähnlicher Rolle
-                const receptionRole = yield prisma_1.prisma.role.findFirst({
+                // Bestimme zuständige Rolle (Cleaning)
+                let cleaningRoleId = null;
+                // Suche nach "Cleaning" oder ähnlicher Rolle
+                const cleaningRole = yield prisma_1.prisma.role.findFirst({
                     where: {
                         organizationId,
                         name: {
-                            in: ['Rezeption', 'Reception', 'Front Desk', 'Recepcion'],
+                            in: ['Cleaning', 'Limpieza', 'Reinigung'],
                             mode: 'insensitive'
                         }
                     }
                 });
-                if (receptionRole) {
-                    receptionRoleId = receptionRole.id;
+                if (cleaningRole) {
+                    cleaningRoleId = cleaningRole.id;
                 }
                 else {
                     // Fallback: Verwende erste verfügbare Rolle der Organisation
@@ -597,18 +599,18 @@ class TaskAutomationService {
                         where: { organizationId }
                     });
                     if (firstRole) {
-                        receptionRoleId = firstRole.id;
+                        cleaningRoleId = firstRole.id;
                     }
                 }
-                if (!receptionRoleId) {
-                    console.warn(`[TaskAutomation] Keine Rolle gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
+                if (!cleaningRoleId) {
+                    logger_1.logger.warn(`[TaskAutomation] Keine Cleaning-Rolle gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
                     return null;
                 }
                 // Hole Branch der Reservation (falls vorhanden), sonst erste Branch der Organisation
                 let branchId = null;
                 if (reservation.branchId) {
                     branchId = reservation.branchId;
-                    console.log(`[TaskAutomation] Verwende Branch ${branchId} aus Reservation`);
+                    logger_1.logger.log(`[TaskAutomation] Verwende Branch ${branchId} aus Reservation`);
                 }
                 else {
                     // Fallback: Hole erste Branch der Organisation
@@ -616,22 +618,49 @@ class TaskAutomationService {
                         where: { organizationId }
                     });
                     if (!branch) {
-                        console.warn(`[TaskAutomation] Keine Branch gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
+                        logger_1.logger.warn(`[TaskAutomation] Keine Branch gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
                         return null;
                     }
                     branchId = branch.id;
-                    console.log(`[TaskAutomation] Verwende erste Branch ${branchId} der Organisation (Reservation hat keine branchId)`);
+                    logger_1.logger.log(`[TaskAutomation] Verwende erste Branch ${branchId} der Organisation (Reservation hat keine branchId)`);
                 }
                 // Prüfe ob bereits ein Task für diese Reservierung existiert
                 const existingTask = yield prisma_1.prisma.task.findUnique({
                     where: { reservationId: reservation.id }
                 });
                 if (existingTask) {
-                    console.log(`[TaskAutomation] Task für Reservierung ${reservation.id} existiert bereits`);
+                    logger_1.logger.log(`[TaskAutomation] Task für Reservierung ${reservation.id} existiert bereits`);
                     return existingTask;
                 }
+                // Prüfe ob checkOutDate vorhanden ist
+                if (!reservation.checkOutDate) {
+                    logger_1.logger.error(`[TaskAutomation] Reservation ${reservation.id} hat kein checkOutDate. Task wird nicht erstellt.`);
+                    return null;
+                }
                 // Erstelle Task
-                const taskTitle = `Check-in: ${reservation.guestName} - ${reservation.checkInDate.toLocaleDateString('de-DE')}`;
+                // Titel: Zimmername (bei Dorms: "Zimmername (Bettnummer)", bei Privates: "Zimmername")
+                const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
+                let taskTitle;
+                if (isDorm) {
+                    // Dorm: "Zimmername (Bettnummer)"
+                    const roomName = ((_a = reservation.roomDescription) === null || _a === void 0 ? void 0 : _a.trim()) || '';
+                    const bedNumber = ((_b = reservation.roomNumber) === null || _b === void 0 ? void 0 : _b.trim()) || '';
+                    taskTitle = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || `Reservation ${reservation.id}`);
+                }
+                else {
+                    // Private: "Zimmername"
+                    taskTitle = ((_c = reservation.roomDescription) === null || _c === void 0 ? void 0 : _c.trim()) || `Reservation ${reservation.id}`;
+                }
+                // Zimmer-Anzeige für Beschreibung
+                let roomDisplay;
+                if (isDorm) {
+                    const roomName = ((_d = reservation.roomDescription) === null || _d === void 0 ? void 0 : _d.trim()) || '';
+                    const bedNumber = ((_e = reservation.roomNumber) === null || _e === void 0 ? void 0 : _e.trim()) || '';
+                    roomDisplay = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || 'Noch nicht zugewiesen');
+                }
+                else {
+                    roomDisplay = ((_f = reservation.roomDescription) === null || _f === void 0 ? void 0 : _f.trim()) || 'Noch nicht zugewiesen';
+                }
                 const taskDescription = `
 Reservierungsdetails:
 - Gast: ${reservation.guestName}
@@ -639,7 +668,7 @@ Reservierungsdetails:
 - Telefon: ${reservation.guestPhone || 'N/A'}
 - Check-in: ${reservation.checkInDate.toLocaleDateString('de-DE')}
 - Check-out: ${reservation.checkOutDate.toLocaleDateString('de-DE')}
-- Zimmer: ${reservation.roomNumber || 'Noch nicht zugewiesen'}
+- Zimmer: ${roomDisplay}
 - Status: ${reservation.status}
 - Zahlungsstatus: ${reservation.paymentStatus}
 ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleTimeString('de-DE')}` : ''}
@@ -649,11 +678,11 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                         title: taskTitle,
                         description: taskDescription,
                         status: 'open',
-                        roleId: receptionRoleId,
+                        roleId: cleaningRoleId,
                         branchId: branchId,
                         organizationId: organizationId,
                         reservationId: reservation.id,
-                        dueDate: reservation.checkInDate,
+                        dueDate: reservation.checkOutDate,
                         qualityControlId: 1 // TODO: Bestimme Quality Control User
                     },
                     include: {
@@ -666,23 +695,23 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                         reservation: true
                     }
                 });
-                console.log(`[TaskAutomation] Task ${task.id} für Reservierung ${reservation.id} erstellt`);
-                // Benachrichtigung für alle User mit Rezeption-Rolle
-                const receptionUsers = yield prisma_1.prisma.user.findMany({
+                logger_1.logger.log(`[TaskAutomation] Cleaning-Task ${task.id} für Reservierung ${reservation.id} erstellt (Check-out: ${reservation.checkOutDate.toLocaleDateString('de-DE')})`);
+                // Benachrichtigung für alle User mit Cleaning-Rolle
+                const cleaningUsers = yield prisma_1.prisma.user.findMany({
                     where: {
                         roles: {
                             some: {
-                                roleId: receptionRoleId,
+                                roleId: cleaningRoleId,
                                 lastUsed: true
                             }
                         }
                     }
                 });
-                for (const receptionUser of receptionUsers) {
-                    const userLang = yield (0, translations_1.getUserLanguage)(receptionUser.id);
+                for (const cleaningUser of cleaningUsers) {
+                    const userLang = yield (0, translations_1.getUserLanguage)(cleaningUser.id);
                     const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'check_in_started', task.title, undefined, undefined, reservation.guestName);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
-                        userId: receptionUser.id,
+                        userId: cleaningUser.id,
                         title: notificationText.title,
                         message: notificationText.message,
                         type: client_1.NotificationType.task,
@@ -693,7 +722,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 return task;
             }
             catch (error) {
-                console.error(`[TaskAutomation] Fehler beim Erstellen des Reservierungs-Tasks:`, error);
+                logger_1.logger.error(`[TaskAutomation] Fehler beim Erstellen des Reservierungs-Tasks:`, error);
                 throw error;
             }
         });
@@ -716,7 +745,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     select: { country: true, settings: true }
                 });
                 if ((organization === null || organization === void 0 ? void 0 : organization.country) !== 'CO') {
-                    console.log(`[createAdminOnboardingTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
+                    logger_1.logger.log(`[createAdminOnboardingTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
                     return null; // Nur für Kolumbien
                 }
                 // Hole User-Daten
@@ -749,7 +778,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     }
                 }
                 if (!adminRoleId) {
-                    console.warn(`[createAdminOnboardingTask] Keine Admin-Rolle gefunden für Organisation ${organizationId}`);
+                    logger_1.logger.warn(`[createAdminOnboardingTask] Keine Admin-Rolle gefunden für Organisation ${organizationId}`);
                     return null;
                 }
                 // Hole Admin-User für QC (nutze bestehende Logik)
@@ -791,7 +820,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     }
                 });
                 if (existingTask) {
-                    console.log(`[createAdminOnboardingTask] Admin-Onboarding-Task existiert bereits für User ${userId}`);
+                    logger_1.logger.log(`[createAdminOnboardingTask] Admin-Onboarding-Task existiert bereits für User ${userId}`);
                     return existingTask;
                 }
                 // Erstelle Task für Admin
@@ -819,11 +848,11 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                         relatedEntityType: 'task'
                     });
                 }
-                console.log(`[createAdminOnboardingTask] Admin-Onboarding-Task erstellt: Task ID ${task.id} für User ${userId}`);
+                logger_1.logger.log(`[createAdminOnboardingTask] Admin-Onboarding-Task erstellt: Task ID ${task.id} für User ${userId}`);
                 return task;
             }
             catch (error) {
-                console.error('[createAdminOnboardingTask] Fehler:', error);
+                logger_1.logger.error('[createAdminOnboardingTask] Fehler:', error);
                 // Logge Fehler, aber breche nicht ab
                 return null;
             }
@@ -853,7 +882,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 }
                 // Prüfe ob User bereits bankDetails hat
                 if (user.bankDetails && user.bankDetails.trim() !== '') {
-                    console.log(`[createUserBankDetailsTask] User ${userId} hat bereits bankDetails, überspringe Task-Erstellung`);
+                    logger_1.logger.log(`[createUserBankDetailsTask] User ${userId} hat bereits bankDetails, überspringe Task-Erstellung`);
                     return null;
                 }
                 // Hole Branch (nutze bestehende Logik)
@@ -916,7 +945,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     }
                 });
                 if (existingTask) {
-                    console.log(`[createUserBankDetailsTask] BankDetails-Task existiert bereits für User ${userId}`);
+                    logger_1.logger.log(`[createUserBankDetailsTask] BankDetails-Task existiert bereits für User ${userId}`);
                     return existingTask;
                 }
                 // Erstelle Task für User
@@ -941,11 +970,11 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     relatedEntityId: task.id,
                     relatedEntityType: 'task'
                 });
-                console.log(`[createUserBankDetailsTask] BankDetails-Task erstellt: Task ID ${task.id} für User ${userId}`);
+                logger_1.logger.log(`[createUserBankDetailsTask] BankDetails-Task erstellt: Task ID ${task.id} für User ${userId}`);
                 return task;
             }
             catch (error) {
-                console.error('[createUserBankDetailsTask] Fehler:', error);
+                logger_1.logger.error('[createUserBankDetailsTask] Fehler:', error);
                 // Logge Fehler, aber breche nicht ab
                 return null;
             }
@@ -966,7 +995,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     select: { country: true, settings: true }
                 });
                 if ((organization === null || organization === void 0 ? void 0 : organization.country) !== 'CO') {
-                    console.log(`[createUserIdentificationDocumentTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
+                    logger_1.logger.log(`[createUserIdentificationDocumentTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
                     return null; // Nur für Kolumbien
                 }
                 // Hole User-Daten
@@ -988,7 +1017,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 }
                 // Prüfe ob User bereits ein Identitätsdokument hat
                 if (user.identificationDocuments && user.identificationDocuments.length > 0) {
-                    console.log(`[createUserIdentificationDocumentTask] User ${userId} hat bereits ein Identitätsdokument, überspringe Task-Erstellung`);
+                    logger_1.logger.log(`[createUserIdentificationDocumentTask] User ${userId} hat bereits ein Identitätsdokument, überspringe Task-Erstellung`);
                     return null;
                 }
                 // Hole Branch (nutze bestehende Logik)
@@ -1047,7 +1076,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     }
                 });
                 if (existingTask) {
-                    console.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task existiert bereits für User ${userId}`);
+                    logger_1.logger.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task existiert bereits für User ${userId}`);
                     return existingTask;
                 }
                 // Erstelle Task für User
@@ -1072,11 +1101,11 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     relatedEntityId: task.id,
                     relatedEntityType: 'task'
                 });
-                console.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task erstellt: Task ID ${task.id} für User ${userId}`);
+                logger_1.logger.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task erstellt: Task ID ${task.id} für User ${userId}`);
                 return task;
             }
             catch (error) {
-                console.error('[createUserIdentificationDocumentTask] Fehler:', error);
+                logger_1.logger.error('[createUserIdentificationDocumentTask] Fehler:', error);
                 // Logge Fehler, aber breche nicht ab
                 return null;
             }

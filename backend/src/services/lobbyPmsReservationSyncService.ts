@@ -1,5 +1,6 @@
 import { LobbyPmsService } from './lobbyPmsService';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Service für die Synchronisation von Reservierungen von LobbyPMS API pro Branch
@@ -57,12 +58,12 @@ export class LobbyPmsReservationSyncService {
       const lobbyPmsSettings = decryptedBranchSettings || decryptedOrgSettings?.lobbyPms;
 
       if (!lobbyPmsSettings?.apiKey) {
-        console.log(`[LobbyPmsSync] Branch ${branchId} hat keinen LobbyPMS API Key konfiguriert`);
+        logger.log(`[LobbyPmsSync] Branch ${branchId} hat keinen LobbyPMS API Key konfiguriert`);
         return 0;
       }
 
       if (lobbyPmsSettings.syncEnabled === false) {
-        console.log(`[LobbyPmsSync] LobbyPMS Sync ist für Branch ${branchId} deaktiviert`);
+        logger.log(`[LobbyPmsSync] LobbyPMS Sync ist für Branch ${branchId} deaktiviert`);
         return 0;
       }
 
@@ -71,11 +72,11 @@ export class LobbyPmsReservationSyncService {
       if (startDate) {
         // Explizites startDate übergeben (z.B. manueller Sync)
         syncStartDate = startDate;
-        console.log(`[LobbyPmsSync] Branch ${branchId}: Verwende explizites startDate: ${syncStartDate.toISOString()}`);
+        logger.log(`[LobbyPmsSync] Branch ${branchId}: Verwende explizites startDate: ${syncStartDate.toISOString()}`);
       } else {
         // Immer letzte 24 Stunden (Erstellungsdatum)
         syncStartDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        console.log(`[LobbyPmsSync] Branch ${branchId}: Prüfe Reservierungen mit Erstellungsdatum in den letzten 24 Stunden`);
+        logger.log(`[LobbyPmsSync] Branch ${branchId}: Prüfe Reservierungen mit Erstellungsdatum in den letzten 24 Stunden`);
       }
 
       // Erstelle LobbyPMS Service für Branch
@@ -85,7 +86,7 @@ export class LobbyPmsReservationSyncService {
       // fetchReservations filtert jetzt nach creation_date, nicht nach Check-in!
       const syncedCount = await lobbyPmsService.syncReservations(syncStartDate);
 
-      console.log(`[LobbyPmsSync] Branch ${branchId}: ${syncedCount} Reservierungen synchronisiert`);
+      logger.log(`[LobbyPmsSync] Branch ${branchId}: ${syncedCount} Reservierungen synchronisiert`);
 
       // OPTIMIERUNG: Speichere erfolgreiche Sync-Zeit
       if (syncedCount >= 0) { // Auch bei 0 (keine neuen Reservierungen) speichern
@@ -95,12 +96,12 @@ export class LobbyPmsReservationSyncService {
             lobbyPmsLastSyncAt: new Date(), // Aktuelle Zeit
           }
         });
-        console.log(`[LobbyPmsSync] Branch ${branchId}: Sync-Zeit gespeichert`);
+        logger.log(`[LobbyPmsSync] Branch ${branchId}: Sync-Zeit gespeichert`);
       }
 
       return syncedCount;
     } catch (error) {
-      console.error(`[LobbyPmsSync] Fehler beim Synchronisieren für Branch ${branchId}:`, error);
+      logger.error(`[LobbyPmsSync] Fehler beim Synchronisieren für Branch ${branchId}:`, error);
       throw error;
     }
   }

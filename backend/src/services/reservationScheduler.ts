@@ -1,4 +1,5 @@
 import { ReservationNotificationService } from './reservationNotificationService';
+import { logger } from '../utils/logger';
 
 /**
  * Scheduler für automatische Reservierungs-Benachrichtigungen
@@ -16,7 +17,7 @@ export class ReservationScheduler {
    * Wenn ja, sendet Check-in-Einladungen
    */
   static start(): void {
-    console.log('[ReservationScheduler] Scheduler gestartet');
+    logger.log('[ReservationScheduler] Scheduler gestartet');
 
     // Prüfe alle 10 Minuten
     const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten
@@ -29,14 +30,14 @@ export class ReservationScheduler {
       // Prüfe ob es zwischen 20:00 und 20:10 Uhr ist
       // Und ob wir heute noch nicht gesendet haben
       if (currentHour === 20 && this.lastCheckDate !== currentDate) {
-        console.log('[ReservationScheduler] Starte tägliche Check-in-Einladungen...');
+        logger.log('[ReservationScheduler] Starte tägliche Check-in-Einladungen...');
         this.lastCheckDate = currentDate;
 
         try {
           await ReservationNotificationService.sendLateCheckInInvitations();
-          console.log('[ReservationScheduler] Check-in-Einladungen erfolgreich versendet');
+          logger.log('[ReservationScheduler] Check-in-Einladungen erfolgreich versendet');
         } catch (error) {
-          console.error('[ReservationScheduler] Fehler beim Versand:', error);
+          logger.error('[ReservationScheduler] Fehler beim Versand:', error);
         }
       }
     }, CHECK_INTERVAL_MS);
@@ -49,7 +50,7 @@ export class ReservationScheduler {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
-      console.log('[ReservationScheduler] Scheduler gestoppt');
+      logger.log('[ReservationScheduler] Scheduler gestoppt');
     }
   }
 
@@ -57,12 +58,12 @@ export class ReservationScheduler {
    * Führt manuell den Versand aus (für Tests)
    */
   static async triggerManually(): Promise<void> {
-    console.log('[ReservationScheduler] Manueller Trigger...');
+    logger.log('[ReservationScheduler] Manueller Trigger...');
     try {
       await ReservationNotificationService.sendLateCheckInInvitations();
-      console.log('[ReservationScheduler] Manueller Versand erfolgreich');
+      logger.log('[ReservationScheduler] Manueller Versand erfolgreich');
     } catch (error) {
-      console.error('[ReservationScheduler] Fehler beim manuellen Versand:', error);
+      logger.error('[ReservationScheduler] Fehler beim manuellen Versand:', error);
       throw error;
     }
   }

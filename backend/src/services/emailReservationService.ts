@@ -6,6 +6,7 @@ import { EmailReadingService, EmailMessage } from './emailReadingService';
 import { EmailReservationParser } from './emailReservationParser';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Service für die Erstellung von Reservationen aus Emails
@@ -31,7 +32,7 @@ export class EmailReservationService {
       });
 
       if (existingReservation) {
-        console.log(`[EmailReservation] Reservation ${parsedEmail.reservationCode} existiert bereits (ID: ${existingReservation.id})`);
+        logger.log(`[EmailReservation] Reservation ${parsedEmail.reservationCode} existiert bereits (ID: ${existingReservation.id})`);
         return existingReservation;
       }
 
@@ -82,7 +83,7 @@ export class EmailReservationService {
         }
       });
 
-      console.log(`[EmailReservation] Reservation ${reservation.id} erstellt aus Email (Code: ${parsedEmail.reservationCode})`);
+      logger.log(`[EmailReservation] Reservation ${reservation.id} erstellt aus Email (Code: ${parsedEmail.reservationCode})`);
 
       // ⚠️ SICHERHEIT: WhatsApp-Versand beim Erstellen aus Emails ist DEAKTIVIERT
       // Um zu verhindern, dass während Tests Nachrichten an echte Empfänger versendet werden
@@ -90,8 +91,8 @@ export class EmailReservationService {
       const EMAIL_RESERVATION_WHATSAPP_ENABLED = process.env.EMAIL_RESERVATION_WHATSAPP_ENABLED === 'true';
       
       if (!EMAIL_RESERVATION_WHATSAPP_ENABLED) {
-        console.log(`[EmailReservation] ⚠️ WhatsApp-Versand ist DEAKTIVIERT (Test-Modus)`);
-        console.log(`[EmailReservation] Um zu aktivieren: Setze EMAIL_RESERVATION_WHATSAPP_ENABLED=true in .env`);
+        logger.log(`[EmailReservation] ⚠️ WhatsApp-Versand ist DEAKTIVIERT (Test-Modus)`);
+        logger.log(`[EmailReservation] Um zu aktivieren: Setze EMAIL_RESERVATION_WHATSAPP_ENABLED=true in .env`);
       }
 
       // Automatisch WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden UND aktiviert)
@@ -108,21 +109,21 @@ export class EmailReservationService {
           );
 
           if (result.success) {
-            console.log(`[EmailReservation] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservation ${reservation.id}`);
+            logger.log(`[EmailReservation] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservation ${reservation.id}`);
           } else {
-            console.warn(`[EmailReservation] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservation ${reservation.id}: ${result.error}`);
+            logger.warn(`[EmailReservation] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservation ${reservation.id}: ${result.error}`);
           }
         } catch (whatsappError) {
-          console.error(`[EmailReservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, whatsappError);
+          logger.error(`[EmailReservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, whatsappError);
           // Fehler nicht weiterwerfen, Reservation wurde bereits erstellt
         }
       } else {
-        console.log(`[EmailReservation] Keine Telefonnummer vorhanden, WhatsApp-Nachricht wird nicht versendet`);
+        logger.log(`[EmailReservation] Keine Telefonnummer vorhanden, WhatsApp-Nachricht wird nicht versendet`);
       }
 
       return reservation;
     } catch (error) {
-      console.error('[EmailReservation] Fehler beim Erstellen der Reservation:', error);
+      logger.error('[EmailReservation] Fehler beim Erstellen der Reservation:', error);
       throw error;
     }
   }
@@ -146,11 +147,11 @@ export class EmailReservationService {
       );
 
       if (!parsedEmail) {
-        console.log(`[EmailReservation] Email ${emailMessage.messageId} konnte nicht als Reservation geparst werden`);
+        logger.log(`[EmailReservation] Email ${emailMessage.messageId} konnte nicht als Reservation geparst werden`);
         return null;
       }
 
-      console.log(`[EmailReservation] Email ${emailMessage.messageId} erfolgreich geparst:`, {
+      logger.log(`[EmailReservation] Email ${emailMessage.messageId} erfolgreich geparst:`, {
         reservationCode: parsedEmail.reservationCode,
         guestName: parsedEmail.guestName,
         checkInDate: parsedEmail.checkInDate,
@@ -168,7 +169,7 @@ export class EmailReservationService {
 
       return reservation;
     } catch (error) {
-      console.error(`[EmailReservation] Fehler beim Verarbeiten der Email ${emailMessage.messageId}:`, error);
+      logger.error(`[EmailReservation] Fehler beim Verarbeiten der Email ${emailMessage.messageId}:`, error);
       throw error;
     }
   }
@@ -184,7 +185,7 @@ export class EmailReservationService {
       // Lade Email-Konfiguration
       const emailConfig = await EmailReadingService.loadConfigFromOrganization(organizationId);
       if (!emailConfig) {
-        console.log(`[EmailReservation] Keine Email-Konfiguration für Organisation ${organizationId}`);
+        logger.log(`[EmailReservation] Keine Email-Konfiguration für Organisation ${organizationId}`);
         return 0;
       }
 
@@ -210,11 +211,11 @@ export class EmailReservationService {
         });
 
         if (emails.length === 0) {
-          console.log(`[EmailReservation] Keine neuen Emails für Organisation ${organizationId}`);
+          logger.log(`[EmailReservation] Keine neuen Emails für Organisation ${organizationId}`);
           return 0;
         }
 
-        console.log(`[EmailReservation] ${emails.length} neue Email(s) gefunden für Organisation ${organizationId}`);
+        logger.log(`[EmailReservation] ${emails.length} neue Email(s) gefunden für Organisation ${organizationId}`);
 
         let processedCount = 0;
 
@@ -228,24 +229,24 @@ export class EmailReservationService {
               // Keine markAsRead() oder moveToFolder() Aufrufe mehr!
               
               processedCount++;
-              console.log(`[EmailReservation] ✅ Email ${email.messageId} erfolgreich verarbeitet (Reservation ID: ${reservation.id})`);
+              logger.log(`[EmailReservation] ✅ Email ${email.messageId} erfolgreich verarbeitet (Reservation ID: ${reservation.id})`);
             } else {
-              console.log(`[EmailReservation] Email ${email.messageId} konnte nicht als Reservation erkannt werden`);
+              logger.log(`[EmailReservation] Email ${email.messageId} konnte nicht als Reservation erkannt werden`);
             }
           } catch (error) {
-            console.error(`[EmailReservation] Fehler beim Verarbeiten der Email ${email.messageId}:`, error);
+            logger.error(`[EmailReservation] Fehler beim Verarbeiten der Email ${email.messageId}:`, error);
             // Weiter mit nächster Email
           }
         }
 
-        console.log(`[EmailReservation] ${processedCount} von ${emails.length} Email(s) erfolgreich verarbeitet`);
+        logger.log(`[EmailReservation] ${processedCount} von ${emails.length} Email(s) erfolgreich verarbeitet`);
         return processedCount;
       } finally {
         // Trenne Verbindung
         emailService.disconnect();
       }
     } catch (error) {
-      console.error(`[EmailReservation] Fehler beim Email-Check für Organisation ${organizationId}:`, error);
+      logger.error(`[EmailReservation] Fehler beim Email-Check für Organisation ${organizationId}:`, error);
       throw error;
     }
   }

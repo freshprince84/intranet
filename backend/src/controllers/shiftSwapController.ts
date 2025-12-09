@@ -3,6 +3,7 @@ import { SwapStatus, ShiftStatus } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
 import { format } from 'date-fns';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * GET /api/shifts/swaps
@@ -121,7 +122,7 @@ export const getAllSwapRequests = async (req: Request, res: Response) => {
       data: swapRequests
     });
   } catch (error) {
-    console.error('[ShiftSwap] Fehler beim Abrufen der Tausch-Anfragen:', error);
+    logger.error('[ShiftSwap] Fehler beim Abrufen der Tausch-Anfragen:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Tausch-Anfragen'
@@ -209,7 +210,7 @@ export const getSwapRequestById = async (req: Request, res: Response) => {
       data: swapRequest
     });
   } catch (error) {
-    console.error('[ShiftSwap] Fehler beim Abrufen der Tausch-Anfrage:', error);
+    logger.error('[ShiftSwap] Fehler beim Abrufen der Tausch-Anfrage:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Tausch-Anfrage'
@@ -395,7 +396,7 @@ export const createSwapRequest = async (req: Request, res: Response) => {
       data: swapRequest
     });
   } catch (error) {
-    console.error('[ShiftSwap] Fehler beim Erstellen der Tausch-Anfrage:', error);
+    logger.error('[ShiftSwap] Fehler beim Erstellen der Tausch-Anfrage:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Erstellen der Tausch-Anfrage'
@@ -559,7 +560,7 @@ export const approveSwapRequest = async (req: Request, res: Response) => {
       data: updatedSwapRequest
     });
   } catch (error) {
-    console.error('[ShiftSwap] Fehler beim Genehmigen der Tausch-Anfrage:', error);
+    logger.error('[ShiftSwap] Fehler beim Genehmigen der Tausch-Anfrage:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Genehmigen der Tausch-Anfrage'
@@ -693,7 +694,7 @@ export const rejectSwapRequest = async (req: Request, res: Response) => {
       data: updatedSwapRequest
     });
   } catch (error) {
-    console.error('[ShiftSwap] Fehler beim Ablehnen der Tausch-Anfrage:', error);
+    logger.error('[ShiftSwap] Fehler beim Ablehnen der Tausch-Anfrage:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Ablehnen der Tausch-Anfrage'

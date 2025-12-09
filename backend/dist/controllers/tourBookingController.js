@@ -50,6 +50,7 @@ const filterToPrisma_1 = require("../utils/filterToPrisma");
 const filterCache_1 = require("../services/filterCache");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const organization_1 = require("../middleware/organization");
+const logger_1 = require("../utils/logger");
 const userSelect = {
     id: true,
     username: true,
@@ -101,7 +102,7 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 }
             }
             catch (filterError) {
-                console.error(`[getAllTourBookings] Fehler beim Laden von Filter ${filterId}:`, filterError);
+                logger_1.logger.error(`[getAllTourBookings] Fehler beim Laden von Filter ${filterId}:`, filterError);
             }
         }
         else if (filterConditions) {
@@ -227,7 +228,7 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[getAllTourBookings] Fehler:', error);
+        logger_1.logger.error('[getAllTourBookings] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Buchungen'
@@ -289,7 +290,7 @@ const getTourBookingById = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[getTourBookingById] Fehler:', error);
+        logger_1.logger.error('[getTourBookingById] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Buchung'
@@ -425,7 +426,7 @@ const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
             yield (0, commissionService_1.calculateCommission)(booking.id);
         }
         catch (commissionError) {
-            console.error('[createTourBooking] Fehler bei Kommissions-Berechnung:', commissionError);
+            logger_1.logger.error('[createTourBooking] Fehler bei Kommissions-Berechnung:', commissionError);
             // Nicht abbrechen, nur loggen
         }
         // Generiere Payment Link (analog zu Reservations)
@@ -463,7 +464,7 @@ const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 // await prisma.reservation.delete({ where: { id: dummyReservation.id } });
             }
             catch (paymentError) {
-                console.error('[createTourBooking] Fehler beim Erstellen des Payment-Links:', paymentError);
+                logger_1.logger.error('[createTourBooking] Fehler beim Erstellen des Payment-Links:', paymentError);
                 // Nicht abbrechen, nur loggen
             }
         }
@@ -474,7 +475,7 @@ const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 yield TourWhatsAppService.sendBookingRequestToProvider(booking.id, organizationId, branchId);
             }
             catch (whatsappError) {
-                console.error('[createTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+                logger_1.logger.error('[createTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
                 // Nicht abbrechen, nur loggen
             }
         }
@@ -504,7 +505,7 @@ const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error('[createTourBooking] Fehler:', error);
+        logger_1.logger.error('[createTourBooking] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Erstellen der Buchung'
@@ -587,7 +588,7 @@ const updateTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 yield (0, commissionService_1.calculateCommission)(bookingId);
             }
             catch (commissionError) {
-                console.error('[updateTourBooking] Fehler bei Kommissions-Berechnung:', commissionError);
+                logger_1.logger.error('[updateTourBooking] Fehler bei Kommissions-Berechnung:', commissionError);
             }
         }
         if (customerName !== undefined) {
@@ -625,7 +626,7 @@ const updateTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error('[updateTourBooking] Fehler:', error);
+        logger_1.logger.error('[updateTourBooking] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Aktualisieren der Buchung'
@@ -671,7 +672,7 @@ const deleteTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error('[deleteTourBooking] Fehler:', error);
+        logger_1.logger.error('[deleteTourBooking] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Löschen der Buchung'
@@ -748,7 +749,7 @@ const cancelTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 yield TourWhatsAppService.sendCancellationToCustomer(bookingId, bookingForNotification.tour.organizationId, bookingForNotification.branchId || null, (reason === null || reason === void 0 ? void 0 : reason.trim()) || undefined);
             }
             catch (whatsappError) {
-                console.error('[cancelTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+                logger_1.logger.error('[cancelTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
                 // Nicht abbrechen, nur loggen
             }
         }
@@ -758,7 +759,7 @@ const cancelTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error('[cancelTourBooking] Fehler:', error);
+        logger_1.logger.error('[cancelTourBooking] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Stornieren der Buchung'
@@ -797,7 +798,7 @@ const completeTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        console.error('[completeTourBooking] Fehler:', error);
+        logger_1.logger.error('[completeTourBooking] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Markieren der Buchung als abgeschlossen'
@@ -853,7 +854,7 @@ const getUserTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        console.error('[getUserTourBookings] Fehler:', error);
+        logger_1.logger.error('[getUserTourBookings] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Buchungen'
@@ -886,7 +887,7 @@ const getUserCommissions = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[getUserCommissions] Fehler:', error);
+        logger_1.logger.error('[getUserCommissions] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Kommissionen'

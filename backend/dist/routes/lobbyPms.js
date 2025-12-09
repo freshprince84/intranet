@@ -20,6 +20,7 @@ router.get('/reservations/:id', lobbyPmsController_1.getReservationById);
 router.put('/reservations/:id/check-in', lobbyPmsController_1.checkInReservation);
 // Synchronisation
 router.post('/sync', lobbyPmsController_1.syncReservations);
+router.post('/sync-full', lobbyPmsController_1.syncFullReservations); // ✅ MEMORY: Vollständiger Sync nach check_out_date (für manuellen ersten Sync)
 // Validierung
 router.get('/validate', lobbyPmsController_1.validateConnection);
 exports.default = router;

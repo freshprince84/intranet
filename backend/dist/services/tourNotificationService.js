@@ -47,6 +47,7 @@ const prisma_1 = require("../utils/prisma");
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("../controllers/notificationController");
 const translations_1 = require("../utils/translations");
+const logger_1 = require("../utils/logger");
 /**
  * Service für Tour-Benachrichtigungen
  */
@@ -96,10 +97,10 @@ class TourNotificationService {
                         relatedEntityType: 'tour_booking'
                     });
                 }
-                console.log(`[TourNotification] ✅ Tour-Buchung Notification gesendet an ${users.length} User in Org ${organizationId}`);
+                logger_1.logger.log(`[TourNotification] ✅ Tour-Buchung Notification gesendet an ${users.length} User in Org ${organizationId}`);
             }
             catch (error) {
-                console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Buchung Notification:', error);
+                logger_1.logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Buchung Notification:', error);
             }
         });
     }
@@ -149,7 +150,7 @@ class TourNotificationService {
                     select: { id: true }
                 });
                 if (!role) {
-                    console.log(`[TourNotification] ⚠️ Rolle "${tourRequestRoleName}" nicht gefunden, verwende Admin-Rolle`);
+                    logger_1.logger.log(`[TourNotification] ⚠️ Rolle "${tourRequestRoleName}" nicht gefunden, verwende Admin-Rolle`);
                     // Fallback: Admin-Rolle
                     const adminRole = yield prisma_1.prisma.role.findFirst({
                         where: {
@@ -159,7 +160,7 @@ class TourNotificationService {
                         select: { id: true }
                     });
                     if (!adminRole) {
-                        console.log(`[TourNotification] ⚠️ Admin-Rolle nicht gefunden, überspringe Notification`);
+                        logger_1.logger.log(`[TourNotification] ⚠️ Admin-Rolle nicht gefunden, überspringe Notification`);
                         return;
                     }
                     // Sende an alle User mit Admin-Rolle
@@ -213,10 +214,10 @@ class TourNotificationService {
                         });
                     }
                 }
-                console.log(`[TourNotification] ✅ Tour-Anfrage Notification gesendet`);
+                logger_1.logger.log(`[TourNotification] ✅ Tour-Anfrage Notification gesendet`);
             }
             catch (error) {
-                console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Anfrage Notification:', error);
+                logger_1.logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Anfrage Notification:', error);
             }
         });
     }
@@ -242,10 +243,10 @@ class TourNotificationService {
                     relatedEntityId: tourBookingId,
                     relatedEntityType: 'tour_booking_paid'
                 });
-                console.log(`[TourNotification] ✅ Tour-Bezahlung Notification gesendet`);
+                logger_1.logger.log(`[TourNotification] ✅ Tour-Bezahlung Notification gesendet`);
             }
             catch (error) {
-                console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Bezahlung Notification:', error);
+                logger_1.logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Bezahlung Notification:', error);
             }
         });
     }
@@ -294,10 +295,10 @@ class TourNotificationService {
                         relatedEntityType: 'tour_booking_cancelled_customer'
                     });
                 }
-                console.log(`[TourNotification] ✅ Tour-Stornierung (Kunde) Notification gesendet an ${users.length} User`);
+                logger_1.logger.log(`[TourNotification] ✅ Tour-Stornierung (Kunde) Notification gesendet an ${users.length} User`);
             }
             catch (error) {
-                console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Stornierung Notification:', error);
+                logger_1.logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Stornierung Notification:', error);
             }
         });
     }
@@ -353,10 +354,10 @@ class TourNotificationService {
                         });
                     }
                 }
-                console.log(`[TourNotification] ✅ Tour-Stornierung (Anbieter) Notification gesendet`);
+                logger_1.logger.log(`[TourNotification] ✅ Tour-Stornierung (Anbieter) Notification gesendet`);
             }
             catch (error) {
-                console.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Stornierung (Anbieter) Notification:', error);
+                logger_1.logger.error('[TourNotification] ⚠️ Fehler beim Senden der Tour-Stornierung (Anbieter) Notification:', error);
             }
         });
     }

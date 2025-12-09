@@ -49,6 +49,7 @@ exports.WhatsAppService = void 0;
 const axios_1 = __importDefault(require("axios"));
 const encryption_1 = require("../utils/encryption");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * WhatsApp Service für Versand von WhatsApp-Nachrichten
  *
@@ -77,7 +78,7 @@ class WhatsAppService {
             var _a, _b, _c;
             // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
             if (this.branchId) {
-                console.log(`[WhatsApp Service] Lade Settings für Branch ${this.branchId}`);
+                logger_1.logger.log(`[WhatsApp Service] Lade Settings für Branch ${this.branchId}`);
                 const branch = yield prisma_1.prisma.branch.findUnique({
                     where: { id: this.branchId },
                     select: {
@@ -87,7 +88,7 @@ class WhatsAppService {
                 });
                 if (branch === null || branch === void 0 ? void 0 : branch.whatsappSettings) {
                     // Branch hat eigene WhatsApp Settings
-                    console.log(`[WhatsApp Service] Branch hat eigene WhatsApp Settings`);
+                    logger_1.logger.log(`[WhatsApp Service] Branch hat eigene WhatsApp Settings`);
                     try {
                         // branch.whatsappSettings enthält direkt die WhatsApp Settings (kann verschachtelt sein)
                         // Verwende decryptBranchApiSettings für Branch Settings (entschlüsselt verschachtelte Settings)
@@ -104,7 +105,7 @@ class WhatsAppService {
                             this.apiSecret = whatsappSettings.apiSecret;
                             this.phoneNumberId = whatsappSettings.phoneNumberId;
                             this.businessAccountId = whatsappSettings.businessAccountId;
-                            console.log(`[WhatsApp Service] Branch Settings geladen:`, {
+                            logger_1.logger.log(`[WhatsApp Service] Branch Settings geladen:`, {
                                 provider: this.provider,
                                 hasApiKey: !!this.apiKey,
                                 phoneNumberId: this.phoneNumberId
@@ -113,48 +114,48 @@ class WhatsAppService {
                             return; // Erfolgreich geladen
                         }
                         else {
-                            console.warn(`[WhatsApp Service] Branch Settings gefunden, aber kein API Key vorhanden`);
+                            logger_1.logger.warn(`[WhatsApp Service] Branch Settings gefunden, aber kein API Key vorhanden`);
                         }
                     }
                     catch (error) {
-                        console.warn(`[WhatsApp Service] Fehler beim Laden der Branch Settings:`, error);
+                        logger_1.logger.warn(`[WhatsApp Service] Fehler beim Laden der Branch Settings:`, error);
                         // Fallback auf Organization Settings
                     }
                     // Fallback: Lade Organization Settings
                     if (branch.organizationId) {
-                        console.log(`[WhatsApp Service] Fallback: Lade Organization Settings für Organisation ${branch.organizationId}`);
+                        logger_1.logger.log(`[WhatsApp Service] Fallback: Lade Organization Settings für Organisation ${branch.organizationId}`);
                         this.organizationId = branch.organizationId;
                     }
                 }
                 else if (branch === null || branch === void 0 ? void 0 : branch.organizationId) {
                     // Branch hat keine Settings, aber Organization ID
-                    console.log(`[WhatsApp Service] Branch hat keine WhatsApp Settings, verwende Organization ${branch.organizationId}`);
+                    logger_1.logger.log(`[WhatsApp Service] Branch hat keine WhatsApp Settings, verwende Organization ${branch.organizationId}`);
                     this.organizationId = branch.organizationId;
                 }
             }
             // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
             if (this.organizationId) {
-                console.log(`[WhatsApp Service] Lade Settings für Organisation ${this.organizationId}`);
+                logger_1.logger.log(`[WhatsApp Service] Lade Settings für Organisation ${this.organizationId}`);
                 const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: this.organizationId },
                     select: { settings: true }
                 });
                 if (!(organization === null || organization === void 0 ? void 0 : organization.settings)) {
-                    console.error(`[WhatsApp Service] Keine Settings für Organisation ${this.organizationId} gefunden`);
+                    logger_1.logger.error(`[WhatsApp Service] Keine Settings für Organisation ${this.organizationId} gefunden`);
                     throw new Error(`WhatsApp ist nicht für Organisation ${this.organizationId} konfiguriert`);
                 }
                 // Prüfe ENCRYPTION_KEY
                 const encryptionKey = process.env.ENCRYPTION_KEY;
                 if (!encryptionKey) {
-                    console.warn('[WhatsApp Service] ⚠️ ENCRYPTION_KEY nicht gesetzt - versuche Settings ohne Entschlüsselung zu laden');
+                    logger_1.logger.warn('[WhatsApp Service] ⚠️ ENCRYPTION_KEY nicht gesetzt - versuche Settings ohne Entschlüsselung zu laden');
                 }
                 else {
-                    console.log(`[WhatsApp Service] ENCRYPTION_KEY ist gesetzt (Länge: ${encryptionKey.length})`);
+                    logger_1.logger.log(`[WhatsApp Service] ENCRYPTION_KEY ist gesetzt (Länge: ${encryptionKey.length})`);
                 }
                 try {
                     const settings = (0, encryption_1.decryptApiSettings)(organization.settings);
                     const whatsappSettings = settings === null || settings === void 0 ? void 0 : settings.whatsapp;
-                    console.log(`[WhatsApp Service] WhatsApp Settings geladen:`, {
+                    logger_1.logger.log(`[WhatsApp Service] WhatsApp Settings geladen:`, {
                         provider: whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.provider,
                         hasApiKey: !!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey),
                         apiKeyLength: ((_a = whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey) === null || _a === void 0 ? void 0 : _a.length) || 0,
@@ -164,7 +165,7 @@ class WhatsAppService {
                         phoneNumberId: whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.phoneNumberId
                     });
                     if (!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey)) {
-                        console.error(`[WhatsApp Service] WhatsApp API Key fehlt für Organisation ${this.organizationId}`);
+                        logger_1.logger.error(`[WhatsApp Service] WhatsApp API Key fehlt für Organisation ${this.organizationId}`);
                         throw new Error(`WhatsApp API Key ist nicht für Organisation ${this.organizationId} konfiguriert`);
                     }
                     this.provider = whatsappSettings.provider || 'twilio';
@@ -172,16 +173,16 @@ class WhatsAppService {
                     this.apiSecret = whatsappSettings.apiSecret;
                     this.phoneNumberId = whatsappSettings.phoneNumberId;
                     this.businessAccountId = whatsappSettings.businessAccountId;
-                    console.log(`[WhatsApp Service] Provider: ${this.provider}, Phone Number ID: ${this.phoneNumberId}`);
+                    logger_1.logger.log(`[WhatsApp Service] Provider: ${this.provider}, Phone Number ID: ${this.phoneNumberId}`);
                     // Erstelle Axios-Instanz basierend auf Provider
                     this.axiosInstance = this.createAxiosInstance();
                     return; // Erfolgreich geladen
                 }
                 catch (error) {
-                    console.error('[WhatsApp Service] Fehler beim Laden der Settings:', error);
+                    logger_1.logger.error('[WhatsApp Service] Fehler beim Laden der Settings:', error);
                     if (error instanceof Error) {
-                        console.error('[WhatsApp Service] Fehlermeldung:', error.message);
-                        console.error('[WhatsApp Service] Stack:', error.stack);
+                        logger_1.logger.error('[WhatsApp Service] Fehlermeldung:', error.message);
+                        logger_1.logger.error('[WhatsApp Service] Stack:', error.stack);
                     }
                     throw error;
                 }
@@ -232,23 +233,23 @@ class WhatsAppService {
     sendMessage(to, message, template, groupId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                console.log(`[WhatsApp Service] sendMessage aufgerufen für: ${to}`);
+                logger_1.logger.log(`[WhatsApp Service] sendMessage aufgerufen für: ${to}`);
                 yield this.loadSettings();
                 if (!this.axiosInstance) {
-                    console.error('[WhatsApp Service] Axios-Instanz nicht initialisiert');
+                    logger_1.logger.error('[WhatsApp Service] Axios-Instanz nicht initialisiert');
                     throw new Error('WhatsApp Service nicht initialisiert');
                 }
                 if (!this.apiKey) {
-                    console.error('[WhatsApp Service] API Key nicht gesetzt');
+                    logger_1.logger.error('[WhatsApp Service] API Key nicht gesetzt');
                     throw new Error('WhatsApp API Key nicht gesetzt');
                 }
-                console.log(`[WhatsApp Service] Sende Nachricht via ${this.provider}...`);
+                logger_1.logger.log(`[WhatsApp Service] Sende Nachricht via ${this.provider}...`);
                 // Prüfe ob es eine Gruppen-Nachricht ist
                 const isGroupMessage = groupId || (to.includes('@g.us'));
                 const targetGroupId = groupId || (isGroupMessage ? to : null);
                 if (isGroupMessage && targetGroupId) {
                     // Gruppen-Nachricht
-                    console.log(`[WhatsApp Service] Sende Gruppen-Nachricht an: ${targetGroupId}`);
+                    logger_1.logger.log(`[WhatsApp Service] Sende Gruppen-Nachricht an: ${targetGroupId}`);
                     if (this.provider === 'whatsapp-business-api') {
                         return yield this.sendViaWhatsAppBusiness(targetGroupId, message, template, undefined, undefined, true);
                     }
@@ -272,7 +273,7 @@ class WhatsAppService {
                 }
             }
             catch (error) {
-                console.error('[WhatsApp] Fehler beim Versenden:', error);
+                logger_1.logger.error('[WhatsApp] Fehler beim Versenden:', error);
                 throw error;
             }
         });
@@ -283,17 +284,17 @@ class WhatsAppService {
     sendImage(to, imageUrl, caption) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                console.log(`[WhatsApp Service] sendImage aufgerufen für: ${to}, Bild: ${imageUrl}`);
+                logger_1.logger.log(`[WhatsApp Service] sendImage aufgerufen für: ${to}, Bild: ${imageUrl}`);
                 yield this.loadSettings();
                 if (!this.axiosInstance) {
-                    console.error('[WhatsApp Service] Axios-Instanz nicht initialisiert');
+                    logger_1.logger.error('[WhatsApp Service] Axios-Instanz nicht initialisiert');
                     throw new Error('WhatsApp Service nicht initialisiert');
                 }
                 if (!this.apiKey) {
-                    console.error('[WhatsApp Service] API Key nicht gesetzt');
+                    logger_1.logger.error('[WhatsApp Service] API Key nicht gesetzt');
                     throw new Error('WhatsApp API Key nicht gesetzt');
                 }
-                console.log(`[WhatsApp Service] Sende Bild via ${this.provider}...`);
+                logger_1.logger.log(`[WhatsApp Service] Sende Bild via ${this.provider}...`);
                 // Normalisiere Telefonnummer
                 const normalizedPhone = this.normalizePhoneNumber(to);
                 if (this.provider === 'twilio') {
@@ -308,7 +309,7 @@ class WhatsAppService {
                 }
             }
             catch (error) {
-                console.error('[WhatsApp] Fehler beim Versenden des Bildes:', error);
+                logger_1.logger.error('[WhatsApp] Fehler beim Versenden des Bildes:', error);
                 throw error;
             }
         });
@@ -343,7 +344,7 @@ class WhatsAppService {
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    console.error('[WhatsApp Twilio] API Fehler:', (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data);
+                    logger_1.logger.error('[WhatsApp Twilio] API Fehler:', (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data);
                     throw new Error(`Twilio API Fehler: ${JSON.stringify((_b = axiosError.response) === null || _b === void 0 ? void 0 : _b.data)}`);
                 }
                 throw error;
@@ -360,7 +361,7 @@ class WhatsAppService {
                 throw new Error('WhatsApp Business Service nicht initialisiert');
             }
             if (!this.phoneNumberId) {
-                console.error('[WhatsApp Business] Phone Number ID fehlt!');
+                logger_1.logger.error('[WhatsApp Business] Phone Number ID fehlt!');
                 throw new Error('WhatsApp Phone Number ID ist nicht konfiguriert');
             }
             try {
@@ -377,24 +378,24 @@ class WhatsAppService {
                 if (caption) {
                     payload.image.caption = caption;
                 }
-                console.log(`[WhatsApp Business] Sende Bild an ${to} via Phone Number ID ${this.phoneNumberId}`);
-                console.log(`[WhatsApp Business] Payload:`, JSON.stringify(payload, null, 2));
+                logger_1.logger.log(`[WhatsApp Business] Sende Bild an ${to} via Phone Number ID ${this.phoneNumberId}`);
+                logger_1.logger.log(`[WhatsApp Business] Payload:`, JSON.stringify(payload, null, 2));
                 const response = yield this.axiosInstance.post('/messages', payload);
-                console.log(`[WhatsApp Business] Response Status: ${response.status}`);
-                console.log(`[WhatsApp Business] Response Data:`, JSON.stringify(response.data, null, 2));
+                logger_1.logger.log(`[WhatsApp Business] Response Status: ${response.status}`);
+                logger_1.logger.log(`[WhatsApp Business] Response Data:`, JSON.stringify(response.data, null, 2));
                 if ((_a = response.data) === null || _a === void 0 ? void 0 : _a.error) {
                     const errorData = response.data.error;
-                    console.error(`[WhatsApp Business] ⚠️ Fehler in Response-Daten:`, errorData);
+                    logger_1.logger.error(`[WhatsApp Business] ⚠️ Fehler in Response-Daten:`, errorData);
                     throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify(errorData)}`);
                 }
                 const returnedMessageId = (_d = (_c = (_b = response.data) === null || _b === void 0 ? void 0 : _b.messages) === null || _c === void 0 ? void 0 : _c[0]) === null || _d === void 0 ? void 0 : _d.id;
                 if (returnedMessageId) {
-                    console.log(`[WhatsApp Business] ✅ Bild gesendet, Message-ID: ${returnedMessageId}`);
+                    logger_1.logger.log(`[WhatsApp Business] ✅ Bild gesendet, Message-ID: ${returnedMessageId}`);
                 }
                 return true;
             }
             catch (error) {
-                console.error('[WhatsApp Business] Fehler beim Senden des Bildes:', error);
+                logger_1.logger.error('[WhatsApp Business] Fehler beim Senden des Bildes:', error);
                 throw error;
             }
         });
@@ -426,7 +427,7 @@ class WhatsAppService {
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    console.error('[WhatsApp Twilio] API Fehler:', (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data);
+                    logger_1.logger.error('[WhatsApp Twilio] API Fehler:', (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data);
                     throw new Error(`Twilio API Fehler: ${JSON.stringify((_b = axiosError.response) === null || _b === void 0 ? void 0 : _b.data)}`);
                 }
                 throw error;
@@ -446,7 +447,7 @@ class WhatsAppService {
                 throw new Error('WhatsApp Business Service nicht initialisiert');
             }
             if (!this.phoneNumberId) {
-                console.error('[WhatsApp Business] Phone Number ID fehlt!');
+                logger_1.logger.error('[WhatsApp Business] Phone Number ID fehlt!');
                 throw new Error('WhatsApp Phone Number ID ist nicht konfiguriert');
             }
             try {
@@ -485,23 +486,23 @@ class WhatsAppService {
                         }
                     };
                 }
-                console.log(`[WhatsApp Business] Sende Nachricht an ${to} via Phone Number ID ${this.phoneNumberId}`);
-                console.log(`[WhatsApp Business] Payload:`, JSON.stringify(payload, null, 2));
-                console.log(`[WhatsApp Business] Base URL:`, this.axiosInstance.defaults.baseURL);
+                logger_1.logger.log(`[WhatsApp Business] Sende Nachricht an ${to} via Phone Number ID ${this.phoneNumberId}`);
+                logger_1.logger.log(`[WhatsApp Business] Payload:`, JSON.stringify(payload, null, 2));
+                logger_1.logger.log(`[WhatsApp Business] Base URL:`, this.axiosInstance.defaults.baseURL);
                 const authHeader = (_a = this.axiosInstance.defaults.headers) === null || _a === void 0 ? void 0 : _a['Authorization'];
                 if (authHeader) {
-                    console.log(`[WhatsApp Business] Authorization Header Länge: ${authHeader.length}`);
-                    console.log(`[WhatsApp Business] Authorization Header Vorschau: ${authHeader.substring(0, 50)}...`);
-                    console.log(`[WhatsApp Business] Token Start: ${authHeader.substring(7, 30)}...`);
-                    console.log(`[WhatsApp Business] Token Ende: ...${authHeader.substring(authHeader.length - 20)}`);
+                    logger_1.logger.log(`[WhatsApp Business] Authorization Header Länge: ${authHeader.length}`);
+                    logger_1.logger.log(`[WhatsApp Business] Authorization Header Vorschau: ${authHeader.substring(0, 50)}...`);
+                    logger_1.logger.log(`[WhatsApp Business] Token Start: ${authHeader.substring(7, 30)}...`);
+                    logger_1.logger.log(`[WhatsApp Business] Token Ende: ...${authHeader.substring(authHeader.length - 20)}`);
                 }
                 else {
-                    console.error(`[WhatsApp Business] ⚠️ Authorization Header fehlt!`);
+                    logger_1.logger.error(`[WhatsApp Business] ⚠️ Authorization Header fehlt!`);
                 }
                 const response = yield this.axiosInstance.post('/messages', payload);
-                console.log(`[WhatsApp Business] Response Status: ${response.status}`);
-                console.log(`[WhatsApp Business] Response Headers:`, JSON.stringify(response.headers, null, 2));
-                console.log(`[WhatsApp Business] Response Data:`, JSON.stringify(response.data, null, 2));
+                logger_1.logger.log(`[WhatsApp Business] Response Status: ${response.status}`);
+                logger_1.logger.log(`[WhatsApp Business] Response Headers:`, JSON.stringify(response.headers, null, 2));
+                logger_1.logger.log(`[WhatsApp Business] Response Data:`, JSON.stringify(response.data, null, 2));
                 // WICHTIG: Prüfe Response-Daten auch bei Status 200
                 // Die API kann Status 200 zurückgeben, aber trotzdem Fehler in response.data enthalten
                 if ((_b = response.data) === null || _b === void 0 ? void 0 : _b.error) {
@@ -509,7 +510,7 @@ class WhatsAppService {
                     const errorCode = errorData.code;
                     const errorMessage = (errorData.message || '').toLowerCase();
                     const errorSubcode = errorData.error_subcode;
-                    console.error(`[WhatsApp Business] ⚠️ Fehler in Response-Daten (trotz Status 200):`, errorData);
+                    logger_1.logger.error(`[WhatsApp Business] ⚠️ Fehler in Response-Daten (trotz Status 200):`, errorData);
                     // Prüfe ob es ein 24h-Fenster-Fehler ist
                     const is24HourWindowError = errorCode === 131047 ||
                         errorCode === 131026 ||
@@ -519,7 +520,7 @@ class WhatsAppService {
                         errorMessage.includes('template required') ||
                         errorMessage.includes('outside the 24 hour');
                     if (is24HourWindowError) {
-                        console.log(`[WhatsApp Business] ⚠️ 24h-Fenster-Fehler erkannt in Response-Daten`);
+                        logger_1.logger.log(`[WhatsApp Business] ⚠️ 24h-Fenster-Fehler erkannt in Response-Daten`);
                     }
                     // Werfe Error, damit Template-Fallback ausgelöst wird
                     throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify(errorData)}`);
@@ -527,9 +528,9 @@ class WhatsAppService {
                 // Prüfe ob Message-ID zurückgegeben wurde
                 const returnedMessageId = (_e = (_d = (_c = response.data) === null || _c === void 0 ? void 0 : _c.messages) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.id;
                 if (returnedMessageId) {
-                    console.log(`[WhatsApp Business] ✅ Message-ID: ${returnedMessageId}`);
-                    console.log(`[WhatsApp Business] ⚠️ WICHTIG: Status 200 bedeutet nur, dass die API die Nachricht akzeptiert hat.`);
-                    console.log(`[WhatsApp Business] ⚠️ Die tatsächliche Zustellung kann über Webhook-Status-Updates verfolgt werden.`);
+                    logger_1.logger.log(`[WhatsApp Business] ✅ Message-ID: ${returnedMessageId}`);
+                    logger_1.logger.log(`[WhatsApp Business] ⚠️ WICHTIG: Status 200 bedeutet nur, dass die API die Nachricht akzeptiert hat.`);
+                    logger_1.logger.log(`[WhatsApp Business] ⚠️ Die tatsächliche Zustellung kann über Webhook-Status-Updates verfolgt werden.`);
                     // Speichere ausgehende Nachricht in Datenbank
                     try {
                         const normalizedPhone = this.normalizePhoneNumber(to);
@@ -555,23 +556,23 @@ class WhatsAppService {
                                     sentAt: new Date()
                                 }
                             });
-                            console.log(`[WhatsApp Business] ✅ Ausgehende Nachricht in Datenbank gespeichert`);
+                            logger_1.logger.log(`[WhatsApp Business] ✅ Ausgehende Nachricht in Datenbank gespeichert`);
                         }
                         else {
-                            console.warn(`[WhatsApp Business] ⚠️ BranchId nicht verfügbar - Nachricht nicht in DB gespeichert`);
+                            logger_1.logger.warn(`[WhatsApp Business] ⚠️ BranchId nicht verfügbar - Nachricht nicht in DB gespeichert`);
                         }
                     }
                     catch (dbError) {
-                        console.error(`[WhatsApp Business] ⚠️ Fehler beim Speichern der ausgehenden Nachricht:`, dbError);
+                        logger_1.logger.error(`[WhatsApp Business] ⚠️ Fehler beim Speichern der ausgehenden Nachricht:`, dbError);
                         // Weiter mit Verarbeitung, auch wenn Speichern fehlschlägt
                     }
                     // Prüfe ob es Warnungen gibt (können auf mögliche Probleme hinweisen)
                     if (((_f = response.data) === null || _f === void 0 ? void 0 : _f.warnings) && Array.isArray(response.data.warnings) && response.data.warnings.length > 0) {
-                        console.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, JSON.stringify(response.data.warnings, null, 2));
+                        logger_1.logger.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, JSON.stringify(response.data.warnings, null, 2));
                         // Prüfe ob Warnungen auf 24h-Fenster-Problem hinweisen
                         const warningsText = JSON.stringify(response.data.warnings).toLowerCase();
                         if (warningsText.includes('24 hour') || warningsText.includes('outside window') || warningsText.includes('template')) {
-                            console.warn(`[WhatsApp Business] ⚠️ Warnungen deuten auf mögliches 24h-Fenster-Problem hin - Template-Fallback wird empfohlen`);
+                            logger_1.logger.warn(`[WhatsApp Business] ⚠️ Warnungen deuten auf mögliches 24h-Fenster-Problem hin - Template-Fallback wird empfohlen`);
                             // Wir werfen hier keinen Error, weil die API die Nachricht akzeptiert hat
                             // Aber wir loggen es, damit der Template-Fallback später ausgelöst werden kann
                         }
@@ -579,25 +580,25 @@ class WhatsAppService {
                 }
                 else {
                     // Keine Message-ID zurückgegeben - könnte ein Problem sein
-                    console.error(`[WhatsApp Business] ❌ Keine Message-ID in Response zurückgegeben - möglicherweise wurde die Nachricht nicht akzeptiert`);
-                    console.error(`[WhatsApp Business] Response-Daten:`, JSON.stringify(response.data, null, 2));
+                    logger_1.logger.error(`[WhatsApp Business] ❌ Keine Message-ID in Response zurückgegeben - möglicherweise wurde die Nachricht nicht akzeptiert`);
+                    logger_1.logger.error(`[WhatsApp Business] Response-Daten:`, JSON.stringify(response.data, null, 2));
                     // Prüfe ob es Warnungen gibt
                     if ((_g = response.data) === null || _g === void 0 ? void 0 : _g.warnings) {
-                        console.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, response.data.warnings);
+                        logger_1.logger.warn(`[WhatsApp Business] ⚠️ Warnungen in Response:`, response.data.warnings);
                     }
                     // Prüfe ob response.data leer ist oder unerwartete Struktur hat
                     if (!response.data || Object.keys(response.data).length === 0) {
-                        console.error(`[WhatsApp Business] ❌ Response-Daten sind leer - möglicherweise wurde die Nachricht nicht akzeptiert`);
+                        logger_1.logger.error(`[WhatsApp Business] ❌ Response-Daten sind leer - möglicherweise wurde die Nachricht nicht akzeptiert`);
                         throw new Error('WhatsApp Business API: Response-Daten sind leer - Nachricht wurde möglicherweise nicht akzeptiert');
                     }
                     // Wenn Template verwendet wird, ist Message-ID optional (kann später kommen)
                     // Aber bei Session Messages sollte eine Message-ID vorhanden sein
                     if (!template) {
-                        console.error(`[WhatsApp Business] ❌ Session Message: Keine Message-ID zurückgegeben - Nachricht wurde möglicherweise nicht akzeptiert`);
+                        logger_1.logger.error(`[WhatsApp Business] ❌ Session Message: Keine Message-ID zurückgegeben - Nachricht wurde möglicherweise nicht akzeptiert`);
                         throw new Error('WhatsApp Business API: Session Message - Keine Message-ID zurückgegeben - Nachricht wurde möglicherweise nicht akzeptiert');
                     }
                     else {
-                        console.warn(`[WhatsApp Business] ⚠️ Template Message: Keine Message-ID zurückgegeben (kann normal sein, wird später über Webhook bestätigt)`);
+                        logger_1.logger.warn(`[WhatsApp Business] ⚠️ Template Message: Keine Message-ID zurückgegeben (kann normal sein, wird später über Webhook bestätigt)`);
                     }
                 }
                 return response.status === 200;
@@ -605,16 +606,16 @@ class WhatsAppService {
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    console.error('[WhatsApp Business] API Fehler Details:');
-                    console.error('  Status:', (_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.status);
-                    console.error('  Status Text:', (_j = axiosError.response) === null || _j === void 0 ? void 0 : _j.statusText);
-                    console.error('  Response Data:', JSON.stringify((_k = axiosError.response) === null || _k === void 0 ? void 0 : _k.data, null, 2));
-                    console.error('  Request URL:', (_l = axiosError.config) === null || _l === void 0 ? void 0 : _l.url);
-                    console.error('  Request Method:', (_m = axiosError.config) === null || _m === void 0 ? void 0 : _m.method);
-                    console.error('  Request Headers:', JSON.stringify((_o = axiosError.config) === null || _o === void 0 ? void 0 : _o.headers, null, 2));
+                    logger_1.logger.error('[WhatsApp Business] API Fehler Details:');
+                    logger_1.logger.error('  Status:', (_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.status);
+                    logger_1.logger.error('  Status Text:', (_j = axiosError.response) === null || _j === void 0 ? void 0 : _j.statusText);
+                    logger_1.logger.error('  Response Data:', JSON.stringify((_k = axiosError.response) === null || _k === void 0 ? void 0 : _k.data, null, 2));
+                    logger_1.logger.error('  Request URL:', (_l = axiosError.config) === null || _l === void 0 ? void 0 : _l.url);
+                    logger_1.logger.error('  Request Method:', (_m = axiosError.config) === null || _m === void 0 ? void 0 : _m.method);
+                    logger_1.logger.error('  Request Headers:', JSON.stringify((_o = axiosError.config) === null || _o === void 0 ? void 0 : _o.headers, null, 2));
                     throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify((_p = axiosError.response) === null || _p === void 0 ? void 0 : _p.data)}`);
                 }
-                console.error('[WhatsApp Business] Unbekannter Fehler:', error);
+                logger_1.logger.error('[WhatsApp Business] Unbekannter Fehler:', error);
                 throw error;
             }
         });
@@ -674,7 +675,7 @@ class WhatsAppService {
                         }
                     });
                     if (!lastIncomingMessage) {
-                        console.log(`[WhatsApp Service] ⚠️ Keine eingehende WhatsApp-Nachricht von ${to} in den letzten 24h gefunden - 24h-Fenster nicht aktiv - verwende direkt Template Message`);
+                        logger_1.logger.log(`[WhatsApp Service] ⚠️ Keine eingehende WhatsApp-Nachricht von ${to} in den letzten 24h gefunden - 24h-Fenster nicht aktiv - verwende direkt Template Message`);
                         // Überspringe Session Message und verwende direkt Template
                         yield this.loadSettings();
                         if (!this.axiosInstance || !this.phoneNumberId) {
@@ -697,7 +698,7 @@ class WhatsAppService {
                         const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
                         const templateResult = yield this.sendViaWhatsAppBusiness(normalizedPhone2, message, adjustedTemplateName, formattedParams, languageCode);
                         if (templateResult) {
-                            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (direkt, da 24h-Fenster nicht aktiv)`);
+                            logger_1.logger.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (direkt, da 24h-Fenster nicht aktiv)`);
                             return true;
                         }
                         else {
@@ -706,98 +707,98 @@ class WhatsAppService {
                     }
                     else {
                         const hoursAgo = Math.round((Date.now() - lastIncomingMessage.sentAt.getTime()) / (60 * 60 * 1000));
-                        console.log(`[WhatsApp Service] ✅ Eingehende WhatsApp-Nachricht von ${to} vor ${hoursAgo} Stunden gefunden - 24h-Fenster ist aktiv - versuche Session Message`);
+                        logger_1.logger.log(`[WhatsApp Service] ✅ Eingehende WhatsApp-Nachricht von ${to} vor ${hoursAgo} Stunden gefunden - 24h-Fenster ist aktiv - versuche Session Message`);
                     }
                 }
                 catch (dbError) {
-                    console.warn(`[WhatsApp Service] ⚠️ Fehler bei Datenbank-Prüfung für 24h-Fenster:`, dbError);
+                    logger_1.logger.warn(`[WhatsApp Service] ⚠️ Fehler bei Datenbank-Prüfung für 24h-Fenster:`, dbError);
                     // Bei Fehler: Versuche trotzdem Session Message
                 }
             }
             try {
                 // Versuche zuerst Session Message (24h-Fenster)
-                console.log(`[WhatsApp Service] Versuche Session Message (24h-Fenster) für ${to}...`);
+                logger_1.logger.log(`[WhatsApp Service] Versuche Session Message (24h-Fenster) für ${to}...`);
                 const sessionResult = yield this.sendMessage(to, message);
                 if (sessionResult) {
-                    console.log(`[WhatsApp Service] ✅ Session Message erfolgreich gesendet an ${to}`);
+                    logger_1.logger.log(`[WhatsApp Service] ✅ Session Message erfolgreich gesendet an ${to}`);
                     return true;
                 }
                 else {
-                    console.warn(`[WhatsApp Service] ⚠️ Session Message gab false zurück für ${to}`);
+                    logger_1.logger.warn(`[WhatsApp Service] ⚠️ Session Message gab false zurück für ${to}`);
                     throw new Error('Session Message gab false zurück');
                 }
             }
             catch (error) {
                 // Detailliertes Logging des Fehlers
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                console.error(`[WhatsApp Service] Fehler bei Session Message für ${to}:`, errorMessage);
+                logger_1.logger.error(`[WhatsApp Service] Fehler bei Session Message für ${to}:`, errorMessage);
                 // Prüfe ob Fehler "outside 24h window" ist
                 const is24HourWindowError = this.isOutside24HourWindowError(error);
                 if (is24HourWindowError) {
-                    console.log(`[WhatsApp Service] ⚠️ 24h-Fenster abgelaufen, verwende Template Message...`);
+                    logger_1.logger.log(`[WhatsApp Service] ⚠️ 24h-Fenster abgelaufen, verwende Template Message...`);
                 }
                 else {
-                    console.log(`[WhatsApp Service] ⚠️ Session Message fehlgeschlagen (${errorMessage}), versuche Template Message als Fallback...`);
+                    logger_1.logger.log(`[WhatsApp Service] ⚠️ Session Message fehlgeschlagen (${errorMessage}), versuche Template Message als Fallback...`);
                 }
                 // Template-Fallback versuchen (wenn Template-Name vorhanden)
                 // WICHTIG: Template-Fallback wird jetzt bei ALLEN Fehlern versucht, nicht nur bei 24h-Fenster-Fehlern
                 // Das macht Sinn, weil Templates auch bei anderen Fehlern funktionieren können (z.B. OAuth-Fehler, etc.)
                 if (!templateName) {
-                    console.error('[WhatsApp Service] Template-Name fehlt für Fallback!');
+                    logger_1.logger.error('[WhatsApp Service] Template-Name fehlt für Fallback!');
                     if (is24HourWindowError) {
                         throw new Error('Template Message erforderlich (24h-Fenster abgelaufen), aber kein Template-Name angegeben');
                     }
                     else {
                         // Bei anderen Fehlern ist Template optional, aber empfohlen
-                        console.warn('[WhatsApp Service] ⚠️ Template-Name fehlt - Session Message fehlgeschlagen, aber kein Fallback möglich');
+                        logger_1.logger.warn('[WhatsApp Service] ⚠️ Template-Name fehlt - Session Message fehlgeschlagen, aber kein Fallback möglich');
                         throw error;
                     }
                 }
                 // Fallback: Template Message
                 try {
-                    console.log(`[WhatsApp Service] Lade Settings für Template Message...`);
+                    logger_1.logger.log(`[WhatsApp Service] Lade Settings für Template Message...`);
                     yield this.loadSettings();
                     if (!this.axiosInstance || !this.phoneNumberId) {
                         throw new Error('WhatsApp Service nicht initialisiert');
                     }
                     const normalizedPhone = this.normalizePhoneNumber(to);
-                    console.log(`[WhatsApp Service] Normalisierte Telefonnummer: ${normalizedPhone}`);
+                    logger_1.logger.log(`[WhatsApp Service] Normalisierte Telefonnummer: ${normalizedPhone}`);
                     // Formatiere Template-Parameter
                     const formattedParams = (templateParams === null || templateParams === void 0 ? void 0 : templateParams.map(text => ({
                         type: 'text',
                         text: text
                     }))) || [];
-                    console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
+                    logger_1.logger.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
                     // Template-Sprache: Reservation > Environment-Variable > Fallback
                     let languageCode;
                     if (reservation) {
                         const { CountryLanguageService } = require('./countryLanguageService');
                         languageCode = CountryLanguageService.getLanguageForReservation(reservation);
-                        console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (basierend auf Reservation)`);
+                        logger_1.logger.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (basierend auf Reservation)`);
                     }
                     else {
                         languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
-                        console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (aus Environment-Variable)`);
+                        logger_1.logger.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (aus Environment-Variable)`);
                     }
                     // Passe Template-Namen basierend auf Sprache an
                     // Englische Templates haben einen Unterstrich am Ende: reservation_checkin_invitation_
                     // Spanische Templates haben keinen Unterstrich: reservation_checkin_invitation
                     const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
-                    console.log(`[WhatsApp Service] Template-Name (angepasst für Sprache ${languageCode}): ${adjustedTemplateName}`);
+                    logger_1.logger.log(`[WhatsApp Service] Template-Name (angepasst für Sprache ${languageCode}): ${adjustedTemplateName}`);
                     const templateResult = yield this.sendViaWhatsAppBusiness(normalizedPhone, message, adjustedTemplateName, formattedParams, languageCode);
                     if (templateResult) {
-                        console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (Fallback nach Session Message Fehler)`);
+                        logger_1.logger.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (Fallback nach Session Message Fehler)`);
                         return true;
                     }
                     else {
-                        console.error(`[WhatsApp Service] ❌ Template Message gab false zurück für ${to}`);
+                        logger_1.logger.error(`[WhatsApp Service] ❌ Template Message gab false zurück für ${to}`);
                         throw new Error('Template Message gab false zurück');
                     }
                 }
                 catch (templateError) {
-                    console.error('[WhatsApp Service] ❌ Fehler bei Template Message:', templateError);
+                    logger_1.logger.error('[WhatsApp Service] ❌ Fehler bei Template Message:', templateError);
                     const templateErrorMessage = templateError instanceof Error ? templateError.message : String(templateError);
-                    console.error('[WhatsApp Service] Template Error Details:', templateErrorMessage);
+                    logger_1.logger.error('[WhatsApp Service] Template Error Details:', templateErrorMessage);
                     // Wenn Template auch fehlschlägt, werfe den ursprünglichen Fehler (Session Message Fehler)
                     // Das gibt mehr Kontext über das ursprüngliche Problem
                     throw new Error(`Session Message fehlgeschlagen: ${errorMessage}. Template-Fallback auch fehlgeschlagen: ${templateErrorMessage}`);
@@ -860,48 +861,48 @@ class WhatsAppService {
     ) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                console.log(`[WhatsApp Service] Sende DIREKT Template Message an ${to} (kein Session Message Fallback)`);
+                logger_1.logger.log(`[WhatsApp Service] Sende DIREKT Template Message an ${to} (kein Session Message Fallback)`);
                 yield this.loadSettings();
                 if (!this.axiosInstance || !this.phoneNumberId) {
                     throw new Error('WhatsApp Service nicht initialisiert');
                 }
                 const normalizedPhone = this.normalizePhoneNumber(to);
-                console.log(`[WhatsApp Service] Normalisierte Telefonnummer: ${normalizedPhone}`);
+                logger_1.logger.log(`[WhatsApp Service] Normalisierte Telefonnummer: ${normalizedPhone}`);
                 // Formatiere Template-Parameter
                 const formattedParams = templateParams.map(text => ({
                     type: 'text',
                     text: String(text)
                 }));
-                console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
+                logger_1.logger.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
                 // Template-Sprache: Reservation > Environment-Variable > Fallback
                 let languageCode;
                 if (reservation) {
                     const { CountryLanguageService } = require('./countryLanguageService');
                     languageCode = CountryLanguageService.getLanguageForReservation(reservation);
-                    console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (basierend auf Reservation)`);
+                    logger_1.logger.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (basierend auf Reservation)`);
                 }
                 else {
                     languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
-                    console.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (aus Environment-Variable)`);
+                    logger_1.logger.log(`[WhatsApp Service] Template-Sprache: ${languageCode} (aus Environment-Variable)`);
                 }
                 // Passe Template-Namen basierend auf Sprache an
                 const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
-                console.log(`[WhatsApp Service] Template-Name (angepasst für Sprache ${languageCode}): ${adjustedTemplateName}`);
+                logger_1.logger.log(`[WhatsApp Service] Template-Name (angepasst für Sprache ${languageCode}): ${adjustedTemplateName}`);
                 const templateResult = yield this.sendViaWhatsAppBusiness(normalizedPhone, message || '', // Wird ignoriert, da Template verwendet wird
                 adjustedTemplateName, formattedParams, languageCode);
                 if (templateResult) {
-                    console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to}`);
+                    logger_1.logger.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to}`);
                     return true;
                 }
                 else {
-                    console.error(`[WhatsApp Service] ❌ Template Message gab false zurück für ${to}`);
+                    logger_1.logger.error(`[WhatsApp Service] ❌ Template Message gab false zurück für ${to}`);
                     throw new Error('Template Message gab false zurück');
                 }
             }
             catch (error) {
-                console.error('[WhatsApp Service] ❌ Fehler bei Template Message:', error);
+                logger_1.logger.error('[WhatsApp Service] ❌ Fehler bei Template Message:', error);
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                console.error('[WhatsApp Service] Template Error Details:', errorMessage);
+                logger_1.logger.error('[WhatsApp Service] Template Error Details:', errorMessage);
                 throw error;
             }
         });
@@ -1050,7 +1051,7 @@ Acceso:
                 if (!this.axiosInstance || !this.apiKey) {
                     throw new Error('WhatsApp Service nicht initialisiert');
                 }
-                console.log(`[WhatsApp Service] Lade Media ${mediaId} herunter...`);
+                logger_1.logger.log(`[WhatsApp Service] Lade Media ${mediaId} herunter...`);
                 // Schritt 1: Hole Media-URL
                 // WhatsApp Business API Endpoint: GET https://graph.facebook.com/v18.0/{media-id}
                 // Erstelle separate Axios-Instanz für Media-Download (baseURL enthält phoneNumberId, was hier nicht benötigt wird)
@@ -1065,7 +1066,7 @@ Acceso:
                 const mediaUrl = mediaInfoResponse.data.url;
                 const mimeType = mediaInfoResponse.data.mime_type || 'image/jpeg';
                 const fileName = mediaInfoResponse.data.filename || `whatsapp-media-${mediaId}.${this.getFileExtension(mimeType)}`;
-                console.log(`[WhatsApp Service] Media-URL erhalten: ${mediaUrl.substring(0, 50)}...`);
+                logger_1.logger.log(`[WhatsApp Service] Media-URL erhalten: ${mediaUrl.substring(0, 50)}...`);
                 // Schritt 2: Lade die tatsächliche Datei herunter
                 const mediaResponse = yield axios_1.default.get(mediaUrl, {
                     responseType: 'arraybuffer',
@@ -1074,7 +1075,7 @@ Acceso:
                     }
                 });
                 const buffer = Buffer.from(mediaResponse.data);
-                console.log(`[WhatsApp Service] Media heruntergeladen: ${buffer.length} bytes, Type: ${mimeType}`);
+                logger_1.logger.log(`[WhatsApp Service] Media heruntergeladen: ${buffer.length} bytes, Type: ${mimeType}`);
                 return {
                     buffer,
                     mimeType,
@@ -1082,10 +1083,10 @@ Acceso:
                 };
             }
             catch (error) {
-                console.error('[WhatsApp Service] Fehler beim Herunterladen von Media:', error);
+                logger_1.logger.error('[WhatsApp Service] Fehler beim Herunterladen von Media:', error);
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    console.error('[WhatsApp Service] API Fehler:', (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data);
+                    logger_1.logger.error('[WhatsApp Service] API Fehler:', (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data);
                     throw new Error(`WhatsApp Media Download Fehler: ${JSON.stringify((_b = axiosError.response) === null || _b === void 0 ? void 0 : _b.data)}`);
                 }
                 throw error;

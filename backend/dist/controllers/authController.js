@@ -23,6 +23,7 @@ const emailService_1 = require("../services/emailService");
 const prisma_1 = require("../utils/prisma");
 const userCache_1 = require("../services/userCache");
 const organizationCache_1 = require("../utils/organizationCache");
+const logger_1 = require("../utils/logger");
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, password, username, first_name, last_name, language } = req.body;
@@ -33,7 +34,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             where: { id: 2 }
         });
         if (!userRole) {
-            console.error('User-Rolle nicht gefunden');
+            logger_1.logger.error('User-Rolle nicht gefunden');
             return res.status(500).json({ message: 'User-Rolle nicht gefunden' });
         }
         // Prüfe ob Benutzer bereits existiert
@@ -119,7 +120,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         };
         // 📧 E-Mail mit Anmeldeinformationen versenden (asynchron, blockiert nicht die Response)
         (0, emailService_1.sendRegistrationEmail)(user.email, finalUsername, password).catch((error) => {
-            console.error('Fehler beim Versenden der Registrierungs-E-Mail:', error);
+            logger_1.logger.error('Fehler beim Versenden der Registrierungs-E-Mail:', error);
             // E-Mail-Fehler blockieren nicht die Registrierung
         });
         res.status(201).json({
@@ -129,7 +130,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     catch (error) {
-        console.error('Register error:', error);
+        logger_1.logger.error('Register error:', error);
         res.status(400).json({
             message: 'Fehler bei der Registrierung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -197,7 +198,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     activeRole = Object.assign(Object.assign({}, roleToActivate), { lastUsed: true });
                 }
                 catch (error) {
-                    console.error('[LOGIN] Fehler beim Aktualisieren des UserRole-Eintrags:', error);
+                    logger_1.logger.error('[LOGIN] Fehler beim Aktualisieren des UserRole-Eintrags:', error);
                     return res.status(500).json({
                         message: 'Fehler bei der Rollenzuweisung',
                         error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -207,7 +208,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         // Nach allen Versuchen, eine aktive Rolle zu finden oder zuzuweisen, überprüfen wir nochmals
         if (!activeRole) {
-            console.error('[LOGIN] Kritischer Fehler: Keine aktive Rolle konnte zugewiesen werden');
+            logger_1.logger.error('[LOGIN] Kritischer Fehler: Keine aktive Rolle konnte zugewiesen werden');
             return res.status(500).json({
                 message: 'Kritischer Fehler: Keine Rolle konnte zugewiesen werden'
             });
@@ -230,8 +231,8 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         // Debug: Logge Logo-Daten vor Login-Response
         const activeRoleOrg = (_a = user.roles.find(r => r.lastUsed)) === null || _a === void 0 ? void 0 : _a.role.organization;
-        console.log('=== LOGIN LOGO DEBUG ===');
-        console.log('Active role organization:', activeRoleOrg ? {
+        logger_1.logger.log('=== LOGIN LOGO DEBUG ===');
+        logger_1.logger.log('Active role organization:', activeRoleOrg ? {
             id: activeRoleOrg.id,
             name: activeRoleOrg.name,
             logo: activeRoleOrg.logo ? (activeRoleOrg.logo === 'null' ? 'String "null" (WIRD KORRIGIERT)' : `${activeRoleOrg.logo.substring(0, 50)}...`) : 'null'
@@ -267,11 +268,11 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             // OrganizationCache vorfüllen
             organizationCache_1.organizationCache.invalidate(user.id); // Alten Cache löschen falls vorhanden
             yield organizationCache_1.organizationCache.get(user.id);
-            console.log(`[LOGIN] ✅ Cache-Warming abgeschlossen für User ${user.id}`);
+            logger_1.logger.log(`[LOGIN] ✅ Cache-Warming abgeschlossen für User ${user.id}`);
         }
         catch (cacheError) {
             // Cache-Warming-Fehler sollten Login nicht blockieren
-            console.error('[LOGIN] ⚠️ Cache-Warming fehlgeschlagen (nicht kritisch):', cacheError);
+            logger_1.logger.error('[LOGIN] ⚠️ Cache-Warming fehlgeschlagen (nicht kritisch):', cacheError);
         }
         // Bereite die Benutzerinformationen für die Antwort vor
         const userResponse = {
@@ -306,7 +307,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     catch (error) {
-        console.error('[LOGIN] Unbehandelter Fehler:', error);
+        logger_1.logger.error('[LOGIN] Unbehandelter Fehler:', error);
         res.status(500).json({
             message: 'Fehler beim Login',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -319,7 +320,7 @@ const logout = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
         return res.status(200).json({ message: 'Logout erfolgreich' });
     }
     catch (error) {
-        console.error('Logout-Fehler:', error);
+        logger_1.logger.error('Logout-Fehler:', error);
         return res.status(500).json({
             message: 'Fehler beim Logout',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -383,7 +384,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.json({ user: userResponse });
     }
     catch (error) {
-        console.error('getCurrentUser Fehler:', error);
+        logger_1.logger.error('getCurrentUser Fehler:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen des Benutzers',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -429,7 +430,7 @@ const requestPasswordReset = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const successMessage = 'Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.';
         if (!user) {
             // Logge intern, aber sende keine Fehlermeldung
-            console.log(`[PASSWORD_RESET] Passwort-Reset-Anfrage für nicht existierende E-Mail: ${email}`);
+            logger_1.logger.log(`[PASSWORD_RESET] Passwort-Reset-Anfrage für nicht existierende E-Mail: ${email}`);
             return res.status(200).json({ message: successMessage });
         }
         // Generiere einen sicheren Token (32 Bytes = 44 Zeichen Base64)
@@ -447,20 +448,20 @@ const requestPasswordReset = (req, res) => __awaiter(void 0, void 0, void 0, fun
         });
         // Finde die Organisation des Benutzers (erste aktive Rolle oder erste Rolle)
         let organizationId = undefined;
-        console.log(`[PASSWORD_RESET] Benutzer hat ${user.roles.length} Rolle(n)`);
+        logger_1.logger.log(`[PASSWORD_RESET] Benutzer hat ${user.roles.length} Rolle(n)`);
         const activeRole = user.roles.find(r => r.lastUsed === true);
         if ((_a = activeRole === null || activeRole === void 0 ? void 0 : activeRole.role) === null || _a === void 0 ? void 0 : _a.organization) {
             organizationId = activeRole.role.organization.id;
-            console.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (aktive Rolle)`);
+            logger_1.logger.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (aktive Rolle)`);
         }
         else if (user.roles.length > 0 && ((_c = (_b = user.roles[0]) === null || _b === void 0 ? void 0 : _b.role) === null || _c === void 0 ? void 0 : _c.organization)) {
             organizationId = user.roles[0].role.organization.id;
-            console.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (erste Rolle)`);
+            logger_1.logger.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (erste Rolle)`);
         }
         else {
-            console.log(`[PASSWORD_RESET] ⚠️ Keine Organisation gefunden für Benutzer ${user.id}`);
+            logger_1.logger.log(`[PASSWORD_RESET] ⚠️ Keine Organisation gefunden für Benutzer ${user.id}`);
             if (user.roles.length > 0) {
-                console.log(`[PASSWORD_RESET] Rollen vorhanden, aber keine Organisation zugeordnet`);
+                logger_1.logger.log(`[PASSWORD_RESET] Rollen vorhanden, aber keine Organisation zugeordnet`);
             }
         }
         // Generiere Reset-Link
@@ -469,14 +470,14 @@ const requestPasswordReset = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const resetLink = `${frontendUrl}/reset-password?token=${token}`;
         // Sende E-Mail (asynchron, blockiert nicht die Response) mit organisationId
         (0, emailService_1.sendPasswordResetEmail)(user.email, user.username, resetLink, organizationId).catch((error) => {
-            console.error('Fehler beim Versenden der Passwort-Reset-E-Mail:', error);
+            logger_1.logger.error('Fehler beim Versenden der Passwort-Reset-E-Mail:', error);
             // E-Mail-Fehler blockieren nicht die Response
         });
-        console.log(`[PASSWORD_RESET] Passwort-Reset-Token erstellt für Benutzer: ${user.username} (${user.email})`);
+        logger_1.logger.log(`[PASSWORD_RESET] Passwort-Reset-Token erstellt für Benutzer: ${user.username} (${user.email})`);
         res.status(200).json({ message: successMessage });
     }
     catch (error) {
-        console.error('[PASSWORD_RESET] Fehler bei Passwort-Reset-Anfrage:', error);
+        logger_1.logger.error('[PASSWORD_RESET] Fehler bei Passwort-Reset-Anfrage:', error);
         // Auch bei Fehlern die gleiche Erfolgsmeldung zurückgeben (Sicherheit)
         res.status(200).json({
             message: 'Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.'
@@ -526,11 +527,11 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 data: { used: true }
             })
         ]);
-        console.log(`[PASSWORD_RESET] Passwort erfolgreich zurückgesetzt für Benutzer: ${resetToken.user.username} (${resetToken.user.email})`);
+        logger_1.logger.log(`[PASSWORD_RESET] Passwort erfolgreich zurückgesetzt für Benutzer: ${resetToken.user.username} (${resetToken.user.email})`);
         res.status(200).json({ message: 'Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt mit dem neuen Passwort anmelden.' });
     }
     catch (error) {
-        console.error('[PASSWORD_RESET] Fehler beim Zurücksetzen des Passworts:', error);
+        logger_1.logger.error('[PASSWORD_RESET] Fehler beim Zurücksetzen des Passworts:', error);
         res.status(500).json({
             message: 'Fehler beim Zurücksetzen des Passworts',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

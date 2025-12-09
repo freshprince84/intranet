@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.userCache = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * In-Memory Cache für User-Daten aus authMiddleware
  *
@@ -81,7 +82,7 @@ class UserCache {
                 return data;
             }
             catch (error) {
-                console.error(`[UserCache] Fehler beim Laden für User ${userId}:`, error);
+                logger_1.logger.error(`[UserCache] Fehler beim Laden für User ${userId}:`, error);
                 return null;
             }
         });

@@ -1,6 +1,7 @@
 import { prisma } from '../utils/prisma';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { Request } from 'express';
+import { logger } from '../utils/logger';
 
 interface Branch {
   id: number;
@@ -97,7 +98,7 @@ class BranchCache {
 
       return branches;
     } catch (error) {
-      console.error(`[BranchCache] Fehler beim Laden für User ${userId}:`, error);
+      logger.error(`[BranchCache] Fehler beim Laden für User ${userId}:`, error);
       return null;
     }
   }

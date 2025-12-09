@@ -4,6 +4,7 @@ const express_1 = require("express");
 const roleController_1 = require("../controllers/roleController");
 const auth_1 = require("../middleware/auth");
 const organization_1 = require("../middleware/organization");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 // Authentifizierung und Organisation-Kontext zuerst setzen
 router.use(auth_1.authMiddleware);
@@ -21,11 +22,11 @@ const roleAuthMiddleware = (req, res, next) => {
             return false;
         });
         if (hasRoleReadPermission) {
-            console.log('Benutzer hat Leseberechtigung für Organization Management');
+            logger_1.logger.log('Benutzer hat Leseberechtigung für Organization Management');
             return next();
         }
         else {
-            console.log('Benutzer hat KEINE Leseberechtigung für Organization Management');
+            logger_1.logger.log('Benutzer hat KEINE Leseberechtigung für Organization Management');
             return res.status(403).json({ message: 'Leseberechtigung für Rollen erforderlich' });
         }
     }
@@ -39,10 +40,10 @@ const roleAuthMiddleware = (req, res, next) => {
         return false;
     });
     if (!hasRoleWritePermission) {
-        console.log('Benutzer hat KEINE Schreibberechtigung für Rollen/Organization Management');
+        logger_1.logger.log('Benutzer hat KEINE Schreibberechtigung für Rollen/Organization Management');
         return res.status(403).json({ message: 'Schreibberechtigung für Rollen erforderlich für diese Operation' });
     }
-    console.log('Benutzer hat Schreibberechtigung für Rollen/Organization Management');
+    logger_1.logger.log('Benutzer hat Schreibberechtigung für Rollen/Organization Management');
     next();
 };
 // Alle Rollen abrufen

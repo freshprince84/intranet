@@ -3,6 +3,7 @@ import { ShiftStatus } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
 import { addDays, startOfDay, format } from 'date-fns';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Hilfsfunktion: Prüft, ob zwei Zeitfenster sich überschneiden
@@ -226,9 +227,9 @@ async function checkOverlap(
  * Holt alle Schichten (mit Filtern)
  */
 export const getAllShifts = async (req: Request, res: Response) => {
-  console.log('[getAllShifts] 🚀 Controller aufgerufen');
-  console.log('[getAllShifts] Query:', req.query);
-  console.log('[getAllShifts] organizationId:', req.organizationId);
+  logger.log('[getAllShifts] 🚀 Controller aufgerufen');
+  logger.log('[getAllShifts] Query:', req.query);
+  logger.log('[getAllShifts] organizationId:', req.organizationId);
   try {
     const branchId = req.query.branchId ? parseInt(req.query.branchId as string, 10) : null;
     const roleId = req.query.roleId ? parseInt(req.query.roleId as string, 10) : null;
@@ -236,7 +237,7 @@ export const getAllShifts = async (req: Request, res: Response) => {
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
     const status = req.query.status as ShiftStatus | undefined;
-    console.log('[getAllShifts] Filter:', { branchId, roleId, userId, startDate, endDate, status });
+    logger.log('[getAllShifts] Filter:', { branchId, roleId, userId, startDate, endDate, status });
 
     const where: any = {};
 
@@ -266,7 +267,7 @@ export const getAllShifts = async (req: Request, res: Response) => {
       where.status = status;
     }
 
-    console.log('[getAllShifts] 🔍 Führe Prisma-Query aus...');
+    logger.log('[getAllShifts] 🔍 Führe Prisma-Query aus...');
     const shifts = await prisma.shift.findMany({
       where,
       include: {
@@ -320,14 +321,14 @@ export const getAllShifts = async (req: Request, res: Response) => {
       ]
     });
 
-    console.log('[getAllShifts] ✅ Gefunden:', shifts.length, 'Schichten');
+    logger.log('[getAllShifts] ✅ Gefunden:', shifts.length, 'Schichten');
     res.json({
       success: true,
       data: shifts
     });
-    console.log('[getAllShifts] ✅ Response gesendet');
+    logger.log('[getAllShifts] ✅ Response gesendet');
   } catch (error) {
-    console.error('[Shift] Fehler beim Abrufen der Schichten:', error);
+    logger.error('[Shift] Fehler beim Abrufen der Schichten:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Schichten'
@@ -412,7 +413,7 @@ export const getShiftById = async (req: Request, res: Response) => {
       data: shift
     });
   } catch (error) {
-    console.error('[Shift] Fehler beim Abrufen der Schicht:', error);
+    logger.error('[Shift] Fehler beim Abrufen der Schicht:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Schicht'
@@ -582,7 +583,7 @@ export const createShift = async (req: Request, res: Response) => {
       data: shift
     });
   } catch (error) {
-    console.error('[Shift] Fehler beim Erstellen der Schicht:', error);
+    logger.error('[Shift] Fehler beim Erstellen der Schicht:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Erstellen der Schicht'
@@ -794,7 +795,7 @@ export const updateShift = async (req: Request, res: Response) => {
       data: shift
     });
   } catch (error) {
-    console.error('[Shift] Fehler beim Aktualisieren der Schicht:', error);
+    logger.error('[Shift] Fehler beim Aktualisieren der Schicht:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren der Schicht'
@@ -850,7 +851,7 @@ export const deleteShift = async (req: Request, res: Response) => {
       message: 'Schicht erfolgreich gelöscht'
     });
   } catch (error) {
-    console.error('[Shift] Fehler beim Löschen der Schicht:', error);
+    logger.error('[Shift] Fehler beim Löschen der Schicht:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Löschen der Schicht'
@@ -1195,7 +1196,7 @@ export const generateShiftPlan = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('[Shift] Fehler beim Generieren des Schichtplans:', error);
+    logger.error('[Shift] Fehler beim Generieren des Schichtplans:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Generieren des Schichtplans'

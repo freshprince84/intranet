@@ -13,6 +13,7 @@ exports.rejectSwapRequest = exports.approveSwapRequest = exports.createSwapReque
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * GET /api/shifts/swaps
  * Holt alle Schichttausch-Anfragen
@@ -126,7 +127,7 @@ const getAllSwapRequests = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[ShiftSwap] Fehler beim Abrufen der Tausch-Anfragen:', error);
+        logger_1.logger.error('[ShiftSwap] Fehler beim Abrufen der Tausch-Anfragen:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Tausch-Anfragen'
@@ -211,7 +212,7 @@ const getSwapRequestById = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[ShiftSwap] Fehler beim Abrufen der Tausch-Anfrage:', error);
+        logger_1.logger.error('[ShiftSwap] Fehler beim Abrufen der Tausch-Anfrage:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Tausch-Anfrage'
@@ -384,7 +385,7 @@ const createSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error('[ShiftSwap] Fehler beim Erstellen der Tausch-Anfrage:', error);
+        logger_1.logger.error('[ShiftSwap] Fehler beim Erstellen der Tausch-Anfrage:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Erstellen der Tausch-Anfrage'
@@ -538,7 +539,7 @@ const approveSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[ShiftSwap] Fehler beim Genehmigen der Tausch-Anfrage:', error);
+        logger_1.logger.error('[ShiftSwap] Fehler beim Genehmigen der Tausch-Anfrage:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Genehmigen der Tausch-Anfrage'
@@ -665,7 +666,7 @@ const rejectSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error('[ShiftSwap] Fehler beim Ablehnen der Tausch-Anfrage:', error);
+        logger_1.logger.error('[ShiftSwap] Fehler beim Ablehnen der Tausch-Anfrage:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Ablehnen der Tausch-Anfrage'

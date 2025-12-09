@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { prisma } from '../utils/prisma';
 import { branchCache } from '../services/branchCache';
+import { logger } from '../utils/logger';
 
 interface TestBranch {
     id: number;
@@ -67,7 +68,7 @@ export const getAllBranches = async (req: Request, res: Response) => {
         const queryStartTime = Date.now();
         let branches = await prisma.branch.findMany(queryOptions);
         const queryDuration = Date.now() - queryStartTime;
-        console.log(`[getAllBranches] ⏱️ Query: ${queryDuration}ms | Branches: ${branches.length}`);
+        logger.log(`[getAllBranches] ⏱️ Query: ${queryDuration}ms | Branches: ${branches.length}`);
         
         // Entschlüssele alle Settings für alle Branches
         // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
@@ -78,7 +79,7 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 try {
                     branch.whatsappSettings = decryptBranchApiSettings(branch.whatsappSettings as any);
                 } catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings für Branch ${branch.id}:`, error);
+                    logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings für Branch ${branch.id}:`, error);
                 }
             }
             
@@ -87,7 +88,7 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 try {
                     branch.lobbyPmsSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
                 } catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings für Branch ${branch.id}:`, error);
+                    logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings für Branch ${branch.id}:`, error);
                 }
             }
             
@@ -96,7 +97,7 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 try {
                     branch.boldPaymentSettings = decryptBranchApiSettings(branch.boldPaymentSettings as any);
                 } catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
+                    logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
                 }
             }
             
@@ -105,7 +106,7 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 try {
                     branch.doorSystemSettings = decryptBranchApiSettings(branch.doorSystemSettings as any);
                 } catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Door System Settings für Branch ${branch.id}:`, error);
+                    logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der Door System Settings für Branch ${branch.id}:`, error);
                 }
             }
             
@@ -114,7 +115,7 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 try {
                     branch.emailSettings = decryptBranchApiSettings(branch.emailSettings as any);
                 } catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Email Settings für Branch ${branch.id}:`, error);
+                    logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der Email Settings für Branch ${branch.id}:`, error);
                 }
             }
             
@@ -160,7 +161,7 @@ export const getAllBranches = async (req: Request, res: Response) => {
         
         res.json(branches);
     } catch (error) {
-        console.error('Error in getAllBranches:', error);
+        logger.error('Error in getAllBranches:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen der Niederlassungen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -184,9 +185,9 @@ export const getUserBranches = async (req: Request, res: Response) => {
         const cachedBranches = await branchCache.get(userId, req);
         const cacheDuration = Date.now() - cacheStartTime;
         if (cachedBranches) {
-            console.log(`[getUserBranches] ⏱️ Cache-Hit: ${cacheDuration}ms | Branches: ${cachedBranches.length}`);
+            logger.log(`[getUserBranches] ⏱️ Cache-Hit: ${cacheDuration}ms | Branches: ${cachedBranches.length}`);
         } else {
-            console.log(`[getUserBranches] ⏱️ Cache-Miss: ${cacheDuration}ms`);
+            logger.log(`[getUserBranches] ⏱️ Cache-Miss: ${cacheDuration}ms`);
         }
         
         if (cachedBranches) {
@@ -199,7 +200,7 @@ export const getUserBranches = async (req: Request, res: Response) => {
             error: 'Cache-Fehler'
         });
     } catch (error) {
-        console.error('Error in getUserBranches:', error);
+        logger.error('Error in getUserBranches:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen der Benutzer-Niederlassungen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -329,7 +330,7 @@ export const switchUserBranch = async (req: Request, res: Response) => {
             selectedBranch: branchId
         });
     } catch (error) {
-        console.error('Error in switchUserBranch:', error);
+        logger.error('Error in switchUserBranch:', error);
         res.status(500).json({ 
             message: 'Fehler beim Wechseln der Niederlassung', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -378,7 +379,7 @@ export const createBranch = async (req: Request, res: Response) => {
 
         res.status(201).json(branch);
     } catch (error) {
-        console.error('Error in createBranch:', error);
+        logger.error('Error in createBranch:', error);
         if (error instanceof Error && error.message.includes('Unique constraint')) {
             return res.status(400).json({
                 message: 'Eine Niederlassung mit diesem Namen existiert bereits'
@@ -441,9 +442,9 @@ export const updateBranch = async (req: Request, res: Response) => {
         if (whatsappSettings) {
             try {
                 encryptedWhatsAppSettings = encryptBranchApiSettings(whatsappSettings);
-                console.log('[Branch Controller] WhatsApp Settings verschlüsselt');
+                logger.log('[Branch Controller] WhatsApp Settings verschlüsselt');
             } catch (error) {
-                console.warn('[Branch Controller] WhatsApp Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger.warn('[Branch Controller] WhatsApp Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         
@@ -451,9 +452,9 @@ export const updateBranch = async (req: Request, res: Response) => {
         if (lobbyPmsSettings) {
             try {
                 encryptedLobbyPmsSettings = encryptBranchApiSettings(lobbyPmsSettings);
-                console.log('[Branch Controller] LobbyPMS Settings verschlüsselt');
+                logger.log('[Branch Controller] LobbyPMS Settings verschlüsselt');
             } catch (error) {
-                console.warn('[Branch Controller] LobbyPMS Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger.warn('[Branch Controller] LobbyPMS Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         
@@ -461,9 +462,9 @@ export const updateBranch = async (req: Request, res: Response) => {
         if (boldPaymentSettings) {
             try {
                 encryptedBoldPaymentSettings = encryptBranchApiSettings(boldPaymentSettings);
-                console.log('[Branch Controller] Bold Payment Settings verschlüsselt');
+                logger.log('[Branch Controller] Bold Payment Settings verschlüsselt');
             } catch (error) {
-                console.warn('[Branch Controller] Bold Payment Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger.warn('[Branch Controller] Bold Payment Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         
@@ -471,9 +472,9 @@ export const updateBranch = async (req: Request, res: Response) => {
         if (doorSystemSettings) {
             try {
                 encryptedDoorSystemSettings = encryptBranchApiSettings(doorSystemSettings);
-                console.log('[Branch Controller] Door System Settings verschlüsselt');
+                logger.log('[Branch Controller] Door System Settings verschlüsselt');
             } catch (error) {
-                console.warn('[Branch Controller] Door System Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger.warn('[Branch Controller] Door System Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         
@@ -481,9 +482,9 @@ export const updateBranch = async (req: Request, res: Response) => {
         if (emailSettings) {
             try {
                 encryptedEmailSettings = encryptBranchApiSettings(emailSettings);
-                console.log('[Branch Controller] Email Settings verschlüsselt');
+                logger.log('[Branch Controller] Email Settings verschlüsselt');
             } catch (error) {
-                console.warn('[Branch Controller] Email Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger.warn('[Branch Controller] Email Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
 
@@ -529,7 +530,7 @@ export const updateBranch = async (req: Request, res: Response) => {
             try {
                 (updatedBranch as any).whatsappSettings = decryptBranchApiSettings(updatedBranch.whatsappSettings as any);
             } catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings:', error);
+                logger.warn('[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings:', error);
             }
         }
         
@@ -537,7 +538,7 @@ export const updateBranch = async (req: Request, res: Response) => {
             try {
                 (updatedBranch as any).lobbyPmsSettings = decryptBranchApiSettings(updatedBranch.lobbyPmsSettings as any);
             } catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+                logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
             }
         }
         
@@ -545,7 +546,7 @@ export const updateBranch = async (req: Request, res: Response) => {
             try {
                 (updatedBranch as any).boldPaymentSettings = decryptBranchApiSettings(updatedBranch.boldPaymentSettings as any);
             } catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings:', error);
+                logger.warn('[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings:', error);
             }
         }
         
@@ -553,7 +554,7 @@ export const updateBranch = async (req: Request, res: Response) => {
             try {
                 (updatedBranch as any).doorSystemSettings = decryptBranchApiSettings(updatedBranch.doorSystemSettings as any);
             } catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Door System Settings:', error);
+                logger.warn('[Branch Controller] Fehler beim Entschlüsseln der Door System Settings:', error);
             }
         }
         
@@ -561,7 +562,7 @@ export const updateBranch = async (req: Request, res: Response) => {
             try {
                 (updatedBranch as any).emailSettings = decryptBranchApiSettings(updatedBranch.emailSettings as any);
             } catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
+                logger.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
             }
         }
 
@@ -570,7 +571,7 @@ export const updateBranch = async (req: Request, res: Response) => {
 
         res.json(updatedBranch);
     } catch (error) {
-        console.error('Error in updateBranch:', error);
+        logger.error('Error in updateBranch:', error);
         if (error instanceof Error && error.message.includes('Unique constraint')) {
             return res.status(400).json({
                 message: 'Eine Niederlassung mit diesem Namen existiert bereits'
@@ -640,7 +641,7 @@ export const deleteBranch = async (req: Request, res: Response) => {
 
         res.status(204).send();
     } catch (error) {
-        console.error('Error in deleteBranch:', error);
+        logger.error('Error in deleteBranch:', error);
         res.status(500).json({
             message: 'Fehler beim Löschen der Niederlassung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -688,13 +689,13 @@ export const getRoomDescriptions = async (req: Request, res: Response) => {
                 const lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings;
                 roomDescriptions = lobbyPmsSettings?.roomDescriptions || {};
             } catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+                logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
             }
         }
 
         res.json(roomDescriptions);
     } catch (error) {
-        console.error('Error in getRoomDescriptions:', error);
+        logger.error('Error in getRoomDescriptions:', error);
         res.status(500).json({
             message: 'Fehler beim Laden der Zimmer-Beschreibungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -744,7 +745,7 @@ export const updateRoomDescriptions = async (req: Request, res: Response) => {
                 const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
                 lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings || {};
             } catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+                logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
                 lobbyPmsSettings = {};
             }
         }
@@ -768,7 +769,7 @@ export const updateRoomDescriptions = async (req: Request, res: Response) => {
 
         res.json({ success: true, roomDescriptions });
     } catch (error) {
-        console.error('Error in updateRoomDescriptions:', error);
+        logger.error('Error in updateRoomDescriptions:', error);
         res.status(500).json({
             message: 'Fehler beim Speichern der Zimmer-Beschreibungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -816,13 +817,13 @@ export const getRoomDescription = async (req: Request, res: Response) => {
                 const lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings;
                 roomDescription = lobbyPmsSettings?.roomDescriptions?.[categoryId] || null;
             } catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+                logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
             }
         }
 
         res.json(roomDescription || {});
     } catch (error) {
-        console.error('Error in getRoomDescription:', error);
+        logger.error('Error in getRoomDescription:', error);
         res.status(500).json({
             message: 'Fehler beim Laden der Zimmer-Beschreibung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

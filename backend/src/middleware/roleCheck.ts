@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../utils/logger';
 
 // Middleware zur Überprüfung der Benutzerrolle
 export const checkRole = (allowedRoles: string[]) => {
@@ -22,7 +23,7 @@ export const checkRole = (allowedRoles: string[]) => {
 
       next();
     } catch (error) {
-      console.error('Fehler bei der Rollenprüfung:', error);
+      logger.error('Fehler bei der Rollenprüfung:', error);
       res.status(500).json({ message: 'Interner Server-Fehler' });
     }
   };

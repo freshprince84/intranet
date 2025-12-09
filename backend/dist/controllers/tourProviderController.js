@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteTourProvider = exports.updateTourProvider = exports.createTourProvider = exports.getTourProviderById = exports.getAllTourProviders = void 0;
 const prisma_1 = require("../utils/prisma");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
+const logger_1 = require("../utils/logger");
 // GET /api/tour-providers - Alle Anbieter (mit Filtern)
 const getAllTourProviders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -67,7 +68,7 @@ const getAllTourProviders = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        console.error('[getAllTourProviders] Fehler:', error);
+        logger_1.logger.error('[getAllTourProviders] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden der Anbieter'
@@ -126,7 +127,7 @@ const getTourProviderById = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        console.error('[getTourProviderById] Fehler:', error);
+        logger_1.logger.error('[getTourProviderById] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Laden des Anbieters'
@@ -193,7 +194,7 @@ const createTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[createTourProvider] Fehler:', error);
+        logger_1.logger.error('[createTourProvider] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Erstellen des Anbieters'
@@ -273,7 +274,7 @@ const updateTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[updateTourProvider] Fehler:', error);
+        logger_1.logger.error('[updateTourProvider] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Aktualisieren des Anbieters'
@@ -319,7 +320,7 @@ const deleteTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[deleteTourProvider] Fehler:', error);
+        logger_1.logger.error('[deleteTourProvider] Fehler:', error);
         res.status(500).json({
             success: false,
             message: 'Fehler beim Löschen des Anbieters'

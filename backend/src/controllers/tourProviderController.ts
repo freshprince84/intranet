@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
+import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -66,7 +67,7 @@ export const getAllTourProviders = async (req: Request, res: Response) => {
       data: providers
     });
   } catch (error) {
-    console.error('[getAllTourProviders] Fehler:', error);
+    logger.error('[getAllTourProviders] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden der Anbieter'
@@ -128,7 +129,7 @@ export const getTourProviderById = async (req: Request, res: Response) => {
       data: provider
     });
   } catch (error) {
-    console.error('[getTourProviderById] Fehler:', error);
+    logger.error('[getTourProviderById] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden des Anbieters'
@@ -212,7 +213,7 @@ export const createTourProvider = async (req: AuthenticatedRequest, res: Respons
       data: provider
     });
   } catch (error) {
-    console.error('[createTourProvider] Fehler:', error);
+    logger.error('[createTourProvider] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Erstellen des Anbieters'
@@ -307,7 +308,7 @@ export const updateTourProvider = async (req: AuthenticatedRequest, res: Respons
       data: provider
     });
   } catch (error) {
-    console.error('[updateTourProvider] Fehler:', error);
+    logger.error('[updateTourProvider] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Aktualisieren des Anbieters'
@@ -364,7 +365,7 @@ export const deleteTourProvider = async (req: AuthenticatedRequest, res: Respons
       message: 'Anbieter gelöscht'
     });
   } catch (error) {
-    console.error('[deleteTourProvider] Fehler:', error);
+    logger.error('[deleteTourProvider] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Löschen des Anbieters'

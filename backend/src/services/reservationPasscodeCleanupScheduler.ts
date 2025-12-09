@@ -2,6 +2,7 @@ import { prisma } from '../utils/prisma';
 import { TTLockService } from './ttlockService';
 import { getTimezoneForCountry } from '../utils/timeUtils';
 import { fromZonedTime } from 'date-fns-tz';
+import { logger } from '../utils/logger';
 
 /**
  * Scheduler für automatische Löschung von TTLock Passcodes nach Checkout
@@ -22,11 +23,11 @@ export class ReservationPasscodeCleanupScheduler {
    */
   static start(): void {
     if (this.checkInterval) {
-      console.log('[ReservationPasscodeCleanup] Scheduler läuft bereits');
+      logger.log('[ReservationPasscodeCleanup] Scheduler läuft bereits');
       return;
     }
 
-    console.log('[ReservationPasscodeCleanup] Starte Scheduler...');
+    logger.log('[ReservationPasscodeCleanup] Starte Scheduler...');
 
     // Prüfe alle 1 Stunde, ob es 11:00 Uhr ist
     this.checkInterval = setInterval(async () => {
@@ -37,19 +38,19 @@ export class ReservationPasscodeCleanupScheduler {
       // Prüfe ob es 11:00 Uhr ist
       // Und ob wir heute noch nicht geprüft haben
       if (currentHour === 11 && this.lastCheckDate !== currentDate) {
-        console.log('[ReservationPasscodeCleanup] Starte tägliche Passcode-Löschung (11:00 Uhr)...');
+        logger.log('[ReservationPasscodeCleanup] Starte tägliche Passcode-Löschung (11:00 Uhr)...');
         this.lastCheckDate = currentDate;
 
         try {
           await this.checkAndCleanupPasscodes();
-          console.log('[ReservationPasscodeCleanup] Passcode-Löschung erfolgreich abgeschlossen');
+          logger.log('[ReservationPasscodeCleanup] Passcode-Löschung erfolgreich abgeschlossen');
         } catch (error) {
-          console.error('[ReservationPasscodeCleanup] Fehler beim Löschen der Passcodes:', error);
+          logger.error('[ReservationPasscodeCleanup] Fehler beim Löschen der Passcodes:', error);
         }
       }
     }, this.CHECK_INTERVAL);
 
-    console.log('[ReservationPasscodeCleanup] Scheduler gestartet (prüft täglich um 11:00 Uhr)');
+    logger.log('[ReservationPasscodeCleanup] Scheduler gestartet (prüft täglich um 11:00 Uhr)');
   }
 
   /**
@@ -60,7 +61,7 @@ export class ReservationPasscodeCleanupScheduler {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
       this.lastCheckDate = '';
-      console.log('[ReservationPasscodeCleanup] Scheduler gestoppt');
+      logger.log('[ReservationPasscodeCleanup] Scheduler gestoppt');
     }
   }
 
@@ -103,7 +104,7 @@ export class ReservationPasscodeCleanupScheduler {
         return; // Keine Reservations mit Passcodes
       }
 
-      console.log(`[ReservationPasscodeCleanup] ${reservationsWithPasscodes.length} Reservations mit Passcodes gefunden`);
+      logger.log(`[ReservationPasscodeCleanup] ${reservationsWithPasscodes.length} Reservations mit Passcodes gefunden`);
 
       let deletedCount = 0;
       let skippedCount = 0;
@@ -124,23 +125,23 @@ export class ReservationPasscodeCleanupScheduler {
           
           if (deleted) {
             deletedCount++;
-            console.log(`[ReservationPasscodeCleanup] ✅ Passcode für Reservation ${reservation.id} gelöscht`);
+            logger.log(`[ReservationPasscodeCleanup] ✅ Passcode für Reservation ${reservation.id} gelöscht`);
           } else {
             skippedCount++;
-            console.log(`[ReservationPasscodeCleanup] ⚠️ Passcode für Reservation ${reservation.id} nicht gefunden oder bereits gelöscht`);
+            logger.log(`[ReservationPasscodeCleanup] ⚠️ Passcode für Reservation ${reservation.id} nicht gefunden oder bereits gelöscht`);
           }
         } catch (error) {
           errorCount++;
-          console.error(`[ReservationPasscodeCleanup] ❌ Fehler beim Löschen des Passcodes für Reservation ${reservation.id}:`, error);
+          logger.error(`[ReservationPasscodeCleanup] ❌ Fehler beim Löschen des Passcodes für Reservation ${reservation.id}:`, error);
           // Weiter mit nächster Reservierung
         }
       }
 
       if (deletedCount > 0 || skippedCount > 0 || errorCount > 0) {
-        console.log(`[ReservationPasscodeCleanup] Zusammenfassung: ${deletedCount} gelöscht, ${skippedCount} übersprungen, ${errorCount} Fehler`);
+        logger.log(`[ReservationPasscodeCleanup] Zusammenfassung: ${deletedCount} gelöscht, ${skippedCount} übersprungen, ${errorCount} Fehler`);
       }
     } catch (error) {
-      console.error('[ReservationPasscodeCleanup] Fehler beim Prüfen der Reservations:', error);
+      logger.error('[ReservationPasscodeCleanup] Fehler beim Prüfen der Reservations:', error);
     }
   }
 
@@ -202,12 +203,12 @@ export class ReservationPasscodeCleanupScheduler {
         // Wir löschen NICHT doorPin aus der DB, sondern markieren nur als gelöscht
         // Frontend zeigt dann durchgestrichen & rot an
         // TODO: Optional - Flag hinzufügen wenn gewünscht
-        console.log(`[ReservationPasscodeCleanup] Passcode für Reservation ${reservation.id} erfolgreich gelöscht`);
+        logger.log(`[ReservationPasscodeCleanup] Passcode für Reservation ${reservation.id} erfolgreich gelöscht`);
       }
 
       return deleted;
     } catch (error) {
-      console.error(`[ReservationPasscodeCleanup] Fehler beim Löschen des Passcodes:`, error);
+      logger.error(`[ReservationPasscodeCleanup] Fehler beim Löschen des Passcodes:`, error);
       throw error;
     }
   }

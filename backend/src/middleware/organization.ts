@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { organizationCache } from '../utils/organizationCache';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 // Erweitere Request-Interface
 declare global {
@@ -25,7 +26,7 @@ export const organizationMiddleware = async (req: Request, res: Response, next: 
     const cachedData = await organizationCache.get(Number(userId));
 
     if (!cachedData) {
-      console.error('[organizationMiddleware] Keine aktive Rolle gefunden für userId:', userId);
+      logger.error('[organizationMiddleware] Keine aktive Rolle gefunden für userId:', userId);
       return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
     }
     
@@ -36,7 +37,7 @@ export const organizationMiddleware = async (req: Request, res: Response, next: 
 
     next();
   } catch (error) {
-    console.error('❌ Error in Organization Middleware:', error);
+    logger.error('❌ Error in Organization Middleware:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -61,7 +62,7 @@ export const getUserOrganizationFilter = (req: Request): any => {
   const userId = Number(req.userId);
   
   if (isNaN(userId)) {
-    console.error('Invalid userId in getUserOrganizationFilter:', req.userId);
+    logger.error('Invalid userId in getUserOrganizationFilter:', req.userId);
     return {}; // Leerer Filter als Fallback
   }
 
@@ -90,7 +91,7 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
   const userId = Number(req.userId);
   
   if (isNaN(userId)) {
-    console.error('Invalid userId in request:', req.userId);
+    logger.error('Invalid userId in request:', req.userId);
     return {}; // Leerer Filter als Fallback
   }
 
@@ -176,7 +177,7 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
       const userRoleId = req.userRole?.role?.id;
       
       // Debug-Logging
-      console.log('[getDataIsolationFilter] Task filter:', {
+      logger.log('[getDataIsolationFilter] Task filter:', {
         userId,
         organizationId: req.organizationId,
         userRoleId,
@@ -203,7 +204,7 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
       // Lösung: organizationId wird als separate Bedingung hinzugefügt
       // Das bedeutet: (organizationId = X) AND (responsibleId = Y OR roleId = Z OR qualityControlId = Y)
       
-      console.log('[getDataIsolationFilter] Final task filter:', JSON.stringify(taskFilter, null, 2));
+      logger.log('[getDataIsolationFilter] Final task filter:', JSON.stringify(taskFilter, null, 2));
       
       return taskFilter;
     
@@ -384,7 +385,7 @@ export const belongsToOrganization = async (
         return false;
     }
   } catch (error) {
-    console.error(`Fehler in belongsToOrganization für ${entity}:`, error);
+    logger.error(`Fehler in belongsToOrganization für ${entity}:`, error);
     return false;
   }
 }; 
