@@ -1,4 +1,4 @@
-import errorHandler from './ErrorHandler.ts';
+import errorHandlerModule from './ErrorHandler.ts';
 import { logger } from '../utils/logger.ts';
 
 // ✅ MEMORY: Speichere Event Handler für Cleanup
@@ -18,7 +18,7 @@ export function initializeErrorHandler(): (() => void) | null {
     return null;
   }
 
-  errorHandler.configure({
+  errorHandlerModule.configure({
     // Hier könnte ein global verfügbarer Benachrichtigungsdienst eingebunden werden
     onError: (message) => {
       console.error(`[Global Error]: ${message}`);
@@ -31,7 +31,7 @@ export function initializeErrorHandler(): (() => void) | null {
   // ✅ MEMORY: Speichere Handler-Funktionen für Cleanup
   errorHandler = (event: ErrorEvent) => {
     console.error('Unbehandelter Fehler aufgetreten:', event.error);
-    errorHandler.handleError(event.error, {
+    errorHandlerModule.handleError(event.error, {
       type: 'UnhandledError',
       origin: event.filename,
       lineNumber: event.lineno,
@@ -45,7 +45,7 @@ export function initializeErrorHandler(): (() => void) | null {
 
   rejectionHandler = (event: PromiseRejectionEvent) => {
     console.error('Unbehandelte Promise-Rejection aufgetreten:', event.reason);
-    errorHandler.handleError(event.reason, {
+    errorHandlerModule.handleError(event.reason, {
       type: 'UnhandledRejection'
     });
     
