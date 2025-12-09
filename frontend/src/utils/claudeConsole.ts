@@ -18,6 +18,9 @@ class ClaudeConsole {
   private logBuffer: LogEntry[] = [];
   private isConnected = false;
   private reconnectInterval: number | null = null;
+  // ✅ MEMORY: Speichere Event Handler für Cleanup
+  private errorHandler: ((event: ErrorEvent) => void) | null = null;
+  private rejectionHandler: ((event: PromiseRejectionEvent) => void) | null = null;
 
   constructor() {
     this.initializeWebSocket();
@@ -95,21 +98,47 @@ class ClaudeConsole {
   }
 
   private interceptErrors() {
-    // Globale Error-Handler
-    window.addEventListener('error', (event) => {
+    // ✅ MEMORY: Speichere Handler-Funktionen für Cleanup
+    this.errorHandler = (event: ErrorEvent) => {
       this.sendLog('error', [
         `${event.message} at ${event.filename}:${event.lineno}:${event.colno}`,
         event.error
       ], event.error?.stack);
-    });
+    };
 
-    // Promise Rejection Handler
-    window.addEventListener('unhandledrejection', (event) => {
+    this.rejectionHandler = (event: PromiseRejectionEvent) => {
       this.sendLog('error', [
         'Unhandled Promise Rejection:',
         event.reason
       ], event.reason?.stack);
-    });
+    };
+
+    // Globale Error-Handler
+    window.addEventListener('error', this.errorHandler);
+
+    // Promise Rejection Handler
+    window.addEventListener('unhandledrejection', this.rejectionHandler);
+  }
+
+  // ✅ MEMORY: Cleanup-Methode zum Entfernen der Event Listener
+  public destroy() {
+    if (this.errorHandler) {
+      window.removeEventListener('error', this.errorHandler);
+      this.errorHandler = null;
+    }
+    if (this.rejectionHandler) {
+      window.removeEventListener('unhandledrejection', this.rejectionHandler);
+      this.rejectionHandler = null;
+    }
+    if (this.reconnectInterval) {
+      clearInterval(this.reconnectInterval);
+      this.reconnectInterval = null;
+    }
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    this.logBuffer = [];
   }
 
   private sendLog(level: LogEntry['level'], args: any[], stack?: string) {
@@ -231,7 +260,9 @@ let claudeConsole: ClaudeConsole | null = null;
 
 export const initClaudeConsole = () => {
   // ✅ FIX: Nur im Development-Modus initialisieren (verhindert Memory-Leak in Production)
-  if (!claudeConsole && typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  // @ts-ignore - process.env wird zur Build-Zeit von Vite/Webpack ersetzt
+  const isDevelopment = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
+  if (!claudeConsole && typeof window !== 'undefined' && isDevelopment) {
     claudeConsole = new ClaudeConsole();
   }
   return claudeConsole;

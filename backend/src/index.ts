@@ -84,9 +84,9 @@ process.on('SIGINT', async () => {
   });
 });
 
-// Timer für automatische Stornierung von Tour-Buchungen (alle 5 Minuten)
+// ✅ MEMORY: Timer für automatische Stornierung von Tour-Buchungen (alle 5 Minuten)
 let tourBookingSchedulerInterval: NodeJS.Timeout | null = null;
-setInterval(async () => {
+tourBookingSchedulerInterval = setInterval(async () => {
   try {
     const { TourBookingScheduler } = await import('./services/tourBookingScheduler');
     await TourBookingScheduler.checkExpiredBookings();
@@ -97,8 +97,9 @@ setInterval(async () => {
 
 console.log('✅ Tour-Booking-Scheduler Timer gestartet (prüft alle 5 Minuten)');
 
-// Starte Reservation Passcode Cleanup Scheduler (prüft täglich um 11:00 Uhr)
-setTimeout(async () => {
+// ✅ MEMORY: Starte Reservation Passcode Cleanup Scheduler (prüft täglich um 11:00 Uhr)
+let passcodeCleanupTimeout: NodeJS.Timeout | null = null;
+passcodeCleanupTimeout = setTimeout(async () => {
   try {
     const { ReservationPasscodeCleanupScheduler } = await import('./services/reservationPasscodeCleanupScheduler');
     ReservationPasscodeCleanupScheduler.start();
@@ -106,6 +107,20 @@ setTimeout(async () => {
     console.error('[Timer] Fehler beim Starten des Passcode-Cleanup-Schedulers:', error);
   }
 }, 1000); // Starte nach 1 Sekunde
+
+// ✅ MEMORY: Cleanup-Funktion für Server-Shutdown
+export const cleanupTimers = () => {
+  if (tourBookingSchedulerInterval) {
+    clearInterval(tourBookingSchedulerInterval);
+    tourBookingSchedulerInterval = null;
+    console.log('✅ Tour-Booking-Scheduler Timer gestoppt');
+  }
+  if (passcodeCleanupTimeout) {
+    clearTimeout(passcodeCleanupTimeout);
+    passcodeCleanupTimeout = null;
+    console.log('✅ Passcode-Cleanup-Timeout gestoppt');
+  }
+};
 
 console.log('✅ Reservation-Passcode-Cleanup-Scheduler wird gestartet (prüft täglich um 11:00 Uhr)');
 

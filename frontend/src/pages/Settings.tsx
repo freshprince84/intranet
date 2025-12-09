@@ -36,6 +36,15 @@ const Settings: React.FC = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // ✅ MEMORY: Cleanup Blob-URL beim Unmount
+    useEffect(() => {
+        return () => {
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+            }
+        };
+    }, [previewUrl]);
     const [isSaving, setIsSaving] = useState(false);
     // Tab-Zustand für Navigation zwischen den Einstellungen
     const [activeTab, setActiveTab] = useState<'personal' | 'notifications' | 'system' | 'password_manager'>('personal');

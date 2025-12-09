@@ -45,6 +45,15 @@ const ArticleEdit: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // ✅ MEMORY: Cleanup Blob-URLs beim Unmount
+  useEffect(() => {
+    return () => {
+      temporaryMedia.forEach(media => {
+        URL.revokeObjectURL(media.url);
+      });
+    };
+  }, [temporaryMedia]);
+  
   // Überprüfen der Berechtigungen - an die richtigen Berechtigungen anpassen
   const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
   const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
