@@ -45,14 +45,28 @@ const ArticleEdit: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // ✅ MEMORY: Cleanup Blob-URLs beim Unmount
+  // ✅ MEMORY: Ref für Cleanup (verhindert vorzeitiges Revokieren)
+  const temporaryMediaRef = useRef<typeof temporaryMedia>([]);
+  
+  // ✅ MEMORY: Aktualisiere Ref und revoke alte URLs, die nicht mehr in der Liste sind
+  useEffect(() => {
+    // Revoke alte URLs, die nicht mehr in temporaryMedia sind
+    temporaryMediaRef.current.forEach(oldMedia => {
+      if (!temporaryMedia.find(m => m.url === oldMedia.url)) {
+        URL.revokeObjectURL(oldMedia.url);
+      }
+    });
+    temporaryMediaRef.current = temporaryMedia;
+  }, [temporaryMedia]);
+  
+  // ✅ MEMORY: Cleanup Blob-URLs beim Unmount (verwendet Ref statt State)
   useEffect(() => {
     return () => {
-      temporaryMedia.forEach(media => {
+      temporaryMediaRef.current.forEach(media => {
         URL.revokeObjectURL(media.url);
       });
     };
-  }, [temporaryMedia]);
+  }, []); // Nur beim Unmount
   
   // Überprüfen der Berechtigungen - an die richtigen Berechtigungen anpassen
   const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');

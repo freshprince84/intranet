@@ -37,14 +37,25 @@ const Settings: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
+    // ✅ MEMORY: Ref für Cleanup (optimiert Performance)
+    const prevPreviewUrlRef = useRef<string | null>(null);
+    
+    // ✅ MEMORY: Revoke alte URL, wenn neue erstellt wird
+    useEffect(() => {
+        if (prevPreviewUrlRef.current && prevPreviewUrlRef.current !== previewUrl) {
+            URL.revokeObjectURL(prevPreviewUrlRef.current);
+        }
+        prevPreviewUrlRef.current = previewUrl;
+    }, [previewUrl]);
+    
     // ✅ MEMORY: Cleanup Blob-URL beim Unmount
     useEffect(() => {
         return () => {
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
+            if (prevPreviewUrlRef.current) {
+                URL.revokeObjectURL(prevPreviewUrlRef.current);
             }
         };
-    }, [previewUrl]);
+    }, []); // Nur beim Unmount
     const [isSaving, setIsSaving] = useState(false);
     // Tab-Zustand für Navigation zwischen den Einstellungen
     const [activeTab, setActiveTab] = useState<'personal' | 'notifications' | 'system' | 'password_manager'>('personal');
