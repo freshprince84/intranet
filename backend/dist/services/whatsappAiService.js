@@ -50,6 +50,7 @@ const axios_1 = __importDefault(require("axios"));
 const languageDetectionService_1 = require("./languageDetectionService");
 const prisma_1 = require("../utils/prisma");
 const whatsappFunctionHandlers_1 = require("./whatsappFunctionHandlers");
+const logger_1 = require("../utils/logger");
 /**
  * WhatsApp AI Service
  *
@@ -84,7 +85,7 @@ class WhatsAppAiService {
                     settings.apiKey = decryptSecret(settings.apiKey);
                 }
                 catch (error) {
-                    console.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiKey:', error);
+                    logger_1.logger.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiKey:', error);
                 }
             }
             if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
@@ -92,7 +93,7 @@ class WhatsAppAiService {
                     settings.apiSecret = decryptSecret(settings.apiSecret);
                 }
                 catch (error) {
-                    console.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiSecret:', error);
+                    logger_1.logger.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiSecret:', error);
                 }
             }
             const whatsappSettings = settings; // Branch-Settings sind direkt WhatsApp Settings
@@ -107,27 +108,56 @@ class WhatsAppAiService {
                 // Prüfe ob groupId mit konfigurierter Group ID übereinstimmt
                 if (guestGroupId && guestGroupId === groupId) {
                     aiConfig = whatsappSettings.guestGroup.ai;
-                    console.log('[WhatsApp AI Service] Verwende Gäste-Gruppen-KI-Konfiguration');
+                    logger_1.logger.log('[WhatsApp AI Service] Verwende Gäste-Gruppen-KI-Konfiguration');
                 }
                 else {
                     // Fallback: Verwende normale AI-Konfiguration
                     aiConfig = whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.ai;
-                    console.log('[WhatsApp AI Service] Group ID stimmt nicht überein, verwende normale KI-Konfiguration');
+                    logger_1.logger.log('[WhatsApp AI Service] Group ID stimmt nicht überein, verwende normale KI-Konfiguration');
                 }
             }
             else {
                 // Einzel-Chat: Verwende normale AI-Konfiguration
                 aiConfig = whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.ai;
             }
-            if (!(aiConfig === null || aiConfig === void 0 ? void 0 : aiConfig.enabled)) {
+            // DEBUG: Log AI-Konfiguration für Diagnose
+            logger_1.logger.log('[WhatsApp AI Service] AI-Konfiguration:', {
+                branchId,
+                hasWhatsappSettings: !!whatsappSettings,
+                hasAiConfig: !!aiConfig,
+                aiConfigEnabled: aiConfig === null || aiConfig === void 0 ? void 0 : aiConfig.enabled,
+                aiConfigKeys: aiConfig ? Object.keys(aiConfig) : [],
+                whatsappSettingsKeys: whatsappSettings ? Object.keys(whatsappSettings) : []
+            });
+            if (!aiConfig) {
+                logger_1.logger.error('[WhatsApp AI Service] KI-Konfiguration nicht gefunden:', {
+                    branchId,
+                    whatsappSettingsKeys: whatsappSettings ? Object.keys(whatsappSettings) : [],
+                    whatsappSettingsAi: whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.ai
+                });
+                throw new Error('KI-Konfiguration nicht gefunden für diesen Branch');
+            }
+            // Prüfe ob enabled explizit auf false gesetzt ist (undefined = aktiviert, false = deaktiviert)
+            if (aiConfig.enabled === false) {
+                logger_1.logger.error('[WhatsApp AI Service] KI ist explizit deaktiviert:', {
+                    branchId,
+                    aiConfigEnabled: aiConfig.enabled,
+                    aiConfig: JSON.stringify(aiConfig, null, 2)
+                });
                 throw new Error('KI ist für diesen Branch nicht aktiviert');
+            }
+            // Wenn enabled undefined ist, behandeln wir es als aktiviert (Rückwärtskompatibilität)
+            if (aiConfig.enabled === undefined) {
+                logger_1.logger.warn('[WhatsApp AI Service] KI enabled ist undefined, behandle als aktiviert (Rückwärtskompatibilität):', {
+                    branchId
+                });
             }
             // 2. Erkenne Sprache aus Nachricht (primär) oder Telefonnummer (Fallback)
             const detectedLanguage = this.detectLanguageFromMessage(message);
             const phoneLanguage = languageDetectionService_1.LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
             // Verwende erkannte Sprache aus Nachricht, falls vorhanden, sonst Telefonnummer
             const language = detectedLanguage || phoneLanguage;
-            console.log('[WhatsApp AI Service] Spracherkennung:', {
+            logger_1.logger.log('[WhatsApp AI Service] Spracherkennung:', {
                 message: message.substring(0, 50),
                 detectedFromMessage: detectedLanguage,
                 detectedFromPhone: phoneLanguage,
@@ -147,36 +177,67 @@ class WhatsAppAiService {
             }
             try {
                 // Lade Message History (letzte 10 Nachrichten) falls conversationId vorhanden
+                // WICHTIG: Prüfe zuerst, ob bereits eine Reservierung für diese Conversation existiert
                 let messageHistory = [];
                 if (conversationId) {
                     try {
+                        // Prüfe, ob bereits eine Reservierung für diese Conversation existiert
+                        const existingReservation = yield prisma_1.prisma.whatsAppMessage.findFirst({
+                            where: {
+                                conversationId: conversationId,
+                                branchId: branchId,
+                                reservationId: { not: null }
+                            },
+                            select: {
+                                reservationId: true,
+                                sentAt: true
+                            },
+                            orderBy: {
+                                sentAt: 'desc'
+                            }
+                        });
+                        if (existingReservation) {
+                            logger_1.logger.log(`[WhatsApp AI Service] ⚠️ Bereits existierende Reservierung ${existingReservation.reservationId} für Conversation ${conversationId} gefunden. Filtere alte Buchungs-Nachrichten aus History.`);
+                        }
+                        // Prüfe Altersgrenze: Nur Nachrichten der letzten 24 Stunden
+                        const maxAge = new Date();
+                        maxAge.setHours(maxAge.getHours() - 24);
                         const recentMessages = yield prisma_1.prisma.whatsAppMessage.findMany({
                             where: {
                                 conversationId: conversationId,
-                                branchId: branchId
+                                branchId: branchId,
+                                sentAt: { gte: maxAge } // Nur Nachrichten der letzten 24 Stunden
                             },
                             orderBy: {
                                 sentAt: 'desc'
                             },
-                            take: 10, // Letzte 10 Nachrichten
+                            take: (aiConfig.model || 'gpt-4o').includes('gpt-4o') ? 10 : 5, // Weniger History für gpt-4 (8192 Tokens Limit)
                             select: {
                                 direction: true,
                                 message: true,
-                                sentAt: true
+                                sentAt: true,
+                                reservationId: true
                             }
                         });
                         // Konvertiere zu OpenAI-Format (neueste zuerst, dann umdrehen für chronologische Reihenfolge)
+                        // WICHTIG: Filtere Nachrichten, die zu einer bereits existierenden Reservierung gehören
                         messageHistory = recentMessages
                             .reverse() // Älteste zuerst
+                            .filter(msg => {
+                            // Wenn bereits eine Reservierung existiert, filtere Nachrichten mit reservationId
+                            if (existingReservation && msg.reservationId) {
+                                return false; // Filtere Nachrichten, die zu einer Reservierung gehören
+                            }
+                            return msg.message && msg.message.trim().length > 0; // Filtere leere Nachrichten
+                        })
                             .map(msg => ({
                             role: msg.direction === 'incoming' ? 'user' : 'assistant',
                             content: msg.message
-                        }))
-                            .filter(msg => msg.content && msg.content.trim().length > 0); // Filtere leere Nachrichten
-                        console.log(`[WhatsApp AI Service] Message History geladen: ${messageHistory.length} Nachrichten`);
+                        }));
+                        logger_1.logger.log(`[WhatsApp AI Service] Message History geladen: ${messageHistory.length} Nachrichten (gefiltert: ${recentMessages.length - messageHistory.length} alte/Reservierungs-Nachrichten entfernt)`);
                     }
                     catch (historyError) {
-                        console.error('[WhatsApp AI Service] Fehler beim Laden der Message History:', historyError);
+                        logger_1.logger.error('[WhatsApp AI Service] Fehler beim Laden der Message History:', historyError);
                         // Weiter ohne History
                     }
                 }
@@ -213,13 +274,13 @@ class WhatsAppAiService {
                 const responseMessage = response.data.choices[0].message;
                 // Prüfe ob KI Function Calls machen möchte
                 if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
-                    console.log('[WhatsApp AI Service] Function Calls erkannt:', responseMessage.tool_calls.length);
+                    logger_1.logger.log('[WhatsApp AI Service] Function Calls erkannt:', responseMessage.tool_calls.length);
                     // Führe Funktionen aus
                     const toolResults = [];
                     for (const toolCall of responseMessage.tool_calls) {
                         const functionName = toolCall.function.name;
                         const functionArgs = JSON.parse(toolCall.function.arguments);
-                        console.log('[WhatsApp AI Service] Führe Function aus:', {
+                        logger_1.logger.log('[WhatsApp AI Service] Führe Function aus:', {
                             name: functionName,
                             args: functionArgs
                         });
@@ -248,28 +309,67 @@ class WhatsAppAiService {
                                 name: functionName,
                                 content: JSON.stringify(result)
                             });
-                            console.log('[WhatsApp AI Service] Function Ergebnis:', {
+                            logger_1.logger.log('[WhatsApp AI Service] Function Ergebnis:', {
                                 name: functionName,
                                 resultCount: Array.isArray(result) ? result.length : 1
                             });
                         }
                         catch (error) {
-                            console.error('[WhatsApp AI Service] Function Fehler:', {
+                            logger_1.logger.error('[WhatsApp AI Service] Function Fehler:', {
                                 name: functionName,
                                 error: error.message
                             });
+                            // WICHTIG: Übersetze Fehlermeldung in die erkannte Sprache
+                            let errorMessage = error.message;
+                            if (language === 'es') {
+                                // Übersetze häufige Fehlermeldungen ins Spanische
+                                if (errorMessage.includes('invalid input value for enum') && errorMessage.includes('potential')) {
+                                    errorMessage = 'Error técnico: El estado "potential" no está disponible en la base de datos. Por favor, contacta al soporte.';
+                                }
+                                else if (errorMessage.includes('Der Name des Gastes ist erforderlich')) {
+                                    errorMessage = 'El nombre del huésped es requerido para la reservación. Por favor, proporciona tu nombre completo.';
+                                }
+                                else if (errorMessage.includes('Mindestens eine Kontaktinformation')) {
+                                    errorMessage = 'Se requiere al menos una información de contacto (número de teléfono o correo electrónico) para la reservación.';
+                                }
+                                else if (errorMessage.includes('Fehler beim Erstellen der Reservierung in LobbyPMS')) {
+                                    errorMessage = 'Error al crear la reservación en LobbyPMS. Por favor, intenta de nuevo o contacta al soporte.';
+                                }
+                                else if (errorMessage.includes('categoryId ist erforderlich')) {
+                                    errorMessage = 'Se requiere la categoría de la habitación. Por favor, selecciona una habitación específica de la lista.';
+                                }
+                            }
+                            else if (language === 'en') {
+                                // Übersetze häufige Fehlermeldungen ins Englische
+                                if (errorMessage.includes('invalid input value for enum') && errorMessage.includes('potential')) {
+                                    errorMessage = 'Technical error: The "potential" status is not available in the database. Please contact support.';
+                                }
+                                else if (errorMessage.includes('Der Name des Gastes ist erforderlich')) {
+                                    errorMessage = 'Guest name is required for the reservation. Please provide your full name.';
+                                }
+                                else if (errorMessage.includes('Mindestens eine Kontaktinformation')) {
+                                    errorMessage = 'At least one contact information (phone number or email) is required for the reservation.';
+                                }
+                                else if (errorMessage.includes('Fehler beim Erstellen der Reservierung in LobbyPMS')) {
+                                    errorMessage = 'Error creating reservation in LobbyPMS. Please try again or contact support.';
+                                }
+                                else if (errorMessage.includes('categoryId ist erforderlich')) {
+                                    errorMessage = 'Room category is required. Please select a specific room from the list.';
+                                }
+                            }
                             toolResults.push({
                                 tool_call_id: toolCall.id,
                                 role: 'tool',
                                 name: functionName,
-                                content: JSON.stringify({ error: error.message })
+                                content: JSON.stringify({ error: errorMessage })
                             });
                         }
                     }
                     // Erneuter API Call mit Function Results
                     // WICHTIG: Sprachanweisung explizit wiederholen, damit KI die richtige Sprache verwendet
                     const languageInstruction = this.getLanguageInstruction(language);
-                    const systemPromptWithLanguage = languageInstruction + '\n\n' + systemPrompt;
+                    // Mehrfache Wiederholung der Sprachinstruktion für maximale Betonung
+                    const systemPromptWithLanguage = languageInstruction + '\n\n' + languageInstruction + '\n\n' + systemPrompt;
                     // Erstelle Messages-Array mit History, aktueller Nachricht, Function Calls und Results
                     const finalMessages = [
                         {
@@ -315,10 +415,10 @@ class WhatsAppAiService {
                 }
             }
             catch (error) {
-                console.error('[WhatsApp AI Service] OpenAI API Fehler:', error);
+                logger_1.logger.error('[WhatsApp AI Service] OpenAI API Fehler:', error);
                 if (axios_1.default.isAxiosError(error)) {
-                    console.error('[WhatsApp AI Service] Status:', (_d = error.response) === null || _d === void 0 ? void 0 : _d.status);
-                    console.error('[WhatsApp AI Service] Data:', (_e = error.response) === null || _e === void 0 ? void 0 : _e.data);
+                    logger_1.logger.error('[WhatsApp AI Service] Status:', (_d = error.response) === null || _d === void 0 ? void 0 : _d.status);
+                    logger_1.logger.error('[WhatsApp AI Service] Data:', (_e = error.response) === null || _e === void 0 ? void 0 : _e.data);
                 }
                 throw new Error('Fehler bei der KI-Antwort-Generierung');
             }
@@ -612,7 +712,7 @@ class WhatsAppAiService {
                 type: 'function',
                 function: {
                     name: 'create_room_reservation',
-                    description: 'Erstellt oder bestätigt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! WICHTIG: Diese Function darf NUR aufgerufen werden, wenn ALLE erforderlichen Daten vorhanden sind: checkInDate, checkOutDate, guestName (vollständiger Name), roomType, categoryId. WICHTIG: Wenn Daten fehlen (z.B. kein Name), rufe NICHT diese Function auf, sondern create_potential_reservation() und FRAGE dann nach fehlenden Daten! WICHTIG: Wenn bereits eine "potential" Reservation existiert, wird diese bestätigt (Status "potential" → "confirmed") und LobbyPMS-Buchung erstellt. Wenn keine "potential" Reservation existiert, wird eine neue Reservation erstellt. WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende "today" als checkInDate. Wenn User Zimmer-Namen sagt (z.B. "la tia artista"), finde categoryId aus vorheriger check_room_availability Response. Benötigt: checkInDate, checkOutDate, guestName (ERFORDERLICH - vollständiger Name), roomType (compartida/privada), categoryId (optional, wird automatisch gefunden). Optional: guestPhone (optional, WhatsApp-Nummer als Fallback), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link. Setzt Payment-Deadline auf 1 Stunde.',
+                    description: 'Erstellt oder bestätigt eine Zimmer-Reservation für den aktuellen Branch. WICHTIG: Nur für ZIMMER verwenden, NICHT für Touren! WICHTIG: Diese Function darf NUR aufgerufen werden, wenn ALLE erforderlichen Daten vorhanden sind: checkInDate, checkOutDate, guestName (vollständiger Name), roomType, categoryId. WICHTIG: Wenn Daten fehlen (z.B. kein Name), rufe NICHT diese Function auf, sondern create_potential_reservation() und FRAGE dann nach fehlenden Daten! WICHTIG: Wenn bereits eine "potential" Reservation existiert, wird diese bestätigt (Status "potential" → "confirmed") und LobbyPMS-Buchung erstellt. Wenn keine "potential" Reservation existiert, wird eine neue Reservation erstellt. WICHTIG: Nutze Kontext aus vorherigen Nachrichten! Wenn User "heute" gesagt hat, verwende "today" als checkInDate. Wenn User Zimmer-Namen sagt (z.B. "la tia artista"), finde categoryId aus vorheriger check_room_availability Response. Benötigt: checkInDate, checkOutDate, guestName (ERFORDERLICH - vollständiger Name), roomType (compartida/privada), categoryId (optional, wird automatisch gefunden). Optional: guestPhone (optional, WhatsApp-Nummer als Fallback), guestEmail (optional). Generiert automatisch Payment Link und Check-in-Link (falls Email vorhanden). Setzt Payment-Deadline auf 1 Stunde. WICHTIG: Nach dem Aufruf dieser Function MUSS DU eine vollständige Nachricht generieren mit paymentLink, checkInLink (falls nicht null), Hinweis für 18:00 (NICHT 22:00!) und PIN-Code-Hinweis. Die Function sendet KEINE Nachricht automatisch - DU musst die Nachricht generieren!',
                     parameters: {
                         type: 'object',
                         properties: {
@@ -661,19 +761,154 @@ class WhatsAppAiService {
      */
     static getLanguageInstruction(language) {
         const languageInstructions = {
-            es: 'WICHTIG: Antworte IMMER auf Spanisch. Die Antwort muss vollständig auf Spanisch sein, unabhängig von der Sprache des System Prompts.',
-            de: 'WICHTIG: Antworte IMMER auf Deutsch. Die Antwort muss vollständig auf Deutsch sein, unabhängig von der Sprache des System Prompts.',
-            en: 'IMPORTANT: Always answer in English. The response must be completely in English, regardless of the system prompt language.',
-            fr: 'IMPORTANT: Réponds TOUJOURS en français. La réponse doit être entièrement en français, indépendamment de la langue du prompt système.',
-            it: 'IMPORTANTE: Rispondi SEMPRE in italiano. La risposta deve essere completamente in italiano, indipendentemente dalla lingua del prompt di sistema.',
-            pt: 'IMPORTANTE: Responda SEMPRE em português. A resposta deve ser completamente em português, independentemente do idioma do prompt do sistema.',
-            zh: '重要：始终用中文回答。回答必须完全用中文，无论系统提示的语言如何。',
-            ja: '重要：常に日本語で答えてください。回答は完全に日本語でなければなりません。システムプロンプトの言語に関係なく。',
-            ko: '중요: 항상 한국어로 답변하세요. 응답은 완전히 한국어로 작성되어야 하며, 시스템 프롬프트의 언어와 무관합니다.',
-            hi: 'महत्वपूर्ण: हमेशा हिंदी में उत्तर दें। उत्तर पूरी तरह से हिंदी में होना चाहिए, सिस्टम प्रॉम्प्ट की भाषा की परवाह किए बिना।',
-            ru: 'ВАЖНО: Всегда отвечай на русском языке. Ответ должен быть полностью на русском, независимо от языка системного промпта.',
-            tr: 'ÖNEMLİ: Her zaman Türkçe cevap ver. Cevap tamamen Türkçe olmalıdır, sistem isteminin dilinden bağımsız olarak.',
-            ar: 'مهم: أجب دائماً بالعربية. يجب أن تكون الإجابة بالكامل بالعربية، بغض النظر عن لغة مطالبة النظام.'
+            es: '=== KRITISCH: SPRACH-ANWEISUNG ===\n' +
+                'DU MUSST IMMER UND AUSSCHLIESSLICH AUF SPANISCH ANTWORTEN!\n' +
+                'Die gesamte Antwort muss vollständig auf Spanisch sein.\n' +
+                'Verwende KEIN Deutsch, KEIN Englisch, NUR Spanisch.\n' +
+                'Alle Texte, Erklärungen, Fragen und Antworten müssen auf Spanisch sein.\n' +
+                'Auch wenn der System Prompt auf Deutsch ist, antworte IMMER auf Spanisch.\n' +
+                'Wenn du Function Results interpretierst, erkläre sie auf Spanisch.\n' +
+                'Wenn du Fragen stellst, stelle sie auf Spanisch.\n' +
+                'Wenn du Fehler meldest, melde sie auf Spanisch.\n' +
+                'ANTWORTE NUR AUF SPANISCH - KEINE AUSNAHME!\n' +
+                '=== ENDE SPRACH-ANWEISUNG ===\n',
+            de: '=== KRITISCH: SPRACH-ANWEISUNG ===\n' +
+                'DU MUSST IMMER UND AUSSCHLIESSLICH AUF DEUTSCH ANTWORTEN!\n' +
+                'Die gesamte Antwort muss vollständig auf Deutsch sein.\n' +
+                'Verwende KEIN Spanisch, KEIN Englisch, NUR Deutsch.\n' +
+                'Alle Texte, Erklärungen, Fragen und Antworten müssen auf Deutsch sein.\n' +
+                'Auch wenn der System Prompt auf Deutsch ist, antworte IMMER auf Deutsch.\n' +
+                'Wenn du Function Results interpretierst, erkläre sie auf Deutsch.\n' +
+                'Wenn du Fragen stellst, stelle sie auf Deutsch.\n' +
+                'Wenn du Fehler meldest, melde sie auf Deutsch.\n' +
+                'ANTWORTE NUR AUF DEUTSCH - KEINE AUSNAHME!\n' +
+                '=== ENDE SPRACH-ANWEISUNG ===\n',
+            en: '=== CRITICAL: LANGUAGE INSTRUCTION ===\n' +
+                'YOU MUST ALWAYS AND EXCLUSIVELY ANSWER IN ENGLISH!\n' +
+                'The entire response must be completely in English.\n' +
+                'Do NOT use German, do NOT use Spanish, ONLY English.\n' +
+                'All texts, explanations, questions and answers must be in English.\n' +
+                'Even if the system prompt is in German, ALWAYS answer in English.\n' +
+                'IMPORTANT: If Function Results contain German terms (e.g. "Dorm-Zimmer", "Privates Zimmer", "Betten", "Zimmer"), ALWAYS translate them to English!\n' +
+                'IMPORTANT: "Dorm-Zimmer" → "Shared rooms" or "Dorm rooms", "Privates Zimmer" → "Private rooms"\n' +
+                'IMPORTANT: "Betten" → "beds", "Zimmer" → "rooms"\n' +
+                'IMPORTANT: "compartida" → "shared", "privada" → "private"\n' +
+                'When you interpret Function Results, explain them in English and translate ALL terms.\n' +
+                'When you ask questions, ask them in English.\n' +
+                'When you report errors, report them in English.\n' +
+                'ANSWER ONLY IN ENGLISH - NO EXCEPTION!\n' +
+                'TRANSLATE ALL GERMAN TERMS FROM FUNCTION RESULTS TO ENGLISH!\n' +
+                '=== END LANGUAGE INSTRUCTION ===\n',
+            fr: '=== CRITIQUE: INSTRUCTION DE LANGUE ===\n' +
+                'TU DOIS TOUJOURS ET EXCLUSIVEMENT RÉPONDRE EN FRANÇAIS!\n' +
+                'La réponse entière doit être complètement en français.\n' +
+                'N\'utilise PAS l\'allemand, N\'utilise PAS l\'espagnol, UNIQUEMENT le français.\n' +
+                'Tous les textes, explications, questions et réponses doivent être en français.\n' +
+                'Même si le prompt système est en allemand, réponds TOUJOURS en français.\n' +
+                'Quand tu interprètes les résultats de fonction, explique-les en français.\n' +
+                'Quand tu poses des questions, pose-les en français.\n' +
+                'Quand tu signales des erreurs, signale-les en français.\n' +
+                'RÉPONDS UNIQUEMENT EN FRANÇAIS - AUCUNE EXCEPTION!\n' +
+                '=== FIN INSTRUCTION DE LANGUE ===\n',
+            it: '=== CRITICO: ISTRUZIONE LINGUISTICA ===\n' +
+                'DEVI SEMPRE E ESCLUSIVAMENTE RISpondere IN ITALIANO!\n' +
+                'L\'intera risposta deve essere completamente in italiano.\n' +
+                'NON usare tedesco, NON usare spagnolo, SOLO italiano.\n' +
+                'Tutti i testi, spiegazioni, domande e risposte devono essere in italiano.\n' +
+                'Anche se il prompt di sistema è in tedesco, rispondi SEMPRE in italiano.\n' +
+                'Quando interpreti i risultati delle funzioni, spiegalo in italiano.\n' +
+                'Quando fai domande, fallo in italiano.\n' +
+                'Quando segnali errori, segnalali in italiano.\n' +
+                'RISpondi SOLO IN ITALIANO - NESSUNA ECCEZIONE!\n' +
+                '=== FINE ISTRUZIONE LINGUISTICA ===\n',
+            pt: '=== CRÍTICO: INSTRUÇÃO DE IDIOMA ===\n' +
+                'VOCÊ DEVE SEMPRE E EXCLUSIVAMENTE RESPONDER EM PORTUGUÊS!\n' +
+                'A resposta inteira deve ser completamente em português.\n' +
+                'NÃO use alemão, NÃO use espanhol, APENAS português.\n' +
+                'Todos os textos, explicações, perguntas e respostas devem estar em português.\n' +
+                'Mesmo que o prompt do sistema esteja em alemão, responda SEMPRE em português.\n' +
+                'Quando você interpreta resultados de função, explique-os em português.\n' +
+                'Quando você faz perguntas, faça-as em português.\n' +
+                'Quando você relata erros, relate-os em português.\n' +
+                'RESPONDA APENAS EM PORTUGUÊS - SEM EXCEÇÃO!\n' +
+                '=== FIM DA INSTRUÇÃO DE IDIOMA ===\n',
+            zh: '=== 关键：语言指令 ===\n' +
+                '你必须始终且仅用中文回答！\n' +
+                '整个回答必须完全用中文。\n' +
+                '不要使用德语，不要使用西班牙语，仅使用中文。\n' +
+                '所有文本、解释、问题和答案都必须用中文。\n' +
+                '即使系统提示是德语，也要始终用中文回答。\n' +
+                '当你解释函数结果时，用中文解释。\n' +
+                '当你提问时，用中文提问。\n' +
+                '当你报告错误时，用中文报告。\n' +
+                '仅用中文回答 - 无例外！\n' +
+                '=== 语言指令结束 ===\n',
+            ja: '=== 重要：言語指示 ===\n' +
+                'あなたは常に日本語でのみ回答する必要があります！\n' +
+                '回答全体は完全に日本語である必要があります。\n' +
+                'ドイツ語を使用せず、スペイン語を使用せず、日本語のみを使用してください。\n' +
+                'すべてのテキスト、説明、質問、回答は日本語である必要があります。\n' +
+                'システムプロンプトがドイツ語であっても、常に日本語で回答してください。\n' +
+                '関数結果を解釈する場合、日本語で説明してください。\n' +
+                '質問をする場合、日本語で質問してください。\n' +
+                'エラーを報告する場合、日本語で報告してください。\n' +
+                '日本語でのみ回答してください - 例外なし！\n' +
+                '=== 言語指示終了 ===\n',
+            ko: '=== 중요: 언어 지시 ===\n' +
+                '당신은 항상 한국어로만 답변해야 합니다!\n' +
+                '전체 응답은 완전히 한국어여야 합니다.\n' +
+                '독일어를 사용하지 말고, 스페인어를 사용하지 말고, 한국어만 사용하세요.\n' +
+                '모든 텍스트, 설명, 질문 및 답변은 한국어여야 합니다.\n' +
+                '시스템 프롬프트가 독일어라도 항상 한국어로 답변하세요.\n' +
+                '함수 결과를 해석할 때 한국어로 설명하세요.\n' +
+                '질문을 할 때 한국어로 질문하세요.\n' +
+                '오류를 보고할 때 한국어로 보고하세요.\n' +
+                '한국어로만 답변하세요 - 예외 없음!\n' +
+                '=== 언어 지시 종료 ===\n',
+            hi: '=== महत्वपूर्ण: भाषा निर्देश ===\n' +
+                'आपको हमेशा और विशेष रूप से हिंदी में उत्तर देना चाहिए!\n' +
+                'पूरा उत्तर पूरी तरह से हिंदी में होना चाहिए।\n' +
+                'जर्मन का उपयोग न करें, स्पेनिश का उपयोग न करें, केवल हिंदी।\n' +
+                'सभी पाठ, स्पष्टीकरण, प्रश्न और उत्तर हिंदी में होने चाहिए।\n' +
+                'भले ही सिस्टम प्रॉम्प्ट जर्मन में हो, हमेशा हिंदी में उत्तर दें।\n' +
+                'जब आप फ़ंक्शन परिणामों की व्याख्या करते हैं, तो उन्हें हिंदी में समझाएं।\n' +
+                'जब आप प्रश्न पूछते हैं, तो उन्हें हिंदी में पूछें।\n' +
+                'जब आप त्रुटियों की रिपोर्ट करते हैं, तो उन्हें हिंदी में रिपोर्ट करें।\n' +
+                'केवल हिंदी में उत्तर दें - कोई अपवाद नहीं!\n' +
+                '=== भाषा निर्देश समाप्त ===\n',
+            ru: '=== КРИТИЧЕСКИ ВАЖНО: ЯЗЫКОВАЯ ИНСТРУКЦИЯ ===\n' +
+                'ВЫ ДОЛЖНЫ ВСЕГДА И ИСКЛЮЧИТЕЛЬНО ОТВЕЧАТЬ НА РУССКОМ ЯЗЫКЕ!\n' +
+                'Весь ответ должен быть полностью на русском языке.\n' +
+                'НЕ используйте немецкий, НЕ используйте испанский, ТОЛЬКО русский.\n' +
+                'Все тексты, объяснения, вопросы и ответы должны быть на русском языке.\n' +
+                'Даже если системный промпт на немецком, ВСЕГДА отвечайте на русском.\n' +
+                'Когда вы интерпретируете результаты функций, объясняйте их на русском.\n' +
+                'Когда вы задаете вопросы, задавайте их на русском.\n' +
+                'Когда вы сообщаете об ошибках, сообщайте их на русском.\n' +
+                'ОТВЕЧАЙТЕ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ - БЕЗ ИСКЛЮЧЕНИЙ!\n' +
+                '=== КОНЕЦ ЯЗЫКОВОЙ ИНСТРУКЦИИ ===\n',
+            tr: '=== KRİTİK: DİL TALİMATI ===\n' +
+                'HER ZAMAN VE YALNIZCA TÜRKÇE CEVAP VERMELİSİNİZ!\n' +
+                'Tüm cevap tamamen Türkçe olmalıdır.\n' +
+                'Almanca kullanmayın, İspanyolca kullanmayın, YALNIZCA Türkçe.\n' +
+                'Tüm metinler, açıklamalar, sorular ve cevaplar Türkçe olmalıdır.\n' +
+                'Sistem istemi Almanca olsa bile, HER ZAMAN Türkçe cevap verin.\n' +
+                'Fonksiyon sonuçlarını yorumlarken, Türkçe açıklayın.\n' +
+                'Soru sorarken, Türkçe sorun.\n' +
+                'Hataları bildirirken, Türkçe bildirin.\n' +
+                'YALNIZCA TÜRKÇE CEVAP VERİN - İSTİSNA YOK!\n' +
+                '=== DİL TALİMATI SONU ===\n',
+            ar: '=== حرج: تعليمات اللغة ===\n' +
+                'يجب عليك دائمًا وحصريًا الإجابة بالعربية!\n' +
+                'يجب أن تكون الإجابة بأكملها بالعربية تمامًا.\n' +
+                'لا تستخدم الألمانية، لا تستخدم الإسبانية، العربية فقط.\n' +
+                'يجب أن تكون جميع النصوص والتفسيرات والأسئلة والإجابات بالعربية.\n' +
+                'حتى لو كان مطالبة النظام بالألمانية، أجب دائمًا بالعربية.\n' +
+                'عند تفسير نتائج الوظائف، اشرحها بالعربية.\n' +
+                'عند طرح الأسئلة، اطرحها بالعربية.\n' +
+                'عند الإبلاغ عن الأخطاء، أبلغ عنها بالعربية.\n' +
+                'أجب بالعربية فقط - لا استثناء!\n' +
+                '=== نهاية تعليمات اللغة ===\n'
         };
         return languageInstructions[language] || languageInstructions.es;
     }
@@ -683,8 +918,9 @@ class WhatsAppAiService {
     static buildSystemPrompt(aiConfig, language, conversationContext) {
         // WICHTIG: Sprachanweisung GANZ AN DEN ANFANG setzen für maximale Priorität
         const languageInstruction = this.getLanguageInstruction(language);
-        // Beginne mit Sprachanweisung
+        // Beginne mit Sprachanweisung (mehrfach für maximale Betonung)
         let prompt = languageInstruction + '\n\n';
+        prompt += languageInstruction + '\n\n'; // Wiederholung für maximale Betonung
         // Dann System Prompt
         prompt += aiConfig.systemPrompt || 'Du bist ein hilfreicher Assistent.';
         // Füge Regeln hinzu
@@ -718,11 +954,32 @@ class WhatsAppAiService {
         prompt += '  WICHTIG: Jedes Zimmer im Function-Ergebnis muss in der Antwort erwähnt werden!\n';
         prompt += '  WICHTIG: Wenn User nur "heute" sagt, verwende startDate: "today" und lasse endDate leer (zeigt nur heute, nicht heute+morgen)!\n';
         prompt += '  WICHTIG: Wenn User nur "morgen" sagt, verwende startDate: "tomorrow" und lasse endDate leer (zeigt nur morgen)!\n';
-        prompt += '  WICHTIG: Terminologie beachten!\n';
-        prompt += '    - Bei compartida (Dorm-Zimmer): Verwende "Betten" (beds), NICHT "Zimmer"!\n';
-        prompt += '    - Bei privada (private Zimmer): Verwende "Zimmer" (rooms)!\n';
-        prompt += '    - Beispiel compartida: "1 Bett verfügbar" oder "3 Betten verfügbar"\n';
-        prompt += '    - Beispiel privada: "1 Zimmer verfügbar" oder "2 Zimmer verfügbar"\n';
+        prompt += '  WICHTIG: Terminologie beachten - IMMER in der erkannten Sprache!\n';
+        if (language === 'es') {
+            prompt += '    - Bei compartida: Verwende "camas" (beds), NICHT "habitaciones"!\n';
+            prompt += '    - Bei privada: Verwende "habitaciones" (rooms), NICHT "camas"!\n';
+            prompt += '    - Beispiel compartida: "4 camas disponibles" oder "1 cama disponible"\n';
+            prompt += '    - Beispiel privada: "1 habitación disponible" oder "2 habitaciones disponibles"\n';
+            prompt += '    - Kategorien: "Habitaciones compartidas" (nicht "Dorm-Zimmer") und "Habitaciones privadas" (nicht "Privates Zimmer")\n';
+        }
+        else if (language === 'en') {
+            prompt += '    - Bei compartida: Verwende "beds", NICHT "rooms"!\n';
+            prompt += '    - Bei privada: Verwende "rooms", NICHT "beds"!\n';
+            prompt += '    - Beispiel compartida: "4 beds available" oder "1 bed available"\n';
+            prompt += '    - Beispiel privada: "1 room available" oder "2 rooms available"\n';
+            prompt += '    - Kategorien: "Shared rooms" (nicht "Dorm-Zimmer") und "Private rooms" (nicht "Privates Zimmer")\n';
+        }
+        else {
+            prompt += '    - Bei compartida: Verwende "Betten", NICHT "Zimmer"!\n';
+            prompt += '    - Bei privada: Verwende "Zimmer", NICHT "Betten"!\n';
+            prompt += '    - Beispiel compartida: "4 Betten verfügbar" oder "1 Bett verfügbar"\n';
+            prompt += '    - Beispiel privada: "1 Zimmer verfügbar" oder "2 Zimmer verfügbar"\n';
+            prompt += '    - Kategorien: "Dorm-Zimmer" (compartida) und "Privates Zimmer" (privada)\n';
+        }
+        prompt += '  WICHTIG: Übersetze ALLE Begriffe aus Function Results in die erkannte Sprache!\n';
+        prompt += '  WICHTIG: Wenn Function Results "Dorm-Zimmer" oder "Privates Zimmer" enthalten, übersetze diese IMMER!\n';
+        prompt += '  WICHTIG: Wenn Function Results einen Fehler enthalten (error-Feld), erkläre den Fehler in der erkannten Sprache und gib hilfreiche Anweisungen!\n';
+        prompt += '  WICHTIG: Bei Fehlern in Function Results: Erkläre den Fehler auf ' + (language === 'es' ? 'Spanisch' : language === 'en' ? 'Englisch' : 'Deutsch') + ' und gib dem User hilfreiche Anweisungen, was zu tun ist!\n';
         prompt += '  Beispiele:\n';
         prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "today" })\n';
         prompt += '    - "Haben wir Zimmer frei morgen?" → check_room_availability({ startDate: "tomorrow" })\n';
@@ -732,10 +989,15 @@ class WhatsAppAiService {
         // Tour-Funktionen - IMMER verfügbar (auch für Gäste)
         prompt += '\n- get_tours: Hole verfügbare Touren (type, availableFrom, availableTo, limit)\n';
         prompt += '  WICHTIG: Verwende diese Function wenn der User nach Touren fragt!\n';
+        prompt += '  WICHTIG: Diese Function zeigt eine Liste aller verfügbaren Touren\n';
+        prompt += '  KRITISCH: Wenn User bereits eine Tour gewählt hat (z.B. "die 2.", "guatape", "tour 2"), rufe diese Function NICHT nochmal auf!\n';
+        prompt += '  KRITISCH: Wenn User nach get_tours() eine Tour wählt, rufe stattdessen book_tour() auf!\n';
+        prompt += '  KRITISCH: Liste NICHT alle Touren nochmal auf, wenn User bereits eine Tour gewählt hat!\n';
         prompt += '  Beispiele:\n';
         prompt += '    - "welche touren gibt es?" → get_tours({})\n';
         prompt += '    - "zeige mir alle touren" → get_tours({})\n';
         prompt += '    - "¿qué tours tienen disponibles?" → get_tours({})\n';
+        prompt += '    - User sagt "die 2." nach get_tours() → NICHT get_tours() nochmal, sondern book_tour()!\n';
         prompt += '\n- get_tour_details: Hole detaillierte Informationen zu einer Tour (tourId)\n';
         prompt += '  WICHTIG: Verwende diese Function wenn der User Details zu einer spezifischen Tour wissen möchte!\n';
         prompt += '  Beispiele:\n';
@@ -754,12 +1016,15 @@ class WhatsAppAiService {
         prompt += '  WICHTIG: Wenn customerName fehlt → FRAGE nach dem Namen, rufe Function NICHT auf!\n';
         prompt += '  WICHTIG: Wenn tourDate fehlt → FRAGE nach dem Datum, rufe Function NICHT auf!\n';
         prompt += '  WICHTIG: Wenn numberOfParticipants fehlt → FRAGE nach der Anzahl, rufe Function NICHT auf!\n';
+        prompt += '  KRITISCH: Wenn User nach get_tours() eine Tour wählt (z.B. "die 2.", "guatape", "tour 2"), rufe SOFORT book_tour() auf, NICHT get_tours() nochmal!\n';
+        prompt += '  KRITISCH: NIEMALS get_tours() nochmal aufrufen, wenn User bereits eine Tour gewählt hat!\n';
+        prompt += '  KRITISCH: Wenn User "die 2. guatape. für morgen" sagt, hat er eine Tour gewählt → rufe book_tour() auf, liste NICHT alle Touren nochmal auf!\n';
         prompt += '  Beispiele:\n';
         prompt += '    - "ich möchte tour 1 für morgen buchen" → book_tour({ tourId: 1, tourDate: "tomorrow", numberOfParticipants: 1, customerName: "Max Mustermann", customerPhone: "+573001234567" })\n';
         prompt += '    - "reservar tour 3 para mañana" → book_tour({ tourId: 3, tourDate: "tomorrow", numberOfParticipants: 1, customerName: "Juan Pérez", customerEmail: "juan@example.com" })\n';
         prompt += '    - "die 2., guatape. für morgen. für 2 personen" → book_tour({ tourId: 2, tourDate: "tomorrow", numberOfParticipants: 2, customerName: "Max Mustermann", customerPhone: "+573001234567" })\n';
-        prompt += '    - User sagt "die 2." nach get_tours() → tourId=2 (aus vorheriger Response)\n';
-        prompt += '    - User sagt "Guatapé" → finde tourId aus get_tours() Response (z.B. tourId=2)\n';
+        prompt += '    - User sagt "die 2." nach get_tours() → tourId=2 (aus vorheriger Response), rufe book_tour() auf, NICHT get_tours() nochmal!\n';
+        prompt += '    - User sagt "Guatapé" → finde tourId aus get_tours() Response (z.B. tourId=2), rufe book_tour() auf, NICHT get_tours() nochmal!\n';
         // Zimmer-Buchung - IMMER verfügbar (auch für Gäste)
         prompt += '\n- create_room_reservation: Erstelle eine Zimmer-Reservation (checkInDate, checkOutDate, guestName, roomType, categoryId optional)\n';
         prompt += '  WICHTIG: Verwende diese Function wenn der User ein ZIMMER buchen möchte (NICHT für Touren)!\n';
@@ -776,7 +1041,6 @@ class WhatsAppAiService {
         prompt += '  WICHTIG: Wenn User "para mañana" + "1 noche" sagt, dann: checkInDate="tomorrow", checkOutDate="day after tomorrow"!\n';
         prompt += '  WICHTIG: Wenn User "04/12" oder "04.12" sagt, erkenne dies als Datum (04. Dezember, aktuelles Jahr)!\n';
         prompt += '  WICHTIG: Wenn User nach Buchung Daten gibt (z.B. "01.dez bis 02.dez") → rufe create_room_reservation auf, NICHT check_room_availability!\n';
-        prompt += '  WICHTIG: Generiert automatisch Payment Link und Check-in-Link, setzt Zahlungsfrist (1 Stunde)\n';
         prompt += '  WICHTIG: Alle Reservierungen sind Branch-spezifisch (Branch wird automatisch aus Context verwendet)\n';
         prompt += '  WICHTIG: Reservierungsablauf - KRITISCH BEACHTEN:\n';
         prompt += '    1. Wenn User erste Buchungsinformationen gibt (Check-in, Check-out, Zimmer) ABER noch nicht ALLE Daten hat (z.B. kein Name, keine categoryId) → rufe create_potential_reservation() auf\n';
@@ -786,9 +1050,20 @@ class WhatsAppAiService {
         prompt += '    5. Wenn categoryId fehlt → rufe create_potential_reservation() auf und FRAGE nach dem Zimmer!\n';
         prompt += '  WICHTIG: create_potential_reservation() erstellt sofort eine Reservation mit Status "potential" (ohne LobbyPMS-Buchung, guestName optional)\n';
         prompt += '  WICHTIG: create_room_reservation() ändert Status von "potential" auf "confirmed" (keine neue Reservation) und erstellt LobbyPMS-Buchung (guestName ERFORDERLICH!)\n';
-        prompt += '  WICHTIG: Payment-Link wird mit Betrag + 5% erstellt und versendet (automatisch in boldPaymentService)\n';
+        prompt += '  WICHTIG: Payment-Link wird mit Betrag + 5% erstellt (automatisch in boldPaymentService)\n';
         prompt += '  WICHTIG: Wenn User direkt ALLE Daten gibt (Check-in, Check-out, Zimmer, Name) → rufe SOFORT create_room_reservation() auf (keine "potential" Reservation nötig)\n';
         prompt += '  WICHTIG: NIEMALS create_room_reservation() aufrufen, wenn guestName fehlt! Immer erst create_potential_reservation() und dann nachfragen!\n';
+        prompt += '  WICHTIG: Nach create_room_reservation() - KRITISCH BEACHTEN:\n';
+        prompt += '    1. Das Return-Objekt enthält: paymentLink, checkInLink (kann null sein), checkInDate, checkOutDate, guestName, amount, currency\n';
+        prompt += '    2. DU MUSST eine vollständige Nachricht generieren mit:\n';
+        prompt += '       - Reservierungsbestätigung (Gast-Name, Zimmer, Check-in/Check-out Datum)\n';
+        prompt += '       - Payment-Link (immer vorhanden, aus paymentLink)\n';
+        prompt += '       - Check-in-Link (nur wenn checkInLink nicht null ist!)\n';
+        prompt += '       - Hinweis: "Falls Ankunft nach 18:00 (NICHT 22:00!), bitte Check-in-Link vor Ankunft erledigen, damit PIN-Code zugesendet wird"\n';
+        prompt += '       - Zahlungsfrist: "Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Reservierung automatisch storniert"\n';
+        prompt += '    3. Verwende IMMER 18:00 (NICHT 22:00!) für den Ankunfts-Hinweis!\n';
+        prompt += '    4. Wenn checkInLink null ist, erwähne den Check-in-Link NICHT in der Nachricht!\n';
+        prompt += '    5. Die Nachricht muss in der erkannten Sprache sein (Spanisch/Deutsch/Englisch)\n';
         prompt += '  Beispiele:\n';
         prompt += '    - "reservame 1 cama en el primo aventurero für heute, 1 nacht" → create_room_reservation({ checkInDate: "today", checkOutDate: "tomorrow", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34280 })\n';
         prompt += '    - "ich möchte das Zimmer 2 buchen vom 1.12. bis 3.12." → create_room_reservation({ checkInDate: "2025-12-01", checkOutDate: "2025-12-04", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34281 })\n';
@@ -852,6 +1127,10 @@ class WhatsAppAiService {
         prompt += '\nWICHTIG: Unterscheide klar zwischen TOUR-Buchung (book_tour) und ZIMMER-Buchung (create_room_reservation)!';
         prompt += '\nWICHTIG: Wenn User nach get_tours() eine Nummer wählt (z.B. "2."), ist das IMMER eine Tour-ID, NICHT eine Zimmer-Nummer!';
         prompt += '\nWICHTIG: Wenn User nach check_room_availability() eine Nummer wählt (z.B. "2."), ist das IMMER eine Zimmer-categoryId, NICHT eine Tour-ID!';
+        prompt += '\nKRITISCH: Wenn User nach get_tours() eine Tour wählt (z.B. "die 2.", "guatape", "tour 2"), rufe SOFORT book_tour() auf, NICHT get_tours() nochmal!';
+        prompt += '\nKRITISCH: NIEMALS get_tours() nochmal aufrufen, wenn User bereits eine Tour gewählt hat!';
+        prompt += '\nKRITISCH: Liste NICHT alle Touren nochmal auf, wenn User bereits eine Tour gewählt hat!';
+        prompt += '\nKRITISCH: Wenn User "die 2. guatape. für morgen" sagt, hat er eine Tour gewählt → rufe book_tour() auf, liste NICHT alle Touren nochmal auf!';
         prompt += '\nWICHTIG: Wenn User "ja" sagt nachdem du eine Frage gestellt hast, interpretiere es als Bestätigung deiner Vorschläge!';
         prompt += '\nWICHTIG: Wenn User "ja", "sí", "yes" sagt nachdem du eine Frage gestellt hast, interpretiere es als Bestätigung und führe die Aktion aus!';
         prompt += '\nWICHTIG: Wenn User "ja, ich bestätige, bitte buchen" oder "ja ich möchte buchen" oder "sí, quiero reservar" sagt, rufe SOFORT create_room_reservation auf!';
@@ -880,6 +1159,7 @@ class WhatsAppAiService {
     }
     /**
      * Erkennt Sprache aus Nachrichtentext (einfache Heuristik)
+     * WICHTIG: Public, damit andere Services diese Funktion nutzen können
      */
     static detectLanguageFromMessage(message) {
         if (!message || message.trim().length === 0) {
@@ -967,7 +1247,7 @@ class WhatsAppAiService {
                 return (aiConfig === null || aiConfig === void 0 ? void 0 : aiConfig.enabled) === true;
             }
             catch (error) {
-                console.error('[WhatsApp AI Service] Fehler beim Prüfen der KI-Aktivierung:', error);
+                logger_1.logger.error('[WhatsApp AI Service] Fehler beim Prüfen der KI-Aktivierung:', error);
                 return false;
             }
         });

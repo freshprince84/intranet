@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
+import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -123,7 +124,7 @@ export const createTourReservation = async (req: AuthenticatedRequest, res: Resp
       data: tourReservation
     });
   } catch (error) {
-    console.error('[createTourReservation] Fehler:', error);
+    logger.error('[createTourReservation] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Erstellen der Verknüpfung'
@@ -247,7 +248,7 @@ export const updateTourReservation = async (req: AuthenticatedRequest, res: Resp
       data: tourReservation
     });
   } catch (error) {
-    console.error('[updateTourReservation] Fehler:', error);
+    logger.error('[updateTourReservation] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Aktualisieren der Verknüpfung'
@@ -277,7 +278,7 @@ export const deleteTourReservation = async (req: AuthenticatedRequest, res: Resp
       message: 'Verknüpfung gelöscht'
     });
   } catch (error) {
-    console.error('[deleteTourReservation] Fehler:', error);
+    logger.error('[deleteTourReservation] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Löschen der Verknüpfung'
@@ -323,7 +324,7 @@ export const getTourReservationsByReservation = async (req: Request, res: Respon
       data: tourReservations
     });
   } catch (error) {
-    console.error('[getTourReservationsByReservation] Fehler:', error);
+    logger.error('[getTourReservationsByReservation] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden der Verknüpfungen'
@@ -370,7 +371,7 @@ export const getTourReservationsByBooking = async (req: Request, res: Response) 
       data: tourReservations
     });
   } catch (error) {
-    console.error('[getTourReservationsByBooking] Fehler:', error);
+    logger.error('[getTourReservationsByBooking] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden der Verknüpfungen'

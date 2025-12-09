@@ -7,6 +7,7 @@ import { checkUserPermission } from '../middleware/permissionMiddleware';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -96,7 +97,7 @@ export const getAllTours = async (req: Request, res: Response) => {
           filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'tour');
         }
       } catch (filterError) {
-        console.error(`[getAllTours] Fehler beim Laden von Filter ${filterId}:`, filterError);
+        logger.error(`[getAllTours] Fehler beim Laden von Filter ${filterId}:`, filterError);
       }
     } else if (filterConditions) {
       filterWhereClause = convertFilterConditionsToPrismaWhere(
@@ -184,10 +185,10 @@ export const getAllTours = async (req: Request, res: Response) => {
       data: tours
     });
   } catch (error) {
-    console.error('[getAllTours] Fehler:', error);
+    logger.error('[getAllTours] Fehler:', error);
     if (error instanceof Error) {
-      console.error('[getAllTours] Fehlermeldung:', error.message);
-      console.error('[getAllTours] Stack:', error.stack);
+      logger.error('[getAllTours] Fehlermeldung:', error.message);
+      logger.error('[getAllTours] Stack:', error.stack);
     }
     res.status(500).json({
       success: false,
@@ -252,7 +253,7 @@ export const getTourById = async (req: Request, res: Response) => {
       data: tour
     });
   } catch (error) {
-    console.error('[getTourById] Fehler:', error);
+    logger.error('[getTourById] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden der Tour'
@@ -394,7 +395,7 @@ export const createTour = async (req: AuthenticatedRequest, res: Response) => {
       data: tour
     });
   } catch (error) {
-    console.error('[createTour] Fehler:', error);
+    logger.error('[createTour] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Erstellen der Tour'
@@ -468,7 +469,7 @@ export const uploadTourImage = async (req: AuthenticatedRequest, res: Response) 
       data: updatedTour
     });
   } catch (error) {
-    console.error('[uploadTourImage] Fehler:', error);
+    logger.error('[uploadTourImage] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Hochladen des Bildes'
@@ -536,7 +537,7 @@ export const uploadTourGalleryImage = async (req: AuthenticatedRequest, res: Res
       data: updatedTour
     });
   } catch (error) {
-    console.error('[uploadTourGalleryImage] Fehler:', error);
+    logger.error('[uploadTourGalleryImage] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Hochladen des Galerie-Bildes'
@@ -596,7 +597,7 @@ export const getTourImage = async (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 Jahr Cache
     res.sendFile(imagePath);
   } catch (error) {
-    console.error('[getTourImage] Fehler:', error);
+    logger.error('[getTourImage] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden des Bildes'
@@ -665,7 +666,7 @@ export const getTourGalleryImage = async (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 Jahr Cache
     res.sendFile(imagePath);
   } catch (error) {
-    console.error('[getTourGalleryImage] Fehler:', error);
+    logger.error('[getTourGalleryImage] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden des Galerie-Bildes'
@@ -741,7 +742,7 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
       data: updatedTour
     });
   } catch (error) {
-    console.error('[deleteTourGalleryImage] Fehler:', error);
+    logger.error('[deleteTourGalleryImage] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Löschen des Galerie-Bildes'
@@ -875,7 +876,7 @@ export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
       data: tour
     });
   } catch (error) {
-    console.error('[updateTour] Fehler:', error);
+    logger.error('[updateTour] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Aktualisieren der Tour'
@@ -938,7 +939,7 @@ export const toggleTourActive = async (req: AuthenticatedRequest, res: Response)
       data: tour
     });
   } catch (error) {
-    console.error('[toggleTourActive] Fehler:', error);
+    logger.error('[toggleTourActive] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Aktualisieren der Tour'
@@ -1002,7 +1003,7 @@ export const getTourBookings = async (req: Request, res: Response) => {
       data: bookings
     });
   } catch (error) {
-    console.error('[getTourBookings] Fehler:', error);
+    logger.error('[getTourBookings] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden der Buchungen'
@@ -1091,7 +1092,7 @@ export const exportTours = async (req: Request, res: Response) => {
       tours
     });
   } catch (error) {
-    console.error('[exportTours] Fehler:', error);
+    logger.error('[exportTours] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Exportieren der Touren'

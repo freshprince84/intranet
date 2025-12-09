@@ -48,6 +48,7 @@ const lifecycleRoles_1 = require("../utils/lifecycleRoles");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Upload-Verzeichnis für Certificates/Contracts
 const CERTIFICATES_DIR = path.join(__dirname, '../../uploads/certificates');
 const CONTRACTS_DIR = path.join(__dirname, '../../uploads/contracts');
@@ -106,7 +107,7 @@ const getLifecycle = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 }
             }
             catch (createError) {
-                console.error('Error creating lifecycle:', createError);
+                logger_1.logger.error('Error creating lifecycle:', createError);
                 // Fall through to return 404
             }
         }
@@ -116,7 +117,7 @@ const getLifecycle = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.json(result);
     }
     catch (error) {
-        console.error('Error in getLifecycle:', error);
+        logger_1.logger.error('Error in getLifecycle:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen des Lebenszyklus',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -152,7 +153,7 @@ const updateStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.json(updated);
     }
     catch (error) {
-        console.error('Error in updateStatus:', error);
+        logger_1.logger.error('Error in updateStatus:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren des Status',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -188,7 +189,7 @@ const getSocialSecurity = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.json(status);
     }
     catch (error) {
-        console.error('Error in getSocialSecurity:', error);
+        logger_1.logger.error('Error in getSocialSecurity:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen des Sozialversicherungs-Status',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -228,7 +229,7 @@ const updateSocialSecurity = (req, res) => __awaiter(void 0, void 0, void 0, fun
         res.json(updated);
     }
     catch (error) {
-        console.error('Error in updateSocialSecurity:', error);
+        logger_1.logger.error('Error in updateSocialSecurity:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren des Sozialversicherungs-Status',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -283,7 +284,7 @@ const getCertificates = (req, res) => __awaiter(void 0, void 0, void 0, function
                 }
             }
             catch (createError) {
-                console.error('Error creating lifecycle:', createError);
+                logger_1.logger.error('Error creating lifecycle:', createError);
             }
         }
         if (certificates === null) {
@@ -292,7 +293,7 @@ const getCertificates = (req, res) => __awaiter(void 0, void 0, void 0, function
         res.json({ certificates });
     }
     catch (error) {
-        console.error('Error in getCertificates:', error);
+        logger_1.logger.error('Error in getCertificates:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Arbeitszeugnisse',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -323,7 +324,7 @@ const getCertificate = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.json(certificate);
     }
     catch (error) {
-        console.error('Error in getCertificate:', error);
+        logger_1.logger.error('Error in getCertificate:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen des Arbeitszeugnisses',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -356,7 +357,7 @@ const createCertificate = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.status(201).json(certificate);
     }
     catch (error) {
-        console.error('Error in createCertificate:', error);
+        logger_1.logger.error('Error in createCertificate:', error);
         res.status(500).json({
             message: 'Fehler beim Erstellen des Arbeitszeugnisses',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -386,7 +387,7 @@ const updateCertificate = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.json(updated);
     }
     catch (error) {
-        console.error('Error in updateCertificate:', error);
+        logger_1.logger.error('Error in updateCertificate:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren des Arbeitszeugnisses',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -430,7 +431,7 @@ const downloadCertificate = (req, res) => __awaiter(void 0, void 0, void 0, func
         fs.createReadStream(filePath).pipe(res);
     }
     catch (error) {
-        console.error('Error in downloadCertificate:', error);
+        logger_1.logger.error('Error in downloadCertificate:', error);
         res.status(500).json({
             message: 'Fehler beim Herunterladen des Arbeitszeugnisses',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -485,7 +486,7 @@ const getContracts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 }
             }
             catch (createError) {
-                console.error('Error creating lifecycle:', createError);
+                logger_1.logger.error('Error creating lifecycle:', createError);
             }
         }
         if (contracts === null) {
@@ -494,7 +495,7 @@ const getContracts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.json({ contracts });
     }
     catch (error) {
-        console.error('Error in getContracts:', error);
+        logger_1.logger.error('Error in getContracts:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Arbeitsverträge',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -525,7 +526,7 @@ const getContract = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.json(contract);
     }
     catch (error) {
-        console.error('Error in getContract:', error);
+        logger_1.logger.error('Error in getContract:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen des Arbeitsvertrags',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -566,7 +567,7 @@ const createContract = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(201).json(contract);
     }
     catch (error) {
-        console.error('Error in createContract:', error);
+        logger_1.logger.error('Error in createContract:', error);
         res.status(500).json({
             message: 'Fehler beim Erstellen des Arbeitsvertrags',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -601,7 +602,7 @@ const updateContract = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.json(updated);
     }
     catch (error) {
-        console.error('Error in updateContract:', error);
+        logger_1.logger.error('Error in updateContract:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren des Arbeitsvertrags',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -645,7 +646,7 @@ const downloadContract = (req, res) => __awaiter(void 0, void 0, void 0, functio
         fs.createReadStream(filePath).pipe(res);
     }
     catch (error) {
-        console.error('Error in downloadContract:', error);
+        logger_1.logger.error('Error in downloadContract:', error);
         res.status(500).json({
             message: 'Fehler beim Herunterladen des Arbeitsvertrags',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

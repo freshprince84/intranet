@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface WorktimeCacheEntry {
   data: {
@@ -71,7 +72,7 @@ class WorktimeCache {
 
       return data;
     } catch (error) {
-      console.error(`[WorktimeCache] Fehler beim Laden für User ${userId}:`, error);
+      logger.error(`[WorktimeCache] Fehler beim Laden für User ${userId}:`, error);
       return null;
     }
   }

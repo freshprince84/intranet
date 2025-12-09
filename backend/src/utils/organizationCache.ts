@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { logger } from './logger';
 
 interface OrganizationCacheEntry {
   data: {
@@ -88,7 +89,7 @@ class OrganizationCache {
 
       return data;
     } catch (error) {
-      console.error(`[OrganizationCache] Fehler beim Laden für User ${userId}:`, error);
+      logger.error(`[OrganizationCache] Fehler beim Laden für User ${userId}:`, error);
       return null;
     }
   }

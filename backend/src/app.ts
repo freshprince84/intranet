@@ -52,11 +52,12 @@ import { ReservationScheduler } from './services/reservationScheduler';
 import { LobbyPmsReservationScheduler } from './services/lobbyPmsReservationScheduler';
 import { ReservationAutoCancelScheduler } from './services/reservationAutoCancelScheduler';
 import { startWorkers, stopWorkers } from './queues';
+import { logger } from './utils/logger';
 
 const app = express();
 
-console.log('[App] ⚠️ App erstellt, shiftRoutes Type:', typeof shiftRoutes);
-console.log('[App] ⚠️ shiftRoutes vorhanden:', !!shiftRoutes);
+logger.log('[App] ⚠️ App erstellt, shiftRoutes Type:', typeof shiftRoutes);
+logger.log('[App] ⚠️ shiftRoutes vorhanden:', !!shiftRoutes);
 
 // Middleware
 app.use(express.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
@@ -84,7 +85,7 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
-      console.warn(`Origin ${origin} ist nicht erlaubt durch CORS`);
+      logger.warn(`Origin ${origin} ist nicht erlaubt durch CORS`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -131,7 +132,7 @@ if (!fs.existsSync(downloadsPath)) {
 const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 2 Minuten
 let worktimeCheckInterval: NodeJS.Timeout | null = null;
 worktimeCheckInterval = setInterval(async () => {
-  console.log('Starte automatische Überprüfung der Arbeitszeiten...');
+  logger.log('Starte automatische Überprüfung der Arbeitszeiten...');
   await checkAndStopExceededWorktimes();
 }, CHECK_INTERVAL_MS);
 
@@ -150,7 +151,7 @@ monthlyReportCheckInterval = setInterval(async () => {
     
     // Führe die Prüfung nur zwischen 9:00 und 10:00 Uhr aus
     if (currentHour >= 9 && currentHour < 10) {
-      console.log('Starte tägliche Überprüfung für automatische Monatsabrechnungen...');
+      logger.log('Starte tägliche Überprüfung für automatische Monatsabrechnungen...');
       await checkAndGenerateMonthlyReports();
       lastMonthlyReportCheck = today;
     }
@@ -162,12 +163,12 @@ export const cleanupTimers = () => {
   if (worktimeCheckInterval) {
     clearInterval(worktimeCheckInterval);
     worktimeCheckInterval = null;
-    console.log('✅ Worktime-Check-Interval gestoppt');
+    logger.log('✅ Worktime-Check-Interval gestoppt');
   }
   if (monthlyReportCheckInterval) {
     clearInterval(monthlyReportCheckInterval);
     monthlyReportCheckInterval = null;
-    console.log('✅ Monthly-Report-Check-Interval gestoppt');
+    logger.log('✅ Monthly-Report-Check-Interval gestoppt');
   }
 };
 
@@ -185,7 +186,7 @@ ReservationAutoCancelScheduler.start();
 
 // Starte Queue Workers (wenn aktiviert)
 startWorkers().catch((error) => {
-  console.error('[App] Fehler beim Starten der Queue Workers:', error);
+  logger.error('[App] Fehler beim Starten der Queue Workers:', error);
   // Server startet trotzdem, aber Queue funktioniert nicht
 });
 
@@ -213,7 +214,7 @@ app.post('/api/admin/trigger-monthly-reports', async (req: Request, res: Respons
     const result = await triggerMonthlyReportCheck();
     res.json(result);
   } catch (error) {
-    console.error('Fehler beim manuellen Auslösen der Monatsabrechnungsprüfung:', error);
+    logger.error('Fehler beim manuellen Auslösen der Monatsabrechnungsprüfung:', error);
     res.status(500).json({ 
       message: 'Fehler beim Auslösen der Monatsabrechnungsprüfung',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -230,7 +231,7 @@ app.post('/api/admin/trigger-check-in-invitations', async (req: Request, res: Re
       message: 'Check-in-Einladungen erfolgreich versendet'
     });
   } catch (error) {
-    console.error('Fehler beim manuellen Auslösen der Check-in-Einladungen:', error);
+    logger.error('Fehler beim manuellen Auslösen der Check-in-Einladungen:', error);
     res.status(500).json({ 
       success: false,
       message: 'Fehler beim Auslösen der Check-in-Einladungen',
@@ -282,35 +283,35 @@ app.use('/api/monthly-consultation-reports', monthlyConsultationReportsRoutes);
 app.use('/api/database', databaseRoutes);
 app.use('/api/claude', claudeRoutes);
 app.use('/api/organizations', organizationRoutes);
-console.log('[App] ✅ /api/organizations registriert');
-console.log('[App] 🔄 Registriere /api/shifts Route...');
-console.log('[App] shiftRoutes vorhanden:', !!shiftRoutes);
+logger.log('[App] ✅ /api/organizations registriert');
+logger.log('[App] 🔄 Registriere /api/shifts Route...');
+logger.log('[App] shiftRoutes vorhanden:', !!shiftRoutes);
 app.use('/api/shifts', (req, res, next) => {
-  console.log(`[App] 🎯 /api/shifts Route erreicht: ${req.method} ${req.path}`);
+  logger.log(`[App] 🎯 /api/shifts Route erreicht: ${req.method} ${req.path}`);
   next();
 }, shiftRoutes);
-console.log('[App] ✅ /api/shifts Route registriert');
+logger.log('[App] ✅ /api/shifts Route registriert');
 app.use('/api/lobby-pms', lobbyPmsRoutes);
 app.use('/api/bold-payment', boldPaymentRoutes);
 app.use('/api/ttlock', ttlockRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 // Reservierungen (manuelle Erstellung) - MUSS nach lobby-pms kommen
-console.log('[App] Registriere /api/reservations Route...');
-console.log('[App] reservationRoutes:', reservationRoutes ? 'geladen' : 'FEHLT!');
+logger.log('[App] Registriere /api/reservations Route...');
+logger.log('[App] reservationRoutes:', reservationRoutes ? 'geladen' : 'FEHLT!');
 app.use('/api/reservations', (req, res, next) => {
-  console.log(`[App] Reservations Route aufgerufen: ${req.method} ${req.path}`);
+  logger.log(`[App] Reservations Route aufgerufen: ${req.method} ${req.path}`);
   next();
 }, reservationRoutes);
-console.log('[App] /api/reservations Route registriert');
+logger.log('[App] /api/reservations Route registriert');
 // Email-Reservation-Integration
 app.use('/api/email-reservations', emailReservationRoutes);
-console.log('[App] /api/email-reservations Route registriert');
+logger.log('[App] /api/email-reservations Route registriert');
 // Tour-Management
 app.use('/api/tours', tourRoutes);
 app.use('/api/tour-bookings', tourBookingRoutes);
 app.use('/api/tour-reservations', tourReservationRoutes);
 app.use('/api/tour-providers', tourProviderRoutes);
-console.log('[App] Tour-Management Routes registriert');
+logger.log('[App] Tour-Management Routes registriert');
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

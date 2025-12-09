@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
+import { logger } from '../utils/logger';
 
 /**
  * Redis-Connection für BullMQ
@@ -39,17 +40,17 @@ function getConnection(): IORedis {
       const now = Date.now();
       // Nur loggen, wenn QUEUE_ENABLED=true ist oder wenn letzter Fehler länger her ist
       if (queueEnabled && (now - lastErrorTime > ERROR_LOG_INTERVAL)) {
-        console.error('[Queue Service] Redis-Verbindungsfehler:', error.message);
+        logger.error('[Queue Service] Redis-Verbindungsfehler:', error.message);
         lastErrorTime = now;
       }
     });
 
     connection.on('connect', () => {
-      console.log('[Queue Service] ✅ Redis-Verbindung hergestellt');
+      logger.log('[Queue Service] ✅ Redis-Verbindung hergestellt');
     });
 
     connection.on('ready', () => {
-      console.log('[Queue Service] ✅ Redis bereit');
+      logger.log('[Queue Service] ✅ Redis bereit');
     });
   }
   
@@ -243,7 +244,7 @@ export async function checkQueueHealth(): Promise<boolean> {
     // Nur loggen, wenn QUEUE_ENABLED=true ist
     const queueEnabled = process.env.QUEUE_ENABLED === 'true';
     if (queueEnabled) {
-      console.error('[Queue Service] Redis-Verbindung fehlgeschlagen:', error);
+      logger.error('[Queue Service] Redis-Verbindung fehlgeschlagen:', error);
     }
     return false;
   }
@@ -276,9 +277,9 @@ export async function closeQueues(): Promise<void> {
     if (connection && connection.status !== 'end') {
       await connection.quit();
     }
-    console.log('[Queue Service] Alle Queues geschlossen');
+    logger.log('[Queue Service] Alle Queues geschlossen');
   } catch (error) {
-    console.error('[Queue Service] Fehler beim Schließen der Queues:', error);
+    logger.error('[Queue Service] Fehler beim Schließen der Queues:', error);
   }
 }
 

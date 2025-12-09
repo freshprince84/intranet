@@ -4,12 +4,13 @@ import { checkPermission } from '../middleware/permissionMiddleware';
 import { passwordManagerRateLimiter } from '../middleware/rateLimiter';
 import { organizationMiddleware } from '../middleware/organization';
 import * as passwordManagerController from '../controllers/passwordManagerController';
+import { logger } from '../utils/logger';
 
 const router = express.Router();
 
 // Debug-Middleware (optional)
 router.use((req, res, next) => {
-    console.log('Password Manager Router aufgerufen:', {
+    logger.log('Password Manager Router aufgerufen:', {
         method: req.method,
         path: req.path,
         userId: req.userId || req.user?.id || 'nicht verfügbar'

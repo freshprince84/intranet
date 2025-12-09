@@ -14,6 +14,7 @@ const emailReservationService_1 = require("../services/emailReservationService")
 const emailReservationParser_1 = require("../services/emailReservationParser");
 const emailReservationScheduler_1 = require("../services/emailReservationScheduler");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * POST /api/email-reservations/check
  * Manueller Email-Check (für Tests)
@@ -27,7 +28,7 @@ const checkEmails = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: 'Organisation-ID fehlt'
             });
         }
-        console.log(`[EmailReservationController] Manueller Email-Check für Organisation ${organizationId}`);
+        logger_1.logger.log(`[EmailReservationController] Manueller Email-Check für Organisation ${organizationId}`);
         const processedCount = yield emailReservationService_1.EmailReservationService.checkForNewReservationEmails(organizationId);
         res.json({
             success: true,
@@ -36,7 +37,7 @@ const checkEmails = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         });
     }
     catch (error) {
-        console.error('[EmailReservationController] Fehler beim Email-Check:', error);
+        logger_1.logger.error('[EmailReservationController] Fehler beim Email-Check:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Email-Check'
@@ -89,7 +90,7 @@ const getStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     catch (error) {
-        console.error('[EmailReservationController] Fehler beim Abrufen des Status:', error);
+        logger_1.logger.error('[EmailReservationController] Fehler beim Abrufen des Status:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen des Status'
@@ -110,7 +111,7 @@ const parseEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 message: 'emailContent ist erforderlich'
             });
         }
-        console.log('[EmailReservationController] Test-Parsing einer Email...');
+        logger_1.logger.log('[EmailReservationController] Test-Parsing einer Email...');
         const parsedEmail = emailReservationParser_1.EmailReservationParser.parseReservationEmail(emailContent, emailHtml);
         if (!parsedEmail) {
             return res.json({
@@ -140,7 +141,7 @@ const parseEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         });
     }
     catch (error) {
-        console.error('[EmailReservationController] Fehler beim Parsing:', error);
+        logger_1.logger.error('[EmailReservationController] Fehler beim Parsing:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Parsing'
@@ -155,7 +156,7 @@ exports.parseEmail = parseEmail;
 const triggerScheduler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const organizationId = req.organizationId;
-        console.log('[EmailReservationController] Manueller Scheduler-Trigger...');
+        logger_1.logger.log('[EmailReservationController] Manueller Scheduler-Trigger...');
         const processedCount = yield emailReservationScheduler_1.EmailReservationScheduler.triggerManually(organizationId);
         res.json({
             success: true,
@@ -164,7 +165,7 @@ const triggerScheduler = (req, res) => __awaiter(void 0, void 0, void 0, functio
         });
     }
     catch (error) {
-        console.error('[EmailReservationController] Fehler beim Scheduler-Trigger:', error);
+        logger_1.logger.error('[EmailReservationController] Fehler beim Scheduler-Trigger:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Scheduler-Trigger'

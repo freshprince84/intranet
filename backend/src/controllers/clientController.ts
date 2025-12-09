@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getDataIsolationFilter, belongsToOrganization } from '../middleware/organization';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 // Alle Clients abrufen
 export const getClients = async (req: Request, res: Response) => {
@@ -14,7 +15,7 @@ export const getClients = async (req: Request, res: Response) => {
     });
     res.json(clients);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Clients:', error);
+    logger.error('Fehler beim Abrufen der Clients:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -51,7 +52,7 @@ export const getClientById = async (req: Request, res: Response) => {
     
     res.json(client);
   } catch (error) {
-    console.error('Fehler beim Abrufen des Clients:', error);
+    logger.error('Fehler beim Abrufen des Clients:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -79,7 +80,7 @@ export const createClient = async (req: Request, res: Response) => {
     
     res.status(201).json(client);
   } catch (error) {
-    console.error('Fehler beim Erstellen des Clients:', error);
+    logger.error('Fehler beim Erstellen des Clients:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -112,7 +113,7 @@ export const updateClient = async (req: Request, res: Response) => {
     
     res.json(client);
   } catch (error) {
-    console.error('Fehler beim Aktualisieren des Clients:', error);
+    logger.error('Fehler beim Aktualisieren des Clients:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -174,7 +175,7 @@ export const deleteClient = async (req: Request, res: Response) => {
     
     res.json({ message: 'Client erfolgreich gelöscht' });
   } catch (error) {
-    console.error('Fehler beim Löschen des Clients:', error);
+    logger.error('Fehler beim Löschen des Clients:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -182,18 +183,18 @@ export const deleteClient = async (req: Request, res: Response) => {
 // Zuletzt beratene Clients abrufen
 export const getRecentClients = async (req: Request, res: Response) => {
   try {
-    console.log('🚀 DEBUG: getRecentClients wurde aufgerufen');
-    console.log('🚀 DEBUG: req.userId:', req.userId);
-    console.log('🚀 DEBUG: headers:', req.headers.authorization?.substring(0, 20) + '...');
+    logger.log('🚀 DEBUG: getRecentClients wurde aufgerufen');
+    logger.log('🚀 DEBUG: req.userId:', req.userId);
+    logger.log('🚀 DEBUG: headers:', req.headers.authorization?.substring(0, 20) + '...');
     
     const userId = req.userId;
     
     if (!userId) {
-      console.log('❌ DEBUG: Nicht authentifiziert');
+      logger.log('❌ DEBUG: Nicht authentifiziert');
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
     
-    console.log('✅ DEBUG: Benutzer authentifiziert, userId:', userId);
+    logger.log('✅ DEBUG: Benutzer authentifiziert, userId:', userId);
     
     // ✅ TIMEZONE-FIX: Verwende gleiche Logik wie Frontend (getTimezoneOffset)
     // Das Frontend verwendet: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
@@ -201,7 +202,7 @@ export const getRecentClients = async (req: Request, res: Response) => {
     const localNow = new Date();
     const now = new Date(localNow.getTime() - localNow.getTimezoneOffset() * 60000);
     
-    console.log('🕒 DEBUG: Timezone-korrigierte Zeit:', now.toISOString());
+    logger.log('🕒 DEBUG: Timezone-korrigierte Zeit:', now.toISOString());
     
     // Hole vergangene Beratungen (startTime < jetzt) - diese sind "zuletzt beraten"
     const pastConsultations = await prisma.workTime.findMany({
@@ -264,31 +265,31 @@ export const getRecentClients = async (req: Request, res: Response) => {
       }));
     
     // DEBUG: Log die Sortierreihenfolge mit Timezone-Infos
-    console.log('=== RECENT CLIENTS DEBUG (TIMEZONE-FIXED) ===');
-    console.log('User ID:', userId);
-    console.log('Local now (raw):', localNow.toISOString());
-    console.log('Corrected now (with timezone offset):', now.toISOString());
-    console.log('Timezone offset minutes:', localNow.getTimezoneOffset());
-    console.log('Past consultations:', pastConsultations.length);
+    logger.log('=== RECENT CLIENTS DEBUG (TIMEZONE-FIXED) ===');
+    logger.log('User ID:', userId);
+    logger.log('Local now (raw):', localNow.toISOString());
+    logger.log('Corrected now (with timezone offset):', now.toISOString());
+    logger.log('Timezone offset minutes:', localNow.getTimezoneOffset());
+    logger.log('Past consultations:', pastConsultations.length);
     pastConsultations.forEach((consultation, index) => {
       const isPast = consultation.startTime < now;
-      console.log(`  Past ${index + 1}. Client: ${consultation.client?.name}, StartTime: ${consultation.startTime.toISOString()}, isPast: ${isPast}`);
+      logger.log(`  Past ${index + 1}. Client: ${consultation.client?.name}, StartTime: ${consultation.startTime.toISOString()}, isPast: ${isPast}`);
     });
-    console.log('Planned consultations:', plannedConsultations.length);
+    logger.log('Planned consultations:', plannedConsultations.length);
     plannedConsultations.forEach((consultation, index) => {
       const isPlanned = consultation.startTime >= now;
-      console.log(`  Planned ${index + 1}. Client: ${consultation.client?.name}, StartTime: ${consultation.startTime.toISOString()}, isPlanned: ${isPlanned}`);
+      logger.log(`  Planned ${index + 1}. Client: ${consultation.client?.name}, StartTime: ${consultation.startTime.toISOString()}, isPlanned: ${isPlanned}`);
     });
-    console.log('Unique planned (after filtering):', uniquePlannedConsultations.length);
+    logger.log('Unique planned (after filtering):', uniquePlannedConsultations.length);
     uniquePlannedConsultations.forEach((consultation, index) => {
-      console.log(`  Unique Planned ${index + 1}. Client: ${consultation.client?.name}, StartTime: ${consultation.startTime.toISOString()}`);
+      logger.log(`  Unique Planned ${index + 1}. Client: ${consultation.client?.name}, StartTime: ${consultation.startTime.toISOString()}`);
     });
-    console.log('Final clients order with status:', recentClientsWithStatus.map(c => `${c.name} (${c.status})`));
-    console.log('=== END DEBUG ===');
+    logger.log('Final clients order with status:', recentClientsWithStatus.map(c => `${c.name} (${c.status})`));
+    logger.log('=== END DEBUG ===');
     
     res.json(recentClientsWithStatus);
   } catch (error) {
-    console.error('Fehler beim Abrufen der zuletzt beratenen Clients:', error);
+    logger.error('Fehler beim Abrufen der zuletzt beratenen Clients:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 }; 

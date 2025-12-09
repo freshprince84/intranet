@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.saveUserTableSettings = exports.getUserTableSettings = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Funktion zum Abrufen der Tabelleneinstellungen eines Benutzers für eine bestimmte Tabelle
 const getUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -49,10 +50,13 @@ const getUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fun
         if (settings.viewMode) {
             response.viewMode = settings.viewMode;
         }
+        if (settings.sortConfig) {
+            response.sortConfig = JSON.parse(settings.sortConfig);
+        }
         res.json(response);
     }
     catch (error) {
-        console.error('Error in getUserTableSettings:', error);
+        logger_1.logger.error('Error in getUserTableSettings:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Tabelleneinstellungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -64,7 +68,7 @@ exports.getUserTableSettings = getUserTableSettings;
 const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
-        const { tableId, columnOrder, hiddenColumns, viewMode } = req.body;
+        const { tableId, columnOrder, hiddenColumns, viewMode, sortConfig } = req.body;
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
@@ -74,6 +78,7 @@ const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
         // Konvertiere Arrays in JSON-Strings für die Datenbank
         const columnOrderJson = JSON.stringify(columnOrder || []);
         const hiddenColumnsJson = JSON.stringify(hiddenColumns || []);
+        const sortConfigJson = sortConfig ? JSON.stringify(sortConfig) : null;
         // Prüfe, ob bereits Einstellungen für diese Tabelle existieren
         const existingSettings = yield prisma_1.prisma.userTableSettings.findUnique({
             where: {
@@ -96,7 +101,8 @@ const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
                 data: {
                     columnOrder: columnOrderJson,
                     hiddenColumns: hiddenColumnsJson,
-                    viewMode: viewMode || null
+                    viewMode: viewMode || null,
+                    sortConfig: sortConfigJson
                 }
             });
         }
@@ -108,7 +114,8 @@ const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
                     tableId,
                     columnOrder: columnOrderJson,
                     hiddenColumns: hiddenColumnsJson,
-                    viewMode: viewMode || null
+                    viewMode: viewMode || null,
+                    sortConfig: sortConfigJson
                 }
             });
         }
@@ -122,10 +129,13 @@ const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
         if (settings.viewMode) {
             response.viewMode = settings.viewMode;
         }
+        if (settings.sortConfig) {
+            response.sortConfig = JSON.parse(settings.sortConfig);
+        }
         res.json(response);
     }
     catch (error) {
-        console.error('Error in saveUserTableSettings:', error);
+        logger_1.logger.error('Error in saveUserTableSettings:', error);
         res.status(500).json({
             message: 'Fehler beim Speichern der Tabelleneinstellungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

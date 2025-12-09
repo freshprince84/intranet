@@ -45,6 +45,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LobbyPmsReservationSyncService = void 0;
 const lobbyPmsService_1 = require("./lobbyPmsService");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Service für die Synchronisation von Reservierungen von LobbyPMS API pro Branch
  *
@@ -93,11 +94,11 @@ class LobbyPmsReservationSyncService {
                 const decryptedOrgSettings = orgSettings ? decryptApiSettings(orgSettings) : null;
                 const lobbyPmsSettings = decryptedBranchSettings || (decryptedOrgSettings === null || decryptedOrgSettings === void 0 ? void 0 : decryptedOrgSettings.lobbyPms);
                 if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiKey)) {
-                    console.log(`[LobbyPmsSync] Branch ${branchId} hat keinen LobbyPMS API Key konfiguriert`);
+                    logger_1.logger.log(`[LobbyPmsSync] Branch ${branchId} hat keinen LobbyPMS API Key konfiguriert`);
                     return 0;
                 }
                 if (lobbyPmsSettings.syncEnabled === false) {
-                    console.log(`[LobbyPmsSync] LobbyPMS Sync ist für Branch ${branchId} deaktiviert`);
+                    logger_1.logger.log(`[LobbyPmsSync] LobbyPMS Sync ist für Branch ${branchId} deaktiviert`);
                     return 0;
                 }
                 // WICHTIG: Immer die letzten 24 Stunden prüfen (Erstellungsdatum)
@@ -105,19 +106,19 @@ class LobbyPmsReservationSyncService {
                 if (startDate) {
                     // Explizites startDate übergeben (z.B. manueller Sync)
                     syncStartDate = startDate;
-                    console.log(`[LobbyPmsSync] Branch ${branchId}: Verwende explizites startDate: ${syncStartDate.toISOString()}`);
+                    logger_1.logger.log(`[LobbyPmsSync] Branch ${branchId}: Verwende explizites startDate: ${syncStartDate.toISOString()}`);
                 }
                 else {
                     // Immer letzte 24 Stunden (Erstellungsdatum)
                     syncStartDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                    console.log(`[LobbyPmsSync] Branch ${branchId}: Prüfe Reservierungen mit Erstellungsdatum in den letzten 24 Stunden`);
+                    logger_1.logger.log(`[LobbyPmsSync] Branch ${branchId}: Prüfe Reservierungen mit Erstellungsdatum in den letzten 24 Stunden`);
                 }
                 // Erstelle LobbyPMS Service für Branch
                 const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
                 // Hole Reservierungen von LobbyPMS und synchronisiere sie
                 // fetchReservations filtert jetzt nach creation_date, nicht nach Check-in!
                 const syncedCount = yield lobbyPmsService.syncReservations(syncStartDate);
-                console.log(`[LobbyPmsSync] Branch ${branchId}: ${syncedCount} Reservierungen synchronisiert`);
+                logger_1.logger.log(`[LobbyPmsSync] Branch ${branchId}: ${syncedCount} Reservierungen synchronisiert`);
                 // OPTIMIERUNG: Speichere erfolgreiche Sync-Zeit
                 if (syncedCount >= 0) { // Auch bei 0 (keine neuen Reservierungen) speichern
                     yield prisma_1.prisma.branch.update({
@@ -126,12 +127,12 @@ class LobbyPmsReservationSyncService {
                             lobbyPmsLastSyncAt: new Date(), // Aktuelle Zeit
                         }
                     });
-                    console.log(`[LobbyPmsSync] Branch ${branchId}: Sync-Zeit gespeichert`);
+                    logger_1.logger.log(`[LobbyPmsSync] Branch ${branchId}: Sync-Zeit gespeichert`);
                 }
                 return syncedCount;
             }
             catch (error) {
-                console.error(`[LobbyPmsSync] Fehler beim Synchronisieren für Branch ${branchId}:`, error);
+                logger_1.logger.error(`[LobbyPmsSync] Fehler beim Synchronisieren für Branch ${branchId}:`, error);
                 throw error;
             }
         });

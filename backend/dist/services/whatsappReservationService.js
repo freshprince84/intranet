@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsAppReservationService = void 0;
 const client_1 = require("@prisma/client");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Service für automatische Reservierungserstellung aus WhatsApp-Nachrichten
  */
@@ -32,7 +33,7 @@ class WhatsAppReservationService {
                     where: { lobbyReservationId: parsedMessage.reservationId }
                 });
                 if (existingReservation) {
-                    console.log(`[WhatsAppReservation] Reservierung ${parsedMessage.reservationId} existiert bereits`);
+                    logger_1.logger.log(`[WhatsAppReservation] Reservierung ${parsedMessage.reservationId} existiert bereits`);
                     return existingReservation;
                 }
                 // Hole erste Branch der Organisation als Fallback
@@ -69,11 +70,11 @@ class WhatsAppReservationService {
                         }
                     }
                 });
-                console.log(`[WhatsAppReservation] Reservierung ${reservation.id} erstellt aus WhatsApp-Nachricht`);
+                logger_1.logger.log(`[WhatsAppReservation] Reservierung ${reservation.id} erstellt aus WhatsApp-Nachricht`);
                 return reservation;
             }
             catch (error) {
-                console.error('[WhatsAppReservation] Fehler beim Erstellen der Reservierung:', error);
+                logger_1.logger.error('[WhatsAppReservation] Fehler beim Erstellen der Reservierung:', error);
                 throw error;
             }
         });

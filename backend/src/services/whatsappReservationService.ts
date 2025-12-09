@@ -1,6 +1,7 @@
 import { ReservationStatus, PaymentStatus } from '@prisma/client';
 import { ParsedReservationMessage } from './whatsappMessageParser';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Service für automatische Reservierungserstellung aus WhatsApp-Nachrichten
@@ -25,7 +26,7 @@ export class WhatsAppReservationService {
       });
 
       if (existingReservation) {
-        console.log(`[WhatsAppReservation] Reservierung ${parsedMessage.reservationId} existiert bereits`);
+        logger.log(`[WhatsAppReservation] Reservierung ${parsedMessage.reservationId} existiert bereits`);
         return existingReservation;
       }
 
@@ -66,10 +67,10 @@ export class WhatsAppReservationService {
         }
       });
 
-      console.log(`[WhatsAppReservation] Reservierung ${reservation.id} erstellt aus WhatsApp-Nachricht`);
+      logger.log(`[WhatsAppReservation] Reservierung ${reservation.id} erstellt aus WhatsApp-Nachricht`);
       return reservation;
     } catch (error) {
-      console.error('[WhatsAppReservation] Fehler beim Erstellen der Reservierung:', error);
+      logger.error('[WhatsAppReservation] Fehler beim Erstellen der Reservierung:', error);
       throw error;
     }
   }

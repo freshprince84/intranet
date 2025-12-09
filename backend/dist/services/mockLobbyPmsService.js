@@ -15,6 +15,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MockLobbyPmsService = void 0;
+const logger_1 = require("../utils/logger");
 /**
  * Mock-Daten für Reservierungen
  */
@@ -88,7 +89,7 @@ class MockLobbyPmsService {
      */
     fetchReservations(startDate, endDate) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('[MockLobbyPms] fetchReservations:', { startDate, endDate });
+            logger_1.logger.log('[MockLobbyPms] fetchReservations:', { startDate, endDate });
             // Filtere nach Datum
             return MOCK_RESERVATIONS.filter(res => {
                 const checkIn = new Date(res.check_in_date);
@@ -101,7 +102,7 @@ class MockLobbyPmsService {
      */
     fetchTomorrowReservations(arrivalTimeThreshold) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('[MockLobbyPms] fetchTomorrowReservations:', { arrivalTimeThreshold });
+            logger_1.logger.log('[MockLobbyPms] fetchTomorrowReservations:', { arrivalTimeThreshold });
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             tomorrow.setHours(0, 0, 0, 0);
@@ -131,7 +132,7 @@ class MockLobbyPmsService {
      */
     fetchReservationById(reservationId) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('[MockLobbyPms] fetchReservationById:', reservationId);
+            logger_1.logger.log('[MockLobbyPms] fetchReservationById:', reservationId);
             const reservation = MOCK_RESERVATIONS.find(r => r.id === reservationId);
             if (!reservation) {
                 throw new Error(`Reservierung ${reservationId} nicht gefunden`);
@@ -144,7 +145,7 @@ class MockLobbyPmsService {
      */
     validateConnection() {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('[MockLobbyPms] validateConnection');
+            logger_1.logger.log('[MockLobbyPms] validateConnection');
             return true;
         });
     }
@@ -153,7 +154,7 @@ class MockLobbyPmsService {
      */
     syncReservation(lobbyReservation) {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('[MockLobbyPms] syncReservation:', lobbyReservation.id);
+            logger_1.logger.log('[MockLobbyPms] syncReservation:', lobbyReservation.id);
             // Simuliere Synchronisation - gibt einfach die Reservierung zurück
             // In der echten Implementierung würde hier die DB aktualisiert
             return {

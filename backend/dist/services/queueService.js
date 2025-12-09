@@ -22,6 +22,7 @@ exports.getRedisConnection = getRedisConnection;
 exports.closeQueues = closeQueues;
 const bullmq_1 = require("bullmq");
 const ioredis_1 = __importDefault(require("ioredis"));
+const logger_1 = require("../utils/logger");
 /**
  * Redis-Connection für BullMQ
  * Konfiguriert über Environment-Variablen
@@ -56,15 +57,15 @@ function getConnection() {
             const now = Date.now();
             // Nur loggen, wenn QUEUE_ENABLED=true ist oder wenn letzter Fehler länger her ist
             if (queueEnabled && (now - lastErrorTime > ERROR_LOG_INTERVAL)) {
-                console.error('[Queue Service] Redis-Verbindungsfehler:', error.message);
+                logger_1.logger.error('[Queue Service] Redis-Verbindungsfehler:', error.message);
                 lastErrorTime = now;
             }
         });
         connection.on('connect', () => {
-            console.log('[Queue Service] ✅ Redis-Verbindung hergestellt');
+            logger_1.logger.log('[Queue Service] ✅ Redis-Verbindung hergestellt');
         });
         connection.on('ready', () => {
-            console.log('[Queue Service] ✅ Redis bereit');
+            logger_1.logger.log('[Queue Service] ✅ Redis bereit');
         });
     }
     return connection;
@@ -250,7 +251,7 @@ function checkQueueHealth() {
             // Nur loggen, wenn QUEUE_ENABLED=true ist
             const queueEnabled = process.env.QUEUE_ENABLED === 'true';
             if (queueEnabled) {
-                console.error('[Queue Service] Redis-Verbindung fehlgeschlagen:', error);
+                logger_1.logger.error('[Queue Service] Redis-Verbindung fehlgeschlagen:', error);
             }
             return false;
         }
@@ -281,10 +282,10 @@ function closeQueues() {
             if (connection && connection.status !== 'end') {
                 yield connection.quit();
             }
-            console.log('[Queue Service] Alle Queues geschlossen');
+            logger_1.logger.log('[Queue Service] Alle Queues geschlossen');
         }
         catch (error) {
-            console.error('[Queue Service] Fehler beim Schließen der Queues:', error);
+            logger_1.logger.error('[Queue Service] Fehler beim Schließen der Queues:', error);
         }
     });
 }

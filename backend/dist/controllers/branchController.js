@@ -46,6 +46,7 @@ exports.getRoomDescription = exports.updateRoomDescriptions = exports.getRoomDes
 const organization_1 = require("../middleware/organization");
 const prisma_1 = require("../utils/prisma");
 const branchCache_1 = require("../services/branchCache");
+const logger_1 = require("../utils/logger");
 // Debug-Funktion ohne DB-Zugriff
 const getTest = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const testBranches = [
@@ -98,7 +99,7 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const queryStartTime = Date.now();
         let branches = yield prisma_1.prisma.branch.findMany(queryOptions);
         const queryDuration = Date.now() - queryStartTime;
-        console.log(`[getAllBranches] ⏱️ Query: ${queryDuration}ms | Branches: ${branches.length}`);
+        logger_1.logger.log(`[getAllBranches] ⏱️ Query: ${queryDuration}ms | Branches: ${branches.length}`);
         // Entschlüssele alle Settings für alle Branches
         // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
         const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
@@ -109,7 +110,7 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     branch.whatsappSettings = decryptBranchApiSettings(branch.whatsappSettings);
                 }
                 catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings für Branch ${branch.id}:`, error);
+                    logger_1.logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings für Branch ${branch.id}:`, error);
                 }
             }
             // Entschlüssele LobbyPMS Settings
@@ -118,7 +119,7 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     branch.lobbyPmsSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
                 }
                 catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings für Branch ${branch.id}:`, error);
+                    logger_1.logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings für Branch ${branch.id}:`, error);
                 }
             }
             // Entschlüssele Bold Payment Settings
@@ -127,7 +128,7 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     branch.boldPaymentSettings = decryptBranchApiSettings(branch.boldPaymentSettings);
                 }
                 catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
+                    logger_1.logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
                 }
             }
             // Entschlüssele Door System Settings
@@ -136,7 +137,7 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     branch.doorSystemSettings = decryptBranchApiSettings(branch.doorSystemSettings);
                 }
                 catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Door System Settings für Branch ${branch.id}:`, error);
+                    logger_1.logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der Door System Settings für Branch ${branch.id}:`, error);
                 }
             }
             // Entschlüssele Email Settings
@@ -145,7 +146,7 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     branch.emailSettings = decryptBranchApiSettings(branch.emailSettings);
                 }
                 catch (error) {
-                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Email Settings für Branch ${branch.id}:`, error);
+                    logger_1.logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der Email Settings für Branch ${branch.id}:`, error);
                 }
             }
             return branch;
@@ -188,7 +189,7 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.json(branches);
     }
     catch (error) {
-        console.error('Error in getAllBranches:', error);
+        logger_1.logger.error('Error in getAllBranches:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Niederlassungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -210,10 +211,10 @@ const getUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, function
         const cachedBranches = yield branchCache_1.branchCache.get(userId, req);
         const cacheDuration = Date.now() - cacheStartTime;
         if (cachedBranches) {
-            console.log(`[getUserBranches] ⏱️ Cache-Hit: ${cacheDuration}ms | Branches: ${cachedBranches.length}`);
+            logger_1.logger.log(`[getUserBranches] ⏱️ Cache-Hit: ${cacheDuration}ms | Branches: ${cachedBranches.length}`);
         }
         else {
-            console.log(`[getUserBranches] ⏱️ Cache-Miss: ${cacheDuration}ms`);
+            logger_1.logger.log(`[getUserBranches] ⏱️ Cache-Miss: ${cacheDuration}ms`);
         }
         if (cachedBranches) {
             return res.json(cachedBranches);
@@ -225,7 +226,7 @@ const getUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, function
         });
     }
     catch (error) {
-        console.error('Error in getUserBranches:', error);
+        logger_1.logger.error('Error in getUserBranches:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Benutzer-Niederlassungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -338,7 +339,7 @@ const switchUserBranch = (req, res) => __awaiter(void 0, void 0, void 0, functio
         });
     }
     catch (error) {
-        console.error('Error in switchUserBranch:', error);
+        logger_1.logger.error('Error in switchUserBranch:', error);
         res.status(500).json({
             message: 'Fehler beim Wechseln der Niederlassung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -381,7 +382,7 @@ const createBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.status(201).json(branch);
     }
     catch (error) {
-        console.error('Error in createBranch:', error);
+        logger_1.logger.error('Error in createBranch:', error);
         if (error instanceof Error && error.message.includes('Unique constraint')) {
             return res.status(400).json({
                 message: 'Eine Niederlassung mit diesem Namen existiert bereits'
@@ -433,50 +434,50 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (whatsappSettings) {
             try {
                 encryptedWhatsAppSettings = encryptBranchApiSettings(whatsappSettings);
-                console.log('[Branch Controller] WhatsApp Settings verschlüsselt');
+                logger_1.logger.log('[Branch Controller] WhatsApp Settings verschlüsselt');
             }
             catch (error) {
-                console.warn('[Branch Controller] WhatsApp Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger_1.logger.warn('[Branch Controller] WhatsApp Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         let encryptedLobbyPmsSettings = lobbyPmsSettings;
         if (lobbyPmsSettings) {
             try {
                 encryptedLobbyPmsSettings = encryptBranchApiSettings(lobbyPmsSettings);
-                console.log('[Branch Controller] LobbyPMS Settings verschlüsselt');
+                logger_1.logger.log('[Branch Controller] LobbyPMS Settings verschlüsselt');
             }
             catch (error) {
-                console.warn('[Branch Controller] LobbyPMS Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger_1.logger.warn('[Branch Controller] LobbyPMS Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         let encryptedBoldPaymentSettings = boldPaymentSettings;
         if (boldPaymentSettings) {
             try {
                 encryptedBoldPaymentSettings = encryptBranchApiSettings(boldPaymentSettings);
-                console.log('[Branch Controller] Bold Payment Settings verschlüsselt');
+                logger_1.logger.log('[Branch Controller] Bold Payment Settings verschlüsselt');
             }
             catch (error) {
-                console.warn('[Branch Controller] Bold Payment Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger_1.logger.warn('[Branch Controller] Bold Payment Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         let encryptedDoorSystemSettings = doorSystemSettings;
         if (doorSystemSettings) {
             try {
                 encryptedDoorSystemSettings = encryptBranchApiSettings(doorSystemSettings);
-                console.log('[Branch Controller] Door System Settings verschlüsselt');
+                logger_1.logger.log('[Branch Controller] Door System Settings verschlüsselt');
             }
             catch (error) {
-                console.warn('[Branch Controller] Door System Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger_1.logger.warn('[Branch Controller] Door System Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         let encryptedEmailSettings = emailSettings;
         if (emailSettings) {
             try {
                 encryptedEmailSettings = encryptBranchApiSettings(emailSettings);
-                console.log('[Branch Controller] Email Settings verschlüsselt');
+                logger_1.logger.log('[Branch Controller] Email Settings verschlüsselt');
             }
             catch (error) {
-                console.warn('[Branch Controller] Email Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                logger_1.logger.warn('[Branch Controller] Email Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         // Aktualisiere Branch
@@ -518,7 +519,7 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 updatedBranch.whatsappSettings = decryptBranchApiSettings(updatedBranch.whatsappSettings);
             }
             catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings:', error);
+                logger_1.logger.warn('[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings:', error);
             }
         }
         if (updatedBranch.lobbyPmsSettings) {
@@ -526,7 +527,7 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 updatedBranch.lobbyPmsSettings = decryptBranchApiSettings(updatedBranch.lobbyPmsSettings);
             }
             catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+                logger_1.logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
             }
         }
         if (updatedBranch.boldPaymentSettings) {
@@ -534,7 +535,7 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 updatedBranch.boldPaymentSettings = decryptBranchApiSettings(updatedBranch.boldPaymentSettings);
             }
             catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings:', error);
+                logger_1.logger.warn('[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings:', error);
             }
         }
         if (updatedBranch.doorSystemSettings) {
@@ -542,7 +543,7 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 updatedBranch.doorSystemSettings = decryptBranchApiSettings(updatedBranch.doorSystemSettings);
             }
             catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Door System Settings:', error);
+                logger_1.logger.warn('[Branch Controller] Fehler beim Entschlüsseln der Door System Settings:', error);
             }
         }
         if (updatedBranch.emailSettings) {
@@ -550,7 +551,7 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 updatedBranch.emailSettings = decryptBranchApiSettings(updatedBranch.emailSettings);
             }
             catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
+                logger_1.logger.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
             }
         }
         // ✅ PERFORMANCE: Cache leeren nach Branch-Update (alle User betroffen)
@@ -558,7 +559,7 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.json(updatedBranch);
     }
     catch (error) {
-        console.error('Error in updateBranch:', error);
+        logger_1.logger.error('Error in updateBranch:', error);
         if (error instanceof Error && error.message.includes('Unique constraint')) {
             return res.status(400).json({
                 message: 'Eine Niederlassung mit diesem Namen existiert bereits'
@@ -622,7 +623,7 @@ const deleteBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.status(204).send();
     }
     catch (error) {
-        console.error('Error in deleteBranch:', error);
+        logger_1.logger.error('Error in deleteBranch:', error);
         res.status(500).json({
             message: 'Fehler beim Löschen der Niederlassung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -663,13 +664,13 @@ const getRoomDescriptions = (req, res) => __awaiter(void 0, void 0, void 0, func
                 roomDescriptions = (lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.roomDescriptions) || {};
             }
             catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+                logger_1.logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
             }
         }
         res.json(roomDescriptions);
     }
     catch (error) {
-        console.error('Error in getRoomDescriptions:', error);
+        logger_1.logger.error('Error in getRoomDescriptions:', error);
         res.status(500).json({
             message: 'Fehler beim Laden der Zimmer-Beschreibungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -712,7 +713,7 @@ const updateRoomDescriptions = (req, res) => __awaiter(void 0, void 0, void 0, f
                 lobbyPmsSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) || decryptedSettings || {};
             }
             catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+                logger_1.logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
                 lobbyPmsSettings = {};
             }
         }
@@ -732,7 +733,7 @@ const updateRoomDescriptions = (req, res) => __awaiter(void 0, void 0, void 0, f
         res.json({ success: true, roomDescriptions });
     }
     catch (error) {
-        console.error('Error in updateRoomDescriptions:', error);
+        logger_1.logger.error('Error in updateRoomDescriptions:', error);
         res.status(500).json({
             message: 'Fehler beim Speichern der Zimmer-Beschreibungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -774,13 +775,13 @@ const getRoomDescription = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 roomDescription = ((_a = lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.roomDescriptions) === null || _a === void 0 ? void 0 : _a[categoryId]) || null;
             }
             catch (error) {
-                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+                logger_1.logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
             }
         }
         res.json(roomDescription || {});
     }
     catch (error) {
-        console.error('Error in getRoomDescription:', error);
+        logger_1.logger.error('Error in getRoomDescription:', error);
         res.status(500).json({
             message: 'Fehler beim Laden der Zimmer-Beschreibung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

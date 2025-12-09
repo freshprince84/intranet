@@ -4,6 +4,7 @@ import { getDataIsolationFilter } from '../middleware/organization';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 // Rechnung aus gefilterten Beratungen erstellen
 export const createInvoiceFromConsultations = async (req: Request, res: Response) => {
@@ -175,7 +176,7 @@ export const createInvoiceFromConsultations = async (req: Request, res: Response
 
     res.status(201).json(fullInvoice);
   } catch (error) {
-    console.error('Fehler beim Erstellen der Rechnung:', error);
+    logger.error('Fehler beim Erstellen der Rechnung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -226,7 +227,7 @@ export const getInvoices = async (req: Request, res: Response) => {
 
     res.json(invoices);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Rechnungen:', error);
+    logger.error('Fehler beim Abrufen der Rechnungen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -268,7 +269,7 @@ export const getInvoiceById = async (req: Request, res: Response) => {
 
     res.json(invoice);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Rechnung:', error);
+    logger.error('Fehler beim Abrufen der Rechnung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -302,7 +303,7 @@ export const updateInvoiceStatus = async (req: Request, res: Response) => {
 
     res.json(invoice);
   } catch (error) {
-    console.error('Fehler beim Aktualisieren des Status:', error);
+    logger.error('Fehler beim Aktualisieren des Status:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -380,7 +381,7 @@ export const generateInvoicePDFEndpoint = async (req: Request, res: Response) =>
     res.send(pdfBuffer);
 
   } catch (error) {
-    console.error('Fehler beim Generieren des PDFs:', error);
+    logger.error('Fehler beim Generieren des PDFs:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -451,7 +452,7 @@ export const markAsPaid = async (req: Request, res: Response) => {
 
     res.json(updatedInvoice);
   } catch (error) {
-    console.error('Fehler beim Erfassen der Zahlung:', error);
+    logger.error('Fehler beim Erfassen der Zahlung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -494,7 +495,7 @@ export const cancelInvoice = async (req: Request, res: Response) => {
 
     res.json(cancelledInvoice);
   } catch (error) {
-    console.error('Fehler beim Stornieren der Rechnung:', error);
+    logger.error('Fehler beim Stornieren der Rechnung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 }; 

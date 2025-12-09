@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma, executeWithRetry } from '../utils/prisma';
 import { filterCache } from '../services/filterCache';
 import { filterListCache } from '../services/filterListCache';
+import { logger } from '../utils/logger';
 
 // Schnittstellendefinitionen
 interface SavedFilterRequest {
@@ -42,11 +43,11 @@ export const getUserSavedFilters = async (req: AuthenticatedRequest, res: Respon
 
       return res.status(200).json(parsedFilters);
     } catch (prismaError) {
-      console.error('Prisma-Fehler beim Abrufen der Filter:', prismaError);
+      logger.error('Prisma-Fehler beim Abrufen der Filter:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
     }
   } catch (error) {
-    console.error('Fehler beim Abrufen der gespeicherten Filter:', error);
+    logger.error('Fehler beim Abrufen der gespeicherten Filter:', error);
     return res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -137,11 +138,11 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
 
       return res.status(200).json(parsedFilter);
     } catch (prismaError) {
-      console.error('Prisma-Fehler beim Speichern des Filters:', prismaError);
+      logger.error('Prisma-Fehler beim Speichern des Filters:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
     }
   } catch (error) {
-    console.error('Fehler beim Speichern des Filters:', error);
+    logger.error('Fehler beim Speichern des Filters:', error);
     return res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -190,11 +191,11 @@ export const deleteFilter = async (req: AuthenticatedRequest, res: Response) => 
 
       return res.status(200).json({ message: 'Filter erfolgreich gelöscht' });
     } catch (prismaError) {
-      console.error('Prisma-Fehler beim Löschen des Filters:', prismaError);
+      logger.error('Prisma-Fehler beim Löschen des Filters:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
     }
   } catch (error) {
-    console.error('Fehler beim Löschen des Filters:', error);
+    logger.error('Fehler beim Löschen des Filters:', error);
     return res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -278,11 +279,11 @@ export const createFilterGroup = async (req: AuthenticatedRequest, res: Response
         updatedAt: group.updatedAt
       });
     } catch (prismaError) {
-      console.error('Prisma-Fehler beim Erstellen der Gruppe:', prismaError);
+      logger.error('Prisma-Fehler beim Erstellen der Gruppe:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
     }
   } catch (error) {
-    console.error('Fehler beim Erstellen der Filter-Gruppe:', error);
+    logger.error('Fehler beim Erstellen der Filter-Gruppe:', error);
     return res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -312,11 +313,11 @@ export const getFilterGroups = async (req: AuthenticatedRequest, res: Response) 
 
       return res.status(200).json(parsedGroups);
     } catch (prismaError) {
-      console.error('Prisma-Fehler beim Abrufen der Gruppen:', prismaError);
+      logger.error('Prisma-Fehler beim Abrufen der Gruppen:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
     }
   } catch (error) {
-    console.error('Fehler beim Abrufen der Filter-Gruppen:', error);
+    logger.error('Fehler beim Abrufen der Filter-Gruppen:', error);
     return res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -419,11 +420,11 @@ export const updateFilterGroup = async (req: AuthenticatedRequest, res: Response
 
       return res.status(200).json(parsedGroup);
     } catch (prismaError) {
-      console.error('Prisma-Fehler beim Aktualisieren der Gruppe:', prismaError);
+      logger.error('Prisma-Fehler beim Aktualisieren der Gruppe:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
     }
   } catch (error) {
-    console.error('Fehler beim Aktualisieren der Filter-Gruppe:', error);
+    logger.error('Fehler beim Aktualisieren der Filter-Gruppe:', error);
     return res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -488,11 +489,11 @@ export const deleteFilterGroup = async (req: AuthenticatedRequest, res: Response
 
       return res.status(200).json({ message: 'Gruppe erfolgreich gelöscht' });
     } catch (prismaError) {
-      console.error('Prisma-Fehler beim Löschen der Gruppe:', prismaError);
+      logger.error('Prisma-Fehler beim Löschen der Gruppe:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
     }
   } catch (error) {
-    console.error('Fehler beim Löschen der Filter-Gruppe:', error);
+    logger.error('Fehler beim Löschen der Filter-Gruppe:', error);
     return res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -593,11 +594,11 @@ export const addFilterToGroup = async (req: AuthenticatedRequest, res: Response)
 
       return res.status(200).json(parsedFilter);
     } catch (prismaError) {
-      console.error('Prisma-Fehler beim Hinzufügen des Filters zur Gruppe:', prismaError);
+      logger.error('Prisma-Fehler beim Hinzufügen des Filters zur Gruppe:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
     }
   } catch (error) {
-    console.error('Fehler beim Hinzufügen des Filters zur Gruppe:', error);
+    logger.error('Fehler beim Hinzufügen des Filters zur Gruppe:', error);
     return res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -663,11 +664,11 @@ export const removeFilterFromGroup = async (req: AuthenticatedRequest, res: Resp
 
       return res.status(200).json(parsedFilter);
     } catch (prismaError) {
-      console.error('Prisma-Fehler beim Entfernen des Filters aus der Gruppe:', prismaError);
+      logger.error('Prisma-Fehler beim Entfernen des Filters aus der Gruppe:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
     }
   } catch (error) {
-    console.error('Fehler beim Entfernen des Filters aus der Gruppe:', error);
+    logger.error('Fehler beim Entfernen des Filters aus der Gruppe:', error);
     return res.status(500).json({ message: 'Interner Serverfehler' });
   }
 }; 

@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger';
+
 /**
  * WhatsApp Message Parser für LobbyPMS Reservierungsnachrichten
  * 
@@ -87,7 +89,7 @@ export class WhatsAppMessageParser {
 
       // Validiere dass alle erforderlichen Felder vorhanden sind
       if (!data.reservationId || !data.guestName || !data.checkInDate || !data.checkOutDate || !data.amount) {
-        console.warn('[WhatsAppMessageParser] Unvollständige Daten:', data);
+        logger.warn('[WhatsAppMessageParser] Unvollständige Daten:', data);
         return null;
       }
 
@@ -103,7 +105,7 @@ export class WhatsAppMessageParser {
         guests: data.guests || 1
       };
     } catch (error) {
-      console.error('[WhatsAppMessageParser] Fehler beim Parsen:', error);
+      logger.error('[WhatsAppMessageParser] Fehler beim Parsen:', error);
       return null;
     }
   }

@@ -20,6 +20,7 @@ exports.getSystemNotificationText = getSystemNotificationText;
 exports.getPayrollPDFTranslations = getPayrollPDFTranslations;
 const prisma_1 = require("./prisma");
 const userLanguageCache_1 = require("../services/userLanguageCache");
+const logger_1 = require("./logger");
 /**
  * Ruft die aktive Sprache eines Users ab
  * Priorität: User.language > Organisation.language > 'de'
@@ -44,7 +45,7 @@ function getUserLanguage(userId) {
                 select: { language: true }
             });
             if (!user) {
-                console.log(`[getUserLanguage] User ${userId} nicht gefunden, Fallback: de`);
+                logger_1.logger.log(`[getUserLanguage] User ${userId} nicht gefunden, Fallback: de`);
                 const fallback = 'de';
                 userLanguageCache_1.userLanguageCache.set(userId, fallback);
                 return fallback;
@@ -84,20 +85,20 @@ function getUserLanguage(userId) {
             if ((_a = userRole === null || userRole === void 0 ? void 0 : userRole.role) === null || _a === void 0 ? void 0 : _a.organization) {
                 const orgSettings = userRole.role.organization.settings;
                 if (orgSettings === null || orgSettings === void 0 ? void 0 : orgSettings.language) {
-                    console.log(`[getUserLanguage] User ${userId} Sprache: ${orgSettings.language} (aus Organisation)`);
+                    logger_1.logger.log(`[getUserLanguage] User ${userId} Sprache: ${orgSettings.language} (aus Organisation)`);
                     // Speichere im Cache
                     userLanguageCache_1.userLanguageCache.set(userId, orgSettings.language);
                     return orgSettings.language;
                 }
             }
             // Priorität 3: Fallback
-            console.log(`[getUserLanguage] User ${userId} Sprache: de (Fallback)`);
+            logger_1.logger.log(`[getUserLanguage] User ${userId} Sprache: de (Fallback)`);
             const fallback = 'de';
             userLanguageCache_1.userLanguageCache.set(userId, fallback);
             return fallback;
         }
         catch (error) {
-            console.error('Fehler beim Abrufen der User-Sprache:', error);
+            logger_1.logger.error('Fehler beim Abrufen der User-Sprache:', error);
             const fallback = 'de';
             // Cache auch bei Fehler, um wiederholte Fehler zu vermeiden
             userLanguageCache_1.userLanguageCache.set(userId, fallback);

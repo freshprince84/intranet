@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CountryLanguageService = void 0;
+const logger_1 = require("../utils/logger");
 /**
  * Country Language Service
  *
@@ -54,18 +55,18 @@ class CountryLanguageService {
         // Priorität 1: Land-basierte Erkennung
         if (reservation.guestNationality) {
             const language = this.getLanguageForCountry(reservation.guestNationality);
-            console.log(`[CountryLanguageService] Sprache basierend auf Land "${reservation.guestNationality}": ${language}`);
+            logger_1.logger.log(`[CountryLanguageService] Sprache basierend auf Land "${reservation.guestNationality}": ${language}`);
             return language;
         }
         // Priorität 2: Telefonnummer-basierte Erkennung (Fallback)
         if (reservation.guestPhone) {
             const { LanguageDetectionService } = require('./languageDetectionService');
             const language = LanguageDetectionService.detectLanguageFromPhoneNumber(reservation.guestPhone);
-            console.log(`[CountryLanguageService] Sprache basierend auf Telefonnummer "${reservation.guestPhone}": ${language}`);
+            logger_1.logger.log(`[CountryLanguageService] Sprache basierend auf Telefonnummer "${reservation.guestPhone}": ${language}`);
             return language;
         }
         // Fallback: Spanisch
-        console.log(`[CountryLanguageService] Keine Sprache-Information gefunden, Fallback: es`);
+        logger_1.logger.log(`[CountryLanguageService] Keine Sprache-Information gefunden, Fallback: es`);
         return 'es';
     }
 }

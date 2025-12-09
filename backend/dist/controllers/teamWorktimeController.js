@@ -15,6 +15,7 @@ const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Ruft alle Benutzer mit aktiver Zeiterfassung ab
  */
@@ -58,7 +59,7 @@ const getActiveTeamWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, f
         res.json(activeWorktimes);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der aktiven Team-Zeiterfassungen:', error);
+        logger_1.logger.error('Fehler beim Abrufen der aktiven Team-Zeiterfassungen:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -114,7 +115,7 @@ const stopUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.json(worktime);
     }
     catch (error) {
-        console.error('Fehler beim Stoppen der Benutzer-Zeiterfassung:', error);
+        logger_1.logger.error('Fehler beim Stoppen der Benutzer-Zeiterfassung:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -179,7 +180,7 @@ const getUserWorktimesByDay = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.json(worktimes);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Zeiterfassungen:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Zeiterfassungen:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -236,7 +237,7 @@ const updateUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.json(updatedWorktime);
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren der Zeiterfassung:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren der Zeiterfassung:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -295,7 +296,7 @@ const updateApprovedOvertimeHours = (req, res) => __awaiter(void 0, void 0, void
         res.json(updatedUser);
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren der bewilligten Überstunden:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren der bewilligten Überstunden:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });

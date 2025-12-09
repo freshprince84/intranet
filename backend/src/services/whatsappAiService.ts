@@ -3,6 +3,7 @@ import { decryptApiSettings } from '../utils/encryption';
 import { LanguageDetectionService } from './languageDetectionService';
 import { prisma } from '../utils/prisma';
 import { WhatsAppFunctionHandlers } from './whatsappFunctionHandlers';
+import { logger } from '../utils/logger';
 
 export interface AIResponse {
   message: string;
@@ -59,14 +60,14 @@ export class WhatsAppAiService {
       try {
         settings.apiKey = decryptSecret(settings.apiKey);
       } catch (error) {
-        console.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiKey:', error);
+        logger.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiKey:', error);
       }
     }
     if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
       try {
         settings.apiSecret = decryptSecret(settings.apiSecret);
       } catch (error) {
-        console.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiSecret:', error);
+        logger.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiSecret:', error);
       }
     }
     
@@ -86,11 +87,11 @@ export class WhatsAppAiService {
       // Prüfe ob groupId mit konfigurierter Group ID übereinstimmt
       if (guestGroupId && guestGroupId === groupId) {
         aiConfig = whatsappSettings.guestGroup.ai;
-        console.log('[WhatsApp AI Service] Verwende Gäste-Gruppen-KI-Konfiguration');
+        logger.log('[WhatsApp AI Service] Verwende Gäste-Gruppen-KI-Konfiguration');
       } else {
         // Fallback: Verwende normale AI-Konfiguration
         aiConfig = whatsappSettings?.ai;
-        console.log('[WhatsApp AI Service] Group ID stimmt nicht überein, verwende normale KI-Konfiguration');
+        logger.log('[WhatsApp AI Service] Group ID stimmt nicht überein, verwende normale KI-Konfiguration');
       }
     } else {
       // Einzel-Chat: Verwende normale AI-Konfiguration
@@ -98,7 +99,7 @@ export class WhatsAppAiService {
     }
 
     // DEBUG: Log AI-Konfiguration für Diagnose
-    console.log('[WhatsApp AI Service] AI-Konfiguration:', {
+    logger.log('[WhatsApp AI Service] AI-Konfiguration:', {
       branchId,
       hasWhatsappSettings: !!whatsappSettings,
       hasAiConfig: !!aiConfig,
@@ -108,7 +109,7 @@ export class WhatsAppAiService {
     });
 
     if (!aiConfig) {
-      console.error('[WhatsApp AI Service] KI-Konfiguration nicht gefunden:', {
+      logger.error('[WhatsApp AI Service] KI-Konfiguration nicht gefunden:', {
         branchId,
         whatsappSettingsKeys: whatsappSettings ? Object.keys(whatsappSettings) : [],
         whatsappSettingsAi: whatsappSettings?.ai
@@ -118,7 +119,7 @@ export class WhatsAppAiService {
 
     // Prüfe ob enabled explizit auf false gesetzt ist (undefined = aktiviert, false = deaktiviert)
     if (aiConfig.enabled === false) {
-      console.error('[WhatsApp AI Service] KI ist explizit deaktiviert:', {
+      logger.error('[WhatsApp AI Service] KI ist explizit deaktiviert:', {
         branchId,
         aiConfigEnabled: aiConfig.enabled,
         aiConfig: JSON.stringify(aiConfig, null, 2)
@@ -128,7 +129,7 @@ export class WhatsAppAiService {
     
     // Wenn enabled undefined ist, behandeln wir es als aktiviert (Rückwärtskompatibilität)
     if (aiConfig.enabled === undefined) {
-      console.warn('[WhatsApp AI Service] KI enabled ist undefined, behandle als aktiviert (Rückwärtskompatibilität):', {
+      logger.warn('[WhatsApp AI Service] KI enabled ist undefined, behandle als aktiviert (Rückwärtskompatibilität):', {
         branchId
       });
     }
@@ -139,7 +140,7 @@ export class WhatsAppAiService {
     // Verwende erkannte Sprache aus Nachricht, falls vorhanden, sonst Telefonnummer
     const language = detectedLanguage || phoneLanguage;
     
-    console.log('[WhatsApp AI Service] Spracherkennung:', {
+    logger.log('[WhatsApp AI Service] Spracherkennung:', {
       message: message.substring(0, 50),
       detectedFromMessage: detectedLanguage,
       detectedFromPhone: phoneLanguage,
@@ -184,7 +185,7 @@ export class WhatsAppAiService {
           });
 
           if (existingReservation) {
-            console.log(`[WhatsApp AI Service] ⚠️ Bereits existierende Reservierung ${existingReservation.reservationId} für Conversation ${conversationId} gefunden. Filtere alte Buchungs-Nachrichten aus History.`);
+            logger.log(`[WhatsApp AI Service] ⚠️ Bereits existierende Reservierung ${existingReservation.reservationId} für Conversation ${conversationId} gefunden. Filtere alte Buchungs-Nachrichten aus History.`);
           }
 
           // Prüfe Altersgrenze: Nur Nachrichten der letzten 24 Stunden
@@ -225,9 +226,9 @@ export class WhatsAppAiService {
               content: msg.message
             }));
           
-          console.log(`[WhatsApp AI Service] Message History geladen: ${messageHistory.length} Nachrichten (gefiltert: ${recentMessages.length - messageHistory.length} alte/Reservierungs-Nachrichten entfernt)`);
+          logger.log(`[WhatsApp AI Service] Message History geladen: ${messageHistory.length} Nachrichten (gefiltert: ${recentMessages.length - messageHistory.length} alte/Reservierungs-Nachrichten entfernt)`);
         } catch (historyError) {
-          console.error('[WhatsApp AI Service] Fehler beim Laden der Message History:', historyError);
+          logger.error('[WhatsApp AI Service] Fehler beim Laden der Message History:', historyError);
           // Weiter ohne History
         }
       }
@@ -274,7 +275,7 @@ export class WhatsAppAiService {
 
       // Prüfe ob KI Function Calls machen möchte
       if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
-        console.log('[WhatsApp AI Service] Function Calls erkannt:', responseMessage.tool_calls.length);
+        logger.log('[WhatsApp AI Service] Function Calls erkannt:', responseMessage.tool_calls.length);
         
         // Führe Funktionen aus
         const toolResults = [];
@@ -283,7 +284,7 @@ export class WhatsAppAiService {
           const functionName = toolCall.function.name;
           const functionArgs = JSON.parse(toolCall.function.arguments);
           
-          console.log('[WhatsApp AI Service] Führe Function aus:', {
+          logger.log('[WhatsApp AI Service] Führe Function aus:', {
             name: functionName,
             args: functionArgs
           });
@@ -318,12 +319,12 @@ export class WhatsAppAiService {
               content: JSON.stringify(result)
             });
             
-            console.log('[WhatsApp AI Service] Function Ergebnis:', {
+            logger.log('[WhatsApp AI Service] Function Ergebnis:', {
               name: functionName,
               resultCount: Array.isArray(result) ? result.length : 1
             });
           } catch (error: any) {
-            console.error('[WhatsApp AI Service] Function Fehler:', {
+            logger.error('[WhatsApp AI Service] Function Fehler:', {
               name: functionName,
               error: error.message
             });
@@ -423,10 +424,10 @@ export class WhatsAppAiService {
         };
       }
     } catch (error) {
-      console.error('[WhatsApp AI Service] OpenAI API Fehler:', error);
+      logger.error('[WhatsApp AI Service] OpenAI API Fehler:', error);
       if (axios.isAxiosError(error)) {
-        console.error('[WhatsApp AI Service] Status:', error.response?.status);
-        console.error('[WhatsApp AI Service] Data:', error.response?.data);
+        logger.error('[WhatsApp AI Service] Status:', error.response?.status);
+        logger.error('[WhatsApp AI Service] Data:', error.response?.data);
       }
       throw new Error('Fehler bei der KI-Antwort-Generierung');
     }
@@ -1285,7 +1286,7 @@ export class WhatsAppAiService {
 
       return aiConfig?.enabled === true;
     } catch (error) {
-      console.error('[WhatsApp AI Service] Fehler beim Prüfen der KI-Aktivierung:', error);
+      logger.error('[WhatsApp AI Service] Fehler beim Prüfen der KI-Aktivierung:', error);
       return false;
     }
   }

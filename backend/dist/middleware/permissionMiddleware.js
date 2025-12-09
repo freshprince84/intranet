@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireCompleteProfile = exports.isAdmin = exports.checkUserPermission = exports.checkPermission = void 0;
 const prisma_1 = require("../utils/prisma");
 const userCache_1 = require("../services/userCache");
+const logger_1 = require("../utils/logger");
 /**
  * Middleware zur Überprüfung von Berechtigungen
  * @param entity - Entität (z.B. 'page', 'table' oder 'cerebro')
@@ -25,13 +26,13 @@ const checkPermission = (entity, requiredAccess, entityType = 'page') => {
             const userId = parseInt(req.userId, 10);
             const roleId = parseInt(req.roleId, 10);
             if (isNaN(userId) || isNaN(roleId)) {
-                console.error(`[checkPermission] ❌ Authentifizierung fehlgeschlagen: userId=${req.userId}, roleId=${req.roleId}`);
+                logger_1.logger.error(`[checkPermission] ❌ Authentifizierung fehlgeschlagen: userId=${req.userId}, roleId=${req.roleId}`);
                 return res.status(401).json({ message: 'Nicht authentifiziert' });
             }
             // Prüfe, ob der Benutzer die erforderliche Berechtigung hat
             const hasAccess = yield (0, exports.checkUserPermission)(userId, roleId, entity, requiredAccess, entityType);
             if (!hasAccess) {
-                console.error(`[checkPermission] ❌ VERWEIGERT: Entity=${entity}, EntityType=${entityType}, UserId=${userId}, RoleId=${roleId}`);
+                logger_1.logger.error(`[checkPermission] ❌ VERWEIGERT: Entity=${entity}, EntityType=${entityType}, UserId=${userId}, RoleId=${roleId}`);
             }
             if (!hasAccess) {
                 return res.status(403).json({
@@ -42,7 +43,7 @@ const checkPermission = (entity, requiredAccess, entityType = 'page') => {
             next();
         }
         catch (error) {
-            console.error('Fehler bei der Berechtigungsprüfung:', error);
+            logger_1.logger.error('Fehler bei der Berechtigungsprüfung:', error);
             res.status(500).json({ message: 'Interner Server-Fehler' });
         }
     });
@@ -55,18 +56,18 @@ const checkUserPermission = (userId_1, roleId_1, currentEntity_1, requiredAccess
         // ✅ PERFORMANCE: Verwende UserCache statt eigene DB-Query
         const cached = yield userCache_1.userCache.get(userId);
         if (!cached || !cached.user) {
-            console.error(`[checkUserPermission] ❌ User nicht gefunden: userId=${userId}`);
+            logger_1.logger.error(`[checkUserPermission] ❌ User nicht gefunden: userId=${userId}`);
             return false;
         }
         // Finde aktive Rolle (mit lastUsed: true)
         const activeRole = cached.user.roles.find((r) => r.lastUsed);
         if (!activeRole) {
-            console.error(`[checkUserPermission] ❌ Keine aktive Rolle gefunden: userId=${userId}`);
+            logger_1.logger.error(`[checkUserPermission] ❌ Keine aktive Rolle gefunden: userId=${userId}`);
             return false;
         }
         // Prüfe ob die roleId mit der aktiven Rolle übereinstimmt
         if (activeRole.role.id !== roleId) {
-            console.warn(`[checkUserPermission] ⚠️ roleId mismatch: requested=${roleId}, active=${activeRole.role.id}, verwende aktive Rolle`);
+            logger_1.logger.warn(`[checkUserPermission] ⚠️ roleId mismatch: requested=${roleId}, active=${activeRole.role.id}, verwende aktive Rolle`);
             // Verwende die aktive Rolle statt der angeforderten roleId
         }
         // Hole Permissions aus der aktiven Rolle (bereits im Cache geladen)
@@ -74,12 +75,12 @@ const checkUserPermission = (userId_1, roleId_1, currentEntity_1, requiredAccess
         // Suche nach der Berechtigung für die angeforderte Entität
         const permission = permissions.find((p) => p.entity === currentEntity && p.entityType === entityType);
         if (!permission) {
-            console.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${activeRole.role.name}" (ID: ${activeRole.role.id})`);
-            console.log(`[checkUserPermission] Verfügbare Cerebro-Permissions:`);
+            logger_1.logger.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${activeRole.role.name}" (ID: ${activeRole.role.id})`);
+            logger_1.logger.log(`[checkUserPermission] Verfügbare Cerebro-Permissions:`);
             permissions
                 .filter((p) => p.entity.includes('cerebro'))
                 .forEach((p) => {
-                console.log(`   - ${p.entity} (${p.entityType}): ${p.accessLevel}`);
+                logger_1.logger.log(`   - ${p.entity} (${p.entityType}): ${p.accessLevel}`);
             });
             return false;
         }
@@ -88,14 +89,14 @@ const checkUserPermission = (userId_1, roleId_1, currentEntity_1, requiredAccess
             (requiredAccess === 'read' && (permission.accessLevel === 'read' || permission.accessLevel === 'write')) ||
             (requiredAccess === 'write' && permission.accessLevel === 'write');
         if (!hasAccess) {
-            console.error(`[checkUserPermission] ❌ Zugriff unzureichend: ${permission.accessLevel} < ${requiredAccess}`);
+            logger_1.logger.error(`[checkUserPermission] ❌ Zugriff unzureichend: ${permission.accessLevel} < ${requiredAccess}`);
             return false;
         }
         // Zugriff gewähren, wenn alle Prüfungen bestanden wurden
         return true;
     }
     catch (error) {
-        console.error('Fehler bei der Berechtigungsprüfung:', error);
+        logger_1.logger.error('Fehler bei der Berechtigungsprüfung:', error);
         return false;
     }
 });
@@ -126,7 +127,7 @@ const isAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
         next();
     }
     catch (error) {
-        console.error('Error in admin check middleware:', error);
+        logger_1.logger.error('Error in admin check middleware:', error);
         res.status(500).json({
             message: 'Fehler bei der Admin-Berechtigungsprüfung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -211,7 +212,7 @@ const requireCompleteProfile = (req, res, next) => __awaiter(void 0, void 0, voi
         next();
     }
     catch (error) {
-        console.error('Error in requireCompleteProfile middleware:', error);
+        logger_1.logger.error('Error in requireCompleteProfile middleware:', error);
         res.status(500).json({
             message: 'Fehler bei der Profilprüfung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

@@ -3,6 +3,7 @@ import { EmailReservationService } from '../services/emailReservationService';
 import { EmailReservationParser } from '../services/emailReservationParser';
 import { EmailReservationScheduler } from '../services/emailReservationScheduler';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * POST /api/email-reservations/check
@@ -19,7 +20,7 @@ export const checkEmails = async (req: Request, res: Response) => {
       });
     }
 
-    console.log(`[EmailReservationController] Manueller Email-Check für Organisation ${organizationId}`);
+    logger.log(`[EmailReservationController] Manueller Email-Check für Organisation ${organizationId}`);
 
     const processedCount = await EmailReservationService.checkForNewReservationEmails(organizationId);
 
@@ -29,7 +30,7 @@ export const checkEmails = async (req: Request, res: Response) => {
       processedCount
     });
   } catch (error) {
-    console.error('[EmailReservationController] Fehler beim Email-Check:', error);
+    logger.error('[EmailReservationController] Fehler beim Email-Check:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Email-Check'
@@ -87,7 +88,7 @@ export const getStatus = async (req: Request, res: Response) => {
       data: status
     });
   } catch (error) {
-    console.error('[EmailReservationController] Fehler beim Abrufen des Status:', error);
+    logger.error('[EmailReservationController] Fehler beim Abrufen des Status:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen des Status'
@@ -110,7 +111,7 @@ export const parseEmail = async (req: Request, res: Response) => {
       });
     }
 
-    console.log('[EmailReservationController] Test-Parsing einer Email...');
+    logger.log('[EmailReservationController] Test-Parsing einer Email...');
 
     const parsedEmail = EmailReservationParser.parseReservationEmail(
       emailContent,
@@ -145,7 +146,7 @@ export const parseEmail = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('[EmailReservationController] Fehler beim Parsing:', error);
+    logger.error('[EmailReservationController] Fehler beim Parsing:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Parsing'
@@ -161,7 +162,7 @@ export const triggerScheduler = async (req: Request, res: Response) => {
   try {
     const organizationId = req.organizationId;
 
-    console.log('[EmailReservationController] Manueller Scheduler-Trigger...');
+    logger.log('[EmailReservationController] Manueller Scheduler-Trigger...');
 
     const processedCount = await EmailReservationScheduler.triggerManually(organizationId);
 
@@ -171,7 +172,7 @@ export const triggerScheduler = async (req: Request, res: Response) => {
       processedCount
     });
   } catch (error) {
-    console.error('[EmailReservationController] Fehler beim Scheduler-Trigger:', error);
+    logger.error('[EmailReservationController] Fehler beim Scheduler-Trigger:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Scheduler-Trigger'

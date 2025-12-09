@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.filterCache = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * In-Memory Cache für SavedFilter
  *
@@ -44,7 +45,7 @@ class FilterCache {
             // 1. Prüfe Cache
             const cached = this.cache.get(filterId);
             if (this.isCacheValid(cached)) {
-                console.log(`[FilterCache] ✅ Cache-Hit für Filter ${filterId}`);
+                logger_1.logger.log(`[FilterCache] ✅ Cache-Hit für Filter ${filterId}`);
                 return {
                     conditions: cached.filter.conditions,
                     operators: cached.filter.operators
@@ -72,14 +73,14 @@ class FilterCache {
                     },
                     timestamp: Date.now()
                 });
-                console.log(`[FilterCache] 💾 Cache-Miss für Filter ${filterId} - aus DB geladen und gecacht`);
+                logger_1.logger.log(`[FilterCache] 💾 Cache-Miss für Filter ${filterId} - aus DB geladen und gecacht`);
                 return {
                     conditions: savedFilter.conditions,
                     operators: savedFilter.operators
                 };
             }
             catch (error) {
-                console.error(`[FilterCache] Fehler beim Laden von Filter ${filterId}:`, error);
+                logger_1.logger.error(`[FilterCache] Fehler beim Laden von Filter ${filterId}:`, error);
                 return null;
             }
         });

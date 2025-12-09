@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger';
+
 /**
  * Country Language Service
  * 
@@ -167,7 +169,7 @@ export class CountryLanguageService {
     // Priorität 1: Land-basierte Erkennung
     if (reservation.guestNationality) {
       const language = this.getLanguageForCountry(reservation.guestNationality);
-      console.log(`[CountryLanguageService] Sprache basierend auf Land "${reservation.guestNationality}": ${language}`);
+      logger.log(`[CountryLanguageService] Sprache basierend auf Land "${reservation.guestNationality}": ${language}`);
       return language;
     }
 
@@ -175,12 +177,12 @@ export class CountryLanguageService {
     if (reservation.guestPhone) {
       const { LanguageDetectionService } = require('./languageDetectionService');
       const language = LanguageDetectionService.detectLanguageFromPhoneNumber(reservation.guestPhone);
-      console.log(`[CountryLanguageService] Sprache basierend auf Telefonnummer "${reservation.guestPhone}": ${language}`);
+      logger.log(`[CountryLanguageService] Sprache basierend auf Telefonnummer "${reservation.guestPhone}": ${language}`);
       return language;
     }
 
     // Fallback: Spanisch
-    console.log(`[CountryLanguageService] Keine Sprache-Information gefunden, Fallback: es`);
+    logger.log(`[CountryLanguageService] Keine Sprache-Information gefunden, Fallback: es`);
     return 'es';
   }
 }

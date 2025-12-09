@@ -1,27 +1,7 @@
 "use strict";
-/**
- * Email Reservation Parser für LobbyPMS Reservation-Emails
- *
- * Parst Emails im Format von lobbybookings.com:
- *
- * Hola, La Familia Hostel - Manila
- *
- * Recibiste una nueva reserva de Booking.com para La Familia Hostel - Manila
- *
- * Reserva: 6057955462
- * Titular: Nastassia Yankouskaya
- * Bielorrusia
- * Email del huésped: nyanko.690495@guest.booking.com
- *
- * 4 noches, 1 habitaciones, 1 huéspedes
- * Check in: 17/11/2025
- * Check out: 21/11/2025
- *
- * Total: COP 186600
- * Comisión: COP 27990
- */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailReservationParser = void 0;
+const logger_1 = require("../utils/logger");
 class EmailReservationParser {
     /**
      * Parst eine Reservation-Email
@@ -47,7 +27,7 @@ class EmailReservationParser {
             }
             // Ignoriere Stornierungen
             if (emailText.includes('cancelada') || emailText.includes('cancelled') || emailText.includes('cancelada en')) {
-                console.log('[EmailReservationParser] Email ist eine Stornierung, wird übersprungen');
+                logger_1.logger.log('[EmailReservationParser] Email ist eine Stornierung, wird übersprungen');
                 return null;
             }
             // Verwende Text (HTML wird zu Text konvertiert, aber Text ist meist besser strukturiert)
@@ -76,13 +56,13 @@ class EmailReservationParser {
             // Extrahiere Reservation Code
             data.reservationCode = this.extractReservationCode(textToParse);
             if (!data.reservationCode) {
-                console.warn('[EmailReservationParser] Reservation Code nicht gefunden');
+                logger_1.logger.warn('[EmailReservationParser] Reservation Code nicht gefunden');
                 return null;
             }
             // Extrahiere Gast-Name
             data.guestName = this.extractGuestName(textToParse);
             if (!data.guestName) {
-                console.warn('[EmailReservationParser] Gast-Name nicht gefunden');
+                logger_1.logger.warn('[EmailReservationParser] Gast-Name nicht gefunden');
                 return null;
             }
             // Extrahiere Kontaktinformationen
@@ -95,7 +75,7 @@ class EmailReservationParser {
             // Extrahiere Daten
             const dates = this.extractDates(textToParse);
             if (!dates) {
-                console.warn('[EmailReservationParser] Daten nicht gefunden');
+                logger_1.logger.warn('[EmailReservationParser] Daten nicht gefunden');
                 return null;
             }
             data.checkInDate = dates.checkIn;
@@ -103,7 +83,7 @@ class EmailReservationParser {
             // Extrahiere Betrag
             const amountInfo = this.extractAmount(textToParse);
             if (!amountInfo) {
-                console.warn('[EmailReservationParser] Betrag nicht gefunden');
+                logger_1.logger.warn('[EmailReservationParser] Betrag nicht gefunden');
                 return null;
             }
             data.amount = amountInfo.amount;
@@ -131,7 +111,7 @@ class EmailReservationParser {
             };
         }
         catch (error) {
-            console.error('[EmailReservationParser] Fehler beim Parsen:', error);
+            logger_1.logger.error('[EmailReservationParser] Fehler beim Parsen:', error);
             return null;
         }
     }

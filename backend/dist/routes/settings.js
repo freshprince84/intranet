@@ -21,10 +21,11 @@ const roleCheck_1 = require("../middleware/roleCheck");
 const settingsController_1 = require("../controllers/settingsController");
 const sharp_1 = __importDefault(require("sharp"));
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 // Debug-Middleware für alle Settings-Routen
 router.use((req, res, next) => {
-    console.log('Settings Router aufgerufen:', {
+    logger_1.logger.log('Settings Router aufgerufen:', {
         method: req.method,
         path: req.path,
         originalUrl: req.originalUrl,
@@ -39,9 +40,9 @@ router.use((req, res, next) => {
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = path_1.default.join(process.cwd(), 'uploads', 'logos');
-        console.log('Upload Verzeichnis:', uploadDir);
+        logger_1.logger.log('Upload Verzeichnis:', uploadDir);
         if (!fs_1.default.existsSync(uploadDir)) {
-            console.log('Erstelle Upload-Verzeichnis');
+            logger_1.logger.log('Erstelle Upload-Verzeichnis');
             fs_1.default.mkdirSync(uploadDir, { recursive: true });
         }
         cb(null, uploadDir);
@@ -50,7 +51,7 @@ const storage = multer_1.default.diskStorage({
         // Verwende einen festen Dateinamen basierend auf der Dateierweiterung
         const fileExtension = path_1.default.extname(file.originalname).toLowerCase();
         const filename = 'logo' + fileExtension;
-        console.log('Generierter Dateiname:', filename);
+        logger_1.logger.log('Generierter Dateiname:', filename);
         // Lösche bestehende Logo-Dateien, um stets nur ein Logo zu haben
         const uploadDir = path_1.default.join(process.cwd(), 'uploads', 'logos');
         try {
@@ -59,12 +60,12 @@ const storage = multer_1.default.diskStorage({
                 if (existingFile.startsWith('logo')) {
                     const filePath = path_1.default.join(uploadDir, existingFile);
                     fs_1.default.unlinkSync(filePath);
-                    console.log('Bestehende Datei gelöscht:', filePath);
+                    logger_1.logger.log('Bestehende Datei gelöscht:', filePath);
                 }
             });
         }
         catch (error) {
-            console.error('Fehler beim Löschen bestehender Dateien:', error);
+            logger_1.logger.error('Fehler beim Löschen bestehender Dateien:', error);
         }
         cb(null, filename);
     }
@@ -75,7 +76,7 @@ const upload = (0, multer_1.default)({
         fileSize: 5 * 1024 * 1024 // 5MB
     },
     fileFilter: (req, file, cb) => {
-        console.log('Datei-Filter:', file);
+        logger_1.logger.log('Datei-Filter:', file);
         const allowedTypes = ['image/jpeg', 'image/png'];
         if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
@@ -89,53 +90,53 @@ const upload = (0, multer_1.default)({
 // GET /logo - Öffentliche Route 
 router.get('/logo', (req, res) => {
     try {
-        console.log('Aktuelles Arbeitsverzeichnis (CWD):', process.cwd());
-        console.log('__dirname:', __dirname);
+        logger_1.logger.log('Aktuelles Arbeitsverzeichnis (CWD):', process.cwd());
+        logger_1.logger.log('__dirname:', __dirname);
         const uploadDir = path_1.default.join(process.cwd(), 'uploads', 'logos');
-        console.log('Suche Logo in:', uploadDir);
+        logger_1.logger.log('Suche Logo in:', uploadDir);
         if (!fs_1.default.existsSync(uploadDir)) {
-            console.log('Upload Verzeichnis existiert nicht');
+            logger_1.logger.log('Upload Verzeichnis existiert nicht');
             return res.status(404).json({ message: 'Kein Logo gefunden' });
         }
         // Prüfe, ob Verzeichnis lesbar ist
         try {
             fs_1.default.accessSync(uploadDir, fs_1.default.constants.R_OK);
-            console.log('Verzeichnis ist lesbar');
+            logger_1.logger.log('Verzeichnis ist lesbar');
         }
         catch (error) {
-            console.error('Verzeichnis ist nicht lesbar:', error);
+            logger_1.logger.error('Verzeichnis ist nicht lesbar:', error);
             return res.status(500).json({ message: 'Fehler beim Zugriff auf das Logo-Verzeichnis' });
         }
         const files = fs_1.default.readdirSync(uploadDir);
-        console.log('Gefundene Dateien:', files);
+        logger_1.logger.log('Gefundene Dateien:', files);
         // Suche nach logo.png oder logo.jpg
         const logoFile = files.find(file => file === 'logo.png' ||
             file === 'logo.jpg' ||
             file === 'logo.jpeg');
-        console.log('Gefundenes Logo:', logoFile || 'Keines');
+        logger_1.logger.log('Gefundenes Logo:', logoFile || 'Keines');
         if (!logoFile) {
-            console.log('Kein Logo gefunden');
+            logger_1.logger.log('Kein Logo gefunden');
             return res.status(404).json({ message: 'Kein Logo gefunden' });
         }
         const logoPath = path_1.default.join(uploadDir, logoFile);
-        console.log('Vollständiger Pfad zum Logo:', logoPath);
+        logger_1.logger.log('Vollständiger Pfad zum Logo:', logoPath);
         // Prüfe, ob Datei existiert und lesbar ist
         try {
             fs_1.default.accessSync(logoPath, fs_1.default.constants.R_OK);
-            console.log('Logo-Datei ist lesbar');
+            logger_1.logger.log('Logo-Datei ist lesbar');
         }
         catch (error) {
-            console.error('Logo-Datei ist nicht lesbar:', error);
+            logger_1.logger.error('Logo-Datei ist nicht lesbar:', error);
             return res.status(500).json({ message: 'Fehler beim Zugriff auf die Logo-Datei' });
         }
         // Prüfe Dateigröße
         const stats = fs_1.default.statSync(logoPath);
-        console.log('Logo-Dateigröße:', stats.size, 'Bytes');
+        logger_1.logger.log('Logo-Dateigröße:', stats.size, 'Bytes');
         if (stats.size === 0) {
-            console.error('Logo-Datei ist leer');
+            logger_1.logger.error('Logo-Datei ist leer');
             return res.status(500).json({ message: 'Logo-Datei ist leer' });
         }
-        console.log('Sende Logo:', logoPath);
+        logger_1.logger.log('Sende Logo:', logoPath);
         // Der Header muss für Bilder korrekt gesetzt werden
         const mimeTypes = {
             '.png': 'image/png',
@@ -148,7 +149,7 @@ router.get('/logo', (req, res) => {
         res.sendFile(logoPath);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen des Logos:', error);
+        logger_1.logger.error('Fehler beim Abrufen des Logos:', error);
         res.status(500).json({
             message: 'Interner Server-Fehler beim Abrufen des Logos',
             error: error instanceof Error ? error.message : String(error)
@@ -158,27 +159,27 @@ router.get('/logo', (req, res) => {
 // GET /logo/base64 - Öffentliche alternative Logo-Route
 router.get('/logo/base64', (req, res) => {
     try {
-        console.log('Aktuelles Arbeitsverzeichnis (CWD):', process.cwd());
-        console.log('__dirname:', __dirname);
+        logger_1.logger.log('Aktuelles Arbeitsverzeichnis (CWD):', process.cwd());
+        logger_1.logger.log('__dirname:', __dirname);
         const uploadDir = path_1.default.join(process.cwd(), 'uploads', 'logos');
-        console.log('Suche Logo in:', uploadDir);
+        logger_1.logger.log('Suche Logo in:', uploadDir);
         if (!fs_1.default.existsSync(uploadDir)) {
-            console.log('Upload Verzeichnis existiert nicht');
+            logger_1.logger.log('Upload Verzeichnis existiert nicht');
             return res.status(404).json({ message: 'Kein Logo gefunden' });
         }
         const files = fs_1.default.readdirSync(uploadDir);
-        console.log('Gefundene Dateien:', files);
+        logger_1.logger.log('Gefundene Dateien:', files);
         // Suche nach logo.png oder logo.jpg
         const logoFile = files.find(file => file === 'logo.png' ||
             file === 'logo.jpg' ||
             file === 'logo.jpeg');
-        console.log('Gefundenes Logo:', logoFile || 'Keines');
+        logger_1.logger.log('Gefundenes Logo:', logoFile || 'Keines');
         if (!logoFile) {
-            console.log('Kein Logo gefunden');
+            logger_1.logger.log('Kein Logo gefunden');
             return res.status(404).json({ message: 'Kein Logo gefunden' });
         }
         const logoPath = path_1.default.join(uploadDir, logoFile);
-        console.log('Vollständiger Pfad zum Logo:', logoPath);
+        logger_1.logger.log('Vollständiger Pfad zum Logo:', logoPath);
         // Datei als Base64 lesen
         const fileData = fs_1.default.readFileSync(logoPath);
         const base64Data = fileData.toString('base64');
@@ -197,7 +198,7 @@ router.get('/logo/base64', (req, res) => {
         });
     }
     catch (error) {
-        console.error('Fehler beim Abrufen des Logos als Base64:', error);
+        logger_1.logger.error('Fehler beim Abrufen des Logos als Base64:', error);
         res.status(500).json({
             message: 'Interner Server-Fehler beim Abrufen des Logos',
             error: error instanceof Error ? error.message : String(error)
@@ -268,7 +269,7 @@ router.get('/logo/mobile', (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('Fehler beim Generieren der Mobile Icons:', error);
+        logger_1.logger.error('Fehler beim Generieren der Mobile Icons:', error);
         res.status(500).json({
             message: 'Interner Server-Fehler beim Generieren der Mobile Icons',
             error: error instanceof Error ? error.message : String(error)
@@ -287,11 +288,11 @@ router.get('/test', (req, res) => {
 });
 // POST /logo (nur für authentifizierte Benutzer)
 router.post('/logo', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('Logo Upload Route erreicht');
-    console.log('Request Headers:', req.headers);
+    logger_1.logger.log('Logo Upload Route erreicht');
+    logger_1.logger.log('Request Headers:', req.headers);
     upload.single('logo')(req, res, (err) => __awaiter(void 0, void 0, void 0, function* () {
         if (err) {
-            console.error('Upload Fehler:', err);
+            logger_1.logger.error('Upload Fehler:', err);
             return res.status(400).json({
                 message: err instanceof multer_1.default.MulterError && err.code === 'LIMIT_FILE_SIZE'
                     ? 'Datei ist zu groß (maximal 5MB erlaubt)'
@@ -299,11 +300,11 @@ router.post('/logo', auth_1.authenticateToken, (req, res) => __awaiter(void 0, v
             });
         }
         if (!req.file) {
-            console.error('Keine Datei im Request gefunden');
+            logger_1.logger.error('Keine Datei im Request gefunden');
             return res.status(400).json({ message: 'Keine Datei hochgeladen' });
         }
         try {
-            console.log('Datei erfolgreich hochgeladen:', req.file);
+            logger_1.logger.log('Datei erfolgreich hochgeladen:', req.file);
             // Lese Logo als Base64
             const fileData = fs_1.default.readFileSync(req.file.path);
             const base64Data = fileData.toString('base64');
@@ -340,14 +341,14 @@ router.post('/logo', auth_1.authenticateToken, (req, res) => __awaiter(void 0, v
                 where: { id: userRole.role.organization.id },
                 data: { logo: base64Logo }
             });
-            console.log('Logo erfolgreich in Datenbank gespeichert für Organisation:', userRole.role.organization.id);
+            logger_1.logger.log('Logo erfolgreich in Datenbank gespeichert für Organisation:', userRole.role.organization.id);
             res.status(200).json({
                 message: 'Logo erfolgreich hochgeladen',
                 filename: req.file.filename
             });
         }
         catch (error) {
-            console.error('Fehler beim Speichern des Logos in Datenbank:', error);
+            logger_1.logger.error('Fehler beim Speichern des Logos in Datenbank:', error);
             res.status(500).json({
                 message: 'Fehler beim Speichern des Logos',
                 error: error instanceof Error ? error.message : 'Unbekannter Fehler'

@@ -13,6 +13,7 @@ exports.LifecycleService = void 0;
 const taskAutomationService_1 = require("./taskAutomationService");
 const documentService_1 = require("./documentService");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Service für Mitarbeiterlebenszyklus-Verwaltung
  */
@@ -91,7 +92,7 @@ class LifecycleService {
             }
             catch (error) {
                 // Logge Fehler, aber breche nicht ab
-                console.error('Fehler beim Erstellen der Onboarding-Tasks:', error);
+                logger_1.logger.error('Fehler beim Erstellen der Onboarding-Tasks:', error);
             }
             return lifecycle;
         });
@@ -112,7 +113,7 @@ class LifecycleService {
                     }
                 });
                 if (!userRole) {
-                    console.warn(`[startLifecycleAfterOnboarding] User-Rolle nicht gefunden für Organisation ${organizationId}`);
+                    logger_1.logger.warn(`[startLifecycleAfterOnboarding] User-Rolle nicht gefunden für Organisation ${organizationId}`);
                     return null;
                 }
                 // Prüfe ob User bereits diese Rolle hat
@@ -131,7 +132,7 @@ class LifecycleService {
                             lastUsed: false // Nicht als aktiv setzen, da User bereits andere Rolle haben könnte
                         }
                     });
-                    console.log(`[startLifecycleAfterOnboarding] User-Rolle hinzugefügt für User ${userId} in Organisation ${organizationId}`);
+                    logger_1.logger.log(`[startLifecycleAfterOnboarding] User-Rolle hinzugefügt für User ${userId} in Organisation ${organizationId}`);
                 }
                 // Starte Lifecycle (erstellt ihn, falls noch nicht vorhanden)
                 const lifecycle = yield this.createLifecycle(userId, organizationId);
@@ -147,11 +148,11 @@ class LifecycleService {
                         }
                     }
                 });
-                console.log(`[startLifecycleAfterOnboarding] Lifecycle gestartet für User ${userId} in Organisation ${organizationId}`);
+                logger_1.logger.log(`[startLifecycleAfterOnboarding] Lifecycle gestartet für User ${userId} in Organisation ${organizationId}`);
                 return lifecycle;
             }
             catch (error) {
-                console.error('[startLifecycleAfterOnboarding] Fehler:', error);
+                logger_1.logger.error('[startLifecycleAfterOnboarding] Fehler:', error);
                 throw error;
             }
         });
@@ -185,7 +186,7 @@ class LifecycleService {
                 }
                 catch (error) {
                     // Logge Fehler, aber breche nicht ab
-                    console.error('Fehler beim Erstellen der Offboarding-Tasks:', error);
+                    logger_1.logger.error('Fehler beim Erstellen der Offboarding-Tasks:', error);
                 }
             }
             if (status === 'archived' && !lifecycle.offboardingCompletedAt) {
@@ -202,12 +203,12 @@ class LifecycleService {
                             templateUsed: 'default',
                             templateVersion: '1.0'
                         }, generatedBy);
-                        console.log(`✅ Automatisch Arbeitszeugnis erstellt für User ${userId} beim Offboarding-Abschluss`);
+                        logger_1.logger.log(`✅ Automatisch Arbeitszeugnis erstellt für User ${userId} beim Offboarding-Abschluss`);
                     }
                 }
                 catch (error) {
                     // Logge Fehler, aber breche nicht ab
-                    console.error('Fehler beim automatischen Erstellen des Arbeitszeugnisses:', error);
+                    logger_1.logger.error('Fehler beim automatischen Erstellen des Arbeitszeugnisses:', error);
                 }
                 // Deaktiviere User (nicht löschen!)
                 try {
@@ -215,11 +216,11 @@ class LifecycleService {
                         where: { id: userId },
                         data: { active: false }
                     });
-                    console.log(`✅ User ${userId} wurde deaktiviert beim Archivieren`);
+                    logger_1.logger.log(`✅ User ${userId} wurde deaktiviert beim Archivieren`);
                 }
                 catch (error) {
                     // Logge Fehler, aber breche nicht ab
-                    console.error('Fehler beim Deaktivieren des Users:', error);
+                    logger_1.logger.error('Fehler beim Deaktivieren des Users:', error);
                 }
                 // Optional: Prüfe, ob alle Offboarding-Tasks abgeschlossen sind (nur Warnung)
                 // Suche Tasks, die für diesen User erstellt wurden (über Branch oder Rolle)
@@ -256,14 +257,14 @@ class LifecycleService {
                         });
                         const completedTasks = offboardingTasks.filter(task => task.status === 'done');
                         if (offboardingTasks.length > 0 && completedTasks.length < offboardingTasks.length) {
-                            console.warn(`⚠️ User ${userId} wird archiviert, aber nicht alle Offboarding-Tasks sind abgeschlossen ` +
+                            logger_1.logger.warn(`⚠️ User ${userId} wird archiviert, aber nicht alle Offboarding-Tasks sind abgeschlossen ` +
                                 `(${completedTasks.length}/${offboardingTasks.length})`);
                         }
                     }
                 }
                 catch (error) {
                     // Logge Fehler, aber breche nicht ab
-                    console.error('Fehler beim Prüfen der Offboarding-Tasks:', error);
+                    logger_1.logger.error('Fehler beim Prüfen der Offboarding-Tasks:', error);
                 }
             }
             // Zusätzliche Daten

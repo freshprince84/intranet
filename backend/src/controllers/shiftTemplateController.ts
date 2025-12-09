@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * GET /api/shifts/templates
@@ -55,7 +56,7 @@ export const getAllShiftTemplates = async (req: Request, res: Response) => {
       data: templates
     });
   } catch (error) {
-    console.error('[ShiftTemplate] Fehler beim Abrufen der Templates:', error);
+    logger.error('[ShiftTemplate] Fehler beim Abrufen der Templates:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Templates'
@@ -110,7 +111,7 @@ export const getShiftTemplateById = async (req: Request, res: Response) => {
       data: template
     });
   } catch (error) {
-    console.error('[ShiftTemplate] Fehler beim Abrufen des Templates:', error);
+    logger.error('[ShiftTemplate] Fehler beim Abrufen des Templates:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen des Templates'
@@ -237,7 +238,7 @@ export const createShiftTemplate = async (req: Request, res: Response) => {
       data: template
     });
   } catch (error) {
-    console.error('[ShiftTemplate] Fehler beim Erstellen des Templates:', error);
+    logger.error('[ShiftTemplate] Fehler beim Erstellen des Templates:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Erstellen des Templates'
@@ -370,7 +371,7 @@ export const updateShiftTemplate = async (req: Request, res: Response) => {
       data: template
     });
   } catch (error) {
-    console.error('[ShiftTemplate] Fehler beim Aktualisieren des Templates:', error);
+    logger.error('[ShiftTemplate] Fehler beim Aktualisieren des Templates:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren des Templates'
@@ -428,7 +429,7 @@ export const deleteShiftTemplate = async (req: Request, res: Response) => {
       message: 'Template erfolgreich gelöscht'
     });
   } catch (error) {
-    console.error('[ShiftTemplate] Fehler beim Löschen des Templates:', error);
+    logger.error('[ShiftTemplate] Fehler beim Löschen des Templates:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Löschen des Templates'

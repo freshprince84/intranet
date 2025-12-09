@@ -3,6 +3,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { decryptApiSettings, decryptBranchApiSettings } from '../utils/encryption';
 import { TaskAutomationService } from './taskAutomationService';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Findet Branch-ID über LobbyPMS property_id UND apiKey
@@ -158,11 +159,11 @@ export class LobbyPmsService {
             if (branch.organizationId) {
               this.organizationId = branch.organizationId;
             }
-            console.log(`[LobbyPMS] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
+            logger.log(`[LobbyPMS] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
             return; // Erfolgreich geladen
           }
         } catch (error) {
-          console.warn(`[LobbyPMS] Fehler beim Laden der Branch Settings:`, error);
+          logger.warn(`[LobbyPMS] Fehler beim Laden der Branch Settings:`, error);
           // Fallback auf Organization Settings
         }
 
@@ -262,11 +263,11 @@ export class LobbyPmsService {
     // Request Interceptor für Logging
     instance.interceptors.request.use(
       (config) => {
-        console.log(`[LobbyPMS] ${config.method?.toUpperCase()} ${config.url}`);
+        logger.log(`[LobbyPMS] ${config.method?.toUpperCase()} ${config.url}`);
         return config;
       },
       (error) => {
-        console.error('[LobbyPMS] Request Error:', error);
+        logger.error('[LobbyPMS] Request Error:', error);
         return Promise.reject(error);
       }
     );
@@ -275,7 +276,7 @@ export class LobbyPmsService {
     instance.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        console.error('[LobbyPMS] API Error:', {
+        logger.error('[LobbyPMS] API Error:', {
           status: error.response?.status,
           statusText: error.response?.statusText,
           data: error.response?.data,
@@ -358,9 +359,9 @@ export class LobbyPmsService {
         const categories = dateEntry.categories || [];
         
         // Debug: Logge alle Kategorien für diesen Tag
-        console.log(`[LobbyPMS] Datum ${date}: ${categories.length} Kategorien gefunden`);
+        logger.log(`[LobbyPMS] Datum ${date}: ${categories.length} Kategorien gefunden`);
         for (const cat of categories) {
-          console.log(`[LobbyPMS]   - ${cat.category_id}: ${cat.name}, available_rooms: ${cat.available_rooms || 0}`);
+          logger.log(`[LobbyPMS]   - ${cat.category_id}: ${cat.name}, available_rooms: ${cat.available_rooms || 0}`);
         }
         
         for (const category of categories) {
@@ -392,7 +393,7 @@ export class LobbyPmsService {
           
           // Debug: Spezifisch für "apartamento doble" und "primo deportista"
           if (name.includes('apartamento doble') || name.includes('primo deportista')) {
-            console.log(`[LobbyPMS] ⚠️ Apartamento doble / Primo deportista: category_id=${category.category_id}, name=${category.name}, roomType=${roomType}, available_rooms=${category.available_rooms || 0}, date=${date}`);
+            logger.log(`[LobbyPMS] ⚠️ Apartamento doble / Primo deportista: category_id=${category.category_id}, name=${category.name}, roomType=${roomType}, available_rooms=${category.available_rooms || 0}, date=${date}`);
           }
         }
       }
@@ -470,7 +471,7 @@ export class LobbyPmsService {
         } else {
           // Debug: Zeige Response-Struktur (nur wenn nicht HTML)
           if (typeof responseData !== 'string') {
-            console.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(responseData, null, 2));
+            logger.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(responseData, null, 2));
           }
           throw new Error(
             (responseData && typeof responseData === 'object' && responseData.error) ||
@@ -495,15 +496,15 @@ export class LobbyPmsService {
           // Neue Reservierungen gefunden - füge hinzu
           allReservations = allReservations.concat(recentReservations);
           consecutiveOldPages = 0; // Reset Counter
-          console.log(`[LobbyPMS] Seite ${page}: ${recentReservations.length} neue Reservierungen (von ${pageReservations.length} insgesamt)`);
+          logger.log(`[LobbyPMS] Seite ${page}: ${recentReservations.length} neue Reservierungen (von ${pageReservations.length} insgesamt)`);
         } else {
           // Keine neuen Reservierungen auf dieser Seite
           consecutiveOldPages++;
-          console.log(`[LobbyPMS] Seite ${page}: 0 neue Reservierungen (${consecutiveOldPages}/${MAX_CONSECUTIVE_OLD_PAGES} aufeinanderfolgende "alte" Seiten)`);
+          logger.log(`[LobbyPMS] Seite ${page}: 0 neue Reservierungen (${consecutiveOldPages}/${MAX_CONSECUTIVE_OLD_PAGES} aufeinanderfolgende "alte" Seiten)`);
           
           // OPTIMIERUNG: Stoppe nach X Seiten ohne neue Reservierungen
           if (consecutiveOldPages >= MAX_CONSECUTIVE_OLD_PAGES) {
-            console.log(`[LobbyPMS] Stoppe Pagination: ${MAX_CONSECUTIVE_OLD_PAGES} aufeinanderfolgende Seiten ohne neue Reservierungen`);
+            logger.log(`[LobbyPMS] Stoppe Pagination: ${MAX_CONSECUTIVE_OLD_PAGES} aufeinanderfolgende Seiten ohne neue Reservierungen`);
             hasMore = false;
             break;
           }
@@ -545,7 +546,7 @@ export class LobbyPmsService {
         
         // Debug-Log für Pagination (bei ersten 5 Seiten oder wenn totalPages erreicht)
         if (page <= 5 || (effectiveTotalPages !== undefined && page >= effectiveTotalPages)) {
-          console.log(`[LobbyPMS] Seite ${page - 1}: ${pageReservations.length} Reservierungen, totalPages: ${effectiveTotalPages || 'N/A'}, hasMore: ${hasMore}`);
+          logger.log(`[LobbyPMS] Seite ${page - 1}: ${pageReservations.length} Reservierungen, totalPages: ${effectiveTotalPages || 'N/A'}, hasMore: ${hasMore}`);
         }
       }
 
@@ -620,7 +621,7 @@ export class LobbyPmsService {
           pageReservations = responseData.data;
         } else {
           if (typeof responseData !== 'string') {
-            console.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(responseData, null, 2));
+            logger.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(responseData, null, 2));
           }
           throw new Error(
             (responseData && typeof responseData === 'object' && responseData.error) ||
@@ -646,10 +647,10 @@ export class LobbyPmsService {
         if (recentReservations.length > 0) {
           // Passende Reservierungen gefunden - füge hinzu
           allReservations = allReservations.concat(recentReservations);
-          console.log(`[LobbyPMS] Seite ${page}: ${recentReservations.length} Reservierungen mit check_out_date >= gestern (von ${pageReservations.length} insgesamt)`);
+          logger.log(`[LobbyPMS] Seite ${page}: ${recentReservations.length} Reservierungen mit check_out_date >= gestern (von ${pageReservations.length} insgesamt)`);
         } else {
           // Keine passenden Reservierungen auf dieser Seite
-          console.log(`[LobbyPMS] Seite ${page}: 0 Reservierungen mit check_out_date >= gestern (von ${pageReservations.length} insgesamt)`);
+          logger.log(`[LobbyPMS] Seite ${page}: 0 Reservierungen mit check_out_date >= gestern (von ${pageReservations.length} insgesamt)`);
           // WICHTIG: Stoppe NICHT hier - Reservierungen können auf späteren Seiten sein!
           // Die API sortiert nicht nach check_out_date, daher können passende Reservierungen überall sein
         }
@@ -687,7 +688,7 @@ export class LobbyPmsService {
         
         // Debug-Log für Pagination (bei ersten 5 Seiten oder wenn totalPages erreicht)
         if (page <= 5 || (effectiveTotalPages !== undefined && page >= effectiveTotalPages)) {
-          console.log(`[LobbyPMS] Seite ${page - 1}: ${pageReservations.length} Reservierungen, totalPages: ${effectiveTotalPages || 'N/A'}, hasMore: ${hasMore}`);
+          logger.log(`[LobbyPMS] Seite ${page - 1}: ${pageReservations.length} Reservierungen, totalPages: ${effectiveTotalPages || 'N/A'}, hasMore: ${hasMore}`);
         }
       }
 
@@ -828,7 +829,7 @@ export class LobbyPmsService {
         payload.guest_phone = guestPhone.trim();
       }
 
-      console.log(`[LobbyPMS] Erstelle Reservierung: category_id=${categoryId}, checkIn=${this.formatDate(checkInDate)}, checkOut=${this.formatDate(checkOutDate)}, guest=${guestName}`);
+      logger.log(`[LobbyPMS] Erstelle Reservierung: category_id=${categoryId}, checkIn=${this.formatDate(checkInDate)}, checkOut=${this.formatDate(checkOutDate)}, guest=${guestName}`);
 
       const response = await this.axiosInstance.post<any>(
         '/api/v1/bookings',
@@ -855,11 +856,11 @@ export class LobbyPmsService {
       }
 
       if (!bookingId) {
-        console.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(response.data, null, 2));
+        logger.error('[LobbyPMS] Unerwartete Response-Struktur:', JSON.stringify(response.data, null, 2));
         throw new Error('LobbyPMS API hat keine booking_id zurückgegeben');
       }
 
-      console.log(`[LobbyPMS] Reservierung erfolgreich erstellt: booking_id=${bookingId}`);
+      logger.log(`[LobbyPMS] Reservierung erfolgreich erstellt: booking_id=${bookingId}`);
       return String(bookingId);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -870,7 +871,7 @@ export class LobbyPmsService {
           axiosError.response?.data?.message ||
           `LobbyPMS API Fehler: ${axiosError.message}`;
         
-        console.error('[LobbyPMS] Fehler beim Erstellen der Reservierung:', errorMessage);
+        logger.error('[LobbyPMS] Fehler beim Erstellen der Reservierung:', errorMessage);
         throw new Error(errorMessage);
       }
       throw error;
@@ -1144,18 +1145,18 @@ export class LobbyPmsService {
       try {
         await TaskAutomationService.createReservationTask(reservation, this.organizationId);
       } catch (error) {
-        console.error(`[LobbyPMS] Fehler beim Erstellen des Tasks für Reservierung ${reservation.id}:`, error);
+        logger.error(`[LobbyPMS] Fehler beim Erstellen des Tasks für Reservierung ${reservation.id}:`, error);
         // Fehler nicht weiterwerfen, da Task-Erstellung optional ist
       }
 
       // PIN-Versand: Wenn Check-in-Link abgeschlossen UND bezahlt → versende PIN
       if (checkInDataUploadedChanged && paymentStatus === PaymentStatus.paid && !reservation.doorPin) {
         try {
-          console.log(`[LobbyPMS] Check-in-Link abgeschlossen und bezahlt → versende PIN für Reservierung ${reservation.id}`);
+          logger.log(`[LobbyPMS] Check-in-Link abgeschlossen und bezahlt → versende PIN für Reservierung ${reservation.id}`);
           const { ReservationNotificationService } = await import('./reservationNotificationService');
           await ReservationNotificationService.generatePinAndSendNotification(reservation.id);
         } catch (error) {
-          console.error(`[LobbyPMS] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
+          logger.error(`[LobbyPMS] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
           // Fehler nicht weiterwerfen, da PIN-Versand optional ist
         }
       }
@@ -1182,7 +1183,7 @@ export class LobbyPmsService {
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(0, 0, 0, 0);
 
-    console.log(`[LobbyPMS] Starte vollständigen Sync nach check_out_date >= ${yesterday.toISOString()}`);
+    logger.log(`[LobbyPMS] Starte vollständigen Sync nach check_out_date >= ${yesterday.toISOString()}`);
 
     // Rufe fetchReservationsByCheckoutDate auf
     const lobbyReservations = await this.fetchReservationsByCheckoutDate(yesterday);
@@ -1194,7 +1195,7 @@ export class LobbyPmsService {
         syncedCount++;
       } catch (error) {
         const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id || 'unknown');
-        console.error(`[LobbyPMS] Fehler beim Synchronisieren der Reservierung ${bookingId}:`, error);
+        logger.error(`[LobbyPMS] Fehler beim Synchronisieren der Reservierung ${bookingId}:`, error);
         // Erstelle Sync-History mit Fehler
         const existingReservation = await prisma.reservation.findUnique({
           where: { lobbyReservationId: bookingId }
@@ -1212,7 +1213,7 @@ export class LobbyPmsService {
       }
     }
 
-    console.log(`[LobbyPMS] Vollständiger Sync abgeschlossen: ${syncedCount} Reservierungen synchronisiert`);
+    logger.log(`[LobbyPMS] Vollständiger Sync abgeschlossen: ${syncedCount} Reservierungen synchronisiert`);
     return syncedCount;
   }
 
@@ -1239,7 +1240,7 @@ export class LobbyPmsService {
         syncedCount++;
       } catch (error) {
         const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id || 'unknown');
-        console.error(`[LobbyPMS] Fehler beim Synchronisieren der Reservierung ${bookingId}:`, error);
+        logger.error(`[LobbyPMS] Fehler beim Synchronisieren der Reservierung ${bookingId}:`, error);
         // Erstelle Sync-History mit Fehler
         const existingReservation = await prisma.reservation.findUnique({
           where: { lobbyReservationId: bookingId }

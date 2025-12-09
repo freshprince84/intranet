@@ -8,6 +8,7 @@ import { prisma } from '../utils/prisma';
 import bcrypt from 'bcrypt';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getUserNotificationText } from '../utils/translations';
+import { logger } from '../utils/logger';
 import { organizationMiddleware, getUserOrganizationFilter, getDataIsolationFilter } from '../middleware/organization';
 import { LifecycleService } from '../services/lifecycleService';
 import { userLanguageCache } from '../services/userLanguageCache';
@@ -105,7 +106,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         });
         res.json(users);
     } catch (error) {
-        console.error('Error in getAllUsers:', error);
+        logger.error('Error in getAllUsers:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen der Benutzer', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -149,7 +150,7 @@ export const getAllUsersForDropdown = async (req: Request, res: Response) => {
         });
         res.json(users);
     } catch (error) {
-        console.error('Error in getAllUsersForDropdown:', error);
+        logger.error('Error in getAllUsersForDropdown:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Benutzer für Dropdown',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -202,7 +203,7 @@ export const getUserById = async (req: Request, res: Response) => {
         
         res.json(user);
     } catch (error) {
-        console.error('Error in getUserById:', error);
+        logger.error('Error in getUserById:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen des Benutzers', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -319,7 +320,7 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
         
         res.json(userWithLogo);
     } catch (error) {
-        console.error('Error in getCurrentUser:', error);
+        logger.error('Error in getCurrentUser:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen des Benutzerprofils', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -354,8 +355,8 @@ export const updateUserById = async (req: Request, res: Response) => {
             active
         } = req.body;
 
-        console.log('updateUserById - Received body:', req.body);
-        console.log('updateUserById - Active value:', active, 'Type:', typeof active);
+        logger.log('updateUserById - Received body:', req.body);
+        logger.log('updateUserById - Active value:', active, 'Type:', typeof active);
 
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
@@ -405,7 +406,7 @@ export const updateUserById = async (req: Request, res: Response) => {
             ...(active !== undefined && active !== null && { active: Boolean(active) })
         };
 
-        console.log('Updating user with data:', updateData);
+        logger.log('Updating user with data:', updateData);
 
         const updatedUser = await prisma.user.update({
             where: { id: userId },
@@ -446,7 +447,7 @@ export const updateUserById = async (req: Request, res: Response) => {
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
-                console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
+                logger.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
                 const lifecycle = await prisma.employeeLifecycle.findUnique({
                     where: { userId }
                 });
@@ -456,15 +457,15 @@ export const updateUserById = async (req: Request, res: Response) => {
                     // Alle anderen → epsRequired = false
                     const epsRequired = contract === 'tiempo_completo';
                     
-                    console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
-                    console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
+                    logger.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    logger.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
                     
                     const updated = await prisma.employeeLifecycle.update({
                         where: { userId },
                         data: { epsRequired }
                     });
                     
-                    console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
+                    logger.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
 
                     // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
                     if (epsRequired && !lifecycle.epsRequired) {
@@ -490,7 +491,7 @@ export const updateUserById = async (req: Request, res: Response) => {
                                     status: 'pending'
                                 }
                             });
-                            console.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
+                            logger.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
                         } else if (!existingRegistration) {
                             // Erstelle neue "pending"-Registrierung
                             await prisma.socialSecurityRegistration.create({
@@ -500,7 +501,7 @@ export const updateUserById = async (req: Request, res: Response) => {
                                     status: 'pending'
                                 }
                             });
-                            console.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
+                            logger.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
                         }
                     }
 
@@ -517,21 +518,21 @@ export const updateUserById = async (req: Request, res: Response) => {
                         }
                     });
                     
-                    console.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
+                    logger.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
                 } else {
-                    console.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
+                    logger.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
                 }
             } catch (lifecycleError) {
                 // Logge Fehler, aber breche nicht ab
-                console.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
+                logger.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
             }
         } else {
-            console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
+            logger.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
         }
 
         res.json(updatedUser);
     } catch (error) {
-        console.error('Error in updateUserById:', error);
+        logger.error('Error in updateUserById:', error);
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
             res.status(400).json({ 
                 message: 'Benutzername oder E-Mail bereits vergeben', 
@@ -604,17 +605,17 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
         }
 
         // Logging für Debugging
-        console.log('[updateProfile] phoneNumber received:', phoneNumber, 'Type:', typeof phoneNumber);
-        console.log('[updateProfile] Request body size:', JSON.stringify(req.body).length, 'bytes');
+        logger.log('[updateProfile] phoneNumber received:', phoneNumber, 'Type:', typeof phoneNumber);
+        logger.log('[updateProfile] Request body size:', JSON.stringify(req.body).length, 'bytes');
 
         // Validiere Telefonnummer-Format falls vorhanden
         if (phoneNumber && phoneNumber.trim() !== '') {
             // Validiere Format: + gefolgt von 1-15 Ziffern
             const phoneRegex = /^\+[1-9]\d{1,14}$/;
             const normalizedPhone = phoneNumber.replace(/[\s-]/g, '');
-            console.log('[updateProfile] Normalized phone for validation:', normalizedPhone);
+            logger.log('[updateProfile] Normalized phone for validation:', normalizedPhone);
             if (!phoneRegex.test(normalizedPhone)) {
-                console.log('[updateProfile] Phone validation failed for:', normalizedPhone);
+                logger.log('[updateProfile] Phone validation failed for:', normalizedPhone);
                 return res.status(400).json({
                     message: 'Ungültiges Telefonnummer-Format. Format: +LändercodeNummer (z.B. +573001234567)'
                 });
@@ -629,14 +630,14 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                 if (!normalizedPhoneNumber.startsWith('+')) {
                     normalizedPhoneNumber = '+' + normalizedPhoneNumber;
                 }
-                console.log('[updateProfile] Final normalized phoneNumber:', normalizedPhoneNumber);
+                logger.log('[updateProfile] Final normalized phoneNumber:', normalizedPhoneNumber);
             } else {
                 // Explizit auf null setzen, wenn phoneNumber leer oder null ist
                 normalizedPhoneNumber = null;
-                console.log('[updateProfile] phoneNumber set to null (empty string)');
+                logger.log('[updateProfile] phoneNumber set to null (empty string)');
             }
         } else {
-            console.log('[updateProfile] phoneNumber is undefined, not updating');
+            logger.log('[updateProfile] phoneNumber is undefined, not updating');
         }
 
         const updateData: Prisma.UserUpdateInput = {
@@ -653,7 +654,7 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             ...(phoneNumber !== undefined && { phoneNumber: normalizedPhoneNumber })
         };
 
-        console.log('[updateProfile] Update data:', JSON.stringify(updateData, null, 2));
+        logger.log('[updateProfile] Update data:', JSON.stringify(updateData, null, 2));
 
         const updatedUser = await prisma.user.update({
             where: { id: userId },
@@ -719,7 +720,7 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
-                console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
+                logger.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
                 const lifecycle = await prisma.employeeLifecycle.findUnique({
                     where: { userId }
                 });
@@ -729,15 +730,15 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                     // Alle anderen → epsRequired = false
                     const epsRequired = contract === 'tiempo_completo';
                     
-                    console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
-                    console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
+                    logger.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    logger.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
                     
                     const updated = await prisma.employeeLifecycle.update({
                         where: { userId },
                         data: { epsRequired }
                     });
                     
-                    console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
+                    logger.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
 
                     // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
                     if (epsRequired && !lifecycle.epsRequired) {
@@ -763,7 +764,7 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                                     status: 'pending'
                                 }
                             });
-                            console.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
+                            logger.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
                         } else if (!existingRegistration) {
                             // Erstelle neue "pending"-Registrierung
                             await prisma.socialSecurityRegistration.create({
@@ -773,7 +774,7 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                                     status: 'pending'
                                 }
                             });
-                            console.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
+                            logger.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
                         }
                     }
 
@@ -790,21 +791,21 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                         }
                     });
                     
-                    console.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
+                    logger.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
                 } else {
-                    console.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
+                    logger.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
                 }
             } catch (lifecycleError) {
                 // Logge Fehler, aber breche nicht ab
-                console.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
+                logger.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
             }
         } else {
-            console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
+            logger.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
         }
 
         res.json(updatedUser);
     } catch (error) {
-        console.error('Error in updateProfile:', error);
+        logger.error('Error in updateProfile:', error);
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
             res.status(400).json({ 
                 message: 'Benutzername oder E-Mail bereits vergeben', 
@@ -863,7 +864,7 @@ export const isProfileComplete = async (req: AuthenticatedRequest, res: Response
             missingFields
         });
     } catch (error) {
-        console.error('Error in isProfileComplete:', error);
+        logger.error('Error in isProfileComplete:', error);
         res.status(500).json({
             message: 'Fehler bei der Profilprüfung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1006,9 +1007,9 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
 
         // Benachrichtigung an den Benutzer senden, dessen Rollen aktualisiert wurden
         const userLang = await getUserLanguage(userId);
-        console.log(`[updateUserRoles] User ${userId} Sprache: ${userLang}`);
+        logger.log(`[updateUserRoles] User ${userId} Sprache: ${userLang}`);
         const userNotificationText = getUserNotificationText(userLang, 'roles_updated', true);
-        console.log(`[updateUserRoles] User Notification Text: ${userNotificationText.title} - ${userNotificationText.message}`);
+        logger.log(`[updateUserRoles] User Notification Text: ${userNotificationText.title} - ${userNotificationText.message}`);
         await createNotificationIfEnabled({
             userId: userId,
             title: userNotificationText.title,
@@ -1039,9 +1040,9 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
 
         for (const admin of admins) {
             const adminLang = await getUserLanguage(admin.id);
-            console.log(`[updateUserRoles] Admin ${admin.id} Sprache: ${adminLang}`);
+            logger.log(`[updateUserRoles] Admin ${admin.id} Sprache: ${adminLang}`);
             const adminNotificationText = getUserNotificationText(adminLang, 'roles_updated', false, `${updatedUser.firstName} ${updatedUser.lastName}`);
-            console.log(`[updateUserRoles] Admin Notification Text: ${adminNotificationText.title} - ${adminNotificationText.message}`);
+            logger.log(`[updateUserRoles] Admin Notification Text: ${adminNotificationText.title} - ${adminNotificationText.message}`);
             await createNotificationIfEnabled({
                 userId: admin.id,
                 title: adminNotificationText.title,
@@ -1054,7 +1055,7 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
 
         res.json(updatedUser);
     } catch (error) {
-        console.error('Error in updateUserRoles:', error);
+        logger.error('Error in updateUserRoles:', error);
         res.status(500).json({ 
             message: 'Fehler beim Aktualisieren der Benutzerrollen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1088,9 +1089,9 @@ export const updateUserBranches = async (req: Request<{ id: string }, {}, Update
         // Überprüfe, ob alle Branches existieren und zur Organisation gehören
         const branchFilter = getDataIsolationFilter(req as any, 'branch');
         
-        console.log('[updateUserBranches] Branch Filter:', branchFilter);
-        console.log('[updateUserBranches] Requested branchIds:', branchIds);
-        console.log('[updateUserBranches] Organization ID:', req.organizationId);
+        logger.log('[updateUserBranches] Branch Filter:', branchFilter);
+        logger.log('[updateUserBranches] Requested branchIds:', branchIds);
+        logger.log('[updateUserBranches] Organization ID:', req.organizationId);
         
         const existingBranches = await prisma.branch.findMany({
             where: {
@@ -1101,8 +1102,8 @@ export const updateUserBranches = async (req: Request<{ id: string }, {}, Update
             }
         });
 
-        console.log('[updateUserBranches] Found branches:', existingBranches.map(b => ({ id: b.id, name: b.name, organizationId: b.organizationId })));
-        console.log('[updateUserBranches] Expected:', branchIds.length, 'Found:', existingBranches.length);
+        logger.log('[updateUserBranches] Found branches:', existingBranches.map(b => ({ id: b.id, name: b.name, organizationId: b.organizationId })));
+        logger.log('[updateUserBranches] Expected:', branchIds.length, 'Found:', existingBranches.length);
 
         if (existingBranches.length !== branchIds.length) {
             // Prüfe welche Branches fehlen
@@ -1121,7 +1122,7 @@ export const updateUserBranches = async (req: Request<{ id: string }, {}, Update
                 }
             });
             
-            console.log('[updateUserBranches] All requested branches (without filter):', allRequestedBranches);
+            logger.log('[updateUserBranches] All requested branches (without filter):', allRequestedBranches);
             
             return res.status(400).json({ 
                 message: `Eine oder mehrere Niederlassungen wurden nicht gefunden oder gehören nicht zu Ihrer Organisation. Fehlende IDs: ${missingIds.join(', ')}`,
@@ -1255,7 +1256,7 @@ export const updateUserBranches = async (req: Request<{ id: string }, {}, Update
 
         res.json(updatedUser);
     } catch (error) {
-        console.error('Error in updateUserBranches:', error);
+        logger.error('Error in updateUserBranches:', error);
         res.status(500).json({ 
             message: 'Fehler beim Aktualisieren der Benutzer-Niederlassungen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1298,7 +1299,7 @@ export const updateUserSettings = async (req: AuthenticatedRequest & { body: Upd
 
         res.json(settings);
     } catch (error) {
-        console.error('Error in updateUserSettings:', error);
+        logger.error('Error in updateUserSettings:', error);
         res.status(500).json({ 
             message: 'Fehler beim Aktualisieren der Benutzereinstellungen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1366,7 +1367,7 @@ export const getUserActiveLanguage = async (req: AuthenticatedRequest, res: Resp
 
         res.json({ language: activeLanguage });
     } catch (error) {
-        console.error('Error in getUserActiveLanguage:', error);
+        logger.error('Error in getUserActiveLanguage:', error);
         res.status(500).json({ 
             message: 'Fehler beim Bestimmen der aktiven Sprache', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1376,7 +1377,7 @@ export const getUserActiveLanguage = async (req: AuthenticatedRequest, res: Resp
 
 export const updateInvoiceSettings = async (req: AuthenticatedRequest & { body: UpdateInvoiceSettingsRequest }, res: Response) => {
     try {
-        console.log('DEBUG updateInvoiceSettings:', {
+        logger.log('DEBUG updateInvoiceSettings:', {
             userId: req.userId,
             userIdType: typeof req.userId,
             userObject: req.user?.id,
@@ -1385,7 +1386,7 @@ export const updateInvoiceSettings = async (req: AuthenticatedRequest & { body: 
         
         const userId = parseInt(req.userId, 10);
         if (isNaN(userId)) {
-            console.error('ERROR: userId is NaN', { 
+            logger.error('ERROR: userId is NaN', { 
                 rawUserId: req.userId, 
                 userObjectId: req.user?.id 
             });
@@ -1461,7 +1462,7 @@ export const updateInvoiceSettings = async (req: AuthenticatedRequest & { body: 
 
         res.json(invoiceSettings);
     } catch (error) {
-        console.error('Error in updateInvoiceSettings:', error);
+        logger.error('Error in updateInvoiceSettings:', error);
         res.status(500).json({ 
             message: 'Fehler beim Aktualisieren der Invoice-Einstellungen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1566,7 +1567,7 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
 
         return res.json(updatedUser);
     } catch (error) {
-        console.error('Error in switchUserRole:', error);
+        logger.error('Error in switchUserRole:', error);
         
         // Spezielle Behandlung für "Rolle nicht zugewiesen" Fehler
         if (error instanceof Error && error.message === 'Diese Rolle ist dem Benutzer nicht zugewiesen') {
@@ -1762,7 +1763,7 @@ export const createUser = async (req: Request, res: Response) => {
                 await LifecycleService.createLifecycle(user.id, organizationId);
             } catch (lifecycleError) {
                 // Logge Fehler, aber breche nicht ab
-                console.error('Fehler beim Erstellen des Lebenszyklus:', lifecycleError);
+                logger.error('Fehler beim Erstellen des Lebenszyklus:', lifecycleError);
             }
         }
 
@@ -1774,7 +1775,7 @@ export const createUser = async (req: Request, res: Response) => {
 
         res.status(201).json(userResponse);
     } catch (error) {
-        console.error('Error in createUser:', error);
+        logger.error('Error in createUser:', error);
         res.status(500).json({
             message: 'Fehler beim Erstellen des Benutzers',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1804,8 +1805,8 @@ export const updateUser = async (req: Request, res: Response) => {
 
         const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, active } = req.body;
 
-        console.log('Updating user with data:', req.body);
-        console.log('Active value:', active, 'Type:', typeof active);
+        logger.log('Updating user with data:', req.body);
+        logger.log('Active value:', active, 'Type:', typeof active);
 
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
@@ -1841,7 +1842,7 @@ export const updateUser = async (req: Request, res: Response) => {
             ...(active !== undefined && active !== null && { active: Boolean(active) })
         };
 
-        console.log('Update data to be applied:', updateData);
+        logger.log('Update data to be applied:', updateData);
 
         const updatedUser = await prisma.user.update({
             where: { id: userId },
@@ -1871,7 +1872,7 @@ export const updateUser = async (req: Request, res: Response) => {
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
-                console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
+                logger.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
                 const lifecycle = await prisma.employeeLifecycle.findUnique({
                     where: { userId }
                 });
@@ -1881,15 +1882,15 @@ export const updateUser = async (req: Request, res: Response) => {
                     // Alle anderen → epsRequired = false
                     const epsRequired = contract === 'tiempo_completo';
                     
-                    console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
-                    console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
+                    logger.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    logger.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
                     
                     const updated = await prisma.employeeLifecycle.update({
                         where: { userId },
                         data: { epsRequired }
                     });
                     
-                    console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
+                    logger.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
 
                     // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
                     if (epsRequired && !lifecycle.epsRequired) {
@@ -1915,7 +1916,7 @@ export const updateUser = async (req: Request, res: Response) => {
                                     status: 'pending'
                                 }
                             });
-                            console.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
+                            logger.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
                         } else if (!existingRegistration) {
                             // Erstelle neue "pending"-Registrierung
                             await prisma.socialSecurityRegistration.create({
@@ -1925,7 +1926,7 @@ export const updateUser = async (req: Request, res: Response) => {
                                     status: 'pending'
                                 }
                             });
-                            console.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
+                            logger.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
                         }
                     }
 
@@ -1942,16 +1943,16 @@ export const updateUser = async (req: Request, res: Response) => {
                         }
                     });
                     
-                    console.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
+                    logger.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
                 } else {
-                    console.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
+                    logger.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
                 }
             } catch (lifecycleError) {
                 // Logge Fehler, aber breche nicht ab
-                console.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
+                logger.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
             }
         } else {
-            console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
+            logger.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
         }
 
         // Benachrichtigung für den aktualisierten Benutzer senden
@@ -2000,7 +2001,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
         res.json(updatedUser);
     } catch (error) {
-        console.error('Error in updateUser:', error);
+        logger.error('Error in updateUser:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren des Benutzers',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -2089,7 +2090,7 @@ export const deleteUser = async (req: Request, res: Response) => {
 
         res.status(204).send();
     } catch (error) {
-        console.error('Error in deleteUser:', error);
+        logger.error('Error in deleteUser:', error);
         res.status(500).json({
             message: 'Fehler beim Löschen des Benutzers',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -2120,7 +2121,7 @@ export const getOnboardingStatus = async (req: AuthenticatedRequest, res: Respon
             error: 'Cache-Fehler'
         });
     } catch (error) {
-        console.error('Error in getOnboardingStatus:', error);
+        logger.error('Error in getOnboardingStatus:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen des Onboarding-Status',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -2159,7 +2160,7 @@ export const updateOnboardingProgress = async (req: AuthenticatedRequest, res: R
             onboardingProgress: user.onboardingProgress
         });
     } catch (error) {
-        console.error('Error in updateOnboardingProgress:', error);
+        logger.error('Error in updateOnboardingProgress:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren des Onboarding-Fortschritts',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -2190,7 +2191,7 @@ export const completeOnboarding = async (req: AuthenticatedRequest, res: Respons
             onboardingCompletedAt: user.onboardingCompletedAt
         });
     } catch (error) {
-        console.error('Error in completeOnboarding:', error);
+        logger.error('Error in completeOnboarding:', error);
         res.status(500).json({
             message: 'Fehler beim Abschließen des Onboardings',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -2228,7 +2229,7 @@ export const trackOnboardingEvent = async (req: AuthenticatedRequest, res: Respo
             event
         });
     } catch (error) {
-        console.error('Error in trackOnboardingEvent:', error);
+        logger.error('Error in trackOnboardingEvent:', error);
         res.status(500).json({
             message: 'Fehler beim Speichern des Onboarding-Events',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -2260,7 +2261,7 @@ export const resetOnboarding = async (req: AuthenticatedRequest, res: Response) 
             onboardingCompleted: user.onboardingCompleted
         });
     } catch (error) {
-        console.error('Error in resetOnboarding:', error);
+        logger.error('Error in resetOnboarding:', error);
         res.status(500).json({
             message: 'Fehler beim Zurücksetzen des Onboardings',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -2328,7 +2329,7 @@ export const getOnboardingAnalytics = async (req: AuthenticatedRequest, res: Res
             analytics: Object.values(analytics)
         });
     } catch (error) {
-        console.error('Error in getOnboardingAnalytics:', error);
+        logger.error('Error in getOnboardingAnalytics:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Onboarding-Analytics',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -2500,7 +2501,7 @@ export const debugUserBranches = async (req: Request, res: Response) => {
             }
         });
     } catch (error) {
-        console.error('Error in debugUserBranches:', error);
+        logger.error('Error in debugUserBranches:', error);
         res.status(500).json({
             message: 'Fehler beim Debug-Abruf',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

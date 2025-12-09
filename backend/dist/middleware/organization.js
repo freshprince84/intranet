@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.belongsToOrganization = exports.isAdminOrOwner = exports.isOwnerRole = exports.isAdminRole = exports.getDataIsolationFilter = exports.getUserOrganizationFilter = exports.getOrganizationFilter = exports.organizationMiddleware = void 0;
 const organizationCache_1 = require("../utils/organizationCache");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.userId;
@@ -21,7 +22,7 @@ const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, voi
         // ✅ PERFORMANCE: Verwende Cache statt DB-Query bei jedem Request
         const cachedData = yield organizationCache_1.organizationCache.get(Number(userId));
         if (!cachedData) {
-            console.error('[organizationMiddleware] Keine aktive Rolle gefunden für userId:', userId);
+            logger_1.logger.error('[organizationMiddleware] Keine aktive Rolle gefunden für userId:', userId);
             return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
         }
         // Füge Organisations-Kontext zum Request hinzu
@@ -31,7 +32,7 @@ const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, voi
         next();
     }
     catch (error) {
-        console.error('❌ Error in Organization Middleware:', error);
+        logger_1.logger.error('❌ Error in Organization Middleware:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -54,7 +55,7 @@ const getUserOrganizationFilter = (req) => {
     // Konvertiere userId von String zu Integer
     const userId = Number(req.userId);
     if (isNaN(userId)) {
-        console.error('Invalid userId in getUserOrganizationFilter:', req.userId);
+        logger_1.logger.error('Invalid userId in getUserOrganizationFilter:', req.userId);
         return {}; // Leerer Filter als Fallback
     }
     // Für standalone User (ohne Organisation) - nur eigene Daten
@@ -81,7 +82,7 @@ const getDataIsolationFilter = (req, entity) => {
     // Konvertiere userId von String zu Integer
     const userId = Number(req.userId);
     if (isNaN(userId)) {
-        console.error('Invalid userId in request:', req.userId);
+        logger_1.logger.error('Invalid userId in request:', req.userId);
         return {}; // Leerer Filter als Fallback
     }
     // Standalone User (ohne Organisation) - nur eigene Daten
@@ -152,7 +153,7 @@ const getDataIsolationFilter = (req, entity) => {
             // Wenn User eine aktive Rolle hat, füge roleId-Filter hinzu
             const userRoleId = (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.id;
             // Debug-Logging
-            console.log('[getDataIsolationFilter] Task filter:', {
+            logger_1.logger.log('[getDataIsolationFilter] Task filter:', {
                 userId,
                 organizationId: req.organizationId,
                 userRoleId,
@@ -177,7 +178,7 @@ const getDataIsolationFilter = (req, entity) => {
             // ABER: Prisma unterstützt keine verschachtelten OR-Bedingungen mit AND
             // Lösung: organizationId wird als separate Bedingung hinzugefügt
             // Das bedeutet: (organizationId = X) AND (responsibleId = Y OR roleId = Z OR qualityControlId = Y)
-            console.log('[getDataIsolationFilter] Final task filter:', JSON.stringify(taskFilter, null, 2));
+            logger_1.logger.log('[getDataIsolationFilter] Final task filter:', JSON.stringify(taskFilter, null, 2));
             return taskFilter;
         case 'request':
         case 'worktime':
@@ -346,7 +347,7 @@ const belongsToOrganization = (req, entity, resourceId) => __awaiter(void 0, voi
         }
     }
     catch (error) {
-        console.error(`Fehler in belongsToOrganization für ${entity}:`, error);
+        logger_1.logger.error(`Fehler in belongsToOrganization für ${entity}:`, error);
         return false;
     }
 });

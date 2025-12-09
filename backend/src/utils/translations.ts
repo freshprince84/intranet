@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { userLanguageCache } from '../services/userLanguageCache';
+import { logger } from './logger';
 
 /**
  * Ruft die aktive Sprache eines Users ab
@@ -25,7 +26,7 @@ export async function getUserLanguage(userId: number): Promise<string> {
     });
 
     if (!user) {
-      console.log(`[getUserLanguage] User ${userId} nicht gefunden, Fallback: de`);
+      logger.log(`[getUserLanguage] User ${userId} nicht gefunden, Fallback: de`);
       const fallback = 'de';
       userLanguageCache.set(userId, fallback);
       return fallback;
@@ -68,7 +69,7 @@ export async function getUserLanguage(userId: number): Promise<string> {
     if (userRole?.role?.organization) {
       const orgSettings = userRole.role.organization.settings as any;
       if (orgSettings?.language) {
-        console.log(`[getUserLanguage] User ${userId} Sprache: ${orgSettings.language} (aus Organisation)`);
+        logger.log(`[getUserLanguage] User ${userId} Sprache: ${orgSettings.language} (aus Organisation)`);
         // Speichere im Cache
         userLanguageCache.set(userId, orgSettings.language);
         return orgSettings.language;
@@ -76,12 +77,12 @@ export async function getUserLanguage(userId: number): Promise<string> {
     }
 
     // Priorität 3: Fallback
-    console.log(`[getUserLanguage] User ${userId} Sprache: de (Fallback)`);
+    logger.log(`[getUserLanguage] User ${userId} Sprache: de (Fallback)`);
     const fallback = 'de';
     userLanguageCache.set(userId, fallback);
     return fallback;
   } catch (error) {
-    console.error('Fehler beim Abrufen der User-Sprache:', error);
+    logger.error('Fehler beim Abrufen der User-Sprache:', error);
     const fallback = 'de';
     // Cache auch bei Fehler, um wiederholte Fehler zu vermeiden
     userLanguageCache.set(userId, fallback);

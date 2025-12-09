@@ -7,11 +7,12 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const notificationController_1 = require("../controllers/notificationController");
 const roleCheck_1 = require("../middleware/roleCheck");
+const logger_1 = require("../utils/logger");
 const router = express_1.default.Router();
 // Debug-Middleware
 router.use((req, res, next) => {
     var _a;
-    console.log('Notifications Router aufgerufen:', {
+    logger_1.logger.log('Notifications Router aufgerufen:', {
         method: req.method,
         path: req.path,
         originalUrl: req.originalUrl,

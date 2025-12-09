@@ -48,8 +48,8 @@ const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const lobbyPmsService_1 = require("./lobbyPmsService");
 const boldPaymentService_1 = require("./boldPaymentService");
 const client_1 = require("@prisma/client");
-const reservationNotificationService_1 = require("./reservationNotificationService");
 const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
+const logger_1 = require("../utils/logger");
 /**
  * WhatsApp Function Handlers
  *
@@ -59,17 +59,27 @@ const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
 class WhatsAppFunctionHandlers {
     /**
      * Findet Reservationen mit gleichem Kunden-Namen (Name, Telefonnummer oder Email)
+     * UND Datum-Überlappung (checkInDate <= tourDate <= checkOutDate)
      */
-    static findReservationByCustomerName(customerName, customerPhone, customerEmail, branchId, organizationId) {
+    static findReservationByCustomerName(customerName, customerPhone, customerEmail, branchId, organizationId, tourDate // Tour-Datum für Überlappungsprüfung
+    ) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const normalizedName = customerName.trim().toLowerCase();
                 // Suche nach Name, Telefonnummer oder Email
+                // WICHTIG: Prüfe auch Datum-Überlappung (checkInDate <= tourDate <= checkOutDate)
                 const where = {
                     organizationId: organizationId,
                     branchId: branchId,
                     status: {
                         in: [client_1.ReservationStatus.confirmed, client_1.ReservationStatus.notification_sent, client_1.ReservationStatus.checked_in]
+                    },
+                    // Datum-Überlappung prüfen: Tour-Datum muss zwischen checkInDate und checkOutDate liegen
+                    checkInDate: {
+                        lte: tourDate // checkInDate <= tourDate
+                    },
+                    checkOutDate: {
+                        gte: tourDate // checkOutDate >= tourDate
                     },
                     OR: []
                 };
@@ -105,7 +115,7 @@ class WhatsAppFunctionHandlers {
                 return reservations.length > 0 ? reservations[0] : null;
             }
             catch (error) {
-                console.error('[findReservationByCustomerName] Fehler:', error);
+                logger_1.logger.error('[findReservationByCustomerName] Fehler:', error);
                 return null;
             }
         });
@@ -288,7 +298,7 @@ class WhatsAppFunctionHandlers {
                 });
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] get_requests Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] get_requests Fehler:', error);
                 throw error;
             }
         });
@@ -378,7 +388,7 @@ class WhatsAppFunctionHandlers {
                 });
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] get_todos Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] get_todos Fehler:', error);
                 throw error;
             }
         });
@@ -487,7 +497,7 @@ class WhatsAppFunctionHandlers {
                 };
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] get_worktime Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] get_worktime Fehler:', error);
                 throw error;
             }
         });
@@ -576,7 +586,7 @@ class WhatsAppFunctionHandlers {
                 }));
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] get_cerebro_articles Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] get_cerebro_articles Fehler:', error);
                 throw error;
             }
         });
@@ -628,7 +638,7 @@ class WhatsAppFunctionHandlers {
                 };
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] get_user_info Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] get_user_info Fehler:', error);
                 throw error;
             }
         });
@@ -715,9 +725,9 @@ class WhatsAppFunctionHandlers {
                 const availability = yield service.checkAvailability(startDate, endDate);
                 // Debug: Logge alle gefundenen Kategorien
                 const uniqueCategories = new Set(availability.map(item => `${item.categoryId}:${item.roomName}`));
-                console.log(`[WhatsApp Function Handlers] check_room_availability: ${availability.length} Einträge, ${uniqueCategories.size} eindeutige Kategorien`);
+                logger_1.logger.log(`[WhatsApp Function Handlers] check_room_availability: ${availability.length} Einträge, ${uniqueCategories.size} eindeutige Kategorien`);
                 for (const cat of uniqueCategories) {
-                    console.log(`[WhatsApp Function Handlers]   - ${cat}`);
+                    logger_1.logger.log(`[WhatsApp Function Handlers]   - ${cat}`);
                 }
                 // Debug: Logge spezifisch "apartamento doble" und "primo deportista" falls vorhanden
                 const apartamentoDoble = availability.filter(item => {
@@ -726,13 +736,13 @@ class WhatsAppFunctionHandlers {
                         ((_b = item.roomName) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes('primo deportista'));
                 });
                 if (apartamentoDoble.length > 0) {
-                    console.log(`[WhatsApp Function Handlers] ⚠️ Apartamento doble / Primo deportista gefunden: ${apartamentoDoble.length} Einträge`);
+                    logger_1.logger.log(`[WhatsApp Function Handlers] ⚠️ Apartamento doble / Primo deportista gefunden: ${apartamentoDoble.length} Einträge`);
                     apartamentoDoble.forEach(item => {
-                        console.log(`[WhatsApp Function Handlers]   - ${item.categoryId}: ${item.roomName}, roomType: ${item.roomType}, availableRooms: ${item.availableRooms}, date: ${item.date}`);
+                        logger_1.logger.log(`[WhatsApp Function Handlers]   - ${item.categoryId}: ${item.roomName}, roomType: ${item.roomType}, availableRooms: ${item.availableRooms}, date: ${item.date}`);
                     });
                 }
                 else {
-                    console.log(`[WhatsApp Function Handlers] ⚠️ Apartamento doble / Primo deportista NICHT in API-Response gefunden!`);
+                    logger_1.logger.log(`[WhatsApp Function Handlers] ⚠️ Apartamento doble / Primo deportista NICHT in API-Response gefunden!`);
                 }
                 // 6. Filtere nach roomType falls angegeben
                 let filteredAvailability = availability;
@@ -803,9 +813,9 @@ class WhatsAppFunctionHandlers {
                     };
                 });
                 // Debug: Logge alle formatierten Zimmer
-                console.log(`[WhatsApp Function Handlers] check_room_availability: ${rooms.length} Zimmer formatiert`);
+                logger_1.logger.log(`[WhatsApp Function Handlers] check_room_availability: ${rooms.length} Zimmer formatiert`);
                 for (const room of rooms) {
-                    console.log(`[WhatsApp Function Handlers]   - ${room.name} (${room.type}): ${room.availableRooms} verfügbar, ${room.pricePerNight.toLocaleString('de-CH')} COP`);
+                    logger_1.logger.log(`[WhatsApp Function Handlers]   - ${room.name} (${room.type}): ${room.availableRooms} verfügbar, ${room.pricePerNight.toLocaleString('de-CH')} COP`);
                 }
                 // Speichere Context in Conversation (falls conversationId vorhanden)
                 if (conversationId) {
@@ -836,7 +846,7 @@ class WhatsAppFunctionHandlers {
                                     context: Object.assign(Object.assign({}, context), { booking: updatedContext })
                                 }
                             });
-                            console.log('[check_room_availability] Context aktualisiert:', {
+                            logger_1.logger.log('[check_room_availability] Context aktualisiert:', {
                                 checkInDate: updatedContext.checkInDate,
                                 checkOutDate: updatedContext.checkOutDate,
                                 roomType: updatedContext.roomType
@@ -844,7 +854,7 @@ class WhatsAppFunctionHandlers {
                         }
                     }
                     catch (contextError) {
-                        console.error('[check_room_availability] Fehler beim Speichern des Contexts:', contextError);
+                        logger_1.logger.error('[check_room_availability] Fehler beim Speichern des Contexts:', contextError);
                         // Nicht abbrechen, nur loggen
                     }
                 }
@@ -857,15 +867,14 @@ class WhatsAppFunctionHandlers {
                         // WICHTIG: Verwende availableRooms (bereits korrigiert: maxAvailableRooms wenn minAvailableRooms = 0)
                         const availableCount = room.availableRooms;
                         return Object.assign(Object.assign({}, room), { 
-                            // WICHTIG: Füge explizite Terminologie-Hinweise hinzu für KI
-                            description: room.type === 'compartida'
-                                ? `${room.name}: ${availableCount} ${availableCount === 1 ? 'Bett' : 'Betten'} verfügbar (Dorm-Zimmer)`
-                                : `${room.name}: ${availableCount} ${availableCount === 1 ? 'Zimmer' : 'Zimmer'} verfügbar (privates Zimmer)` });
+                            // WICHTIG: Sprachneutral - keine deutschen Begriffe, nur roomType (compartida/privada)
+                            // Die KI muss die Begriffe selbst in die erkannte Sprache übersetzen
+                            description: `${room.name}: ${availableCount} available (type: ${room.type}, unit: ${room.unit})` });
                     })
                 };
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] check_room_availability Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] check_room_availability Fehler:', error);
                 throw error;
             }
         });
@@ -966,20 +975,20 @@ class WhatsAppFunctionHandlers {
                                     context: Object.assign(Object.assign({}, context), { tour: updatedContext })
                                 }
                             });
-                            console.log('[get_tours] Context aktualisiert:', {
+                            logger_1.logger.log('[get_tours] Context aktualisiert:', {
                                 toursCount: formattedTours.length
                             });
                         }
                     }
                     catch (contextError) {
-                        console.error('[get_tours] Fehler beim Speichern des Contexts:', contextError);
+                        logger_1.logger.error('[get_tours] Fehler beim Speichern des Contexts:', contextError);
                         // Nicht abbrechen, nur loggen
                     }
                 }
                 return formattedTours;
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] get_tours Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] get_tours Fehler:', error);
                 throw error;
             }
         });
@@ -1017,7 +1026,7 @@ class WhatsAppFunctionHandlers {
                             : tour.galleryUrls;
                     }
                     catch (e) {
-                        console.warn('[get_tour_details] Fehler beim Parsen von galleryUrls:', e);
+                        logger_1.logger.warn('[get_tour_details] Fehler beim Parsen von galleryUrls:', e);
                     }
                 }
                 return {
@@ -1048,7 +1057,7 @@ class WhatsAppFunctionHandlers {
                 };
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] get_tour_details Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] get_tour_details Fehler:', error);
                 throw error;
             }
         });
@@ -1110,7 +1119,7 @@ class WhatsAppFunctionHandlers {
                 if (!customerPhone && phoneNumber) {
                     const { LanguageDetectionService } = yield Promise.resolve().then(() => __importStar(require('./languageDetectionService')));
                     customerPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
-                    console.log(`[book_tour] WhatsApp-Telefonnummer als Fallback verwendet: ${customerPhone}`);
+                    logger_1.logger.log(`[book_tour] WhatsApp-Telefonnummer als Fallback verwendet: ${customerPhone}`);
                 }
                 if (!customerPhone && !customerEmail) {
                     throw new Error('Mindestens eine Kontaktinformation (Telefonnummer oder Email) ist erforderlich für die Tour-Buchung. Bitte geben Sie Ihre Telefonnummer oder Email-Adresse an.');
@@ -1178,11 +1187,13 @@ class WhatsAppFunctionHandlers {
                         }
                     }
                 });
-                // Prüfe ob Reservation mit gleichem Namen existiert und verknüpfe Tour
+                // Prüfe ob Reservation mit gleichem Namen UND Datum-Überlappung existiert
+                let matchingReservation = null;
                 try {
-                    const matchingReservation = yield this.findReservationByCustomerName(args.customerName.trim(), customerPhone, customerEmail, branchId, branch.organizationId);
+                    matchingReservation = yield this.findReservationByCustomerName(args.customerName.trim(), customerPhone, customerEmail, branchId, branch.organizationId, tourDate // NEU: Tour-Datum für Überlappungsprüfung
+                    );
                     if (matchingReservation) {
-                        console.log(`[book_tour] ✅ Reservation ${matchingReservation.id} mit gleichem Namen gefunden, verknüpfe Tour-Buchung`);
+                        logger_1.logger.log(`[book_tour] ✅ Reservation ${matchingReservation.id} mit gleichem Namen und Datum-Überlappung gefunden, verknüpfe Tour-Buchung`);
                         // Erstelle TourReservation Verknüpfung
                         // WICHTIG: tourPrice = totalPrice, accommodationPrice = 0 (Tour ist zusätzlich zur Reservation)
                         const tourReservation = yield prisma_1.prisma.tourReservation.create({
@@ -1197,38 +1208,44 @@ class WhatsAppFunctionHandlers {
                                 accommodationPending: 0
                             }
                         });
-                        console.log(`[book_tour] ✅ TourReservation Verknüpfung erstellt: ${tourReservation.id}`);
-                        // WICHTIG: Payment Link für Tour bleibt separat (in TourBooking.paymentLink)
-                        // Reservation hat bereits eigenen Payment Link (in Reservation.paymentLink)
-                        // Beide Links können unabhängig bezahlt werden
+                        logger_1.logger.log(`[book_tour] ✅ TourReservation Verknüpfung erstellt: ${tourReservation.id}`);
                     }
                 }
                 catch (linkError) {
-                    console.error('[book_tour] Fehler beim Verknüpfen mit Reservation:', linkError);
+                    logger_1.logger.error('[book_tour] Fehler beim Verknüpfen mit Reservation:', linkError);
                     // Nicht abbrechen, nur loggen
                 }
                 // Generiere Payment Link (analog zu tourBookingController)
                 let paymentLink = null;
                 if (totalPrice > 0 && (customerPhone || customerEmail)) {
                     try {
-                        // Erstelle "Dummy"-Reservation für Payment Link
-                        const dummyReservation = yield prisma_1.prisma.reservation.create({
-                            data: {
-                                guestName: args.customerName,
-                                guestPhone: customerPhone,
-                                guestEmail: customerEmail,
-                                checkInDate: tourDate,
-                                checkOutDate: new Date(tourDate.getTime() + 24 * 60 * 60 * 1000), // +1 Tag
-                                status: 'confirmed',
-                                paymentStatus: 'pending',
-                                amount: totalPrice,
-                                currency: tour.currency || 'COP',
-                                organizationId: branch.organizationId,
-                                branchId: branchId
-                            }
-                        });
+                        let reservationForPaymentLink;
+                        if (matchingReservation) {
+                            // WICHTIG: Verwende bestehende Reservation für Payment Link
+                            logger_1.logger.log(`[book_tour] Verwende bestehende Reservation ${matchingReservation.id} für Payment Link`);
+                            reservationForPaymentLink = matchingReservation;
+                        }
+                        else {
+                            // Nur wenn KEINE passende Reservation gefunden wurde: Erstelle "Dummy"-Reservation
+                            logger_1.logger.log(`[book_tour] Keine passende Reservation gefunden, erstelle "Dummy"-Reservation für Payment Link`);
+                            reservationForPaymentLink = yield prisma_1.prisma.reservation.create({
+                                data: {
+                                    guestName: args.customerName,
+                                    guestPhone: customerPhone,
+                                    guestEmail: customerEmail,
+                                    checkInDate: tourDate,
+                                    checkOutDate: new Date(tourDate.getTime() + 24 * 60 * 60 * 1000), // +1 Tag
+                                    status: 'confirmed',
+                                    paymentStatus: 'pending',
+                                    amount: totalPrice,
+                                    currency: tour.currency || 'COP',
+                                    organizationId: branch.organizationId,
+                                    branchId: branchId
+                                }
+                            });
+                        }
                         const boldPaymentService = yield boldPaymentService_1.BoldPaymentService.createForBranch(branchId);
-                        paymentLink = yield boldPaymentService.createPaymentLink(dummyReservation, totalPrice, tour.currency || 'COP', `Zahlung für Tour-Buchung: ${tour.title}`);
+                        paymentLink = yield boldPaymentService.createPaymentLink(reservationForPaymentLink, totalPrice, tour.currency || 'COP', `Zahlung für Tour-Buchung: ${tour.title}`);
                         // Aktualisiere Buchung mit Payment Link
                         yield prisma_1.prisma.tourBooking.update({
                             where: { id: booking.id },
@@ -1236,7 +1253,7 @@ class WhatsAppFunctionHandlers {
                         });
                     }
                     catch (paymentError) {
-                        console.error('[book_tour] Fehler beim Erstellen des Payment-Links:', paymentError);
+                        logger_1.logger.error('[book_tour] Fehler beim Erstellen des Payment-Links:', paymentError);
                         // Nicht abbrechen, nur loggen
                     }
                 }
@@ -1247,7 +1264,7 @@ class WhatsAppFunctionHandlers {
                         yield calculateCommission(booking.id);
                     }
                     catch (commissionError) {
-                        console.error('[book_tour] Fehler bei Kommissions-Berechnung:', commissionError);
+                        logger_1.logger.error('[book_tour] Fehler bei Kommissions-Berechnung:', commissionError);
                     }
                 }
                 // Sende Buchungsbestätigung per WhatsApp (wenn Payment Link vorhanden)
@@ -1255,10 +1272,10 @@ class WhatsAppFunctionHandlers {
                     try {
                         const { TourWhatsAppService } = yield Promise.resolve().then(() => __importStar(require('../services/tourWhatsAppService')));
                         yield TourWhatsAppService.sendBookingConfirmationToCustomer(booking.id, branch.organizationId, branchId, paymentLink, totalPrice, tour.currency || 'COP');
-                        console.log(`[book_tour] ✅ Buchungsbestätigung per WhatsApp gesendet`);
+                        logger_1.logger.log(`[book_tour] ✅ Buchungsbestätigung per WhatsApp gesendet`);
                     }
                     catch (whatsappError) {
-                        console.error('[book_tour] Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+                        logger_1.logger.error('[book_tour] Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
                         // Nicht abbrechen, nur loggen
                     }
                 }
@@ -1269,7 +1286,7 @@ class WhatsAppFunctionHandlers {
                         yield TourWhatsAppService.sendBookingRequestToProvider(booking.id, branch.organizationId, branchId);
                     }
                     catch (whatsappError) {
-                        console.error('[book_tour] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+                        logger_1.logger.error('[book_tour] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
                     }
                 }
                 return {
@@ -1286,7 +1303,7 @@ class WhatsAppFunctionHandlers {
                 };
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] book_tour Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] book_tour Fehler:', error);
                 throw error;
             }
         });
@@ -1361,7 +1378,7 @@ class WhatsAppFunctionHandlers {
                 if (!guestPhone && phoneNumber) {
                     const { LanguageDetectionService } = yield Promise.resolve().then(() => __importStar(require('./languageDetectionService')));
                     guestPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
-                    console.log(`[create_potential_reservation] WhatsApp-Telefonnummer als Fallback verwendet: ${guestPhone}`);
+                    logger_1.logger.log(`[create_potential_reservation] WhatsApp-Telefonnummer als Fallback verwendet: ${guestPhone}`);
                 }
                 if (!guestPhone && !guestEmail) {
                     throw new Error('Mindestens eine Kontaktinformation (Telefonnummer oder Email) ist erforderlich für die Reservierung. Bitte geben Sie Ihre Telefonnummer oder Email-Adresse an.');
@@ -1388,15 +1405,15 @@ class WhatsAppFunctionHandlers {
                     const room = availability.find(item => item.categoryId === args.categoryId);
                     if (room && room.pricePerNight > 0) {
                         estimatedAmount = nights * room.pricePerNight;
-                        console.log(`[create_potential_reservation] Preis aus Verfügbarkeit: ${room.pricePerNight} COP/Nacht × ${nights} Nächte = ${estimatedAmount} COP`);
+                        logger_1.logger.log(`[create_potential_reservation] Preis aus Verfügbarkeit: ${room.pricePerNight} COP/Nacht × ${nights} Nächte = ${estimatedAmount} COP`);
                     }
                     else {
-                        console.warn(`[create_potential_reservation] Zimmer mit categoryId ${args.categoryId} nicht in Verfügbarkeit gefunden, verwende Platzhalter`);
+                        logger_1.logger.warn(`[create_potential_reservation] Zimmer mit categoryId ${args.categoryId} nicht in Verfügbarkeit gefunden, verwende Platzhalter`);
                         estimatedAmount = nights * 50000; // Platzhalter
                     }
                 }
                 catch (error) {
-                    console.error('[create_potential_reservation] Fehler beim Abrufen des Preises, verwende Platzhalter:', error);
+                    logger_1.logger.error('[create_potential_reservation] Fehler beim Abrufen des Preises, verwende Platzhalter:', error);
                     estimatedAmount = nights * 50000; // Platzhalter
                 }
                 // 6. Prüfe ob bereits eine "potential" Reservation existiert (verhindert Duplikate)
@@ -1413,7 +1430,7 @@ class WhatsAppFunctionHandlers {
                 let reservation;
                 if (existingPotentialReservation) {
                     // Aktualisiere bestehende Reservation
-                    console.log(`[create_potential_reservation] Aktualisiere bestehende "potential" Reservation ${existingPotentialReservation.id}`);
+                    logger_1.logger.log(`[create_potential_reservation] Aktualisiere bestehende "potential" Reservation ${existingPotentialReservation.id}`);
                     reservation = yield prisma_1.prisma.reservation.update({
                         where: { id: existingPotentialReservation.id },
                         data: {
@@ -1446,7 +1463,7 @@ class WhatsAppFunctionHandlers {
                             autoCancelEnabled: false // Keine automatische Stornierung für "potential"
                         }
                     });
-                    console.log(`[create_potential_reservation] Neue "potential" Reservation erstellt: ${reservation.id}`);
+                    logger_1.logger.log(`[create_potential_reservation] Neue "potential" Reservation erstellt: ${reservation.id}`);
                 }
                 // 7. Verknüpfe WhatsApp-Nachrichten mit reservationId (über conversationId)
                 // WICHTIG: conversationId muss übergeben werden, aber wir haben es hier nicht direkt
@@ -1476,12 +1493,12 @@ class WhatsAppFunctionHandlers {
                                     reservationId: reservation.id
                                 }
                             });
-                            console.log(`[create_potential_reservation] WhatsApp-Nachrichten mit Reservation ${reservation.id} verknüpft`);
+                            logger_1.logger.log(`[create_potential_reservation] WhatsApp-Nachrichten mit Reservation ${reservation.id} verknüpft`);
                         }
                     }
                 }
                 catch (error) {
-                    console.error('[create_potential_reservation] Fehler beim Verknüpfen der WhatsApp-Nachrichten:', error);
+                    logger_1.logger.error('[create_potential_reservation] Fehler beim Verknüpfen der WhatsApp-Nachrichten:', error);
                     // Nicht abbrechen, nur loggen
                 }
                 return {
@@ -1497,7 +1514,7 @@ class WhatsAppFunctionHandlers {
                 };
             }
             catch (error) {
-                console.error('[create_potential_reservation] Fehler:', error);
+                logger_1.logger.error('[create_potential_reservation] Fehler:', error);
                 throw new Error(`Fehler beim Erstellen der potenziellen Reservierung: ${error.message}`);
             }
         });
@@ -1583,7 +1600,7 @@ class WhatsAppFunctionHandlers {
                             });
                             if (nameMatch) {
                                 categoryId = nameMatch.categoryId;
-                                console.log(`[create_room_reservation] categoryId aus Zimmer-Namen gefunden: ${categoryId} (${nameMatch.roomName})`);
+                                logger_1.logger.log(`[create_room_reservation] categoryId aus Zimmer-Namen gefunden: ${categoryId} (${nameMatch.roomName})`);
                             }
                             else {
                                 // Keine exakte Übereinstimmung, aber mehrere Zimmer → Fehler
@@ -1593,7 +1610,7 @@ class WhatsAppFunctionHandlers {
                         else if (matchingRooms.length === 1) {
                             // Nur ein Zimmer dieser Art verfügbar → verwende es
                             categoryId = matchingRooms[0].categoryId;
-                            console.log(`[create_room_reservation] categoryId aus Verfügbarkeit gefunden: ${categoryId} (${matchingRooms[0].roomName})`);
+                            logger_1.logger.log(`[create_room_reservation] categoryId aus Verfügbarkeit gefunden: ${categoryId} (${matchingRooms[0].roomName})`);
                         }
                         else if (matchingRooms.length > 1) {
                             // Mehrere Zimmer verfügbar → kann nicht automatisch bestimmt werden
@@ -1632,7 +1649,7 @@ class WhatsAppFunctionHandlers {
                 if (!guestPhone && phoneNumber) {
                     const { LanguageDetectionService } = yield Promise.resolve().then(() => __importStar(require('./languageDetectionService')));
                     guestPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
-                    console.log(`[create_room_reservation] WhatsApp-Telefonnummer als Fallback verwendet: ${guestPhone}`);
+                    logger_1.logger.log(`[create_room_reservation] WhatsApp-Telefonnummer als Fallback verwendet: ${guestPhone}`);
                 }
                 if (!guestPhone && !guestEmail) {
                     throw new Error('Mindestens eine Kontaktinformation (Telefonnummer oder Email) ist erforderlich für die Reservierung. Bitte geben Sie Ihre Telefonnummer oder Email-Adresse an.');
@@ -1660,21 +1677,21 @@ class WhatsAppFunctionHandlers {
                 let lobbyReservationId = null;
                 if (existingPotentialReservation) {
                     // Bestätigung einer "potential" Reservation
-                    console.log(`[create_room_reservation] Bestätige "potential" Reservation ${existingPotentialReservation.id}`);
+                    logger_1.logger.log(`[create_room_reservation] Bestätige "potential" Reservation ${existingPotentialReservation.id}`);
                     // 5.1. Erstelle LobbyPMS-Buchung (nur bei Bestätigung!)
                     try {
                         const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
                         lobbyReservationId = yield lobbyPmsService.createBooking(categoryId, checkInDate, checkOutDate, guestName, guestEmail || undefined, guestPhone || undefined, 1);
-                        console.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
+                        logger_1.logger.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
                     }
                     catch (lobbyError) {
-                        console.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
+                        logger_1.logger.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
                         throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
                     }
                 }
                 else {
                     // Neue Reservation (Rückwärtskompatibilität)
-                    console.log(`[create_room_reservation] Erstelle neue Reservation (keine "potential" Reservation gefunden)`);
+                    logger_1.logger.log(`[create_room_reservation] Erstelle neue Reservation (keine "potential" Reservation gefunden)`);
                     // 5.1. Erstelle Reservierung in LobbyPMS (WICHTIG: ZUERST in LobbyPMS, dann lokal!)
                     try {
                         const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
@@ -1683,10 +1700,10 @@ class WhatsAppFunctionHandlers {
                         guestPhone || undefined, // Verwende validierte Telefonnummer
                         1 // Anzahl Personen (default: 1, kann später erweitert werden)
                         );
-                        console.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
+                        logger_1.logger.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
                     }
                     catch (lobbyError) {
-                        console.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
+                        logger_1.logger.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
                         throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
                     }
                 }
@@ -1704,23 +1721,23 @@ class WhatsAppFunctionHandlers {
                             // Verwende Preis aus Verfügbarkeitsprüfung
                             // TODO: Verschiedene Personenanzahl berücksichtigen (aktuell: 1 Person)
                             estimatedAmount = nights * room.pricePerNight;
-                            console.log(`[create_room_reservation] Preis aus Verfügbarkeit: ${room.pricePerNight} COP/Nacht × ${nights} Nächte = ${estimatedAmount} COP`);
+                            logger_1.logger.log(`[create_room_reservation] Preis aus Verfügbarkeit: ${room.pricePerNight} COP/Nacht × ${nights} Nächte = ${estimatedAmount} COP`);
                         }
                         else {
                             // Fallback: Platzhalter wenn Zimmer nicht gefunden
-                            console.warn(`[create_room_reservation] Zimmer mit categoryId ${args.categoryId || categoryId} nicht in Verfügbarkeit gefunden, verwende Platzhalter`);
+                            logger_1.logger.warn(`[create_room_reservation] Zimmer mit categoryId ${args.categoryId || categoryId} nicht in Verfügbarkeit gefunden, verwende Platzhalter`);
                             estimatedAmount = nights * 50000; // Platzhalter
                         }
                     }
                     catch (error) {
                         // Fallback: Platzhalter bei Fehler
-                        console.error('[create_room_reservation] Fehler beim Abrufen des Preises, verwende Platzhalter:', error);
+                        logger_1.logger.error('[create_room_reservation] Fehler beim Abrufen des Preises, verwende Platzhalter:', error);
                         estimatedAmount = nights * 50000; // Platzhalter
                     }
                 }
                 else {
                     // Fallback: Platzhalter wenn keine categoryId
-                    console.warn('[create_room_reservation] Keine categoryId angegeben, verwende Platzhalter');
+                    logger_1.logger.warn('[create_room_reservation] Keine categoryId angegeben, verwende Platzhalter');
                     estimatedAmount = nights * 50000; // Platzhalter
                 }
                 // 7. Setze Payment-Deadline (konfigurierbar, Standard: 1 Stunde)
@@ -1744,7 +1761,7 @@ class WhatsAppFunctionHandlers {
                             autoCancelEnabled: true // Automatische Stornierung aktiviert
                         }
                     });
-                    console.log(`[create_room_reservation] Reservation ${reservation.id} von "potential" auf "confirmed" aktualisiert`);
+                    logger_1.logger.log(`[create_room_reservation] Reservation ${reservation.id} von "potential" auf "confirmed" aktualisiert`);
                 }
                 else {
                     // Erstelle neue Reservation (Rückwärtskompatibilität)
@@ -1782,27 +1799,11 @@ class WhatsAppFunctionHandlers {
                         });
                     }
                     catch (error) {
-                        console.error('[create_room_reservation] Fehler beim Erstellen des Payment-Links:', error);
+                        logger_1.logger.error('[create_room_reservation] Fehler beim Erstellen des Payment-Links:', error);
                         // Nicht abbrechen, nur loggen
                     }
                 }
-                // 10. Sende Links per WhatsApp (wenn Telefonnummer vorhanden)
-                let linksSent = false;
-                if (guestPhone || reservation.guestPhone) {
-                    try {
-                        yield reservationNotificationService_1.ReservationNotificationService.sendReservationInvitation(reservation.id, {
-                            guestPhone: guestPhone || reservation.guestPhone || undefined,
-                            amount: estimatedAmount,
-                            currency: 'COP'
-                        });
-                        linksSent = true;
-                    }
-                    catch (error) {
-                        console.error('[create_room_reservation] Fehler beim Versand der Links:', error);
-                        // Nicht abbrechen, nur loggen
-                    }
-                }
-                // 11. Generiere Check-in Link (falls Email vorhanden)
+                // 10. Generiere Check-in Link (falls Email vorhanden)
                 // WICHTIG: Check-in Link kann erst nach erfolgreicher LobbyPMS-Buchung erstellt werden!
                 let checkInLink = null;
                 if (reservation.guestEmail && reservation.lobbyReservationId) {
@@ -1814,10 +1815,12 @@ class WhatsAppFunctionHandlers {
                         });
                     }
                     catch (error) {
-                        console.error('[create_room_reservation] Fehler beim Generieren des Check-in-Links:', error);
+                        logger_1.logger.error('[create_room_reservation] Fehler beim Generieren des Check-in-Links:', error);
                     }
                 }
-                // 12. Return Ergebnis
+                // 11. Return Ergebnis
+                // WICHTIG: Die AI generiert die Nachricht mit paymentLink und checkInLink
+                // sendReservationInvitation wird NICHT aufgerufen - die AI sendet die Nachricht
                 return {
                     success: true,
                     reservationId: reservation.id,
@@ -1832,16 +1835,14 @@ class WhatsAppFunctionHandlers {
                     amount: estimatedAmount,
                     currency: 'COP',
                     paymentLink: paymentLink,
-                    checkInLink: checkInLink,
+                    checkInLink: checkInLink, // Kann null sein, wenn keine Email vorhanden
                     paymentDeadline: paymentDeadline.toISOString(),
-                    linksSent: linksSent,
-                    message: linksSent
-                        ? `Reservierung erstellt. Zahlungslink und Check-in-Link wurden per WhatsApp gesendet. Bitte zahlen Sie innerhalb von ${paymentDeadlineHours} Stunde(n), sonst wird die Reservierung automatisch storniert.`
-                        : `Reservierung erstellt. Bitte Zahlungslink und Check-in-Link manuell senden. Bitte zahlen Sie innerhalb von ${paymentDeadlineHours} Stunde(n), sonst wird die Reservierung automatisch storniert.`
+                    linksSent: false, // WICHTIG: AI generiert die Nachricht, nicht sendReservationInvitation
+                    message: `Reservierung erfolgreich erstellt. Die AI generiert die Nachricht mit Payment-Link und Check-in-Link.`
                 };
             }
             catch (error) {
-                console.error('[WhatsApp Function Handlers] create_room_reservation Fehler:', error);
+                logger_1.logger.error('[WhatsApp Function Handlers] create_room_reservation Fehler:', error);
                 throw error;
             }
         });

@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isTeamManager = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Middleware zur Überprüfung, ob ein Benutzer die Berechtigung hat, als Team-Manager zu agieren
  */
@@ -55,7 +56,7 @@ const isTeamManager = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         next();
     }
     catch (error) {
-        console.error('Fehler bei der Überprüfung der Team-Manager-Berechtigung:', error);
+        logger_1.logger.error('Fehler bei der Überprüfung der Team-Manager-Berechtigung:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });

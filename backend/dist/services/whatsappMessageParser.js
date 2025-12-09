@@ -1,21 +1,7 @@
 "use strict";
-/**
- * WhatsApp Message Parser für LobbyPMS Reservierungsnachrichten
- *
- * Parst Nachrichten im Format:
- * 🏨 Hola, Se ha generado una nueva reserva desde el motor de reservas:
- *
- * Propiedad: La Familia Hostel - Manila
- * Reserva: 18036808
- * Titular: Bryan Vuithier
- * Entrada: 13/11/2025
- * Salida: 15/11/2025
- * Cargos: COP 360,000
- * Habitaciones: 1
- * Huéspedes: 2
- */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsAppMessageParser = void 0;
+const logger_1 = require("../utils/logger");
 class WhatsAppMessageParser {
     /**
      * Parst eine WhatsApp-Nachricht im LobbyPMS-Format
@@ -73,7 +59,7 @@ class WhatsAppMessageParser {
             }
             // Validiere dass alle erforderlichen Felder vorhanden sind
             if (!data.reservationId || !data.guestName || !data.checkInDate || !data.checkOutDate || !data.amount) {
-                console.warn('[WhatsAppMessageParser] Unvollständige Daten:', data);
+                logger_1.logger.warn('[WhatsAppMessageParser] Unvollständige Daten:', data);
                 return null;
             }
             return {
@@ -89,7 +75,7 @@ class WhatsAppMessageParser {
             };
         }
         catch (error) {
-            console.error('[WhatsAppMessageParser] Fehler beim Parsen:', error);
+            logger_1.logger.error('[WhatsAppMessageParser] Fehler beim Parsen:', error);
             return null;
         }
     }

@@ -55,6 +55,7 @@ const fs = __importStar(require("fs"));
 const encryption_1 = require("../utils/encryption");
 const urlValidation_1 = require("../utils/urlValidation");
 const organizationSettingsSchema_1 = require("../validation/organizationSettingsSchema");
+const logger_1 = require("../utils/logger");
 const auditService_1 = require("../services/auditService");
 // Validation Schemas
 const createOrganizationSchema = zod_1.z.object({
@@ -102,7 +103,7 @@ const getAllOrganizations = (_req, res) => __awaiter(void 0, void 0, void 0, fun
         res.json(organizations);
     }
     catch (error) {
-        console.error('Error in getAllOrganizations:', error);
+        logger_1.logger.error('Error in getAllOrganizations:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Organisationen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -179,7 +180,7 @@ const getOrganizationById = (req, res) => __awaiter(void 0, void 0, void 0, func
         res.json(organization);
     }
     catch (error) {
-        console.error('Error in getOrganizationById:', error);
+        logger_1.logger.error('Error in getOrganizationById:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Organisation',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -348,6 +349,13 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     roleId: adminRole.id
                 });
             }
+            // Branch-basierte Reservations-Berechtigungen für Admin (alle Branches)
+            permissions.push({
+                entity: 'reservations_all_branches',
+                entityType: 'table',
+                accessLevel: 'read',
+                roleId: adminRole.id
+            });
             yield tx.permission.createMany({
                 data: permissions
             });
@@ -432,6 +440,13 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 entity: 'cerebro_links',
                 entityType: 'cerebro',
                 accessLevel: 'both',
+                roleId: userRole.id
+            });
+            // Branch-basierte Reservations-Berechtigungen für User (nur eigene Branch)
+            userPermissions.push({
+                entity: 'reservations_own_branch',
+                entityType: 'table',
+                accessLevel: 'read',
                 roleId: userRole.id
             });
             yield tx.permission.createMany({
@@ -540,7 +555,7 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 adminRoleId: adminRole.id
             };
         }));
-        console.log(`✅ Organisation "${result.organization.displayName}" erstellt. Ersteller (User ${userId}) ist jetzt Admin.`);
+        logger_1.logger.log(`✅ Organisation "${result.organization.displayName}" erstellt. Ersteller (User ${userId}) ist jetzt Admin.`);
         res.status(201).json(result.organization);
     }
     catch (error) {
@@ -550,7 +565,7 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 errors: error.errors
             });
         }
-        console.error('Error in createOrganization:', error);
+        logger_1.logger.error('Error in createOrganization:', error);
         res.status(500).json({
             message: 'Fehler beim Erstellen der Organisation',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -597,7 +612,7 @@ const updateOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 errors: error.errors
             });
         }
-        console.error('Error in updateOrganization:', error);
+        logger_1.logger.error('Error in updateOrganization:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren der Organisation',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -657,7 +672,7 @@ const deleteOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.json({ message: 'Organisation erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Error in deleteOrganization:', error);
+        logger_1.logger.error('Error in deleteOrganization:', error);
         res.status(500).json({
             message: 'Fehler beim Löschen der Organisation',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -704,7 +719,7 @@ const getOrganizationStats = (req, res) => __awaiter(void 0, void 0, void 0, fun
         res.json(response);
     }
     catch (error) {
-        console.error('Error in getOrganizationStats:', error);
+        logger_1.logger.error('Error in getOrganizationStats:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Organisations-Statistiken',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -764,7 +779,7 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
                 const decryptDuration = Date.now() - decryptStartTime;
                 // ✅ MONITORING: Settings-Größe und Performance loggen
                 const settingsSize = JSON.stringify(orgWithSettings.settings || {}).length;
-                console.log(`[getCurrentOrganization] ⏱️ Settings-Query: ${settingsDuration}ms | Decrypt: ${decryptDuration}ms | Size: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
+                logger_1.logger.log(`[getCurrentOrganization] ⏱️ Settings-Query: ${settingsDuration}ms | Decrypt: ${decryptDuration}ms | Size: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
             }
         }
         else {
@@ -788,7 +803,7 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
         res.json(organization);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Organisation:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Organisation:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -837,7 +852,7 @@ const createJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.status(201).json(joinRequest);
     }
     catch (error) {
-        console.error('Fehler beim Erstellen der Beitrittsanfrage:', error);
+        logger_1.logger.error('Fehler beim Erstellen der Beitrittsanfrage:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -845,22 +860,22 @@ exports.createJoinRequest = createJoinRequest;
 // Beitrittsanfragen abrufen
 const getJoinRequests = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log('=== getJoinRequests CALLED ===');
+        logger_1.logger.log('=== getJoinRequests CALLED ===');
         const userId = req.userId;
-        console.log('userId:', userId);
-        console.log('req.organizationId:', req.organizationId);
+        logger_1.logger.log('userId:', userId);
+        logger_1.logger.log('req.organizationId:', req.organizationId);
         if (!userId) {
-            console.log('❌ No userId, returning 401');
+            logger_1.logger.log('❌ No userId, returning 401');
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Verwende req.organizationId aus Middleware (wie getOrganizationStats)
         if (!req.organizationId) {
-            console.log('❌ No organizationId, returning 400');
+            logger_1.logger.log('❌ No organizationId, returning 400');
             return res.status(400).json({
                 message: 'Diese Funktion ist nur für Benutzer mit Organisation verfügbar'
             });
         }
-        console.log('✅ Fetching join requests for organizationId:', req.organizationId);
+        logger_1.logger.log('✅ Fetching join requests for organizationId:', req.organizationId);
         const joinRequests = yield prisma_1.prisma.organizationJoinRequest.findMany({
             where: { organizationId: req.organizationId },
             include: {
@@ -882,12 +897,12 @@ const getJoinRequests = (req, res) => __awaiter(void 0, void 0, void 0, function
             },
             orderBy: { createdAt: 'desc' }
         });
-        console.log('✅ Found join requests:', joinRequests.length);
-        console.log('✅ Returning join requests to frontend');
+        logger_1.logger.log('✅ Found join requests:', joinRequests.length);
+        logger_1.logger.log('✅ Returning join requests to frontend');
         res.json(joinRequests);
     }
     catch (error) {
-        console.error('❌ Error in getJoinRequests:', error);
+        logger_1.logger.error('❌ Error in getJoinRequests:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -968,7 +983,7 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.json(result);
     }
     catch (error) {
-        console.error('Fehler beim Bearbeiten der Beitrittsanfrage:', error);
+        logger_1.logger.error('Fehler beim Bearbeiten der Beitrittsanfrage:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -1003,7 +1018,7 @@ const searchOrganizations = (req, res) => __awaiter(void 0, void 0, void 0, func
         res.json(organizations);
     }
     catch (error) {
-        console.error('Fehler beim Suchen von Organisationen:', error);
+        logger_1.logger.error('Fehler beim Suchen von Organisationen:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -1039,7 +1054,7 @@ const getOrganizationLanguage = (req, res) => __awaiter(void 0, void 0, void 0, 
         res.json({ language });
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Organisation-Sprache:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Organisation-Sprache:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Organisation-Sprache',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1102,7 +1117,7 @@ const updateOrganizationLanguage = (req, res) => __awaiter(void 0, void 0, void 
                 errors: error.errors
             });
         }
-        console.error('Fehler beim Aktualisieren der Organisation-Sprache:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren der Organisation-Sprache:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren der Organisation-Sprache',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1119,11 +1134,11 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Debug: Logge Request-Body
-        console.log('=== REQUEST BODY DEBUG ===');
-        console.log('req.body.logo vorhanden:', !!req.body.logo);
-        console.log('req.body.logo type:', typeof req.body.logo);
-        console.log('req.body.logo length:', (_a = req.body.logo) === null || _a === void 0 ? void 0 : _a.length);
-        console.log('req.body keys:', Object.keys(req.body));
+        logger_1.logger.log('=== REQUEST BODY DEBUG ===');
+        logger_1.logger.log('req.body.logo vorhanden:', !!req.body.logo);
+        logger_1.logger.log('req.body.logo type:', typeof req.body.logo);
+        logger_1.logger.log('req.body.logo length:', (_a = req.body.logo) === null || _a === void 0 ? void 0 : _a.length);
+        logger_1.logger.log('req.body keys:', Object.keys(req.body));
         // Validiere Eingabedaten
         const validatedData = updateOrganizationSchema.parse(req.body);
         // Hole die aktuelle Organisation des Users mit Berechtigungen
@@ -1154,12 +1169,12 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
         // Wenn settings aktualisiert werden, validiere und verschlüssele sie
         let updateData = Object.assign({}, validatedData);
         // Debug: Logge Logo-Daten
-        console.log('=== ORGANIZATION UPDATE DEBUG ===');
-        console.log('validatedData.logo:', validatedData.logo ? (validatedData.logo === 'null' ? 'String "null"' : `${validatedData.logo.substring(0, 50)}...`) : 'null/undefined');
-        console.log('validatedData.logo type:', typeof validatedData.logo);
-        console.log('validatedData.logo length:', (_b = validatedData.logo) === null || _b === void 0 ? void 0 : _b.length);
-        console.log('validatedData.logo === "null":', validatedData.logo === 'null');
-        console.log('updateData.logo:', updateData.logo ? (updateData.logo === 'null' ? 'String "null"' : `${updateData.logo.substring(0, 50)}...`) : 'null/undefined');
+        logger_1.logger.log('=== ORGANIZATION UPDATE DEBUG ===');
+        logger_1.logger.log('validatedData.logo:', validatedData.logo ? (validatedData.logo === 'null' ? 'String "null"' : `${validatedData.logo.substring(0, 50)}...`) : 'null/undefined');
+        logger_1.logger.log('validatedData.logo type:', typeof validatedData.logo);
+        logger_1.logger.log('validatedData.logo length:', (_b = validatedData.logo) === null || _b === void 0 ? void 0 : _b.length);
+        logger_1.logger.log('validatedData.logo === "null":', validatedData.logo === 'null');
+        logger_1.logger.log('updateData.logo:', updateData.logo ? (updateData.logo === 'null' ? 'String "null"' : `${updateData.logo.substring(0, 50)}...`) : 'null/undefined');
         if (validatedData.settings !== undefined) {
             const currentSettings = organization.settings || {};
             const newSettings = Object.assign(Object.assign({}, currentSettings), validatedData.settings);
@@ -1193,7 +1208,7 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 // Password ist noch nicht gehasht (32-stelliger MD5-Hash)
                 const crypto = require('crypto');
                 newSettings.doorSystem.password = crypto.createHash('md5').update(newSettings.doorSystem.password).digest('hex');
-                console.log('[TTLock] Password wurde MD5-gehasht');
+                logger_1.logger.log('[TTLock] Password wurde MD5-gehasht');
             }
             // ✅ VERSCHLÜSSELUNG: Verschlüssele alle API-Keys vor dem Speichern
             // ✅ PERFORMANCE: encryptApiSettings prüft jetzt ob bereits verschlüsselt (verhindert mehrfache Verschlüsselung)
@@ -1202,17 +1217,17 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 // ✅ PERFORMANCE: Validiere Settings-Größe (Warnung bei > 1 MB)
                 const settingsSize = JSON.stringify(encryptedSettings).length;
                 if (settingsSize > 1024 * 1024) { // > 1 MB
-                    console.warn(`[updateCurrentOrganization] ⚠️ Settings sind sehr groß: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
-                    console.warn(`[updateCurrentOrganization] ⚠️ Möglicherweise mehrfach verschlüsselte API-Keys vorhanden!`);
+                    logger_1.logger.warn(`[updateCurrentOrganization] ⚠️ Settings sind sehr groß: ${(settingsSize / 1024 / 1024).toFixed(2)} MB`);
+                    logger_1.logger.warn(`[updateCurrentOrganization] ⚠️ Möglicherweise mehrfach verschlüsselte API-Keys vorhanden!`);
                 }
                 updateData.settings = encryptedSettings;
             }
             catch (encryptionError) {
-                console.error('Error encrypting API settings:', encryptionError);
+                logger_1.logger.error('Error encrypting API settings:', encryptionError);
                 // Wenn ENCRYPTION_KEY nicht gesetzt ist, speichere unverschlüsselt (für Migration)
                 // TODO: Später sollte dies ein Fehler sein
                 if (encryptionError instanceof Error && encryptionError.message.includes('ENCRYPTION_KEY')) {
-                    console.warn('⚠️ ENCRYPTION_KEY nicht gesetzt - speichere unverschlüsselt (nur für Migration!)');
+                    logger_1.logger.warn('⚠️ ENCRYPTION_KEY nicht gesetzt - speichere unverschlüsselt (nur für Migration!)');
                     updateData.settings = newSettings;
                 }
                 else {
@@ -1225,14 +1240,14 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
             if (organization.id === 1 && newSettings.emailReading) {
                 // Stelle sicher, dass Email-Reading für Organisation 1 aktiviert bleibt
                 if (newSettings.emailReading.enabled === false) {
-                    console.warn('[OrganizationController] ⚠️ Email-Reading für Organisation 1 wurde deaktiviert - wird beim nächsten Seed wieder aktiviert');
+                    logger_1.logger.warn('[OrganizationController] ⚠️ Email-Reading für Organisation 1 wurde deaktiviert - wird beim nächsten Seed wieder aktiviert');
                 }
             }
             // ✅ AUDIT-LOG: Protokolliere Settings-Änderungen
             yield (0, auditService_1.logSettingsChange)(organization.id, Number(userId), currentSettings, newSettings, req.ip, req.get('user-agent'));
         }
         // Debug: Logge updateData vor dem Speichern
-        console.log('updateData vor Prisma Update:', Object.assign(Object.assign({}, updateData), { logo: updateData.logo ? `${updateData.logo.substring(0, 50)}...` : updateData.logo }));
+        logger_1.logger.log('updateData vor Prisma Update:', Object.assign(Object.assign({}, updateData), { logo: updateData.logo ? `${updateData.logo.substring(0, 50)}...` : updateData.logo }));
         // Stelle sicher, dass leere Strings und String 'null' als null gespeichert werden
         if (updateData.logo !== undefined) {
             if (updateData.logo === '' ||
@@ -1240,7 +1255,7 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 updateData.logo === 'null' ||
                 updateData.logo === null) {
                 updateData.logo = null;
-                console.log('Logo ist leerer String oder String "null", setze auf null');
+                logger_1.logger.log('Logo ist leerer String oder String "null", setze auf null');
             }
         }
         // Aktualisiere Organisation
@@ -1269,14 +1284,14 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 updatedOrganization.settings = (0, encryption_1.decryptApiSettings)(updatedOrganization.settings);
             }
             catch (decryptionError) {
-                console.error('Error decrypting API settings:', decryptionError);
+                logger_1.logger.error('Error decrypting API settings:', decryptionError);
                 // Bei Fehler: Settings bleiben verschlüsselt (für Migration)
                 // Frontend zeigt dann verschlüsselte Werte, aber das ist OK für Migration
             }
         }
         // Debug: Logge gespeichertes Logo
-        console.log('Gespeichertes Logo in DB:', updatedOrganization.logo ? `${updatedOrganization.logo.substring(0, 50)}...` : 'null');
-        console.log('Logo length:', (_d = updatedOrganization.logo) === null || _d === void 0 ? void 0 : _d.length);
+        logger_1.logger.log('Gespeichertes Logo in DB:', updatedOrganization.logo ? `${updatedOrganization.logo.substring(0, 50)}...` : 'null');
+        logger_1.logger.log('Logo length:', (_d = updatedOrganization.logo) === null || _d === void 0 ? void 0 : _d.length);
         res.json(updatedOrganization);
     }
     catch (error) {
@@ -1286,8 +1301,8 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 errors: error.errors
             });
         }
-        console.error('Error in updateCurrentOrganization:', error);
-        console.error('Error details:', {
+        logger_1.logger.error('Error in updateCurrentOrganization:', error);
+        logger_1.logger.error('Error details:', {
             message: error instanceof Error ? error.message : 'Unbekannter Fehler',
             stack: error instanceof Error ? error.stack : undefined,
             name: error instanceof Error ? error.name : undefined
@@ -1331,7 +1346,7 @@ const getLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error('Error in getLifecycleRoles:', error);
+        logger_1.logger.error('Error in getLifecycleRoles:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Lebenszyklus-Rollen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1347,8 +1362,8 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
             return res.status(400).json({ message: 'Keine Organisation gefunden' });
         }
         const { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds } = req.body;
-        console.log('[updateLifecycleRoles] Request body:', { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds });
-        console.log('[updateLifecycleRoles] Organization ID:', req.organizationId);
+        logger_1.logger.log('[updateLifecycleRoles] Request body:', { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds });
+        logger_1.logger.log('[updateLifecycleRoles] Organization ID:', req.organizationId);
         // Validiere Rollen-IDs (nur wenn sie gesetzt sind und > 0)
         // Konvertiere zu Number und prüfe, ob gültig
         const parseRoleId = (id) => {
@@ -1362,7 +1377,7 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const parsedHrRoleId = parseRoleId(hrRoleId);
         const parsedLegalRoleId = parseRoleId(legalRoleId);
         const parsedEmployeeRoleIds = (employeeRoleIds || []).map(parseRoleId).filter((id) => id !== null);
-        console.log('[updateLifecycleRoles] Parsed role IDs:', {
+        logger_1.logger.log('[updateLifecycleRoles] Parsed role IDs:', {
             admin: parsedAdminRoleId,
             hr: parsedHrRoleId,
             legal: parsedLegalRoleId,
@@ -1407,7 +1422,7 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 where: { organizationId: req.organizationId },
                 select: { id: true, name: true }
             });
-            console.log('[updateLifecycleRoles] All roles in organization:', allOrgRoles);
+            logger_1.logger.log('[updateLifecycleRoles] All roles in organization:', allOrgRoles);
             const validRoles = yield prisma_1.prisma.role.findMany({
                 where: {
                     id: { in: roleIds },
@@ -1415,11 +1430,11 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 },
                 select: { id: true, name: true, organizationId: true }
             });
-            console.log('[updateLifecycleRoles] Valid roles found:', validRoles);
-            console.log('[updateLifecycleRoles] Requested role IDs:', roleIds);
+            logger_1.logger.log('[updateLifecycleRoles] Valid roles found:', validRoles);
+            logger_1.logger.log('[updateLifecycleRoles] Requested role IDs:', roleIds);
             if (validRoles.length !== roleIds.length) {
                 const missingRoleIds = roleIds.filter(id => !validRoles.some(r => r.id === id));
-                console.error('[updateLifecycleRoles] Missing roles:', missingRoleIds);
+                logger_1.logger.error('[updateLifecycleRoles] Missing roles:', missingRoleIds);
                 return res.status(400).json({
                     message: 'Eine oder mehrere Rollen gehören nicht zu dieser Organisation',
                     details: {
@@ -1453,7 +1468,7 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const normalizedHrRoleId = normalizeRoleId(hrRoleId);
         const normalizedLegalRoleId = normalizeRoleId(legalRoleId);
         const normalizedEmployeeRoleIds = (employeeRoleIds || []).map(normalizeRoleId).filter((id) => id !== null);
-        console.log('[updateLifecycleRoles] Normalized role IDs:', {
+        logger_1.logger.log('[updateLifecycleRoles] Normalized role IDs:', {
             admin: normalizedAdminRoleId,
             hr: normalizedHrRoleId,
             legal: normalizedLegalRoleId,
@@ -1465,7 +1480,7 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
             legalRoleId: normalizedLegalRoleId,
             employeeRoleIds: normalizedEmployeeRoleIds
         };
-        console.log('[updateLifecycleRoles] Settings to save:', JSON.stringify(settings.lifecycleRoles, null, 2));
+        logger_1.logger.log('[updateLifecycleRoles] Settings to save:', JSON.stringify(settings.lifecycleRoles, null, 2));
         // Aktualisiere Organisation
         const updated = yield prisma_1.prisma.organization.update({
             where: { id: req.organizationId },
@@ -1477,14 +1492,14 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 settings: true
             }
         });
-        console.log('[updateLifecycleRoles] Organization updated successfully. Saved lifecycleRoles:', (_a = updated.settings) === null || _a === void 0 ? void 0 : _a.lifecycleRoles);
+        logger_1.logger.log('[updateLifecycleRoles] Organization updated successfully. Saved lifecycleRoles:', (_a = updated.settings) === null || _a === void 0 ? void 0 : _a.lifecycleRoles);
         res.json({
             lifecycleRoles: (_b = updated.settings) === null || _b === void 0 ? void 0 : _b.lifecycleRoles,
             message: 'Lebenszyklus-Rollen erfolgreich aktualisiert'
         });
     }
     catch (error) {
-        console.error('Error in updateLifecycleRoles:', error);
+        logger_1.logger.error('Error in updateLifecycleRoles:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren der Lebenszyklus-Rollen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1570,7 +1585,7 @@ const getDocumentTemplates = (req, res) => __awaiter(void 0, void 0, void 0, fun
         });
     }
     catch (error) {
-        console.error('Error in getDocumentTemplates:', error);
+        logger_1.logger.error('Error in getDocumentTemplates:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Dokumenten-Templates',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1625,7 +1640,7 @@ const uploadDocumentTemplate = (req, res) => __awaiter(void 0, void 0, void 0, f
         });
     }
     catch (error) {
-        console.error('Error in uploadDocumentTemplate:', error);
+        logger_1.logger.error('Error in uploadDocumentTemplate:', error);
         res.status(500).json({
             message: 'Fehler beim Hochladen des Templates',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1656,7 +1671,7 @@ const getDocumentSignatures = (req, res) => __awaiter(void 0, void 0, void 0, fu
         });
     }
     catch (error) {
-        console.error('Error in getDocumentSignatures:', error);
+        logger_1.logger.error('Error in getDocumentSignatures:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Dokumenten-Signaturen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -1716,7 +1731,7 @@ const uploadDocumentSignature = (req, res) => __awaiter(void 0, void 0, void 0, 
         });
     }
     catch (error) {
-        console.error('Error in uploadDocumentSignature:', error);
+        logger_1.logger.error('Error in uploadDocumentSignature:', error);
         res.status(500).json({
             message: 'Fehler beim Hochladen der Signatur',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

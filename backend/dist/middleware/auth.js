@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticateToken = exports.authMiddleware = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const userCache_1 = require("../services/userCache");
+const logger_1 = require("../utils/logger");
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
 /**
  * Authentication middleware to verify the JWT token
@@ -55,17 +56,17 @@ const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
             }
             else {
                 // Nur bei Fehlern loggen (wenn keine aktive Rolle gefunden)
-                console.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
-                console.error(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
+                logger_1.logger.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
+                logger_1.logger.error(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
                 user.roles.forEach(r => {
-                    console.error(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
+                    logger_1.logger.error(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
                 });
             }
         }
         next();
     }
     catch (error) {
-        console.error('Fehler in der Auth-Middleware:', error);
+        logger_1.logger.error('Fehler in der Auth-Middleware:', error);
         if (error.name === 'JsonWebTokenError') {
             return res.status(401).json({ message: 'Ungültiger Token' });
         }

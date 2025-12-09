@@ -8,6 +8,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface TestResult {
   testName: string;
@@ -227,7 +228,7 @@ async function testMultiOrgUsers(): Promise<TestResult> {
  * Hauptfunktion zum Ausführen aller Tests
  */
 export async function runOrganizationMiddlewareTests(): Promise<void> {
-  console.log('🔧 Starting Organization Middleware Integration Tests...\n');
+  logger.log('🔧 Starting Organization Middleware Integration Tests...\n');
 
   const tests = [
     testValidOrganizationAssignment,
@@ -239,31 +240,31 @@ export async function runOrganizationMiddlewareTests(): Promise<void> {
   const results: TestResult[] = [];
 
   for (const test of tests) {
-    console.log(`⏳ Running ${test.name}...`);
+    logger.log(`⏳ Running ${test.name}...`);
     const result = await test();
     results.push(result);
     
     const status = result.success ? '✅ PASSED' : '❌ FAILED';
-    console.log(`${status}: ${result.testName}`);
-    console.log(`   ${result.message}`);
+    logger.log(`${status}: ${result.testName}`);
+    logger.log(`   ${result.message}`);
     if (result.organizationId) {
-      console.log(`   Organization ID: ${result.organizationId}`);
+      logger.log(`   Organization ID: ${result.organizationId}`);
     }
-    console.log('');
+    logger.log('');
   }
 
   // Zusammenfassung
   const passed = results.filter(r => r.success).length;
   const total = results.length;
   
-  console.log('📊 Test Summary:');
-  console.log(`   Passed: ${passed}/${total}`);
-  console.log(`   Failed: ${total - passed}/${total}`);
+  logger.log('📊 Test Summary:');
+  logger.log(`   Passed: ${passed}/${total}`);
+  logger.log(`   Failed: ${total - passed}/${total}`);
   
   if (passed === total) {
-    console.log('🎉 All Organization Middleware tests passed!');
+    logger.log('🎉 All Organization Middleware tests passed!');
   } else {
-    console.log('⚠️  Some tests failed. Please review the issues above.');
+    logger.log('⚠️  Some tests failed. Please review the issues above.');
   }
 
 }
@@ -271,5 +272,5 @@ export async function runOrganizationMiddlewareTests(): Promise<void> {
 // Ausführen falls direkt aufgerufen
 if (require.main === module) {
   runOrganizationMiddlewareTests()
-    .catch(console.error);
+    .catch(logger.error);
 } 

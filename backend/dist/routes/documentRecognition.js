@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../utils/logger");
 // CommonJS-Stil Import für express-validator
 const expressValidator = require('express-validator');
 const { body, validationResult } = expressValidator;
@@ -30,28 +31,28 @@ router.post('/', [
 ], (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c;
     try {
-        console.log('Dokumenterkennung-Anfrage empfangen');
+        logger_1.logger.log('Dokumenterkennung-Anfrage empfangen');
         // Validiere die Eingabeparameter
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            console.log('Validierungsfehler:', errors.array());
+            logger_1.logger.log('Validierungsfehler:', errors.array());
             return res.status(400).json({ errors: errors.array() });
         }
         // Prüfe, ob das Bild im Request vorhanden ist
         if (!req.body.image) {
-            console.log('Kein Bild im Request gefunden');
+            logger_1.logger.log('Kein Bild im Request gefunden');
             return res.status(400).json({ error: 'Kein Bild im Request' });
         }
         // Stelle sicher, dass ein API-Key vorhanden ist
         const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
         if (!OPENAI_API_KEY) {
-            console.error('OpenAI API-Key fehlt in den Umgebungsvariablen');
+            logger_1.logger.error('OpenAI API-Key fehlt in den Umgebungsvariablen');
             return res.status(500).json({
                 error: 'Server-Konfigurationsfehler. Bitte kontaktieren Sie den Administrator.'
             });
         }
         const { image, documentType } = req.body;
-        console.log('Starte Dokumentenanalyse mit OpenAI...');
+        logger_1.logger.log('Starte Dokumentenanalyse mit OpenAI...');
         // Erstelle die Anfrage an die OpenAI API (GPT-4 Vision)
         try {
             const openaiResponse = yield axios_1.default.post('https://api.openai.com/v1/chat/completions', {
@@ -84,7 +85,7 @@ router.post('/', [
                     'Authorization': `Bearer ${OPENAI_API_KEY}`
                 }
             });
-            console.log('OpenAI-Antwort erhalten');
+            logger_1.logger.log('OpenAI-Antwort erhalten');
             // Extrahiere den JSON-Teil aus der Antwort
             const aiResponse = openaiResponse.data.choices[0].message.content;
             // Versuche, JSON aus der Antwort zu extrahieren (falls die Antwort Text enthält)
@@ -108,20 +109,20 @@ router.post('/', [
                 }
             }
             catch (parseError) {
-                console.error('Fehler beim Parsen der KI-Antwort:', parseError);
+                logger_1.logger.error('Fehler beim Parsen der KI-Antwort:', parseError);
                 return res.status(500).json({
                     error: 'Fehler bei der Verarbeitung der KI-Antwort',
                     aiResponse
                 });
             }
-            console.log('Dokumentdaten erfolgreich extrahiert:', documentData);
+            logger_1.logger.log('Dokumentdaten erfolgreich extrahiert:', documentData);
             // Sende die Dokumentdaten zurück
             return res.json(documentData);
         }
         catch (openaiError) {
-            console.error('Fehler bei der Anfrage an OpenAI:', openaiError.message);
-            console.error('OpenAI Status:', (_a = openaiError.response) === null || _a === void 0 ? void 0 : _a.status);
-            console.error('OpenAI Daten:', (_b = openaiError.response) === null || _b === void 0 ? void 0 : _b.data);
+            logger_1.logger.error('Fehler bei der Anfrage an OpenAI:', openaiError.message);
+            logger_1.logger.error('OpenAI Status:', (_a = openaiError.response) === null || _a === void 0 ? void 0 : _a.status);
+            logger_1.logger.error('OpenAI Daten:', (_b = openaiError.response) === null || _b === void 0 ? void 0 : _b.data);
             return res.status(500).json({
                 error: 'Fehler bei der Anfrage an OpenAI API',
                 message: openaiError.message,
@@ -130,7 +131,7 @@ router.post('/', [
         }
     }
     catch (error) {
-        console.error('Allgemeiner Fehler bei der KI-Dokumentenerkennung:', error);
+        logger_1.logger.error('Allgemeiner Fehler bei der KI-Dokumentenerkennung:', error);
         return res.status(500).json({
             error: 'Fehler bei der Dokumentenerkennung',
             message: error.message

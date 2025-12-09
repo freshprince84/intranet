@@ -4,6 +4,7 @@ import { getDataIsolationFilter } from '../middleware/organization';
 import { ReservationTaskService } from '../services/reservationTaskService';
 import { ReservationNotificationService } from '../services/reservationNotificationService';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -89,7 +90,7 @@ export const getReservations = async (req: AuthenticatedRequest, res: Response) 
       count: combinedReservations.length
     });
   } catch (error) {
-    console.error('Error fetching reservations:', error);
+    logger.error('Error fetching reservations:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Reservierungen'
@@ -130,7 +131,7 @@ export const getReservationById = async (req: AuthenticatedRequest, res: Respons
       }
     });
   } catch (error) {
-    console.error('Error fetching reservation:', error);
+    logger.error('Error fetching reservation:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Reservierung'
@@ -285,7 +286,7 @@ export const syncReservations = async (req: AuthenticatedRequest, res: Response)
       errors: branchResults.filter(r => r.error).map(r => `${r.branchName}: ${r.error}`)
     });
   } catch (error) {
-    console.error('Error syncing reservations:', error);
+    logger.error('Error syncing reservations:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Synchronisieren der Reservierungen'
@@ -323,7 +324,7 @@ export const checkInReservation = async (req: AuthenticatedRequest, res: Respons
     try {
       await service.updateReservationStatus(id, 'checked_in');
     } catch (error) {
-      console.error('Fehler beim Aktualisieren des Status in LobbyPMS:', error);
+      logger.error('Fehler beim Aktualisieren des Status in LobbyPMS:', error);
       // Weiter mit lokaler Aktualisierung, auch wenn LobbyPMS-Update fehlschlägt
     }
 
@@ -358,7 +359,7 @@ export const checkInReservation = async (req: AuthenticatedRequest, res: Respons
       await service.syncReservation(lobbyReservation);
     } catch (syncError) {
       // Ignoriere Sync-Fehler, da Status bereits korrekt gesetzt ist
-      console.log('Hinweis: Synchronisation mit LobbyPMS fehlgeschlagen, aber Status ist bereits korrekt gesetzt:', syncError);
+      logger.log('Hinweis: Synchronisation mit LobbyPMS fehlgeschlagen, aber Status ist bereits korrekt gesetzt:', syncError);
     }
 
       // Aktualisiere verknüpften Task falls vorhanden
@@ -369,7 +370,7 @@ export const checkInReservation = async (req: AuthenticatedRequest, res: Respons
       try {
         await ReservationNotificationService.sendCheckInConfirmation(localReservation.id);
       } catch (error) {
-        console.error('Fehler beim Versenden der Check-in-Bestätigung:', error);
+        logger.error('Fehler beim Versenden der Check-in-Bestätigung:', error);
         // Fehler nicht weiterwerfen, da Bestätigung optional ist
       }
 
@@ -378,7 +379,7 @@ export const checkInReservation = async (req: AuthenticatedRequest, res: Respons
         data: updatedReservation
       });
   } catch (error) {
-    console.error('Error checking in reservation:', error);
+    logger.error('Error checking in reservation:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Check-in'
@@ -403,7 +404,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
     // Validiere Webhook-Secret (falls konfiguriert)
     // TODO: Implementiere Webhook-Secret-Validierung
 
-    console.log(`[LobbyPMS Webhook] Event: ${event}`, data);
+    logger.log(`[LobbyPMS Webhook] Event: ${event}`, data);
 
     // Bestimme Organisation aus Webhook-Daten
     // TODO: Wie identifizieren wir die Organisation aus dem Webhook?
@@ -431,7 +432,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
     });
 
     if (!organization) {
-      console.warn(`[LobbyPMS Webhook] Organisation nicht gefunden für Property ID: ${propertyId}`);
+      logger.warn(`[LobbyPMS Webhook] Organisation nicht gefunden für Property ID: ${propertyId}`);
       return res.status(404).json({
         success: false,
         message: 'Organisation nicht gefunden'
@@ -451,7 +452,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
     );
     
     if (!branchId) {
-      console.warn(`[LobbyPMS Webhook] Keine Branch gefunden für Property ID: ${propertyId}`);
+      logger.warn(`[LobbyPMS Webhook] Keine Branch gefunden für Property ID: ${propertyId}`);
       return res.status(404).json({
         success: false,
         message: 'Branch nicht gefunden'
@@ -492,13 +493,13 @@ export const handleWebhook = async (req: Request, res: Response) => {
         break;
 
       default:
-        console.log(`[LobbyPMS Webhook] Unbekanntes Event: ${event}`);
+        logger.log(`[LobbyPMS Webhook] Unbekanntes Event: ${event}`);
     }
 
     // Bestätige Webhook-Empfang
     res.json({ success: true, message: 'Webhook verarbeitet' });
   } catch (error) {
-    console.error('Error handling webhook:', error);
+    logger.error('Error handling webhook:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Verarbeiten des Webhooks'
@@ -619,7 +620,7 @@ export const syncFullReservations = async (req: AuthenticatedRequest, res: Respo
       errors: branchResults.filter(r => r.error).map(r => `${r.branchName}: ${r.error}`)
     });
   } catch (error) {
-    console.error('Error in full sync:', error);
+    logger.error('Error in full sync:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim vollständigen Sync'

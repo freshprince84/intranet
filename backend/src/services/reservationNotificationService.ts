@@ -7,6 +7,7 @@ import { sendEmail } from './emailService';
 import { TaskAutomationService } from './taskAutomationService';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Service für automatische Benachrichtigungen zu Reservierungen
@@ -51,10 +52,10 @@ export class ReservationNotificationService {
           errorMessage: data?.errorMessage || null
         }
       });
-      console.log(`[ReservationNotification] ✅ Log-Eintrag erstellt für Reservation ${reservationId}, Type: ${notificationType}, Success: ${success}`);
+      logger.log(`[ReservationNotification] ✅ Log-Eintrag erstellt für Reservation ${reservationId}, Type: ${notificationType}, Success: ${success}`);
     } catch (error) {
       // Log-Fehler sollten nicht die Hauptfunktionalität beeinträchtigen
-      console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags:`, error);
+      logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags:`, error);
     }
   }
   /**
@@ -64,7 +65,7 @@ export class ReservationNotificationService {
    * Sendet an Gäste mit Ankunft am nächsten Tag nach 18:00 Uhr
    */
   static async sendLateCheckInInvitations(): Promise<void> {
-    console.log('[ReservationNotification] Starte Versand von Check-in-Einladungen...');
+    logger.log('[ReservationNotification] Starte Versand von Check-in-Einladungen...');
 
     try {
       // Hole alle Organisationen mit aktivierter LobbyPMS-Synchronisation
@@ -89,7 +90,7 @@ export class ReservationNotificationService {
           const lateCheckInThreshold = lobbyPmsSettings.lateCheckInThreshold || '18:00';
           const notificationChannels = lobbyPmsSettings.notificationChannels || ['email'];
 
-          console.log(`[ReservationNotification] Verarbeite Organisation ${organization.id}...`);
+          logger.log(`[ReservationNotification] Verarbeite Organisation ${organization.id}...`);
 
           // Hole Reservierungen für morgen mit Ankunft nach Threshold
           // WICHTIG: Iteriere über alle Branches, da fetchTomorrowReservations branch-spezifisch ist
@@ -122,7 +123,7 @@ export class ReservationNotificationService {
 
                   // Prüfe ob bereits Einladung versendet wurde
                   if (reservation.invitationSentAt) {
-                    console.log(`[ReservationNotification] Einladung bereits versendet für Reservierung ${reservation.id}`);
+                    logger.log(`[ReservationNotification] Einladung bereits versendet für Reservierung ${reservation.id}`);
                     continue;
                   }
 
@@ -169,28 +170,28 @@ export class ReservationNotificationService {
                     data: { invitationSentAt: new Date() }
                   });
 
-                  console.log(`[ReservationNotification] Einladung versendet für Reservierung ${reservation.id}`);
+                  logger.log(`[ReservationNotification] Einladung versendet für Reservierung ${reservation.id}`);
                 } catch (error) {
-                  console.error(`[ReservationNotification] Fehler bei Reservierung ${lobbyReservation.id}:`, error);
+                  logger.error(`[ReservationNotification] Fehler bei Reservierung ${lobbyReservation.id}:`, error);
                   // Weiter mit nächster Reservierung
                 }
               }
             } catch (error) {
-              console.error(`[ReservationNotification] Fehler bei Branch ${branch.id}:`, error);
+              logger.error(`[ReservationNotification] Fehler bei Branch ${branch.id}:`, error);
               // Weiter mit nächstem Branch
             }
           }
 
-          console.log(`[ReservationNotification] Organisation ${organization.id}: ${totalReservations} Reservierungen verarbeitet`);
+          logger.log(`[ReservationNotification] Organisation ${organization.id}: ${totalReservations} Reservierungen verarbeitet`);
         } catch (error) {
-          console.error(`[ReservationNotification] Fehler bei Organisation ${organization.id}:`, error);
+          logger.error(`[ReservationNotification] Fehler bei Organisation ${organization.id}:`, error);
           // Weiter mit nächster Organisation
         }
       }
 
-      console.log('[ReservationNotification] Versand abgeschlossen');
+      logger.log('[ReservationNotification] Versand abgeschlossen');
     } catch (error) {
-      console.error('[ReservationNotification] Fehler beim Versand:', error);
+      logger.error('[ReservationNotification] Fehler beim Versand:', error);
       throw error;
     }
   }
@@ -264,11 +265,11 @@ export class ReservationNotificationService {
         // Verwende bestehenden Payment-Link, falls vorhanden
         if (reservation.paymentLink) {
           paymentLink = reservation.paymentLink;
-          console.log(`[ReservationNotification] ✅ Verwende bestehenden Payment-Link: ${paymentLink}`);
+          logger.log(`[ReservationNotification] ✅ Verwende bestehenden Payment-Link: ${paymentLink}`);
         } else {
           // Erstelle neuen Payment-Link nur wenn keiner existiert
           try {
-            console.log(`[ReservationNotification] Erstelle Payment-Link für Reservierung ${reservationId}...`);
+            logger.log(`[ReservationNotification] Erstelle Payment-Link für Reservierung ${reservationId}...`);
             const boldPaymentService = reservation.branchId
               ? await BoldPaymentService.createForBranch(reservation.branchId)
               : new BoldPaymentService(reservation.organizationId);
@@ -280,9 +281,9 @@ export class ReservationNotificationService {
               currency,
               `Zahlung für Reservierung ${reservation.guestName}`
             );
-            console.log(`[ReservationNotification] ✅ Payment-Link erstellt: ${paymentLink}`);
+            logger.log(`[ReservationNotification] ✅ Payment-Link erstellt: ${paymentLink}`);
           } catch (error) {
-            console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des Payment-Links:`, error);
+            logger.error(`[ReservationNotification] ❌ Fehler beim Erstellen des Payment-Links:`, error);
             errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Erstellen des Payment-Links';
             // Payment-Link-Fehler: Log erstellen, aber nicht abbrechen
             // Wir versuchen trotzdem weiterzumachen (z.B. für E-Mail-Versand)
@@ -298,7 +299,7 @@ export class ReservationNotificationService {
                 }
               );
             } catch (logError) {
-              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für Payment-Link-Fehler:`, logError);
+              logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für Payment-Link-Fehler:`, logError);
             }
             // Payment-Link-Fehler ist kritisch - ohne Payment-Link können wir keine Notifications versenden
             throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
@@ -320,9 +321,9 @@ export class ReservationNotificationService {
         
         checkInLink = generateLobbyPmsCheckInLink(reservationForCheckInLink) || 
           `${process.env.FRONTEND_URL || 'http://localhost:3000'}/check-in/${reservation.id}`;
-        console.log(`[ReservationNotification] ✅ Check-in-Link erstellt (mit Original-E-Mail): ${checkInLink}`);
+        logger.log(`[ReservationNotification] ✅ Check-in-Link erstellt (mit Original-E-Mail): ${checkInLink}`);
       } catch (error) {
-        console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Check-in-Links:`, error);
+        logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Check-in-Links:`, error);
         // Check-in-Link-Fehler ist nicht kritisch - verwende Fallback
         checkInLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/check-in/${reservation.id}`;
       }
@@ -330,7 +331,7 @@ export class ReservationNotificationService {
       // Schritt 3: WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden)
       if (guestPhone && paymentLink) {
         try {
-          console.log(`[ReservationNotification] Sende WhatsApp-Nachricht für Reservierung ${reservationId}...`);
+          logger.log(`[ReservationNotification] Sende WhatsApp-Nachricht für Reservierung ${reservationId}...`);
           
           // Verwende Custom Message oder Standard-Nachricht
           if (options?.customMessage) {
@@ -396,9 +397,9 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             paymentLink
           ];
 
-          console.log(`[ReservationNotification] Versuche Session Message (24h-Fenster), bei Fehler: Template Message`);
-          console.log(`[ReservationNotification] Template Name (Basis): ${baseTemplateName}`);
-          console.log(`[ReservationNotification] Template Params: ${JSON.stringify(templateParams)}`);
+          logger.log(`[ReservationNotification] Versuche Session Message (24h-Fenster), bei Fehler: Template Message`);
+          logger.log(`[ReservationNotification] Template Name (Basis): ${baseTemplateName}`);
+          logger.log(`[ReservationNotification] Template Params: ${JSON.stringify(templateParams)}`);
 
           // Versuche zuerst Session Message (wenn 24h-Fenster aktiv), bei Fehler: Template Message
           const whatsappSuccessResult = await whatsappService.sendMessageWithFallback(
@@ -418,7 +419,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
 
           sentMessageAt = new Date();
           whatsappSuccess = whatsappSuccessResult;
-          console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet`);
+          logger.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet`);
           
           // Log erfolgreiche WhatsApp-Notification
           try {
@@ -435,11 +436,11 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
               }
             );
           } catch (logError) {
-            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Notification:`, logError);
+            logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Notification:`, logError);
             // Log-Fehler sollte nicht die Hauptfunktionalität beeinträchtigen
           }
         } catch (error) {
-          console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
+          logger.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
           errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
           // WhatsApp-Fehler ist nicht kritisch - Links wurden bereits erstellt
           // Wir speichern die Links trotzdem, aber Status bleibt auf 'confirmed'
@@ -460,7 +461,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
               }
             );
           } catch (logError) {
-            console.error(`[ReservationNotification] ⚠️ KRITISCH: Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Notification:`, logError);
+            logger.error(`[ReservationNotification] ⚠️ KRITISCH: Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Notification:`, logError);
             // Selbst wenn das Log fehlschlägt, sollten wir weitermachen
           }
         }
@@ -478,7 +479,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             }
           );
         } catch (logError) {
-          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein Payment-Link):`, logError);
+          logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein Payment-Link):`, logError);
         }
       }
 
@@ -486,7 +487,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       if (guestEmail && checkInLink && paymentLink) {
         let emailMessage: string = '';
         try {
-          console.log(`[ReservationNotification] Sende Email für Reservierung ${reservationId}...`);
+          logger.log(`[ReservationNotification] Sende Email für Reservierung ${reservationId}...`);
           
           // Verwende Custom Message oder Standard-Nachricht (gleicher Text wie WhatsApp)
           if (options?.customMessage) {
@@ -621,7 +622,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
 
           if (emailSent) {
             emailSuccess = true;
-            console.log(`[ReservationNotification] ✅ Email erfolgreich versendet`);
+            logger.log(`[ReservationNotification] ✅ Email erfolgreich versendet`);
             
             // Setze sentMessageAt auch bei Email-Versand
             if (!sentMessageAt) {
@@ -643,13 +644,13 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
                 }
               );
             } catch (logError) {
-              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Email-Notification:`, logError);
+              logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Email-Notification:`, logError);
             }
           } else {
             throw new Error('Email konnte nicht versendet werden');
           }
         } catch (error) {
-          console.error(`[ReservationNotification] ❌ Fehler beim Versenden der Email:`, error);
+          logger.error(`[ReservationNotification] ❌ Fehler beim Versenden der Email:`, error);
           const emailErrorMsg = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der Email';
           
           // Log fehlgeschlagene Email-Notification
@@ -668,7 +669,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
               }
             );
           } catch (logError) {
-            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Email-Notification:`, logError);
+            logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Email-Notification:`, logError);
           }
         }
       } else if (guestEmail && (!checkInLink || !paymentLink)) {
@@ -685,7 +686,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             }
           );
         } catch (logError) {
-          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (Email ohne Links):`, logError);
+          logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (Email ohne Links):`, logError);
         }
       }
 
@@ -707,7 +708,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         } else if (paymentLink && !success) {
           // Payment-Link wurde erstellt, aber alle Notifications fehlgeschlagen
           // Status bleibt auf 'confirmed', aber Payment-Link wird gespeichert
-          console.log(`[ReservationNotification] ⚠️ Payment-Link gespeichert, aber alle Notifications fehlgeschlagen - Status bleibt auf 'confirmed'`);
+          logger.log(`[ReservationNotification] ⚠️ Payment-Link gespeichert, aber alle Notifications fehlgeschlagen - Status bleibt auf 'confirmed'`);
         }
 
         await prisma.reservation.update({
@@ -715,9 +716,9 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           data: updateData,
         });
 
-        console.log(`[ReservationNotification] ✅ Reservierung ${reservationId} erfolgreich aktualisiert`);
+        logger.log(`[ReservationNotification] ✅ Reservierung ${reservationId} erfolgreich aktualisiert`);
       } catch (error) {
-        console.error(`[ReservationNotification] ❌ Fehler beim Aktualisieren der Reservierung:`, error);
+        logger.error(`[ReservationNotification] ❌ Fehler beim Aktualisieren der Reservierung:`, error);
         const updateErrorMsg = error instanceof Error ? error.message : 'Unbekannter Fehler beim Aktualisieren der Reservierung';
         
         // Log auch bei Reservation-Update-Fehler erstellen
@@ -735,7 +736,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             }
           );
         } catch (logError) {
-          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für Reservation-Update-Fehler:`, logError);
+          logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für Reservation-Update-Fehler:`, logError);
         }
         
         // Fehler beim Update ist kritisch, aber wir werfen den Fehler nicht, damit der Log erstellt werden kann
@@ -752,7 +753,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         error: errorMessage || undefined
       };
     } catch (error) {
-      console.error(`[ReservationNotification] Fehler beim Senden der Reservation-Einladung:`, error);
+      logger.error(`[ReservationNotification] Fehler beim Senden der Reservation-Einladung:`, error);
       const errorMsg = error instanceof Error ? error.message : 'Unbekannter Fehler';
       
       // Log kritischen Fehler (wenn Reservation nicht gefunden wurde, etc.)
@@ -768,7 +769,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         );
       } catch (logError) {
         // Ignoriere Log-Fehler
-        console.error(`[ReservationNotification] Fehler beim Loggen des kritischen Fehlers:`, logError);
+        logger.error(`[ReservationNotification] Fehler beim Loggen des kritischen Fehlers:`, logError);
       }
       
       return {
@@ -797,7 +798,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
 
       // Entschlüssele Settings (aus Branch oder Organisation)
       const { decryptApiSettings, decryptBranchApiSettings } = await import('../utils/encryption');
-      console.log(`[ReservationNotification] Entschlüssele Settings für Reservation ${reservationId}...`);
+      logger.log(`[ReservationNotification] Entschlüssele Settings für Reservation ${reservationId}...`);
       
       let decryptedSettings: any = null;
       let doorSystemSettings: any = null;
@@ -816,9 +817,9 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       
       const notificationChannels = decryptedSettings?.lobbyPms?.notificationChannels || ['email'];
 
-      console.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
-      console.log(`[ReservationNotification] Guest Phone: ${reservation.guestPhone || 'N/A'}`);
-      console.log(`[ReservationNotification] Settings entschlüsselt:`, {
+      logger.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
+      logger.log(`[ReservationNotification] Guest Phone: ${reservation.guestPhone || 'N/A'}`);
+      logger.log(`[ReservationNotification] Settings entschlüsselt:`, {
         hasDoorSystem: !!doorSystemSettings,
         doorSystemProvider: doorSystemSettings?.provider,
         doorSystemLockIds: doorSystemSettings?.lockIds
@@ -828,14 +829,14 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       let doorPin: string | null = null;
       let doorAppName: string | null = null;
 
-      console.log(`[ReservationNotification] Starte PIN-Generierung für Reservation ${reservationId}...`);
+      logger.log(`[ReservationNotification] Starte PIN-Generierung für Reservation ${reservationId}...`);
 
       try {
         const ttlockService = reservation.branchId
           ? await TTLockService.createForBranch(reservation.branchId)
           : new TTLockService(reservation.organizationId);
 
-        console.log(`[ReservationNotification] Door System Settings:`, {
+        logger.log(`[ReservationNotification] Door System Settings:`, {
           hasDoorSystem: !!doorSystemSettings,
           hasLockIds: !!doorSystemSettings?.lockIds,
           lockIds: doorSystemSettings?.lockIds,
@@ -846,9 +847,9 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           const lockId = doorSystemSettings.lockIds[0]; // Verwende ersten Lock
           doorAppName = 'TTLock'; // Oder aus Settings: doorSystemSettings.appName
 
-          console.log(`[ReservationNotification] Erstelle TTLock Passcode für Lock ID: ${lockId}`);
-          console.log(`[ReservationNotification] Check-in Date: ${reservation.checkInDate}`);
-          console.log(`[ReservationNotification] Check-out Date: ${reservation.checkOutDate}`);
+          logger.log(`[ReservationNotification] Erstelle TTLock Passcode für Lock ID: ${lockId}`);
+          logger.log(`[ReservationNotification] Check-in Date: ${reservation.checkInDate}`);
+          logger.log(`[ReservationNotification] Check-out Date: ${reservation.checkOutDate}`);
 
           // WICHTIG: checkOutDate muss nach checkInDate liegen (mindestens 1 Tag später)
           // Falls beide identisch sind (z.B. bei manuell erstellten Reservierungen), korrigiere
@@ -857,10 +858,10 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           
           // Prüfe ob beide Daten identisch oder checkOutDate vor checkInDate liegt
           if (actualCheckOutDate.getTime() <= actualCheckInDate.getTime()) {
-            console.warn(`[ReservationNotification] ⚠️ checkOutDate ist identisch oder vor checkInDate - korrigiere auf checkInDate + 1 Tag`);
+            logger.warn(`[ReservationNotification] ⚠️ checkOutDate ist identisch oder vor checkInDate - korrigiere auf checkInDate + 1 Tag`);
             actualCheckOutDate = new Date(actualCheckInDate);
             actualCheckOutDate.setDate(actualCheckOutDate.getDate() + 1); // +1 Tag
-            console.log(`[ReservationNotification] Korrigierte Check-out Date: ${actualCheckOutDate}`);
+            logger.log(`[ReservationNotification] Korrigierte Check-out Date: ${actualCheckOutDate}`);
           }
 
           // Erstelle Passcode für Check-in bis Check-out
@@ -871,7 +872,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             `Guest: ${reservation.guestName}`
           );
 
-          console.log(`[ReservationNotification] ✅ TTLock Passcode erfolgreich generiert: ${doorPin}`);
+          logger.log(`[ReservationNotification] ✅ TTLock Passcode erfolgreich generiert: ${doorPin}`);
 
           // Speichere in Reservierung
           await prisma.reservation.update({
@@ -884,15 +885,15 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             }
           });
 
-          console.log(`[ReservationNotification] ✅ PIN in DB gespeichert für Reservation ${reservationId}`);
+          logger.log(`[ReservationNotification] ✅ PIN in DB gespeichert für Reservation ${reservationId}`);
         } else {
-          console.warn(`[ReservationNotification] ⚠️ Keine Lock IDs konfiguriert für Reservation ${reservationId}`);
+          logger.warn(`[ReservationNotification] ⚠️ Keine Lock IDs konfiguriert für Reservation ${reservationId}`);
         }
       } catch (error) {
-        console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des TTLock Passcodes:`, error);
+        logger.error(`[ReservationNotification] ❌ Fehler beim Erstellen des TTLock Passcodes:`, error);
         if (error instanceof Error) {
-          console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
-          console.error(`[ReservationNotification] Stack: ${error.stack}`);
+          logger.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+          logger.error(`[ReservationNotification] Stack: ${error.stack}`);
         }
         // Weiter ohne PIN
       }
@@ -914,7 +915,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             doorAppName
           );
           emailSuccess = true;
-          console.log(`[ReservationNotification] ✅ E-Mail erfolgreich versendet für Reservierung ${reservationId}`);
+          logger.log(`[ReservationNotification] ✅ E-Mail erfolgreich versendet für Reservierung ${reservationId}`);
           
           // Log erfolgreiche Email-Notification
           try {
@@ -929,10 +930,10 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
               }
             );
           } catch (logError) {
-            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Email-Notification:`, logError);
+            logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Email-Notification:`, logError);
           }
         } catch (error) {
-          console.error(`[ReservationNotification] Fehler beim Versenden der E-Mail:`, error);
+          logger.error(`[ReservationNotification] Fehler beim Versenden der E-Mail:`, error);
           emailError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der E-Mail';
           
           // Log fehlgeschlagene Email-Notification
@@ -949,7 +950,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
               }
             );
           } catch (logError) {
-            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Email-Notification:`, logError);
+            logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Email-Notification:`, logError);
           }
         }
       }
@@ -957,7 +958,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
       // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
       if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
-        console.log(`[ReservationNotification] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${doorPin ? `(${doorPin})` : ''} wird nur im Frontend angezeigt`);
+        logger.log(`[ReservationNotification] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${doorPin ? `(${doorPin})` : ''} wird nur im Frontend angezeigt`);
         // TODO: Wieder aktivieren, wenn gewünscht
         /*
         try {
@@ -992,7 +993,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           whatsappSuccess = whatsappSuccessResult;
           
           if (whatsappSuccess) {
-            console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
+            logger.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
             
             // Log erfolgreiche WhatsApp-Notification
             try {
@@ -1007,10 +1008,10 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
                 }
               );
             } catch (logError) {
-              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche WhatsApp-Notification:`, logError);
+              logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche WhatsApp-Notification:`, logError);
             }
           } else {
-            console.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
+            logger.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
             whatsappError = 'WhatsApp-Nachricht konnte nicht versendet werden';
             
             // Log fehlgeschlagene WhatsApp-Notification
@@ -1027,26 +1028,26 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
                 }
               );
             } catch (logError) {
-              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
+              logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
             }
           }
         } catch (error) {
-          console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
+          logger.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
           whatsappError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
         }
         */
       } else {
         if (!notificationChannels.includes('whatsapp')) {
-          console.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
+          logger.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
         }
         if (!reservation.guestPhone) {
-          console.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
+          logger.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
         }
       }
 
       // Log auch wenn PIN nicht generiert werden konnte
       if (!doorPin) {
-        console.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden für Reservierung ${reservationId}`);
+        logger.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden für Reservierung ${reservationId}`);
         try {
           await this.logNotification(
             reservationId,
@@ -1059,18 +1060,18 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             }
           );
         } catch (logError) {
-          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein PIN):`, logError);
+          logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein PIN):`, logError);
         }
       }
 
       // Prüfe ob PIN tatsächlich generiert wurde
       if (doorPin) {
-        console.log(`[ReservationNotification] ✅ PIN generiert und Mitteilung versendet für Reservierung ${reservationId}`);
+        logger.log(`[ReservationNotification] ✅ PIN generiert und Mitteilung versendet für Reservierung ${reservationId}`);
       } else {
-        console.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden, aber Mitteilung versendet für Reservierung ${reservationId}`);
+        logger.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden, aber Mitteilung versendet für Reservierung ${reservationId}`);
       }
     } catch (error) {
-      console.error(`[ReservationNotification] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:`, error);
+      logger.error(`[ReservationNotification] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:`, error);
       throw error;
     }
   }
@@ -1109,7 +1110,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
 
       // Entschlüssele Settings (aus Branch oder Organisation)
       const { decryptApiSettings, decryptBranchApiSettings } = await import('../utils/encryption');
-      console.log(`[ReservationNotification] Entschlüssele Settings für Reservation ${reservationId}...`);
+      logger.log(`[ReservationNotification] Entschlüssele Settings für Reservation ${reservationId}...`);
       
       let decryptedSettings: any = null;
       let doorSystemSettings: any = null;
@@ -1128,10 +1129,10 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       
       const notificationChannels = decryptedSettings?.lobbyPms?.notificationChannels || ['email'];
 
-      console.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
-      console.log(`[ReservationNotification] Guest Phone: ${finalGuestPhone || 'N/A'}`);
-      console.log(`[ReservationNotification] Guest Email: ${finalGuestEmail || 'N/A'}`);
-      console.log(`[ReservationNotification] Settings entschlüsselt:`, {
+      logger.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
+      logger.log(`[ReservationNotification] Guest Phone: ${finalGuestPhone || 'N/A'}`);
+      logger.log(`[ReservationNotification] Guest Email: ${finalGuestEmail || 'N/A'}`);
+      logger.log(`[ReservationNotification] Settings entschlüsselt:`, {
         hasDoorSystem: !!doorSystemSettings,
         doorSystemProvider: doorSystemSettings?.provider,
         doorSystemLockIds: doorSystemSettings?.lockIds
@@ -1141,14 +1142,14 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       let doorPin: string | null = null;
       let doorAppName: string | null = null;
 
-      console.log(`[ReservationNotification] Starte Passcode-Generierung für Reservation ${reservationId}...`);
+      logger.log(`[ReservationNotification] Starte Passcode-Generierung für Reservation ${reservationId}...`);
 
       try {
         const ttlockService = reservation.branchId
           ? await TTLockService.createForBranch(reservation.branchId)
           : new TTLockService(reservation.organizationId);
 
-        console.log(`[ReservationNotification] Door System Settings:`, {
+        logger.log(`[ReservationNotification] Door System Settings:`, {
           hasDoorSystem: !!doorSystemSettings,
           hasLockIds: !!doorSystemSettings?.lockIds,
           lockIds: doorSystemSettings?.lockIds,
@@ -1159,9 +1160,9 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           const lockId = doorSystemSettings.lockIds[0]; // Verwende ersten Lock
           doorAppName = 'TTLock'; // Oder aus Settings: doorSystemSettings.appName
 
-          console.log(`[ReservationNotification] Erstelle TTLock Passcode für Lock ID: ${lockId}`);
-          console.log(`[ReservationNotification] Check-in Date: ${reservation.checkInDate}`);
-          console.log(`[ReservationNotification] Check-out Date: ${reservation.checkOutDate}`);
+          logger.log(`[ReservationNotification] Erstelle TTLock Passcode für Lock ID: ${lockId}`);
+          logger.log(`[ReservationNotification] Check-in Date: ${reservation.checkInDate}`);
+          logger.log(`[ReservationNotification] Check-out Date: ${reservation.checkOutDate}`);
 
           // WICHTIG: checkOutDate muss nach checkInDate liegen (mindestens 1 Tag später)
           // Falls beide identisch sind (z.B. bei manuell erstellten Reservierungen), korrigiere
@@ -1170,10 +1171,10 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           
           // Prüfe ob beide Daten identisch oder checkOutDate vor checkInDate liegt
           if (actualCheckOutDate.getTime() <= actualCheckInDate.getTime()) {
-            console.warn(`[ReservationNotification] ⚠️ checkOutDate ist identisch oder vor checkInDate - korrigiere auf checkInDate + 1 Tag`);
+            logger.warn(`[ReservationNotification] ⚠️ checkOutDate ist identisch oder vor checkInDate - korrigiere auf checkInDate + 1 Tag`);
             actualCheckOutDate = new Date(actualCheckInDate);
             actualCheckOutDate.setDate(actualCheckOutDate.getDate() + 1); // +1 Tag
-            console.log(`[ReservationNotification] Korrigierte Check-out Date: ${actualCheckOutDate}`);
+            logger.log(`[ReservationNotification] Korrigierte Check-out Date: ${actualCheckOutDate}`);
           }
 
           // Erstelle Passcode für Check-in bis Check-out
@@ -1184,7 +1185,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             `Guest: ${reservation.guestName}`
           );
 
-          console.log(`[ReservationNotification] ✅ TTLock Passcode erfolgreich generiert: ${doorPin}`);
+          logger.log(`[ReservationNotification] ✅ TTLock Passcode erfolgreich generiert: ${doorPin}`);
 
           // Speichere in Reservierung
           await prisma.reservation.update({
@@ -1197,15 +1198,15 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             }
           });
 
-          console.log(`[ReservationNotification] ✅ PIN in DB gespeichert für Reservation ${reservationId}`);
+          logger.log(`[ReservationNotification] ✅ PIN in DB gespeichert für Reservation ${reservationId}`);
         } else {
-          console.warn(`[ReservationNotification] ⚠️ Keine Lock IDs konfiguriert für Reservation ${reservationId}`);
+          logger.warn(`[ReservationNotification] ⚠️ Keine Lock IDs konfiguriert für Reservation ${reservationId}`);
         }
       } catch (error) {
-        console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des TTLock Passcodes:`, error);
+        logger.error(`[ReservationNotification] ❌ Fehler beim Erstellen des TTLock Passcodes:`, error);
         if (error instanceof Error) {
-          console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
-          console.error(`[ReservationNotification] Stack: ${error.stack}`);
+          logger.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+          logger.error(`[ReservationNotification] Stack: ${error.stack}`);
         }
         // Weiter ohne PIN
       }
@@ -1288,7 +1289,7 @@ ${contentText}
             doorAppName
           );
           emailSuccess = true;
-          console.log(`[ReservationNotification] ✅ E-Mail erfolgreich versendet für Reservierung ${reservationId}`);
+          logger.log(`[ReservationNotification] ✅ E-Mail erfolgreich versendet für Reservierung ${reservationId}`);
           
           // Log erfolgreiche Email-Notification
           try {
@@ -1303,10 +1304,10 @@ ${contentText}
               }
             );
           } catch (logError) {
-            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Email-Notification:`, logError);
+            logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Email-Notification:`, logError);
           }
         } catch (error) {
-          console.error(`[ReservationNotification] Fehler beim Versenden der E-Mail:`, error);
+          logger.error(`[ReservationNotification] Fehler beim Versenden der E-Mail:`, error);
           emailError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der E-Mail';
           
           // Log fehlgeschlagene Email-Notification
@@ -1323,7 +1324,7 @@ ${contentText}
               }
             );
           } catch (logError) {
-            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Email-Notification:`, logError);
+            logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Email-Notification:`, logError);
           }
         }
       }
@@ -1382,9 +1383,9 @@ ${contentText}
             
             const templateParams = [greeting, contentText];
             
-            console.log(`[ReservationNotification] Versuche Session Message (24h-Fenster) mit customMessage, bei Fehler: Template Message`);
-            console.log(`[ReservationNotification] Template Name: ${templateName}`);
-            console.log(`[ReservationNotification] Template Params: ${JSON.stringify(templateParams)}`);
+            logger.log(`[ReservationNotification] Versuche Session Message (24h-Fenster) mit customMessage, bei Fehler: Template Message`);
+            logger.log(`[ReservationNotification] Template Name: ${templateName}`);
+            logger.log(`[ReservationNotification] Template Params: ${JSON.stringify(templateParams)}`);
             
             whatsappSuccess = await whatsappService.sendMessageWithFallback(
               finalGuestPhone,
@@ -1414,7 +1415,7 @@ ${contentText}
           }
           
           if (whatsappSuccess) {
-            console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
+            logger.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
             
             // Log erfolgreiche WhatsApp-Notification
             try {
@@ -1429,10 +1430,10 @@ ${contentText}
                 }
               );
             } catch (logError) {
-              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche WhatsApp-Notification:`, logError);
+              logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche WhatsApp-Notification:`, logError);
             }
           } else {
-            console.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
+            logger.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
             whatsappError = 'WhatsApp-Nachricht konnte nicht versendet werden';
             
             // Log fehlgeschlagene WhatsApp-Notification
@@ -1449,11 +1450,11 @@ ${contentText}
                 }
               );
             } catch (logError) {
-              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
+              logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
             }
           }
         } catch (error) {
-          console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
+          logger.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
           whatsappError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
           
           // Log fehlgeschlagene WhatsApp-Notification
@@ -1470,21 +1471,21 @@ ${contentText}
               }
             );
           } catch (logError) {
-            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
+            logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
           }
         }
       } else {
         if (!notificationChannels.includes('whatsapp')) {
-          console.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
+          logger.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
         }
         if (!finalGuestPhone) {
-          console.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
+          logger.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
         }
       }
 
       // Log auch wenn PIN nicht generiert werden konnte
       if (!doorPin) {
-        console.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden für Reservierung ${reservationId}`);
+        logger.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden für Reservierung ${reservationId}`);
         try {
           await this.logNotification(
             reservationId,
@@ -1497,7 +1498,7 @@ ${contentText}
             }
           );
         } catch (logError) {
-          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein PIN):`, logError);
+          logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein PIN):`, logError);
         }
       }
 
@@ -1514,12 +1515,12 @@ ${contentText}
 
       // Prüfe ob PIN tatsächlich generiert wurde
       if (doorPin) {
-        console.log(`[ReservationNotification] ✅ Passcode generiert und Mitteilung versendet für Reservierung ${reservationId}`);
+        logger.log(`[ReservationNotification] ✅ Passcode generiert und Mitteilung versendet für Reservierung ${reservationId}`);
       } else {
-        console.warn(`[ReservationNotification] ⚠️ Passcode konnte nicht generiert werden, aber Mitteilung versendet für Reservierung ${reservationId}`);
+        logger.warn(`[ReservationNotification] ⚠️ Passcode konnte nicht generiert werden, aber Mitteilung versendet für Reservierung ${reservationId}`);
       }
     } catch (error) {
-      console.error(`[ReservationNotification] Fehler beim Versenden des Passcodes:`, error);
+      logger.error(`[ReservationNotification] Fehler beim Versenden des Passcodes:`, error);
       throw error;
     }
   }
@@ -1594,7 +1595,7 @@ ${contentText}
           });
         }
       } catch (error) {
-        console.error(`[ReservationNotification] Fehler beim Erstellen des TTLock Passcodes:`, error);
+        logger.error(`[ReservationNotification] Fehler beim Erstellen des TTLock Passcodes:`, error);
         // Weiter ohne PIN
       }
 
@@ -1610,7 +1611,7 @@ ${contentText}
       // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
       // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
       if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
-        console.log(`[ReservationNotification] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${doorPin ? `(${doorPin})` : ''} wird nur im Frontend angezeigt`);
+        logger.log(`[ReservationNotification] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${doorPin ? `(${doorPin})` : ''} wird nur im Frontend angezeigt`);
         // TODO: Wieder aktivieren, wenn gewünscht
         /*
         const whatsappService = reservation.branchId
@@ -1627,9 +1628,9 @@ ${contentText}
         */
       }
 
-      console.log(`[ReservationNotification] Check-in-Bestätigung versendet für Reservierung ${reservationId}`);
+      logger.log(`[ReservationNotification] Check-in-Bestätigung versendet für Reservierung ${reservationId}`);
     } catch (error) {
-      console.error(`[ReservationNotification] Fehler beim Versand der Check-in-Bestätigung:`, error);
+      logger.error(`[ReservationNotification] Fehler beim Versand der Check-in-Bestätigung:`, error);
       throw error;
     }
   }
@@ -1847,7 +1848,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           }
         }
       } catch (error) {
-        console.warn(`[ReservationNotification] Fehler beim Laden der Zimmer-Beschreibung für E-Mail:`, error);
+        logger.warn(`[ReservationNotification] Fehler beim Laden der Zimmer-Beschreibung für E-Mail:`, error);
         // Fallback auf reservation.roomDescription
         roomDescription = reservation.roomDescription || 'N/A';
       }

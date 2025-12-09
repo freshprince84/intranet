@@ -8,6 +8,7 @@ import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { createNotificationIfEnabled } from './notificationController';
 import { parse } from 'date-fns';
 import { getDataIsolationFilter } from '../middleware/organization';
+import { logger } from '../utils/logger';
 import { getUserLanguage, getWorktimeNotificationText } from '../utils/translations';
 import { worktimeCache } from '../services/worktimeCache';
 
@@ -69,8 +70,8 @@ export const startWorktime = async (req: Request, res: Response) => {
     const todayEnd = new Date(localEndOfDay.getTime() - endOffsetMinutes * 60000);
     
     // Protokolliere die berechneten Zeitgrenzen für bessere Nachvollziehbarkeit
-    console.log(`Berechneter Tagesbeginn (kompensiert): ${todayStart.toISOString()}`);
-    console.log(`Berechnetes Tagesende (kompensiert): ${todayEnd.toISOString()}`);
+    logger.log(`Berechneter Tagesbeginn (kompensiert): ${todayStart.toISOString()}`);
+    logger.log(`Berechnetes Tagesende (kompensiert): ${todayEnd.toISOString()}`);
 
     // Hole alle Zeiterfassungen für heute
     const todaysWorktimes = await prisma.workTime.findMany({
@@ -90,12 +91,12 @@ export const startWorktime = async (req: Request, res: Response) => {
     let totalWorkTimeMs = 0;
     
     // Protokolliere jede einzelne Zeiterfassung für bessere Transparenz
-    console.log(`Gefundene abgeschlossene Zeiterfassungen für heute: ${todaysWorktimes.length}`);
+    logger.log(`Gefundene abgeschlossene Zeiterfassungen für heute: ${todaysWorktimes.length}`);
     for (const workTime of todaysWorktimes) {
       if (workTime.endTime) {
         const workTimeMs = workTime.endTime.getTime() - workTime.startTime.getTime();
         const workTimeHours = workTimeMs / (1000 * 60 * 60);
-        console.log(`Zeiterfassung ID ${workTime.id}: ${workTime.startTime.toISOString()} - ${workTime.endTime.toISOString()} = ${workTimeHours.toFixed(2)}h`);
+        logger.log(`Zeiterfassung ID ${workTime.id}: ${workTime.startTime.toISOString()} - ${workTime.endTime.toISOString()} = ${workTimeHours.toFixed(2)}h`);
         totalWorkTimeMs += workTimeMs;
       }
     }
@@ -105,7 +106,7 @@ export const startWorktime = async (req: Request, res: Response) => {
     
     // Wenn die gesamte Arbeitszeit die normale Arbeitszeit überschreitet, verhindere den Start
     if (totalWorkTimeHours >= user.normalWorkingHours) {
-      console.log(`Schwellenwert erreicht oder überschritten. Verhindere Start der Zeiterfassung.`);
+      logger.log(`Schwellenwert erreicht oder überschritten. Verhindere Start der Zeiterfassung.`);
       return res.status(403).json({
         message: `Die tägliche Arbeitszeit von ${user.normalWorkingHours}h wurde bereits erreicht. Die Zeiterfassung kann erst am nächsten Tag wieder gestartet werden.`
       });
@@ -126,7 +127,7 @@ export const startWorktime = async (req: Request, res: Response) => {
       }
     });
 
-    console.log(`Zeiterfassung ID ${worktime.id} gespeichert mit Startzeit: ${worktime.startTime.toISOString()}`);
+    logger.log(`Zeiterfassung ID ${worktime.id} gespeichert mit Startzeit: ${worktime.startTime.toISOString()}`);
 
     // OPTIMIERUNG: Cache invalidieren
     worktimeCache.invalidate(Number(userId));
@@ -145,7 +146,7 @@ export const startWorktime = async (req: Request, res: Response) => {
 
     res.status(201).json(worktime);
   } catch (error) {
-    console.error('Fehler beim Starten der Zeiterfassung:', error);
+    logger.error('Fehler beim Starten der Zeiterfassung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -174,7 +175,7 @@ export const stopWorktime = async (req: Request, res: Response) => {
     // VEREINFACHT: Verwende die aktuelle Zeit oder die übergebene endTime direkt
     const now = endTime ? new Date(endTime) : new Date();
     
-    console.log(`Stoppe Zeiterfassung mit Endzeit: ${now.toISOString()}`);
+    logger.log(`Stoppe Zeiterfassung mit Endzeit: ${now.toISOString()}`);
 
     const worktime = await prisma.workTime.update({
       where: { id: activeWorktime.id },
@@ -189,7 +190,7 @@ export const stopWorktime = async (req: Request, res: Response) => {
       }
     });
     
-    console.log(`Gespeicherte Endzeit: ${worktime.endTime.toISOString()}`);
+    logger.log(`Gespeicherte Endzeit: ${worktime.endTime.toISOString()}`);
 
     // OPTIMIERUNG: Cache invalidieren
     worktimeCache.invalidate(Number(userId));
@@ -208,7 +209,7 @@ export const stopWorktime = async (req: Request, res: Response) => {
 
     res.json(worktime);
   } catch (error) {
-    console.error('Fehler beim Stoppen der Zeiterfassung:', error);
+    logger.error('Fehler beim Stoppen der Zeiterfassung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -260,11 +261,11 @@ export const getWorktimes = async (req: Request, res: Response) => {
       const compensatedStartOfDay = new Date(localStartOfDay.getTime() - startOffsetMinutes * 60000);
       const compensatedEndOfDay = new Date(localEndOfDay.getTime() - endOffsetMinutes * 60000);
       
-      console.log(`Filterung für Datum: ${year}-${month+1}-${day}`);
-      console.log(`Original Start des Tages: ${localStartOfDay.toISOString()}`);
-      console.log(`Kompensierter Start des Tages: ${compensatedStartOfDay.toISOString()}`);
-      console.log(`Original Ende des Tages: ${localEndOfDay.toISOString()}`);
-      console.log(`Kompensiertes Ende des Tages: ${compensatedEndOfDay.toISOString()}`);
+      logger.log(`Filterung für Datum: ${year}-${month+1}-${day}`);
+      logger.log(`Original Start des Tages: ${localStartOfDay.toISOString()}`);
+      logger.log(`Kompensierter Start des Tages: ${compensatedStartOfDay.toISOString()}`);
+      logger.log(`Original Ende des Tages: ${localEndOfDay.toISOString()}`);
+      logger.log(`Kompensiertes Ende des Tages: ${compensatedEndOfDay.toISOString()}`);
       
       // Setze die Abfragebedingung
       whereClause = {
@@ -288,7 +289,7 @@ export const getWorktimes = async (req: Request, res: Response) => {
 
     res.json(worktimes);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Zeiterfassungen:', error);
+    logger.error('Fehler beim Abrufen der Zeiterfassungen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -321,7 +322,7 @@ export const deleteWorktime = async (req: Request, res: Response) => {
 
     res.json({ message: 'Zeiterfassung erfolgreich gelöscht' });
   } catch (error) {
-    console.error('Fehler beim Löschen der Zeiterfassung:', error);
+    logger.error('Fehler beim Löschen der Zeiterfassung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -332,7 +333,7 @@ export const updateWorktime = async (req: Request, res: Response) => {
     const { startTime, endTime, branchId } = req.body;
     const userId = req.userId;
 
-    console.log('DEBUG updateWorktime Received:', JSON.stringify({ id, startTime, endTime, branchId, userId }));
+    logger.log('DEBUG updateWorktime Received:', JSON.stringify({ id, startTime, endTime, branchId, userId }));
 
     if (!userId) {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
@@ -367,7 +368,7 @@ export const updateWorktime = async (req: Request, res: Response) => {
         if (dateString.match(/T\d{2}:\d{2}:\d{2}:\d{2}$/)) {
           // Format ist YYYY-MM-DDTHH:MM:SS:00 - entferne das letzte :00
           cleanDateString = dateString.substring(0, dateString.lastIndexOf(':'));
-          console.log(`Bereinigter Datumsstring: ${cleanDateString}`);
+          logger.log(`Bereinigter Datumsstring: ${cleanDateString}`);
         }
         
         // Jetzt normale Verarbeitung mit dem bereinigten String
@@ -383,13 +384,13 @@ export const updateWorktime = async (req: Request, res: Response) => {
           // Fallback für andere Formate
           const date = new Date(cleanDateString);
           if (isNaN(date.getTime())) {
-            console.error(`Ungültiges Datum: ${cleanDateString}`);
+            logger.error(`Ungültiges Datum: ${cleanDateString}`);
             return null;
           }
           return date;
         }
       } catch (error) {
-        console.error(`Fehler beim Parsen des Datums ${dateString}:`, error);
+        logger.error(`Fehler beim Parsen des Datums ${dateString}:`, error);
         return null;
       }
     };
@@ -399,7 +400,7 @@ export const updateWorktime = async (req: Request, res: Response) => {
       const parsedStartTime = safeDateParse(startTime);
       if (parsedStartTime) {
         updateData.startTime = parsedStartTime;
-        console.log('Startzeit für Update:', parsedStartTime.toISOString());
+        logger.log('Startzeit für Update:', parsedStartTime.toISOString());
       } else {
         return res.status(400).json({ message: 'Ungültiges Startzeit-Format' });
       }
@@ -410,19 +411,19 @@ export const updateWorktime = async (req: Request, res: Response) => {
       // Wenn endTime null ist, setze es explizit auf null
       if (endTime === null) {
         updateData.endTime = null;
-        console.log('Endzeit für Update: null');
+        logger.log('Endzeit für Update: null');
       } else {
         const parsedEndTime = safeDateParse(endTime);
         if (parsedEndTime) {
           updateData.endTime = parsedEndTime;
-          console.log('Endzeit für Update:', parsedEndTime.toISOString());
+          logger.log('Endzeit für Update:', parsedEndTime.toISOString());
         } else {
           return res.status(400).json({ message: 'Ungültiges Endzeit-Format' });
         }
       }
     }
     
-    console.log('Final updateData:', JSON.stringify(updateData));
+    logger.log('Final updateData:', JSON.stringify(updateData));
 
     const updatedWorktime = await prisma.workTime.update({
       where: { id: Number(id) },
@@ -434,7 +435,7 @@ export const updateWorktime = async (req: Request, res: Response) => {
 
     res.json(updatedWorktime);
   } catch (error) {
-    console.error('Fehler beim Aktualisieren der Zeiterfassung:', error);
+    logger.error('Fehler beim Aktualisieren der Zeiterfassung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -544,7 +545,7 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
       },
     });
 
-    console.log(`Gefundene Einträge (${isQuinzena ? 'Quinzena' : 'Woche'}): ${entries.length}`);
+    logger.log(`Gefundene Einträge (${isQuinzena ? 'Quinzena' : 'Woche'}): ${entries.length}`);
     
     // Erstelle Tagesdaten-Struktur
     let periodData: Array<{ day: string; hours: number; date: string }>;
@@ -568,8 +569,8 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
         });
       }
       
-      console.log(`Quinzena periodData erstellt: ${periodData.length} Tage von ${periodStartStr} bis ${periodEndStr}`);
-      console.log('PeriodData:', periodData.map(d => `${d.date}: ${d.day}`));
+      logger.log(`Quinzena periodData erstellt: ${periodData.length} Tage von ${periodStartStr} bis ${periodEndStr}`);
+      logger.log('PeriodData:', periodData.map(d => `${d.date}: ${d.day}`));
     } else {
       // Woche: Wochentage (bestehend)
       periodData = [
@@ -697,7 +698,7 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
                 daysWorked++;
               }
             } else {
-              console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+              logger.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
             }
           } else {
             // Abgeschlossene Zeitmessung: Prüfe ob Start und Ende auf dem gleichen lokalen Tag liegen
@@ -721,7 +722,7 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
                   daysWorked++;
                 }
               } else {
-                console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+                logger.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
               }
             } else {
             // Mehrere Tage: Verteile proportional
@@ -807,7 +808,7 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
                     daysWorked++;
                   }
                 } else {
-                  console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+                  logger.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
                 }
               }
               
@@ -858,7 +859,7 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
                   daysWorked++;
                 }
               } else {
-                console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+                logger.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
               }
             }
             
@@ -882,7 +883,7 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
     // Für Frontend-Kompatibilität: weeklyData verwenden
     const weeklyData = periodData;
 
-    console.log("Berechnete weeklyData:", weeklyData);
+    logger.log("Berechnete weeklyData:", weeklyData);
 
     // Berechne den Durchschnitt der Arbeitsstunden pro Tag
     const averageHoursPerDay = daysWorked > 0 ? Math.round((totalHours / daysWorked) * 10) / 10 : 0;
@@ -890,7 +891,7 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
     // Runde die Gesamtstunden auf eine Dezimalstelle
     totalHours = Math.round(totalHours * 10) / 10;
 
-    console.log(`Gesamtstunden: ${totalHours}, Durchschnitt: ${averageHoursPerDay}, Arbeitstage: ${daysWorked}`);
+    logger.log(`Gesamtstunden: ${totalHours}, Durchschnitt: ${averageHoursPerDay}, Arbeitstage: ${daysWorked}`);
 
     // Sende die Statistikdaten an das Frontend
     res.json({
@@ -900,7 +901,7 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
       weeklyData
     });
   } catch (error) {
-    console.error('Fehler beim Abrufen der Worktime-Statistik:', error);
+    logger.error('Fehler beim Abrufen der Worktime-Statistik:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -964,7 +965,7 @@ export const exportWorktimes = async (req: Request, res: Response) => {
       weekDateString = format(monday, 'yyyy-MM-dd');
     }
     
-    console.log(`Export - Verwende direkt das Datum: ${weekDateString} als Beginn der Woche`);
+    logger.log(`Export - Verwende direkt das Datum: ${weekDateString} als Beginn der Woche`);
     
     // Berechne das Ende der Woche (7 Tage später)
     // Der Datumstring für den Wochenanfang
@@ -974,7 +975,7 @@ export const exportWorktimes = async (req: Request, res: Response) => {
     tempDate.setDate(tempDate.getDate() + 6); // Ende der Woche ist 6 Tage später (Sonntag)
     const weekEndStr = format(tempDate, 'yyyy-MM-dd');
     
-    console.log(`Export - Wochenbereich String: ${weekStartStr} bis ${weekEndStr}`);
+    logger.log(`Export - Wochenbereich String: ${weekStartStr} bis ${weekEndStr}`);
     
     // DIE UNIVERSELLE LÖSUNG: Wir arbeiten mit UTC-Zeitgrenzen als Referenzpunkte
     // Für "Montag 00:00" bis "Sonntag 23:59:59" der ausgewählten Woche, WELTWEIT KONSISTENT
@@ -984,7 +985,7 @@ export const exportWorktimes = async (req: Request, res: Response) => {
     const weekStartUtc = new Date(`${weekStartStr}T00:00:00.000Z`); // Z = UTC!
     const weekEndUtc = new Date(`${weekEndStr}T23:59:59.999Z`);     // Z = UTC!
     
-    console.log(`Universeller UTC-Bereich (weltweit konsistent): ${weekStartUtc.toISOString()} bis ${weekEndUtc.toISOString()}`);
+    logger.log(`Universeller UTC-Bereich (weltweit konsistent): ${weekStartUtc.toISOString()} bis ${weekEndUtc.toISOString()}`);
     
     // Direkte Suche nach den Einträgen mit universellen UTC-Grenzen
     const entries = await prisma.workTime.findMany({
@@ -1003,9 +1004,9 @@ export const exportWorktimes = async (req: Request, res: Response) => {
       },
     });
 
-    console.log(`Gefundene Einträge mit universellen UTC-Grenzen: ${entries.length}`);
+    logger.log(`Gefundene Einträge mit universellen UTC-Grenzen: ${entries.length}`);
     if (entries.length > 0) {
-      console.log(`Erster Eintrag - startTime: ${entries[0].startTime.toISOString()}, endTime: ${entries[0].endTime.toISOString()}`);
+      logger.log(`Erster Eintrag - startTime: ${entries[0].startTime.toISOString()}, endTime: ${entries[0].endTime.toISOString()}`);
     }
 
     const workbook = new ExcelJS.Workbook();
@@ -1067,7 +1068,7 @@ export const exportWorktimes = async (req: Request, res: Response) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error('Fehler beim Exportieren der Zeiterfassungen:', error);
+    logger.error('Fehler beim Exportieren der Zeiterfassungen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -1118,7 +1119,7 @@ export const getActiveWorktime = async (req: Request, res: Response) => {
       active: true
     });
   } catch (error) {
-    console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
+    logger.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -1160,10 +1161,10 @@ export const checkAndStopExceededWorktimes = async () => {
       const todayEnd = new Date(year, month, day, 23, 59, 59, 999);
       
       // Protokolliere lokale Zeit (ohne UTC-Konvertierung)
-      console.log(`Prüfung auf überschrittene Arbeitszeit für Datum: ${format(now, 'yyyy-MM-dd')}`);
-      console.log(`Aktuelle Zeit: ${formatLocalTime(now)}`);
-      console.log(`Tagesbeginn: ${formatLocalTime(todayStart)}`);
-      console.log(`Tagesende: ${formatLocalTime(todayEnd)}`);
+      logger.log(`Prüfung auf überschrittene Arbeitszeit für Datum: ${format(now, 'yyyy-MM-dd')}`);
+      logger.log(`Aktuelle Zeit: ${formatLocalTime(now)}`);
+      logger.log(`Tagesbeginn: ${formatLocalTime(todayStart)}`);
+      logger.log(`Tagesende: ${formatLocalTime(todayEnd)}`);
 
       // Hole alle beendeten Zeiterfassungen für heute
       const todaysWorktimes = await prisma.workTime.findMany({
@@ -1183,7 +1184,7 @@ export const checkAndStopExceededWorktimes = async () => {
       let totalWorkTimeMs = 0;
       
       // Protokolliere jede einzelne Zeiterfassung für bessere Transparenz
-      console.log(`Gefundene abgeschlossene Zeiterfassungen für heute: ${todaysWorktimes.length}`);
+      logger.log(`Gefundene abgeschlossene Zeiterfassungen für heute: ${todaysWorktimes.length}`);
       for (const wt of todaysWorktimes) {
         if (wt.endTime) {
           // Berechne Differenz aus lokalen Komponenten (ohne getTime() - verboten!)
@@ -1201,7 +1202,7 @@ export const checkAndStopExceededWorktimes = async () => {
 
           const workTimeMs = daysDiffMs + timeDiffMs;
           const workTimeHours = workTimeMs / (1000 * 60 * 60);
-          console.log(`Zeiterfassung ID ${wt.id}: ${formatLocalTime(wt.startTime)} - ${formatLocalTime(wt.endTime)} = ${workTimeHours.toFixed(2)}h`);
+          logger.log(`Zeiterfassung ID ${wt.id}: ${formatLocalTime(wt.startTime)} - ${formatLocalTime(wt.endTime)} = ${workTimeHours.toFixed(2)}h`);
           totalWorkTimeMs += workTimeMs;
         }
       }
@@ -1223,7 +1224,7 @@ export const checkAndStopExceededWorktimes = async () => {
       // Formatiere lokale Zeit für bessere Lesbarkeit
       const localNowString = formatLocalTime(now);
       
-      console.log(`Aktuelle laufende Sitzung: ${formatLocalTime(worktime.startTime)} - jetzt (${localNowString}) = ${currentSessionHours.toFixed(2)}h`);
+      logger.log(`Aktuelle laufende Sitzung: ${formatLocalTime(worktime.startTime)} - jetzt (${localNowString}) = ${currentSessionHours.toFixed(2)}h`);
       
       totalWorkTimeMs += currentSessionMs;
 
@@ -1231,12 +1232,12 @@ export const checkAndStopExceededWorktimes = async () => {
       const totalWorkTimeHours = totalWorkTimeMs / (1000 * 60 * 60);
       
       // Anzeige der normalen Arbeitszeit des Benutzers und der aktuellen Gesamtarbeitszeit
-      console.log(`Normale Arbeitszeit des Benutzers: ${worktime.user.normalWorkingHours}h`);
-      console.log(`Gesamtarbeitszeit heute: ${totalWorkTimeHours.toFixed(2)}h`);
+      logger.log(`Normale Arbeitszeit des Benutzers: ${worktime.user.normalWorkingHours}h`);
+      logger.log(`Gesamtarbeitszeit heute: ${totalWorkTimeHours.toFixed(2)}h`);
 
       // Wenn die gesamte Arbeitszeit die normale Arbeitszeit überschreitet, stoppe die Zeiterfassung
       if (totalWorkTimeHours >= worktime.user.normalWorkingHours) {
-        console.log(`Schwellenwert erreicht oder überschritten. Stoppe Zeiterfassung automatisch.`);
+        logger.log(`Schwellenwert erreicht oder überschritten. Stoppe Zeiterfassung automatisch.`);
         
         // Zeiterfassung beenden - speichere die aktuelle Zeit direkt
         // KORREKT: Wie im Modal - verwende new Date() direkt (wird als lokale Zeit gespeichert)
@@ -1252,7 +1253,7 @@ export const checkAndStopExceededWorktimes = async () => {
           }
         });
 
-        console.log(`Zeiterfassung ID ${stoppedWorktime.id} wurde beendet um: ${formatLocalTime(stoppedWorktime.endTime)}`);
+        logger.log(`Zeiterfassung ID ${stoppedWorktime.id} wurde beendet um: ${formatLocalTime(stoppedWorktime.endTime)}`);
 
         // Benachrichtigung erstellen
         const userLang = await getUserLanguage(worktime.userId);
@@ -1266,13 +1267,13 @@ export const checkAndStopExceededWorktimes = async () => {
           relatedEntityType: 'auto_stop'
         });
 
-        console.log(`Zeiterfassung für Benutzer ${worktime.userId} automatisch beendet.`);
+        logger.log(`Zeiterfassung für Benutzer ${worktime.userId} automatisch beendet.`);
       }
     }
 
-    console.log('Prüfung auf überschrittene Arbeitszeiten abgeschlossen.');
+    logger.log('Prüfung auf überschrittene Arbeitszeiten abgeschlossen.');
   } catch (error) {
-    console.error('Fehler bei der Prüfung auf überschrittene Arbeitszeiten:', error);
+    logger.error('Fehler bei der Prüfung auf überschrittene Arbeitszeiten:', error);
   }
 };
 

@@ -1,5 +1,6 @@
 import { EmailReservationService } from './emailReservationService';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Scheduler für automatische Email-Reservation-Verarbeitung
@@ -17,11 +18,11 @@ export class EmailReservationScheduler {
    */
   static start(): void {
     if (this.isRunning) {
-      console.log('[EmailReservationScheduler] Scheduler läuft bereits');
+      logger.log('[EmailReservationScheduler] Scheduler läuft bereits');
       return;
     }
 
-    console.log('[EmailReservationScheduler] Scheduler gestartet');
+    logger.log('[EmailReservationScheduler] Scheduler gestartet');
 
     // Prüfe alle 10 Minuten
     const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten
@@ -44,7 +45,7 @@ export class EmailReservationScheduler {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
       this.isRunning = false;
-      console.log('[EmailReservationScheduler] Scheduler gestoppt');
+      logger.log('[EmailReservationScheduler] Scheduler gestoppt');
     }
   }
 
@@ -53,7 +54,7 @@ export class EmailReservationScheduler {
    */
   private static async checkAllOrganizations(): Promise<void> {
     try {
-      console.log('[EmailReservationScheduler] Starte Email-Check für alle Organisationen...');
+      logger.log('[EmailReservationScheduler] Starte Email-Check für alle Organisationen...');
 
       // Hole alle Organisationen
       const organizations = await prisma.organization.findMany({
@@ -82,33 +83,33 @@ export class EmailReservationScheduler {
           if (!emailReading || !emailReading.enabled) {
             // Für Organisation 1: Warnung, wenn Email-Reading deaktiviert ist
             if (org.id === 1) {
-              console.warn(`[EmailReservationScheduler] ⚠️ Email-Reading für Organisation 1 ist deaktiviert - sollte standardmäßig aktiviert sein!`);
+              logger.warn(`[EmailReservationScheduler] ⚠️ Email-Reading für Organisation 1 ist deaktiviert - sollte standardmäßig aktiviert sein!`);
             }
             continue;
           }
 
-          console.log(`[EmailReservationScheduler] Prüfe Organisation ${org.id} (${org.name})...`);
+          logger.log(`[EmailReservationScheduler] Prüfe Organisation ${org.id} (${org.name})...`);
 
           // Prüfe auf neue Emails
           const processedCount = await EmailReservationService.checkForNewReservationEmails(org.id);
           totalProcessed += processedCount;
 
           if (processedCount > 0) {
-            console.log(`[EmailReservationScheduler] ✅ Organisation ${org.id}: ${processedCount} Reservation(s) erstellt`);
+            logger.log(`[EmailReservationScheduler] ✅ Organisation ${org.id}: ${processedCount} Reservation(s) erstellt`);
           }
         } catch (error) {
-          console.error(`[EmailReservationScheduler] Fehler bei Organisation ${org.id}:`, error);
+          logger.error(`[EmailReservationScheduler] Fehler bei Organisation ${org.id}:`, error);
           // Weiter mit nächster Organisation
         }
       }
 
       if (totalProcessed > 0) {
-        console.log(`[EmailReservationScheduler] ✅ Insgesamt ${totalProcessed} Reservation(s) aus Emails erstellt`);
+        logger.log(`[EmailReservationScheduler] ✅ Insgesamt ${totalProcessed} Reservation(s) aus Emails erstellt`);
       } else {
-        console.log('[EmailReservationScheduler] Keine neuen Reservation-Emails gefunden');
+        logger.log('[EmailReservationScheduler] Keine neuen Reservation-Emails gefunden');
       }
     } catch (error) {
-      console.error('[EmailReservationScheduler] Fehler beim Email-Check:', error);
+      logger.error('[EmailReservationScheduler] Fehler beim Email-Check:', error);
     }
   }
 
@@ -116,16 +117,16 @@ export class EmailReservationScheduler {
    * Führt manuell einen Email-Check für eine bestimmte Organisation aus (für Tests)
    */
   static async triggerManually(organizationId?: number): Promise<number> {
-    console.log('[EmailReservationScheduler] Manueller Trigger...');
+    logger.log('[EmailReservationScheduler] Manueller Trigger...');
 
     if (organizationId) {
       // Prüfe nur eine Organisation
       try {
         const processedCount = await EmailReservationService.checkForNewReservationEmails(organizationId);
-        console.log(`[EmailReservationScheduler] Manueller Check für Organisation ${organizationId}: ${processedCount} Reservation(s) erstellt`);
+        logger.log(`[EmailReservationScheduler] Manueller Check für Organisation ${organizationId}: ${processedCount} Reservation(s) erstellt`);
         return processedCount;
       } catch (error) {
-        console.error(`[EmailReservationScheduler] Fehler beim manuellen Check für Organisation ${organizationId}:`, error);
+        logger.error(`[EmailReservationScheduler] Fehler beim manuellen Check für Organisation ${organizationId}:`, error);
         throw error;
       }
     } else {

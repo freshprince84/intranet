@@ -14,6 +14,7 @@ const prisma_1 = require("../utils/prisma");
 const languageDetectionService_1 = require("./languageDetectionService");
 const boldPaymentService_1 = require("./boldPaymentService");
 const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
+const logger_1 = require("../utils/logger");
 /**
  * WhatsApp Guest Service
  *
@@ -46,7 +47,7 @@ class WhatsAppGuestService {
                 return reservation;
             }
             catch (error) {
-                console.error('[WhatsApp Guest Service] Fehler bei Gast-Identifikation via Telefonnummer:', error);
+                logger_1.logger.error('[WhatsApp Guest Service] Fehler bei Gast-Identifikation via Telefonnummer:', error);
                 return null;
             }
         });
@@ -102,7 +103,7 @@ class WhatsAppGuestService {
                 return filtered;
             }
             catch (error) {
-                console.error('[WhatsApp Guest Service] Fehler bei Suche nach Gast-Details:', error);
+                logger_1.logger.error('[WhatsApp Guest Service] Fehler bei Suche nach Gast-Details:', error);
                 return [];
             }
         });
@@ -143,7 +144,7 @@ class WhatsAppGuestService {
                 return null;
             }
             catch (error) {
-                console.error('[WhatsApp Guest Service] Fehler beim Erstellen des Payment Links:', error);
+                logger_1.logger.error('[WhatsApp Guest Service] Fehler beim Erstellen des Payment Links:', error);
                 return null;
             }
         });
@@ -165,7 +166,7 @@ class WhatsAppGuestService {
             return checkInLink;
         }
         catch (error) {
-            console.error('[WhatsApp Guest Service] Fehler beim Generieren des Check-in Links:', error);
+            logger_1.logger.error('[WhatsApp Guest Service] Fehler beim Generieren des Check-in Links:', error);
             return null;
         }
     }

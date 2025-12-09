@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Cache-Eintrag für Filter-Listen
@@ -51,7 +52,7 @@ class FilterListCache {
     // 1. Prüfe Cache
     const cached = this.filterListCache.get(cacheKey);
     if (this.isCacheValid(cached)) {
-      console.log(`[FilterListCache] ✅ Cache-Hit für Filter-Liste ${cacheKey}`);
+      logger.log(`[FilterListCache] ✅ Cache-Hit für Filter-Liste ${cacheKey}`);
       return cached!.filters;
     }
 
@@ -86,11 +87,11 @@ class FilterListCache {
         timestamp: Date.now()
       });
 
-      console.log(`[FilterListCache] 💾 Cache-Miss für Filter-Liste ${cacheKey} - aus DB geladen und gecacht`);
+      logger.log(`[FilterListCache] 💾 Cache-Miss für Filter-Liste ${cacheKey} - aus DB geladen und gecacht`);
 
       return parsedFilters;
     } catch (error) {
-      console.error(`[FilterListCache] Fehler beim Laden von Filter-Liste ${cacheKey}:`, error);
+      logger.error(`[FilterListCache] Fehler beim Laden von Filter-Liste ${cacheKey}:`, error);
       return null;
     }
   }
@@ -108,7 +109,7 @@ class FilterListCache {
     // 1. Prüfe Cache
     const cached = this.filterGroupListCache.get(cacheKey);
     if (this.isCacheValid(cached)) {
-      console.log(`[FilterListCache] ✅ Cache-Hit für Filter-Gruppen ${cacheKey}`);
+      logger.log(`[FilterListCache] ✅ Cache-Hit für Filter-Gruppen ${cacheKey}`);
       return cached!.groups;
     }
 
@@ -211,11 +212,11 @@ class FilterListCache {
         timestamp: Date.now()
       });
 
-      console.log(`[FilterListCache] 💾 Cache-Miss für Filter-Gruppen ${cacheKey} - aus DB geladen und gecacht`);
+      logger.log(`[FilterListCache] 💾 Cache-Miss für Filter-Gruppen ${cacheKey} - aus DB geladen und gecacht`);
 
       return parsedGroups;
     } catch (error) {
-      console.error(`[FilterListCache] Fehler beim Laden von Filter-Gruppen ${cacheKey}:`, error);
+      logger.error(`[FilterListCache] Fehler beim Laden von Filter-Gruppen ${cacheKey}:`, error);
       return null;
     }
   }
@@ -231,7 +232,7 @@ class FilterListCache {
     const cacheKey = `${userId}:${tableId}`;
     this.filterListCache.delete(cacheKey);
     this.filterGroupListCache.delete(cacheKey);
-    console.log(`[FilterListCache] 🗑️ Cache invalidiert für ${cacheKey}`);
+    logger.log(`[FilterListCache] 🗑️ Cache invalidiert für ${cacheKey}`);
   }
 
   /**

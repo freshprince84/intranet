@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onboardingCache = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * In-Memory Cache für Onboarding-Status
  *
@@ -69,7 +70,7 @@ class OnboardingCache {
                 return status;
             }
             catch (error) {
-                console.error(`[OnboardingCache] Fehler beim Laden für User ${userId}:`, error);
+                logger_1.logger.error(`[OnboardingCache] Fehler beim Laden für User ${userId}:`, error);
                 return null;
             }
         });

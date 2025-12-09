@@ -13,6 +13,7 @@ exports.deleteAvailability = exports.updateAvailability = exports.createAvailabi
 const client_1 = require("@prisma/client");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * GET /api/shifts/availabilities
  * Holt alle Verfügbarkeiten (optional gefiltert nach userId, branchId, roleId)
@@ -93,7 +94,7 @@ const getAllAvailabilities = (req, res) => __awaiter(void 0, void 0, void 0, fun
         });
     }
     catch (error) {
-        console.error('[UserAvailability] Fehler beim Abrufen der Verfügbarkeiten:', error);
+        logger_1.logger.error('[UserAvailability] Fehler beim Abrufen der Verfügbarkeiten:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Verfügbarkeiten'
@@ -172,7 +173,7 @@ const getAvailabilityById = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        console.error('[UserAvailability] Fehler beim Abrufen der Verfügbarkeit:', error);
+        logger_1.logger.error('[UserAvailability] Fehler beim Abrufen der Verfügbarkeit:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Verfügbarkeit'
@@ -345,7 +346,7 @@ const createAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[UserAvailability] Fehler beim Erstellen der Verfügbarkeit:', error);
+        logger_1.logger.error('[UserAvailability] Fehler beim Erstellen der Verfügbarkeit:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Erstellen der Verfügbarkeit'
@@ -517,7 +518,7 @@ const updateAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[UserAvailability] Fehler beim Aktualisieren der Verfügbarkeit:', error);
+        logger_1.logger.error('[UserAvailability] Fehler beim Aktualisieren der Verfügbarkeit:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Aktualisieren der Verfügbarkeit'
@@ -577,7 +578,7 @@ const deleteAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('[UserAvailability] Fehler beim Löschen der Verfügbarkeit:', error);
+        logger_1.logger.error('[UserAvailability] Fehler beim Löschen der Verfügbarkeit:', error);
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : 'Fehler beim Löschen der Verfügbarkeit'

@@ -51,6 +51,7 @@ const client_1 = require("@prisma/client");
 const prisma_1 = require("../utils/prisma");
 const notificationValidation_1 = require("../validation/notificationValidation");
 const notificationSettingsCache_1 = require("../services/notificationSettingsCache");
+const logger_1 = require("../utils/logger");
 // Hilfsfunktion zum Prüfen, ob Benachrichtigung für einen Typ aktiviert ist
 function isNotificationEnabled(userId, type, relatedEntityType) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -61,7 +62,7 @@ function isNotificationEnabled(userId, type, relatedEntityType) {
         const systemSettings = yield notificationSettingsCache_1.notificationSettingsCache.getSystemSettings();
         // Wenn keine Systemeinstellungen vorhanden sind, erstelle Standard-Werte
         if (!systemSettings) {
-            console.warn('Keine NotificationSettings in der Datenbank gefunden. Verwende Standard-Werte (alle aktiviert).');
+            logger_1.logger.warn('Keine NotificationSettings in der Datenbank gefunden. Verwende Standard-Werte (alle aktiviert).');
         }
         let enabled = true;
         switch (type) {
@@ -187,7 +188,7 @@ function createNotificationIfEnabled(data) {
         try {
             const enabled = yield isNotificationEnabled(data.userId, data.type, data.relatedEntityType);
             if (!enabled) {
-                console.log(`Notification nicht erstellt: Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId} ist deaktiviert`);
+                logger_1.logger.log(`Notification nicht erstellt: Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId} ist deaktiviert`);
                 return false;
             }
             const notification = yield prisma_1.prisma.notification.create({
@@ -200,12 +201,12 @@ function createNotificationIfEnabled(data) {
                     relatedEntityType: data.relatedEntityType
                 }
             });
-            console.log(`Notification erstellt: ID ${notification.id}, Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId}`);
+            logger_1.logger.log(`Notification erstellt: ID ${notification.id}, Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId}`);
             return true;
         }
         catch (error) {
-            console.error('Fehler beim Erstellen der Notification:', error);
-            console.error('Notification-Daten:', {
+            logger_1.logger.error('Fehler beim Erstellen der Notification:', error);
+            logger_1.logger.error('Notification-Daten:', {
                 userId: data.userId,
                 type: data.type,
                 relatedEntityType: data.relatedEntityType,
@@ -719,7 +720,7 @@ function createOrganizationNotification(data) {
             return true;
         }
         catch (error) {
-            console.error('Fehler beim Erstellen der Organisation-Benachrichtigung:', error);
+            logger_1.logger.error('Fehler beim Erstellen der Organisation-Benachrichtigung:', error);
             return false;
         }
     });
@@ -757,7 +758,7 @@ function notifyOrganizationAdmins(organizationId, joinRequestId, requesterEmail)
             }
         }
         catch (error) {
-            console.error('Fehler beim Benachrichtigen der Organisation-Admins:', error);
+            logger_1.logger.error('Fehler beim Benachrichtigen der Organisation-Admins:', error);
         }
     });
 }
@@ -778,7 +779,7 @@ function notifyJoinRequestStatus(userId, organizationName, status, joinRequestId
             });
         }
         catch (error) {
-            console.error('Fehler beim Benachrichtigen über Beitrittsanfrage-Status:', error);
+            logger_1.logger.error('Fehler beim Benachrichtigen über Beitrittsanfrage-Status:', error);
         }
     });
 }

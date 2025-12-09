@@ -14,6 +14,7 @@ const zod_1 = require("zod");
 const notificationController_1 = require("./notificationController");
 const taskAutomationService_1 = require("../services/taskAutomationService");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Validation Schemas
 const createJoinRequestSchema = zod_1.z.object({
     organizationName: zod_1.z.string().min(1, 'Organisationsname ist erforderlich'),
@@ -95,7 +96,7 @@ const createJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.status(201).json(joinRequest);
     }
     catch (error) {
-        console.error('Error in createJoinRequest:', error);
+        logger_1.logger.error('Error in createJoinRequest:', error);
         res.status(500).json({
             message: 'Fehler beim Erstellen der Beitrittsanfrage',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -153,7 +154,7 @@ const getJoinRequestsForOrganization = (req, res) => __awaiter(void 0, void 0, v
         res.json(joinRequests);
     }
     catch (error) {
-        console.error('Error in getJoinRequestsForOrganization:', error);
+        logger_1.logger.error('Error in getJoinRequestsForOrganization:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Beitrittsanfragen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -192,7 +193,7 @@ const getMyJoinRequests = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.json(joinRequests);
     }
     catch (error) {
-        console.error('Error in getMyJoinRequests:', error);
+        logger_1.logger.error('Error in getMyJoinRequests:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der eigenen Beitrittsanfragen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -278,7 +279,7 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
             catch (bankDetailsTaskError) {
                 // Logge Fehler, aber breche nicht ab
-                console.error('[processJoinRequest] Fehler beim Erstellen des BankDetails-To-Dos:', bankDetailsTaskError);
+                logger_1.logger.error('[processJoinRequest] Fehler beim Erstellen des BankDetails-To-Dos:', bankDetailsTaskError);
             }
             try {
                 // Identitätsdokument-To-Do (nur für Kolumbien)
@@ -286,13 +287,13 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
             catch (identificationDocumentTaskError) {
                 // Logge Fehler, aber breche nicht ab
-                console.error('[processJoinRequest] Fehler beim Erstellen des Identitätsdokument-To-Dos:', identificationDocumentTaskError);
+                logger_1.logger.error('[processJoinRequest] Fehler beim Erstellen des Identitätsdokument-To-Dos:', identificationDocumentTaskError);
             }
         }
         res.json(result);
     }
     catch (error) {
-        console.error('Error in processJoinRequest:', error);
+        logger_1.logger.error('Error in processJoinRequest:', error);
         res.status(500).json({
             message: 'Fehler beim Bearbeiten der Beitrittsanfrage',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -345,7 +346,7 @@ const withdrawJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, func
         res.json(updatedRequest);
     }
     catch (error) {
-        console.error('Error in withdrawJoinRequest:', error);
+        logger_1.logger.error('Error in withdrawJoinRequest:', error);
         res.status(500).json({
             message: 'Fehler beim Zurückziehen der Beitrittsanfrage',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

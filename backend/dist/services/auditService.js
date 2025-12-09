@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.logSettingsChange = exports.logAuditEvent = void 0;
+const logger_1 = require("../utils/logger");
 /**
  * Erstellt einen Audit-Log-Eintrag
  *
@@ -19,7 +20,7 @@ const logAuditEvent = (entry) => __awaiter(void 0, void 0, void 0, function* () 
     try {
         // Aktuell: Console-Logging
         // Später: In AuditLog-Tabelle speichern
-        console.log('[AUDIT]', JSON.stringify({
+        logger_1.logger.log('[AUDIT]', JSON.stringify({
             timestamp: new Date().toISOString(),
             organizationId: entry.organizationId,
             userId: entry.userId,
@@ -34,7 +35,7 @@ const logAuditEvent = (entry) => __awaiter(void 0, void 0, void 0, function* () 
         // await prisma.auditLog.create({ data: { ... } });
     }
     catch (error) {
-        console.error('Error logging audit event:', error);
+        logger_1.logger.error('Error logging audit event:', error);
         // Fehler beim Logging sollten die Hauptoperation nicht blockieren
     }
 });

@@ -17,6 +17,7 @@ const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Konfiguration für Multer (Datei-Upload)
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -153,7 +154,7 @@ const uploadMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.status(201).json(mediaData);
     }
     catch (error) {
-        console.error('Fehler beim Hochladen der Mediendatei:', error);
+        logger_1.logger.error('Fehler beim Hochladen der Mediendatei:', error);
         // Lösche die Datei bei einem Fehler
         if (req.file) {
             fs_1.default.unlinkSync(req.file.path);
@@ -190,7 +191,7 @@ const getMediaByArticle = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.status(200).json(media);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Mediendateien:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Mediendateien:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Mediendateien' });
     }
 });
@@ -219,7 +220,7 @@ const getMediaById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.status(200).json(media[0]);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Mediendatei:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Mediendatei:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Mediendatei' });
     }
 });
@@ -274,7 +275,7 @@ const getMediaFile = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Mediendatei:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Mediendatei:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Mediendatei' });
     }
 });
@@ -308,7 +309,7 @@ const deleteMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.status(200).json({ message: 'Mediendatei erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Fehler beim Löschen der Mediendatei:', error);
+        logger_1.logger.error('Fehler beim Löschen der Mediendatei:', error);
         res.status(500).json({ message: 'Fehler beim Löschen der Mediendatei' });
     }
 });
@@ -344,7 +345,7 @@ const updateMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.status(200).json(updatedMedia[0]);
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren der Mediendatei:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren der Mediendatei:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren der Mediendatei' });
     }
 });

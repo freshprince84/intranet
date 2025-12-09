@@ -10,6 +10,7 @@ import {
 import { validateNotification } from '../validation/notificationValidation';
 import { notificationSettingsCache } from '../services/notificationSettingsCache';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { logger } from '../utils/logger';
 
 // Hilfsfunktion zum Prüfen, ob Benachrichtigung für einen Typ aktiviert ist
 async function isNotificationEnabled(
@@ -25,7 +26,7 @@ async function isNotificationEnabled(
 
   // Wenn keine Systemeinstellungen vorhanden sind, erstelle Standard-Werte
   if (!systemSettings) {
-    console.warn('Keine NotificationSettings in der Datenbank gefunden. Verwende Standard-Werte (alle aktiviert).');
+    logger.warn('Keine NotificationSettings in der Datenbank gefunden. Verwende Standard-Werte (alle aktiviert).');
   }
 
   let enabled = true;
@@ -139,7 +140,7 @@ export async function createNotificationIfEnabled(
     const enabled = await isNotificationEnabled(data.userId, data.type, data.relatedEntityType);
 
     if (!enabled) {
-      console.log(`Notification nicht erstellt: Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId} ist deaktiviert`);
+      logger.log(`Notification nicht erstellt: Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId} ist deaktiviert`);
       return false;
     }
 
@@ -154,11 +155,11 @@ export async function createNotificationIfEnabled(
       }
     });
 
-    console.log(`Notification erstellt: ID ${notification.id}, Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId}`);
+    logger.log(`Notification erstellt: ID ${notification.id}, Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId}`);
     return true;
   } catch (error) {
-    console.error('Fehler beim Erstellen der Notification:', error);
-    console.error('Notification-Daten:', {
+    logger.error('Fehler beim Erstellen der Notification:', error);
+    logger.error('Notification-Daten:', {
       userId: data.userId,
       type: data.type,
       relatedEntityType: data.relatedEntityType,
@@ -672,7 +673,7 @@ export async function createOrganizationNotification(
 
     return true;
   } catch (error) {
-    console.error('Fehler beim Erstellen der Organisation-Benachrichtigung:', error);
+    logger.error('Fehler beim Erstellen der Organisation-Benachrichtigung:', error);
     return false;
   }
 }
@@ -717,7 +718,7 @@ export async function notifyOrganizationAdmins(
       });
     }
   } catch (error) {
-    console.error('Fehler beim Benachrichtigen der Organisation-Admins:', error);
+    logger.error('Fehler beim Benachrichtigen der Organisation-Admins:', error);
   }
 }
 
@@ -742,6 +743,6 @@ export async function notifyJoinRequestStatus(
       message
     });
   } catch (error) {
-    console.error('Fehler beim Benachrichtigen über Beitrittsanfrage-Status:', error);
+    logger.error('Fehler beim Benachrichtigen über Beitrittsanfrage-Status:', error);
   }
 } 

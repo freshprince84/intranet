@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface UserCacheEntry {
   data: {
@@ -81,7 +82,7 @@ class UserCache {
 
       return data;
     } catch (error) {
-      console.error(`[UserCache] Fehler beim Laden für User ${userId}:`, error);
+      logger.error(`[UserCache] Fehler beim Laden für User ${userId}:`, error);
       return null;
     }
   }

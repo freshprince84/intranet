@@ -16,6 +16,7 @@ const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const prisma_1 = require("../utils/prisma");
 const userCache_1 = require("../services/userCache");
+const logger_1 = require("../utils/logger");
 const userSelect = {
     id: true,
     username: true,
@@ -43,7 +44,7 @@ exports.isRoleAvailableForBranch = isRoleAvailableForBranch;
 // Alle Rollen abrufen (optional gefiltert nach branchId)
 const getAllRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log('getAllRoles aufgerufen');
+        logger_1.logger.log('getAllRoles aufgerufen');
         // Datenisolation: Zeigt alle Rollen der Organisation oder nur eigene (wenn standalone)
         const roleFilter = (0, organization_1.getDataIsolationFilter)(req, 'role');
         // Optional: Filter nach branchId (aus Query-Parameter)
@@ -82,11 +83,11 @@ const getAllRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 return role.allBranches || (role.branches && role.branches.length > 0);
             });
         }
-        console.log('Gefundene Rollen:', roles.length);
+        logger_1.logger.log('Gefundene Rollen:', roles.length);
         res.json(roles);
     }
     catch (error) {
-        console.error('Error in getAllRoles:', error);
+        logger_1.logger.error('Error in getAllRoles:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Rollen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -141,7 +142,7 @@ const getRoleById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.json(role);
     }
     catch (error) {
-        console.error('Error in getRoleById:', error);
+        logger_1.logger.error('Error in getRoleById:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Rolle',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -153,8 +154,8 @@ exports.getRoleById = getRoleById;
 const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, description, permissions, allBranches = false, branchIds = [] } = req.body;
-        console.log('Request Body für createRole:', req.body);
-        console.log('Permissions aus Request:', permissions);
+        logger_1.logger.log('Request Body für createRole:', req.body);
+        logger_1.logger.log('Permissions aus Request:', permissions);
         if (!name) {
             return res.status(400).json({
                 message: 'Fehler beim Erstellen der Rolle: Name ist erforderlich'
@@ -165,11 +166,11 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 message: 'Fehler beim Erstellen der Rolle: Ungültige Berechtigungen'
             });
         }
-        console.log('Berechtigungsdetails:');
+        logger_1.logger.log('Berechtigungsdetails:');
         permissions.forEach((perm, idx) => {
-            console.log(`Permission ${idx + 1}:`, JSON.stringify(perm));
-            console.log(`  - Schlüssel: ${Object.keys(perm).join(', ')}`);
-            console.log(`  - entity: ${perm.entity}, entityType: ${perm.entityType || 'nicht angegeben'}, accessLevel: ${perm.accessLevel}`);
+            logger_1.logger.log(`Permission ${idx + 1}:`, JSON.stringify(perm));
+            logger_1.logger.log(`  - Schlüssel: ${Object.keys(perm).join(', ')}`);
+            logger_1.logger.log(`  - entity: ${perm.entity}, entityType: ${perm.entityType || 'nicht angegeben'}, accessLevel: ${perm.accessLevel}`);
         });
         // Prüfe ob User eine Organisation hat
         const organizationId = req.organizationId;
@@ -230,14 +231,14 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     }
                 }
             });
-            console.log('Neue Rolle wurde erstellt, überprüfe Permissions:');
+            logger_1.logger.log('Neue Rolle wurde erstellt, überprüfe Permissions:');
             if (role.permissions.length === 0) {
-                console.error('WARNUNG: Rolle wurde erstellt, aber keine Berechtigungen wurden angelegt!');
+                logger_1.logger.error('WARNUNG: Rolle wurde erstellt, aber keine Berechtigungen wurden angelegt!');
             }
             else {
-                console.log(`Rolle hat ${role.permissions.length} Berechtigungen:`);
+                logger_1.logger.log(`Rolle hat ${role.permissions.length} Berechtigungen:`);
                 role.permissions.forEach((perm, idx) => {
-                    console.log(`Gespeicherte Permission ${idx + 1}:`, JSON.stringify(perm));
+                    logger_1.logger.log(`Gespeicherte Permission ${idx + 1}:`, JSON.stringify(perm));
                 });
             }
             // Benachrichtigung für Administratoren der Organisation senden
@@ -264,20 +265,20 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     relatedEntityType: 'create'
                 });
             }
-            console.log('Neue Rolle erfolgreich erstellt:', role);
+            logger_1.logger.log('Neue Rolle erfolgreich erstellt:', role);
             res.status(201).json(role);
         }
         catch (prismaError) {
-            console.error('Prisma-Fehler beim Erstellen der Rolle:', prismaError);
+            logger_1.logger.error('Prisma-Fehler beim Erstellen der Rolle:', prismaError);
             throw prismaError;
         }
     }
     catch (error) {
-        console.error('Error in createRole:', error);
+        logger_1.logger.error('Error in createRole:', error);
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-            console.log('Fehlercode:', error.code);
-            console.log('Fehlermeldung:', error.message);
-            console.log('Meta:', error.meta);
+            logger_1.logger.log('Fehlercode:', error.code);
+            logger_1.logger.log('Fehlermeldung:', error.message);
+            logger_1.logger.log('Meta:', error.meta);
             if (error.code === 'P2002') {
                 return res.status(400).json({
                     message: 'Eine Rolle mit diesem Namen existiert bereits',
@@ -332,12 +333,12 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 });
             }
         }
-        console.log(`Aktualisierung für Rolle mit ID ${roleId} begonnen...`);
-        console.log('Neue Daten:', { name, description, permissions: permissions.length, allBranches, branchIds });
+        logger_1.logger.log(`Aktualisierung für Rolle mit ID ${roleId} begonnen...`);
+        logger_1.logger.log('Neue Daten:', { name, description, permissions: permissions.length, allBranches, branchIds });
         // Detaillierte Ausgabe der Berechtigungen
-        console.log('Detaillierte Berechtigungen:');
+        logger_1.logger.log('Detaillierte Berechtigungen:');
         permissions.forEach((perm, index) => {
-            console.log(`Permission ${index + 1}:`, JSON.stringify(perm));
+            logger_1.logger.log(`Permission ${index + 1}:`, JSON.stringify(perm));
         });
         // Transaktion verwenden, um sicherzustellen, dass alle Schritte erfolgreich sind oder komplett zurückgerollt werden
         const updatedRole = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
@@ -352,12 +353,12 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             if (!existingRole) {
                 throw new Error(`Rolle mit ID ${roleId} wurde nicht gefunden`);
             }
-            console.log(`Bestehende Rolle gefunden: ${existingRole.name} mit ${existingRole.permissions.length} Berechtigungen`);
+            logger_1.logger.log(`Bestehende Rolle gefunden: ${existingRole.name} mit ${existingRole.permissions.length} Berechtigungen`);
             // 2. Lösche alle bestehenden Berechtigungen
             const deletedPermissions = yield tx.permission.deleteMany({
                 where: { roleId: roleId }
             });
-            console.log(`${deletedPermissions.count} alte Berechtigungen gelöscht`);
+            logger_1.logger.log(`${deletedPermissions.count} alte Berechtigungen gelöscht`);
             // 3. Aktualisiere Branch-Zuweisungen (wenn allBranches oder branchIds angegeben)
             if (allBranches !== undefined) {
                 // Lösche alle bestehenden RoleBranch Einträge
@@ -408,15 +409,15 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     users: true
                 }
             });
-            console.log(`Rolle '${role.name}' erfolgreich aktualisiert mit ${role.permissions.length} neuen Berechtigungen`);
+            logger_1.logger.log(`Rolle '${role.name}' erfolgreich aktualisiert mit ${role.permissions.length} neuen Berechtigungen`);
             // Überprüfe die gespeicherten Berechtigungen
             if (role.permissions.length === 0) {
-                console.error('WARNUNG: Rolle wurde aktualisiert, aber keine Berechtigungen wurden angelegt!');
+                logger_1.logger.error('WARNUNG: Rolle wurde aktualisiert, aber keine Berechtigungen wurden angelegt!');
             }
             else {
-                console.log('Details der gespeicherten Berechtigungen:');
+                logger_1.logger.log('Details der gespeicherten Berechtigungen:');
                 role.permissions.forEach((perm, idx) => {
-                    console.log(`Gespeicherte Permission ${idx + 1}:`, JSON.stringify(perm));
+                    logger_1.logger.log(`Gespeicherte Permission ${idx + 1}:`, JSON.stringify(perm));
                 });
             }
             return role;
@@ -485,7 +486,7 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.json(updatedRole);
     }
     catch (error) {
-        console.error('Error in updateRole:', error);
+        logger_1.logger.error('Error in updateRole:', error);
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
             // Spezifische Fehlerbehandlung für Prisma-Fehler
             let errorMessage = 'Fehler beim Aktualisieren der Rolle';
@@ -607,7 +608,7 @@ const deleteRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.status(204).send();
     }
     catch (error) {
-        console.error('Error in deleteRole:', error);
+        logger_1.logger.error('Error in deleteRole:', error);
         if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
             let errorMessage = 'Fehler beim Löschen der Rolle';
             if (error.code === 'P2025') {
@@ -647,7 +648,7 @@ const getRolePermissions = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.json(permissions);
     }
     catch (error) {
-        console.error('Error in getRolePermissions:', error);
+        logger_1.logger.error('Error in getRolePermissions:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Berechtigungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -696,7 +697,7 @@ const getRoleBranches = (req, res) => __awaiter(void 0, void 0, void 0, function
         });
     }
     catch (error) {
-        console.error('Error in getRoleBranches:', error);
+        logger_1.logger.error('Error in getRoleBranches:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Branches',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -778,7 +779,7 @@ const updateRoleBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('Error in updateRoleBranches:', error);
+        logger_1.logger.error('Error in updateRoleBranches:', error);
         res.status(500).json({
             message: 'Fehler beim Aktualisieren der Branches',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

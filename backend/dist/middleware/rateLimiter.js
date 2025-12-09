@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.passwordManagerRateLimiter = exports.rateLimiter = void 0;
+exports.passwordManagerRateLimiter = exports.rateLimiter = exports.cleanupRateLimiter = void 0;
 // In-Memory Store (für Produktion sollte Redis verwendet werden)
 const store = {};
-// Cleanup alte Einträge alle 5 Minuten
-setInterval(() => {
+// ✅ MEMORY: Cleanup alte Einträge alle 5 Minuten
+let cleanupInterval = null;
+cleanupInterval = setInterval(() => {
     const now = Date.now();
     Object.keys(store).forEach(key => {
         if (store[key].resetTime < now) {
@@ -12,6 +13,14 @@ setInterval(() => {
         }
     });
 }, 5 * 60 * 1000);
+// ✅ MEMORY: Cleanup-Funktion für Server-Shutdown
+const cleanupRateLimiter = () => {
+    if (cleanupInterval) {
+        clearInterval(cleanupInterval);
+        cleanupInterval = null;
+    }
+};
+exports.cleanupRateLimiter = cleanupRateLimiter;
 /**
  * Rate-Limiting Middleware
  * @param windowMs - Zeitfenster in Millisekunden

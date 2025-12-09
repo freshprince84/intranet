@@ -18,6 +18,7 @@ const organization_1 = require("../middleware/organization");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Rechnung aus gefilterten Beratungen erstellen
 const createInvoiceFromConsultations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -157,7 +158,7 @@ const createInvoiceFromConsultations = (req, res) => __awaiter(void 0, void 0, v
         res.status(201).json(fullInvoice);
     }
     catch (error) {
-        console.error('Fehler beim Erstellen der Rechnung:', error);
+        logger_1.logger.error('Fehler beim Erstellen der Rechnung:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -201,7 +202,7 @@ const getInvoices = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.json(invoices);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Rechnungen:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Rechnungen:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -240,7 +241,7 @@ const getInvoiceById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.json(invoice);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Rechnung:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Rechnung:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -271,7 +272,7 @@ const updateInvoiceStatus = (req, res) => __awaiter(void 0, void 0, void 0, func
         res.json(invoice);
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren des Status:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren des Status:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -338,7 +339,7 @@ const generateInvoicePDFEndpoint = (req, res) => __awaiter(void 0, void 0, void 
         res.send(pdfBuffer);
     }
     catch (error) {
-        console.error('Fehler beim Generieren des PDFs:', error);
+        logger_1.logger.error('Fehler beim Generieren des PDFs:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -401,7 +402,7 @@ const markAsPaid = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.json(updatedInvoice);
     }
     catch (error) {
-        console.error('Fehler beim Erfassen der Zahlung:', error);
+        logger_1.logger.error('Fehler beim Erfassen der Zahlung:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -439,7 +440,7 @@ const cancelInvoice = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.json(cancelledInvoice);
     }
     catch (error) {
-        console.error('Fehler beim Stornieren der Rechnung:', error);
+        logger_1.logger.error('Fehler beim Stornieren der Rechnung:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });

@@ -1,5 +1,6 @@
 import { LobbyPmsReservationSyncService } from './lobbyPmsReservationSyncService';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Scheduler für automatische LobbyPMS-Reservation-Synchronisation
@@ -18,11 +19,11 @@ export class LobbyPmsReservationScheduler {
    */
   static start(): void {
     if (this.isRunning) {
-      console.log('[LobbyPmsReservationScheduler] Scheduler läuft bereits');
+      logger.log('[LobbyPmsReservationScheduler] Scheduler läuft bereits');
       return;
     }
 
-    console.log('[LobbyPmsReservationScheduler] Scheduler gestartet');
+    logger.log('[LobbyPmsReservationScheduler] Scheduler gestartet');
 
     // Prüfe alle 10 Minuten
     const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten
@@ -46,7 +47,7 @@ export class LobbyPmsReservationScheduler {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
       this.isRunning = false;
-      console.log('[LobbyPmsReservationScheduler] Scheduler gestoppt');
+      logger.log('[LobbyPmsReservationScheduler] Scheduler gestoppt');
     }
   }
 
@@ -59,7 +60,7 @@ export class LobbyPmsReservationScheduler {
    */
   private static async checkAllBranches(): Promise<void> {
     try {
-      console.log('[LobbyPmsReservationScheduler] Starte Sync für eingerichtete Branches...');
+      logger.log('[LobbyPmsReservationScheduler] Starte Sync für eingerichtete Branches...');
 
       // Hole nur eingerichtete Branches von Organisation 1 (Manila und Parque Poblado)
       const branches = await prisma.branch.findMany({
@@ -102,28 +103,28 @@ export class LobbyPmsReservationScheduler {
             continue; // Sync deaktiviert
           }
 
-          console.log(`[LobbyPmsReservationScheduler] Prüfe Branch ${branch.id} (${branch.name})...`);
+          logger.log(`[LobbyPmsReservationScheduler] Prüfe Branch ${branch.id} (${branch.name})...`);
 
           // Synchronisiere Reservierungen für diesen Branch
           const syncedCount = await LobbyPmsReservationSyncService.syncReservationsForBranch(branch.id);
           totalProcessed += syncedCount;
 
           if (syncedCount > 0) {
-            console.log(`[LobbyPmsReservationScheduler] ✅ Branch ${branch.id}: ${syncedCount} Reservation(s) synchronisiert`);
+            logger.log(`[LobbyPmsReservationScheduler] ✅ Branch ${branch.id}: ${syncedCount} Reservation(s) synchronisiert`);
           }
         } catch (error) {
-          console.error(`[LobbyPmsReservationScheduler] Fehler bei Branch ${branch.id}:`, error);
+          logger.error(`[LobbyPmsReservationScheduler] Fehler bei Branch ${branch.id}:`, error);
           // Weiter mit nächster Branch
         }
       }
 
       if (totalProcessed > 0) {
-        console.log(`[LobbyPmsReservationScheduler] ✅ Insgesamt ${totalProcessed} Reservation(s) synchronisiert`);
+        logger.log(`[LobbyPmsReservationScheduler] ✅ Insgesamt ${totalProcessed} Reservation(s) synchronisiert`);
       } else {
-        console.log('[LobbyPmsReservationScheduler] Keine neuen Reservierungen gefunden');
+        logger.log('[LobbyPmsReservationScheduler] Keine neuen Reservierungen gefunden');
       }
     } catch (error) {
-      console.error('[LobbyPmsReservationScheduler] Fehler beim Branch-Check:', error);
+      logger.error('[LobbyPmsReservationScheduler] Fehler beim Branch-Check:', error);
     }
   }
 
@@ -131,16 +132,16 @@ export class LobbyPmsReservationScheduler {
    * Führt manuell einen Sync für eine bestimmte Branch aus (für Tests)
    */
   static async triggerManually(branchId?: number): Promise<number> {
-    console.log('[LobbyPmsReservationScheduler] Manueller Trigger...');
+    logger.log('[LobbyPmsReservationScheduler] Manueller Trigger...');
 
     if (branchId) {
       // Prüfe nur eine Branch
       try {
         const syncedCount = await LobbyPmsReservationSyncService.syncReservationsForBranch(branchId);
-        console.log(`[LobbyPmsReservationScheduler] Manueller Sync für Branch ${branchId}: ${syncedCount} Reservation(s) synchronisiert`);
+        logger.log(`[LobbyPmsReservationScheduler] Manueller Sync für Branch ${branchId}: ${syncedCount} Reservation(s) synchronisiert`);
         return syncedCount;
       } catch (error) {
-        console.error(`[LobbyPmsReservationScheduler] Fehler beim manuellen Sync für Branch ${branchId}:`, error);
+        logger.error(`[LobbyPmsReservationScheduler] Fehler beim manuellen Sync für Branch ${branchId}:`, error);
         throw error;
       }
     } else {

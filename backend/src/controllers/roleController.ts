@@ -5,6 +5,7 @@ import { getUserLanguage, getRoleNotificationText } from '../utils/translations'
 import { getDataIsolationFilter, belongsToOrganization, getUserOrganizationFilter } from '../middleware/organization';
 import { prisma } from '../utils/prisma';
 import { userCache } from '../services/userCache';
+import { logger } from '../utils/logger';
 
 interface RoleParams {
     id: string;
@@ -55,7 +56,7 @@ export const isRoleAvailableForBranch = async (roleId: number, branchId: number)
 // Alle Rollen abrufen (optional gefiltert nach branchId)
 export const getAllRoles = async (req: Request, res: Response) => {
     try {
-        console.log('getAllRoles aufgerufen');
+        logger.log('getAllRoles aufgerufen');
         
         // Datenisolation: Zeigt alle Rollen der Organisation oder nur eigene (wenn standalone)
         const roleFilter = getDataIsolationFilter(req as any, 'role');
@@ -99,10 +100,10 @@ export const getAllRoles = async (req: Request, res: Response) => {
             });
         }
         
-        console.log('Gefundene Rollen:', roles.length);
+        logger.log('Gefundene Rollen:', roles.length);
         res.json(roles);
     } catch (error) {
-        console.error('Error in getAllRoles:', error);
+        logger.error('Error in getAllRoles:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen der Rollen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -161,7 +162,7 @@ export const getRoleById = async (req: Request<RoleParams>, res: Response) => {
         
         res.json(role);
     } catch (error) {
-        console.error('Error in getRoleById:', error);
+        logger.error('Error in getRoleById:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen der Rolle', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -174,8 +175,8 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
     try {
         const { name, description, permissions, allBranches = false, branchIds = [] } = req.body;
         
-        console.log('Request Body für createRole:', req.body);
-        console.log('Permissions aus Request:', permissions);
+        logger.log('Request Body für createRole:', req.body);
+        logger.log('Permissions aus Request:', permissions);
         
         if (!name) {
             return res.status(400).json({
@@ -189,11 +190,11 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
             });
         }
 
-        console.log('Berechtigungsdetails:');
+        logger.log('Berechtigungsdetails:');
         permissions.forEach((perm, idx) => {
-            console.log(`Permission ${idx+1}:`, JSON.stringify(perm));
-            console.log(`  - Schlüssel: ${Object.keys(perm).join(', ')}`);
-            console.log(`  - entity: ${perm.entity}, entityType: ${perm.entityType || 'nicht angegeben'}, accessLevel: ${perm.accessLevel}`);
+            logger.log(`Permission ${idx+1}:`, JSON.stringify(perm));
+            logger.log(`  - Schlüssel: ${Object.keys(perm).join(', ')}`);
+            logger.log(`  - entity: ${perm.entity}, entityType: ${perm.entityType || 'nicht angegeben'}, accessLevel: ${perm.accessLevel}`);
         });
 
         // Prüfe ob User eine Organisation hat
@@ -264,13 +265,13 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
                 }
             });
             
-            console.log('Neue Rolle wurde erstellt, überprüfe Permissions:');
+            logger.log('Neue Rolle wurde erstellt, überprüfe Permissions:');
             if (role.permissions.length === 0) {
-                console.error('WARNUNG: Rolle wurde erstellt, aber keine Berechtigungen wurden angelegt!');
+                logger.error('WARNUNG: Rolle wurde erstellt, aber keine Berechtigungen wurden angelegt!');
             } else {
-                console.log(`Rolle hat ${role.permissions.length} Berechtigungen:`);
+                logger.log(`Rolle hat ${role.permissions.length} Berechtigungen:`);
                 role.permissions.forEach((perm, idx) => {
-                    console.log(`Gespeicherte Permission ${idx+1}:`, JSON.stringify(perm));
+                    logger.log(`Gespeicherte Permission ${idx+1}:`, JSON.stringify(perm));
                 });
             }
             
@@ -303,19 +304,19 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
                 });
             }
             
-            console.log('Neue Rolle erfolgreich erstellt:', role);
+            logger.log('Neue Rolle erfolgreich erstellt:', role);
             res.status(201).json(role);
         } catch (prismaError) {
-            console.error('Prisma-Fehler beim Erstellen der Rolle:', prismaError);
+            logger.error('Prisma-Fehler beim Erstellen der Rolle:', prismaError);
             throw prismaError;
         }
     } catch (error) {
-        console.error('Error in createRole:', error);
+        logger.error('Error in createRole:', error);
         
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            console.log('Fehlercode:', error.code);
-            console.log('Fehlermeldung:', error.message);
-            console.log('Meta:', error.meta);
+            logger.log('Fehlercode:', error.code);
+            logger.log('Fehlermeldung:', error.message);
+            logger.log('Meta:', error.meta);
             
             if (error.code === 'P2002') {
                 return res.status(400).json({
@@ -380,13 +381,13 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
             }
         }
 
-        console.log(`Aktualisierung für Rolle mit ID ${roleId} begonnen...`);
-        console.log('Neue Daten:', { name, description, permissions: permissions.length, allBranches, branchIds });
+        logger.log(`Aktualisierung für Rolle mit ID ${roleId} begonnen...`);
+        logger.log('Neue Daten:', { name, description, permissions: permissions.length, allBranches, branchIds });
         
         // Detaillierte Ausgabe der Berechtigungen
-        console.log('Detaillierte Berechtigungen:');
+        logger.log('Detaillierte Berechtigungen:');
         permissions.forEach((perm, index) => {
-            console.log(`Permission ${index + 1}:`, JSON.stringify(perm));
+            logger.log(`Permission ${index + 1}:`, JSON.stringify(perm));
         });
 
         // Transaktion verwenden, um sicherzustellen, dass alle Schritte erfolgreich sind oder komplett zurückgerollt werden
@@ -404,13 +405,13 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
                 throw new Error(`Rolle mit ID ${roleId} wurde nicht gefunden`);
             }
 
-            console.log(`Bestehende Rolle gefunden: ${existingRole.name} mit ${existingRole.permissions.length} Berechtigungen`);
+            logger.log(`Bestehende Rolle gefunden: ${existingRole.name} mit ${existingRole.permissions.length} Berechtigungen`);
 
             // 2. Lösche alle bestehenden Berechtigungen
             const deletedPermissions = await tx.permission.deleteMany({
                 where: { roleId: roleId }
             });
-            console.log(`${deletedPermissions.count} alte Berechtigungen gelöscht`);
+            logger.log(`${deletedPermissions.count} alte Berechtigungen gelöscht`);
 
             // 3. Aktualisiere Branch-Zuweisungen (wenn allBranches oder branchIds angegeben)
             if (allBranches !== undefined) {
@@ -467,15 +468,15 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
                 }
             });
 
-            console.log(`Rolle '${role.name}' erfolgreich aktualisiert mit ${role.permissions.length} neuen Berechtigungen`);
+            logger.log(`Rolle '${role.name}' erfolgreich aktualisiert mit ${role.permissions.length} neuen Berechtigungen`);
             
             // Überprüfe die gespeicherten Berechtigungen
             if (role.permissions.length === 0) {
-                console.error('WARNUNG: Rolle wurde aktualisiert, aber keine Berechtigungen wurden angelegt!');
+                logger.error('WARNUNG: Rolle wurde aktualisiert, aber keine Berechtigungen wurden angelegt!');
             } else {
-                console.log('Details der gespeicherten Berechtigungen:');
+                logger.log('Details der gespeicherten Berechtigungen:');
                 role.permissions.forEach((perm, idx) => {
-                    console.log(`Gespeicherte Permission ${idx+1}:`, JSON.stringify(perm));
+                    logger.log(`Gespeicherte Permission ${idx+1}:`, JSON.stringify(perm));
                 });
             }
             
@@ -553,7 +554,7 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
 
         res.json(updatedRole);
     } catch (error) {
-        console.error('Error in updateRole:', error);
+        logger.error('Error in updateRole:', error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             // Spezifische Fehlerbehandlung für Prisma-Fehler
             let errorMessage = 'Fehler beim Aktualisieren der Rolle';
@@ -685,7 +686,7 @@ export const deleteRole = async (req: Request<RoleParams>, res: Response) => {
 
         res.status(204).send();
     } catch (error) {
-        console.error('Error in deleteRole:', error);
+        logger.error('Error in deleteRole:', error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
             let errorMessage = 'Fehler beim Löschen der Rolle';
             
@@ -728,7 +729,7 @@ export const getRolePermissions = async (req: Request<RoleParams>, res: Response
         });
         res.json(permissions);
     } catch (error) {
-        console.error('Error in getRolePermissions:', error);
+        logger.error('Error in getRolePermissions:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen der Berechtigungen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -781,7 +782,7 @@ export const getRoleBranches = async (req: Request<RoleParams>, res: Response) =
             branches: role.branches.map(rb => rb.branch)
         });
     } catch (error) {
-        console.error('Error in getRoleBranches:', error);
+        logger.error('Error in getRoleBranches:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen der Branches', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
@@ -881,7 +882,7 @@ export const updateRoleBranches = async (req: Request<RoleParams, {}, UpdateRole
             branches: updatedRole.branches.map(rb => rb.branch)
         });
     } catch (error) {
-        console.error('Error in updateRoleBranches:', error);
+        logger.error('Error in updateRoleBranches:', error);
         res.status(500).json({ 
             message: 'Fehler beim Aktualisieren der Branches', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler' 

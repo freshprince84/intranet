@@ -3,6 +3,7 @@ import { TaskStatus, RequestStatus } from '@prisma/client';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import { startOfDay, endOfDay, parseISO, format } from 'date-fns';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 // To-Dos pro User für ein bestimmtes Datum
 export const getTodosByUserForDate = async (req: Request, res: Response) => {
@@ -145,7 +146,7 @@ export const getTodosByUserForDate = async (req: Request, res: Response) => {
 
         res.json(result);
     } catch (error) {
-        console.error('Fehler beim Abrufen der To-Dos pro User:', error);
+        logger.error('Fehler beim Abrufen der To-Dos pro User:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der To-Dos' });
     }
 };
@@ -271,7 +272,7 @@ export const getRequestsByUserForDate = async (req: Request, res: Response) => {
 
         res.json(result);
     } catch (error) {
-        console.error('Fehler beim Abrufen der Requests pro User:', error);
+        logger.error('Fehler beim Abrufen der Requests pro User:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der Requests' });
     }
 };
@@ -414,7 +415,7 @@ export const getTodosChronological = async (req: Request, res: Response) => {
 
         res.json(tasks);
     } catch (error) {
-        console.error('Fehler beim Abrufen der chronologischen To-Dos:', error);
+        logger.error('Fehler beim Abrufen der chronologischen To-Dos:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der To-Dos' });
     }
 };
@@ -516,7 +517,7 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
 
         res.json(requests);
     } catch (error) {
-        console.error('Fehler beim Abrufen der chronologischen Requests:', error);
+        logger.error('Fehler beim Abrufen der chronologischen Requests:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der Requests' });
     }
 };
@@ -779,7 +780,7 @@ export const getTodosFrequencyAnalysis = async (req: Request, res: Response) => 
             }
         });
     } catch (error) {
-        console.error('Fehler beim Abrufen der Häufigkeitsanalyse:', error);
+        logger.error('Fehler beim Abrufen der Häufigkeitsanalyse:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der Häufigkeitsanalyse' });
     }
 };
@@ -958,7 +959,7 @@ export const getTodosShiftAnalysis = async (req: Request, res: Response) => {
             tasksWithShifts: tasksWithShifts.slice(0, 100) // Top 100
         });
     } catch (error) {
-        console.error('Fehler beim Abrufen der Schicht-Analyse:', error);
+        logger.error('Fehler beim Abrufen der Schicht-Analyse:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der Schicht-Analyse' });
     }
 };

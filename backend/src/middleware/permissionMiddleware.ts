@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../utils/prisma';
 import { userCache } from '../services/userCache';
+import { logger } from '../utils/logger';
 
 // Erweitere den Request-Typ um userPermissions
 declare global {
@@ -32,7 +33,7 @@ export const checkPermission = (entity: string, requiredAccess: 'read' | 'write'
             const roleId = parseInt(req.roleId, 10);
 
             if (isNaN(userId) || isNaN(roleId)) {
-                console.error(`[checkPermission] ❌ Authentifizierung fehlgeschlagen: userId=${req.userId}, roleId=${req.roleId}`);
+                logger.error(`[checkPermission] ❌ Authentifizierung fehlgeschlagen: userId=${req.userId}, roleId=${req.roleId}`);
                 return res.status(401).json({ message: 'Nicht authentifiziert' });
             }
 
@@ -40,7 +41,7 @@ export const checkPermission = (entity: string, requiredAccess: 'read' | 'write'
             const hasAccess = await checkUserPermission(userId, roleId, entity, requiredAccess, entityType);
 
             if (!hasAccess) {
-                console.error(`[checkPermission] ❌ VERWEIGERT: Entity=${entity}, EntityType=${entityType}, UserId=${userId}, RoleId=${roleId}`);
+                logger.error(`[checkPermission] ❌ VERWEIGERT: Entity=${entity}, EntityType=${entityType}, UserId=${userId}, RoleId=${roleId}`);
             }
 
             if (!hasAccess) {
@@ -52,7 +53,7 @@ export const checkPermission = (entity: string, requiredAccess: 'read' | 'write'
 
             next();
         } catch (error) {
-            console.error('Fehler bei der Berechtigungsprüfung:', error);
+            logger.error('Fehler bei der Berechtigungsprüfung:', error);
             res.status(500).json({ message: 'Interner Server-Fehler' });
         }
     };
@@ -72,7 +73,7 @@ export const checkUserPermission = async (
         const cached = await userCache.get(userId);
         
         if (!cached || !cached.user) {
-            console.error(`[checkUserPermission] ❌ User nicht gefunden: userId=${userId}`);
+            logger.error(`[checkUserPermission] ❌ User nicht gefunden: userId=${userId}`);
             return false;
         }
 
@@ -80,13 +81,13 @@ export const checkUserPermission = async (
         const activeRole = cached.user.roles.find((r: any) => r.lastUsed);
 
         if (!activeRole) {
-            console.error(`[checkUserPermission] ❌ Keine aktive Rolle gefunden: userId=${userId}`);
+            logger.error(`[checkUserPermission] ❌ Keine aktive Rolle gefunden: userId=${userId}`);
             return false;
         }
 
         // Prüfe ob die roleId mit der aktiven Rolle übereinstimmt
         if (activeRole.role.id !== roleId) {
-            console.warn(`[checkUserPermission] ⚠️ roleId mismatch: requested=${roleId}, active=${activeRole.role.id}, verwende aktive Rolle`);
+            logger.warn(`[checkUserPermission] ⚠️ roleId mismatch: requested=${roleId}, active=${activeRole.role.id}, verwende aktive Rolle`);
             // Verwende die aktive Rolle statt der angeforderten roleId
         }
 
@@ -99,12 +100,12 @@ export const checkUserPermission = async (
         );
 
         if (!permission) {
-            console.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${activeRole.role.name}" (ID: ${activeRole.role.id})`);
-            console.log(`[checkUserPermission] Verfügbare Cerebro-Permissions:`);
+            logger.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${activeRole.role.name}" (ID: ${activeRole.role.id})`);
+            logger.log(`[checkUserPermission] Verfügbare Cerebro-Permissions:`);
             permissions
                 .filter((p: any) => p.entity.includes('cerebro'))
                 .forEach((p: any) => {
-                    console.log(`   - ${p.entity} (${p.entityType}): ${p.accessLevel}`);
+                    logger.log(`   - ${p.entity} (${p.entityType}): ${p.accessLevel}`);
                 });
             return false;
         }
@@ -116,14 +117,14 @@ export const checkUserPermission = async (
             (requiredAccess === 'write' && permission.accessLevel === 'write');
 
         if (!hasAccess) {
-            console.error(`[checkUserPermission] ❌ Zugriff unzureichend: ${permission.accessLevel} < ${requiredAccess}`);
+            logger.error(`[checkUserPermission] ❌ Zugriff unzureichend: ${permission.accessLevel} < ${requiredAccess}`);
             return false;
         }
 
         // Zugriff gewähren, wenn alle Prüfungen bestanden wurden
         return true;
     } catch (error) {
-        console.error('Fehler bei der Berechtigungsprüfung:', error);
+        logger.error('Fehler bei der Berechtigungsprüfung:', error);
         return false;
     }
 };
@@ -157,7 +158,7 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction) =
 
         next();
     } catch (error) {
-        console.error('Error in admin check middleware:', error);
+        logger.error('Error in admin check middleware:', error);
         res.status(500).json({ 
             message: 'Fehler bei der Admin-Berechtigungsprüfung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -258,7 +259,7 @@ export const requireCompleteProfile = async (
 
         next();
     } catch (error) {
-        console.error('Error in requireCompleteProfile middleware:', error);
+        logger.error('Error in requireCompleteProfile middleware:', error);
         res.status(500).json({
             message: 'Fehler bei der Profilprüfung',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

@@ -13,6 +13,7 @@ exports.updateUserNotificationSettings = exports.getUserNotificationSettings = e
 const notificationValidation_1 = require("../validation/notificationValidation");
 const prisma_1 = require("../utils/prisma");
 const notificationSettingsCache_1 = require("../services/notificationSettingsCache");
+const logger_1 = require("../utils/logger");
 // System-weite Notification-Einstellungen abrufen
 const getNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -41,7 +42,7 @@ const getNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 0, 
         res.json(settings);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Notification-Einstellungen:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Notification-Einstellungen:', error);
         res.status(500).json({ message: 'Interner Server-Fehler' });
     }
 });
@@ -76,7 +77,7 @@ const updateNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 
         res.json(settings);
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren der Notification-Einstellungen:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren der Notification-Einstellungen:', error);
         res.status(500).json({ message: 'Interner Server-Fehler' });
     }
 });
@@ -84,16 +85,16 @@ exports.updateNotificationSettings = updateNotificationSettings;
 // Benutzer-spezifische Notification-Einstellungen abrufen
 const getUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
-    console.log('[SettingsController] getUserNotificationSettings aufgerufen');
+    logger_1.logger.log('[SettingsController] getUserNotificationSettings aufgerufen');
     try {
         // Korrekte Extraktion der userId mit mehr Fehlertoleranz
         let userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         if (!userId && req.userId) {
             userId = req.userId;
-            console.log('[SettingsController] userId aus req.userId extrahiert:', userId);
+            logger_1.logger.log('[SettingsController] userId aus req.userId extrahiert:', userId);
         }
         if (!userId) {
-            console.log('[SettingsController] Kein userId gefunden');
+            logger_1.logger.log('[SettingsController] Kein userId gefunden');
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // userId in number umwandeln, falls es ein String ist
@@ -101,30 +102,30 @@ const getUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, void
         if (typeof userId === 'string') {
             numericUserId = parseInt(userId, 10);
             if (isNaN(numericUserId)) {
-                console.error('[SettingsController] Ungültige userId (keine Zahl):', userId);
+                logger_1.logger.error('[SettingsController] Ungültige userId (keine Zahl):', userId);
                 return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
             }
-            console.log('[SettingsController] String-userId in Zahl umgewandelt:', numericUserId);
+            logger_1.logger.log('[SettingsController] String-userId in Zahl umgewandelt:', numericUserId);
         }
         else {
             numericUserId = userId;
         }
-        console.log('[SettingsController] Lade Benachrichtigungseinstellungen für Benutzer:', numericUserId);
+        logger_1.logger.log('[SettingsController] Lade Benachrichtigungseinstellungen für Benutzer:', numericUserId);
         // Überprüfe, ob der Prisma-Client verfügbar ist
         if (!prisma_1.prisma) {
-            console.error('[SettingsController] Prisma-Client nicht verfügbar');
+            logger_1.logger.error('[SettingsController] Prisma-Client nicht verfügbar');
             return res.status(500).json({ message: 'Interner Datenbankfehler' });
         }
         // Benutzereinstellungen abrufen
         const settings = yield prisma_1.prisma.userNotificationSettings.findFirst({
             where: { userId: numericUserId }
         });
-        console.log('[SettingsController] Gefundene Einstellungen:', settings ? 'Ja' : 'Nein');
+        logger_1.logger.log('[SettingsController] Gefundene Einstellungen:', settings ? 'Ja' : 'Nein');
         // Wenn keine benutzer-spezifischen Einstellungen, dann System-Einstellungen abrufen
         if (!settings) {
-            console.log('[SettingsController] Keine Benutzereinstellungen gefunden, lade System-Einstellungen');
+            logger_1.logger.log('[SettingsController] Keine Benutzereinstellungen gefunden, lade System-Einstellungen');
             const systemSettings = yield prisma_1.prisma.notificationSettings.findFirst();
-            console.log('[SettingsController] System-Einstellungen geladen:', !!systemSettings);
+            logger_1.logger.log('[SettingsController] System-Einstellungen geladen:', !!systemSettings);
             // Default-Einstellungen mit Systemwerten oder Standardwerten
             return res.json({
                 userId: numericUserId,
@@ -146,11 +147,11 @@ const getUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, void
                 worktimeStop: (_s = systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.worktimeStop) !== null && _s !== void 0 ? _s : true
             });
         }
-        console.log('[SettingsController] Sende Benutzereinstellungen zurück');
+        logger_1.logger.log('[SettingsController] Sende Benutzereinstellungen zurück');
         res.json(settings);
     }
     catch (error) {
-        console.error('[SettingsController] Fehler beim Abrufen der Benutzer-Notification-Einstellungen:', error);
+        logger_1.logger.error('[SettingsController] Fehler beim Abrufen der Benutzer-Notification-Einstellungen:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Benachrichtigungseinstellungen',
             error: error instanceof Error ? error.message : String(error)
@@ -172,7 +173,7 @@ const updateUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, v
         else {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        console.log('Aktualisiere Benachrichtigungseinstellungen für Benutzer:', userId);
+        logger_1.logger.log('Aktualisiere Benachrichtigungseinstellungen für Benutzer:', userId);
         const data = Object.assign(Object.assign({}, req.body), { userId });
         // Validierung
         const validationError = (0, notificationValidation_1.validateUserNotificationSettings)(data);
@@ -202,7 +203,7 @@ const updateUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, v
         res.json(settings);
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren der Benutzer-Notification-Einstellungen:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren der Benutzer-Notification-Einstellungen:', error);
         res.status(500).json({ message: 'Interner Server-Fehler' });
     }
 });

@@ -7,6 +7,7 @@ import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } 
 import { filterCache } from '../services/filterCache';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import { isAdminOrOwner } from '../middleware/organization';
+import { logger } from '../utils/logger';
 // TourWhatsAppService wird dynamisch importiert wenn benötigt
 // NotificationService wird dynamisch importiert wenn benötigt
 
@@ -73,7 +74,7 @@ export const getAllTourBookings = async (req: Request, res: Response) => {
           filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'tour_booking');
         }
       } catch (filterError) {
-        console.error(`[getAllTourBookings] Fehler beim Laden von Filter ${filterId}:`, filterError);
+        logger.error(`[getAllTourBookings] Fehler beim Laden von Filter ${filterId}:`, filterError);
       }
     } else if (filterConditions) {
       filterWhereClause = convertFilterConditionsToPrismaWhere(
@@ -212,7 +213,7 @@ export const getAllTourBookings = async (req: Request, res: Response) => {
       hasMore: offset + bookings.length < totalCount
     });
   } catch (error) {
-    console.error('[getAllTourBookings] Fehler:', error);
+    logger.error('[getAllTourBookings] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden der Buchungen'
@@ -277,7 +278,7 @@ export const getTourBookingById = async (req: Request, res: Response) => {
       data: booking
     });
   } catch (error) {
-    console.error('[getTourBookingById] Fehler:', error);
+    logger.error('[getTourBookingById] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden der Buchung'
@@ -441,7 +442,7 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
     try {
       await calculateCommission(booking.id);
     } catch (commissionError) {
-      console.error('[createTourBooking] Fehler bei Kommissions-Berechnung:', commissionError);
+      logger.error('[createTourBooking] Fehler bei Kommissions-Berechnung:', commissionError);
       // Nicht abbrechen, nur loggen
     }
 
@@ -488,7 +489,7 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
         // Lösche Dummy-Reservation wieder (oder behalte sie für Tracking?)
         // await prisma.reservation.delete({ where: { id: dummyReservation.id } });
       } catch (paymentError) {
-        console.error('[createTourBooking] Fehler beim Erstellen des Payment-Links:', paymentError);
+        logger.error('[createTourBooking] Fehler beim Erstellen des Payment-Links:', paymentError);
         // Nicht abbrechen, nur loggen
       }
     }
@@ -499,7 +500,7 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
         const { TourWhatsAppService } = await import('../services/tourWhatsAppService');
         await TourWhatsAppService.sendBookingRequestToProvider(booking.id, organizationId, branchId);
       } catch (whatsappError) {
-        console.error('[createTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+        logger.error('[createTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
         // Nicht abbrechen, nur loggen
       }
     }
@@ -531,7 +532,7 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
       data: fullBooking
     });
   } catch (error) {
-    console.error('[createTourBooking] Fehler:', error);
+    logger.error('[createTourBooking] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Erstellen der Buchung'
@@ -638,7 +639,7 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
       try {
         await calculateCommission(bookingId);
       } catch (commissionError) {
-        console.error('[updateTourBooking] Fehler bei Kommissions-Berechnung:', commissionError);
+        logger.error('[updateTourBooking] Fehler bei Kommissions-Berechnung:', commissionError);
       }
     }
 
@@ -675,7 +676,7 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
       data: booking
     });
   } catch (error) {
-    console.error('[updateTourBooking] Fehler:', error);
+    logger.error('[updateTourBooking] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Aktualisieren der Buchung'
@@ -732,7 +733,7 @@ export const deleteTourBooking = async (req: AuthenticatedRequest, res: Response
       message: 'Buchung gelöscht'
     });
   } catch (error) {
-    console.error('[deleteTourBooking] Fehler:', error);
+    logger.error('[deleteTourBooking] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Löschen der Buchung'
@@ -828,7 +829,7 @@ export const cancelTourBooking = async (req: AuthenticatedRequest, res: Response
           reason?.trim() || undefined
         );
       } catch (whatsappError) {
-        console.error('[cancelTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
+        logger.error('[cancelTourBooking] Fehler beim Senden der WhatsApp-Nachricht:', whatsappError);
         // Nicht abbrechen, nur loggen
       }
     }
@@ -838,7 +839,7 @@ export const cancelTourBooking = async (req: AuthenticatedRequest, res: Response
       data: booking
     });
   } catch (error) {
-    console.error('[cancelTourBooking] Fehler:', error);
+    logger.error('[cancelTourBooking] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Stornieren der Buchung'
@@ -879,7 +880,7 @@ export const completeTourBooking = async (req: AuthenticatedRequest, res: Respon
       data: booking
     });
   } catch (error) {
-    console.error('[completeTourBooking] Fehler:', error);
+    logger.error('[completeTourBooking] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Markieren der Buchung als abgeschlossen'
@@ -942,7 +943,7 @@ export const getUserTourBookings = async (req: Request, res: Response) => {
       data: bookings
     });
   } catch (error) {
-    console.error('[getUserTourBookings] Fehler:', error);
+    logger.error('[getUserTourBookings] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden der Buchungen'
@@ -977,7 +978,7 @@ export const getUserCommissions = async (req: Request, res: Response) => {
       data: stats
     });
   } catch (error) {
-    console.error('[getUserCommissions] Fehler:', error);
+    logger.error('[getUserCommissions] Fehler:', error);
     res.status(500).json({
       success: false,
       message: 'Fehler beim Laden der Kommissionen'

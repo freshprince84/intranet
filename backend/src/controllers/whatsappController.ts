@@ -4,6 +4,7 @@ import { WhatsAppReservationService } from '../services/whatsappReservationServi
 import { WhatsAppMessageHandler } from '../services/whatsappMessageHandler';
 import { WhatsAppService } from '../services/whatsappService';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * POST /api/whatsapp/webhook
@@ -14,7 +15,7 @@ import { prisma } from '../utils/prisma';
  */
 export const handleWebhook = async (req: Request, res: Response) => {
   try {
-    console.log('[WhatsApp Webhook] Webhook-Anfrage erhalten:', {
+    logger.log('[WhatsApp Webhook] Webhook-Anfrage erhalten:', {
       method: req.method,
       path: req.path,
       headers: {
@@ -29,23 +30,23 @@ export const handleWebhook = async (req: Request, res: Response) => {
       const token = req.query['hub.verify_token'];
       const challenge = req.query['hub.challenge'];
 
-      console.log('[WhatsApp Webhook] GET Request - Verifizierung:', { mode, token: token ? '***' : 'fehlt', challenge });
+      logger.log('[WhatsApp Webhook] GET Request - Verifizierung:', { mode, token: token ? '***' : 'fehlt', challenge });
 
       // TODO: Webhook-Verifizierungstoken aus Settings laden
       const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || 'your_verify_token';
 
       if (mode === 'subscribe' && token === verifyToken) {
-        console.log('[WhatsApp Webhook] Webhook verifiziert');
+        logger.log('[WhatsApp Webhook] Webhook verifiziert');
         return res.status(200).send(challenge);
       } else {
-        console.warn('[WhatsApp Webhook] Verifizierung fehlgeschlagen:', { mode, tokenMatch: token === verifyToken });
+        logger.warn('[WhatsApp Webhook] Verifizierung fehlgeschlagen:', { mode, tokenMatch: token === verifyToken });
         return res.status(403).send('Forbidden');
       }
     }
 
     // POST Request: Eingehende Nachricht
     const body = req.body;
-    console.log('[WhatsApp Webhook] POST Request Body:', JSON.stringify(body, null, 2));
+    logger.log('[WhatsApp Webhook] POST Request Body:', JSON.stringify(body, null, 2));
 
     // WhatsApp Business API Format
     // https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components
@@ -55,9 +56,9 @@ export const handleWebhook = async (req: Request, res: Response) => {
       const value = changes?.value;
       const field = changes?.field;
 
-      console.log('[WhatsApp Webhook] Webhook Field:', field);
-      console.log('[WhatsApp Webhook] Has messages:', !!value?.messages?.[0]);
-      console.log('[WhatsApp Webhook] Has statuses:', !!value?.statuses?.[0]);
+      logger.log('[WhatsApp Webhook] Webhook Field:', field);
+      logger.log('[WhatsApp Webhook] Has messages:', !!value?.messages?.[0]);
+      logger.log('[WhatsApp Webhook] Has statuses:', !!value?.statuses?.[0]);
 
       // Status-Update (loggen für Debugging)
       if (value?.statuses?.[0]) {
@@ -68,7 +69,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
         const timestamp = statusUpdate.timestamp;
         const errors = statusUpdate.errors;
         
-        console.log('[WhatsApp Webhook] Status-Update empfangen:', {
+        logger.log('[WhatsApp Webhook] Status-Update empfangen:', {
           status,
           messageId,
           recipientId,
@@ -78,7 +79,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
         
         // Bei Fehlern detailliert loggen
         if (status === 'failed' || errors) {
-          console.error('[WhatsApp Webhook] ❌ Nachricht-Zustellung fehlgeschlagen!', {
+          logger.error('[WhatsApp Webhook] ❌ Nachricht-Zustellung fehlgeschlagen!', {
             status,
             messageId,
             recipientId,
@@ -86,11 +87,11 @@ export const handleWebhook = async (req: Request, res: Response) => {
             timestamp
           });
         } else if (status === 'sent') {
-          console.log('[WhatsApp Webhook] ✅ Nachricht erfolgreich gesendet:', { messageId, recipientId });
+          logger.log('[WhatsApp Webhook] ✅ Nachricht erfolgreich gesendet:', { messageId, recipientId });
         } else if (status === 'delivered') {
-          console.log('[WhatsApp Webhook] ✅ Nachricht erfolgreich zugestellt:', { messageId, recipientId });
+          logger.log('[WhatsApp Webhook] ✅ Nachricht erfolgreich zugestellt:', { messageId, recipientId });
         } else if (status === 'read') {
-          console.log('[WhatsApp Webhook] ✅ Nachricht gelesen:', { messageId, recipientId });
+          logger.log('[WhatsApp Webhook] ✅ Nachricht gelesen:', { messageId, recipientId });
         }
         
         return res.status(200).json({ success: true, message: 'Status-Update empfangen' });
@@ -109,7 +110,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
         const groupId = context?.group_id || null;
         const isGroupMessage = !!groupId;
 
-        console.log('[WhatsApp Webhook] Eingehende Nachricht:', {
+        logger.log('[WhatsApp Webhook] Eingehende Nachricht:', {
           from: fromNumber,
           text: messageText,
           phoneNumberId: phoneNumberId,
@@ -121,12 +122,12 @@ export const handleWebhook = async (req: Request, res: Response) => {
         const branchId = await identifyBranchFromPhoneNumberId(phoneNumberId);
 
         if (!branchId) {
-          console.error('[WhatsApp Webhook] Branch nicht gefunden für Phone Number ID:', phoneNumberId);
+          logger.error('[WhatsApp Webhook] Branch nicht gefunden für Phone Number ID:', phoneNumberId);
           // Trotzdem 200 zurückgeben, damit WhatsApp nicht erneut sendet
           return res.status(200).json({ success: false, error: 'Branch nicht gefunden' });
         }
 
-        console.log('[WhatsApp Webhook] Branch identifiziert:', branchId);
+        logger.log('[WhatsApp Webhook] Branch identifiziert:', branchId);
 
         // 1.5. Speichere eingehende Nachricht in Datenbank
         try {
@@ -148,7 +149,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
             });
             conversationId = conversation?.id || null;
           } catch (convError) {
-            console.error('[WhatsApp Webhook] Fehler beim Laden der Conversation:', convError);
+            logger.error('[WhatsApp Webhook] Fehler beim Laden der Conversation:', convError);
           }
           
           // Prüfe ob es eine Reservation zu dieser Telefonnummer gibt
@@ -176,9 +177,9 @@ export const handleWebhook = async (req: Request, res: Response) => {
             }
           });
           
-          console.log('[WhatsApp Webhook] ✅ Eingehende Nachricht in Datenbank gespeichert', { conversationId });
+          logger.log('[WhatsApp Webhook] ✅ Eingehende Nachricht in Datenbank gespeichert', { conversationId });
         } catch (dbError) {
-          console.error('[WhatsApp Webhook] ⚠️ Fehler beim Speichern der eingehenden Nachricht:', dbError);
+          logger.error('[WhatsApp Webhook] ⚠️ Fehler beim Speichern der eingehenden Nachricht:', dbError);
           // Weiter mit Verarbeitung, auch wenn Speichern fehlschlägt
         }
 
@@ -186,17 +187,17 @@ export const handleWebhook = async (req: Request, res: Response) => {
         const parsedMessage = WhatsAppMessageParser.parseReservationMessage(messageText);
 
         if (parsedMessage) {
-          console.log('[WhatsApp Webhook] LobbyPMS Reservierungsnachricht erkannt:', parsedMessage);
+          logger.log('[WhatsApp Webhook] LobbyPMS Reservierungsnachricht erkannt:', parsedMessage);
 
           // Erstelle Reservierung
           try {
             const reservation = await WhatsAppReservationService.createReservationFromMessage(parsedMessage);
-            console.log('[WhatsApp Webhook] Reservierung erstellt:', reservation.id);
+            logger.log('[WhatsApp Webhook] Reservierung erstellt:', reservation.id);
 
             // Bestätige Webhook-Empfang
             return res.status(200).json({ success: true, reservationId: reservation.id });
           } catch (error) {
-            console.error('[WhatsApp Webhook] Fehler beim Erstellen der Reservierung:', error);
+            logger.error('[WhatsApp Webhook] Fehler beim Erstellen der Reservierung:', error);
             // Trotzdem 200 zurückgeben, damit WhatsApp nicht erneut sendet
             return res.status(200).json({ success: false, error: 'Fehler beim Erstellen der Reservierung' });
           }
@@ -204,7 +205,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
         // 3. Verarbeite Nachricht via Message Handler (neue Funktionalität)
         try {
-          console.log('[WhatsApp Webhook] Rufe Message Handler auf...');
+          logger.log('[WhatsApp Webhook] Rufe Message Handler auf...');
           const response = await WhatsAppMessageHandler.handleIncomingMessage(
             fromNumber,
             messageText,
@@ -213,14 +214,14 @@ export const handleWebhook = async (req: Request, res: Response) => {
             groupId || undefined
           );
 
-          console.log('[WhatsApp Webhook] Antwort generiert:', response.substring(0, 100) + '...');
-          console.log('[WhatsApp Webhook] Vollständige Antwort:', response);
+          logger.log('[WhatsApp Webhook] Antwort generiert:', response.substring(0, 100) + '...');
+          logger.log('[WhatsApp Webhook] Vollständige Antwort:', response);
 
           // 4. Sende Antwort
-          console.log('[WhatsApp Webhook] Erstelle WhatsApp Service für Branch', branchId);
+          logger.log('[WhatsApp Webhook] Erstelle WhatsApp Service für Branch', branchId);
           const whatsappService = await WhatsAppService.getServiceForBranch(branchId);
           
-          console.log('[WhatsApp Webhook] Sende Antwort an', fromNumber, isGroupMessage ? `(Gruppe: ${groupId})` : '');
+          logger.log('[WhatsApp Webhook] Sende Antwort an', fromNumber, isGroupMessage ? `(Gruppe: ${groupId})` : '');
           
           // Für Gruppen: Sende mit group_id, für Einzel-Chats: normale Nachricht
           if (isGroupMessage && groupId) {
@@ -229,14 +230,14 @@ export const handleWebhook = async (req: Request, res: Response) => {
             await whatsappService.sendMessage(fromNumber, response);
           }
 
-          console.log('[WhatsApp Webhook] ✅ Antwort erfolgreich gesendet');
+          logger.log('[WhatsApp Webhook] ✅ Antwort erfolgreich gesendet');
 
           return res.status(200).json({ success: true, message: 'Nachricht verarbeitet und Antwort gesendet' });
         } catch (error) {
-          console.error('[WhatsApp Webhook] ❌ Fehler bei Message Handler:', error);
+          logger.error('[WhatsApp Webhook] ❌ Fehler bei Message Handler:', error);
           if (error instanceof Error) {
-            console.error('[WhatsApp Webhook] Fehlermeldung:', error.message);
-            console.error('[WhatsApp Webhook] Stack:', error.stack);
+            logger.error('[WhatsApp Webhook] Fehlermeldung:', error.message);
+            logger.error('[WhatsApp Webhook] Stack:', error.stack);
           }
           // Trotzdem 200 zurückgeben, damit WhatsApp nicht erneut sendet
           return res.status(200).json({ 
@@ -248,10 +249,10 @@ export const handleWebhook = async (req: Request, res: Response) => {
     }
 
     // Unbekanntes Format
-    console.log('[WhatsApp Webhook] Unbekanntes Webhook-Format:', JSON.stringify(body, null, 2));
+    logger.log('[WhatsApp Webhook] Unbekanntes Webhook-Format:', JSON.stringify(body, null, 2));
     return res.status(200).json({ success: true, message: 'Webhook empfangen, aber nicht verarbeitet' });
   } catch (error) {
-    console.error('[WhatsApp Webhook] Fehler beim Verarbeiten:', error);
+    logger.error('[WhatsApp Webhook] Fehler beim Verarbeiten:', error);
     // Trotzdem 200 zurückgeben, damit WhatsApp nicht erneut sendet
     return res.status(200).json({ 
       success: false, 
@@ -275,7 +276,7 @@ async function identifyBranchFromPhoneNumberId(phoneNumberId: string): Promise<n
     });
 
     if (mapping) {
-      console.log('[WhatsApp Webhook] Branch via Mapping gefunden:', mapping.branchId);
+      logger.log('[WhatsApp Webhook] Branch via Mapping gefunden:', mapping.branchId);
       return mapping.branchId;
     }
 
@@ -296,16 +297,16 @@ async function identifyBranchFromPhoneNumberId(phoneNumberId: string): Promise<n
         const settings = branch.whatsappSettings as any;
         const whatsappSettings = settings?.whatsapp || settings;
         if (whatsappSettings?.phoneNumberId === phoneNumberId) {
-          console.log('[WhatsApp Webhook] Branch via Settings gefunden:', branch.id);
+          logger.log('[WhatsApp Webhook] Branch via Settings gefunden:', branch.id);
           return branch.id;
         }
       }
     }
 
-    console.warn('[WhatsApp Webhook] Kein Branch gefunden für Phone Number ID:', phoneNumberId);
+    logger.warn('[WhatsApp Webhook] Kein Branch gefunden für Phone Number ID:', phoneNumberId);
     return null;
   } catch (error) {
-    console.error('[WhatsApp Webhook] Fehler bei Branch-Identifikation:', error);
+    logger.error('[WhatsApp Webhook] Fehler bei Branch-Identifikation:', error);
     return null;
   }
 }

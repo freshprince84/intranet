@@ -11,6 +11,7 @@ import { sendRegistrationEmail, sendPasswordResetEmail } from '../services/email
 import { prisma } from '../utils/prisma';
 import { userCache } from '../services/userCache';
 import { organizationCache } from '../utils/organizationCache';
+import { logger } from '../utils/logger';
 
 interface RegisterRequest {
     email: string;
@@ -72,7 +73,7 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
         });
 
         if (!userRole) {
-            console.error('User-Rolle nicht gefunden');
+            logger.error('User-Rolle nicht gefunden');
             return res.status(500).json({ message: 'User-Rolle nicht gefunden' });
         }
         
@@ -170,7 +171,7 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
 
         // 📧 E-Mail mit Anmeldeinformationen versenden (asynchron, blockiert nicht die Response)
         sendRegistrationEmail(user.email, finalUsername, password).catch((error) => {
-            console.error('Fehler beim Versenden der Registrierungs-E-Mail:', error);
+            logger.error('Fehler beim Versenden der Registrierungs-E-Mail:', error);
             // E-Mail-Fehler blockieren nicht die Registrierung
         });
 
@@ -180,7 +181,7 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
             user: userResponse
         });
     } catch (error) {
-        console.error('Register error:', error);
+        logger.error('Register error:', error);
         res.status(400).json({ 
             message: 'Fehler bei der Registrierung', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -255,7 +256,7 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
                     
                     activeRole = { ...roleToActivate, lastUsed: true };
                 } catch (error) {
-                    console.error('[LOGIN] Fehler beim Aktualisieren des UserRole-Eintrags:', error);
+                    logger.error('[LOGIN] Fehler beim Aktualisieren des UserRole-Eintrags:', error);
                     return res.status(500).json({ 
                         message: 'Fehler bei der Rollenzuweisung',
                         error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -266,7 +267,7 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
         
         // Nach allen Versuchen, eine aktive Rolle zu finden oder zuzuweisen, überprüfen wir nochmals
         if (!activeRole) {
-            console.error('[LOGIN] Kritischer Fehler: Keine aktive Rolle konnte zugewiesen werden');
+            logger.error('[LOGIN] Kritischer Fehler: Keine aktive Rolle konnte zugewiesen werden');
             return res.status(500).json({ 
                 message: 'Kritischer Fehler: Keine Rolle konnte zugewiesen werden'
             });
@@ -299,8 +300,8 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
         
         // Debug: Logge Logo-Daten vor Login-Response
         const activeRoleOrg = user.roles.find(r => r.lastUsed)?.role.organization;
-        console.log('=== LOGIN LOGO DEBUG ===');
-        console.log('Active role organization:', activeRoleOrg ? {
+        logger.log('=== LOGIN LOGO DEBUG ===');
+        logger.log('Active role organization:', activeRoleOrg ? {
             id: activeRoleOrg.id,
             name: activeRoleOrg.name,
             logo: activeRoleOrg.logo ? (activeRoleOrg.logo === 'null' ? 'String "null" (WIRD KORRIGIERT)' : `${activeRoleOrg.logo.substring(0, 50)}...`) : 'null'
@@ -341,10 +342,10 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
             organizationCache.invalidate(user.id); // Alten Cache löschen falls vorhanden
             await organizationCache.get(user.id);
             
-            console.log(`[LOGIN] ✅ Cache-Warming abgeschlossen für User ${user.id}`);
+            logger.log(`[LOGIN] ✅ Cache-Warming abgeschlossen für User ${user.id}`);
         } catch (cacheError) {
             // Cache-Warming-Fehler sollten Login nicht blockieren
-            console.error('[LOGIN] ⚠️ Cache-Warming fehlgeschlagen (nicht kritisch):', cacheError);
+            logger.error('[LOGIN] ⚠️ Cache-Warming fehlgeschlagen (nicht kritisch):', cacheError);
         }
         
         // Bereite die Benutzerinformationen für die Antwort vor
@@ -380,7 +381,7 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
             user: userResponse
         });
     } catch (error) {
-        console.error('[LOGIN] Unbehandelter Fehler:', error);
+        logger.error('[LOGIN] Unbehandelter Fehler:', error);
         res.status(500).json({ 
             message: 'Fehler beim Login', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -392,7 +393,7 @@ export const logout = async (_req: Request, res: Response) => {
     try {
         return res.status(200).json({ message: 'Logout erfolgreich' });
     } catch (error) {
-        console.error('Logout-Fehler:', error);
+        logger.error('Logout-Fehler:', error);
         return res.status(500).json({ 
             message: 'Fehler beim Logout', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -459,7 +460,7 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
 
         res.json({ user: userResponse });
     } catch (error) {
-        console.error('getCurrentUser Fehler:', error);
+        logger.error('getCurrentUser Fehler:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen des Benutzers', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -518,7 +519,7 @@ export const requestPasswordReset = async (req: Request<{}, {}, RequestPasswordR
 
         if (!user) {
             // Logge intern, aber sende keine Fehlermeldung
-            console.log(`[PASSWORD_RESET] Passwort-Reset-Anfrage für nicht existierende E-Mail: ${email}`);
+            logger.log(`[PASSWORD_RESET] Passwort-Reset-Anfrage für nicht existierende E-Mail: ${email}`);
             return res.status(200).json({ message: successMessage });
         }
 
@@ -540,18 +541,18 @@ export const requestPasswordReset = async (req: Request<{}, {}, RequestPasswordR
 
         // Finde die Organisation des Benutzers (erste aktive Rolle oder erste Rolle)
         let organizationId: number | undefined = undefined;
-        console.log(`[PASSWORD_RESET] Benutzer hat ${user.roles.length} Rolle(n)`);
+        logger.log(`[PASSWORD_RESET] Benutzer hat ${user.roles.length} Rolle(n)`);
         const activeRole = user.roles.find(r => r.lastUsed === true);
         if (activeRole?.role?.organization) {
             organizationId = activeRole.role.organization.id;
-            console.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (aktive Rolle)`);
+            logger.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (aktive Rolle)`);
         } else if (user.roles.length > 0 && user.roles[0]?.role?.organization) {
             organizationId = user.roles[0].role.organization.id;
-            console.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (erste Rolle)`);
+            logger.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (erste Rolle)`);
         } else {
-            console.log(`[PASSWORD_RESET] ⚠️ Keine Organisation gefunden für Benutzer ${user.id}`);
+            logger.log(`[PASSWORD_RESET] ⚠️ Keine Organisation gefunden für Benutzer ${user.id}`);
             if (user.roles.length > 0) {
-                console.log(`[PASSWORD_RESET] Rollen vorhanden, aber keine Organisation zugeordnet`);
+                logger.log(`[PASSWORD_RESET] Rollen vorhanden, aber keine Organisation zugeordnet`);
             }
         }
 
@@ -562,15 +563,15 @@ export const requestPasswordReset = async (req: Request<{}, {}, RequestPasswordR
 
         // Sende E-Mail (asynchron, blockiert nicht die Response) mit organisationId
         sendPasswordResetEmail(user.email, user.username, resetLink, organizationId).catch((error) => {
-            console.error('Fehler beim Versenden der Passwort-Reset-E-Mail:', error);
+            logger.error('Fehler beim Versenden der Passwort-Reset-E-Mail:', error);
             // E-Mail-Fehler blockieren nicht die Response
         });
 
-        console.log(`[PASSWORD_RESET] Passwort-Reset-Token erstellt für Benutzer: ${user.username} (${user.email})`);
+        logger.log(`[PASSWORD_RESET] Passwort-Reset-Token erstellt für Benutzer: ${user.username} (${user.email})`);
 
         res.status(200).json({ message: successMessage });
     } catch (error) {
-        console.error('[PASSWORD_RESET] Fehler bei Passwort-Reset-Anfrage:', error);
+        logger.error('[PASSWORD_RESET] Fehler bei Passwort-Reset-Anfrage:', error);
         // Auch bei Fehlern die gleiche Erfolgsmeldung zurückgeben (Sicherheit)
         res.status(200).json({ 
             message: 'Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.'
@@ -629,11 +630,11 @@ export const resetPassword = async (req: Request<{}, {}, ResetPasswordRequest>, 
             })
         ]);
 
-        console.log(`[PASSWORD_RESET] Passwort erfolgreich zurückgesetzt für Benutzer: ${resetToken.user.username} (${resetToken.user.email})`);
+        logger.log(`[PASSWORD_RESET] Passwort erfolgreich zurückgesetzt für Benutzer: ${resetToken.user.username} (${resetToken.user.email})`);
 
         res.status(200).json({ message: 'Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt mit dem neuen Passwort anmelden.' });
     } catch (error) {
-        console.error('[PASSWORD_RESET] Fehler beim Zurücksetzen des Passworts:', error);
+        logger.error('[PASSWORD_RESET] Fehler beim Zurücksetzen des Passworts:', error);
         res.status(500).json({ 
             message: 'Fehler beim Zurücksetzen des Passworts', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

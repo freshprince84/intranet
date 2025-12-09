@@ -44,6 +44,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TourBookingScheduler = void 0;
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Tour Booking Scheduler
  *
@@ -85,7 +86,7 @@ class TourBookingScheduler {
                         }
                     }
                 });
-                console.log(`[TourBookingScheduler] Gefunden ${expiredBookings.length} abgelaufene Buchungen`);
+                logger_1.logger.log(`[TourBookingScheduler] Gefunden ${expiredBookings.length} abgelaufene Buchungen`);
                 for (const booking of expiredBookings) {
                     try {
                         // Storniere Buchung
@@ -105,18 +106,18 @@ class TourBookingScheduler {
                                 yield TourWhatsAppService.sendCancellationToCustomer(booking.id, booking.tour.organizationId, booking.branchId || null, 'Automatische Stornierung: Zahlung nicht innerhalb der Frist erhalten');
                             }
                             catch (whatsappError) {
-                                console.error(`[TourBookingScheduler] Fehler beim Senden der WhatsApp-Nachricht für Buchung ${booking.id}:`, whatsappError);
+                                logger_1.logger.error(`[TourBookingScheduler] Fehler beim Senden der WhatsApp-Nachricht für Buchung ${booking.id}:`, whatsappError);
                             }
                         }
-                        console.log(`[TourBookingScheduler] ✅ Buchung ${booking.id} automatisch storniert`);
+                        logger_1.logger.log(`[TourBookingScheduler] ✅ Buchung ${booking.id} automatisch storniert`);
                     }
                     catch (error) {
-                        console.error(`[TourBookingScheduler] Fehler beim Stornieren der Buchung ${booking.id}:`, error);
+                        logger_1.logger.error(`[TourBookingScheduler] Fehler beim Stornieren der Buchung ${booking.id}:`, error);
                     }
                 }
             }
             catch (error) {
-                console.error('[TourBookingScheduler] Fehler:', error);
+                logger_1.logger.error('[TourBookingScheduler] Fehler:', error);
             }
         });
     }

@@ -19,6 +19,7 @@ const path_1 = __importDefault(require("path"));
 const translations_1 = require("../utils/translations");
 const date_fns_1 = require("date-fns");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 const saveWorkHours = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId, hours, periodStart, periodEnd } = req.body; // hours: { regular, overtime, night, sundayHoliday, overtimeNight, overtimeSundayHoliday, overtimeNightSundayHoliday }
@@ -88,7 +89,7 @@ const saveWorkHours = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.json(payroll);
     }
     catch (error) {
-        console.error('Fehler beim Speichern der Stunden:', error);
+        logger_1.logger.error('Fehler beim Speichern der Stunden:', error);
         res.status(500).json({ error: 'Interner Serverfehler' });
     }
 });
@@ -129,7 +130,7 @@ const calculatePayroll = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.json(updatedPayroll);
     }
     catch (error) {
-        console.error('Fehler bei der Lohnberechnung:', error);
+        logger_1.logger.error('Fehler bei der Lohnberechnung:', error);
         res.status(500).json({ error: 'Interner Serverfehler' });
     }
 });
@@ -145,7 +146,7 @@ const getPayrolls = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.json(payrolls);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Lohnabrechnungen:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Lohnabrechnungen:', error);
         res.status(500).json({ error: 'Interner Serverfehler' });
     }
 });
@@ -180,7 +181,7 @@ const getPrefilledHours = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.json(categorizedHours);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der vorausgefüllten Stunden:', error);
+        logger_1.logger.error('Fehler beim Abrufen der vorausgefüllten Stunden:', error);
         res.status(500).json({ error: 'Interner Serverfehler' });
     }
 });
@@ -248,7 +249,7 @@ const generatePayrollPDF = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
     }
     catch (error) {
-        console.error('Fehler beim Generieren des PDFs:', error);
+        logger_1.logger.error('Fehler beim Generieren des PDFs:', error);
         res.status(500).json({ error: 'Interner Serverfehler' });
     }
 });

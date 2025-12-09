@@ -49,6 +49,7 @@ const whatsappService_1 = require("../../services/whatsappService");
 const ttlockService_1 = require("../../services/ttlockService");
 const checkInLinkUtils_1 = require("../../utils/checkInLinkUtils");
 const prisma_1 = require("../../utils/prisma");
+const logger_1 = require("../../utils/logger");
 /**
  * Erstellt einen Worker für Guest Contact Update Jobs
  * Verarbeitet Payment-Link, TTLock Passcode und WhatsApp-Versand im Hintergrund
@@ -60,7 +61,7 @@ function createUpdateGuestContactWorker(connection) {
     return new bullmq_1.Worker('update-guest-contact', (job) => __awaiter(this, void 0, void 0, function* () {
         var _a, _b;
         const { reservationId, organizationId, contact, contactType, guestPhone, guestEmail, guestName, } = job.data;
-        console.log(`[UpdateGuestContact Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
+        logger_1.logger.log(`[UpdateGuestContact Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
         // Hole aktuelle Reservierung
         const reservation = yield prisma_1.prisma.reservation.findUnique({
             where: { id: reservationId },
@@ -93,7 +94,7 @@ function createUpdateGuestContactWorker(connection) {
         if (contactType === 'phone' && guestPhone) {
             try {
                 // Schritt 1: Payment-Link erstellen
-                console.log(`[UpdateGuestContact Worker] Erstelle Payment-Link für Reservierung ${reservationId}...`);
+                logger_1.logger.log(`[UpdateGuestContact Worker] Erstelle Payment-Link für Reservierung ${reservationId}...`);
                 const boldPaymentService = reservation.branchId
                     ? yield boldPaymentService_1.BoldPaymentService.createForBranch(reservation.branchId)
                     : new boldPaymentService_1.BoldPaymentService(organizationId);
@@ -112,7 +113,7 @@ function createUpdateGuestContactWorker(connection) {
                     }
                 }
                 paymentLink = yield boldPaymentService.createPaymentLink(reservation, amount, reservation.currency || 'COP', `Zahlung für Reservierung ${guestName}`);
-                console.log(`[UpdateGuestContact Worker] ✅ Payment-Link erstellt: ${paymentLink}`);
+                logger_1.logger.log(`[UpdateGuestContact Worker] ✅ Payment-Link erstellt: ${paymentLink}`);
                 // Schritt 2: TTLock Passcode erstellen (wenn konfiguriert)
                 try {
                     const ttlockService = reservation.branchId
@@ -131,9 +132,9 @@ function createUpdateGuestContactWorker(connection) {
                     }
                     if ((doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds) && doorSystemSettings.lockIds.length > 0) {
                         const lockId = doorSystemSettings.lockIds[0];
-                        console.log(`[UpdateGuestContact Worker] Erstelle TTLock Passcode für Lock ID: ${lockId}...`);
+                        logger_1.logger.log(`[UpdateGuestContact Worker] Erstelle TTLock Passcode für Lock ID: ${lockId}...`);
                         ttlockCode = yield ttlockService.createTemporaryPasscode(lockId, reservation.checkInDate, reservation.checkOutDate, `Guest: ${guestName}`);
-                        console.log(`[UpdateGuestContact Worker] ✅ TTLock Passcode erstellt: ${ttlockCode}`);
+                        logger_1.logger.log(`[UpdateGuestContact Worker] ✅ TTLock Passcode erstellt: ${ttlockCode}`);
                         // Speichere TTLock Code in Reservierung
                         yield prisma_1.prisma.reservation.update({
                             where: { id: reservationId },
@@ -147,11 +148,11 @@ function createUpdateGuestContactWorker(connection) {
                     }
                 }
                 catch (ttlockError) {
-                    console.error(`[UpdateGuestContact Worker] ❌ Fehler beim Erstellen des TTLock Passcodes:`, ttlockError);
+                    logger_1.logger.error(`[UpdateGuestContact Worker] ❌ Fehler beim Erstellen des TTLock Passcodes:`, ttlockError);
                     // Weiter ohne TTLock Code (wie in alter Logik)
                 }
                 // Schritt 3: WhatsApp-Nachricht senden
-                console.log(`[UpdateGuestContact Worker] Sende WhatsApp-Nachricht für Reservierung ${reservationId}...`);
+                logger_1.logger.log(`[UpdateGuestContact Worker] Sende WhatsApp-Nachricht für Reservierung ${reservationId}...`);
                 // Erstelle Nachrichtentext basierend auf Sprache
                 const { CountryLanguageService } = require('../services/countryLanguageService');
                 const languageCode = CountryLanguageService.getLanguageForReservation({
@@ -221,12 +222,12 @@ ${ttlockCode}
                         const originalEmail = ((_b = syncData.holder) === null || _b === void 0 ? void 0 : _b.email) || syncData.guest_email || null;
                         if (originalEmail) {
                             originalGuestEmail = originalEmail;
-                            console.log(`[UpdateGuestContact Worker] Verwende Original-E-Mail aus Sync-History: ${originalGuestEmail}`);
+                            logger_1.logger.log(`[UpdateGuestContact Worker] Verwende Original-E-Mail aus Sync-History: ${originalGuestEmail}`);
                         }
                     }
                 }
                 catch (historyError) {
-                    console.warn(`[UpdateGuestContact Worker] ⚠️ Konnte Original-E-Mail aus Sync-History nicht laden, verwende aktuelle:`, historyError);
+                    logger_1.logger.warn(`[UpdateGuestContact Worker] ⚠️ Konnte Original-E-Mail aus Sync-History nicht laden, verwende aktuelle:`, historyError);
                     // Fallback: Verwende aktuelle E-Mail (könnte bereits geändert sein)
                 }
                 // Erstelle LobbyPMS Check-in-Link mit Original-E-Mail
@@ -238,19 +239,19 @@ ${ttlockCode}
                 };
                 const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservationForCheckInLink);
                 const templateParams = [guestName, checkInLink, paymentLink];
-                console.log(`[UpdateGuestContact Worker] Template Name (Basis): ${templateName}`);
-                console.log(`[UpdateGuestContact Worker] Template Params: ${JSON.stringify(templateParams)}`);
+                logger_1.logger.log(`[UpdateGuestContact Worker] Template Name (Basis): ${templateName}`);
+                logger_1.logger.log(`[UpdateGuestContact Worker] Template Params: ${JSON.stringify(templateParams)}`);
                 yield whatsappService.sendMessageWithFallback(guestPhone, sentMessage, templateName, templateParams, {
                     guestNationality: reservation.guestNationality,
                     guestPhone: reservation.guestPhone
                 });
                 sentMessageAt = new Date();
-                console.log(`[UpdateGuestContact Worker] ✅ WhatsApp-Nachricht erfolgreich versendet`);
+                logger_1.logger.log(`[UpdateGuestContact Worker] ✅ WhatsApp-Nachricht erfolgreich versendet`);
             }
             catch (error) {
-                console.error(`[UpdateGuestContact Worker] ❌ Fehler beim Versenden:`, error);
+                logger_1.logger.error(`[UpdateGuestContact Worker] ❌ Fehler beim Versenden:`, error);
                 if (error instanceof Error) {
-                    console.error(`[UpdateGuestContact Worker] Fehlermeldung: ${error.message}`);
+                    logger_1.logger.error(`[UpdateGuestContact Worker] Fehlermeldung: ${error.message}`);
                 }
                 throw error; // Wird von BullMQ automatisch retried
             }
@@ -268,10 +269,10 @@ ${ttlockCode}
                 where: { id: reservationId },
                 data: updateData,
             });
-            console.log(`[UpdateGuestContact Worker] ✅ Reservierung ${reservationId} erfolgreich aktualisiert`);
+            logger_1.logger.log(`[UpdateGuestContact Worker] ✅ Reservierung ${reservationId} erfolgreich aktualisiert`);
         }
         catch (error) {
-            console.error(`[UpdateGuestContact Worker] ❌ Fehler beim Aktualisieren der Reservierung:`, error);
+            logger_1.logger.error(`[UpdateGuestContact Worker] ❌ Fehler beim Aktualisieren der Reservierung:`, error);
             throw error;
         }
         return {

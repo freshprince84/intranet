@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updatePasswordEntryPermissions = exports.getPasswordEntryPermissions = exports.getPasswordEntryAuditLogs = exports.generatePassword = exports.deletePasswordEntry = exports.updatePasswordEntry = exports.createPasswordEntry = exports.logPasswordCopy = exports.getPasswordEntryPassword = exports.getPasswordEntry = exports.getAllPasswordEntries = void 0;
 const prisma_1 = require("../utils/prisma");
 const encryption_1 = require("../utils/encryption");
+const logger_1 = require("../utils/logger");
 /**
  * Validiert URL für Passwort-Manager (SSRF-Schutz)
  */
@@ -90,7 +91,7 @@ const checkPasswordEntryPermission = (userId, roleId, entryId, requiredPermissio
         return false;
     }
     catch (error) {
-        console.error('Error checking password entry permission:', error);
+        logger_1.logger.error('Error checking password entry permission:', error);
         return false;
     }
 });
@@ -111,7 +112,7 @@ const createAuditLog = (entryId, userId, action, details, ipAddress, userAgent) 
         });
     }
     catch (error) {
-        console.error('Error creating audit log:', error);
+        logger_1.logger.error('Error creating audit log:', error);
         // Nicht kritisch, weiter machen
     }
 });
@@ -206,7 +207,7 @@ const getAllPasswordEntries = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.json(visibleEntries);
     }
     catch (error) {
-        console.error('Error getting password entries:', error);
+        logger_1.logger.error('Error getting password entries:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Passwort-Einträge' });
     }
 });
@@ -269,7 +270,7 @@ const getPasswordEntry = (req, res) => __awaiter(void 0, void 0, void 0, functio
             decryptedPassword = (0, encryption_1.decryptSecret)(entry.password);
         }
         catch (error) {
-            console.error('Error decrypting password:', error);
+            logger_1.logger.error('Error decrypting password:', error);
             return res.status(500).json({ message: 'Fehler beim Entschlüsseln des Passworts' });
         }
         // Audit-Log erstellen
@@ -277,7 +278,7 @@ const getPasswordEntry = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.json(Object.assign(Object.assign({}, entry), { password: decryptedPassword }));
     }
     catch (error) {
-        console.error('Error getting password entry:', error);
+        logger_1.logger.error('Error getting password entry:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Passwort-Eintrags' });
     }
 });
@@ -314,7 +315,7 @@ const getPasswordEntryPassword = (req, res) => __awaiter(void 0, void 0, void 0,
             decryptedPassword = (0, encryption_1.decryptSecret)(entry.password);
         }
         catch (error) {
-            console.error('Error decrypting password:', error);
+            logger_1.logger.error('Error decrypting password:', error);
             return res.status(500).json({ message: 'Fehler beim Entschlüsseln des Passworts' });
         }
         // Audit-Log erstellen
@@ -324,7 +325,7 @@ const getPasswordEntryPassword = (req, res) => __awaiter(void 0, void 0, void 0,
         });
     }
     catch (error) {
-        console.error('Error getting password:', error);
+        logger_1.logger.error('Error getting password:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Passworts' });
     }
 });
@@ -358,7 +359,7 @@ const logPasswordCopy = (req, res) => __awaiter(void 0, void 0, void 0, function
         res.json({ message: 'Audit-Log erstellt' });
     }
     catch (error) {
-        console.error('Error logging password copy:', error);
+        logger_1.logger.error('Error logging password copy:', error);
         res.status(500).json({ message: 'Fehler beim Erstellen des Audit-Logs' });
     }
 });
@@ -388,7 +389,7 @@ const createPasswordEntry = (req, res) => __awaiter(void 0, void 0, void 0, func
             encryptedPassword = (0, encryption_1.encryptSecret)(password);
         }
         catch (error) {
-            console.error('Error encrypting password:', error);
+            logger_1.logger.error('Error encrypting password:', error);
             return res.status(500).json({ message: 'Fehler beim Verschlüsseln des Passworts' });
         }
         // Erstelle Eintrag
@@ -434,7 +435,7 @@ const createPasswordEntry = (req, res) => __awaiter(void 0, void 0, void 0, func
          }));
     }
     catch (error) {
-        console.error('Error creating password entry:', error);
+        logger_1.logger.error('Error creating password entry:', error);
         res.status(500).json({ message: 'Fehler beim Erstellen des Passwort-Eintrags' });
     }
 });
@@ -483,7 +484,7 @@ const updatePasswordEntry = (req, res) => __awaiter(void 0, void 0, void 0, func
                 updateData.password = (0, encryption_1.encryptSecret)(password);
             }
             catch (error) {
-                console.error('Error encrypting password:', error);
+                logger_1.logger.error('Error encrypting password:', error);
                 return res.status(500).json({ message: 'Fehler beim Verschlüsseln des Passworts' });
             }
         }
@@ -518,7 +519,7 @@ const updatePasswordEntry = (req, res) => __awaiter(void 0, void 0, void 0, func
          }));
     }
     catch (error) {
-        console.error('Error updating password entry:', error);
+        logger_1.logger.error('Error updating password entry:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren des Passwort-Eintrags' });
     }
 });
@@ -555,7 +556,7 @@ const deletePasswordEntry = (req, res) => __awaiter(void 0, void 0, void 0, func
         res.json({ message: 'Eintrag erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Error deleting password entry:', error);
+        logger_1.logger.error('Error deleting password entry:', error);
         res.status(500).json({ message: 'Fehler beim Löschen des Passwort-Eintrags' });
     }
 });
@@ -587,7 +588,7 @@ const generatePassword = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.json({ password });
     }
     catch (error) {
-        console.error('Error generating password:', error);
+        logger_1.logger.error('Error generating password:', error);
         res.status(500).json({ message: 'Fehler beim Generieren des Passworts' });
     }
 });
@@ -647,7 +648,7 @@ const getPasswordEntryAuditLogs = (req, res) => __awaiter(void 0, void 0, void 0
         res.json(auditLogs);
     }
     catch (error) {
-        console.error('Error getting audit logs:', error);
+        logger_1.logger.error('Error getting audit logs:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Audit-Logs' });
     }
 });
@@ -706,7 +707,7 @@ const getPasswordEntryPermissions = (req, res) => __awaiter(void 0, void 0, void
         });
     }
     catch (error) {
-        console.error('Error getting password entry permissions:', error);
+        logger_1.logger.error('Error getting password entry permissions:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Berechtigungen' });
     }
 });
@@ -770,7 +771,7 @@ const updatePasswordEntryPermissions = (req, res) => __awaiter(void 0, void 0, v
         res.json({ message: 'Berechtigungen erfolgreich aktualisiert' });
     }
     catch (error) {
-        console.error('Error updating password entry permissions:', error);
+        logger_1.logger.error('Error updating password entry permissions:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren der Berechtigungen' });
     }
 });

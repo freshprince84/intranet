@@ -45,32 +45,35 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.cleanupTimers = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
 // Lade Environment-Variablen aus .env Datei
 dotenv_1.default.config({ path: path_1.default.join(__dirname, '../.env') });
 const http_1 = __importDefault(require("http"));
-const app_1 = __importDefault(require("./app"));
+const app_1 = __importStar(require("./app"));
+const rateLimiter_1 = require("./middleware/rateLimiter");
 const claudeConsoleService_1 = require("./services/claudeConsoleService");
 const queues_1 = require("./queues");
 const prisma_1 = require("./utils/prisma");
+const logger_1 = require("./utils/logger");
 // ENCRYPTION_KEY-Prüfung beim Start
 const encryptionKey = process.env.ENCRYPTION_KEY;
 if (!encryptionKey) {
-    console.error('\n❌ KRITISCHER FEHLER: ENCRYPTION_KEY ist nicht gesetzt!');
-    console.error('   Der Passwort-Manager benötigt einen Verschlüsselungsschlüssel.');
-    console.error('   Bitte setzen Sie ENCRYPTION_KEY in der .env Datei.');
-    console.error('   Generierung: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
+    logger_1.logger.error('\n❌ KRITISCHER FEHLER: ENCRYPTION_KEY ist nicht gesetzt!');
+    logger_1.logger.error('   Der Passwort-Manager benötigt einen Verschlüsselungsschlüssel.');
+    logger_1.logger.error('   Bitte setzen Sie ENCRYPTION_KEY in der .env Datei.');
+    logger_1.logger.error('   Generierung: node -e "logger.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
     process.exit(1);
 }
 if (encryptionKey.length !== 64) {
-    console.error('\n❌ KRITISCHER FEHLER: ENCRYPTION_KEY hat falsche Länge!');
-    console.error(`   Erwartet: 64 hex characters (32 bytes)`);
-    console.error(`   Aktuell: ${encryptionKey.length} characters`);
-    console.error('   Generierung: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
+    logger_1.logger.error('\n❌ KRITISCHER FEHLER: ENCRYPTION_KEY hat falsche Länge!');
+    logger_1.logger.error(`   Erwartet: 64 hex characters (32 bytes)`);
+    logger_1.logger.error(`   Aktuell: ${encryptionKey.length} characters`);
+    logger_1.logger.error('   Generierung: node -e "logger.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
     process.exit(1);
 }
-console.log('✅ ENCRYPTION_KEY validiert');
+logger_1.logger.log('✅ ENCRYPTION_KEY validiert');
 // HTTP-Server mit WebSocket-Support erstellen
 const PORT = process.env.PORT || 5000;
 const server = http_1.default.createServer(app_1.default);
@@ -79,59 +82,91 @@ const claudeConsoleService = (0, claudeConsoleService_1.getClaudeConsoleService)
 claudeConsoleService.setupWebSocketServer(server);
 // Server starten
 server.listen(PORT, () => {
-    console.log(`🚀 Server läuft auf Port ${PORT}`);
-    console.log(`📊 Database verfügbar`);
-    console.log(`🔍 Claude API verfügbar unter /api/claude/`);
-    console.log(`🖥️ Claude Console WebSocket verfügbar unter ws://localhost:${PORT}/ws/claude-console`);
+    logger_1.logger.log(`🚀 Server läuft auf Port ${PORT}`);
+    logger_1.logger.log(`📊 Database verfügbar`);
+    logger_1.logger.log(`🔍 Claude API verfügbar unter /api/claude/`);
+    logger_1.logger.log(`🖥️ Claude Console WebSocket verfügbar unter ws://localhost:${PORT}/ws/claude-console`);
 }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-        console.error(`\n❌ FEHLER: Port ${PORT} ist bereits belegt!`);
-        console.error(`\n📋 Lösungsvorschläge:`);
-        console.error(`   1. Beenden Sie den bereits laufenden Prozess auf Port ${PORT}`);
-        console.error(`   2. Unter Windows: netstat -ano | findstr :${PORT}`);
-        console.error(`   3. Oder verwenden Sie einen anderen Port: PORT=5001 npm run dev`);
-        console.error(`\n💡 Falls der Server bereits läuft, müssen Sie ihn nicht neu starten.\n`);
+        logger_1.logger.error(`\n❌ FEHLER: Port ${PORT} ist bereits belegt!`);
+        logger_1.logger.error(`\n📋 Lösungsvorschläge:`);
+        logger_1.logger.error(`   1. Beenden Sie den bereits laufenden Prozess auf Port ${PORT}`);
+        logger_1.logger.error(`   2. Unter Windows: netstat -ano | findstr :${PORT}`);
+        logger_1.logger.error(`   3. Oder verwenden Sie einen anderen Port: PORT=5001 npm run dev`);
+        logger_1.logger.error(`\n💡 Falls der Server bereits läuft, müssen Sie ihn nicht neu starten.\n`);
         process.exit(1);
     }
     else {
-        console.error(`\n❌ FEHLER beim Starten des Servers:`, err);
+        logger_1.logger.error(`\n❌ FEHLER beim Starten des Servers:`, err);
         process.exit(1);
     }
 });
 // Graceful Shutdown
 process.on('SIGTERM', () => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
+    logger_1.logger.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
     yield (0, queues_1.stopWorkers)();
-    // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
-    const pools = (0, prisma_1.getAllPrismaPools)();
-    yield Promise.all(pools.map(pool => pool.$disconnect()));
+    // ✅ MEMORY: Cleanup Timer
+    (0, exports.cleanupTimers)(); // index.ts Timer
+    (0, app_1.cleanupTimers)(); // app.ts Timer
+    (0, rateLimiter_1.cleanupRateLimiter)(); // rateLimiter Timer
+    // ✅ PERFORMANCE: Prisma-Instanz disconnecten
+    yield prisma_1.prisma.$disconnect();
     server.close(() => {
-        console.log('Server erfolgreich heruntergefahren.');
+        logger_1.logger.log('Server erfolgreich heruntergefahren.');
         process.exit(0);
     });
 }));
 process.on('SIGINT', () => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('SIGINT signal empfangen. Server wird heruntergefahren...');
+    logger_1.logger.log('SIGINT signal empfangen. Server wird heruntergefahren...');
     yield (0, queues_1.stopWorkers)();
-    // ✅ PERFORMANCE: Alle Prisma-Pools disconnecten
-    const pools = (0, prisma_1.getAllPrismaPools)();
-    yield Promise.all(pools.map(pool => pool.$disconnect()));
+    // ✅ MEMORY: Cleanup Timer
+    (0, exports.cleanupTimers)(); // index.ts Timer
+    (0, app_1.cleanupTimers)(); // app.ts Timer
+    (0, rateLimiter_1.cleanupRateLimiter)(); // rateLimiter Timer
+    // ✅ PERFORMANCE: Prisma-Instanz disconnecten
+    yield prisma_1.prisma.$disconnect();
     server.close(() => {
-        console.log('Server erfolgreich heruntergefahren.');
+        logger_1.logger.log('Server erfolgreich heruntergefahren.');
         process.exit(0);
     });
 }));
-// Timer für automatische Stornierung von Tour-Buchungen (alle 5 Minuten)
+// ✅ MEMORY: Timer für automatische Stornierung von Tour-Buchungen (alle 5 Minuten)
 let tourBookingSchedulerInterval = null;
-setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
+tourBookingSchedulerInterval = setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { TourBookingScheduler } = yield Promise.resolve().then(() => __importStar(require('./services/tourBookingScheduler')));
         yield TourBookingScheduler.checkExpiredBookings();
     }
     catch (error) {
-        console.error('[Timer] Fehler beim Prüfen abgelaufener Tour-Buchungen:', error);
+        logger_1.logger.error('[Timer] Fehler beim Prüfen abgelaufener Tour-Buchungen:', error);
     }
 }), 5 * 60 * 1000); // 5 Minuten
-console.log('✅ Tour-Booking-Scheduler Timer gestartet (prüft alle 5 Minuten)');
+logger_1.logger.log('✅ Tour-Booking-Scheduler Timer gestartet (prüft alle 5 Minuten)');
+// ✅ MEMORY: Starte Reservation Passcode Cleanup Scheduler (prüft täglich um 11:00 Uhr)
+let passcodeCleanupTimeout = null;
+passcodeCleanupTimeout = setTimeout(() => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { ReservationPasscodeCleanupScheduler } = yield Promise.resolve().then(() => __importStar(require('./services/reservationPasscodeCleanupScheduler')));
+        ReservationPasscodeCleanupScheduler.start();
+    }
+    catch (error) {
+        logger_1.logger.error('[Timer] Fehler beim Starten des Passcode-Cleanup-Schedulers:', error);
+    }
+}), 1000); // Starte nach 1 Sekunde
+// ✅ MEMORY: Cleanup-Funktion für Server-Shutdown
+const cleanupTimers = () => {
+    if (tourBookingSchedulerInterval) {
+        clearInterval(tourBookingSchedulerInterval);
+        tourBookingSchedulerInterval = null;
+        logger_1.logger.log('✅ Tour-Booking-Scheduler Timer gestoppt');
+    }
+    if (passcodeCleanupTimeout) {
+        clearTimeout(passcodeCleanupTimeout);
+        passcodeCleanupTimeout = null;
+        logger_1.logger.log('✅ Passcode-Cleanup-Timeout gestoppt');
+    }
+};
+exports.cleanupTimers = cleanupTimers;
+logger_1.logger.log('✅ Reservation-Passcode-Cleanup-Scheduler wird gestartet (prüft täglich um 11:00 Uhr)');
 exports.default = server;
 //# sourceMappingURL=index.js.map

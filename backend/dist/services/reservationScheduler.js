@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReservationScheduler = void 0;
 const reservationNotificationService_1 = require("./reservationNotificationService");
+const logger_1 = require("../utils/logger");
 /**
  * Scheduler für automatische Reservierungs-Benachrichtigungen
  *
@@ -24,7 +25,7 @@ class ReservationScheduler {
      * Wenn ja, sendet Check-in-Einladungen
      */
     static start() {
-        console.log('[ReservationScheduler] Scheduler gestartet');
+        logger_1.logger.log('[ReservationScheduler] Scheduler gestartet');
         // Prüfe alle 10 Minuten
         const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten
         this.checkInterval = setInterval(() => __awaiter(this, void 0, void 0, function* () {
@@ -34,14 +35,14 @@ class ReservationScheduler {
             // Prüfe ob es zwischen 20:00 und 20:10 Uhr ist
             // Und ob wir heute noch nicht gesendet haben
             if (currentHour === 20 && this.lastCheckDate !== currentDate) {
-                console.log('[ReservationScheduler] Starte tägliche Check-in-Einladungen...');
+                logger_1.logger.log('[ReservationScheduler] Starte tägliche Check-in-Einladungen...');
                 this.lastCheckDate = currentDate;
                 try {
                     yield reservationNotificationService_1.ReservationNotificationService.sendLateCheckInInvitations();
-                    console.log('[ReservationScheduler] Check-in-Einladungen erfolgreich versendet');
+                    logger_1.logger.log('[ReservationScheduler] Check-in-Einladungen erfolgreich versendet');
                 }
                 catch (error) {
-                    console.error('[ReservationScheduler] Fehler beim Versand:', error);
+                    logger_1.logger.error('[ReservationScheduler] Fehler beim Versand:', error);
                 }
             }
         }), CHECK_INTERVAL_MS);
@@ -53,7 +54,7 @@ class ReservationScheduler {
         if (this.checkInterval) {
             clearInterval(this.checkInterval);
             this.checkInterval = null;
-            console.log('[ReservationScheduler] Scheduler gestoppt');
+            logger_1.logger.log('[ReservationScheduler] Scheduler gestoppt');
         }
     }
     /**
@@ -61,13 +62,13 @@ class ReservationScheduler {
      */
     static triggerManually() {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('[ReservationScheduler] Manueller Trigger...');
+            logger_1.logger.log('[ReservationScheduler] Manueller Trigger...');
             try {
                 yield reservationNotificationService_1.ReservationNotificationService.sendLateCheckInInvitations();
-                console.log('[ReservationScheduler] Manueller Versand erfolgreich');
+                logger_1.logger.log('[ReservationScheduler] Manueller Versand erfolgreich');
             }
             catch (error) {
-                console.error('[ReservationScheduler] Fehler beim manuellen Versand:', error);
+                logger_1.logger.error('[ReservationScheduler] Fehler beim manuellen Versand:', error);
                 throw error;
             }
         });

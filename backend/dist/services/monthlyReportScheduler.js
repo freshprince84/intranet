@@ -15,13 +15,14 @@ const notificationController_1 = require("../controllers/notificationController"
 const notificationValidation_1 = require("../validation/notificationValidation");
 const translations_1 = require("../utils/translations");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 /**
  * Überprüft und erstellt automatische Monatsabrechnungen für alle Benutzer
  * die die automatische Funktion aktiviert haben und deren Stichdatum heute ist
  */
 const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log('Starte automatische Überprüfung für Monatsabrechnungen...');
+        logger_1.logger.log('Starte automatische Überprüfung für Monatsabrechnungen...');
         const today = new Date();
         const currentDay = today.getDate();
         // Hole alle Benutzer mit aktivierter automatischer Monatsabrechnung
@@ -45,10 +46,10 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                 }
             }
         });
-        console.log(`${usersWithActiveReports.length} Benutzer haben heute (${currentDay}.) ihre Monatsstichtag-Konfiguration`);
+        logger_1.logger.log(`${usersWithActiveReports.length} Benutzer haben heute (${currentDay}.) ihre Monatsstichtag-Konfiguration`);
         for (const userSettings of usersWithActiveReports) {
             try {
-                console.log(`Verarbeite automatische Monatsabrechnung für Benutzer ${userSettings.user.firstName} ${userSettings.user.lastName} (ID: ${userSettings.userId})`);
+                logger_1.logger.log(`Verarbeite automatische Monatsabrechnung für Benutzer ${userSettings.user.firstName} ${userSettings.user.lastName} (ID: ${userSettings.userId})`);
                 // Prüfe, ob bereits ein Bericht für den aktuellen Zeitraum existiert
                 const { periodStart, periodEnd } = calculateReportPeriod(currentDay, today);
                 const existingReport = yield prisma_1.prisma.monthlyConsultationReport.findFirst({
@@ -61,7 +62,7 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                     }
                 });
                 if (existingReport) {
-                    console.log(`Bericht für Benutzer ${userSettings.userId} existiert bereits (ID: ${existingReport.id})`);
+                    logger_1.logger.log(`Bericht für Benutzer ${userSettings.userId} existiert bereits (ID: ${existingReport.id})`);
                     continue;
                 }
                 // Erstelle Mock Request/Response für den Controller
@@ -77,7 +78,7 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                     },
                     json: (data) => __awaiter(void 0, void 0, void 0, function* () {
                         if (data.message && !data.message.includes('Für diesen Zeitraum existiert bereits')) {
-                            console.log(`Automatische Monatsabrechnung für Benutzer ${userSettings.userId}: ${data.message}`);
+                            logger_1.logger.log(`Automatische Monatsabrechnung für Benutzer ${userSettings.userId}: ${data.message}`);
                             // Bei Erfolg: Benachrichtigung senden
                             if (lastStatusCode === 201 || lastStatusCode === 200) {
                                 const userLang = yield (0, translations_1.getUserLanguage)(userSettings.userId);
@@ -89,7 +90,7 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                                     type: notificationValidation_1.NotificationType.system,
                                     relatedEntityId: data.id || null,
                                     relatedEntityType: 'monthly_report_generated'
-                                }).catch(err => console.error('Fehler beim Erstellen der Benachrichtigung:', err));
+                                }).catch(err => logger_1.logger.error('Fehler beim Erstellen der Benachrichtigung:', err));
                             }
                         }
                         return mockRes;
@@ -99,7 +100,7 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                 yield (0, monthlyConsultationReportController_1.generateAutomaticMonthlyReport)(mockReq, mockRes);
             }
             catch (userError) {
-                console.error(`Fehler bei automatischer Monatsabrechnung für Benutzer ${userSettings.userId}:`, userError);
+                logger_1.logger.error(`Fehler bei automatischer Monatsabrechnung für Benutzer ${userSettings.userId}:`, userError);
                 // Fehler-Benachrichtigung senden
                 try {
                     const userLang = yield (0, translations_1.getUserLanguage)(userSettings.userId);
@@ -113,14 +114,14 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                     });
                 }
                 catch (notificationError) {
-                    console.error('Fehler beim Erstellen der Fehler-Benachrichtigung:', notificationError);
+                    logger_1.logger.error('Fehler beim Erstellen der Fehler-Benachrichtigung:', notificationError);
                 }
             }
         }
-        console.log('Automatische Überprüfung für Monatsabrechnungen abgeschlossen.');
+        logger_1.logger.log('Automatische Überprüfung für Monatsabrechnungen abgeschlossen.');
     }
     catch (error) {
-        console.error('Fehler bei der automatischen Monatsabrechnungsgenerierung:', error);
+        logger_1.logger.error('Fehler bei der automatischen Monatsabrechnungsgenerierung:', error);
     }
 });
 exports.checkAndGenerateMonthlyReports = checkAndGenerateMonthlyReports;

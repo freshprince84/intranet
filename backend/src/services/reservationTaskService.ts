@@ -2,6 +2,7 @@ import { Reservation, TaskStatus, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from '../controllers/notificationController';
 import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Service für Reservierungs-Task-Management
@@ -27,7 +28,7 @@ export class ReservationTaskService {
       });
 
       if (!task) {
-        console.log(`[ReservationTaskService] Kein Task gefunden für Reservierung ${reservationId}`);
+        logger.log(`[ReservationTaskService] Kein Task gefunden für Reservierung ${reservationId}`);
         return;
       }
 
@@ -40,7 +41,7 @@ export class ReservationTaskService {
         }
       });
 
-      console.log(`[ReservationTaskService] Task ${task.id} auf "in_progress" gesetzt für Check-in`);
+      logger.log(`[ReservationTaskService] Task ${task.id} auf "in_progress" gesetzt für Check-in`);
 
       // Erstelle WorkTime-Eintrag (Start)
       // TODO: Implementiere WorkTime-Erfassung für Check-in-Prozess
@@ -70,7 +71,7 @@ export class ReservationTaskService {
         });
       }
     } catch (error) {
-      console.error(`[ReservationTaskService] Fehler beim Aktualisieren des Tasks:`, error);
+      logger.error(`[ReservationTaskService] Fehler beim Aktualisieren des Tasks:`, error);
       throw error;
     }
   }
@@ -97,7 +98,7 @@ export class ReservationTaskService {
       });
 
       if (!task) {
-        console.log(`[ReservationTaskService] Kein Task gefunden für Reservierung ${reservationId}`);
+        logger.log(`[ReservationTaskService] Kein Task gefunden für Reservierung ${reservationId}`);
         return;
       }
 
@@ -110,7 +111,7 @@ export class ReservationTaskService {
         }
       });
 
-      console.log(`[ReservationTaskService] Task ${task.id} auf "done" gesetzt`);
+      logger.log(`[ReservationTaskService] Task ${task.id} auf "done" gesetzt`);
 
       // Erstelle WorkTime-Eintrag (Ende)
       if (durationMinutes) {
@@ -144,7 +145,7 @@ export class ReservationTaskService {
         });
       }
     } catch (error) {
-      console.error(`[ReservationTaskService] Fehler beim Abschließen des Tasks:`, error);
+      logger.error(`[ReservationTaskService] Fehler beim Abschließen des Tasks:`, error);
       throw error;
     }
   }
@@ -198,10 +199,10 @@ export class ReservationTaskService {
           data: { status: newTaskStatus }
         });
 
-        console.log(`[ReservationTaskService] Task ${reservation.task.id} Status synchronisiert: ${newTaskStatus}`);
+        logger.log(`[ReservationTaskService] Task ${reservation.task.id} Status synchronisiert: ${newTaskStatus}`);
       }
     } catch (error) {
-      console.error(`[ReservationTaskService] Fehler beim Synchronisieren des Task-Status:`, error);
+      logger.error(`[ReservationTaskService] Fehler beim Synchronisieren des Task-Status:`, error);
       throw error;
     }
   }

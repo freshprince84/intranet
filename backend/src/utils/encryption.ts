@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { logger } from './logger';
 
 /**
  * Verschlüsselungs-Utility für sensitive Daten (API-Keys, Secrets)
@@ -8,7 +9,7 @@ import crypto from 'crypto';
  * WICHTIG: ENCRYPTION_KEY muss in .env gesetzt sein:
  * ENCRYPTION_KEY=<64 hex characters> (32 bytes = 256 bits)
  * 
- * Generierung: node -e "console.log(crypto.randomBytes(32).toString('hex'))"
+ * Generierung: node -e "logger.log(crypto.randomBytes(32).toString('hex'))"
  */
 
 const ALGORITHM = 'aes-256-gcm';
@@ -52,7 +53,7 @@ export const encryptSecret = (text: string): string => {
     // Format: iv:authTag:encrypted
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
   } catch (error) {
-    console.error('Error encrypting secret:', error);
+    logger.error('Error encrypting secret:', error);
     throw new Error('Failed to encrypt secret');
   }
 };
@@ -106,7 +107,7 @@ export const decryptSecret = (encryptedText: string): string => {
 
     return decrypted;
   } catch (error) {
-    console.error('Error decrypting secret:', error);
+    logger.error('Error decrypting secret:', error);
     throw new Error('Failed to decrypt secret - invalid key or corrupted data');
   }
 };
@@ -234,7 +235,7 @@ export const decryptApiSettings = (settings: any): any => {
       }
       // Wenn nicht verschlüsselt, bleibt der Key unverändert (für Migration)
     } catch (error) {
-      console.error('Error decrypting LobbyPMS API key:', error);
+      logger.error('Error decrypting LobbyPMS API key:', error);
       // Bei Fehler: Key bleibt wie er ist (verschlüsselt oder unverschlüsselt)
     }
   }
@@ -249,7 +250,7 @@ export const decryptApiSettings = (settings: any): any => {
         };
       }
     } catch (error) {
-      console.error('Error decrypting TTLock client ID:', error);
+      logger.error('Error decrypting TTLock client ID:', error);
     }
   }
 
@@ -263,7 +264,7 @@ export const decryptApiSettings = (settings: any): any => {
       };
       }
     } catch (error) {
-      console.error('Error decrypting TTLock client secret:', error);
+      logger.error('Error decrypting TTLock client secret:', error);
     }
   }
 
@@ -275,7 +276,7 @@ export const decryptApiSettings = (settings: any): any => {
         apiKey: decryptSecret(decrypted.boldPayment.apiKey)
       };
     } catch (error) {
-      console.error('Error decrypting Bold Payment API key:', error);
+      logger.error('Error decrypting Bold Payment API key:', error);
     }
   }
 
@@ -286,7 +287,7 @@ export const decryptApiSettings = (settings: any): any => {
       if (decrypted.whatsapp.apiKey.includes(':')) {
         const encryptedLength = decrypted.whatsapp.apiKey.length;
         const decryptedKey = decryptSecret(decrypted.whatsapp.apiKey);
-        console.log('[WhatsApp Token Debug] Entschlüsselung:', {
+        logger.log('[WhatsApp Token Debug] Entschlüsselung:', {
           encryptedLength,
           decryptedLength: decryptedKey.length,
           decryptedStart: decryptedKey.substring(0, 30),
@@ -299,17 +300,17 @@ export const decryptApiSettings = (settings: any): any => {
           apiKey: decryptedKey
         };
       } else {
-        console.log('[WhatsApp Token Debug] Token ist bereits unverschlüsselt:', {
+        logger.log('[WhatsApp Token Debug] Token ist bereits unverschlüsselt:', {
           length: decrypted.whatsapp.apiKey.length,
           start: decrypted.whatsapp.apiKey.substring(0, 30)
         });
       }
       // Wenn kein ':' vorhanden ist, ist der Token bereits unverschlüsselt (für Migration)
     } catch (error) {
-      console.error('Error decrypting WhatsApp API key:', error);
+      logger.error('Error decrypting WhatsApp API key:', error);
       // Bei Fehler: Token ist möglicherweise bereits unverschlüsselt
-      console.log('Token wird als unverschlüsselt behandelt');
-      console.log('[WhatsApp Token Debug] Fehler beim Entschlüsseln - verwende Token wie er ist:', {
+      logger.log('Token wird als unverschlüsselt behandelt');
+      logger.log('[WhatsApp Token Debug] Fehler beim Entschlüsseln - verwende Token wie er ist:', {
         length: decrypted.whatsapp.apiKey.length,
         start: decrypted.whatsapp.apiKey.substring(0, 50)
       });
@@ -324,7 +325,7 @@ export const decryptApiSettings = (settings: any): any => {
         };
       }
     } catch (error) {
-      console.error('Error decrypting WhatsApp API secret:', error);
+      logger.error('Error decrypting WhatsApp API secret:', error);
     }
   }
 
@@ -424,7 +425,7 @@ export const decryptBranchApiSettings = (settings: any): any => {
       try {
         decrypted[field] = decryptSecret(decrypted[field]);
       } catch (error) {
-        console.error(`Error decrypting ${field}:`, error);
+        logger.error(`Error decrypting ${field}:`, error);
         // Bei Fehler: Feld bleibt wie es ist
       }
     }
@@ -438,14 +439,14 @@ export const decryptBranchApiSettings = (settings: any): any => {
       try {
         boldPaymentUpdates.apiKey = decryptSecret(decrypted.boldPayment.apiKey);
       } catch (error) {
-        console.error('Error decrypting boldPayment.apiKey:', error);
+        logger.error('Error decrypting boldPayment.apiKey:', error);
       }
     }
     if (decrypted.boldPayment.merchantId && typeof decrypted.boldPayment.merchantId === 'string' && decrypted.boldPayment.merchantId.includes(':')) {
       try {
         boldPaymentUpdates.merchantId = decryptSecret(decrypted.boldPayment.merchantId);
       } catch (error) {
-        console.error('Error decrypting boldPayment.merchantId:', error);
+        logger.error('Error decrypting boldPayment.merchantId:', error);
       }
     }
     if (Object.keys(boldPaymentUpdates).length > 0) {
@@ -465,7 +466,7 @@ export const decryptBranchApiSettings = (settings: any): any => {
           apiKey: decryptSecret(decrypted.lobbyPms.apiKey)
         };
       } catch (error) {
-        console.error('Error decrypting lobbyPms.apiKey:', error);
+        logger.error('Error decrypting lobbyPms.apiKey:', error);
       }
     }
   }
@@ -481,7 +482,7 @@ export const decryptBranchApiSettings = (settings: any): any => {
             [field]: decryptSecret(decrypted.doorSystem[field])
           };
         } catch (error) {
-          console.error(`Error decrypting doorSystem.${field}:`, error);
+          logger.error(`Error decrypting doorSystem.${field}:`, error);
         }
       }
     }
@@ -496,7 +497,7 @@ export const decryptBranchApiSettings = (settings: any): any => {
           apiKey: decryptSecret(decrypted.sire.apiKey)
         };
       } catch (error) {
-        console.error('Error decrypting sire.apiKey:', error);
+        logger.error('Error decrypting sire.apiKey:', error);
       }
     }
     if (decrypted.sire.apiSecret && typeof decrypted.sire.apiSecret === 'string' && decrypted.sire.apiSecret.includes(':')) {
@@ -506,7 +507,7 @@ export const decryptBranchApiSettings = (settings: any): any => {
           apiSecret: decryptSecret(decrypted.sire.apiSecret)
         };
       } catch (error) {
-        console.error('Error decrypting sire.apiSecret:', error);
+        logger.error('Error decrypting sire.apiSecret:', error);
       }
     }
   }
@@ -518,7 +519,7 @@ export const decryptBranchApiSettings = (settings: any): any => {
       try {
         const encryptedLength = decrypted.whatsapp.apiKey.length;
         const decryptedKey = decryptSecret(decrypted.whatsapp.apiKey);
-        console.log('[WhatsApp Token Debug] Branch Settings Entschlüsselung:', {
+        logger.log('[WhatsApp Token Debug] Branch Settings Entschlüsselung:', {
           encryptedLength,
           decryptedLength: decryptedKey.length,
           decryptedStart: decryptedKey.substring(0, 30),
@@ -528,14 +529,14 @@ export const decryptBranchApiSettings = (settings: any): any => {
         });
         whatsappUpdates.apiKey = decryptedKey;
       } catch (error) {
-        console.error('Error decrypting whatsapp.apiKey:', error);
+        logger.error('Error decrypting whatsapp.apiKey:', error);
       }
     }
     if (decrypted.whatsapp.apiSecret && typeof decrypted.whatsapp.apiSecret === 'string' && decrypted.whatsapp.apiSecret.includes(':')) {
       try {
         whatsappUpdates.apiSecret = decryptSecret(decrypted.whatsapp.apiSecret);
       } catch (error) {
-        console.error('Error decrypting whatsapp.apiSecret:', error);
+        logger.error('Error decrypting whatsapp.apiSecret:', error);
       }
     }
     if (Object.keys(whatsappUpdates).length > 0) {
@@ -553,7 +554,7 @@ export const decryptBranchApiSettings = (settings: any): any => {
       try {
         emailUpdates.smtpPass = decryptSecret(decrypted.email.smtpPass);
       } catch (error) {
-        console.error('Error decrypting email.smtpPass:', error);
+        logger.error('Error decrypting email.smtpPass:', error);
       }
     }
     if (Object.keys(emailUpdates).length > 0) {
@@ -572,7 +573,7 @@ export const decryptBranchApiSettings = (settings: any): any => {
         password: decryptSecret(decrypted.imap.password)
       };
     } catch (error) {
-      console.error('Error decrypting imap.password:', error);
+      logger.error('Error decrypting imap.password:', error);
     }
   }
 

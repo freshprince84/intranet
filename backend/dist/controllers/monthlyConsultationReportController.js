@@ -46,6 +46,7 @@ exports.generateMonthlyReportPDF = exports.checkUnbilledConsultations = exports.
 const organization_1 = require("../middleware/organization");
 const date_fns_1 = require("date-fns");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // Alle Monatsberichte des Benutzers abrufen
 const getMonthlyReports = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -69,7 +70,7 @@ const getMonthlyReports = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.json(reports);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Monatsberichte:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Monatsberichte:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -108,7 +109,7 @@ const getMonthlyReportById = (req, res) => __awaiter(void 0, void 0, void 0, fun
         res.json(report);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen des Monatsberichts:', error);
+        logger_1.logger.error('Fehler beim Abrufen des Monatsberichts:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -246,7 +247,7 @@ const generateMonthlyReport = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.status(201).json(fullReport);
     }
     catch (error) {
-        console.error('Fehler beim Generieren des Monatsberichts:', error);
+        logger_1.logger.error('Fehler beim Generieren des Monatsberichts:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -311,7 +312,7 @@ const generateAutomaticMonthlyReport = (req, res) => __awaiter(void 0, void 0, v
         return (0, exports.generateMonthlyReport)(generateRequest, res);
     }
     catch (error) {
-        console.error('Fehler beim automatischen Generieren des Monatsberichts:', error);
+        logger_1.logger.error('Fehler beim automatischen Generieren des Monatsberichts:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -341,7 +342,7 @@ const updateReportStatus = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.json({ message: 'Status erfolgreich aktualisiert' });
     }
     catch (error) {
-        console.error('Fehler beim Aktualisieren des Report-Status:', error);
+        logger_1.logger.error('Fehler beim Aktualisieren des Report-Status:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -366,7 +367,7 @@ const deleteMonthlyReport = (req, res) => __awaiter(void 0, void 0, void 0, func
         res.json({ message: 'Monatsbericht erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Fehler beim Löschen des Monatsberichts:', error);
+        logger_1.logger.error('Fehler beim Löschen des Monatsberichts:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -418,7 +419,7 @@ const checkUnbilledConsultations = (req, res) => __awaiter(void 0, void 0, void 
         });
     }
     catch (error) {
-        console.error('Fehler beim Prüfen nicht-abgerechneter Beratungen:', error);
+        logger_1.logger.error('Fehler beim Prüfen nicht-abgerechneter Beratungen:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -486,7 +487,7 @@ const generateMonthlyReportPDF = (req, res) => __awaiter(void 0, void 0, void 0,
         res.send(pdfBuffer);
     }
     catch (error) {
-        console.error('Fehler beim Generieren des PDFs:', error);
+        logger_1.logger.error('Fehler beim Generieren des PDFs:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });

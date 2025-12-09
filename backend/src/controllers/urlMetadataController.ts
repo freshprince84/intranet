@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import cheerio from 'cheerio';
+import { logger } from '../utils/logger';
 
 /**
  * Extrahiert Metadaten einer URL (Titel, Beschreibung, Bild)
@@ -58,7 +59,7 @@ export const getUrlMetadata = async (req: Request, res: Response): Promise<void>
       throw new Error(`Failed to fetch URL: HTTP ${response.status}`);
     }
   } catch (error) {
-    console.error('Fehler beim Abrufen der URL-Metadaten:', error);
+    logger.error('Fehler beim Abrufen der URL-Metadaten:', error);
     
     // Fallback-Antwort mit begrenzten Informationen
     try {

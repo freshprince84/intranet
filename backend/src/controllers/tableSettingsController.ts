@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
     userId: string;
@@ -65,7 +66,7 @@ export const getUserTableSettings = async (req: AuthenticatedRequest, res: Respo
 
         res.json(response);
     } catch (error) {
-        console.error('Error in getUserTableSettings:', error);
+        logger.error('Error in getUserTableSettings:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen der Tabelleneinstellungen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -152,7 +153,7 @@ export const saveUserTableSettings = async (req: AuthenticatedRequest, res: Resp
 
         res.json(response);
     } catch (error) {
-        console.error('Error in saveUserTableSettings:', error);
+        logger.error('Error in saveUserTableSettings:', error);
         res.status(500).json({ 
             message: 'Fehler beim Speichern der Tabelleneinstellungen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getDataIsolationFilter } from '../middleware/organization';
 import slugify from 'slugify';
 import { prisma } from '../utils/prisma';
+import { logger } from '../utils/logger';
 
 /**
  * Hilfsfunktion zum Erstellen eines eindeutigen Slugs
@@ -94,7 +95,7 @@ export const getAllArticles = async (req: Request, res: Response) => {
         
         res.status(200).json(formattedArticles);
     } catch (error) {
-        console.error('Fehler beim Abrufen der Artikel:', error);
+        logger.error('Fehler beim Abrufen der Artikel:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Artikel' });
     }
 };
@@ -179,7 +180,7 @@ export const getArticleById = async (req: Request, res: Response) => {
         
         res.status(200).json(result);
     } catch (error) {
-        console.error('Fehler beim Abrufen des Artikels:', error);
+        logger.error('Fehler beim Abrufen des Artikels:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Artikels' });
     }
 };
@@ -259,7 +260,7 @@ export const getArticleBySlug = async (req: Request, res: Response) => {
         
         res.status(200).json(result);
     } catch (error) {
-        console.error('Fehler beim Abrufen des Artikels:', error);
+        logger.error('Fehler beim Abrufen des Artikels:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen des Artikels' });
     }
 };
@@ -330,7 +331,7 @@ export const getArticlesStructure = async (req: Request, res: Response) => {
         
         res.status(200).json(structure);
     } catch (error) {
-        console.error('Fehler beim Abrufen der Artikelstruktur:', error);
+        logger.error('Fehler beim Abrufen der Artikelstruktur:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Artikelstruktur' });
     }
 };
@@ -407,8 +408,8 @@ export const createArticle = async (req: Request, res: Response) => {
         
         res.status(201).json(newArticle[0]);
     } catch (error: any) {
-        console.error('[createArticle] ❌ Fehler beim Erstellen des Artikels:', error);
-        console.error('[createArticle] Error details:', {
+        logger.error('[createArticle] ❌ Fehler beim Erstellen des Artikels:', error);
+        logger.error('[createArticle] Error details:', {
             message: error?.message,
             code: error?.code,
             stack: error?.stack
@@ -512,7 +513,7 @@ export const updateArticle = async (req: Request, res: Response) => {
         
         res.status(200).json(updatedArticle[0]);
     } catch (error) {
-        console.error('Fehler beim Aktualisieren des Artikels:', error);
+        logger.error('Fehler beim Aktualisieren des Artikels:', error);
         res.status(500).json({ message: 'Fehler beim Aktualisieren des Artikels' });
     }
 };
@@ -611,7 +612,7 @@ export const deleteArticle = async (req: Request, res: Response) => {
         
         res.status(200).json({ message: 'Artikel erfolgreich gelöscht' });
     } catch (error) {
-        console.error('Fehler beim Löschen des Artikels:', error);
+        logger.error('Fehler beim Löschen des Artikels:', error);
         res.status(500).json({ message: 'Fehler beim Löschen des Artikels' });
     }
 };
@@ -690,7 +691,7 @@ export const searchArticles = async (req: Request, res: Response) => {
         
         res.status(200).json(articles);
     } catch (error) {
-        console.error('Fehler bei der Suche nach Artikeln:', error);
+        logger.error('Fehler bei der Suche nach Artikeln:', error);
         res.status(500).json({ message: 'Fehler bei der Suche nach Artikeln' });
     }
 }; 

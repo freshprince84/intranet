@@ -14,6 +14,7 @@ const client_1 = require("@prisma/client");
 const organization_1 = require("../middleware/organization");
 const date_fns_1 = require("date-fns");
 const prisma_1 = require("../utils/prisma");
+const logger_1 = require("../utils/logger");
 // To-Dos pro User für ein bestimmtes Datum
 const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -145,7 +146,7 @@ const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.json(result);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der To-Dos pro User:', error);
+        logger_1.logger.error('Fehler beim Abrufen der To-Dos pro User:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der To-Dos' });
     }
 });
@@ -261,7 +262,7 @@ const getRequestsByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0,
         res.json(result);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Requests pro User:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Requests pro User:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der Requests' });
     }
 });
@@ -397,7 +398,7 @@ const getTodosChronological = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.json(tasks);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der chronologischen To-Dos:', error);
+        logger_1.logger.error('Fehler beim Abrufen der chronologischen To-Dos:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der To-Dos' });
     }
 });
@@ -492,7 +493,7 @@ const getRequestsChronological = (req, res) => __awaiter(void 0, void 0, void 0,
         res.json(requests);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der chronologischen Requests:', error);
+        logger_1.logger.error('Fehler beim Abrufen der chronologischen Requests:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der Requests' });
     }
 });
@@ -733,7 +734,7 @@ const getTodosFrequencyAnalysis = (req, res) => __awaiter(void 0, void 0, void 0
         });
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Häufigkeitsanalyse:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Häufigkeitsanalyse:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der Häufigkeitsanalyse' });
     }
 });
@@ -897,7 +898,7 @@ const getTodosShiftAnalysis = (req, res) => __awaiter(void 0, void 0, void 0, fu
         });
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Schicht-Analyse:', error);
+        logger_1.logger.error('Fehler beim Abrufen der Schicht-Analyse:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der Schicht-Analyse' });
     }
 });
