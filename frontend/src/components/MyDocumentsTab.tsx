@@ -62,6 +62,20 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
   const [downloadingContractId, setDownloadingContractId] = useState<number | null>(null);
   const [certPreviewUrls, setCertPreviewUrls] = useState<Record<number, string>>({});
   const [contractPreviewUrls, setContractPreviewUrls] = useState<Record<number, string>>({});
+  
+  // ✅ MEMORY: Cleanup Blob-URLs beim Unmount
+  useEffect(() => {
+    return () => {
+      // Revoke alle Certificate Preview URLs
+      Object.values(certPreviewUrls).forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+      // Revoke alle Contract Preview URLs
+      Object.values(contractPreviewUrls).forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+    };
+  }, [certPreviewUrls, contractPreviewUrls]);
   const [loadingPreviews, setLoadingPreviews] = useState<Record<number, boolean>>({});
 
   useEffect(() => {

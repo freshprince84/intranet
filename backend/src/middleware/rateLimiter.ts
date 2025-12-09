@@ -10,8 +10,9 @@ interface RateLimitStore {
 // In-Memory Store (für Produktion sollte Redis verwendet werden)
 const store: RateLimitStore = {};
 
-// Cleanup alte Einträge alle 5 Minuten
-setInterval(() => {
+// ✅ MEMORY: Cleanup alte Einträge alle 5 Minuten
+let cleanupInterval: NodeJS.Timeout | null = null;
+cleanupInterval = setInterval(() => {
     const now = Date.now();
     Object.keys(store).forEach(key => {
         if (store[key].resetTime < now) {
@@ -19,6 +20,14 @@ setInterval(() => {
         }
     });
 }, 5 * 60 * 1000);
+
+// ✅ MEMORY: Cleanup-Funktion für Server-Shutdown
+export const cleanupRateLimiter = () => {
+    if (cleanupInterval) {
+        clearInterval(cleanupInterval);
+        cleanupInterval = null;
+    }
+};
 
 /**
  * Rate-Limiting Middleware

@@ -127,19 +127,21 @@ if (!fs.existsSync(downloadsPath)) {
   fs.mkdirSync(downloadsPath, { recursive: true });
 }
 
-// Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 2 Minuten)
+// ✅ MEMORY: Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 2 Minuten)
 const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 2 Minuten
-setInterval(async () => {
+let worktimeCheckInterval: NodeJS.Timeout | null = null;
+worktimeCheckInterval = setInterval(async () => {
   console.log('Starte automatische Überprüfung der Arbeitszeiten...');
   await checkAndStopExceededWorktimes();
 }, CHECK_INTERVAL_MS);
 
-// Timer für die tägliche Überprüfung der Monatsabrechnungen (alle 10 Minuten)
+// ✅ MEMORY: Timer für die tägliche Überprüfung der Monatsabrechnungen (alle 10 Minuten)
 // Überprüft, ob heute ein Stichdatum für automatische Monatsabrechnungen ist
 const MONTHLY_REPORT_CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten
 let lastMonthlyReportCheck = '';
+let monthlyReportCheckInterval: NodeJS.Timeout | null = null;
 
-setInterval(async () => {
+monthlyReportCheckInterval = setInterval(async () => {
   const today = new Date().toDateString();
   
   // Führe die Prüfung nur einmal pro Tag aus
@@ -154,6 +156,20 @@ setInterval(async () => {
     }
   }
 }, MONTHLY_REPORT_CHECK_INTERVAL_MS);
+
+// ✅ MEMORY: Cleanup-Funktion für Server-Shutdown
+export const cleanupTimers = () => {
+  if (worktimeCheckInterval) {
+    clearInterval(worktimeCheckInterval);
+    worktimeCheckInterval = null;
+    console.log('✅ Worktime-Check-Interval gestoppt');
+  }
+  if (monthlyReportCheckInterval) {
+    clearInterval(monthlyReportCheckInterval);
+    monthlyReportCheckInterval = null;
+    console.log('✅ Monthly-Report-Check-Interval gestoppt');
+  }
+};
 
 // Starte Reservation Scheduler
 ReservationScheduler.start();
