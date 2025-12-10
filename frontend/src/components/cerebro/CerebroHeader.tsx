@@ -75,28 +75,9 @@ const CerebroHeader: React.FC<CerebroHeaderProps> = ({
   return (
     <div className="px-3 sm:px-4 md:px-6 py-3">
       <div className="flex items-center justify-between">
-        {/* Linke Seite: Titel mit Icon */}
-        <div className="flex items-center">
-          <DocumentTextIcon className="h-6 w-6 mr-2 dark:text-white" />
-          <h2 className="text-xl font-semibold dark:text-white">{t('cerebro.header.title', 'Cerebro')}</h2>
-        </div>
-        
-        {/* Rechte Seite: Suchfeld, Neuer Artikel Button, Filter, Sortieren */}
+        {/* Linke Seite: Create-Button, Titel mit Icon */}
         <div className="flex items-center gap-1.5">
-          {/* Suchfeld */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder={t('cerebro.header.searchPlaceholder', 'Artikel suchen...')}
-              className="w-[200px] px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              onKeyPress={handleSearchKeyPress}
-            />
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          </div>
-          
-          {/* Neuer Artikel Button */}
+          {/* Neuer Artikel Button - LINKS positioniert */}
           {canCreateArticle && (
             <div className="relative group">
               <button
@@ -112,6 +93,26 @@ const CerebroHeader: React.FC<CerebroHeaderProps> = ({
               </div>
             </div>
           )}
+          <div className="flex items-center">
+            <DocumentTextIcon className="h-6 w-6 mr-2 dark:text-white" />
+            <h2 className="text-xl font-semibold dark:text-white">{t('cerebro.header.title', 'Cerebro')}</h2>
+          </div>
+        </div>
+        
+        {/* Rechte Seite: Suchfeld, Filter, Sortieren */}
+        <div className="flex items-center gap-1.5">
+          {/* Suchfeld */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder={t('cerebro.header.searchPlaceholder', 'Artikel suchen...')}
+              className="w-[200px] px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyPress={handleSearchKeyPress}
+            />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
           
           {/* Filter-Button */}
           <div className="relative group">
