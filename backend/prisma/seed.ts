@@ -1800,6 +1800,31 @@ async function main() {
             }
           });
           
+          // Standard-Filter für Join Requests (join-requests-table)
+          const joinRequestsTableId = 'join-requests-table';
+          
+          // "Alle" Filter (leere Bedingungen = alle anzeigen)
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: joinRequestsTableId,
+                name: 'Alle'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: joinRequestsTableId,
+              name: 'Alle',
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            }
+          });
+          
         } catch (error) {
           console.error(`  ❌ Fehler beim Erstellen der Standard-Filter für User ${userId}:`, error);
         }

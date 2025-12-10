@@ -95,10 +95,6 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   // ✅ KRITISCH: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
   const defaultFilterAppliedRef = useRef<boolean>(false);
   
-  // ✅ FIX: Zustandsmaschine für Filter-Load-Prozess
-  type FilterLoadState = 'idle' | 'loading' | 'loaded' | 'error';
-  const [filterLoadState, setFilterLoadState] = useState<FilterLoadState>('idle');
-  
   // Responsive Tag-Display States (optimiert)
   const containerRef = useRef<HTMLDivElement>(null);
   const tagRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -210,53 +206,24 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const { loadFilters } = filterContext;
   
   useEffect(() => {
-    // ✅ Reset Ref und State wenn tableId sich ändert
+    // ✅ Reset Ref wenn tableId sich ändert
     defaultFilterAppliedRef.current = false;
-    setFilterLoadState('idle');
     
-    // Lade Filter über Filter-Context
+    // Lade Filter über Filter-Context (für UI)
     loadFilters(tableId);
   }, [tableId, loadFilters]);
-  
-  // ✅ FIX: Überwache Filter-Load-Status
-  useEffect(() => {
-    if (loading) {
-      setFilterLoadState('loading');
-    } else if (error) {
-      setFilterLoadState('error');
-    } else {
-      // ✅ FIX: Wenn nicht mehr am Laden und kein Fehler, dann ist es geladen
-      // (auch wenn savedFilters.length === 0, weil Filter geladen wurden, aber leer sind)
-      setFilterLoadState('loaded');
-    }
-  }, [loading, error]);
 
   // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
-  // ✅ FIX: Default-Filter nur anwenden, wenn Filter geladen wurden
+  // ✅ VEREINFACHT: Prüfe direkt auf savedFilters.length statt filterLoadState
+  // Hinweis: Komponenten mit Standard-Pattern wenden Default-Filter selbst an
+  // Diese Logik bleibt für Komponenten, die noch nicht umgestellt sind (z.B. ConsultationList)
   useEffect(() => {
     // Nur ausführen, wenn:
     // 1. Default-Filter definiert ist
     // 2. Noch nicht angewendet wurde
-    // 3. Filter geladen wurden (nicht während Laden)
-    if (defaultFilterName && !defaultFilterAppliedRef.current && filterLoadState === 'loaded') {
-      // ✅ FIX: Wenn keine Filter geladen wurden, aber State ist "loaded"
-      // → Filter existieren nicht in DB → Lade Daten ohne Filter (Fallback)
-      if (savedFilters.length === 0) {
-        // ✅ FIX: Wenn keine Filter existieren, lade Daten ohne Filter (Fallback)
-        // Dies verhindert, dass keine Daten angezeigt werden, wenn keine Filter existieren
-        defaultFilterAppliedRef.current = true;
-        if (onFilterChange) {
-          onFilterChange('', null, [], [], undefined);
-        }
-        return;
-      }
-      
+    // 3. Filter geladen wurden (savedFilters.length > 0) UND nicht mehr am Laden
+    if (defaultFilterName && !defaultFilterAppliedRef.current && !loading && savedFilters.length > 0) {
       // ✅ Suche nach Default-Filter
-      // ✅ DEBUG: Log verfügbare Filter (nur in Development)
-      if (process.env.NODE_ENV === 'development') {
-        logger.log(`[SavedFilterTags] Suche Default-Filter "${defaultFilterName}". Verfügbare Filter:`, savedFilters.map(f => f?.name));
-      }
-      
       const defaultFilter = savedFilters.find((filter: SavedFilter) => {
         if (!filter || !filter.name) return false;
         // Exakte Übereinstimmung
@@ -269,10 +236,6 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       });
       
       if (defaultFilter) {
-        // ✅ DEBUG: Log gefundenen Filter (nur in Development)
-        if (process.env.NODE_ENV === 'development') {
-          logger.log(`[SavedFilterTags] Default-Filter gefunden:`, defaultFilter.name, defaultFilter.id);
-        }
         // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
         defaultFilterAppliedRef.current = true;
         
@@ -290,14 +253,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, savedFilters.map(f => f?.name));
         }
         // ✅ FIX: Fallback - wenn Default-Filter nicht existiert, lade Daten ohne Filter
-        // Dies verhindert, dass keine Daten angezeigt werden, wenn Default-Filter fehlt
         defaultFilterAppliedRef.current = true;
         if (onFilterChange) {
           onFilterChange('', null, [], [], undefined);
         }
       }
     }
-  }, [defaultFilterName, filterLoadState, savedFilters, onFilterChange, onSelectFilter]);
+  }, [defaultFilterName, loading, savedFilters, onFilterChange, onSelectFilter]);
 
   // ✅ PERFORMANCE: Cleanup nicht mehr nötig - FilterContext verwaltet State zentral
   // Filter werden automatisch vom FilterContext verwaltet

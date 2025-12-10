@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
@@ -8,10 +8,11 @@ import useMessage from '../../hooks/useMessage.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { useLanguage } from '../../hooks/useLanguage.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
-import RoleConfigurationTab from './RoleConfigurationTab.tsx';
-import DocumentConfigurationTab from './DocumentConfigurationTab.tsx';
-import SMTPConfigurationTab from './SMTPConfigurationTab.tsx';
-import ApiConfigurationTab from './ApiConfigurationTab.tsx';
+// ✅ PERFORMANCE: Lazy Loading für Tab-Komponenten
+const RoleConfigurationTab = React.lazy(() => import('./RoleConfigurationTab.tsx'));
+const DocumentConfigurationTab = React.lazy(() => import('./DocumentConfigurationTab.tsx'));
+const SMTPConfigurationTab = React.lazy(() => import('./SMTPConfigurationTab.tsx'));
+const ApiConfigurationTab = React.lazy(() => import('./ApiConfigurationTab.tsx'));
 
 interface Props {
   isOpen: boolean;
@@ -31,6 +32,8 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
     nit: null,
     settings: {}
   });
+  // ✅ PERFORMANCE: Organization mit Settings für Tab-Komponenten
+  const [organizationWithSettings, setOrganizationWithSettings] = useState<Organization | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [nit, setNit] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -57,40 +60,62 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
   // Lade Organisations-Daten wenn Modal geöffnet wird
   useEffect(() => {
     if (isOpen && organization) {
-      const orgSettings = organization.settings || {};
-      setFormData({
-        displayName: organization.displayName || '',
-        domain: organization.domain || '',
-        logo: organization.logo || '',
-        country: organization.country || null,
-        nit: organization.nit || null,
-        settings: orgSettings
-      });
-      
-      // Setze Land direkt aus organization (statt aus settings)
-      setSelectedCountry(organization.country || '');
-      setNit(organization.nit || '');
-      
-      // Setze Logo-Preview wenn Logo vorhanden
-      if (organization.logo) {
-        setLogoPreview(organization.logo);
-      } else {
-        setLogoPreview(null);
-      }
-      setLogoFile(null);
-      
-      // Lade Organisation-Sprache
-      const loadOrgLanguage = async () => {
-        try {
-          const langResponse = await organizationService.getOrganizationLanguage();
-          setSelectedOrgLanguage(langResponse.language || '');
-        } catch (langError) {
-          console.error(t('organization.loadLanguageError'), langError);
-          setSelectedOrgLanguage('');
+      // ✅ PERFORMANCE: Settings laden wenn Modal geöffnet wird und Settings fehlen
+      const loadSettingsIfNeeded = async () => {
+        let orgWithSettings = organization;
+        
+        // Settings laden wenn fehlen
+        if (!organization.settings) {
+          try {
+            orgWithSettings = await organizationService.getCurrentOrganization(undefined, true);
+          } catch (error) {
+            console.error('Fehler beim Laden der Settings:', error);
+          }
         }
+        
+        // ✅ PERFORMANCE: Organization mit Settings für Tab-Komponenten speichern
+        setOrganizationWithSettings(orgWithSettings);
+        
+        const orgSettings = orgWithSettings.settings || {};
+        setFormData({
+          displayName: orgWithSettings.displayName || '',
+          domain: orgWithSettings.domain || '',
+          logo: orgWithSettings.logo || '',
+          country: orgWithSettings.country || null,
+          nit: orgWithSettings.nit || null,
+          settings: orgSettings
+        });
+        
+        // Setze Land direkt aus organization (statt aus settings)
+        setSelectedCountry(orgWithSettings.country || '');
+        setNit(orgWithSettings.nit || '');
+        
+        // Setze Logo-Preview wenn Logo vorhanden
+        if (orgWithSettings.logo) {
+          setLogoPreview(orgWithSettings.logo);
+        } else {
+          setLogoPreview(null);
+        }
+        setLogoFile(null);
+        
+        // Lade Organisation-Sprache
+        const loadOrgLanguage = async () => {
+          try {
+            const langResponse = await organizationService.getOrganizationLanguage();
+            setSelectedOrgLanguage(langResponse.language || '');
+          } catch (langError) {
+            console.error(t('organization.loadLanguageError'), langError);
+            setSelectedOrgLanguage('');
+          }
+        };
+        
+        loadOrgLanguage();
       };
       
-      loadOrgLanguage();
+      loadSettingsIfNeeded();
+    } else if (!isOpen) {
+      // ✅ PERFORMANCE: State zurücksetzen beim Schließen
+      setOrganizationWithSettings(null);
     }
   }, [isOpen, organization, t]);
 
@@ -743,7 +768,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
 
           {activeTab === 'roles' && (
             <RoleConfigurationTab 
-              organization={organization}
+              organization={organizationWithSettings || organization}
               onSave={() => {
                 if (onSuccess) {
                   onSuccess();
@@ -754,7 +779,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
 
           {activeTab === 'documents' && (
             <DocumentConfigurationTab 
-              organization={organization}
+              organization={organizationWithSettings || organization}
               onSave={() => {
                 if (onSuccess) {
                   onSuccess();
@@ -765,7 +790,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
 
           {activeTab === 'smtp' && (
             <SMTPConfigurationTab 
-              organization={organization}
+              organization={organizationWithSettings || organization}
               onSave={() => {
                 if (onSuccess) {
                   onSuccess();
@@ -776,7 +801,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
 
           {activeTab === 'api' && selectedCountry === 'CO' && (
             <ApiConfigurationTab 
-              organization={organization}
+              organization={organizationWithSettings || organization}
               onSave={() => {
                 if (onSuccess) {
                   onSuccess();

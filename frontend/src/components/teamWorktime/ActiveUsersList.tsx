@@ -7,6 +7,7 @@ import StopWorktimeModal from './StopWorktimeModal.tsx';
 import EditWorktimeModal from './EditWorktimeModal.tsx';
 import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
+import { useFilterContext } from '../../contexts/FilterContext.tsx';
 import { FilterCondition } from '../FilterRow.tsx';
 import { applyFilters } from '../../utils/filterLogic.ts';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';

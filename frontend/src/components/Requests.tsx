@@ -367,10 +367,6 @@ const Requests: React.FC = () => {
     try {
       if (!append) {
         setLoading(true); // ✅ FIX: Setze loading = true BEVOR Daten geladen werden
-        // ✅ FIX: Markiere initial load als versucht, wenn nicht append
-        if (offset === 0) {
-          initialLoadAttemptedRef.current = true;
-        }
       } else {
         setLoadingMore(true);
       }
@@ -544,33 +540,6 @@ const Requests: React.FC = () => {
     requestsLengthRef.current = requests.length;
   }, [requests.length]);
 
-  // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
-  const filterContext = useFilterContext();
-  const { loadFilters } = filterContext;
-  
-  useEffect(() => {
-    const initialize = async () => {
-      // 1. Filter laden (wartet auf State-Update)
-      const filters = await loadFilters(REQUESTS_TABLE_ID);
-      
-      // 2. Default-Filter anwenden (IMMER vorhanden!)
-      const defaultFilter = filters.find(f => f.name === 'Aktuell');
-      if (defaultFilter) {
-        await handleFilterChange(
-          defaultFilter.name,
-          defaultFilter.id,
-          defaultFilter.conditions,
-          defaultFilter.operators
-        );
-        return; // Daten werden durch handleFilterChange geladen
-      }
-      
-      // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
-      await fetchRequests(undefined, undefined, false, 20, 0);
-    };
-    
-    initialize();
-  }, [loadFilters, handleFilterChange, fetchRequests]);
 
   // ❌ ENTFERNT: Cleanup useEffect - React macht automatisches Cleanup, manuelles Löschen ist überflüssig (Phase 3)
 
@@ -695,9 +664,6 @@ const Requests: React.FC = () => {
     setActiveFilterName(''); // Kein Filter-Name
     updateSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
     
-    // ✅ FIX: Markiere initial load als versucht, wenn Filter angewendet wird
-    initialLoadAttemptedRef.current = true;
-    
     if (conditions.length > 0) {
       await fetchRequests(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
     } else {
@@ -731,6 +697,34 @@ const Requests: React.FC = () => {
       await applyFilterConditions(conditions, operators);
     }
   };
+  
+  // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+  const filterContext = useFilterContext();
+  const { loadFilters } = filterContext;
+  
+  useEffect(() => {
+    const initialize = async () => {
+      // 1. Filter laden (wartet auf State-Update)
+      const filters = await loadFilters(REQUESTS_TABLE_ID);
+      
+      // 2. Default-Filter anwenden (IMMER vorhanden!)
+      const defaultFilter = filters.find(f => f.name === 'Aktuell');
+      if (defaultFilter) {
+        await handleFilterChange(
+          defaultFilter.name,
+          defaultFilter.id,
+          defaultFilter.conditions,
+          defaultFilter.operators
+        );
+        return; // Daten werden durch handleFilterChange geladen
+      }
+      
+      // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+      await fetchRequests(undefined, undefined, false, 20, 0);
+    };
+    
+    initialize();
+  }, [loadFilters, handleFilterChange, fetchRequests]);
 
   // getActiveFilterCount wird direkt inline verwendet (filterConditions.length)
 
