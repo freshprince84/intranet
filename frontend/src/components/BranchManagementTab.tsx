@@ -7,6 +7,7 @@ import axiosInstance from '../config/axios.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import FilterPane from '../components/FilterPane.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
+import { useFilterContext } from '../contexts/FilterContext.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import RoomDescriptionsSection from './branches/RoomDescriptionsSection.tsx';
@@ -473,11 +474,39 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
     };
     
     // Filter Change Handler (Controlled Mode)
-    const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         setActiveFilterName(name);
         setSelectedFilterId(id);
         applyFilterConditions(conditions, operators);
     };
+    
+    // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+    const filterContext = useFilterContext();
+    const { loadFilters } = filterContext;
+    
+    useEffect(() => {
+        const initialize = async () => {
+            // 1. Filter laden (wartet auf State-Update)
+            const filters = await loadFilters(BRANCHES_TABLE_ID);
+            
+            // 2. Default-Filter anwenden (IMMER vorhanden!)
+            const defaultFilter = filters.find(f => f.name === 'Alle');
+            if (defaultFilter) {
+                await handleFilterChange(
+                    defaultFilter.name,
+                    defaultFilter.id,
+                    defaultFilter.conditions,
+                    defaultFilter.operators
+                );
+                return; // Filter wird angewendet
+            }
+            
+            // 3. Fallback: Kein Filter (sollte nie passieren)
+            // BranchManagementTab filtert client-seitig, daher keine Daten-Lade-Funktion nötig
+        };
+        
+        initialize();
+    }, [loadFilters, handleFilterChange]);
 
     // Standard-Filter erstellen und speichern
     useEffect(() => {
@@ -523,26 +552,6 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
         createStandardFilters();
     }, []);
 
-    // Initialer Default-Filter setzen (Controlled Mode)
-    useEffect(() => {
-        const setInitialFilter = async () => {
-            try {
-                const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(BRANCHES_TABLE_ID));
-                const filters = response.data;
-                
-                const alleFilter = filters.find((filter: any) => filter.name === 'Alle');
-                if (alleFilter) {
-                    setActiveFilterName('Alle');
-                    setSelectedFilterId(alleFilter.id);
-                    applyFilterConditions(alleFilter.conditions, alleFilter.operators);
-                }
-            } catch (error) {
-                console.error(t('branches.setInitialFilterError'), error);
-            }
-        };
-
-        setInitialFilter();
-    }, []);
 
     // Branches rendern
     const renderBranches = () => {

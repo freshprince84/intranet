@@ -1825,6 +1825,221 @@ async function main() {
             }
           });
           
+          // Standard-Filter für Cerebro (CEREBRO_ARTICLES)
+          const cerebroTableId = 'CEREBRO_ARTICLES';
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: cerebroTableId,
+                name: 'Alle Artikel'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: cerebroTableId,
+              name: 'Alle Artikel',
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // Standard-Filter für Tours (worktracker-tours)
+          const toursTableId = 'worktracker-tours';
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: toursTableId,
+                name: 'Aktuell'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'isActive', operator: 'equals', value: true }
+              ]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: toursTableId,
+              name: 'Aktuell',
+              conditions: JSON.stringify([
+                { column: 'isActive', operator: 'equals', value: true }
+              ]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // Standard-Filter für Password Manager (password-manager-table)
+          const passwordManagerTableId = 'password-manager-table';
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: passwordManagerTableId,
+                name: 'Alle Einträge'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: passwordManagerTableId,
+              name: 'Alle Einträge',
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // Standard-Filter für Todo Analytics (todo-analytics-table)
+          const todoAnalyticsTableId = 'todo-analytics-table';
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: todoAnalyticsTableId,
+                name: 'Alle'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: todoAnalyticsTableId,
+              name: 'Alle',
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // Standard-Filter für Request Analytics (request-analytics-table)
+          const requestAnalyticsTableId = 'request-analytics-table';
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: requestAnalyticsTableId,
+                name: 'Alle'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: requestAnalyticsTableId,
+              name: 'Alle',
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // Standard-Filter für My Join Requests (my-join-requests-table)
+          const myJoinRequestsTableId = 'my-join-requests-table';
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: myJoinRequestsTableId,
+                name: 'Alle'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: myJoinRequestsTableId,
+              name: 'Alle',
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // Standard-Filter für Branches (branches-table)
+          const branchesTableId = 'branches-table';
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: branchesTableId,
+                name: 'Alle'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: branchesTableId,
+              name: 'Alle',
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // Standard-Filter für Roles (roles-table)
+          const rolesTableId = 'roles-table';
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: rolesTableId,
+                name: 'Alle'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: rolesTableId,
+              name: 'Alle',
+              conditions: JSON.stringify([]),
+              operators: JSON.stringify([])
+            }
+          });
+          
+          // Standard-Filter für Workcenter (workcenter-table)
+          const workcenterTableId = 'workcenter-table';
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: workcenterTableId,
+                name: 'Aktive'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'hasActiveWorktime', operator: 'equals', value: 'true' }
+              ]),
+              operators: JSON.stringify([])
+            },
+            create: {
+              userId,
+              tableId: workcenterTableId,
+              name: 'Aktive',
+              conditions: JSON.stringify([
+                { column: 'hasActiveWorktime', operator: 'equals', value: 'true' }
+              ]),
+              operators: JSON.stringify([])
+            }
+          });
+          
         } catch (error) {
           console.error(`  ❌ Fehler beim Erstellen der Standard-Filter für User ${userId}:`, error);
         }

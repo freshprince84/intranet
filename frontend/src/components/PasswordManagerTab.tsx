@@ -22,6 +22,7 @@ import PasswordEntryPermissionsModal from './PasswordEntryPermissionsModal.tsx';
 import PasswordEntryAuditLogsModal from './PasswordEntryAuditLogsModal.tsx';
 import FilterPane from './FilterPane.tsx';
 import SavedFilterTags from './SavedFilterTags.tsx';
+import { useFilterContext } from '../contexts/FilterContext.tsx';
 import { FilterCondition } from './FilterRow.tsx';
 import { applyFilters } from '../utils/filterLogic.ts';
 
@@ -226,11 +227,43 @@ const PasswordManagerTab: React.FC = () => {
     setSelectedFilterId(null);
   };
 
-  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     applyFilterConditions(conditions, operators);
   };
+  
+  // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+  const filterContext = useFilterContext();
+  const { loadFilters } = filterContext;
+  
+  useEffect(() => {
+    const initialize = async () => {
+      if (!canView) {
+        return;
+      }
+      
+      // 1. Filter laden (wartet auf State-Update)
+      const filters = await loadFilters(PASSWORD_MANAGER_TABLE_ID);
+      
+      // 2. Default-Filter anwenden (IMMER vorhanden!)
+      const defaultFilter = filters.find(f => f.name === 'Alle Einträge');
+      if (defaultFilter) {
+        await handleFilterChange(
+          defaultFilter.name,
+          defaultFilter.id,
+          defaultFilter.conditions,
+          defaultFilter.operators
+        );
+        return; // Filter wird angewendet
+      }
+      
+      // 3. Fallback: Kein Filter (sollte nie passieren)
+      // loadEntries wird bereits durch useEffect aufgerufen
+    };
+    
+    initialize();
+  }, [canView, loadFilters, handleFilterChange]);
 
   // Column Evaluators für Filter
   const columnEvaluators: any = {

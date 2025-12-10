@@ -825,32 +825,39 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     createStandardFilters();
   }, [t]);
 
-  // Initialer Default-Filter setzen (Controlled Mode)
+  // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+  const filterContext = useFilterContext();
+  const { loadFilters } = filterContext;
+  
   React.useEffect(() => {
-    const setInitialFilter = async () => {
-      try {
-        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(WORKCENTER_TABLE_ID));
-        const filters = response.data;
-        
-        // Suche nach Filter mit aktuellem Namen oder alten Namen (für Migration)
-        const aktiveFilter = filters.find((filter: any) => 
-          filter.name === t('teamWorktime.filters.active') || 
-          filter.name === 'Aktive' || 
-          filter.name === 'Active' || 
-          filter.name === 'Activo'
+    const initialize = async () => {
+      // 1. Filter laden (wartet auf State-Update)
+      const filters = await loadFilters(WORKCENTER_TABLE_ID);
+      
+      // 2. Default-Filter anwenden (IMMER vorhanden!)
+      // Suche nach Filter mit aktuellem Namen oder alten Namen (für Migration)
+      const defaultFilter = filters.find((filter: any) => 
+        filter.name === 'Aktive' || 
+        filter.name === t('teamWorktime.filters.active') ||
+        filter.name === 'Active' || 
+        filter.name === 'Activo'
+      );
+      if (defaultFilter) {
+        await handleFilterChange(
+          defaultFilter.name,
+          defaultFilter.id,
+          defaultFilter.conditions,
+          defaultFilter.operators
         );
-        if (aktiveFilter) {
-          setActiveFilterName(t('teamWorktime.filters.active'));
-          setSelectedFilterId(aktiveFilter.id);
-          applyFilterConditions(aktiveFilter.conditions, aktiveFilter.operators);
-        }
-      } catch (error) {
-        console.error('Fehler beim Setzen des initialen Filters:', error);
+        return; // Filter wird angewendet
       }
+      
+      // 3. Fallback: Kein Filter (sollte nie passieren)
+      // ActiveUsersList filtert client-seitig, daher keine Daten-Lade-Funktion nötig
     };
-
-    setInitialFilter();
-  }, [t]);
+    
+    initialize();
+  }, [t, loadFilters, handleFilterChange]);
 
   // Funktion zum Anwenden von Filterbedingungen
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
@@ -867,11 +874,11 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   };
   
   // Filter Change Handler (Controlled Mode)
-  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  const handleFilterChange = React.useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     applyFilterConditions(conditions, operators);
-  };
+  }, [applyFilterConditions]);
 
   // Datum zu vorherigem Tag ändern
   const handlePreviousDay = () => {
