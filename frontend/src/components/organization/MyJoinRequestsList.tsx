@@ -7,6 +7,7 @@ import useMessage from '../../hooks/useMessage.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
+import { useFilterContext } from '../../contexts/FilterContext.tsx';
 import { FilterCondition } from '../FilterRow.tsx';
 import axiosInstance from '../../config/axios.ts';
 import { logger } from '../../utils/logger.ts';
@@ -224,7 +225,7 @@ const MyJoinRequestsList: React.FC = () => {
   };
 
   // Filter Change Handler (Controlled Mode)
-  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     applyFilterConditions(conditions, operators);
@@ -234,26 +235,33 @@ const MyJoinRequestsList: React.FC = () => {
     return filterConditions.length;
   };
 
-  // Initialer Default-Filter setzen (Controlled Mode)
+  // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+  const filterContext = useFilterContext();
+  const { loadFilters } = filterContext;
+  
   useEffect(() => {
-    const setInitialFilter = async () => {
-      try {
-        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(MY_JOIN_REQUESTS_TABLE_ID));
-        const filters = response.data;
-        
-        const alleFilter = filters.find((filter: any) => filter.name === 'Alle');
-        if (alleFilter) {
-          setActiveFilterName('Alle');
-          setSelectedFilterId(alleFilter.id);
-          applyFilterConditions(alleFilter.conditions, alleFilter.operators);
-        }
-      } catch (error) {
-        console.error('Fehler beim Setzen des initialen Filters:', error);
+    const initialize = async () => {
+      // 1. Filter laden (wartet auf State-Update)
+      const filters = await loadFilters(MY_JOIN_REQUESTS_TABLE_ID);
+      
+      // 2. Default-Filter anwenden (IMMER vorhanden!)
+      const defaultFilter = filters.find(f => f.name === 'Alle');
+      if (defaultFilter) {
+        await handleFilterChange(
+          defaultFilter.name,
+          defaultFilter.id,
+          defaultFilter.conditions,
+          defaultFilter.operators
+        );
+        return; // Filter wird angewendet
       }
+      
+      // 3. Fallback: Kein Filter (sollte nie passieren)
+      // MyJoinRequestsList filtert client-seitig, daher keine Daten-Lade-Funktion nötig
     };
-
-    setInitialFilter();
-  }, []);
+    
+    initialize();
+  }, [loadFilters, handleFilterChange]);
 
   // Standard-Filter erstellen und speichern
   useEffect(() => {

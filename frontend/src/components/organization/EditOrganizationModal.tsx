@@ -767,47 +767,55 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
           )}
 
           {activeTab === 'roles' && (
-            <RoleConfigurationTab 
-              organization={organizationWithSettings || organization}
-              onSave={() => {
-                if (onSuccess) {
-                  onSuccess();
-                }
-              }}
-            />
+            <Suspense fallback={<div className="p-4 text-center">{t('common.loading', 'Lade...')}</div>}>
+              <RoleConfigurationTab 
+                organization={organizationWithSettings || organization}
+                onSave={() => {
+                  if (onSuccess) {
+                    onSuccess();
+                  }
+                }}
+              />
+            </Suspense>
           )}
 
           {activeTab === 'documents' && (
-            <DocumentConfigurationTab 
-              organization={organizationWithSettings || organization}
-              onSave={() => {
-                if (onSuccess) {
-                  onSuccess();
-                }
-              }}
-            />
+            <Suspense fallback={<div className="p-4 text-center">{t('common.loading', 'Lade...')}</div>}>
+              <DocumentConfigurationTab 
+                organization={organizationWithSettings || organization}
+                onSave={() => {
+                  if (onSuccess) {
+                    onSuccess();
+                  }
+                }}
+              />
+            </Suspense>
           )}
 
           {activeTab === 'smtp' && (
-            <SMTPConfigurationTab 
-              organization={organizationWithSettings || organization}
-              onSave={() => {
-                if (onSuccess) {
-                  onSuccess();
-                }
-              }}
-            />
+            <Suspense fallback={<div className="p-4 text-center">{t('common.loading', 'Lade...')}</div>}>
+              <SMTPConfigurationTab 
+                organization={organizationWithSettings || organization}
+                onSave={() => {
+                  if (onSuccess) {
+                    onSuccess();
+                  }
+                }}
+              />
+            </Suspense>
           )}
 
           {activeTab === 'api' && selectedCountry === 'CO' && (
-            <ApiConfigurationTab 
-              organization={organizationWithSettings || organization}
-              onSave={() => {
-                if (onSuccess) {
-                  onSuccess();
-                }
-              }}
-            />
+            <Suspense fallback={<div className="p-4 text-center">{t('common.loading', 'Lade...')}</div>}>
+              <ApiConfigurationTab 
+                organization={organizationWithSettings || organization}
+                onSave={() => {
+                  if (onSuccess) {
+                    onSuccess();
+                  }
+                }}
+              />
+            </Suspense>
           )}
         </div>
       </div>
