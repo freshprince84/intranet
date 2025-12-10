@@ -510,7 +510,7 @@ const DataCard: React.FC<DataCardProps> = ({
           <div className="flex items-center justify-end gap-1 sm:gap-2 md:gap-3 flex-nowrap overflow-visible">
             {/* Typ (erste Zeile, auf gleicher Höhe wie Titel) - main mit und ohne Label */}
             {metadata.filter(item => item.section === 'main').length > 0 && (
-              <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
+              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
                 {metadata
                   .filter(item => item.section === 'main')
                   .map((item, index) => {

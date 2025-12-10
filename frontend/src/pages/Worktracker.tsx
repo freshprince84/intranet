@@ -2602,7 +2602,7 @@ const Worktracker: React.FC = () => {
                                                         icon: <UserIcon className="h-4 w-4" />,
                                                         label: t('tasks.columns.qualityControl'),
                                                         value: shortenedName,
-                                                        section: 'main-second'
+                                                        section: 'main'
                                                     });
                                                 }
                                                 
@@ -3925,7 +3925,7 @@ const Worktracker: React.FC = () => {
                                                         icon: <UserIcon className="h-4 w-4" />,
                                                         label: t('tasks.columns.qualityControl'),
                                                         value: shortenedName,
-                                                        section: 'main-second'
+                                                        section: 'main'
                                                     });
                                                 }
                                                 

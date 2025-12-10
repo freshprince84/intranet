@@ -391,7 +391,7 @@ const ArticleView: React.FC = () => {
         )}
         
         {/* Inhalt des Artikels oder ausgewählter GitHub-Markdown */}
-        <div className="prose dark:prose-invert max-w-none">
+        <div className="prose dark:prose-invert max-w-full overflow-x-hidden">
           {renderContent()}
         </div>
       </div>
