@@ -511,14 +511,12 @@ const DataCard: React.FC<DataCardProps> = ({
             {/* Typ (erste Zeile, auf gleicher Höhe wie Titel) - main mit und ohne Label */}
             {metadata.filter(item => item.section === 'main').length > 0 && (
               <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                {metadata
-                  .filter(item => item.section === 'main')
-                  .map((item, index, array) => {
-                    if (item.descriptionContent) return null;
-                    
-                    const prevItem = index > 0 ? array[index - 1] : null;
-                    const isCheckInOut = item.label?.includes('Check-in') || item.label?.includes('Check-out');
-                    const prevIsRoom = prevItem?.label === 'Zimmer' || prevItem?.label?.includes('Zimmer');
+                {(() => {
+                  const mainItems = metadata.filter(item => item.section === 'main' && !item.descriptionContent);
+                  return mainItems.map((item, index) => {
+                    const prevItem = index > 0 ? mainItems[index - 1] : null;
+                    const isCheckInOut = item.label?.includes('Check-in') || item.label?.includes('Check-out') || item.label?.includes('checkInOut');
+                    const prevIsRoom = prevItem?.label === 'Zimmer' || prevItem?.label?.includes('Zimmer') || prevItem?.label?.includes('room');
                     const needsExtraSpacing = isCheckInOut && prevIsRoom;
                     
                     return (
@@ -531,12 +529,13 @@ const DataCard: React.FC<DataCardProps> = ({
                         </span>
                       </React.Fragment>
                     );
-                  })}
+                  });
+                })()}
               </div>
             )}
             
             {/* Container für Solicitado por + Responsable (nebeneinander, immer zusammen) */}
-            <div className="flex items-center gap-0.5 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg 2xl:text-xl text-gray-600 dark:text-gray-400 flex-nowrap whitespace-nowrap flex-shrink-0">
+            <div className="flex items-center gap-0.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 flex-nowrap whitespace-nowrap flex-shrink-0">
               {/* Solicitado por */}
               {metadata.filter(item => (item.section === 'main-second' && item.label) || (!item.section && item.label === 'Angefragt von')).map((item, index) => {
                 if (item.descriptionContent) return null;
