@@ -141,12 +141,14 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
       setFilterGroups(prev => ({ ...prev, [tableId]: groupsData }));
       // ✅ MEMORY: Timestamp für TTL setzen
       filterCacheTimestamps.current[tableId] = Date.now();
+      // ✅ FIX: Aktualisiere filtersRef SOFORT (vor State-Update), damit Polling funktioniert
+      filtersRef.current[tableId] = filtersData;
         
         // ✅ WICHTIG: Warte auf State-Update (nächster Render-Zyklus)
         await new Promise(resolve => setTimeout(resolve, 0));
         
         // ✅ WICHTIG: Prüfe, ob Filter jetzt im State sind
-        // Warte maximal 100ms auf State-Update
+        // Warte maximal 100ms auf State-Update (falls filtersRef noch nicht aktualisiert wurde)
         let attempts = 0;
         while (attempts < 10 && !filtersRef.current[tableId]) {
           await new Promise(resolve => setTimeout(resolve, 10));

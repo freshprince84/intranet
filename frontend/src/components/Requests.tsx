@@ -655,7 +655,8 @@ const Requests: React.FC = () => {
     setDragOverColumn(null);
   };
 
-  const applyFilterConditions = async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  // ✅ FIX: Mit useCallback stabilisieren (wird in handleFilterChange verwendet)
+  const applyFilterConditions = useCallback(async (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
     
@@ -669,7 +670,7 @@ const Requests: React.FC = () => {
     } else {
       await fetchRequests(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
     }
-  };
+  }, [fetchRequests, updateSortConfig]);
   
   const resetFilterConditions = () => {
     setFilterConditions([]);
@@ -678,8 +679,12 @@ const Requests: React.FC = () => {
     setSelectedFilterId(null);
   };
   
+  // ✅ FIX: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
+  const initialLoadAttemptedRef = useRef(false);
+  
   // Filter Change Handler (Controlled Mode)
-  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  // ✅ FIX: Mit useCallback stabilisieren (verhindert Endlosschleife in useEffect)
+  const handleFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     // Table-Header-Sortierung zurücksetzen
@@ -696,35 +701,53 @@ const Requests: React.FC = () => {
       // ✅ FIX: Flag wird in applyFilterConditions gesetzt
       await applyFilterConditions(conditions, operators);
     }
-  };
+  }, [fetchRequests, updateSortConfig, applyFilterConditions]);
   
   // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
   const filterContext = useFilterContext();
   const { loadFilters } = filterContext;
   
+  // ✅ FIX: Standard-Pattern mit leeren Dependencies (wie in FILTER_STANDARD_DEFINITION.md geplant)
+  // ✅ FIX: initialLoadAttemptedRef verhindert mehrfache Ausführung
   useEffect(() => {
+    // ✅ FIX: Verhindere mehrfache Ausführung
+    if (initialLoadAttemptedRef.current) {
+      return;
+    }
+    
     const initialize = async () => {
-      // 1. Filter laden (wartet auf State-Update)
-      const filters = await loadFilters(REQUESTS_TABLE_ID);
+      // ✅ FIX: Markiere als versucht, BEVOR async Operation startet
+      initialLoadAttemptedRef.current = true;
       
-      // 2. Default-Filter anwenden (IMMER vorhanden!)
-      const defaultFilter = filters.find(f => f.name === 'Aktuell');
-      if (defaultFilter) {
-        await handleFilterChange(
-          defaultFilter.name,
-          defaultFilter.id,
-          defaultFilter.conditions,
-          defaultFilter.operators
-        );
-        return; // Daten werden durch handleFilterChange geladen
+      try {
+        // 1. Filter laden (wartet auf State-Update)
+        const filters = await loadFilters(REQUESTS_TABLE_ID);
+        
+        // 2. Default-Filter anwenden (IMMER vorhanden!)
+        const defaultFilter = filters.find(f => f.name === 'Aktuell');
+        if (defaultFilter) {
+          await handleFilterChange(
+            defaultFilter.name,
+            defaultFilter.id,
+            defaultFilter.conditions,
+            defaultFilter.operators
+          );
+          return; // Daten werden durch handleFilterChange geladen
+        }
+        
+        // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+        await fetchRequests(undefined, undefined, false, 20, 0);
+      } catch (error) {
+        // ✅ FIX: Bei Fehler Ref zurücksetzen, damit Retry möglich ist
+        initialLoadAttemptedRef.current = false;
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[Requests] Fehler beim Initialisieren:', error);
+        }
       }
-      
-      // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
-      await fetchRequests(undefined, undefined, false, 20, 0);
     };
     
     initialize();
-  }, [loadFilters, handleFilterChange, fetchRequests]);
+  }, []); // ✅ FIX: Leere Dependencies wie im Standard-Pattern geplant
 
   // getActiveFilterCount wird direkt inline verwendet (filterConditions.length)
 
