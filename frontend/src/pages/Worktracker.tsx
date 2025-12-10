@@ -28,6 +28,7 @@ import axiosInstance from '../config/axios.ts';
 import FilterPane from '../components/FilterPane.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
+import { useFilterContext } from '../contexts/FilterContext.tsx';
 import { applyFilters, evaluateDateCondition, evaluateUserRoleCondition, evaluateResponsibleAndQualityControl } from '../utils/filterLogic.ts';
 import { toast } from 'react-toastify';
 import MarkdownPreview from '../components/MarkdownPreview.tsx';
@@ -889,11 +890,53 @@ const Worktracker: React.FC = () => {
         }
     };
 
-    // ✅ Initialer Filter-Load für Reservations - DEAKTIVIERT, da SavedFilterTags den Default-Filter bereits anwendet
-    // ✅ SavedFilterTags wendet den Default-Filter automatisch an, daher ist dieser useEffect nicht nötig
-    // useEffect(() => {
-    //     // SavedFilterTags übernimmt die Anwendung des Default-Filters
-    // }, [activeTab]);
+    // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+    const filterContext = useFilterContext();
+    const { loadFilters } = filterContext;
+    
+    useEffect(() => {
+        const initialize = async () => {
+            if (activeTab === 'todos') {
+                // 1. Filter laden (wartet auf State-Update)
+                const filters = await loadFilters(TODOS_TABLE_ID);
+                
+                // 2. Default-Filter anwenden (IMMER vorhanden!)
+                const defaultFilter = filters.find(f => f.name === 'Aktuell');
+                if (defaultFilter) {
+                    await handleFilterChange(
+                        defaultFilter.name,
+                        defaultFilter.id,
+                        defaultFilter.conditions,
+                        defaultFilter.operators
+                    );
+                    return; // Daten werden durch handleFilterChange geladen
+                }
+                
+                // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+                await loadTasks(undefined, undefined, false, 20, 0);
+            } else if (activeTab === 'reservations') {
+                // 1. Filter laden (wartet auf State-Update)
+                const filters = await loadFilters(RESERVATIONS_TABLE_ID);
+                
+                // 2. Default-Filter anwenden (IMMER vorhanden!)
+                const defaultFilter = filters.find(f => f.name === 'Hoy');
+                if (defaultFilter) {
+                    await handleReservationFilterChange(
+                        defaultFilter.name,
+                        defaultFilter.id,
+                        defaultFilter.conditions,
+                        defaultFilter.operators
+                    );
+                    return; // Daten werden durch handleReservationFilterChange geladen
+                }
+                
+                // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+                await loadReservations(undefined, undefined, [], false, 20, 0);
+            }
+        };
+        
+        initialize();
+    }, [activeTab, loadFilters, handleFilterChange, handleReservationFilterChange, loadTasks, loadReservations]);
     
     // Infinite Scroll Handler für Tasks
     // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
@@ -1019,11 +1062,6 @@ const Worktracker: React.FC = () => {
         }
     };
     
-    // ✅ Initialer Filter-Load für Todos - DEAKTIVIERT, da SavedFilterTags den Default-Filter bereits anwendet
-    // ✅ SavedFilterTags wendet den Default-Filter automatisch an, daher ist dieser useEffect nicht nötig
-    // useEffect(() => {
-    //     // SavedFilterTags übernimmt die Anwendung des Default-Filters
-    // }, [activeTab]);
     
     useEffect(() => {
         if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
