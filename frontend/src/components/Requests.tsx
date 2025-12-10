@@ -544,43 +544,33 @@ const Requests: React.FC = () => {
     requestsLengthRef.current = requests.length;
   }, [requests.length]);
 
-  // ✅ FIX: Initiales Laden von Requests (wenn keine Filter existieren oder wenn Filter geladen wurden)
+  // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
   const filterContext = useFilterContext();
   const { loadFilters } = filterContext;
-  const filtersLoading = filterContext.isLoading(REQUESTS_TABLE_ID);
-  
-  // ✅ FIX: Ref verhindert doppeltes Laden (initial load attempted)
-  const initialLoadAttemptedRef = useRef<boolean>(false);
   
   useEffect(() => {
-    // Lade Filter für Requests-Tabelle
-    loadFilters(REQUESTS_TABLE_ID);
-  }, [loadFilters]);
-  
-  // ✅ FIX: Initiales Laden von Requests (wenn Filter geladen wurden, aber kein Default-Filter angewendet wurde)
-  useEffect(() => {
-    // Nur ausführen, wenn:
-    // 1. Filter nicht mehr am Laden sind
-    // 2. Keine Requests geladen wurden (requests.length === 0)
-    // 3. Noch kein initiales Laden versucht wurde (initialLoadAttemptedRef.current === false)
-    // 4. Kein Filter ausgewählt wurde (selectedFilterId === null)
-    // ✅ FIX: !loading entfernt, da loading initial false ist und von fetchRequests gesetzt wird
-    if (!filtersLoading && requests.length === 0 && !initialLoadAttemptedRef.current && selectedFilterId === null && filterConditions.length === 0) {
-      // Warte 800ms, damit SavedFilterTags Zeit hat, Default-Filter anzuwenden
-      // ✅ FIX: Längere Wartezeit, damit SavedFilterTags definitiv fertig ist
-      const timeoutId = setTimeout(() => {
-        // Prüfe nochmal, ob inzwischen ein Filter angewendet wurde oder ob bereits geladen wurde
-        if (selectedFilterId === null && filterConditions.length === 0 && requests.length === 0 && !initialLoadAttemptedRef.current) {
-          // ✅ FIX: Markiere als versucht, BEVOR fetchRequests aufgerufen wird
-          initialLoadAttemptedRef.current = true;
-          // Fallback: Lade Requests ohne Filter
-          fetchRequests(undefined, undefined, false, 20, 0);
-        }
-      }, 800);
+    const initialize = async () => {
+      // 1. Filter laden (wartet auf State-Update)
+      const filters = await loadFilters(REQUESTS_TABLE_ID);
       
-      return () => clearTimeout(timeoutId);
-    }
-  }, [filtersLoading, requests.length, selectedFilterId, filterConditions.length, fetchRequests]);
+      // 2. Default-Filter anwenden (IMMER vorhanden!)
+      const defaultFilter = filters.find(f => f.name === 'Aktuell');
+      if (defaultFilter) {
+        await handleFilterChange(
+          defaultFilter.name,
+          defaultFilter.id,
+          defaultFilter.conditions,
+          defaultFilter.operators
+        );
+        return; // Daten werden durch handleFilterChange geladen
+      }
+      
+      // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+      await fetchRequests(undefined, undefined, false, 20, 0);
+    };
+    
+    initialize();
+  }, [loadFilters, handleFilterChange, fetchRequests]);
 
   // ❌ ENTFERNT: Cleanup useEffect - React macht automatisches Cleanup, manuelles Löschen ist überflüssig (Phase 3)
 

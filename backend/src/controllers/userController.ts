@@ -219,24 +219,30 @@ export const getUserById = async (req: Request | AuthenticatedRequest, res: Resp
         if (authenticatedUserId === userId && roleId) {
             const modifiedUser = {
                 ...user,
-                roles: user.roles.map(roleEntry => ({
-                    ...roleEntry,
-                    role: {
-                        ...roleEntry.role,
-                        organization: roleEntry.role.organization ? {
-                            ...roleEntry.role.organization,
-                            // Korrigiere String 'null' zu echtem null
-                            logo: roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo
-                        } : null
-                    },
-                    lastUsed: roleEntry.role.id === roleId
-                }))
+                roles: user.roles.map(roleEntry => {
+                    const isActiveRole = roleEntry.role.id === roleId;
+                    return {
+                        ...roleEntry,
+                        role: {
+                            ...roleEntry.role,
+                            organization: roleEntry.role.organization ? {
+                                ...roleEntry.role.organization,
+                                // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
+                                logo: isActiveRole
+                                    ? (roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo)
+                                    : null  // ✅ Inaktive Roles: Logo = null (spart Memory)
+                            } : null
+                        },
+                        lastUsed: isActiveRole
+                    };
+                })
             };
             
             return res.json(modifiedUser);
         }
         
         // Stelle sicher, dass das Logo-Feld explizit zurückgegeben wird
+        // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
         const userWithLogo = {
             ...user,
             roles: user.roles.map(roleEntry => ({
@@ -245,8 +251,10 @@ export const getUserById = async (req: Request | AuthenticatedRequest, res: Resp
                     ...roleEntry.role,
                     organization: roleEntry.role.organization ? {
                         ...roleEntry.role.organization,
-                        // Korrigiere String 'null' zu echtem null
-                        logo: roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo
+                        // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
+                        logo: roleEntry.lastUsed
+                            ? (roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo)
+                            : null  // ✅ Inaktive Roles: Logo = null (spart Memory)
                     } : null
                 }
             }))
