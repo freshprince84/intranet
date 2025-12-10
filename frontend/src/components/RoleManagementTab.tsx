@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { roleApi, branchApi } from '../api/apiClient.ts';
@@ -573,20 +573,34 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const { openSidepane, closeSidepane } = useSidepane();
   
-  // Fehlerbehandlung mit Fallback
+  // Fehlerbehandlung mit Fallback - useRef für stabile onError-Referenz
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
   const errorContext = useError();
-  const handleError = errorContext?.handleError || ((err: any, context?: Record<string, any>) => {
-    console.error('Fehler:', err, context);
-    if (onError) {
-      onError(err?.message || 'Ein Fehler ist aufgetreten');
+  const handleError = useCallback((err: any, context?: Record<string, any>) => {
+    if (errorContext?.handleError) {
+      errorContext.handleError(err, context);
+    } else {
+      console.error('Fehler:', err, context);
+      if (onErrorRef.current) {
+        onErrorRef.current(err?.message || 'Ein Fehler ist aufgetreten');
+      }
     }
-  });
-  const handleValidationError = errorContext?.handleValidationError || ((message: string, fieldErrors?: Record<string, string>) => {
-    console.error('Validierungsfehler:', message, fieldErrors);
-    if (onError) {
-      onError(message);
+  }, [errorContext]);
+
+  const handleValidationError = useCallback((message: string, fieldErrors?: Record<string, string>) => {
+    if (errorContext?.handleValidationError) {
+      errorContext.handleValidationError(message, fieldErrors);
+    } else {
+      console.error('Validierungsfehler:', message, fieldErrors);
+      if (onErrorRef.current) {
+        onErrorRef.current(message);
+      }
     }
-  });
+  }, [errorContext]);
   
   // Neue State-Variablen für die Berechtigungen
   const [isAddPermissionModalOpen, setIsAddPermissionModalOpen] = useState(false);
@@ -654,7 +668,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     } finally {
       setLoading(false);
     }
-  }, [handleError, onError]);
+  }, [handleError]);
 
   // ✅ ENTFERNT: Direkt Rollen laden - wird jetzt durch Standard-Pattern gemacht (nach Default-Filter-Anwendung)
 

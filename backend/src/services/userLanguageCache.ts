@@ -1,10 +1,13 @@
 import { prisma } from '../utils/prisma';
+import { cacheCleanupService } from './cacheCleanupService';
 
 /**
  * Cache für User-Sprachen
  * 
  * Reduziert CPU-Last durch Vermeidung wiederholter komplexer DB-Queries
- * TTL: 10 Minuten (User-Sprache ändert sich selten)
+ * TTL: 10 Minuten
+ * MAX_SIZE: 500 Einträge
+ * Auto-Cleanup: Ja
  */
 
 interface CacheEntry {
@@ -15,6 +18,7 @@ interface CacheEntry {
 class UserLanguageCache {
   private cache: Map<number, CacheEntry> = new Map();
   private readonly TTL_MS = 10 * 60 * 1000; // 10 Minuten
+  private readonly MAX_SIZE = 500;
 
   /**
    * Prüft, ob ein Cache-Eintrag noch gültig ist
@@ -87,8 +91,45 @@ class UserLanguageCache {
       validEntries
     };
   }
+
+  /**
+   * Entfernt abgelaufene Einträge und führt LRU-Eviction durch
+   */
+  cleanup(): number {
+    const now = Date.now();
+    let deleted = 0;
+
+    for (const [key, entry] of this.cache) {
+      if ((now - entry.timestamp) >= this.TTL_MS) {
+        this.cache.delete(key);
+        deleted++;
+      }
+    }
+
+    if (this.cache.size > this.MAX_SIZE) {
+      const entries = Array.from(this.cache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = this.cache.size - this.MAX_SIZE;
+      for (let i = 0; i < toDelete; i++) {
+        this.cache.delete(entries[i][0]);
+        deleted++;
+      }
+    }
+
+    return deleted;
+  }
+
+  register(): void {
+    cacheCleanupService.register({
+      name: 'userLanguageCache',
+      cleanup: () => this.cleanup(),
+      getStats: () => this.getStats(),
+      clear: () => this.clear()
+    });
+  }
 }
 
 // Singleton-Instanz
 export const userLanguageCache = new UserLanguageCache();
+userLanguageCache.register();
 

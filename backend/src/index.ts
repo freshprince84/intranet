@@ -11,6 +11,7 @@ import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { stopWorkers } from './queues';
 import { prisma } from './utils/prisma';
 import { logger } from './utils/logger';
+import { cacheCleanupService } from './services/cacheCleanupService';
 
 // ENCRYPTION_KEY-Prüfung beim Start
 const encryptionKey = process.env.ENCRYPTION_KEY;
@@ -128,8 +129,13 @@ export const cleanupTimers = () => {
     passcodeCleanupTimeout = null;
     logger.log('✅ Passcode-Cleanup-Timeout gestoppt');
   }
+  // ✅ MEMORY-LEAK-FIX: Cache-Cleanup-Service stoppen
+  cacheCleanupService.stop();
 };
 
 logger.log('✅ Reservation-Passcode-Cleanup-Scheduler wird gestartet (prüft täglich um 11:00 Uhr)');
+
+// ✅ MEMORY-LEAK-FIX: Starte Cache-Cleanup-Service
+cacheCleanupService.start();
 
 export default server;
