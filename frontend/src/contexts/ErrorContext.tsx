@@ -49,16 +49,11 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
 
 /**
  * Hook zum Zugriff auf den ErrorContext
- * Wirft einen Fehler, wenn außerhalb des ErrorProvider-Kontexts verwendet
+ * Gibt optionalen Context zurück, wenn außerhalb des ErrorProvider-Kontexts verwendet
  */
-export const useError = (): ErrorContextType => {
+export const useError = (): ErrorContextType | null => {
   const context = useContext(ErrorContext);
-  
-  if (context === undefined) {
-    throw new Error('useError muss innerhalb eines ErrorProvider verwendet werden');
-  }
-  
-  return context;
+  return context || null;
 };
 
 export default ErrorContext; 

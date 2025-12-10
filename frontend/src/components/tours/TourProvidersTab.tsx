@@ -95,18 +95,12 @@ const TourProvidersTab: React.FC<TourProvidersTabProps> = () => {
     const { showMessage } = useMessage();
     
     // Fehlerbehandlung mit Fallback
-    let handleErrorContext: (err: any, context?: Record<string, any>) => void;
-    try {
-        const errorContext = useError();
-        handleErrorContext = errorContext.handleError;
-    } catch (error) {
-        // Fallback: Einfache Fehlerbehandlung
-        handleErrorContext = (err: any, context?: Record<string, any>) => {
-            console.error('Fehler:', err, context);
-            const errorMessage = err?.response?.data?.message || err?.message || 'Ein Fehler ist aufgetreten';
-            showMessage(errorMessage, 'error');
-        };
-    }
+    const errorContext = useError();
+    const handleErrorContext = errorContext?.handleError || ((err: any, context?: Record<string, any>) => {
+        console.error('Fehler:', err, context);
+        const errorMessage = err?.response?.data?.message || err?.message || 'Ein Fehler ist aufgetreten';
+        showMessage(errorMessage, 'error');
+    });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingProvider, setEditingProvider] = useState<TourProvider | null>(null);
