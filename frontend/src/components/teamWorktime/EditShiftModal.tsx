@@ -404,10 +404,10 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
         <button
           type="button"
           onClick={() => setShowDeleteConfirm(true)}
-          className="w-full px-4 py-2 text-sm font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center justify-center gap-2"
+          className="w-full p-2 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center justify-center"
+          title={t('teamWorktime.shifts.modal.edit.delete')}
         >
           <TrashIcon className="h-5 w-5" />
-          {t('teamWorktime.shifts.modal.edit.delete')}
         </button>
       </div>
 
@@ -422,16 +422,18 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
               type="button"
               onClick={handleDelete}
               disabled={loading}
-              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+              className="flex-1 p-2 text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+              title={t('common.yes')}
             >
-              {t('common.yes')}
+              <CheckIcon className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(false)}
-              className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+              className="flex-1 p-2 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+              title={t('common.no')}
             >
-              {t('common.no')}
+              <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
         </div>

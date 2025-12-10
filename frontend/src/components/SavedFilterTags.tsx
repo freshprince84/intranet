@@ -101,7 +101,6 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Responsive Tag-Display States (optimiert)
   const containerRef = useRef<HTMLDivElement>(null);
-  const grandParentRef = useRef<HTMLElement | null>(null); // ✅ FIX: Ref für Großeltern-Container
   const tagRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const [visibleTagCount, setVisibleTagCount] = useState(4); // Fallback für SSR
   const [containerWidth, setContainerWidth] = useState(0);
@@ -538,17 +537,40 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   }, [sortedFilters, measuredTagWidths]);
 
   // ✅ FIX: Berechne tatsächlich verfügbare Breite unter Berücksichtigung von negativen Margins
-  // Vereinfachte Lösung: Verwende grandParentRef wenn vorhanden, sonst Container-Breite
+  // Einfache Lösung: Verwende Parent-Container-Breite und kompensiere negative Margins
   const getAvailableWidth = useCallback(() => {
     if (!containerRef.current) return 0;
     
-    // Wenn wir einen Großeltern-Container-Ref haben (bei negativen Margins), verwende dessen Breite
-    if (grandParentRef.current) {
-      return grandParentRef.current.clientWidth;
+    const container = containerRef.current;
+    const parentElement = container.parentElement;
+    
+    if (!parentElement) {
+      return container.clientWidth;
+    }
+    
+    const parentStyles = window.getComputedStyle(parentElement);
+    const parentMarginLeft = parseFloat(parentStyles.marginLeft) || 0;
+    const parentMarginRight = parseFloat(parentStyles.marginRight) || 0;
+    
+    // Wenn Parent negative Margins hat, kompensiere diese
+    if (parentMarginLeft < 0 || parentMarginRight < 0) {
+      // Verwende Parent-Breite + absolute Werte der negativen Margins
+      // Dies gibt uns die tatsächlich verfügbare Breite
+      const parentWidth = parentElement.clientWidth;
+      const compensatedWidth = parentWidth + Math.abs(Math.min(0, parentMarginLeft)) + Math.abs(Math.min(0, parentMarginRight));
+      
+      // ✅ FIX: Wenn Parent noch nicht gerendert ist (clientWidth = 0), warte auf nächsten Frame
+      if (compensatedWidth === 0) {
+        // Fallback: Verwende Container-Breite + geschätzte negative Margins
+        const estimatedNegativeMargins = Math.abs(parentMarginLeft) + Math.abs(parentMarginRight);
+        return container.clientWidth + estimatedNegativeMargins;
+      }
+      
+      return compensatedWidth;
     }
     
     // Fallback: Verwende Container-Breite (wenn keine negativen Margins vorhanden)
-    return containerRef.current.clientWidth;
+    return container.clientWidth;
   }, []);
 
   // Optimierte Sichtbarkeits-Berechnung mit useCallback
@@ -558,6 +580,18 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     if (isMeasuring) return;
 
     const currentWidth = getAvailableWidth();
+    
+    // ✅ FIX: Wenn Breite 0 oder sehr klein ist, warte auf nächsten Frame (Container noch nicht gerendert)
+    if (currentWidth < 100) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (containerRef.current) {
+            calculateVisibleTags();
+          }
+        });
+      });
+      return;
+    }
 
     // Nur neu berechnen wenn sich die Breite signifikant geändert hat (>= 10px)
     if (Math.abs(currentWidth - containerWidth) < 10 && containerWidth > 0) return;
@@ -638,40 +672,45 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }
   }, [sortedFilters, averageTagWidth, containerWidth, isMeasuring, measuredTagWidths, getAvailableWidth]);
 
-  // ✅ PHASE 3: Prüfe ob Parent negative Margins hat und setze grandParentRef
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const container = containerRef.current;
-    const parentElement = container.parentElement;
-    
-    if (parentElement) {
-      const parentStyles = window.getComputedStyle(parentElement);
-      const parentMarginLeft = parseFloat(parentStyles.marginLeft) || 0;
-      const parentMarginRight = parseFloat(parentStyles.marginRight) || 0;
-      
-      if (parentMarginLeft < 0 || parentMarginRight < 0) {
-        const grandParent = parentElement.parentElement;
-        if (grandParent) {
-          grandParentRef.current = grandParent;
-        }
-      }
-    }
-
-    return () => {
-      grandParentRef.current = null; // Cleanup
-    };
-  }, []);
-
-  // ✅ PHASE 3: Verwende Custom Hook für ResizeObserver (Memory-Leak Prevention)
+  // ✅ FIX: Verwende Custom Hook für ResizeObserver (Memory-Leak Prevention)
+  // Beobachte sowohl Container als auch Parent (für negative Margins)
   useResizeObserver(
     containerRef,
     calculateVisibleTags,
     {
       debounceMs: 100, // 100ms Debounce für Filter-Tags (schneller als Client-Tags)
-      additionalElementRef: grandParentRef, // Beobachte auch grandParent für negative Margins
     }
   );
+  
+  // ✅ FIX: Beobachte auch Parent-Container für negative Margins
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const container = containerRef.current;
+    const parentElement = container.parentElement;
+    
+    if (!parentElement) return;
+    
+    const parentStyles = window.getComputedStyle(parentElement);
+    const parentMarginLeft = parseFloat(parentStyles.marginLeft) || 0;
+    const parentMarginRight = parseFloat(parentStyles.marginRight) || 0;
+    
+    // Nur beobachten, wenn negative Margins vorhanden
+    if (parentMarginLeft < 0 || parentMarginRight < 0) {
+      const resizeObserver = new ResizeObserver(() => {
+        // Verzögerung, damit Layout fertig ist
+        requestAnimationFrame(() => {
+          calculateVisibleTags();
+        });
+      });
+      
+      resizeObserver.observe(parentElement);
+      
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }
+  }, [calculateVisibleTags]);
 
   // Messung der tatsächlichen Tag-Breiten nach Render
   useLayoutEffect(() => {
@@ -718,13 +757,22 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
 
   // ✅ FIX: Initial calculation mit Verzögerung, damit Container ihre finale Größe haben
   useLayoutEffect(() => {
-    if (!isMeasuring) {
-      // Verzögerung, damit Container ihre finale Größe haben (besonders wichtig bei negativen Margins)
-      requestAnimationFrame(() => {
+    if (!isMeasuring && containerRef.current) {
+      // Mehrfache Verzögerung, damit Container ihre finale Größe haben (besonders wichtig bei negativen Margins)
+      // Dies ist notwendig, weil CSS-Layout und negative Margins Zeit brauchen
+      const timeoutId = setTimeout(() => {
         requestAnimationFrame(() => {
-          calculateVisibleTags();
+          requestAnimationFrame(() => {
+            if (containerRef.current) {
+              calculateVisibleTags();
+            }
+          });
         });
-      });
+      }, 50); // 50ms Verzögerung für initiales Layout
+      
+      return () => {
+        clearTimeout(timeoutId);
+      };
     }
   }, [calculateVisibleTags, isMeasuring]);
   

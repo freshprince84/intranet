@@ -128,34 +128,30 @@ const InvoiceSuccessModal: React.FC<InvoiceSuccessModalProps> = ({
               <button
                 onClick={handleDownloadPdf}
                 disabled={downloadingPdf}
-                className="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center p-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={downloadingPdf ? 'PDF wird generiert...' : 'PDF herunterladen'}
               >
                 {downloadingPdf ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    PDF wird generiert...
-                  </>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                 ) : (
-                  <>
-                    <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
-                    PDF herunterladen
-                  </>
+                  <DocumentArrowDownIcon className="h-5 w-5" />
                 )}
               </button>
 
               <button
                 onClick={handleViewInvoiceManagement}
-                className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                className="w-full flex items-center justify-center p-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                title="Zur Rechnungsverwaltung"
               >
-                <EyeIcon className="h-5 w-5 mr-2" />
-                Zur Rechnungsverwaltung
+                <EyeIcon className="h-5 w-5" />
               </button>
 
               <button
                 onClick={onClose}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                className="w-full p-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                title="Schließen"
               >
-                Schließen
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
           </div>

@@ -532,10 +532,10 @@ const JoinRequestsList: React.FC = () => {
                     <div className="mt-4 flex items-center gap-2">
                   <button 
                         onClick={() => handleOpenProcessModal(request)}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
+                        className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        title={t('joinRequestsList.edit')}
                       >
-                        <PencilIcon className="h-4 w-4 mr-1" />
-                        {t('joinRequestsList.edit')}
+                        <PencilIcon className="h-5 w-5" />
                   </button>
                 </div>
               )}

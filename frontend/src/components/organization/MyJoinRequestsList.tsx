@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { XMarkIcon, ArrowPathIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ArrowPathIcon, FunnelIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
 import { organizationService } from '../../services/organizationService.ts';
 import { OrganizationJoinRequest } from '../../types/organization.ts';
 import useMessage from '../../hooks/useMessage.ts';
@@ -497,18 +497,13 @@ const MyJoinRequestsList: React.FC = () => {
                       <button 
                         onClick={() => handleWithdraw(request.id)}
                         disabled={withdrawingId === request.id}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md dark:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-md dark:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={withdrawingId === request.id ? t('myJoinRequests.withdrawing') : t('myJoinRequests.withdraw')}
                       >
                         {withdrawingId === request.id ? (
-                          <>
-                            <ArrowPathIcon className="h-4 w-4 mr-1 animate-spin" />
-                            {t('myJoinRequests.withdrawing')}
-                          </>
+                          <ArrowPathIcon className="h-5 w-5 animate-spin" />
                         ) : (
-                          <>
-                            <XMarkIcon className="h-4 w-4 mr-1" />
-                            {t('myJoinRequests.withdraw')}
-                          </>
+                          <ArrowUturnLeftIcon className="h-5 w-5" />
                         )}
                       </button>
                     </div>

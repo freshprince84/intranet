@@ -2275,7 +2275,7 @@ const Worktracker: React.FC = () => {
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             mainSortConfig={activeTab === 'todos' ? tableSortConfig : undefined}
-                                            onMainSortChange={activeTab === 'todos' ? handleMainSortChange : undefined}
+                                            onMainSortChange={handleMainSortChange}
                                             showMainSort={true}
                                         />
                                     </div>
@@ -3602,7 +3602,7 @@ const Worktracker: React.FC = () => {
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             mainSortConfig={activeTab === 'reservations' ? reservationTableSortConfig : undefined}
-                                            onMainSortChange={activeTab === 'reservations' ? handleMainSortChange : undefined}
+                                            onMainSortChange={handleMainSortChange}
                                             showMainSort={true}
                                         />
                                     </div>

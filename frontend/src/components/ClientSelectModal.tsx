@@ -144,10 +144,10 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
                   </p>
                   <button
                     onClick={onCreateNew}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600"
+                    title="Neuen Client anlegen"
                   >
-                    <PlusIcon className="h-5 w-5 mr-2" />
-                    Neuen Client anlegen
+                    <PlusIcon className="h-5 w-5" />
                   </button>
                 </div>
               ) : (
@@ -203,10 +203,10 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   onClick={onCreateNew}
-                  className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="w-full flex items-center justify-center p-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  title="Neuen Client anlegen"
                 >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  Neuen Client anlegen
+                  <PlusIcon className="h-5 w-5" />
                 </button>
               </div>
             )}

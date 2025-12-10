@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { UserGroupIcon, UserIcon, ShieldCheckIcon, MapPinIcon, TruckIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, UserIcon, ShieldCheckIcon, MapPinIcon, TruckIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import UserManagementTab from '../components/UserManagementTab.tsx';
 import RoleManagementTab from '../components/RoleManagementTab.tsx';
 import BranchManagementTab from '../components/BranchManagementTab.tsx';
@@ -267,24 +267,26 @@ const Organisation: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setProvidersViewMode('tours')}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      className={`p-2 rounded-md transition-colors ${
                         providersViewMode === 'tours'
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                       }`}
+                      title={t('tours.title', 'Touren')}
                     >
-                      {t('tours.title', 'Touren')}
+                      <CalendarIcon className="h-5 w-5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setProvidersViewMode('providers')}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      className={`p-2 rounded-md transition-colors ${
                         providersViewMode === 'providers'
                           ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                       }`}
+                      title={t('organisation.tabs.providers', { defaultValue: 'Proveedores' })}
                     >
-                      {t('organisation.tabs.providers', { defaultValue: 'Proveedores' })}
+                      <TruckIcon className="h-5 w-5" />
                     </button>
                   </div>
                   

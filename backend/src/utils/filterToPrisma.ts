@@ -63,28 +63,43 @@ export function convertFilterConditionsToPrismaWhere(
     // Alle ODER: Kombiniere mit OR
     return { OR: prismaConditions };
   } else {
-    // Gemischte Verknüpfungen: Gruppiere nach Operator-Sequenz
-    const grouped: any[] = [];
-    let currentGroup: any[] = [prismaConditions[0]];
+    // Gemischte Verknüpfungen: Korrekte Operator-Präzedenz
+    // OR hat niedrigere Präzedenz als AND, daher: (A OR B) AND C AND D
+    const resultGroups: any[] = [];
+    let currentOrGroup: any[] = [prismaConditions[0]];
 
     for (let i = 1; i < prismaConditions.length; i++) {
       const operator = operators[i - 1];
-      if (operator === 'AND') {
-        currentGroup.push(prismaConditions[i]);
+      if (operator === 'OR') {
+        // OR: Füge zur aktuellen OR-Gruppe hinzu
+        currentOrGroup.push(prismaConditions[i]);
       } else {
-        // ODER: Aktuelle Gruppe abschließen, neue Gruppe starten
-        if (currentGroup.length > 0) {
-          grouped.push(currentGroup.length === 1 ? currentGroup[0] : { AND: currentGroup });
+        // AND: Schließe OR-Gruppe ab (falls vorhanden) und starte neue AND-Gruppe
+        if (currentOrGroup.length > 0) {
+          // OR-Gruppe abschließen
+          if (currentOrGroup.length === 1) {
+            resultGroups.push(currentOrGroup[0]);
+          } else {
+            resultGroups.push({ OR: currentOrGroup });
+          }
+          currentOrGroup = [];
         }
-        currentGroup = [prismaConditions[i]];
+        // Einzelne AND-Bedingung hinzufügen
+        resultGroups.push(prismaConditions[i]);
       }
     }
 
-    if (currentGroup.length > 0) {
-      grouped.push(currentGroup.length === 1 ? currentGroup[0] : { AND: currentGroup });
+    // Letzte OR-Gruppe abschließen
+    if (currentOrGroup.length > 0) {
+      if (currentOrGroup.length === 1) {
+        resultGroups.push(currentOrGroup[0]);
+      } else {
+        resultGroups.push({ OR: currentOrGroup });
+      }
     }
 
-    return grouped.length === 1 ? grouped[0] : { OR: grouped };
+    // Alle Gruppen mit AND kombinieren
+    return resultGroups.length === 1 ? resultGroups[0] : { AND: resultGroups };
   }
 }
 
@@ -421,9 +436,9 @@ function convertSingleCondition(
       if (entityType === 'reservation') {
         // ✅ Konvertiere Wert zu Boolean (resolvedValue ist string | number | Date)
         if (operator === 'equals') {
-          const boolValue = typeof resolvedValue === 'boolean' 
-            ? resolvedValue 
-            : (resolvedValue === 'true' || resolvedValue === '1' || resolvedValue === 1);
+        const boolValue = typeof resolvedValue === 'boolean' 
+          ? resolvedValue 
+          : (resolvedValue === 'true' || resolvedValue === '1' || resolvedValue === 1);
           return { onlineCheckInCompleted: boolValue };
         } else if (operator === 'notEquals') {
           const boolValue = typeof resolvedValue === 'boolean' 
