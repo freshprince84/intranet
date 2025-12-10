@@ -8,7 +8,7 @@ import { isAdminOrOwner } from '../middleware/organization';
 export interface FilterCondition {
   column: string;
   operator: string;
-  value: string | number | Date | null;
+  value: string | number | Date | (string | number | Date)[] | null; // ✅ OPTIMIERUNG: Array für in/notIn
 }
 
 /**
