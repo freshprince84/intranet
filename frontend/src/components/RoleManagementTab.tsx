@@ -1389,7 +1389,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           defaultFilter.conditions,
           defaultFilter.operators
         );
-      }
+        }
       
       // 3. Rollen laden (immer, auch mit Default-Filter)
       await fetchRoles();

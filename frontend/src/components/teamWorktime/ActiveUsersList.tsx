@@ -835,13 +835,13 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       const filters = await loadFilters(WORKCENTER_TABLE_ID);
       
       // 2. Default-Filter anwenden (IMMER vorhanden!)
-      // Suche nach Filter mit aktuellem Namen oder alten Namen (für Migration)
+        // Suche nach Filter mit aktuellem Namen oder alten Namen (für Migration)
       const defaultFilter = filters.find((filter: any) => 
-        filter.name === 'Aktive' || 
+          filter.name === 'Aktive' || 
         filter.name === t('teamWorktime.filters.active') ||
-        filter.name === 'Active' || 
-        filter.name === 'Activo'
-      );
+          filter.name === 'Active' || 
+          filter.name === 'Activo'
+        );
       if (defaultFilter) {
         await handleFilterChange(
           defaultFilter.name,
