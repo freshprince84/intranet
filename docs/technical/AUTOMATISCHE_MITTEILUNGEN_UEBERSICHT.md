@@ -48,3 +48,5 @@
 11. **Tour-Anbieter-Antwort-Verarbeitung (Bestätigung/Absage)**  
     Trigger: Bei eingehender WhatsApp-Nachricht vom Tour-Anbieter
 
+
+
