@@ -25,7 +25,7 @@ function getConnection(): IORedis {
       family: 4, // IPv4 erzwingen (wichtig für Memurai auf Windows)
       maxRetriesPerRequest: null, // Wichtig für BullMQ
       lazyConnect: true, // Verbindung wird erst beim ersten Gebrauch hergestellt
-      enableOfflineQueue: false, // Keine Offline-Queue, um Fehler zu vermeiden
+      enableOfflineQueue: true, // Queue Befehle wenn Redis kurzzeitig nicht erreichbar
       retryStrategy: (times: number) => {
         const delay = Math.min(times * 50, 2000);
         return delay;
