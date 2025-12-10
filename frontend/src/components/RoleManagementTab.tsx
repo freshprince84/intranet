@@ -1389,6 +1389,27 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   const filterContext = useFilterContext();
   const { loadFilters } = filterContext;
   
+  // Funktion zum Anwenden von Filterbedingungen
+  const applyFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
+  }, []);
+  
+  // Funktion zum Zurücksetzen der Filter
+  const resetFilterConditions = useCallback(() => {
+    setFilterConditions([]);
+    setFilterLogicalOperators([]);
+    setActiveFilterName('');
+    setSelectedFilterId(null);
+  }, []);
+  
+  // Filter Change Handler (Controlled Mode) - VOR useEffect definiert
+  const handleFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    setActiveFilterName(name);
+    setSelectedFilterId(id);
+    applyFilterConditions(conditions, operators);
+  }, [applyFilterConditions]);
+  
   useEffect(() => {
     const initialize = async () => {
       // 1. Filter laden (wartet auf State-Update)
@@ -1411,27 +1432,6 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     
     initialize();
   }, [loadFilters, handleFilterChange, fetchRoles]);
-
-  // Funktion zum Anwenden von Filterbedingungen
-  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
-    setFilterConditions(conditions);
-    setFilterLogicalOperators(operators);
-  };
-  
-  // Funktion zum Zurücksetzen der Filter
-  const resetFilterConditions = () => {
-    setFilterConditions([]);
-    setFilterLogicalOperators([]);
-    setActiveFilterName('');
-    setSelectedFilterId(null);
-  };
-  
-  // Filter Change Handler (Controlled Mode)
-  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
-    setActiveFilterName(name);
-    setSelectedFilterId(id);
-    applyFilterConditions(conditions, operators);
-  };
 
   return (
     <div>
