@@ -1,8 +1,7 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { 
   getAllUsers, 
   getAllUsersForDropdown, 
-  getCurrentUser, 
   updateProfile, 
   isProfileComplete,
   getUserById, 
@@ -22,6 +21,7 @@ import {
   getOnboardingAnalytics,
   debugUserBranches
 } from '../controllers/userController';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { 
   getLifecycle, 
   updateStatus, 
@@ -52,7 +52,11 @@ router.use(organizationMiddleware);
 // Benutzer-Routen
 router.get('/', getAllUsers);
 router.get('/dropdown', getAllUsersForDropdown);
-router.get('/profile', getCurrentUser);
+// ✅ STANDARD: /users/profile leitet auf getUserById um (eine Methode für alles)
+router.get('/profile', (req: AuthenticatedRequest, res: Response) => {
+    req.params.id = req.userId;
+    return getUserById(req as any, res);
+});
 router.get('/profile/complete', isProfileComplete);
 router.get('/active-language', getUserActiveLanguage);
 router.get('/debug/branches', debugUserBranches); // Debug-Endpoint

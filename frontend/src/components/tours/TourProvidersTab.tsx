@@ -93,7 +93,20 @@ const ProviderCard: React.FC<{
 const TourProvidersTab: React.FC<TourProvidersTabProps> = () => {
     const { t } = useTranslation();
     const { showMessage } = useMessage();
-    const { handleError: handleErrorContext } = useError();
+    
+    // Fehlerbehandlung mit Fallback
+    let handleErrorContext: (err: any, context?: Record<string, any>) => void;
+    try {
+        const errorContext = useError();
+        handleErrorContext = errorContext.handleError;
+    } catch (error) {
+        // Fallback: Einfache Fehlerbehandlung
+        handleErrorContext = (err: any, context?: Record<string, any>) => {
+            console.error('Fehler:', err, context);
+            const errorMessage = err?.response?.data?.message || err?.message || 'Ein Fehler ist aufgetreten';
+            showMessage(errorMessage, 'error');
+        };
+    }
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingProvider, setEditingProvider] = useState<TourProvider | null>(null);

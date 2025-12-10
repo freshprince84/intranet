@@ -572,8 +572,29 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const { openSidepane, closeSidepane } = useSidepane();
   
-  // Neue Fehlerbehandlung hinzufügen
-  const { handleError, handleValidationError } = useError();
+  // Neue Fehlerbehandlung hinzufügen - mit Fallback
+  let handleError: (err: any, context?: Record<string, any>) => void;
+  let handleValidationError: (message: string, fieldErrors?: Record<string, string>) => void;
+
+  try {
+    const errorContext = useError();
+    handleError = errorContext.handleError;
+    handleValidationError = errorContext.handleValidationError;
+  } catch (error) {
+    // Fallback: Einfache Fehlerbehandlung
+    handleError = (err: any, context?: Record<string, any>) => {
+      console.error('Fehler:', err, context);
+      if (onError) {
+        onError(err?.message || 'Ein Fehler ist aufgetreten');
+      }
+    };
+    handleValidationError = (message: string, fieldErrors?: Record<string, string>) => {
+      console.error('Validierungsfehler:', message, fieldErrors);
+      if (onError) {
+        onError(message);
+      }
+    };
+  }
   
   // Neue State-Variablen für die Berechtigungen
   const [isAddPermissionModalOpen, setIsAddPermissionModalOpen] = useState(false);
