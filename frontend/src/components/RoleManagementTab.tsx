@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import FilterPane from '../components/FilterPane.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
+import { useFilterContext } from '../contexts/FilterContext.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import { useError } from '../contexts/ErrorContext.tsx';
 import { ErrorCategory } from '../services/ErrorHandler.ts';
@@ -655,10 +656,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     }
   }, [handleError, onError]);
 
-  // Direkt Rollen laden
-  useEffect(() => {
-    fetchRoles();
-  }, [fetchRoles]);
+  // ✅ ENTFERNT: Direkt Rollen laden - wird jetzt durch Standard-Pattern gemacht (nach Default-Filter-Anwendung)
 
   // Branches beim Öffnen des Modals laden
   useEffect(() => {
@@ -1373,26 +1371,32 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     createStandardFilters();
   }, []);
 
-  // Initialer Default-Filter setzen (Controlled Mode)
+  // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+  const filterContext = useFilterContext();
+  const { loadFilters } = filterContext;
+  
   useEffect(() => {
-    const setInitialFilter = async () => {
-      try {
-        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(ROLES_TABLE_ID));
-        const filters = response.data;
-        
-        const alleFilter = filters.find((filter: any) => filter.name === 'Alle');
-        if (alleFilter) {
-          setActiveFilterName('Alle');
-          setSelectedFilterId(alleFilter.id);
-          applyFilterConditions(alleFilter.conditions, alleFilter.operators);
-        }
-      } catch (error) {
-        console.error('Fehler beim Setzen des initialen Filters:', error);
+    const initialize = async () => {
+      // 1. Filter laden (wartet auf State-Update)
+      const filters = await loadFilters(ROLES_TABLE_ID);
+      
+      // 2. Default-Filter anwenden (IMMER vorhanden!)
+      const defaultFilter = filters.find(f => f.name === 'Alle');
+      if (defaultFilter) {
+        await handleFilterChange(
+          defaultFilter.name,
+          defaultFilter.id,
+          defaultFilter.conditions,
+          defaultFilter.operators
+        );
       }
+      
+      // 3. Rollen laden (immer, auch mit Default-Filter)
+      await fetchRoles();
     };
-
-    setInitialFilter();
-  }, []);
+    
+    initialize();
+  }, [loadFilters, handleFilterChange, fetchRoles]);
 
   // Funktion zum Anwenden von Filterbedingungen
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
@@ -1409,7 +1413,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   };
   
   // Filter Change Handler (Controlled Mode)
-  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     applyFilterConditions(conditions, operators);

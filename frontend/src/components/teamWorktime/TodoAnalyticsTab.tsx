@@ -18,6 +18,7 @@ import {
 } from '@heroicons/react/24/outline';
 import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
+import { useFilterContext } from '../../contexts/FilterContext.tsx';
 import { FilterCondition } from '../FilterRow.tsx';
 import DataCard, { MetadataItem } from '../shared/DataCard.tsx';
 import CardGrid from '../shared/CardGrid.tsx';
@@ -271,11 +272,39 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
     setSelectedFilterId(null);
   }, []);
 
-  const handleFilterChange = useCallback((name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  const handleFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     applyFilterConditions(conditions, operators);
   }, [applyFilterConditions]);
+  
+  // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+  const filterContext = useFilterContext();
+  const { loadFilters } = filterContext;
+  
+  useEffect(() => {
+    const initialize = async () => {
+      // 1. Filter laden (wartet auf State-Update)
+      const filters = await loadFilters(TODO_ANALYTICS_TABLE_ID);
+      
+      // 2. Default-Filter anwenden (IMMER vorhanden!)
+      const defaultFilter = filters.find(f => f.name === 'Alle');
+      if (defaultFilter) {
+        await handleFilterChange(
+          defaultFilter.name,
+          defaultFilter.id,
+          defaultFilter.conditions,
+          defaultFilter.operators
+        );
+        return; // Filter wird angewendet (fetchTodos wird durch filterConditions-Änderung ausgelöst)
+      }
+      
+      // 3. Fallback: Kein Filter (sollte nie passieren)
+      // fetchTodos wird automatisch durch filterConditions-Änderung aufgerufen
+    };
+    
+    initialize();
+  }, [loadFilters, handleFilterChange]);
 
   const getActiveFilterCount = useCallback(() => {
     return filterConditions.filter(c => c.column !== '' && c.value !== null).length;

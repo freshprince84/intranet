@@ -513,11 +513,17 @@ const DataCard: React.FC<DataCardProps> = ({
               <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
                 {metadata
                   .filter(item => item.section === 'main')
-                  .map((item, index) => {
+                  .map((item, index, array) => {
                     if (item.descriptionContent) return null;
+                    
+                    const prevItem = index > 0 ? array[index - 1] : null;
+                    const isCheckInOut = item.label?.includes('Check-in') || item.label?.includes('Check-out');
+                    const prevIsRoom = prevItem?.label === 'Zimmer' || prevItem?.label?.includes('Zimmer');
+                    const needsExtraSpacing = isCheckInOut && prevIsRoom;
                     
                     return (
                       <React.Fragment key={index}>
+                        {needsExtraSpacing && <span className="ml-2 sm:ml-3" />}
                         {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                         {item.label && <span className="font-medium whitespace-nowrap flex-shrink-0">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
                         <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>

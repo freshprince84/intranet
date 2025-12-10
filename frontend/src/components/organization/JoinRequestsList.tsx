@@ -251,68 +251,9 @@ const JoinRequestsList: React.FC = () => {
     return filterConditions.length;
   };
 
-  // Initialer Default-Filter setzen (Controlled Mode)
-  useEffect(() => {
-    const setInitialFilter = async () => {
-      try {
-        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(JOIN_REQUESTS_TABLE_ID));
-        const filters = response.data;
-        
-        const alleFilter = filters.find((filter: any) => filter.name === 'Alle');
-        if (alleFilter) {
-          setActiveFilterName('Alle');
-          setSelectedFilterId(alleFilter.id);
-          applyFilterConditions(alleFilter.conditions, alleFilter.operators);
-        }
-      } catch (error) {
-        console.error('Fehler beim Setzen des initialen Filters:', error);
-      }
-    };
-
-    setInitialFilter();
-  }, []);
-
-  // Standard-Filter erstellen und speichern
-  useEffect(() => {
-    const createStandardFilters = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          console.error('Nicht authentifiziert');
-          return;
-        }
-
-        // Prüfen, ob die Standard-Filter bereits existieren
-        const existingFiltersResponse = await axiosInstance.get(
-          API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(JOIN_REQUESTS_TABLE_ID)
-        );
-
-        const existingFilters = existingFiltersResponse.data || [];
-        const alleFilterExists = existingFilters.some((filter: any) => filter.name === 'Alle');
-
-        // Erstelle "Alle"-Filter, wenn er noch nicht existiert
-        if (!alleFilterExists) {
-          const alleFilter = {
-            tableId: JOIN_REQUESTS_TABLE_ID,
-            name: 'Alle',
-            conditions: [],
-            operators: []
-          };
-
-          await axiosInstance.post(
-            API_ENDPOINTS.SAVED_FILTERS.BASE,
-            alleFilter
-          );
-          logger.log('Alle-Filter für Join Requests erstellt');
-        }
-      } catch (error) {
-        console.error('Fehler beim Erstellen der Standard-Filter:', error);
-      }
-    };
-
-    createStandardFilters();
-  }, []);
+  // ✅ PERFORMANCE: Filter werden von SavedFilterTags geladen (FilterContext)
+  // ✅ PERFORMANCE: Standard-Filter wird im Seed erstellt (nicht mehr im Frontend)
+  // Keine redundanten API-Calls mehr nötig
 
   // Gefilterte Join-Requests
   const filteredJoinRequests = useMemo(() => {

@@ -14,6 +14,7 @@ import GitHubMarkdownViewer from '../components/cerebro/GitHubMarkdownViewer.tsx
 import CerebroHeader from '../components/cerebro/CerebroHeader.tsx';
 import FilterPane from '../components/FilterPane.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
+import { useFilterContext } from '../contexts/FilterContext.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import { applyFilters, GetFieldValue, ColumnEvaluator } from '../utils/filterLogic.ts';
 import ReactMarkdown from 'react-markdown';
@@ -156,7 +157,7 @@ const CerebroLayout: React.FC = () => {
     setSelectedFilterId(null);
   };
   
-  const handleFilterChange = (
+  const handleFilterChange = async (
     name: string, 
     id: number | null, 
     conditions: FilterCondition[], 
@@ -166,6 +167,34 @@ const CerebroLayout: React.FC = () => {
     setSelectedFilterId(id);
     applyFilterConditions(conditions, operators);
   };
+  
+  // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+  const filterContext = useFilterContext();
+  const { loadFilters } = filterContext;
+  
+  useEffect(() => {
+    const initialize = async () => {
+      // 1. Filter laden (wartet auf State-Update)
+      const filters = await loadFilters(CEREBRO_TABLE_ID);
+      
+      // 2. Default-Filter anwenden (IMMER vorhanden!)
+      const defaultFilter = filters.find(f => f.name === 'Alle Artikel');
+      if (defaultFilter) {
+        await handleFilterChange(
+          defaultFilter.name,
+          defaultFilter.id,
+          defaultFilter.conditions,
+          defaultFilter.operators
+        );
+        return; // Filter wird angewendet
+      }
+      
+      // 3. Fallback: Kein Filter (sollte nie passieren)
+      // Cerebro filtert client-seitig, daher keine Daten-Lade-Funktion nötig
+    };
+    
+    initialize();
+  }, [loadFilters, handleFilterChange]);
   
   // Sortier-Handler
   const handleSortClick = () => {

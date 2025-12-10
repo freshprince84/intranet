@@ -103,8 +103,9 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
     }
     
     // ✅ PERFORMANCE: Wenn bereits am Laden, warte auf bestehenden Promise
-    if (loadingPromises.current[tableId]) {
-      return loadingPromises.current[tableId];
+    const existingPromise = loadingPromises.current[tableId];
+    if (existingPromise) {
+      return existingPromise;
     }
     
     // Neuer Promise für Laden

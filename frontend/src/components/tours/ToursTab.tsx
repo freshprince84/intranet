@@ -10,6 +10,7 @@ import { useError } from '../../contexts/ErrorContext.tsx';
 import TableColumnConfig from '../TableColumnConfig.tsx';
 import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
+import { useFilterContext } from '../../contexts/FilterContext.tsx';
 import CreateTourModal from './CreateTourModal.tsx';
 import EditTourModal from './EditTourModal.tsx';
 import TourDetailsModal from './TourDetailsModal.tsx';
@@ -223,12 +224,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
         };
     }, []); // Nur beim Unmount ausführen
     
-    // Lade Tours beim Mount
-    useEffect(() => {
-        if (hasPermission('tours', 'read', 'table')) {
-            loadTours();
-        }
-    }, [loadTours, hasPermission]);
+    // ✅ ENTFERNT: Lade Tours beim Mount - wird jetzt durch Standard-Pattern gemacht
     
     // Tour-Filter-Funktionen
     const applyTourFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
@@ -245,15 +241,47 @@ const ToursTab: React.FC<ToursTabProps> = () => {
         loadTours();
     };
     
-    const handleTourFilterChange = (filterId: number | null, filterName: string) => {
-        setTourSelectedFilterId(filterId);
-        setTourActiveFilterName(filterName);
-        if (filterId) {
-            loadTours(filterId);
+    const handleTourFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+        setTourSelectedFilterId(id);
+        setTourActiveFilterName(name);
+        if (id) {
+            await loadTours(id);
         } else {
-            resetTourFilterConditions();
+            await applyTourFilterConditions(conditions, operators);
         }
     };
+    
+    // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
+    const filterContext = useFilterContext();
+    const { loadFilters } = filterContext;
+    
+    useEffect(() => {
+        const initialize = async () => {
+            if (!hasPermission('tours', 'read', 'table')) {
+                return;
+            }
+            
+            // 1. Filter laden (wartet auf State-Update)
+            const filters = await loadFilters(TOURS_TABLE_ID);
+            
+            // 2. Default-Filter anwenden (IMMER vorhanden!)
+            const defaultFilter = filters.find(f => f.name === 'Aktuell');
+            if (defaultFilter) {
+                await handleTourFilterChange(
+                    defaultFilter.name,
+                    defaultFilter.id,
+                    defaultFilter.conditions,
+                    defaultFilter.operators
+                );
+                return; // Daten werden durch handleTourFilterChange geladen
+            }
+            
+            // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+            await loadTours();
+        };
+        
+        initialize();
+    }, [hasPermission, loadFilters, handleTourFilterChange, loadTours]);
     
     const handleTourSort = (key: TourSortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)

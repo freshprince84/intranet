@@ -249,11 +249,8 @@ const OrganizationSettings: React.FC = () => {
             </div>
                     {canManageOrganization() && (
                       <button
-                        onClick={async () => {
-                          // ✅ PERFORMANCE: Settings nur laden wenn Bearbeiten-Modal geöffnet wird
-                          if (!organization?.settings) {
-                            await fetchOrganization(true);
-                          }
+                        onClick={() => {
+                          // ✅ PERFORMANCE: Modal öffnet sofort - Settings werden im Modal geladen wenn benötigt
                           setIsEditModalOpen(true);
                         }}
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
