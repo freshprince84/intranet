@@ -245,7 +245,8 @@ const UserManagementTab = (): JSX.Element => {
       }
       
       logger.log('Lade Benutzerdetails für ID:', userId);
-      const response = await userApi.getById(userId);
+      // ✅ MEMORY FIX: includeAllRoles=true für UserManagement (benötigt alle Roles)
+      const response = await userApi.getById(userId, true);
       
       const userData = {
         ...response.data,

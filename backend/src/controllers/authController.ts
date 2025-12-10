@@ -401,72 +401,8 @@ export const logout = async (_req: Request, res: Response) => {
     }
 };
 
-export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) => {
-    try {
-        const userId = parseInt(req.userId, 10);
-        if (isNaN(userId)) {
-            return res.status(401).json({ message: 'Nicht authentifiziert' });
-        }
-        
-        // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
-        const user = await prisma.user.findUnique({
-                where: { id: userId },
-                include: {
-                    roles: {
-                        include: {
-                            role: {
-                                include: {
-                                    permissions: true,
-                                    organization: {
-                                        select: {
-                                            id: true,
-                                            name: true,
-                                            displayName: true,
-                                            logo: true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-        });
-
-        if (!user) {
-            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
-        }
-
-        const userResponse: UserWithRoles = {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            roles: user.roles.map(r => ({
-                role: {
-                    id: r.role.id,
-                    name: r.role.name,
-                    permissions: r.role.permissions,
-                    organization: r.role.organization ? {
-                        id: r.role.organization.id,
-                        name: r.role.organization.name,
-                        displayName: r.role.organization.displayName,
-                        logo: r.role.organization.logo
-                    } : null
-                },
-                lastUsed: r.lastUsed
-            }))
-        };
-
-        res.json({ user: userResponse });
-    } catch (error) {
-        logger.error('getCurrentUser Fehler:', error);
-        res.status(500).json({ 
-            message: 'Fehler beim Abrufen des Benutzers', 
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
-    }
-};
+// ❌ ENTFERNT: getCurrentUser - wird nicht verwendet, Standard ist getUserById in userController.ts
+// Frontend verwendet /users/profile, nicht /auth/user
 
 interface RequestPasswordResetRequest {
     email: string;

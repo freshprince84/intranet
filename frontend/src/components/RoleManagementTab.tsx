@@ -18,7 +18,7 @@ import { logger } from '../utils/logger.ts';
 
 interface RoleManagementTabProps {
   onRolesChange?: () => void;
-  onError: (error: string) => void;
+  onError?: (error: string) => void;
   readOnly?: boolean;
 }
 
