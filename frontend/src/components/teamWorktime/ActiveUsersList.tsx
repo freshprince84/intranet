@@ -1515,10 +1515,11 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       {filteredAndSortedUsers.length > displayLimit && (
         <div className="mt-4 flex justify-center">
           <button
-            className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
+            className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
             onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+            title={`Mehr anzeigen (${filteredAndSortedUsers.length - displayLimit} verbleibend)`}
           >
-            Mehr anzeigen ({filteredAndSortedUsers.length - displayLimit} verbleibend)
+            <ChevronDownIcon className="h-5 w-5" />
           </button>
         </div>
       )}

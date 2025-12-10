@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axiosInstance from '../../config/axios.ts';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
 import { Tour, TourType, TourProvider } from '../../types/tour.ts';
@@ -623,16 +623,18 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+                                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                                title={t('common.cancel', 'Abbrechen')}
                             >
-                                {t('common.cancel', 'Abbrechen')}
+                                <XMarkIcon className="h-5 w-5" />
                             </button>
                             <button
                                 type="submit"
                                 disabled={loading || loadingData}
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-500 dark:hover:bg-blue-600"
+                                title={loading ? t('common.saving', 'Speichere...') : t('common.save', 'Speichern')}
                             >
-                                {loading ? t('common.saving', 'Speichere...') : t('common.save', 'Speichern')}
+                                <CheckIcon className="h-5 w-5" />
                             </button>
                         </div>
                     </form>

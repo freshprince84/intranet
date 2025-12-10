@@ -467,17 +467,17 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       <div className="mb-4 flex items-center gap-2">
         <button
           onClick={() => setShowFrequencyAnalysis(!showFrequencyAnalysis)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+          title={`${t('analytics.todo.frequencyAnalysis')} ${showFrequencyAnalysis ? t('common.collapse') : t('common.expand')}`}
         >
-          <ArrowPathIcon className={`h-4 w-4 transition-transform ${showFrequencyAnalysis ? 'rotate-180' : ''}`} />
-          {t('analytics.todo.frequencyAnalysis')} {showFrequencyAnalysis ? t('common.collapse') : t('common.expand')}
+          <ChartBarIcon className={`h-5 w-5 transition-transform ${showFrequencyAnalysis ? 'rotate-180' : ''}`} />
         </button>
         <button
           onClick={() => setShowShiftAnalysis(!showShiftAnalysis)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+          title={`${t('analytics.todo.shiftAnalysis')} ${showShiftAnalysis ? t('common.collapse') : t('common.expand')}`}
         >
-          <ClockIcon className={`h-4 w-4 transition-transform ${showShiftAnalysis ? 'rotate-180' : ''}`} />
-          {t('analytics.todo.shiftAnalysis')} {showShiftAnalysis ? t('common.collapse') : t('common.expand')}
+          <ClockIcon className={`h-5 w-5 transition-transform ${showShiftAnalysis ? 'rotate-180' : ''}`} />
         </button>
       </div>
 

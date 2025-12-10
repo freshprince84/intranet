@@ -434,10 +434,10 @@ const Profile: React.FC = () => {
                           data-onboarding="upload-document-button"
                           type="button"
                           onClick={() => setShowDocumentUpload(true)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                          title={t('profile.uploadDocument') || 'Dokument hochladen'}
                         >
-                          <DocumentTextIcon className="h-5 w-5 inline mr-2" />
-                          {t('profile.uploadDocument') || 'Dokument hochladen'}
+                          <DocumentTextIcon className="h-5 w-5" />
                         </button>
                       )}
                     </div>

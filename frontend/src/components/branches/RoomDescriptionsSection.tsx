@@ -244,20 +244,18 @@ const RoomDescriptionsSection: React.FC<RoomDescriptionsSectionProps> = ({ branc
                     <button
                       onClick={handleCancel}
                       disabled={saving}
-                      className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+                      className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md disabled:opacity-50"
+                      title={t('common.cancel', { defaultValue: 'Abbrechen' })}
                     >
-                      <XMarkIcon className="h-4 w-4 inline mr-1" />
-                      {t('common.cancel', { defaultValue: 'Abbrechen' })}
+                      <XMarkIcon className="h-5 w-5" />
                     </button>
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      title={saving ? t('common.saving', { defaultValue: 'Speichere...' }) : t('common.save', { defaultValue: 'Speichern' })}
                     >
-                      <CheckIcon className="h-4 w-4 inline mr-1" />
-                      {saving 
-                        ? t('common.saving', { defaultValue: 'Speichere...' })
-                        : t('common.save', { defaultValue: 'Speichern' })}
+                      <CheckIcon className="h-5 w-5" />
                     </button>
                   </div>
                 </div>

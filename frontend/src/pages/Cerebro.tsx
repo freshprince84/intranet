@@ -199,36 +199,36 @@ const CerebroLayout: React.FC = () => {
               activeFilterCount={filterConditions.length}
               sortConfig={sortConfig}
             />
-          </div>
-          
+        </div>
+        
           {/* FilterPane (ausklappbar) - auch fixiert */}
-          {isFilterPaneOpen && (
-            <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
-                <FilterPane
-                  columns={cerebroColumns}
-                  onApply={applyFilterConditions}
-                  onReset={resetFilterConditions}
-                  savedConditions={filterConditions}
-                  savedOperators={filterLogicalOperators}
-                  tableId={CEREBRO_TABLE_ID}
-                />
-              </div>
-            </div>
-          )}
-          
-          {/* SavedFilterTags - auch fixiert */}
+        {isFilterPaneOpen && (
           <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
-              <SavedFilterTags
-                tableId={CEREBRO_TABLE_ID}
-                onSelectFilter={applyFilterConditions}
+              <FilterPane
+                columns={cerebroColumns}
+                onApply={applyFilterConditions}
                 onReset={resetFilterConditions}
-                activeFilterName={activeFilterName}
-                selectedFilterId={selectedFilterId}
-                onFilterChange={handleFilterChange}
-                defaultFilterName="Alle Artikel" // ✅ FIX: Hardcodiert (konsistent mit DB)
+                savedConditions={filterConditions}
+                savedOperators={filterLogicalOperators}
+                tableId={CEREBRO_TABLE_ID}
               />
+            </div>
+          </div>
+        )}
+        
+          {/* SavedFilterTags - auch fixiert */}
+        <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
+            <SavedFilterTags
+              tableId={CEREBRO_TABLE_ID}
+              onSelectFilter={applyFilterConditions}
+              onReset={resetFilterConditions}
+              activeFilterName={activeFilterName}
+              selectedFilterId={selectedFilterId}
+              onFilterChange={handleFilterChange}
+              defaultFilterName="Alle Artikel" // ✅ FIX: Hardcodiert (konsistent mit DB)
+            />
             </div>
           </div>
         </div>

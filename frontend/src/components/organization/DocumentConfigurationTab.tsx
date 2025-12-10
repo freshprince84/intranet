@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DocumentTextIcon, ArrowPathIcon, CheckIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, ArrowPathIcon, CheckIcon, PlusIcon, TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../../config/axios.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import useMessage from '../../hooks/useMessage.ts';
@@ -601,15 +601,13 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading || !signerName.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-500 dark:hover:bg-blue-600"
+                title={uploading ? t('common.uploading', { defaultValue: 'Lade hoch...' }) : t('lifecycle.selectSignatureFile', { defaultValue: 'Hochladen' })}
               >
                 {uploading ? (
-                  <span className="flex items-center space-x-2">
-                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                    <span>{t('common.uploading', { defaultValue: 'Lade hoch...' })}</span>
-                  </span>
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
                 ) : (
-                  t('lifecycle.selectSignatureFile', { defaultValue: 'Datei auswählen' })
+                  <ArrowUpTrayIcon className="h-5 w-5" />
                 )}
               </button>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">

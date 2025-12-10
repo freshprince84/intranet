@@ -56,6 +56,7 @@ const ArticleView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [githubLinks, setGithubLinks] = useState<CerebroExternalLink[]>([]);
   const [selectedGithubLink, setSelectedGithubLink] = useState<CerebroExternalLink | null>(null);
+  const [isInternalDocument, setIsInternalDocument] = useState<boolean>(false);
   
   // Überprüfen der Berechtigungen an die richtigen Berechtigungen anpassen
   const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
@@ -77,9 +78,8 @@ const ArticleView: React.FC = () => {
         
         setGithubLinks(github);
         
-        if (github.length > 0) {
-          setSelectedGithubLink(github[0]);
-        }
+        // selectedGithubLink wird später in checkIfInternalDocument gesetzt
+        // Nur für interne Dokumente wird ein GitHub-Link ausgewählt
         
         setError(null);
       } catch (err) {
@@ -92,6 +92,55 @@ const ArticleView: React.FC = () => {
     
     fetchArticle();
   }, [slug]);
+  
+  // Prüfe, ob Artikel ein internes Dokument ist (nur für interne Dokumente werden GitHub-Tabs angezeigt)
+  useEffect(() => {
+    const checkIfInternalDocument = async () => {
+      if (!article) return;
+      
+      try {
+        // Lade Markdown-Folder
+        const markdownFolder = await cerebroApi.articles.getArticleBySlug('markdown-folder');
+        
+        // Prüfe, ob Artikel ein internes Dokument ist
+        // Ein Artikel ist ein internes Dokument, wenn:
+        // 1. Er ein Kind des markdown-folders ist ODER
+        // 2. Er einen githubPath hat
+        const isInternal = 
+          (markdownFolder && article.parentId === markdownFolder.id) || 
+          article.githubPath !== null;
+        
+        setIsInternalDocument(isInternal);
+        
+        // Nur für interne Dokumente: GitHub-Link auswählen
+        if (isInternal && githubLinks.length > 0) {
+          setSelectedGithubLink(githubLinks[0]);
+        } else {
+          // Für normale Artikel: Kein GitHub-Link ausgewählt
+          setSelectedGithubLink(null);
+        }
+      } catch (err) {
+        // Wenn Markdown-Folder nicht gefunden wird, prüfe nur auf githubPath
+        console.warn('Markdown-Ordner nicht gefunden:', err);
+        const isInternal = article.githubPath !== null;
+        setIsInternalDocument(isInternal);
+        
+        if (isInternal && githubLinks.length > 0) {
+          setSelectedGithubLink(githubLinks[0]);
+        } else {
+          setSelectedGithubLink(null);
+        }
+      }
+    };
+    
+    if (article) {
+      checkIfInternalDocument();
+    } else {
+      // Kein Artikel geladen = definitiv kein internes Dokument
+      setIsInternalDocument(false);
+      setSelectedGithubLink(null);
+    }
+  }, [article, githubLinks]);
   
   const handleDeleteArticle = async () => {
     if (!article || !window.confirm(t('cerebro.messages.deleteConfirm'))) {
@@ -132,8 +181,8 @@ const ArticleView: React.FC = () => {
   
   // Artikel-Komponente rendern
   const renderContent = () => {
-    // Prüfe, ob der Artikel mit GitHub-Markdown verknüpft ist und ein Link ausgewählt ist
-    if (selectedGithubLink) {
+    // Nur für interne Dokumente: GitHub-Markdown anzeigen, wenn ausgewählt
+    if (isInternalDocument && selectedGithubLink) {
       // GitHub-Markdown-Links parsen
       const parseGitHubUrl = (url: string): { owner: string; repo: string; path: string; branch: string; } | null => {
         try {
@@ -357,8 +406,8 @@ const ArticleView: React.FC = () => {
       </div>
       
       <div className="mb-6">
-        {/* GitHub-Links als Tabs anzeigen, falls vorhanden */}
-        {githubLinks.length > 0 && (
+        {/* GitHub-Links als Tabs anzeigen, NUR für interne Dokumente */}
+        {githubLinks.length > 0 && isInternalDocument && (
           <div className="mb-4">
             <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
               <div className="flex">
