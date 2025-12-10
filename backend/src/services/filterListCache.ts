@@ -1,5 +1,6 @@
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { cacheCleanupService } from './cacheCleanupService';
 
 /**
  * Cache-Eintrag für Filter-Listen
@@ -20,15 +21,15 @@ interface FilterGroupListCacheEntry {
 /**
  * In-Memory Cache für Filter-Listen und Filter-Gruppen
  * 
- * Reduziert Datenbank-Queries drastisch, da Filter-Listen bei JEDEM Seitenaufruf
- * abgerufen werden. Mit Cache: Filter-Listen werden nur einmal pro TTL geladen.
- * 
- * TTL: 5 Minuten (Filter-Listen ändern sich selten)
+ * TTL: 5 Minuten
+ * MAX_SIZE: 500 Einträge pro Map
+ * Auto-Cleanup: Ja
  */
 class FilterListCache {
   private filterListCache: Map<string, FilterListCacheEntry> = new Map();
   private filterGroupListCache: Map<string, FilterGroupListCacheEntry> = new Map();
-  private readonly TTL_MS = 5 * 60 * 1000; // 5 Minuten
+  private readonly TTL_MS = 5 * 60 * 1000;
+  private readonly MAX_SIZE = 500;
 
   /**
    * Prüft, ob ein Cache-Eintrag noch gültig ist
@@ -246,7 +247,7 @@ class FilterListCache {
   /**
    * Gibt Cache-Statistiken zurück (für Monitoring)
    */
-  getStats(): { filterListSize: number; filterGroupListSize: number; validEntries: number } {
+  getStats(): { size: number; validEntries: number } {
     const now = Date.now();
     let validEntries = 0;
     
@@ -263,12 +264,66 @@ class FilterListCache {
     }
 
     return {
-      filterListSize: this.filterListCache.size,
-      filterGroupListSize: this.filterGroupListCache.size,
+      size: this.filterListCache.size + this.filterGroupListCache.size,
       validEntries
     };
+  }
+
+  cleanup(): number {
+    const now = Date.now();
+    let deleted = 0;
+
+    // Cleanup filterListCache
+    for (const [key, entry] of this.filterListCache) {
+      if ((now - entry.timestamp) >= this.TTL_MS) {
+        this.filterListCache.delete(key);
+        deleted++;
+      }
+    }
+
+    // Cleanup filterGroupListCache
+    for (const [key, entry] of this.filterGroupListCache) {
+      if ((now - entry.timestamp) >= this.TTL_MS) {
+        this.filterGroupListCache.delete(key);
+        deleted++;
+      }
+    }
+
+    // LRU-Eviction für filterListCache
+    if (this.filterListCache.size > this.MAX_SIZE) {
+      const entries = Array.from(this.filterListCache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = this.filterListCache.size - this.MAX_SIZE;
+      for (let i = 0; i < toDelete; i++) {
+        this.filterListCache.delete(entries[i][0]);
+        deleted++;
+      }
+    }
+
+    // LRU-Eviction für filterGroupListCache
+    if (this.filterGroupListCache.size > this.MAX_SIZE) {
+      const entries = Array.from(this.filterGroupListCache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = this.filterGroupListCache.size - this.MAX_SIZE;
+      for (let i = 0; i < toDelete; i++) {
+        this.filterGroupListCache.delete(entries[i][0]);
+        deleted++;
+      }
+    }
+
+    return deleted;
+  }
+
+  register(): void {
+    cacheCleanupService.register({
+      name: 'filterListCache',
+      cleanup: () => this.cleanup(),
+      getStats: () => this.getStats(),
+      clear: () => this.clear()
+    });
   }
 }
 
 // Singleton-Instanz
 export const filterListCache = new FilterListCache();
+filterListCache.register();

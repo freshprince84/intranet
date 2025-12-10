@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma';
+import { cacheCleanupService } from './cacheCleanupService';
 
 /**
  * Cache-Eintrag für Notification Settings
@@ -6,21 +7,21 @@ import { prisma } from '../utils/prisma';
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
-  ttl: number; // Time-to-live in Millisekunden
+  ttl: number;
 }
 
 /**
  * In-Memory Cache für Notification Settings
  * 
- * Reduziert Datenbank-Queries drastisch, da Settings bei jeder Notification-Erstellung
- * abgerufen werden. Mit Cache: Settings werden nur einmal pro TTL geladen.
- * 
- * TTL: 5 Minuten (Settings ändern sich selten)
+ * TTL: 5 Minuten
+ * MAX_SIZE: 500 Einträge
+ * Auto-Cleanup: Ja
  */
 class NotificationSettingsCache {
   private userSettingsCache: Map<number, CacheEntry<any>> = new Map();
   private systemSettingsCache: CacheEntry<any> | null = null;
-  private readonly TTL_MS = 5 * 60 * 1000; // 5 Minuten
+  private readonly TTL_MS = 5 * 60 * 1000;
+  private readonly MAX_SIZE = 500;
 
   /**
    * Prüft, ob ein Cache-Eintrag noch gültig ist
@@ -105,14 +106,65 @@ class NotificationSettingsCache {
   /**
    * Gibt Cache-Statistiken zurück (für Monitoring)
    */
-  getStats(): { userCacheSize: number; systemCacheValid: boolean } {
+  getStats(): { size: number; validEntries: number } {
+    const now = Date.now();
+    let validEntries = 0;
+    
+    for (const entry of this.userSettingsCache.values()) {
+      if ((now - entry.timestamp) < entry.ttl) {
+        validEntries++;
+      }
+    }
+    if (this.isCacheValid(this.systemSettingsCache)) {
+      validEntries++;
+    }
+
     return {
-      userCacheSize: this.userSettingsCache.size,
-      systemCacheValid: this.isCacheValid(this.systemSettingsCache)
+      size: this.userSettingsCache.size + (this.systemSettingsCache ? 1 : 0),
+      validEntries
     };
+  }
+
+  cleanup(): number {
+    const now = Date.now();
+    let deleted = 0;
+
+    for (const [key, entry] of this.userSettingsCache) {
+      if ((now - entry.timestamp) >= entry.ttl) {
+        this.userSettingsCache.delete(key);
+        deleted++;
+      }
+    }
+
+    if (this.systemSettingsCache && !this.isCacheValid(this.systemSettingsCache)) {
+      this.systemSettingsCache = null;
+      deleted++;
+    }
+
+    if (this.userSettingsCache.size > this.MAX_SIZE) {
+      const entries = Array.from(this.userSettingsCache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = this.userSettingsCache.size - this.MAX_SIZE;
+      for (let i = 0; i < toDelete; i++) {
+        this.userSettingsCache.delete(entries[i][0]);
+        deleted++;
+      }
+    }
+
+    return deleted;
+  }
+
+  register(): void {
+    cacheCleanupService.register({
+      name: 'notificationSettingsCache',
+      cleanup: () => this.cleanup(),
+      getStats: () => this.getStats(),
+      clear: () => this.invalidateAll()
+    });
   }
 }
 
 // Singleton-Instanz
 export const notificationSettingsCache = new NotificationSettingsCache();
+notificationSettingsCache.register();
 

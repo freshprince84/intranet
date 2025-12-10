@@ -1,5 +1,6 @@
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { cacheCleanupService } from './cacheCleanupService';
 
 interface OnboardingStatus {
   onboardingCompleted: boolean;
@@ -16,14 +17,14 @@ interface OnboardingCacheEntry {
 /**
  * In-Memory Cache für Onboarding-Status
  * 
- * Reduziert Datenbank-Queries drastisch, da getOnboardingStatus bei JEDEM Seitenaufruf
- * aufgerufen wird. Mit Cache: Onboarding-Status wird nur einmal pro TTL geladen.
- * 
- * TTL: 5 Minuten (Onboarding-Status ändert sich selten)
+ * TTL: 5 Minuten
+ * MAX_SIZE: 200 Einträge
+ * Auto-Cleanup: Ja
  */
 class OnboardingCache {
   private cache: Map<number, OnboardingCacheEntry> = new Map();
-  private readonly TTL_MS = 5 * 60 * 1000; // 5 Minuten
+  private readonly TTL_MS = 5 * 60 * 1000;
+  private readonly MAX_SIZE = 200;
 
   private isCacheValid(entry: OnboardingCacheEntry | undefined): boolean {
     if (!entry) return false;
@@ -113,8 +114,42 @@ class OnboardingCache {
       validEntries
     };
   }
+
+  cleanup(): number {
+    const now = Date.now();
+    let deleted = 0;
+
+    for (const [key, entry] of this.cache) {
+      if ((now - entry.timestamp) >= this.TTL_MS) {
+        this.cache.delete(key);
+        deleted++;
+      }
+    }
+
+    if (this.cache.size > this.MAX_SIZE) {
+      const entries = Array.from(this.cache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = this.cache.size - this.MAX_SIZE;
+      for (let i = 0; i < toDelete; i++) {
+        this.cache.delete(entries[i][0]);
+        deleted++;
+      }
+    }
+
+    return deleted;
+  }
+
+  register(): void {
+    cacheCleanupService.register({
+      name: 'onboardingCache',
+      cleanup: () => this.cleanup(),
+      getStats: () => this.getStats(),
+      clear: () => this.clear()
+    });
+  }
 }
 
 // Singleton-Instanz
 export const onboardingCache = new OnboardingCache();
+onboardingCache.register();
 

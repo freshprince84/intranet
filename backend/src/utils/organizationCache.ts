@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import { logger } from './logger';
+import { cacheCleanupService } from '../services/cacheCleanupService';
 
 interface OrganizationCacheEntry {
   data: {
@@ -10,9 +11,17 @@ interface OrganizationCacheEntry {
   timestamp: number;
 }
 
+/**
+ * In-Memory Cache für Organization-Daten
+ * 
+ * TTL: 10 Minuten
+ * MAX_SIZE: 200 Einträge
+ * Auto-Cleanup: Ja
+ */
 class OrganizationCache {
   private cache: Map<number, OrganizationCacheEntry> = new Map();
-  private readonly TTL_MS = 10 * 60 * 1000; // 10 Minuten Cache (statt 2 Minuten - reduziert DB-Queries um 80%)
+  private readonly TTL_MS = 10 * 60 * 1000;
+  private readonly MAX_SIZE = 200;
 
   private isCacheValid(entry: OrganizationCacheEntry | undefined): boolean {
     if (!entry) return false;
@@ -117,7 +126,41 @@ class OrganizationCache {
       validEntries
     };
   }
+
+  cleanup(): number {
+    const now = Date.now();
+    let deleted = 0;
+
+    for (const [key, entry] of this.cache) {
+      if ((now - entry.timestamp) >= this.TTL_MS) {
+        this.cache.delete(key);
+        deleted++;
+      }
+    }
+
+    if (this.cache.size > this.MAX_SIZE) {
+      const entries = Array.from(this.cache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = this.cache.size - this.MAX_SIZE;
+      for (let i = 0; i < toDelete; i++) {
+        this.cache.delete(entries[i][0]);
+        deleted++;
+      }
+    }
+
+    return deleted;
+  }
+
+  register(): void {
+    cacheCleanupService.register({
+      name: 'organizationCache',
+      cleanup: () => this.cleanup(),
+      getStats: () => this.getStats(),
+      clear: () => this.clear()
+    });
+  }
 }
 
 export const organizationCache = new OrganizationCache();
+organizationCache.register();
 

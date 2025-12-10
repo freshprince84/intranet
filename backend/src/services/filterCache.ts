@@ -1,5 +1,6 @@
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { cacheCleanupService } from './cacheCleanupService';
 
 /**
  * Cache-Eintrag für SavedFilter
@@ -16,14 +17,14 @@ interface FilterCacheEntry {
 /**
  * In-Memory Cache für SavedFilter
  * 
- * Reduziert Datenbank-Queries drastisch, da Filter bei jedem Request
- * abgerufen werden. Mit Cache: Filter werden nur einmal pro TTL geladen.
- * 
- * TTL: 5 Minuten (Filter ändern sich selten)
+ * TTL: 5 Minuten
+ * MAX_SIZE: 500 Einträge
+ * Auto-Cleanup: Ja
  */
 class FilterCache {
   private cache: Map<number, FilterCacheEntry> = new Map();
-  private readonly TTL_MS = 5 * 60 * 1000; // 5 Minuten
+  private readonly TTL_MS = 5 * 60 * 1000;
+  private readonly MAX_SIZE = 500;
 
   /**
    * Prüft, ob ein Cache-Eintrag noch gültig ist
@@ -123,8 +124,42 @@ class FilterCache {
       validEntries
     };
   }
+
+  cleanup(): number {
+    const now = Date.now();
+    let deleted = 0;
+
+    for (const [key, entry] of this.cache) {
+      if ((now - entry.timestamp) >= this.TTL_MS) {
+        this.cache.delete(key);
+        deleted++;
+      }
+    }
+
+    if (this.cache.size > this.MAX_SIZE) {
+      const entries = Array.from(this.cache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = this.cache.size - this.MAX_SIZE;
+      for (let i = 0; i < toDelete; i++) {
+        this.cache.delete(entries[i][0]);
+        deleted++;
+      }
+    }
+
+    return deleted;
+  }
+
+  register(): void {
+    cacheCleanupService.register({
+      name: 'filterCache',
+      cleanup: () => this.cleanup(),
+      getStats: () => this.getStats(),
+      clear: () => this.clear()
+    });
+  }
 }
 
 // Singleton-Instanz
 export const filterCache = new FilterCache();
+filterCache.register();
 

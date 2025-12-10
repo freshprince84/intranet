@@ -2,6 +2,7 @@ import { prisma } from '../utils/prisma';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { Request } from 'express';
 import { logger } from '../utils/logger';
+import { cacheCleanupService } from './cacheCleanupService';
 
 interface Branch {
   id: number;
@@ -17,16 +18,14 @@ interface BranchCacheEntry {
 /**
  * In-Memory Cache für User-Branches
  * 
- * Reduziert Datenbank-Queries drastisch, da getUserBranches bei JEDEM Seitenaufruf
- * aufgerufen wird. Mit Cache: Branches werden nur einmal pro TTL geladen.
- * 
- * ✅ SICHERHEIT: Berücksichtigt getDataIsolationFilter für Datenisolation
- * 
- * TTL: 5 Minuten (Branches ändern sich selten)
+ * TTL: 5 Minuten
+ * MAX_SIZE: 500 Einträge
+ * Auto-Cleanup: Ja
  */
 class BranchCache {
-  private cache: Map<string, BranchCacheEntry> = new Map(); // Cache-Key: `${userId}:${organizationId}:${roleId}`
-  private readonly TTL_MS = 5 * 60 * 1000; // 5 Minuten
+  private cache: Map<string, BranchCacheEntry> = new Map();
+  private readonly TTL_MS = 5 * 60 * 1000;
+  private readonly MAX_SIZE = 500;
 
   private isCacheValid(entry: BranchCacheEntry | undefined): boolean {
     if (!entry) return false;
@@ -141,8 +140,42 @@ class BranchCache {
       validEntries
     };
   }
+
+  cleanup(): number {
+    const now = Date.now();
+    let deleted = 0;
+
+    for (const [key, entry] of this.cache) {
+      if ((now - entry.timestamp) >= this.TTL_MS) {
+        this.cache.delete(key);
+        deleted++;
+      }
+    }
+
+    if (this.cache.size > this.MAX_SIZE) {
+      const entries = Array.from(this.cache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = this.cache.size - this.MAX_SIZE;
+      for (let i = 0; i < toDelete; i++) {
+        this.cache.delete(entries[i][0]);
+        deleted++;
+      }
+    }
+
+    return deleted;
+  }
+
+  register(): void {
+    cacheCleanupService.register({
+      name: 'branchCache',
+      cleanup: () => this.cleanup(),
+      getStats: () => this.getStats(),
+      clear: () => this.clear()
+    });
+  }
 }
 
 // Singleton-Instanz
 export const branchCache = new BranchCache();
+branchCache.register();
 

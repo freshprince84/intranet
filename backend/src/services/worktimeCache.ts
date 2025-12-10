@@ -1,5 +1,6 @@
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { cacheCleanupService } from './cacheCleanupService';
 
 interface WorktimeCacheEntry {
   data: {
@@ -12,14 +13,14 @@ interface WorktimeCacheEntry {
 /**
  * In-Memory Cache für aktive Worktime
  * 
- * Reduziert Datenbank-Queries drastisch, da getActiveWorktime sehr häufig
- * aufgerufen wird (alle 30 Sekunden Polling).
- * 
- * TTL: 5 Sekunden (kurz, da sich Status schnell ändern kann)
+ * TTL: 30 Sekunden
+ * MAX_SIZE: 200 Einträge
+ * Auto-Cleanup: Ja
  */
 class WorktimeCache {
   private cache: Map<number, WorktimeCacheEntry> = new Map();
-  private readonly TTL_MS = 30 * 1000; // 30 Sekunden (gleich wie Polling-Intervall - reduziert DB-Queries um 83%)
+  private readonly TTL_MS = 30 * 1000;
+  private readonly MAX_SIZE = 200;
 
   /**
    * Prüft, ob ein Cache-Eintrag noch gültig ist
@@ -93,8 +94,53 @@ class WorktimeCache {
   clear(): void {
     this.cache.clear();
   }
+
+  getStats(): { size: number; validEntries: number } {
+    const now = Date.now();
+    let validEntries = 0;
+    for (const entry of this.cache.values()) {
+      if ((now - entry.timestamp) < this.TTL_MS) {
+        validEntries++;
+      }
+    }
+    return { size: this.cache.size, validEntries };
+  }
+
+  cleanup(): number {
+    const now = Date.now();
+    let deleted = 0;
+
+    for (const [key, entry] of this.cache) {
+      if ((now - entry.timestamp) >= this.TTL_MS) {
+        this.cache.delete(key);
+        deleted++;
+      }
+    }
+
+    if (this.cache.size > this.MAX_SIZE) {
+      const entries = Array.from(this.cache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = this.cache.size - this.MAX_SIZE;
+      for (let i = 0; i < toDelete; i++) {
+        this.cache.delete(entries[i][0]);
+        deleted++;
+      }
+    }
+
+    return deleted;
+  }
+
+  register(): void {
+    cacheCleanupService.register({
+      name: 'worktimeCache',
+      cleanup: () => this.cleanup(),
+      getStats: () => this.getStats(),
+      clear: () => this.clear()
+    });
+  }
 }
 
 // Singleton-Instanz
 export const worktimeCache = new WorktimeCache();
+worktimeCache.register();
 
