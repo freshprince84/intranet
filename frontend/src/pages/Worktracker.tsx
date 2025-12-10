@@ -812,14 +812,10 @@ const Worktracker: React.FC = () => {
     // ✅ KRITISCH: handleFilterChange MUSS NACH applyReservationFilterConditions definiert werden
     const handleFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         if (activeTab === 'todos') {
-            // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
-            // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
             setActiveFilterName(name);
             setSelectedFilterId(id);
             updateTasksSortConfig({ key: 'dueDate', direction: 'asc' });
             
-            // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
-            // ✅ Sonst: Setze nur State (applyFilterConditions würde doppelt laden)
             if (id) {
                 // Gespeicherter Filter: Setze State und lade mit id
                 setFilterConditions(conditions);
@@ -852,14 +848,10 @@ const Worktracker: React.FC = () => {
 
     // ✅ KRITISCH: handleReservationFilterChange MUSS NACH applyReservationFilterConditions definiert werden
     const handleReservationFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
-        // ✅ FIX: Prüfung entfernt - Filter-Tag-Klick soll immer Daten neu laden
-        // ✅ Endlosschleife wird durch defaultFilterAppliedRef in SavedFilterTags verhindert
         setReservationActiveFilterName(name);
         setReservationSelectedFilterId(id);
         updateReservationsSortConfig({ key: 'checkInDate', direction: 'desc' });
         
-        // ✅ FIX: Wenn id gesetzt ist (gespeicherter Filter), lade mit id
-        // ✅ Sonst: Setze nur State (applyReservationFilterConditions würde doppelt laden)
         if (id) {
             // Gespeicherter Filter: Setze State und lade mit id
             setReservationFilterConditions(conditions);
@@ -870,6 +862,18 @@ const Worktracker: React.FC = () => {
             await applyReservationFilterConditions(conditions, operators);
         }
     }, [applyReservationFilterConditions, loadReservations]);
+
+    // ✅ FIX: stabile Referenzen für Handler, damit useEffect nicht von Handler-Identität abhängt
+    const handleFilterChangeRef = useRef(handleFilterChange);
+    const handleReservationFilterChangeRef = useRef(handleReservationFilterChange);
+
+    useEffect(() => {
+        handleFilterChangeRef.current = handleFilterChange;
+    }, [handleFilterChange]);
+
+    useEffect(() => {
+        handleReservationFilterChangeRef.current = handleReservationFilterChange;
+    }, [handleReservationFilterChange]);
 
     const handleGeneratePinAndSend = async (reservationId: number) => {
         try {
@@ -899,44 +903,34 @@ const Worktracker: React.FC = () => {
             if (activeTab === 'todos') {
                 // 1. Filter laden (wartet auf State-Update)
                 const filters = await loadFilters(TODOS_TABLE_ID);
-                
                 // 2. Default-Filter anwenden (IMMER vorhanden!)
                 const defaultFilter = filters.find(f => f.name === 'Aktuell');
                 if (defaultFilter) {
-                    await handleFilterChange(
+                    await handleFilterChangeRef.current(
                         defaultFilter.name,
                         defaultFilter.id,
                         defaultFilter.conditions,
                         defaultFilter.operators
                     );
-                    return; // Daten werden durch handleFilterChange geladen
                 }
-                
-                // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
-                await loadTasks(undefined, undefined, false, 20, 0);
             } else if (activeTab === 'reservations') {
                 // 1. Filter laden (wartet auf State-Update)
                 const filters = await loadFilters(RESERVATIONS_TABLE_ID);
-                
                 // 2. Default-Filter anwenden (IMMER vorhanden!)
                 const defaultFilter = filters.find(f => f.name === 'Hoy');
                 if (defaultFilter) {
-                    await handleReservationFilterChange(
+                    await handleReservationFilterChangeRef.current(
                         defaultFilter.name,
                         defaultFilter.id,
                         defaultFilter.conditions,
                         defaultFilter.operators
                     );
-                    return; // Daten werden durch handleReservationFilterChange geladen
                 }
-                
-                // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
-                await loadReservations(undefined, undefined, [], false, 20, 0);
             }
         };
-        
+
         initialize();
-    }, [activeTab, loadFilters, handleFilterChange, handleReservationFilterChange, loadTasks, loadReservations]);
+    }, [activeTab, loadFilters]);
     
     // Infinite Scroll Handler für Tasks
     // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
