@@ -24,8 +24,8 @@ export const API_ENDPOINTS = {
     AUTH: {
         LOGIN: '/auth/login',
         REGISTER: '/auth/register',
-        LOGOUT: '/auth/logout',
-        CURRENT_USER: '/auth/currentUser'
+        LOGOUT: '/auth/logout'
+        // ❌ ENTFERNT: CURRENT_USER - wird nicht verwendet, Standard ist /users/profile (getUserById)
     },
     // Aufgaben
     TASKS: {

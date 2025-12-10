@@ -6,6 +6,7 @@ import axiosInstance from '../../config/axios.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
 import useMessage from '../../hooks/useMessage.ts';
+import { useError } from '../../contexts/ErrorContext.tsx';
 import TableColumnConfig from '../TableColumnConfig.tsx';
 import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
@@ -69,7 +70,14 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     const { t } = useTranslation();
     const { hasPermission } = usePermissions();
     const { showMessage } = useMessage();
-    const { handleError: handleErrorContext } = useError();
+    
+    // Fehlerbehandlung mit Fallback
+    const errorContext = useError();
+    const handleErrorContext = errorContext?.handleError || ((err: any, context?: Record<string, any>) => {
+        console.error('Fehler:', err, context);
+        const errorMessage = err?.response?.data?.message || err?.message || 'Ein Fehler ist aufgetreten';
+        showMessage(errorMessage, 'error');
+    });
     
     // Tour-States
     const [tours, setTours] = useState<Tour[]>([]);

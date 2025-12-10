@@ -174,12 +174,15 @@ export const getUserById = async (req: Request | AuthenticatedRequest, res: Resp
         // ✅ STANDARD: Optionale Parameter für Performance-Optimierung
         const includeSettings = req.query.includeSettings === 'true';
         const includeInvoiceSettings = req.query.includeInvoiceSettings === 'true';
+        const includeAllRoles = req.query.includeAllRoles === 'true'; // ✅ MEMORY FIX: Standard nur aktive Rolle, optional alle
 
         // ✅ STANDARD: identificationDocuments werden IMMER geladen (essentielle Felder)
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
                 roles: {
+                    // ✅ MEMORY FIX: Standard nur aktive Rolle laden (nur 1 Logo statt N Logos)
+                    where: includeAllRoles ? undefined : { lastUsed: true },
                     include: {
                         role: {
                             include: {
@@ -189,7 +192,7 @@ export const getUserById = async (req: Request | AuthenticatedRequest, res: Resp
                                         id: true,
                                         name: true,
                                         displayName: true,
-                                        logo: true
+                                        logo: true  // ✅ MEMORY FIX: Logo nur für aktive Rolle (1x statt Nx)
                                     }
                                 }
                             }

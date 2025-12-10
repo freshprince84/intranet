@@ -53,7 +53,10 @@ apiClient.interceptors.response.use(
 // User API
 export const userApi = {
   getAll: () => apiClient.get('/users'),
-  getById: (id: number) => apiClient.get(`/users/${id}`),
+  getById: (id: number, includeAllRoles: boolean = false) => {
+    const params = includeAllRoles ? { includeAllRoles: 'true' } : {};
+    return apiClient.get(`/users/${id}`, { params });
+  },
   create: (data: any) => {
     logger.log('DEBUGAUSGABE API-Client: userApi.create wird aufgerufen mit Daten:', data);
     try {
