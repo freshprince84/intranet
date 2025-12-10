@@ -160,75 +160,52 @@ router.get('/user', authMiddleware, getCurrentUser);
 
 ---
 
-### Problem 4: Tasks/Requests laden User, die wiederum alle Roles laden
+### Problem 4: ❌ ENTFERNT - Tasks haben nichts mit Logo zu tun
 
-**Beweis 4.1: Tasks laden responsible User nur minimal**
+**KORREKTUR:** Tasks laden User nur minimal (id, firstName, lastName) - **KEINE Roles, KEINE Organization, KEIN Logo!**
+
+**Beweis:**
 ```165:167:backend/src/controllers/taskController.ts
                 responsible: {
-                    select: userSelect
+                    select: userSelect  // Nur id, firstName, lastName
                 },
 ```
 
-**Beweis 4.2: Requests laden requester/responsible User nur minimal**
-```220:225:backend/src/controllers/requestController.ts
-                requester: {
-                    select: userSelect
-                },
-                responsible: {
-                    select: userSelect
-                },
-```
-
-**Beweis 4.3: userSelect enthält nur id, firstName, lastName**
-```17:21:backend/src/controllers/taskController.ts
-const userSelect = {
-    id: true,
-    firstName: true,
-    lastName: true
-} as const;
-```
-
-**ABER:** Wenn diese User irgendwo anders geladen werden (z.B. im Frontend-Context), werden sie mit ALLEN Roles geladen.
-
-**Fazit:** Tasks/Requests laden User korrekt minimal, ABER Frontend könnte User mit allen Roles laden.
+**Fazit:** Tasks haben **NICHTS** mit dem Logo-Problem zu tun. Das Problem liegt **NUR** beim Laden des aktuellen Users (`/users/profile`).
 
 ---
 
-### Problem 5: Role ID vs komplettes Role-Objekt
+### Problem 5: ❌ ENTFERNT - Tasks haben nichts mit Logo zu tun
 
-**Beweis 5.1: Tasks laden role nur mit id, name**
-```168:170:backend/src/controllers/taskController.ts
-                role: {
-                    select: roleSelect
-                },
-```
+**KORREKTUR:** Tasks laden `role` nur mit `id, name` - **KEINE Organization, KEIN Logo!**
 
-**Beweis 5.2: roleSelect enthält nur id, name**
-```23:26:backend/src/controllers/taskController.ts
-const roleSelect = {
-    id: true,
-    name: true
-} as const;
-```
-
-**ABER:** Wenn User geladen werden, werden Roles mit komplettem Objekt geladen:
-- `permissions` (Array)
-- `organization` (komplettes Objekt mit Logo)
-- Alle anderen Role-Felder
-
-**Fazit:** Tasks laden role korrekt minimal, ABER User laden role mit komplettem Objekt.
+**Fazit:** Tasks haben **NICHTS** mit dem Logo-Problem zu tun. Das Problem liegt **NUR** beim Laden des aktuellen Users (`/users/profile`).
 
 ---
 
 ## ✅ KORREKTURPLAN
 
+### ⚠️ WICHTIG: Code-Analyse zeigt - ALLE Roles werden benötigt!
+
+**Gefundene Stellen, die ALLE Roles benötigen:**
+1. **Header.tsx Role-Switching** (Zeile 214, 225) - User muss zwischen Roles wechseln
+2. **OnboardingContext.tsx** (Zeile 91, 126) - Prüft inaktive Roles und alle Roles auf Organisation
+3. **ProtectedRoute.tsx** (Zeile 46) - Prüft ob User Mitglied einer Organisation ist
+4. **UserManagementTab.tsx** (Zeile 265) - Zeigt alle Roles eines Users an
+
+**Stellen, die NUR aktive Role benötigen:**
+1. **Header.tsx Logo** (Zeile 146) - Logo wird nur von aktiver Role verwendet
+2. **usePermissions.ts** (Zeile 125) - Permissions werden nur von aktiver Role verwendet
+
+**Fazit:** Roles müssen geladen werden, ABER Logo wird nur für aktive Role benötigt!
+
+---
+
 ### Phase 1: getCurrentUser entfernen (Standard durchsetzen)
 
 **Datei:** `backend/src/controllers/authController.ts`
 
-**Änderung:**
-- `getCurrentUser` Funktion entfernen (Zeile 404-469)
-- Route `/auth/user` entfernen (auth.ts Zeile 10)
+**Status:** ✅ **BEREITS ENTFERNT** - Funktion wurde entfernt, Route `/auth/user` wurde entfernt
 
 **Begründung:**
 - Frontend verwendet nur `/users/profile`
@@ -237,157 +214,114 @@ const roleSelect = {
 
 ---
 
-### Phase 2: getUserById - NUR aktive Rolle laden
+### Phase 2: Logo nur für aktive Role laden (NEUE LÖSUNG)
+
+**Problem:** Alle Roles werden geladen mit Logo, aber Logo wird nur für aktive Role benötigt.
+
+**Lösung:** Logo in Response auf `null` setzen für inaktive Roles.
 
 **Datei:** `backend/src/controllers/userController.ts`
 
-**Aktueller Code (Zeile 182-197):**
+**Aktueller Code (Zeile 242-256):**
 ```typescript
-roles: {
-    include: {
+const userWithLogo = {
+    ...user,
+    roles: user.roles.map(roleEntry => ({
+        ...roleEntry,
         role: {
-            include: {
-                permissions: true,
-                organization: {
-                    select: {
-                        id: true,
-                        name: true,
-                        displayName: true,
-                        logo: true
-                    }
-                }
-            }
+            ...roleEntry.role,
+            organization: roleEntry.role.organization ? {
+                ...roleEntry.role.organization,
+                logo: roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo
+            } : null
         }
-    }
-},
+    }))
+};
 ```
 
 **Neuer Code:**
 ```typescript
-roles: {
-    where: {
-        lastUsed: true  // ✅ NUR aktive Rolle
-    },
-    include: {
+const userWithLogo = {
+    ...user,
+    roles: user.roles.map(roleEntry => ({
+        ...roleEntry,
         role: {
-            include: {
-                permissions: true,
-                organization: {
-                    select: {
-                        id: true,
-                        name: true,
-                        displayName: true,
-                        logo: true  // ✅ NUR 1 Logo (von aktiver Rolle)
-                    }
-                }
-            }
+            ...roleEntry.role,
+            organization: roleEntry.role.organization ? {
+                ...roleEntry.role.organization,
+                // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
+                logo: roleEntry.lastUsed 
+                    ? (roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo)
+                    : null  // ✅ Inaktive Roles: Logo = null (spart Memory)
+            } : null
         }
-    }
-},
+    }))
+};
 ```
 
-**Begründung:**
-- Frontend verwendet nur aktive Rolle (`lastUsed: true`)
-- Logo wird nur 1x geladen statt N-mal
-- Konsistent mit `organizationCache`
-
----
-
-### Phase 3: Optionale Parameter für alle Roles (wenn benötigt)
-
-**Datei:** `backend/src/controllers/userController.ts`
-
-**Neuer Code:**
-```typescript
-// ✅ STANDARD: Optionale Parameter für Performance-Optimierung
-const includeSettings = req.query.includeSettings === 'true';
-const includeInvoiceSettings = req.query.includeInvoiceSettings === 'true';
-const includeAllRoles = req.query.includeAllRoles === 'true';  // ✅ NEU
-
-// ✅ STANDARD: identificationDocuments werden IMMER geladen (essentielle Felder)
-const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-        roles: {
-            where: includeAllRoles ? undefined : { lastUsed: true },  // ✅ NUR aktive Rolle, außer wenn alle benötigt
-            include: {
-                role: {
-                    include: {
-                        permissions: true,
-                        organization: {
-                            select: {
-                                id: true,
-                                name: true,
-                                displayName: true,
-                                ...(includeAllRoles ? { logo: true } : { logo: true })  // ✅ Logo nur wenn benötigt
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        // ... rest
-    }
-});
-```
+**Gleiche Änderung für Zeile 223-237 (wenn authenticatedUserId === userId):**
 
 **Begründung:**
-- Standard: Nur aktive Rolle (Performance)
-- Optional: Alle Roles wenn benötigt (z.B. UserManagement)
+- Alle Roles werden weiterhin geladen (für Role-Switching, Onboarding, etc.)
+- ABER: Logo wird nur für aktive Role in Response gesetzt
+- Inaktive Roles haben `logo: null` → spart Memory (keine Base64-Strings für inaktive Roles)
+- Frontend verwendet Logo nur von aktiver Role (Header.tsx:146)
 
 ---
 
-### Phase 4: Frontend prüfen - werden User mit allen Roles geladen?
+### Phase 3: Frontend prüfen - Logo-Verwendung
 
-**Zu prüfen:**
-1. Wird `/users/profile` mehrfach aufgerufen?
-2. Werden User-Objekte irgendwo anders geladen?
-3. Werden User-Objekte im Context gespeichert?
+**Status:** ✅ **GEPRÜFT**
 
-**Dateien zu prüfen:**
-- `frontend/src/hooks/useAuth.tsx`
-- `frontend/src/contexts/*.tsx`
-- `frontend/src/components/*.tsx` (User-Management)
+**Header.tsx (Zeile 146):**
+- Verwendet nur aktive Role: `user?.roles.find(r => r.role && r.lastUsed === true)`
+- Logo wird nur von aktiver Role verwendet
+- **Keine Änderung nötig** - funktioniert mit neuer Backend-Lösung
+
+**Andere Stellen:**
+- Verwenden Roles für andere Zwecke (Role-Switching, Onboarding, etc.)
+- Verwenden Logo NICHT
+- **Keine Änderung nötig**
 
 ---
 
-### Phase 5: Tasks/Requests - User bleiben minimal
+### Phase 4: ❌ ENTFERNT - Tasks haben nichts mit Logo zu tun
 
-**Status:** ✅ **KORREKT** - Tasks/Requests laden User nur mit `id, firstName, lastName`
+**Status:** ✅ **KORREKT** - Tasks/Requests laden User nur mit `id, firstName, lastName` - **KEINE Roles, KEINE Logos**
 
-**Keine Änderung nötig**, ABER:
-- Prüfen ob Frontend diese User irgendwo anders mit allen Roles lädt
+**Keine Änderung nötig** - Tasks sind nicht relevant für das Logo-Problem.
 
 ---
 
 ## 📊 ERWARTETE VERBESSERUNG
 
 ### Vorher:
-- **User mit 5 Roles:** 5 Logos geladen = 5-25 MB
-- **100 Tasks:** 100 Users × 5 Roles = 500 Logos = 500-2500 MB
-- **Gesamt:** 600MB+ RAM
+- **User mit 5 Roles:** 5 Logos geladen (alle in Response) = 5-25 MB
+- **Gesamt:** 5-25 MB pro User (alle Logos im Memory)
 
 ### Nachher:
-- **User mit 5 Roles:** 1 Logo geladen (nur aktive) = 1-5 MB
-- **100 Tasks:** 100 Users × 1 Logo = 100 Logos = 100-500 MB
-- **Gesamt:** ~100-200 MB RAM
+- **User mit 5 Roles:** 1 Logo geladen (nur aktive in Response) = 1-5 MB
+- **Inaktive Roles:** Logo = null (kein Base64-String im Memory)
+- **Gesamt:** 1-5 MB pro User
 
-**Reduktion:** ~80-90% weniger RAM für Logos
+**Reduktion:** ~80% weniger RAM für Logos beim Laden des aktuellen Users
+
+**WICHTIG:** 
+- Tasks haben **NICHTS** damit zu tun - laden User nur minimal ohne Roles/Logos!
+- **Alle Roles werden weiterhin geladen** (für Role-Switching, Onboarding, etc.)
+- **NUR Logo wird optimiert** (nur für aktive Role in Response)
 
 ---
 
 ## 🎯 IMPLEMENTIERUNGSREIHENFOLGE
 
 ### Priorität 1: Sofort beheben (kritisch)
-1. ✅ **getCurrentUser entfernen** (wird nicht verwendet)
-2. ✅ **getUserById - NUR aktive Rolle laden**
+1. ✅ **getCurrentUser entfernen** (BEREITS ENTFERNT)
+2. ⏳ **Logo nur für aktive Role in Response setzen** (Phase 2)
 
-### Priorität 2: Wichtig
-3. ✅ **Optionale Parameter für alle Roles** (wenn benötigt)
-4. ✅ **Frontend prüfen** - werden User mehrfach geladen?
-
-### Priorität 3: Validierung
-5. ✅ **Memory Profiling nach Fix** - prüfen ob Verbesserung erreicht wurde
+### Priorität 2: Validierung
+3. ⏳ **Memory Profiling nach Fix** - prüfen ob Verbesserung erreicht wurde
+4. ⏳ **Funktionalität testen** - Role-Switching, Onboarding, ProtectedRoute müssen weiterhin funktionieren
 
 ---
 
