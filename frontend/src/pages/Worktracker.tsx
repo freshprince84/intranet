@@ -1414,7 +1414,7 @@ const Worktracker: React.FC = () => {
             // ❌ ENTFERNT: Table-Header-Sortierung (Priorität 1) - war redundant, da Hauptsortierung bereits tableSortConfig verwendet
             
             // Hauptsortierung (tableSortConfig) - für Table & Card gleich (synchron)
-            if (tableSortConfig.key && (selectedFilterId === null || filterConditions.length === 0)) {
+            if (tableSortConfig.key) {
                 const valueA = getSortValue(a, tableSortConfig.key);
                 const valueB = getSortValue(b, tableSortConfig.key);
                 
@@ -1663,7 +1663,7 @@ const Worktracker: React.FC = () => {
             // ❌ ENTFERNT: Table-Header-Sortierung (Priorität 1) - war redundant, da Hauptsortierung bereits reservationTableSortConfig verwendet
             
             // Hauptsortierung (reservationTableSortConfig) - für Table & Card gleich (synchron)
-            if (reservationTableSortConfig.key && (reservationSelectedFilterId === null || reservationFilterConditions.length === 0)) {
+            if (reservationTableSortConfig.key) {
                 const valueA = getReservationSortValue(a, reservationTableSortConfig.key);
                 const valueB = getReservationSortValue(b, reservationTableSortConfig.key);
                 
