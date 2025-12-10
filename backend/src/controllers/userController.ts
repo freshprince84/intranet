@@ -159,13 +159,23 @@ export const getAllUsersForDropdown = async (req: Request, res: Response) => {
 };
 
 // Spezifischen Benutzer abrufen
-export const getUserById = async (req: Request, res: Response) => {
+// ✅ STANDARD: Eine Methode für alle User-Abfragen (Profile und UserManagement)
+export const getUserById = async (req: Request | AuthenticatedRequest, res: Response) => {
     try {
         const userId = parseInt(req.params.id, 10);
+        const authenticatedRequest = req as AuthenticatedRequest;
+        const authenticatedUserId = authenticatedRequest.userId ? parseInt(authenticatedRequest.userId, 10) : null;
+        const roleId = authenticatedRequest.roleId ? parseInt(authenticatedRequest.roleId, 10) : null;
+        
         if (isNaN(userId)) {
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
 
+        // ✅ STANDARD: Optionale Parameter für Performance-Optimierung
+        const includeSettings = req.query.includeSettings === 'true';
+        const includeInvoiceSettings = req.query.includeInvoiceSettings === 'true';
+
+        // ✅ STANDARD: identificationDocuments werden IMMER geladen (essentielle Felder)
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
@@ -178,7 +188,8 @@ export const getUserById = async (req: Request, res: Response) => {
                                     select: {
                                         id: true,
                                         name: true,
-                                        displayName: true
+                                        displayName: true,
+                                        logo: true
                                     }
                                 }
                             }
@@ -193,7 +204,10 @@ export const getUserById = async (req: Request, res: Response) => {
                 identificationDocuments: {
                     orderBy: { createdAt: 'desc' },
                     take: 1 // Neuestes Dokument
-                }
+                },
+                // ✅ STANDARD: Optionale Felder nur laden wenn benötigt
+                ...(includeSettings ? { settings: true } : {}),
+                ...(includeInvoiceSettings ? { invoiceSettings: true } : {}),
             }
         });
         
@@ -201,88 +215,8 @@ export const getUserById = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
         
-        res.json(user);
-    } catch (error) {
-        logger.error('Error in getUserById:', error);
-        res.status(500).json({ 
-            message: 'Fehler beim Abrufen des Benutzers', 
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
-    }
-};
-
-// Aktuellen Benutzer abrufen
-export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) => {
-    try {
-        const userId = parseInt(req.userId, 10);
-        const roleId = parseInt(req.roleId, 10); // Die roleId aus dem Token lesen
-        
-        if (isNaN(userId)) {
-            return res.status(401).json({ message: 'Nicht authentifiziert' });
-        }
-
-        // ✅ PERFORMANCE: Optional Fields - nur laden wenn explizit angefragt
-        const includeSettings = req.query.includeSettings === 'true';
-        const includeInvoiceSettings = req.query.includeInvoiceSettings === 'true';
-        const includeDocuments = req.query.includeDocuments === 'true';
-
-        // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
-        const user = await prisma.user.findUnique({
-                where: { id: userId },
-                select: {
-                    id: true,
-                    username: true,
-                    email: true,
-                    firstName: true,
-                    lastName: true,
-                    birthday: true,
-                    bankDetails: true,
-                    contract: true,
-                    salary: true,
-                    normalWorkingHours: true,
-                    gender: true,
-                    phoneNumber: true,
-                    country: true,
-                    language: true,
-                    profileComplete: true,
-                    identificationNumber: true,
-                    // ✅ PERFORMANCE: Settings nur laden wenn benötigt
-                    ...(includeSettings ? { settings: true } : {}),
-                    // ✅ PERFORMANCE: InvoiceSettings nur laden wenn benötigt
-                    ...(includeInvoiceSettings ? { invoiceSettings: true } : {}),
-                    // ✅ PERFORMANCE: Documents nur laden wenn benötigt
-                    ...(includeDocuments ? {
-                        identificationDocuments: {
-                            orderBy: { createdAt: 'desc' },
-                            take: 1 // Neuestes Dokument
-                        }
-                    } : {}),
-                    roles: {
-                        include: {
-                            role: {
-                                include: {
-                                    permissions: true,
-                                    organization: {
-                                        select: {
-                                            id: true,
-                                            name: true,
-                                            displayName: true,
-                                            logo: true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-        });
-        
-        if (!user) {
-            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
-        }
-        
-        // Die Rolle aus dem Token als aktive Rolle markieren
-        if (!isNaN(roleId)) {
+        // ✅ STANDARD: lastUsed setzen, wenn es der aktuelle User ist
+        if (authenticatedUserId === userId && roleId) {
             const modifiedUser = {
                 ...user,
                 roles: user.roles.map(roleEntry => ({
@@ -320,13 +254,14 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
         
         res.json(userWithLogo);
     } catch (error) {
-        logger.error('Error in getCurrentUser:', error);
+        logger.error('Error in getUserById:', error);
         res.status(500).json({ 
-            message: 'Fehler beim Abrufen des Benutzerprofils', 
+            message: 'Fehler beim Abrufen des Benutzers', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
         });
     }
 };
+
 
 // Spezifischen Benutzer aktualisieren
 export const updateUserById = async (req: Request, res: Response) => {

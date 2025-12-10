@@ -240,8 +240,8 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
               // Prüfe ob diese Spalte die Hauptsortierung ist
               const isMainSort = mainSortConfig?.key === column.id;
               const sortDirection = isMainSort ? mainSortConfig.direction : undefined;
-              // Sort-Button für alle sichtbaren Spalten anzeigen
-              const showSortButton = showMainSort && isVisible && onMainSortChange;
+              // Sort-Button für alle Spalten anzeigen (unabhängig von Sichtbarkeit)
+              const showSortButton = showMainSort && onMainSortChange;
               
               return (
                 <DraggableColumnItem
