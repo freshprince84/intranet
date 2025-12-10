@@ -132,10 +132,48 @@ const TeamWorktimeControl: React.FC = () => {
     fetchActiveUsers();
     fetchAllWorktimes();
     
-    // Aktualisiere die aktiven Benutzer alle 30 Sekunden
-    const intervalId = setInterval(fetchActiveUsers, 30000) as unknown as number;
+    // ✅ MEMORY: Polling nur wenn Seite sichtbar ist (Page Visibility API)
+    let intervalId: ReturnType<typeof setInterval> | null = null;
     
-    return () => clearInterval(intervalId);
+    const startPolling = () => {
+      if (intervalId) return; // Bereits gestartet
+      intervalId = setInterval(() => {
+        // Prüfe nochmal, ob Seite sichtbar ist
+        if (!document.hidden) {
+          fetchActiveUsers();
+        }
+      }, 30000);
+    };
+    
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+    
+    // Starte Polling wenn Seite sichtbar ist
+    if (!document.hidden) {
+      startPolling();
+    }
+    
+    // Event-Listener für Page Visibility
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        // Seite ist wieder sichtbar - sofort prüfen und Polling starten
+        fetchActiveUsers();
+        startPolling();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchActiveUsers, fetchAllWorktimes, hasRequiredPermissions]);
 
   // Lade Zeiterfassungen neu, wenn sich das Datum ändert

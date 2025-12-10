@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Routes, Route, useNavigate, Outlet, useParams, useLocation } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions.ts';
@@ -39,6 +39,10 @@ const CerebroLayout: React.FC = () => {
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
   const [isTabletOrLarger, setIsTabletOrLarger] = useState<boolean>(window.innerWidth >= 768);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(window.innerWidth >= 768);
+  
+  // Topbar-Ref und Höhe für dynamische Berechnung
+  const topbarRef = useRef<HTMLDivElement>(null);
+  const [topbarHeight, setTopbarHeight] = useState<number>(200); // Default: ~200px
   
   // Filter und Sortierung State
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -103,6 +107,29 @@ const CerebroLayout: React.FC = () => {
     return () => window.removeEventListener('cerebro-sidebar-toggle' as any, handleSidebarToggle as any);
   }, []);
   
+  // Berechne Topbar-Höhe dynamisch
+  useEffect(() => {
+    const updateTopbarHeight = () => {
+      if (topbarRef.current) {
+        setTopbarHeight(topbarRef.current.clientHeight);
+      }
+    };
+    
+    // Initial berechnen
+    updateTopbarHeight();
+    
+    // Bei FilterPane-Änderung neu berechnen (mit kleiner Verzögerung für DOM-Update)
+    const timeoutId = setTimeout(updateTopbarHeight, 100);
+    
+    // Auch bei Resize neu berechnen
+    window.addEventListener('resize', updateTopbarHeight);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updateTopbarHeight);
+    };
+  }, [isFilterPaneOpen]);
+  
   // Suche-Handler
   const handleSearch = () => {
     if (searchTerm.trim()) {
@@ -153,8 +180,12 @@ const CerebroLayout: React.FC = () => {
     <div className="min-h-screen dark:bg-gray-900">
       {/* Standard-Container-Pattern wie Worktracker/Consultations */}
       <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
-        {/* Header-Bereich - EXAKT GLEICHE Padding-Werte wie aktuell */}
-        <div className="w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        {/* Header-Bereich - FIXIERT mit sticky, nicht scrollbar */}
+        <div 
+          ref={topbarRef}
+          className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700"
+          data-cerebro-topbar
+        >
           <div className={`max-w-7xl mx-auto ${isMobile ? '' : 'px-5'}`}>
             <CerebroHeader
               searchTerm={searchTerm}
@@ -169,53 +200,54 @@ const CerebroLayout: React.FC = () => {
               sortConfig={sortConfig}
             />
           </div>
-        </div>
-        
-        {/* FilterPane (ausklappbar) - EXAKT GLEICHE Padding-Werte wie aktuell */}
-        {isFilterPaneOpen && (
+          
+          {/* FilterPane (ausklappbar) - auch fixiert */}
+          {isFilterPaneOpen && (
+            <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
+                <FilterPane
+                  columns={cerebroColumns}
+                  onApply={applyFilterConditions}
+                  onReset={resetFilterConditions}
+                  savedConditions={filterConditions}
+                  savedOperators={filterLogicalOperators}
+                  tableId={CEREBRO_TABLE_ID}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* SavedFilterTags - auch fixiert */}
           <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
-              <FilterPane
-                columns={cerebroColumns}
-                onApply={applyFilterConditions}
-                onReset={resetFilterConditions}
-                savedConditions={filterConditions}
-                savedOperators={filterLogicalOperators}
+              <SavedFilterTags
                 tableId={CEREBRO_TABLE_ID}
+                onSelectFilter={applyFilterConditions}
+                onReset={resetFilterConditions}
+                activeFilterName={activeFilterName}
+                selectedFilterId={selectedFilterId}
+                onFilterChange={handleFilterChange}
+                defaultFilterName="Alle Artikel" // ✅ FIX: Hardcodiert (konsistent mit DB)
               />
             </div>
           </div>
-        )}
-        
-        {/* SavedFilterTags - EXAKT GLEICHE Padding-Werte wie aktuell */}
-        <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4' : 'px-5'} py-2`}>
-            <SavedFilterTags
-              tableId={CEREBRO_TABLE_ID}
-              onSelectFilter={applyFilterConditions}
-              onReset={resetFilterConditions}
-              activeFilterName={activeFilterName}
-              selectedFilterId={selectedFilterId}
-              onFilterChange={handleFilterChange}
-              defaultFilterName="Alle Artikel" // ✅ FIX: Hardcodiert (konsistent mit DB)
-            />
-          </div>
         </div>
         
-        {/* Sidebar + Main Flex-Layout - EXAKT GLEICHE Struktur wie aktuell */}
-        <div className={`flex flex-1 overflow-hidden ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
-          {/* Sidebar - EXAKT GLEICHE Breite und Position wie aktuell */}
+        {/* Sidebar + Main Flex-Layout - Topbar ist jetzt außerhalb, fixed-height-container entfernt */}
+        <div className={`flex ${isTabletOrLarger ? `h-[calc(100vh-${topbarHeight}px)]` : 'min-h-[calc(100vh-200px)]'}`}>
+          {/* Sidebar - scrollbar */}
           <div 
             className={`
               ${sidebarOpen ? 'w-60' : ''}
               ${isMobile && !sidebarOpen ? 'w-0' : ''} 
               transition-all duration-300 ease-in-out shrink-0
+              ${isTabletOrLarger ? 'overflow-y-auto' : ''}
             `}
           >
             <ArticleStructure mdFiles={[]} />
           </div>
           
-          {/* Main-Content - EXAKT GLEICHE Padding-Werte wie aktuell, aber <div> statt <main> */}
+          {/* Main-Content - scrollbar, horizontales Overflow verhindern */}
           <div className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto overflow-x-hidden'} ${
             isMobile 
               ? 'px-0 pt-2 pb-16' // Horizontales Padding auf 0, Bottom-Padding erhöht für den Footer
