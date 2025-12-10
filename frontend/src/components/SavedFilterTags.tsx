@@ -92,9 +92,6 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const error = filterContext.getError(tableId);
   const [recentClientNames, setRecentClientNames] = useState<string[]>([]);
   
-  // ✅ KRITISCH: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
-  const defaultFilterAppliedRef = useRef<boolean>(false);
-  
   // Responsive Tag-Display States (optimiert)
   const containerRef = useRef<HTMLDivElement>(null);
   const tagRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -206,60 +203,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const { loadFilters } = filterContext;
   
   useEffect(() => {
-    // ✅ Reset Ref wenn tableId sich ändert
-    defaultFilterAppliedRef.current = false;
-    
-    // Lade Filter über Filter-Context (für UI)
+    // ✅ Lade Filter über Filter-Context (nur für UI - Filter-Tags anzeigen)
+    // Komponenten wenden Default-Filter selbst an (Standard-Pattern)
     loadFilters(tableId);
   }, [tableId, loadFilters]);
-
-  // ✅ KRITISCH: Default-Filter nur EINMAL anwenden (verhindert Endlosschleife)
-  // ✅ VEREINFACHT: Prüfe direkt auf savedFilters.length statt filterLoadState
-  // Hinweis: Komponenten mit Standard-Pattern wenden Default-Filter selbst an
-  // Diese Logik bleibt für Komponenten, die noch nicht umgestellt sind (z.B. ConsultationList)
-  useEffect(() => {
-    // Nur ausführen, wenn:
-    // 1. Default-Filter definiert ist
-    // 2. Noch nicht angewendet wurde
-    // 3. Filter geladen wurden (savedFilters.length > 0) UND nicht mehr am Laden
-    if (defaultFilterName && !defaultFilterAppliedRef.current && !loading && savedFilters.length > 0) {
-      // ✅ Suche nach Default-Filter
-      const defaultFilter = savedFilters.find((filter: SavedFilter) => {
-        if (!filter || !filter.name) return false;
-        // Exakte Übereinstimmung
-        if (filter.name === defaultFilterName) return true;
-        // Alternative Namen für "Aktuell"
-        if (defaultFilterName === 'Aktuell' && (filter.name === 'tasks.filters.current' || filter.name === 'requests.filters.aktuell')) return true;
-        // Alternative Namen für "Hoy"
-        if (defaultFilterName === 'Hoy' && (filter.name === 'Heute' || filter.name === 'common.today')) return true;
-        return false;
-      });
-      
-      if (defaultFilter) {
-        // ✅ Markiere als angewendet, BEVOR onFilterChange aufgerufen wird
-        defaultFilterAppliedRef.current = true;
-        
-        // ✅ FIX: Einheitliches Format - immer Array (nicht undefined)
-        if (onFilterChange) {
-          // Controlled Mode: Verwende onFilterChange
-          onFilterChange(defaultFilter.name, defaultFilter.id, defaultFilter.conditions, defaultFilter.operators);
-        } else {
-          // Uncontrolled Mode: Verwende onSelectFilter
-          onSelectFilter(defaultFilter.conditions, defaultFilter.operators);
-        }
-      } else if (defaultFilterName) {
-        // ✅ FIX: Wenn Default-Filter nicht gefunden wurde, warnen und Fallback
-        if (process.env.NODE_ENV === 'development') {
-          console.warn(`[SavedFilterTags] Default-Filter "${defaultFilterName}" nicht gefunden. Verfügbare Filter:`, savedFilters.map(f => f?.name));
-        }
-        // ✅ FIX: Fallback - wenn Default-Filter nicht existiert, lade Daten ohne Filter
-        defaultFilterAppliedRef.current = true;
-        if (onFilterChange) {
-          onFilterChange('', null, [], [], undefined);
-        }
-      }
-    }
-  }, [defaultFilterName, loading, savedFilters, onFilterChange, onSelectFilter]);
 
   // ✅ PERFORMANCE: Cleanup nicht mehr nötig - FilterContext verwaltet State zentral
   // Filter werden automatisch vom FilterContext verwaltet
@@ -339,7 +286,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       if (selectedFilterId === filterId || (!onFilterChange && filterId)) {
         if (onFilterChange) {
           // Controlled: Parent entscheidet was passiert
-          onFilterChange('', null, [], [], []);
+          onFilterChange('', null, [], []);
         } else {
           // Uncontrolled: Reset
           onReset();

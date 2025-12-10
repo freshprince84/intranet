@@ -110,37 +110,37 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
     
     // Neuer Promise für Laden
     const promise = (async () => {
-      try {
-        loadedTablesRef.current.add(tableId); // ✅ Setze Flag: Wird geladen
-        setLoading(prev => ({ ...prev, [tableId]: true }));
-        setErrors(prev => ({ ...prev, [tableId]: null }));
-        
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setErrors(prev => ({ ...prev, [tableId]: 'Nicht authentifiziert' }));
-          loadedTablesRef.current.delete(tableId); // ✅ Entferne Flag bei Fehler
+    try {
+      loadedTablesRef.current.add(tableId); // ✅ Setze Flag: Wird geladen
+      setLoading(prev => ({ ...prev, [tableId]: true }));
+      setErrors(prev => ({ ...prev, [tableId]: null }));
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setErrors(prev => ({ ...prev, [tableId]: 'Nicht authentifiziert' }));
+        loadedTablesRef.current.delete(tableId); // ✅ Entferne Flag bei Fehler
           delete loadingPromises.current[tableId];
           return [];
-        }
-        
-        // Lade Filter und Gruppen parallel
-        const [filtersResponse, groupsResponse] = await Promise.all([
-          axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)),
-          axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.GROUPS.BY_TABLE(tableId))
-        ]);
-        
-        const filtersData = Array.isArray(filtersResponse.data) 
-          ? filtersResponse.data.filter(f => f != null) 
-          : [];
-        const groupsData = Array.isArray(groupsResponse.data) 
-          ? groupsResponse.data.filter(g => g != null) 
-          : [];
-        
+      }
+      
+      // Lade Filter und Gruppen parallel
+      const [filtersResponse, groupsResponse] = await Promise.all([
+        axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)),
+        axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.GROUPS.BY_TABLE(tableId))
+      ]);
+      
+      const filtersData = Array.isArray(filtersResponse.data) 
+        ? filtersResponse.data.filter(f => f != null) 
+        : [];
+      const groupsData = Array.isArray(groupsResponse.data) 
+        ? groupsResponse.data.filter(g => g != null) 
+        : [];
+      
         // State-Update
-        setFilters(prev => ({ ...prev, [tableId]: filtersData }));
-        setFilterGroups(prev => ({ ...prev, [tableId]: groupsData }));
-        // ✅ MEMORY: Timestamp für TTL setzen
-        filterCacheTimestamps.current[tableId] = Date.now();
+      setFilters(prev => ({ ...prev, [tableId]: filtersData }));
+      setFilterGroups(prev => ({ ...prev, [tableId]: groupsData }));
+      // ✅ MEMORY: Timestamp für TTL setzen
+      filterCacheTimestamps.current[tableId] = Date.now();
         
         // ✅ WICHTIG: Warte auf State-Update (nächster Render-Zyklus)
         await new Promise(resolve => setTimeout(resolve, 0));
@@ -155,17 +155,17 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
         
         // Gib Filter zurück (aus State oder direkt)
         return filtersRef.current[tableId] || filtersData;
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error(`[FilterContext] Fehler beim Laden der Filter für ${tableId}:`, error);
-        }
-        setErrors(prev => ({ ...prev, [tableId]: 'Fehler beim Laden der Filter' }));
-        return [];
-      } finally {
-        loadedTablesRef.current.delete(tableId); // ✅ Entferne Flag: Laden abgeschlossen
-        setLoading(prev => ({ ...prev, [tableId]: false }));
-        delete loadingPromises.current[tableId];
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+      console.error(`[FilterContext] Fehler beim Laden der Filter für ${tableId}:`, error);
       }
+      setErrors(prev => ({ ...prev, [tableId]: 'Fehler beim Laden der Filter' }));
+        return [];
+    } finally {
+      loadedTablesRef.current.delete(tableId); // ✅ Entferne Flag: Laden abgeschlossen
+      setLoading(prev => ({ ...prev, [tableId]: false }));
+        delete loadingPromises.current[tableId];
+    }
     })();
     
     loadingPromises.current[tableId] = promise;

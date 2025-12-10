@@ -81,7 +81,7 @@ export function convertFilterConditionsToPrismaWhere(
             resultGroups.push(currentOrGroup[0]);
           } else {
             resultGroups.push({ OR: currentOrGroup });
-          }
+        }
           currentOrGroup = [];
         }
         // Einzelne AND-Bedingung hinzufügen
@@ -214,7 +214,7 @@ function optimizeFilterConditions(
             values.push(...c.value);
           } else {
             values.push(c.value);
-          }
+  }
         }
       }
       if (values.length > 0) {
