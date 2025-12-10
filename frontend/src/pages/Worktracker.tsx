@@ -898,39 +898,69 @@ const Worktracker: React.FC = () => {
     const filterContext = useFilterContext();
     const { loadFilters } = filterContext;
     
+    // ✅ STANDARD: initialLoadAttemptedRef verhindert mehrfache Ausführung pro Tab
+    const initialLoadAttemptedRef = useRef<{ todos: boolean; reservations: boolean }>({ todos: false, reservations: false });
+    
     useEffect(() => {
+        // ✅ STANDARD: Verhindere mehrfache Ausführung pro Tab
+        if (activeTab === 'todos' && initialLoadAttemptedRef.current.todos) {
+            return;
+        }
+        if (activeTab === 'reservations' && initialLoadAttemptedRef.current.reservations) {
+            return;
+        }
+        
         const initialize = async () => {
+            // ✅ STANDARD: Markiere als versucht, BEVOR async Operation startet
             if (activeTab === 'todos') {
-                // 1. Filter laden (wartet auf State-Update)
-                const filters = await loadFilters(TODOS_TABLE_ID);
-                // 2. Default-Filter anwenden (IMMER vorhanden!)
-                const defaultFilter = filters.find(f => f.name === 'Aktuell');
-                if (defaultFilter) {
-                    await handleFilterChangeRef.current(
-                        defaultFilter.name,
-                        defaultFilter.id,
-                        defaultFilter.conditions,
-                        defaultFilter.operators
-                    );
-                }
+                initialLoadAttemptedRef.current.todos = true;
             } else if (activeTab === 'reservations') {
-                // 1. Filter laden (wartet auf State-Update)
-                const filters = await loadFilters(RESERVATIONS_TABLE_ID);
-                // 2. Default-Filter anwenden (IMMER vorhanden!)
-                const defaultFilter = filters.find(f => f.name === 'Hoy');
-                if (defaultFilter) {
-                    await handleReservationFilterChangeRef.current(
-                        defaultFilter.name,
-                        defaultFilter.id,
-                        defaultFilter.conditions,
-                        defaultFilter.operators
-                    );
+                initialLoadAttemptedRef.current.reservations = true;
+            }
+            
+            try {
+                if (activeTab === 'todos') {
+                    // 1. Filter laden (wartet auf State-Update)
+                    const filters = await loadFilters(TODOS_TABLE_ID);
+                    // 2. Default-Filter anwenden (IMMER vorhanden!)
+                    const defaultFilter = filters.find(f => f.name === 'Aktuell');
+                    if (defaultFilter) {
+                        await handleFilterChangeRef.current(
+                            defaultFilter.name,
+                            defaultFilter.id,
+                            defaultFilter.conditions,
+                            defaultFilter.operators
+                        );
+                    }
+                } else if (activeTab === 'reservations') {
+                    // 1. Filter laden (wartet auf State-Update)
+                    const filters = await loadFilters(RESERVATIONS_TABLE_ID);
+                    // 2. Default-Filter anwenden (IMMER vorhanden!)
+                    const defaultFilter = filters.find(f => f.name === 'Hoy');
+                    if (defaultFilter) {
+                        await handleReservationFilterChangeRef.current(
+                            defaultFilter.name,
+                            defaultFilter.id,
+                            defaultFilter.conditions,
+                            defaultFilter.operators
+                        );
+                    }
+                }
+            } catch (error) {
+                // ✅ STANDARD: Bei Fehler Ref zurücksetzen, damit Retry möglich ist
+                if (activeTab === 'todos') {
+                    initialLoadAttemptedRef.current.todos = false;
+                } else if (activeTab === 'reservations') {
+                    initialLoadAttemptedRef.current.reservations = false;
+                }
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('[Worktracker] Fehler beim Initialisieren:', error);
                 }
             }
         };
 
         initialize();
-    }, [activeTab, loadFilters]);
+    }, [activeTab]); // ✅ STANDARD: Nur activeTab als Dependency (loadFilters ist stabil, Handler via Refs)
     
     // Infinite Scroll Handler für Tasks
     // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
