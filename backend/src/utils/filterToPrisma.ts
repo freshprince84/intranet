@@ -166,7 +166,17 @@ function optimizeFilterConditions(
     
     // ✅ OPTIMIERUNG: Mehrere notEquals mit AND → kombiniert zu notIn
     if (allAnd && group.notEquals.length > 1) {
-      const values = group.notEquals.map(c => c.value).filter(v => v !== null && v !== undefined);
+      const values: (string | number | Date)[] = [];
+      for (const c of group.notEquals) {
+        if (c.value !== null && c.value !== undefined) {
+          // Wenn value bereits ein Array ist (sollte nicht passieren, aber sicherheitshalber), flach machen
+          if (Array.isArray(c.value)) {
+            values.push(...c.value);
+          } else {
+            values.push(c.value);
+          }
+        }
+      }
       if (values.length > 0) {
         optimized.push({
           column: cond.column,
@@ -181,7 +191,17 @@ function optimizeFilterConditions(
 
     // ✅ OPTIMIERUNG: Mehrere equals mit OR → kombiniert zu in
     if (allOr && group.equals.length > 1) {
-      const values = group.equals.map(c => c.value).filter(v => v !== null && v !== undefined);
+      const values: (string | number | Date)[] = [];
+      for (const c of group.equals) {
+        if (c.value !== null && c.value !== undefined) {
+          // Wenn value bereits ein Array ist (sollte nicht passieren, aber sicherheitshalber), flach machen
+          if (Array.isArray(c.value)) {
+            values.push(...c.value);
+          } else {
+            values.push(c.value);
+          }
+        }
+      }
       if (values.length > 0) {
         optimized.push({
           column: cond.column,
