@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon, LinkIcon, CurrencyDollarIcon, ClockIcon, KeyIcon, PaperAirplaneIcon, MapIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, ArrowUpIcon, ArrowDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon, LinkIcon, CurrencyDollarIcon, ClockIcon, KeyIcon, PaperAirplaneIcon, MapIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import CreateReservationModal from '../components/reservations/CreateReservationModal.tsx';
@@ -1157,11 +1157,12 @@ const Worktracker: React.FC = () => {
         return task.qualityControl?.id === user?.id;
     };
 
-    const handleSort = (key: SortConfig['key']) => {
-        // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
-        const newDirection = tableSortConfig.key === key && tableSortConfig.direction === 'asc' ? 'desc' : 'asc';
+    const handleSort = useCallback((key: SortConfig['key']) => {
+        // ✅ FIX: Verwende tasksSettings.sortConfig direkt (aktueller Wert)
+        const currentSortConfig = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
+        const newDirection = currentSortConfig.key === key && currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
         updateTasksSortConfig({ key, direction: newDirection });
-    };
+    }, [tasksSettings.sortConfig, updateTasksSortConfig]);
 
     const handleReservationSort = (key: ReservationSortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
@@ -2356,7 +2357,7 @@ const Worktracker: React.FC = () => {
                                             savedOperators={filterLogicalOperators}
                                             tableId={TODOS_TABLE_ID}
                                         />
-                                    ) : (
+                                    ) : activeTab === 'reservations' ? (
                                         <FilterPane
                                             columns={[
                                                 { id: 'checkInDate', label: t('reservations.columns.checkInDate', 'Check-in') },
@@ -2372,12 +2373,12 @@ const Worktracker: React.FC = () => {
                                             savedOperators={reservationFilterLogicalOperators}
                                             tableId={RESERVATIONS_TABLE_ID}
                                         />
-                                    )}
+                                    ) : null}
                                 </div>
                             )}
 
                             {/* Gespeicherte Filter als Tags anzeigen */}
-                            {(
+                            {(activeTab === 'todos' || activeTab === 'reservations') && (
                                 <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
                                     <SavedFilterTags
                                     tableId={activeTab === 'todos' ? TODOS_TABLE_ID : RESERVATIONS_TABLE_ID}
@@ -2418,9 +2419,19 @@ const Worktracker: React.FC = () => {
                                                                 {columnId !== 'actions' && (
                                                                     <button 
                                                                         onClick={() => handleSort(columnId as keyof Task)}
-                                                                        className="ml-1 focus:outline-none"
+                                                                        className={`ml-1 focus:outline-none ${
+                                                                            tableSortConfig.key === columnId
+                                                                                ? 'text-blue-600 dark:text-blue-400'
+                                                                                : 'text-gray-400 dark:text-gray-500'
+                                                                        }`}
                                                                     >
-                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        {tableSortConfig.key === columnId && tableSortConfig.direction === 'asc' ? (
+                                                                            <ArrowUpIcon className="h-4 w-4" />
+                                                                        ) : tableSortConfig.key === columnId && tableSortConfig.direction === 'desc' ? (
+                                                                            <ArrowDownIcon className="h-4 w-4" />
+                                                                        ) : (
+                                                                            <ArrowsUpDownIcon className="h-4 w-4" />
+                                                                        )}
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -3683,7 +3694,7 @@ const Worktracker: React.FC = () => {
                                             savedOperators={filterLogicalOperators}
                                             tableId={TODOS_TABLE_ID}
                                         />
-                                    ) : (
+                                    ) : activeTab === 'reservations' ? (
                                         <FilterPane
                                             columns={[
                                                 { id: 'checkInDate', label: t('reservations.columns.checkInDate', 'Check-in') },
@@ -3699,20 +3710,22 @@ const Worktracker: React.FC = () => {
                                             savedOperators={reservationFilterLogicalOperators}
                                             tableId={RESERVATIONS_TABLE_ID}
                                         />
-                                    )}
+                                    ) : null}
                                 </div>
                             )}
 
                             {/* Gespeicherte Filter als Tags anzeigen */}
-                            <SavedFilterTags
-                                tableId={activeTab === 'todos' ? TODOS_TABLE_ID : RESERVATIONS_TABLE_ID}
-                                onSelectFilter={activeTab === 'todos' ? applyFilterConditions : applyReservationFilterConditions}
-                                onReset={activeTab === 'todos' ? resetFilterConditions : resetReservationFilterConditions}
-                                activeFilterName={activeTab === 'todos' ? activeFilterName : reservationActiveFilterName}
-                                selectedFilterId={activeTab === 'todos' ? selectedFilterId : reservationSelectedFilterId}
-                                onFilterChange={activeTab === 'todos' ? handleFilterChange : handleReservationFilterChange}
-                                defaultFilterName={activeTab === 'todos' ? 'Aktuell' : 'Hoy'} // ✅ FIX: Einheitlich hardcodiert (konsistent mit DB und Table-View)
-                            />
+                            {(activeTab === 'todos' || activeTab === 'reservations') && (
+                                <SavedFilterTags
+                                    tableId={activeTab === 'todos' ? TODOS_TABLE_ID : RESERVATIONS_TABLE_ID}
+                                    onSelectFilter={activeTab === 'todos' ? applyFilterConditions : applyReservationFilterConditions}
+                                    onReset={activeTab === 'todos' ? resetFilterConditions : resetReservationFilterConditions}
+                                    activeFilterName={activeTab === 'todos' ? activeFilterName : reservationActiveFilterName}
+                                    selectedFilterId={activeTab === 'todos' ? selectedFilterId : reservationSelectedFilterId}
+                                    onFilterChange={activeTab === 'todos' ? handleFilterChange : handleReservationFilterChange}
+                                    defaultFilterName={activeTab === 'todos' ? 'Aktuell' : 'Hoy'} // ✅ FIX: Einheitlich hardcodiert (konsistent mit DB und Table-View)
+                                />
+                            )}
 
                             {/* Tabelle oder Cards */}
                             {activeTab === 'todos' && viewMode === 'table' ? (
@@ -3741,9 +3754,19 @@ const Worktracker: React.FC = () => {
                                                                 {columnId !== 'actions' && (
                                                                     <button 
                                                                         onClick={() => handleSort(columnId as keyof Task)}
-                                                                        className="ml-1 focus:outline-none"
+                                                                        className={`ml-1 focus:outline-none ${
+                                                                            tableSortConfig.key === columnId
+                                                                                ? 'text-blue-600 dark:text-blue-400'
+                                                                                : 'text-gray-400 dark:text-gray-500'
+                                                                        }`}
                                                                     >
-                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        {tableSortConfig.key === columnId && tableSortConfig.direction === 'asc' ? (
+                                                                            <ArrowUpIcon className="h-4 w-4" />
+                                                                        ) : tableSortConfig.key === columnId && tableSortConfig.direction === 'desc' ? (
+                                                                            <ArrowDownIcon className="h-4 w-4" />
+                                                                        ) : (
+                                                                            <ArrowsUpDownIcon className="h-4 w-4" />
+                                                                        )}
                                                                     </button>
                                                                 )}
                                                             </div>

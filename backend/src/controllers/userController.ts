@@ -1497,7 +1497,8 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
                                     select: {
                                         id: true,
                                         name: true,
-                                        displayName: true
+                                        displayName: true,
+                                        logo: true
                                     }
                                 }
                             }
@@ -1508,7 +1509,29 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             }
         });
 
-        return res.json(updatedUser);
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+
+        // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
+        const userWithOptimizedLogo = {
+            ...updatedUser,
+            roles: updatedUser.roles.map(roleEntry => ({
+                ...roleEntry,
+                role: {
+                    ...roleEntry.role,
+                    organization: roleEntry.role.organization ? {
+                        ...roleEntry.role.organization,
+                        // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
+                        logo: roleEntry.lastUsed
+                            ? (roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo)
+                            : null  // ✅ Inaktive Roles: Logo = null (spart Memory)
+                    } : null
+                }
+            }))
+        };
+
+        return res.json(userWithOptimizedLogo);
     } catch (error) {
         logger.error('Error in switchUserRole:', error);
         
