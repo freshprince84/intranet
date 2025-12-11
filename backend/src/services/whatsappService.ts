@@ -966,9 +966,15 @@ export class WhatsAppService {
     guestName: string,
     guestPhone: string,
     checkInLink: string,
-    paymentLink: string
+    paymentLink: string,
+    options?: {
+      templateName?: string;
+      templateParams?: string[];
+      message?: string;
+    }
   ): Promise<boolean> {
-    const message = `Hola ${guestName},
+    // NEU: Verwende übergebene Template-Parameter oder Fallback auf hardcodierte Nachricht
+    const message = options?.message || `Hola ${guestName},
 
 ¡Nos complace darte la bienvenida a La Familia Hostel! 🎊
 
@@ -990,12 +996,13 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
 
 ¡Esperamos verte pronto!`;
 
-    // Template-Name aus Environment oder Settings (Standard: reservation_checkin_invitation)
-    // Hinweis: Der tatsächliche Template-Name wird in sendMessageWithFallback basierend auf Sprache angepasst
-    const baseTemplateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_INVITATION || 'reservation_checkin_invitation';
+    // NEU: Template-Name aus Options oder Environment (Standard: reservation_checkin_invitation)
+    const baseTemplateName = options?.templateName || 
+      process.env.WHATSAPP_TEMPLATE_CHECKIN_INVITATION || 
+      'reservation_checkin_invitation';
     
-    // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}}, {{3}} im Template sein)
-    const templateParams = [guestName, checkInLink, paymentLink];
+    // NEU: Template-Parameter aus Options oder Fallback
+    const templateParams = options?.templateParams || [guestName, checkInLink, paymentLink];
 
     return await this.sendMessageWithFallback(guestPhone, message, baseTemplateName, templateParams);
   }
@@ -1020,8 +1027,25 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
     roomDescription: string,
     doorPin: string,
     doorAppName: string,
-    reservation?: { guestNationality?: string | null; guestPhone?: string | null }
+    reservation?: { guestNationality?: string | null; guestPhone?: string | null },
+    options?: {
+      templateName?: string;
+      templateParams?: string[];
+      message?: string;
+    }
   ): Promise<boolean> {
+    // NEU: Verwende übergebene Template-Parameter oder Fallback auf hardcodierte Nachricht
+    if (options?.message && options?.templateName && options?.templateParams) {
+      return await this.sendMessageWithFallback(
+        guestPhone, 
+        options.message, 
+        options.templateName, 
+        options.templateParams, 
+        reservation
+      );
+    }
+
+    // Fallback: Alte Logik (wenn keine Options übergeben)
     // Erkenne Sprache für Template
     let languageCode: string;
     if (reservation) {
@@ -1064,12 +1088,13 @@ Acceso:
       ? `${greeting}\n\n${contentText}\n\nWe wish you a pleasant stay!`
       : `${greeting}\n\n${contentText}\n\n¡Te deseamos una estancia agradable!`;
 
-    // Template-Name aus Environment oder Settings (Standard: reservation_checkin_completed)
-    const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_CONFIRMATION || 'reservation_checkin_completed';
+    // NEU: Template-Name aus Options oder Environment (Standard: reservation_checkin_completed)
+    const templateName = options?.templateName || 
+      process.env.WHATSAPP_TEMPLATE_CHECKIN_CONFIRMATION || 
+      'reservation_checkin_completed';
     
-    // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}} im Template sein)
-    // Format: Name mit Begrüßung, Kompletter Text mit Zimmerinfo und PIN
-    const templateParams = [greeting, contentText];
+    // NEU: Template-Parameter aus Options oder Fallback
+    const templateParams = options?.templateParams || [greeting, contentText];
 
     return await this.sendMessageWithFallback(guestPhone, message, templateName, templateParams, reservation);
   }

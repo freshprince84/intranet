@@ -55,3 +55,36 @@ export const branchEmailSettingsSchema = z.object({
   }
 );
 
+// NEU: Schema für Message Templates
+const messageTemplateLanguageSchema = z.object({
+  whatsappTemplateName: z.string().min(1, 'WhatsApp Template Name ist erforderlich'),
+  whatsappTemplateParams: z.array(z.string()).default([]),
+  emailSubject: z.string().min(1, 'Email Betreff ist erforderlich'),
+  emailContent: z.string().min(1, 'Email Inhalt ist erforderlich')
+});
+
+export const messageTemplatesSchema = z.object({
+  checkInInvitation: z.object({
+    en: messageTemplateLanguageSchema,
+    es: messageTemplateLanguageSchema,
+    de: messageTemplateLanguageSchema
+  }),
+  checkInConfirmation: z.object({
+    en: messageTemplateLanguageSchema,
+    es: messageTemplateLanguageSchema,
+    de: messageTemplateLanguageSchema
+  })
+});
+
+// Haupt-Schema für Branch Settings
+export const branchSettingsSchema = z.object({
+  name: z.string().min(1, 'Name ist erforderlich'),
+  whatsappSettings: z.any().optional(),
+  lobbyPmsSettings: branchLobbyPmsSettingsSchema.optional(),
+  boldPaymentSettings: branchBoldPaymentSettingsSchema.optional(),
+  doorSystemSettings: branchDoorSystemSettingsSchema.optional(),
+  emailSettings: branchEmailSettingsSchema.optional(),
+  messageTemplates: messageTemplatesSchema.optional(),
+  autoSendReservationInvitation: z.boolean().optional()
+});
+

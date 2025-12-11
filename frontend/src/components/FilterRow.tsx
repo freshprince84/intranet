@@ -77,8 +77,8 @@ const getOperatorsByColumnType = (columnId: string, t: (key: string) => string):
     return dateOperators;
   } else if (columnId === 'duration' || columnId === 'amount') {
     return durationOperators;
-  } else if (columnId === 'status' || columnId === 'paymentStatus' || columnId === 'roomNumber') {
-    // ✅ FIX: roomNumber nur = und != (wie Status)
+  } else if (columnId === 'status' || columnId === 'paymentStatus' || columnId === 'roomNumber' || columnId === 'type' || columnId === 'branch') {
+    // ✅ FIX: roomNumber, type und branch nur = und != (wie Status)
     return statusOperators;
   } else if (columnId === 'responsible' || columnId === 'qualityControl' || columnId === 'responsibleAndQualityControl') {
     return statusOperators;

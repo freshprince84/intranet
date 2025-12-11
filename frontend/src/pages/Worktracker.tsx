@@ -286,6 +286,16 @@ const Worktracker: React.FC = () => {
         { id: 'responsible', label: t('tasks.columns.responsible'), shortLabel: t('tasks.columns.responsible').substring(0, 3) },
         { id: 'qualityControl', label: t('tasks.columns.qualityControl'), shortLabel: t('tasks.columns.qualityControl').substring(0, 2) },
     ], [t]);
+
+    // Definiere Spalten für FilterPane (ohne actions und responsibleAndQualityControl)
+    const filterPaneColumns = useMemo(() => [
+        { id: 'title', label: t('tasks.columns.title') },
+        { id: 'status', label: t('tasks.columns.status') },
+        { id: 'branch', label: t('tasks.columns.branch') },
+        { id: 'dueDate', label: t('tasks.columns.dueDate') },
+        { id: 'responsible', label: t('tasks.columns.responsible') },
+        { id: 'qualityControl', label: t('tasks.columns.qualityControl') },
+    ], [t]);
     
     // Reservations-Spalten
     const availableReservationColumns = useMemo(() => [
@@ -2359,7 +2369,7 @@ const Worktracker: React.FC = () => {
                                 <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
                                     {activeTab === 'todos' ? (
                                         <FilterPane
-                                            columns={[...availableColumns, ...filterOnlyColumns]}
+                                            columns={filterPaneColumns}
                                             onApply={applyFilterConditions}
                                             onReset={resetFilterConditions}
                                             savedConditions={filterConditions}
@@ -3686,7 +3696,7 @@ const Worktracker: React.FC = () => {
                                 <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
                                     {activeTab === 'todos' ? (
                                         <FilterPane
-                                            columns={[...availableColumns, ...filterOnlyColumns]}
+                                            columns={filterPaneColumns}
                                             onApply={applyFilterConditions}
                                             onReset={resetFilterConditions}
                                             savedConditions={filterConditions}

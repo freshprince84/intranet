@@ -487,6 +487,27 @@ export const createReservation = async (req: Request, res: Response) => {
         logger.error('[Reservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', error);
         // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
       }
+    } else if (contactType === 'email' && reservation.guestEmail) {
+      // NEU: Email-Versendung für contactType === 'email'
+      try {
+        const result = await ReservationNotificationService.sendReservationInvitation(
+          reservation.id,
+          {
+            guestEmail: reservation.guestEmail,
+            amount,
+            currency
+          }
+        );
+
+        if (result.success) {
+          logger.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und Email erfolgreich versendet`);
+        } else {
+          logger.warn(`[Reservation] ⚠️ Reservierung ${reservation.id} erstellt, aber Email fehlgeschlagen: ${result.error}`);
+        }
+      } catch (error) {
+        logger.error('[Reservation] ❌ Fehler beim Versenden der Email:', error);
+        // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
+      }
     }
 
     // Hole die aktuelle Reservierung mit allen Feldern (inkl. Updates wie sentMessage, status, etc.)

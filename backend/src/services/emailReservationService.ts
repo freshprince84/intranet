@@ -85,9 +85,72 @@ export class EmailReservationService {
 
       logger.log(`[EmailReservation] Reservation ${reservation.id} erstellt aus Email (Code: ${parsedEmail.reservationCode})`);
 
+      // NEU: Sofort-Versendung wenn Check-in-Date heute oder in Vergangenheit
+      // UND autoSendReservationInvitation aktiviert
+      if (reservation.checkInDate) {
+        const checkInDate = new Date(reservation.checkInDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        checkInDate.setHours(0, 0, 0, 0);
+        
+        const isTodayOrPast = checkInDate <= today;
+        
+        // Prüfe Branch Settings: autoSendReservationInvitation
+        const branch = reservation.branchId ? await prisma.branch.findUnique({
+          where: { id: reservation.branchId },
+          select: { autoSendReservationInvitation: true }
+        }) : null;
+        
+        const autoSend = branch?.autoSendReservationInvitation ?? false;
+        
+        if (isTodayOrPast && autoSend) {
+          try {
+            logger.log(`[EmailReservation] Check-in-Date heute/vergangen → versende sofort für Reservierung ${reservation.id}`);
+            const { ReservationNotificationService } = await import('./reservationNotificationService');
+            
+            // Versende je nach verfügbaren Kontaktdaten
+            const options: any = {
+              amount: parsedEmail.amount,
+              currency: parsedEmail.currency || 'COP'
+            };
+            
+            if (reservation.guestEmail) {
+              options.guestEmail = reservation.guestEmail;
+            }
+            if (reservation.guestPhone) {
+              options.guestPhone = reservation.guestPhone;
+            }
+            
+            const result = await ReservationNotificationService.sendReservationInvitation(
+              reservation.id,
+              options
+            );
+            
+            if (result.success) {
+              // Markiere als versendet
+              await prisma.reservation.update({
+                where: { id: reservation.id },
+                data: { invitationSentAt: new Date() }
+              });
+              logger.log(`[EmailReservation] ✅ Sofort-Versendung erfolgreich für Reservierung ${reservation.id}`);
+            } else {
+              logger.warn(`[EmailReservation] ⚠️ Sofort-Versendung fehlgeschlagen für Reservierung ${reservation.id}: ${result.error}`);
+            }
+          } catch (error) {
+            logger.error(`[EmailReservation] Fehler beim sofortigen Versenden für Reservierung ${reservation.id}:`, error);
+            // Fehler nicht weiterwerfen, da Reservation erfolgreich erstellt wurde
+          }
+        } else {
+          // Check-in-Date ist in der Zukunft → Scheduler wird versenden
+          logger.log(`[EmailReservation] Check-in-Date ist in der Zukunft (${checkInDate.toISOString()}) → Scheduler wird versenden`);
+        }
+      }
+
       // ⚠️ SICHERHEIT: WhatsApp-Versand beim Erstellen aus Emails ist DEAKTIVIERT
       // Um zu verhindern, dass während Tests Nachrichten an echte Empfänger versendet werden
       // Aktivierung nur nach expliziter Freigabe!
+      // HINWEIS: Die Sofort-Versendung oben verwendet bereits sendReservationInvitation,
+      // die sowohl Email als auch WhatsApp versendet (je nach Kontaktdaten)
       const EMAIL_RESERVATION_WHATSAPP_ENABLED = process.env.EMAIL_RESERVATION_WHATSAPP_ENABLED === 'true';
       
       if (!EMAIL_RESERVATION_WHATSAPP_ENABLED) {
@@ -96,19 +159,26 @@ export class EmailReservationService {
       }
 
       // Automatisch WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden UND aktiviert)
-      if (EMAIL_RESERVATION_WHATSAPP_ENABLED && reservation.guestPhone) {
+      // NUR wenn nicht bereits durch Sofort-Versendung oben versendet wurde
+      if (EMAIL_RESERVATION_WHATSAPP_ENABLED && reservation.guestPhone && !reservation.invitationSentAt) {
         try {
           // Verwende neue Service-Methode sendReservationInvitation()
           const { ReservationNotificationService } = await import('./reservationNotificationService');
           const result = await ReservationNotificationService.sendReservationInvitation(
             reservation.id,
             {
+              guestPhone: reservation.guestPhone,
               amount: parsedEmail.amount,
               currency: parsedEmail.currency || 'COP'
             }
           );
 
           if (result.success) {
+            // Markiere als versendet
+            await prisma.reservation.update({
+              where: { id: reservation.id },
+              data: { invitationSentAt: new Date() }
+            });
             logger.log(`[EmailReservation] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservation ${reservation.id}`);
           } else {
             logger.warn(`[EmailReservation] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservation ${reservation.id}: ${result.error}`);
@@ -118,7 +188,12 @@ export class EmailReservationService {
           // Fehler nicht weiterwerfen, Reservation wurde bereits erstellt
         }
       } else {
-        logger.log(`[EmailReservation] Keine Telefonnummer vorhanden, WhatsApp-Nachricht wird nicht versendet`);
+        if (!reservation.guestPhone) {
+          logger.log(`[EmailReservation] Keine Telefonnummer vorhanden, WhatsApp-Nachricht wird nicht versendet`);
+        }
+        if (reservation.invitationSentAt) {
+          logger.log(`[EmailReservation] Einladung bereits versendet (durch Sofort-Versendung)`);
+        }
       }
 
       return reservation;

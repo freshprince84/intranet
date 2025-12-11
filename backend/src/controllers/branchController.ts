@@ -47,6 +47,8 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 boldPaymentSettings: true,
                 doorSystemSettings: true,
                 emailSettings: true,
+                messageTemplates: true,
+                autoSendReservationInvitation: true,
                 roles: {
                     where: { roleId: roleId },
                     select: { id: true }
@@ -60,7 +62,9 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 lobbyPmsSettings: true,
                 boldPaymentSettings: true,
                 doorSystemSettings: true,
-                emailSettings: true
+                emailSettings: true,
+                messageTemplates: true,
+                autoSendReservationInvitation: true
             };
         }
         
@@ -119,6 +123,15 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 }
             }
             
+            // Entschlüssele Message Templates
+            if (branch.messageTemplates) {
+                try {
+                    branch.messageTemplates = decryptBranchApiSettings(branch.messageTemplates as any);
+                } catch (error) {
+                    logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der Message Templates für Branch ${branch.id}:`, error);
+                }
+            }
+            
             return branch;
         });
         
@@ -155,7 +168,9 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 lobbyPmsSettings: (branch as any).lobbyPmsSettings,
                 boldPaymentSettings: (branch as any).boldPaymentSettings,
                 doorSystemSettings: (branch as any).doorSystemSettings,
-                emailSettings: (branch as any).emailSettings
+                emailSettings: (branch as any).emailSettings,
+                messageTemplates: (branch as any).messageTemplates,
+                autoSendReservationInvitation: (branch as any).autoSendReservationInvitation
             })) as any;
         }
         
@@ -396,7 +411,7 @@ export const createBranch = async (req: Request, res: Response) => {
 export const updateBranch = async (req: Request, res: Response) => {
     try {
         const branchId = parseInt(req.params.id, 10);
-        const { name, whatsappSettings, lobbyPmsSettings, boldPaymentSettings, doorSystemSettings, emailSettings } = req.body;
+        const { name, whatsappSettings, lobbyPmsSettings, boldPaymentSettings, doorSystemSettings, emailSettings, messageTemplates, autoSendReservationInvitation } = req.body;
 
         if (isNaN(branchId)) {
             return res.status(400).json({ message: 'Ungültige Niederlassungs-ID' });
@@ -487,6 +502,16 @@ export const updateBranch = async (req: Request, res: Response) => {
                 logger.warn('[Branch Controller] Email Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
+        
+        let encryptedMessageTemplates = messageTemplates;
+        if (messageTemplates) {
+            try {
+                encryptedMessageTemplates = encryptBranchApiSettings(messageTemplates);
+                logger.log('[Branch Controller] Message Templates verschlüsselt');
+            } catch (error) {
+                logger.warn('[Branch Controller] Message Templates Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+            }
+        }
 
         // Aktualisiere Branch
         const updateData: any = {
@@ -508,6 +533,12 @@ export const updateBranch = async (req: Request, res: Response) => {
         if (emailSettings !== undefined) {
             updateData.emailSettings = encryptedEmailSettings;
         }
+        if (messageTemplates !== undefined) {
+            updateData.messageTemplates = encryptedMessageTemplates;
+        }
+        if (autoSendReservationInvitation !== undefined) {
+            updateData.autoSendReservationInvitation = autoSendReservationInvitation;
+        }
 
         const updatedBranch = await prisma.branch.update({
             where: { id: branchId },
@@ -519,7 +550,9 @@ export const updateBranch = async (req: Request, res: Response) => {
                 lobbyPmsSettings: true,
                 boldPaymentSettings: true,
                 doorSystemSettings: true,
-                emailSettings: true
+                emailSettings: true,
+                messageTemplates: true,
+                autoSendReservationInvitation: true
             }
         });
 
@@ -563,6 +596,14 @@ export const updateBranch = async (req: Request, res: Response) => {
                 (updatedBranch as any).emailSettings = decryptBranchApiSettings(updatedBranch.emailSettings as any);
             } catch (error) {
                 logger.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
+            }
+        }
+        
+        if (updatedBranch.messageTemplates) {
+            try {
+                (updatedBranch as any).messageTemplates = decryptBranchApiSettings(updatedBranch.messageTemplates as any);
+            } catch (error) {
+                logger.warn('[Branch Controller] Fehler beim Entschlüsseln der Message Templates:', error);
             }
         }
 
