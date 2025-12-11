@@ -277,8 +277,7 @@ export const getRequestsByUserForDate = async (req: Request, res: Response) => {
                         status: r.status,
                         role: r.role,
                         branch: r.branch,
-                        createdAt: r.createdAt,
-                        updatedAt: r.updatedAt
+                        createdAt: r.createdAt
                     }))
                 }
             };
