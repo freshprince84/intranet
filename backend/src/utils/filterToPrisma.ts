@@ -55,29 +55,45 @@ export function convertFilterConditionsToPrismaWhere(
     return {};
   }
 
-  // ✅ VEREINFACHT: Sequentielle Auswertung von links nach rechts
-  // Beispiel: A AND B OR C = ((A AND B) OR C)
-  // Das ist die einfachste und intuitivste Logik für Filter-UIs
+  // ✅ KORREKT: AND hat höhere Präzedenz als OR (wie in Mathematik/Logik)
+  // Beispiel: A OR B AND C AND D = A OR (B AND C AND D)
+  // 
+  // Algorithmus:
+  // 1. Gruppiere aufeinanderfolgende ANDs
+  // 2. Verbinde die Gruppen mit OR
   
   if (prismaConditions.length === 1) {
     return prismaConditions[0];
   }
   
-  // Baue die Klausel sequentiell auf
-  let result = prismaConditions[0];
+  // Schritt 1: Teile bei OR in Gruppen auf
+  const groups: any[][] = [[prismaConditions[0]]];
   
   for (let i = 1; i < prismaConditions.length; i++) {
     const operator = operators[i - 1] || 'AND';
-    const nextCondition = prismaConditions[i];
     
     if (operator === 'OR') {
-      result = { OR: [result, nextCondition] };
+      // OR: Neue Gruppe starten
+      groups.push([prismaConditions[i]]);
     } else {
-      result = { AND: [result, nextCondition] };
+      // AND: Zur aktuellen Gruppe hinzufügen
+      groups[groups.length - 1].push(prismaConditions[i]);
     }
   }
   
-  return result;
+  // Schritt 2: Jede Gruppe zu AND-Klausel konvertieren
+  const groupClauses = groups.map(group => {
+    if (group.length === 1) {
+      return group[0];
+    }
+    return { AND: group };
+  });
+  
+  // Schritt 3: Alle Gruppen mit OR verbinden
+  if (groupClauses.length === 1) {
+    return groupClauses[0];
+  }
+  return { OR: groupClauses };
 }
 
 /**
@@ -775,4 +791,5 @@ export function validateFilterAgainstIsolation(
 
   return removeIsolationFilters(filterWhereClause);
 }
+
 
