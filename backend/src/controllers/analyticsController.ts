@@ -49,17 +49,21 @@ export const getTodosByUserForDate = async (req: Request, res: Response) => {
                             }
                         ]
                     },
-                    include: {
+                    // ✅ PERFORMANCE: Nur benötigte Felder, KEINE Attachments (Binary-Daten)
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        updatedAt: true,
+                        createdAt: true,
                         branch: {
                             select: {
                                 id: true,
                                 name: true
                             }
                         },
-                        attachments: {
-                            orderBy: {
-                                uploadedAt: 'desc'
-                            }
+                        _count: {
+                            select: { attachments: true }
                         }
                     }
                 },
@@ -85,17 +89,21 @@ export const getTodosByUserForDate = async (req: Request, res: Response) => {
                             }
                         ]
                     },
-                    include: {
+                    // ✅ PERFORMANCE: Nur benötigte Felder, KEINE Attachments (Binary-Daten)
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        updatedAt: true,
+                        createdAt: true,
                         branch: {
                             select: {
                                 id: true,
                                 name: true
                             }
                         },
-                        attachments: {
-                            orderBy: {
-                                uploadedAt: 'desc'
-                            }
+                        _count: {
+                            select: { attachments: true }
                         }
                     }
                 }
@@ -185,17 +193,20 @@ export const getRequestsByUserForDate = async (req: Request, res: Response) => {
                             }
                         ]
                     },
-                    include: {
+                    // ✅ PERFORMANCE: Nur benötigte Felder, KEINE Attachments
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        createdAt: true,
                         branch: {
                             select: {
                                 id: true,
                                 name: true
                             }
                         },
-                        attachments: {
-                            orderBy: {
-                                uploadedAt: 'desc'
-                            }
+                        _count: {
+                            select: { attachments: true }
                         }
                     }
                 },
@@ -211,17 +222,20 @@ export const getRequestsByUserForDate = async (req: Request, res: Response) => {
                             }
                         ]
                     },
-                    include: {
+                    // ✅ PERFORMANCE: Nur benötigte Felder, KEINE Attachments
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        createdAt: true,
                         branch: {
                             select: {
                                 id: true,
                                 name: true
                             }
                         },
-                        attachments: {
-                            orderBy: {
-                                uploadedAt: 'desc'
-                            }
+                        _count: {
+                            select: { attachments: true }
                         }
                     }
                 }
@@ -381,10 +395,9 @@ export const getTodosChronological = async (req: Request, res: Response) => {
                         name: true
                     }
                 },
-                attachments: {
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
+                // ✅ PERFORMANCE: Nur Count, KEINE Binary-Daten
+                _count: {
+                    select: { attachments: true }
                 },
                 statusHistory: {
                     where: {
@@ -504,10 +517,9 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
                         name: true
                     }
                 },
-                attachments: {
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
+                // ✅ PERFORMANCE: Nur Count, KEINE Binary-Daten
+                _count: {
+                    select: { attachments: true }
                 }
             },
             orderBy: {
