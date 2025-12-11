@@ -357,12 +357,14 @@ const Requests: React.FC = () => {
   }, [viewMode]);
 
   // ✅ PAGINATION: fetchRequests mit Pagination
+  // ✅ MEMORY-LEAK-FIX: operators als Parameter statt aus State lesen
   const fetchRequests = useCallback(async (
     filterId?: number, 
     filterConditions?: any[], 
     append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
     limit = 20,
-    offset = 0
+    offset = 0,
+    operators?: ('AND' | 'OR')[] // ✅ NEU: operators als Parameter
   ) => {
     try {
       if (!append) {
@@ -382,7 +384,7 @@ const Requests: React.FC = () => {
       } else if (filterConditions && filterConditions.length > 0) {
         params.filterConditions = JSON.stringify({
           conditions: filterConditions,
-          operators: filterLogicalOperators
+          operators: operators || [] // ✅ MEMORY-LEAK-FIX: Parameter statt State
         });
       }
       
@@ -521,7 +523,7 @@ const Requests: React.FC = () => {
         setLoadingMore(false);
       }
     }
-  }, [filterLogicalOperators]);
+  }, []); // ✅ MEMORY-LEAK-FIX: Keine Dependencies - operators kommt als Parameter
 
   // ❌ loadMoreRequests entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
@@ -666,9 +668,9 @@ const Requests: React.FC = () => {
     updateSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
     
     if (conditions.length > 0) {
-      await fetchRequests(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+      await fetchRequests(undefined, conditions, false, 20, 0, operators); // ✅ MEMORY-LEAK-FIX: operators als Parameter
     } else {
-      await fetchRequests(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
+      await fetchRequests(undefined, undefined, false, 20, 0, []); // ✅ PAGINATION: Kein Filter
     }
   }, [fetchRequests, updateSortConfig]);
   
@@ -853,6 +855,12 @@ const Requests: React.FC = () => {
       });
   }, [requests, selectedFilterId, searchTerm, sortConfig]); // ✅ cardSortDirections entfernt (Phase 2), cardMetadataOrder & visibleCardMetadata entfernt (nicht mehr benötigt für Sortierung)
 
+  // ✅ MEMORY-LEAK-FIX: Ref für aktuelle Operatoren (verhindert fetchRequests-Recreation)
+  const filterLogicalOperatorsRef = useRef(filterLogicalOperators);
+  useEffect(() => {
+    filterLogicalOperatorsRef.current = filterLogicalOperators;
+  }, [filterLogicalOperators]);
+
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -867,7 +875,8 @@ const Requests: React.FC = () => {
             filterConditions.length > 0 ? filterConditions : undefined,
             true, // append = true
             20, // limit
-            nextOffset // offset
+            nextOffset, // offset
+            filterLogicalOperatorsRef.current // ✅ MEMORY-LEAK-FIX: operators aus Ref
           );
         }
       },
@@ -882,7 +891,7 @@ const Requests: React.FC = () => {
       // ✅ PERFORMANCE: disconnect() statt unobserve() (trennt alle Observer-Verbindungen, robuster)
       observer.disconnect();
     };
-  }, [hasMore, loadingMore, loading, selectedFilterId, filterConditions, fetchRequests]); // ✅ MEMORY: requests.length entfernt (verhindert Endlosschleife), verwende requestsLengthRef
+  }, [hasMore, loadingMore, loading, selectedFilterId, filterConditions, fetchRequests]); // ✅ MEMORY-LEAK-FIX: filterLogicalOperators entfernt (kommt aus Ref)
 
   // Funktion zum Kopieren eines Requests
   const handleCopyRequest = async (request) => {
