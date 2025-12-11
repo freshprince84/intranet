@@ -105,8 +105,8 @@ const TODOS_TABLE_ID = 'worktracker-todos';
 const RESERVATIONS_TABLE_ID = 'worktracker-reservations';
 
 // Maximale Anzahl Items im Memory (verhindert Memory Leaks bei Infinite Scroll)
-const MAX_TASKS = 1000;
-const MAX_RESERVATIONS = 1000;
+const MAX_TASKS = 200;
+const MAX_RESERVATIONS = 200;
 
 
 // Card-Einstellungen Standardwerte
