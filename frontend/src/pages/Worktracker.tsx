@@ -514,12 +514,14 @@ const Worktracker: React.FC = () => {
     const hasLoadedRef = useRef(false);
 
     // ✅ PAGINATION: loadTasks mit Pagination
+    // ✅ MEMORY-LEAK-FIX: operators als Parameter statt aus State lesen
     const loadTasks = useCallback(async (
         filterId?: number, 
         filterConditions?: any[], 
         append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
         limit = 20,
-        offset = 0
+        offset = 0,
+        operators?: ('AND' | 'OR')[] // ✅ NEU: operators als Parameter
     ) => {
         try {
             if (!append) {
@@ -539,7 +541,7 @@ const Worktracker: React.FC = () => {
             } else if (filterConditions && filterConditions.length > 0) {
                 params.filterConditions = JSON.stringify({
                     conditions: filterConditions,
-                    operators: filterLogicalOperators
+                    operators: operators || [] // ✅ MEMORY-LEAK-FIX: Parameter statt State
                 });
             }
             
@@ -670,7 +672,7 @@ const Worktracker: React.FC = () => {
                 setTasksLoadingMore(false);
             }
         }
-    }, [filterLogicalOperators]);
+    }, []); // ✅ MEMORY-LEAK-FIX: Keine Dependencies - operators kommt als Parameter
     
     // ❌ loadMoreTasks entfernt - nicht mehr nötig (Infinite Scroll nur für Anzeige)
 
@@ -685,9 +687,9 @@ const Worktracker: React.FC = () => {
         updateTasksSortConfig({ key: 'dueDate', direction: 'asc' }); // Reset Sortierung
         
         if (conditions.length > 0) {
-            await loadTasks(undefined, conditions, false, 20, 0); // ✅ PAGINATION: limit=20, offset=0
+            await loadTasks(undefined, conditions, false, 20, 0, operators); // ✅ MEMORY-LEAK-FIX: operators als Parameter
         } else {
-            await loadTasks(undefined, undefined, false, 20, 0); // ✅ PAGINATION: Kein Filter
+            await loadTasks(undefined, undefined, false, 20, 0, []); // ✅ PAGINATION: Kein Filter
         }
     }, [loadTasks]); // ✅ loadTasks als Dependency
 
@@ -968,6 +970,12 @@ const Worktracker: React.FC = () => {
     useEffect(() => {
         filterConditionsRef.current = filterConditions;
     }, [filterConditions]);
+    
+    // ✅ MEMORY-LEAK-FIX: filterLogicalOperators als useRef verwenden
+    const filterLogicalOperatorsRef = useRef(filterLogicalOperators);
+    useEffect(() => {
+        filterLogicalOperatorsRef.current = filterLogicalOperators;
+    }, [filterLogicalOperators]);
     
     // ✅ PERFORMANCE: reservationFilterConditions als useRef verwenden (verhindert Re-Render-Loops)
     const reservationFilterConditionsRef = useRef(reservationFilterConditions);
@@ -1827,12 +1835,14 @@ const Worktracker: React.FC = () => {
                     const nextOffset = tasksLengthRef.current;
                     // ✅ FIX: Verwende filterConditionsRef.current statt filterConditions direkt
                     const currentFilterConditions = filterConditionsRef.current;
+                    const currentFilterOperators = filterLogicalOperatorsRef.current;
                     loadTasks(
                         selectedFilterId || undefined,
                         currentFilterConditions.length > 0 ? currentFilterConditions : undefined,
                         true, // append = true
                         20, // limit
-                        nextOffset // offset
+                        nextOffset, // offset
+                        currentFilterOperators // ✅ MEMORY-LEAK-FIX: operators aus Ref
                     );
                 }
             },
