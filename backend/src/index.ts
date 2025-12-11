@@ -41,13 +41,43 @@ const server = http.createServer(app);
 const claudeConsoleService = getClaudeConsoleService();
 claudeConsoleService.setupWebSocketServer(server);
 
-// Server starten
-server.listen(PORT, () => {
-  logger.log(`🚀 Server läuft auf Port ${PORT}`);
-  logger.log(`📊 Database verfügbar`);
-  logger.log(`🔍 Claude API verfügbar unter /api/claude/`);
-  logger.log(`🖥️ Claude Console WebSocket verfügbar unter ws://localhost:${PORT}/ws/claude-console`);
-}).on('error', (err: NodeJS.ErrnoException) => {
+// ✅ FIX: Warte auf DB-Verbindung bevor Server startet
+const startServer = async () => {
+  try {
+    // Prisma Connection mit Retry
+    let connected = false;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        await prisma.$connect();
+        logger.log('✅ Prisma DB-Verbindung hergestellt');
+        connected = true;
+        break;
+      } catch (err) {
+        logger.warn(`[Prisma] Verbindungsversuch ${attempt}/5 fehlgeschlagen, retry in 2s...`);
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+    if (!connected) {
+      logger.error('❌ Konnte keine DB-Verbindung herstellen nach 5 Versuchen!');
+      process.exit(1);
+    }
+  } catch (err) {
+    logger.error('❌ DB-Verbindungsfehler:', err);
+    process.exit(1);
+  }
+
+  // Server starten
+  server.listen(PORT, () => {
+    logger.log(`🚀 Server läuft auf Port ${PORT}`);
+    logger.log(`📊 Database verfügbar`);
+    logger.log(`🔍 Claude API verfügbar unter /api/claude/`);
+    logger.log(`🖥️ Claude Console WebSocket verfügbar unter ws://localhost:${PORT}/ws/claude-console`);
+  });
+};
+
+startServer();
+
+server.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code === 'EADDRINUSE') {
     logger.error(`\n❌ FEHLER: Port ${PORT} ist bereits belegt!`);
     logger.error(`\n📋 Lösungsvorschläge:`);
