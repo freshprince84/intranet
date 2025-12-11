@@ -197,6 +197,15 @@ const Header: React.FC = () => {
         }
     }, [logoLoadFailed, organization]);
 
+    // ✅ MEMORY FIX: Cleanup für timeoutRef beim Unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
+
     // Hilfsfunktion: Prüft, ob eine Rolle für eine Branch verfügbar ist
     const isRoleAvailableForBranch = (role: any, branchId: number | null): boolean => {
         if (!branchId) return true; // Wenn keine Branch aktiv, zeige alle Rollen

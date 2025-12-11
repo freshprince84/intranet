@@ -645,16 +645,20 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       }
     });
 
+    // ✅ MEMORY FIX: Speichere Timer-IDs für Cleanup
+    let outerTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let innerTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
     if (hasMeasurements) {
       // State-Updates verzögern um React Error #185 zu vermeiden
       const shouldEndMeasuring = isMeasuring;
-      setTimeout(() => {
+      outerTimeoutId = setTimeout(() => {
         setMeasuredTagWidths(widths);
         // Nach erfolgreicher Messung: Messmodus beenden und neu berechnen
         if (shouldEndMeasuring) {
           setIsMeasuring(false);
           // Trigger Neuberechnung durch setTimeout (nach State-Update)
-          setTimeout(() => {
+          innerTimeoutId = setTimeout(() => {
             if (containerRef.current) {
               calculateVisibleTags();
             }
@@ -662,6 +666,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         }
       }, 0);
     }
+
+    // ✅ MEMORY FIX: Cleanup alle Timer bei Unmount
+    return () => {
+      if (outerTimeoutId) clearTimeout(outerTimeoutId);
+      if (innerTimeoutId) clearTimeout(innerTimeoutId);
+    };
   }, [sortedFilters, visibleTagCount, isMeasuring, calculateVisibleTags]);
 
   // ✅ FIX: Initial calculation mit Verzögerung, damit Container ihre finale Größe haben
