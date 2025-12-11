@@ -281,17 +281,24 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
 
   // Auto-scroll to selected report
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    
     if (selectedReportId && reports.length > 0 && selectedReportRef.current) {
       selectedReportRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       
       // Highlight the row temporarily
       selectedReportRef.current.style.backgroundColor = '#dbeafe';
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (selectedReportRef.current) {
           selectedReportRef.current.style.backgroundColor = '';
         }
       }, 2000);
     }
+    
+    // ✅ MEMORY FIX: Cleanup Timer bei Unmount/Re-render
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [selectedReportId, reports]);
 
   const loadReports = async () => {

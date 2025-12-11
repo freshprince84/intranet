@@ -130,13 +130,17 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
   const [editingContractEndDate, setEditingContractEndDate] = useState<string>('');
 
   const fetchDataRef = useRef(false);
+  // ✅ MEMORY FIX: Ref für Mounted-Status und Timer-Cleanup
+  const isMountedRef = useRef(true);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const statusChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchData = useCallback(async (force: boolean = false) => {
     // Verhindere mehrfaches gleichzeitiges Laden (außer wenn force=true)
     if (fetchDataRef.current && !force) {
       // Wenn bereits geladen wird, warte kurz und versuche es erneut
-      setTimeout(() => {
-        if (!fetchDataRef.current) {
+      retryTimeoutRef.current = setTimeout(() => {
+        if (!fetchDataRef.current && isMountedRef.current) {
           fetchData(true);
         }
       }, 500);
@@ -152,6 +156,9 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         axiosInstance.get(API_ENDPOINTS.LIFECYCLE.CONTRACTS(userId)),
         axiosInstance.get(API_ENDPOINTS.TASKS.BY_USER(userId)).catch(() => ({ data: [] })) // Optional, falls fehlschlägt
       ]);
+      
+      // ✅ MEMORY FIX: Nur State setzen wenn noch gemounted
+      if (!isMountedRef.current) return;
       
       setLifecycleData(lifecycleResponse.data);
       setCertificates(certsResponse.data?.certificates || []);
@@ -172,13 +179,16 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
       // Prüfe ob automatische Status-Änderung nötig ist (wird im Backend gemacht, aber hier prüfen wir für UI-Feedback)
       if (lifecycleResponse.data?.lifecycle?.status === 'onboarding' && lifecycleResponse.data?.progress?.percent === 100) {
         // Status wird automatisch im Backend geändert, lade Daten nach kurzer Verzögerung neu
-        setTimeout(() => {
-          fetchData();
+        statusChangeTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            fetchData();
+          }
         }, 1000);
       }
       
       setError(null);
     } catch (err: any) {
+      if (!isMountedRef.current) return;
       console.error('Fehler beim Laden der Lebenszyklus-Daten:', err);
       setError(err.response?.data?.message || 'Fehler beim Laden der Daten');
       showMessage('Fehler beim Laden der Daten', 'error');
@@ -189,8 +199,16 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
   }, [userId]); // showMessage entfernt, da es sich ändern kann
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchDataRef.current = false; // Reset beim userId-Wechsel
     fetchData();
+    
+    // ✅ MEMORY FIX: Cleanup Timer bei Unmount
+    return () => {
+      isMountedRef.current = false;
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+      if (statusChangeTimeoutRef.current) clearTimeout(statusChangeTimeoutRef.current);
+    };
   }, [fetchData]);
 
   const handleDownloadCertificate = async (certId: number) => {

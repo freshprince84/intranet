@@ -27,6 +27,8 @@ const OnboardingTour: React.FC = () => {
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const isDismissingRef = useRef<boolean>(false); // Verhindert mehrfache Aufrufe
+  // ✅ MEMORY FIX: Ref für Timer-Cleanup
+  const dismissTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Aktueller Schritt
   const currentStepData = filteredSteps[currentStep];
@@ -42,7 +44,13 @@ const OnboardingTour: React.FC = () => {
       setIsMobile(window.innerWidth < 640);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      // ✅ MEMORY FIX: Cleanup Timer bei Unmount
+      if (dismissTimeoutRef.current) {
+        clearTimeout(dismissTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Track Step-Start
@@ -96,7 +104,8 @@ const OnboardingTour: React.FC = () => {
       // Zum nächsten Schritt weitergehen
       nextStep();
     } finally {
-      setTimeout(() => {
+      // ✅ MEMORY FIX: Timer in Ref speichern für Cleanup
+      dismissTimeoutRef.current = setTimeout(() => {
         isDismissingRef.current = false;
       }, 300);
     }
