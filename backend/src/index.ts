@@ -66,12 +66,12 @@ const startServer = async () => {
     process.exit(1);
   }
 
-  // Server starten
-  server.listen(PORT, () => {
-    logger.log(`🚀 Server läuft auf Port ${PORT}`);
-    logger.log(`📊 Database verfügbar`);
-    logger.log(`🔍 Claude API verfügbar unter /api/claude/`);
-    logger.log(`🖥️ Claude Console WebSocket verfügbar unter ws://localhost:${PORT}/ws/claude-console`);
+// Server starten
+server.listen(PORT, () => {
+  logger.log(`🚀 Server läuft auf Port ${PORT}`);
+  logger.log(`📊 Database verfügbar`);
+  logger.log(`🔍 Claude API verfügbar unter /api/claude/`);
+  logger.log(`🖥️ Claude Console WebSocket verfügbar unter ws://localhost:${PORT}/ws/claude-console`);
   });
 };
 

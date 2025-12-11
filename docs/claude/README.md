@@ -80,7 +80,8 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 - **[log_housekeeping.md](log_housekeeping.md)** - Automatisches Log-Management und Rotation-System für Claude Console Logs
 
 ### Performance-Analyse
-- **[PERFORMANCE_ANALYSE_VOLLSTAENDIG.md](../technical/PERFORMANCE_ANALYSE_VOLLSTAENDIG.md)** - ⭐ **NEU**: Vollständige Performance-Analyse mit konkreten Lösungsvorschlägen (2025-01-21)
+- **[MEMORY_LEAKS_UND_PERFORMANCE_FIXES_2025-12-11.md](../technical/MEMORY_LEAKS_UND_PERFORMANCE_FIXES_2025-12-11.md)** - ⭐ **KRITISCH**: Alle Memory Leak und Performance Fixes mit Checklisten (2025-12-11) - **MUSS bei neuen Implementierungen befolgt werden!**
+- **[PERFORMANCE_ANALYSE_VOLLSTAENDIG.md](../technical/PERFORMANCE_ANALYSE_VOLLSTAENDIG.md)** - Vollständige Performance-Analyse mit konkreten Lösungsvorschlägen (2025-01-21)
 
 ### Queue-System
 - **[QUEUE_SYSTEM_README.md](../technical/QUEUE_SYSTEM_README.md)** - Queue-System Dokumentations-Übersicht

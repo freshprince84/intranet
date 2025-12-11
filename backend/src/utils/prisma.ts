@@ -8,11 +8,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // ✅ PERFORMANCE: Connection Pool - Werte aus DATABASE_URL verwenden oder Defaults
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL environment variable is not set');
-}
-
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
+  
 // Extrahiere connection_limit aus DATABASE_URL oder nutze Default
 const urlParams = new URLSearchParams(databaseUrl.split('?')[1] || '');
 const connectionLimit = parseInt(urlParams.get('connection_limit') || '10', 10); // Default: 10 (nicht 25!)
