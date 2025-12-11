@@ -1691,33 +1691,6 @@ async function main() {
             }
           });
           
-          // ✅ PHASE 4: "Alle" Filter (status != approved AND branch = aktueller branch)
-          await prisma.savedFilter.upsert({
-            where: {
-              userId_tableId_name: {
-                userId,
-                tableId: requestsTableId,
-                name: 'Alle'
-              }
-            },
-            update: {
-              conditions: JSON.stringify([
-                { column: 'status', operator: 'notEquals', value: 'approved' },
-                { column: 'branch', operator: 'equals', value: '__CURRENT_BRANCH__' }
-              ]),
-              operators: JSON.stringify(['AND'])
-            },
-            create: {
-              userId,
-              tableId: requestsTableId,
-              name: 'Alle',
-              conditions: JSON.stringify([
-                { column: 'status', operator: 'notEquals', value: 'approved' },
-                { column: 'branch', operator: 'equals', value: '__CURRENT_BRANCH__' }
-              ]),
-              operators: JSON.stringify(['AND'])
-            }
-          });
           
           // Standard-Filter für Reservations (worktracker-reservations)
           const reservationsTableId = 'worktracker-reservations';
@@ -2240,19 +2213,22 @@ async function main() {
               let operators: string[] = [];
 
               if (table.id === 'requests-table') {
-                // Requests: requestedBy = user ODER responsible = user
+                // Requests: requestedBy = user ODER responsible = user UND status != approved UND status != denied
                 conditions = [
                   { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
-                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` }
+                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'status', operator: 'notEquals', value: 'approved' },
+                  { column: 'status', operator: 'notEquals', value: 'denied' }
                 ];
-                operators = ['OR'];
+                operators = ['OR', 'AND', 'AND'];
               } else if (table.id === 'worktracker-todos') {
-                // ToDos: responsible = user ODER qualityControl = user
+                // ToDos: responsible = user ODER qualityControl = user UND status != done
                 conditions = [
                   { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
-                  { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` }
+                  { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'status', operator: 'notEquals', value: 'done' }
                 ];
-                operators = ['OR'];
+                operators = ['OR', 'AND'];
               }
 
               // Finde die höchste order-Nummer in der Gruppe

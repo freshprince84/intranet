@@ -66,7 +66,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     if (name === 'Heute' || name === 'Hoy') return t('common.today', 'Heute');
     if (name === 'Woche') return t('common.week', 'Woche');
     if (name === 'Aktive') return t('common.active', 'Aktive');
-    if (name === 'Alle') return t('common.all', 'Alle');
+    if (name === 'Alle' || name === 'Todos') return t('common.all', 'Alle');
     // Für alle anderen Namen, gib sie unverändert zurück (z.B. Client-Namen)
     return name;
   };
@@ -306,7 +306,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const isStandardFilter = (filterName: string) => {
     // Erkenne auch Übersetzungsschlüssel
     const standardFilterNames = [
-      'Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Woche', 'Hoy',
+      'Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Woche', 'Hoy', 'Todos',
       'tasks.filters.archive', 'tasks.filters.current',
       'requests.filters.archiv', 'requests.filters.aktuell'
     ];

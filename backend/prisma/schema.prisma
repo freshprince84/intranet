@@ -213,6 +213,8 @@ model Branch {
   boldPaymentSettings   Json? // NEU: Bold Payment-Konfiguration pro Branch
   doorSystemSettings    Json? // NEU: TTLock/Türsystem-Konfiguration pro Branch
   emailSettings         Json? // NEU: Email-Konfiguration pro Branch (SMTP + IMAP)
+  messageTemplates      Json? // NEU: Konfigurierbare Mitteilungsvorlagen (Check-in-Einladung, Check-in-Bestätigung)
+  autoSendReservationInvitation Boolean? @default(false) // NEU: Automatisches Versenden von Check-in-Einladungen aktivieren/deaktivieren
   requests              Request[]
   tasks                 Task[]
   users                 UsersBranches[]

@@ -1161,6 +1161,65 @@ export class LobbyPmsService {
         }
       }
 
+      // NEU: Sofort-Versendung wenn Check-in-Date heute oder in Vergangenheit
+      // UND autoSendReservationInvitation aktiviert
+      // UND noch nicht versendet (invitationSentAt === null)
+      if (reservation.checkInDate) {
+        const checkInDate = new Date(reservation.checkInDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        checkInDate.setHours(0, 0, 0, 0);
+        
+        // Prüfe ob Check-in-Date heute oder in Vergangenheit
+        const isTodayOrPast = checkInDate <= today;
+        
+        // Prüfe Branch Settings: autoSendReservationInvitation
+        const branch = branchId ? await prisma.branch.findUnique({
+          where: { id: branchId },
+          select: { autoSendReservationInvitation: true }
+        }) : null;
+        
+        const autoSend = branch?.autoSendReservationInvitation ?? false;
+        
+        // Prüfe ob bereits versendet
+        const alreadySent = reservation.invitationSentAt !== null;
+        
+        if (isTodayOrPast && autoSend && !alreadySent) {
+          try {
+            logger.log(`[LobbyPMS] Check-in-Date heute/vergangen → versende sofort für Reservierung ${reservation.id}`);
+            const { ReservationNotificationService } = await import('./reservationNotificationService');
+            
+            // Versende je nach verfügbaren Kontaktdaten
+            const options: any = {};
+            if (reservation.guestEmail) {
+              options.guestEmail = reservation.guestEmail;
+            }
+            if (reservation.guestPhone) {
+              options.guestPhone = reservation.guestPhone;
+            }
+            
+            const result = await ReservationNotificationService.sendReservationInvitation(
+              reservation.id,
+              options
+            );
+            
+            if (result.success) {
+              // Markiere als versendet
+              await prisma.reservation.update({
+                where: { id: reservation.id },
+                data: { invitationSentAt: new Date() }
+              });
+              logger.log(`[LobbyPMS] ✅ Sofort-Versendung erfolgreich für Reservierung ${reservation.id}`);
+            } else {
+              logger.warn(`[LobbyPMS] ⚠️ Sofort-Versendung fehlgeschlagen für Reservierung ${reservation.id}: ${result.error}`);
+            }
+          } catch (error) {
+            logger.error(`[LobbyPMS] Fehler beim sofortigen Versenden für Reservierung ${reservation.id}:`, error);
+            // Fehler nicht weiterwerfen, da Import erfolgreich war
+          }
+        }
+      }
+
       return reservation;
   }
 

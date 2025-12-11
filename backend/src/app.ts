@@ -51,6 +51,7 @@ import { ReservationScheduler } from './services/reservationScheduler';
 // import { EmailReservationScheduler } from './services/emailReservationScheduler';
 import { LobbyPmsReservationScheduler } from './services/lobbyPmsReservationScheduler';
 import { ReservationAutoCancelScheduler } from './services/reservationAutoCancelScheduler';
+import { ReservationAutoInvitationScheduler } from './services/reservationAutoInvitationScheduler';
 import { startWorkers, stopWorkers } from './queues';
 import { logger } from './utils/logger';
 
@@ -180,6 +181,9 @@ LobbyPmsReservationScheduler.start();
 
 // Automatische Stornierung von nicht bezahlten Reservierungen
 ReservationAutoCancelScheduler.start();
+
+// NEU: Automatische Versendung von Check-in-Einladungen (1 Tag vor Check-in um 08:00 Uhr in Zeitzone der Organisation)
+ReservationAutoInvitationScheduler.start();
 
 // Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
 // EmailReservationScheduler.start();
