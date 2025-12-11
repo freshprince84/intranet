@@ -63,43 +63,42 @@ export function convertFilterConditionsToPrismaWhere(
     // Alle ODER: Kombiniere mit OR
     return { OR: prismaConditions };
   } else {
-    // Gemischte Verknüpfungen: Korrekte Operator-Präzedenz
-    // OR hat niedrigere Präzedenz als AND, daher: (A OR B) AND C AND D
-    const resultGroups: any[] = [];
-    let currentOrGroup: any[] = [prismaConditions[0]];
-
+    // ✅ FIX: Gemischte Verknüpfungen - Sequentielle Auswertung von links nach rechts
+    // Beispiel: A AND B OR C AND D = ((A AND B) OR C) AND D
+    // 
+    // Algorithmus:
+    // 1. Gruppiere aufeinanderfolgende AND-Bedingungen
+    // 2. Verbinde AND-Gruppen mit OR wo nötig
+    
+    // Schritt 1: Gruppiere aufeinanderfolgende ANDs
+    const groups: any[][] = [[prismaConditions[0]]];
+    
     for (let i = 1; i < prismaConditions.length; i++) {
       const operator = operators[i - 1];
-      if (operator === 'OR') {
-        // OR: Füge zur aktuellen OR-Gruppe hinzu
-        currentOrGroup.push(prismaConditions[i]);
+      if (operator === 'AND') {
+        // AND: Füge zur aktuellen Gruppe hinzu
+        groups[groups.length - 1].push(prismaConditions[i]);
       } else {
-        // AND: Schließe OR-Gruppe ab (falls vorhanden) und starte neue AND-Gruppe
-        if (currentOrGroup.length > 0) {
-          // OR-Gruppe abschließen
-          if (currentOrGroup.length === 1) {
-            resultGroups.push(currentOrGroup[0]);
-          } else {
-            resultGroups.push({ OR: currentOrGroup });
-        }
-          currentOrGroup = [];
-        }
-        // Einzelne AND-Bedingung hinzufügen
-        resultGroups.push(prismaConditions[i]);
+        // OR: Starte neue Gruppe
+        groups.push([prismaConditions[i]]);
       }
     }
-
-    // Letzte OR-Gruppe abschließen
-    if (currentOrGroup.length > 0) {
-      if (currentOrGroup.length === 1) {
-        resultGroups.push(currentOrGroup[0]);
+    
+    // Schritt 2: Konvertiere Gruppen zu Prisma-Klauseln
+    const groupClauses = groups.map(group => {
+      if (group.length === 1) {
+        return group[0];
       } else {
-        resultGroups.push({ OR: currentOrGroup });
+        return { AND: group };
       }
+    });
+    
+    // Schritt 3: Verbinde alle Gruppen mit OR
+    if (groupClauses.length === 1) {
+      return groupClauses[0];
+    } else {
+      return { OR: groupClauses };
     }
-
-    // Alle Gruppen mit AND kombinieren
-    return resultGroups.length === 1 ? resultGroups[0] : { AND: resultGroups };
   }
 }
 
