@@ -1,7 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Role, Permission, AccessLevel } from '../types/interfaces';
 import { useAuth } from './useAuth.tsx';
 import axiosInstance from '../config/axios.ts';
+
+// ✅ PERFORMANCE: Globaler Cache für lifecycle-roles (verhindert doppelte Requests)
+let lifecycleRolesCache: { data: any; timestamp: number; promise: Promise<any> | null } = {
+    data: null,
+    timestamp: 0,
+    promise: null
+};
+const LIFECYCLE_ROLES_CACHE_TTL = 5 * 60 * 1000; // 5 Minuten
 
 /**
  * WICHTIG: Berechtigungssystem
@@ -104,8 +112,36 @@ export const usePermissions = () => {
                 return;
             }
 
-            const response = await axiosInstance.get('/organizations/current/lifecycle-roles');
-            setLifecycleRoles(response.data.lifecycleRoles);
+            const now = Date.now();
+            
+            // ✅ PERFORMANCE: Prüfe Cache
+            if (lifecycleRolesCache.data && (now - lifecycleRolesCache.timestamp) < LIFECYCLE_ROLES_CACHE_TTL) {
+                setLifecycleRoles(lifecycleRolesCache.data);
+                return;
+            }
+
+            // ✅ PERFORMANCE: Wenn bereits ein Request läuft, warte auf ihn (Request Deduplication)
+            if (lifecycleRolesCache.promise) {
+                const data = await lifecycleRolesCache.promise;
+                setLifecycleRoles(data);
+                return;
+            }
+
+            // ✅ PERFORMANCE: Starte neuen Request und speichere Promise
+            lifecycleRolesCache.promise = axiosInstance.get('/organizations/current/lifecycle-roles')
+                .then(response => {
+                    lifecycleRolesCache.data = response.data.lifecycleRoles;
+                    lifecycleRolesCache.timestamp = Date.now();
+                    lifecycleRolesCache.promise = null;
+                    return response.data.lifecycleRoles;
+                })
+                .catch(error => {
+                    lifecycleRolesCache.promise = null;
+                    throw error;
+                });
+
+            const data = await lifecycleRolesCache.promise;
+            setLifecycleRoles(data);
         } catch (error) {
             console.error('Fehler beim Laden der Lebenszyklus-Rollen:', error);
             setLifecycleRoles(null);
