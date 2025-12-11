@@ -4,6 +4,10 @@
 **Status:** ✅ Vollständig analysiert  
 **Priorität:** 🔴 KRITISCH
 
+> **⚠️ WICHTIG:** Für die neuesten Memory Leak und Performance Fixes (2025-12-11) siehe:  
+> **[MEMORY_LEAKS_UND_PERFORMANCE_FIXES_2025-12-11.md](./MEMORY_LEAKS_UND_PERFORMANCE_FIXES_2025-12-11.md)**  
+> Dieses Dokument enthält alle kritischen Fixes und **Checklisten für zukünftige Implementierungen**!
+
 ---
 
 ## 📊 EXECUTIVE SUMMARY
