@@ -55,51 +55,29 @@ export function convertFilterConditionsToPrismaWhere(
     return {};
   }
 
-  // UND/ODER-Verknüpfungen
-  if (operators.length === 0 || operators.every(op => op === 'AND')) {
-    // Alle UND: Kombiniere mit AND
-    return { AND: prismaConditions };
-  } else if (operators.every(op => op === 'OR')) {
-    // Alle ODER: Kombiniere mit OR
-    return { OR: prismaConditions };
-  } else {
-    // ✅ FIX: Gemischte Verknüpfungen - Sequentielle Auswertung von links nach rechts
-    // Beispiel: A AND B OR C AND D = ((A AND B) OR C) AND D
-    // 
-    // Algorithmus:
-    // 1. Gruppiere aufeinanderfolgende AND-Bedingungen
-    // 2. Verbinde AND-Gruppen mit OR wo nötig
+  // ✅ VEREINFACHT: Sequentielle Auswertung von links nach rechts
+  // Beispiel: A AND B OR C = ((A AND B) OR C)
+  // Das ist die einfachste und intuitivste Logik für Filter-UIs
+  
+  if (prismaConditions.length === 1) {
+    return prismaConditions[0];
+  }
+  
+  // Baue die Klausel sequentiell auf
+  let result = prismaConditions[0];
+  
+  for (let i = 1; i < prismaConditions.length; i++) {
+    const operator = operators[i - 1] || 'AND';
+    const nextCondition = prismaConditions[i];
     
-    // Schritt 1: Gruppiere aufeinanderfolgende ANDs
-    const groups: any[][] = [[prismaConditions[0]]];
-    
-    for (let i = 1; i < prismaConditions.length; i++) {
-      const operator = operators[i - 1];
-      if (operator === 'AND') {
-        // AND: Füge zur aktuellen Gruppe hinzu
-        groups[groups.length - 1].push(prismaConditions[i]);
-      } else {
-        // OR: Starte neue Gruppe
-        groups.push([prismaConditions[i]]);
-      }
-    }
-    
-    // Schritt 2: Konvertiere Gruppen zu Prisma-Klauseln
-    const groupClauses = groups.map(group => {
-      if (group.length === 1) {
-        return group[0];
-      } else {
-        return { AND: group };
-      }
-    });
-    
-    // Schritt 3: Verbinde alle Gruppen mit OR
-    if (groupClauses.length === 1) {
-      return groupClauses[0];
+    if (operator === 'OR') {
+      result = { OR: [result, nextCondition] };
     } else {
-      return { OR: groupClauses };
+      result = { AND: [result, nextCondition] };
     }
   }
+  
+  return result;
 }
 
 /**
