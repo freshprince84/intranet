@@ -7,48 +7,23 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// ✅ PERFORMANCE: Connection Pool optimiert (empfohlen von Prisma)
-// connection_limit: 25 für normale Anwendungen (laut Prisma Best Practices)
-// pool_timeout: 20 Sekunden
-const connectionLimit = 25; // Empfohlen: CPUs * 2 + 1, aber 25 ist sicher
-  const poolTimeout = 20;
-  
-// DATABASE_URL mit connection_limit
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL environment variable is not set');
-  }
-  
-// Erstelle URL mit connection_limit
-  let urlWithPool: string;
-  try {
-    const url = new URL(databaseUrl.replace(/^postgresql:/, 'http:'));
-    // Entferne connection_limit und pool_timeout falls vorhanden
-    url.searchParams.delete('connection_limit');
-    url.searchParams.delete('pool_timeout');
-    // Setze neue Werte
-    url.searchParams.set('connection_limit', connectionLimit.toString());
-    url.searchParams.set('pool_timeout', poolTimeout.toString());
-    urlWithPool = url.toString().replace(/^http:/, 'postgresql:');
-  } catch {
-    // Fallback: Einfache String-Ersetzung wenn URL-Parsing fehlschlägt
-    urlWithPool = databaseUrl.includes('connection_limit=')
-      ? databaseUrl.replace(/[?&]connection_limit=\d+/, '').replace(/connection_limit=\d+[&?]/, '')
-        .replace(/[?&]pool_timeout=\d+/, '').replace(/pool_timeout=\d+[&?]/, '')
-        + (databaseUrl.includes('?') ? '&' : '?') + `connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`
-      : `${databaseUrl}${databaseUrl.includes('?') ? '&' : '?'}connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`;
-  }
+// ✅ PERFORMANCE: Connection Pool - Werte aus DATABASE_URL verwenden oder Defaults
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
+
+// Extrahiere connection_limit aus DATABASE_URL oder nutze Default
+const urlParams = new URLSearchParams(databaseUrl.split('?')[1] || '');
+const connectionLimit = parseInt(urlParams.get('connection_limit') || '10', 10); // Default: 10 (nicht 25!)
+const poolTimeout = parseInt(urlParams.get('pool_timeout') || '30', 10); // Default: 30s
   
 const enableQueryLogging = process.env.ENABLE_QUERY_LOGGING === 'true' || process.env.NODE_ENV === 'development';
 
+// ✅ Nutze DATABASE_URL direkt - Werte werden dort konfiguriert
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    datasources: {
-      db: {
-        url: urlWithPool
-      }
-    },
     log: enableQueryLogging ? ['query', 'error', 'warn'] : ['error'],
   });
   
