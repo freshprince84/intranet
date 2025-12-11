@@ -288,14 +288,14 @@ const Worktracker: React.FC = () => {
     ], [t]);
 
     // Definiere Spalten für FilterPane (ohne actions und responsibleAndQualityControl)
-    const filterPaneColumns = useMemo(() => [
-        { id: 'title', label: t('tasks.columns.title') },
-        { id: 'status', label: t('tasks.columns.status') },
-        { id: 'branch', label: t('tasks.columns.branch') },
-        { id: 'dueDate', label: t('tasks.columns.dueDate') },
-        { id: 'responsible', label: t('tasks.columns.responsible') },
-        { id: 'qualityControl', label: t('tasks.columns.qualityControl') },
-    ], [t]);
+    // ✅ OPTIMIERUNG: Ableiten aus availableColumns und filterOnlyColumns (DRY-Prinzip)
+    const filterPaneColumns = useMemo(() => {
+        const fromAvailable = availableColumns
+            .filter(col => col.id !== 'actions' && col.id !== 'responsibleAndQualityControl')
+            .map(col => ({ id: col.id, label: col.label }));
+        const fromFilterOnly = filterOnlyColumns.map(col => ({ id: col.id, label: col.label }));
+        return [...fromAvailable, ...fromFilterOnly];
+    }, [availableColumns, filterOnlyColumns]);
     
     // Reservations-Spalten
     const availableReservationColumns = useMemo(() => [

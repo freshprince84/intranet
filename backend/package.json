@@ -8,7 +8,8 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "test": "jest",
-    "seed": "npx prisma db seed"
+    "seed": "npx prisma db seed",
+    "migrate-filters": "npx ts-node prisma/migrate-filters.ts"
   },
   "keywords": [],
   "author": "",
