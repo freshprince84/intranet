@@ -107,6 +107,7 @@ const ExternalLinkPreview: React.FC<ExternalLinkPreviewProps> = ({ url, alt }) =
           <img 
             src={displayThumbnail} 
             alt={displayTitle}
+            loading="lazy"
             className="w-full h-full object-cover"
             onError={(e) => {
               // Fallback bei Bildfehler: Zeige Platzhalter
@@ -350,6 +351,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                     <img 
                       src={url} 
                       alt={attachment.alt} 
+                      loading="lazy"
                       className="max-w-full border rounded dark:border-gray-700" 
                       style={{ maxHeight: '200px', objectFit: 'contain' }}
                     />
@@ -596,6 +598,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                 <img 
                   src={url} 
                   alt={attachment.alt} 
+                  loading="lazy"
                   className="w-full h-auto max-h-96 object-contain" 
                   style={{ display: 'block' }}
                 />
@@ -936,6 +939,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                 <img 
                   src={url} 
                   alt={attachment.alt} 
+                  loading="lazy"
                   className="w-full h-auto max-h-96 object-contain" 
                   style={{ display: 'block' }}
                 />

@@ -110,7 +110,7 @@ const defaultColumnOrder = ['title', 'requestedByResponsible', 'status', 'type',
 const REQUESTS_TABLE_ID = 'requests-table';
 
 // Maximale Anzahl Requests im Memory (verhindert Memory Leaks bei Infinite Scroll)
-const MAX_REQUESTS = 1000;
+const MAX_REQUESTS = 200;
 
 // Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
 // Tabellen-Spalte -> Card-Metadaten (kann Array sein für 1:N Mapping)
