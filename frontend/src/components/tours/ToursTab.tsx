@@ -400,6 +400,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     // ✅ PERFORMANCE: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
     const initialLoadAttemptedRef = useRef(false);
     
+    // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung mit leeren Dependencies (wie in Requests.tsx)
     useEffect(() => {
         // ✅ PERFORMANCE: Verhindere mehrfache Ausführung
         if (initialLoadAttemptedRef.current) {
@@ -410,31 +411,39 @@ const ToursTab: React.FC<ToursTabProps> = () => {
             // ✅ PERFORMANCE: Markiere als versucht, BEVOR async Operation startet
             initialLoadAttemptedRef.current = true;
             
-            if (!hasPermission('tours', 'read', 'table')) {
-                return;
+            try {
+                if (!hasPermission('tours', 'read', 'table')) {
+                    return;
+                }
+                
+                // 1. Filter laden (wartet auf State-Update)
+                const filters = await loadFilters(TOURS_TABLE_ID);
+                
+                // 2. Default-Filter anwenden (IMMER vorhanden!)
+                const defaultFilter = filters.find(f => f.name === 'Aktuell');
+                if (defaultFilter) {
+                    await handleTourFilterChange(
+                        defaultFilter.name,
+                        defaultFilter.id,
+                        defaultFilter.conditions,
+                        defaultFilter.operators
+                    );
+                    return; // Daten werden durch handleTourFilterChange geladen
+                }
+                
+                // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+                await loadTours();
+            } catch (error) {
+                // ✅ PERFORMANCE: Bei Fehler Ref zurücksetzen, damit Retry möglich ist
+                initialLoadAttemptedRef.current = false;
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('[ToursTab] Fehler beim Initialisieren:', error);
+                }
             }
-            
-            // 1. Filter laden (wartet auf State-Update)
-            const filters = await loadFilters(TOURS_TABLE_ID);
-            
-            // 2. Default-Filter anwenden (IMMER vorhanden!)
-            const defaultFilter = filters.find(f => f.name === 'Aktuell');
-            if (defaultFilter) {
-                await handleTourFilterChange(
-                    defaultFilter.name,
-                    defaultFilter.id,
-                    defaultFilter.conditions,
-                    defaultFilter.operators
-                );
-                return; // Daten werden durch handleTourFilterChange geladen
-            }
-            
-            // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
-            await loadTours();
         };
         
         initialize();
-    }, [hasPermission, loadFilters, handleTourFilterChange, loadTours]);
+    }, []); // ✅ STANDARD: Leere Dependencies wie im Standard-Pattern (Requests.tsx:760)
     
     const handleTourSort = (key: TourSortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
