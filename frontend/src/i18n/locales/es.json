@@ -606,6 +606,10 @@
       "improvement_suggestion": "Sugerencia de Mejora",
       "sick_leave": "Baja por Enfermedad",
       "employment_certificate": "Certificado de Trabajo",
+      "event": "Evento",
+      "permit": "Permiso",
+      "buy_order": "Pedido de venta",
+      "repair": "Reparacion",
       "other": "Otro"
     }
   },

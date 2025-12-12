@@ -395,10 +395,14 @@ const FilterRow: React.FC<FilterRowProps> = ({
             onChange={(e) => onChange(e.target.value)}
           >
             <option value="">{t('filter.row.pleaseSelect')}</option>
-            <option value="vacation">{t('requests.types.vacation')}</option>
+            <option value="event">{t('requests.types.event')}</option>
+            <option value="repair">{t('requests.types.repair')}</option>
             <option value="improvement_suggestion">{t('requests.types.improvement_suggestion')}</option>
-            <option value="sick_leave">{t('requests.types.sick_leave')}</option>
+            <option value="buy_order">{t('requests.types.buy_order')}</option>
             <option value="employment_certificate">{t('requests.types.employment_certificate')}</option>
+            <option value="vacation">{t('requests.types.vacation')}</option>
+            <option value="permit">{t('requests.types.permit')}</option>
+            <option value="sick_leave">{t('requests.types.sick_leave')}</option>
             <option value="other">{t('requests.types.other')}</option>
           </select>
         );

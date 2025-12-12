@@ -54,6 +54,14 @@ const getRequestTypeIcon = (type?: string): string => {
       return '🤒';
     case 'employment_certificate':
       return '📄';
+    case 'event':
+      return '📅';
+    case 'permit':
+      return '📋';
+    case 'buy_order':
+      return '🛒';
+    case 'repair':
+      return '🔧';
     case 'other':
     default:
       return '📝';

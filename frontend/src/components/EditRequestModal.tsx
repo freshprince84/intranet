@@ -9,6 +9,7 @@ import { XMarkIcon, TrashIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react
 import MarkdownPreview from './MarkdownPreview.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import { logger } from '../utils/logger.ts';
+import { getMinDateForType, getDefaultDateForType } from '../utils/requestDateHelpers.ts';
 
 // ✅ MEMORY LEAK FIX: Komponente für Bildvorschau mit Cleanup
 interface ImagePreviewWithCleanupProps {
@@ -143,7 +144,7 @@ const EditRequestModal = ({
   const [description, setDescription] = useState(removeImageMarkdown(request.description || ''));
   const [responsibleId, setResponsibleId] = useState(request.responsible.id);
   const [branchId, setBranchId] = useState(request.branch.id);
-  const [type, setType] = useState<'vacation' | 'improvement_suggestion' | 'sick_leave' | 'employment_certificate' | 'other'>(request.type || 'other');
+  const [type, setType] = useState<'vacation' | 'improvement_suggestion' | 'sick_leave' | 'employment_certificate' | 'event' | 'permit' | 'buy_order' | 'repair' | 'other'>(request.type || 'other');
   const [isPrivate, setIsPrivate] = useState(request.isPrivate || false);
   const [dueDate, setDueDate] = useState(request.dueDate ? request.dueDate.split('T')[0] : '');
   const [createTodo, setCreateTodo] = useState(request.createTodo);
@@ -163,6 +164,24 @@ const EditRequestModal = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   // ✅ MEMORY LEAK FIX: Track Blob-URLs für Cleanup
   const blobUrlsRef = useRef<Set<string>>(new Set());
+  // ✅ MEMORY LEAK FIX: Track Timeout-IDs für Cleanup
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Type-Change Handler
+  const handleTypeChange = (newType: string) => {
+    const newMinDate = getMinDateForType(newType);
+    const newDefaultDate = getDefaultDateForType(newType);
+    
+    setType(newType as any);
+    
+    // Wenn aktuelles dueDate vor dem neuen Mindestdatum liegt, setze auf neues Default-Datum
+    const currentDate = dueDate ? new Date(dueDate) : null;
+    const minDate = new Date(newMinDate);
+    
+    if (!currentDate || currentDate < minDate) {
+      setDueDate(newDefaultDate);
+    }
+  };
   
   const { hasPermission } = usePermissions();
   const canDeleteRequest = hasPermission('requests', 'both', 'table');
@@ -214,6 +233,16 @@ const EditRequestModal = ({
       blobUrlsRef.current.clear();
     };
   }, []);
+
+  // ✅ MEMORY LEAK FIX: Cleanup Timeout bei Modal-Schließung
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [isOpen]);
 
   // Sidepane-Status verwalten
   useEffect(() => {
@@ -365,13 +394,18 @@ const EditRequestModal = ({
           setDescription(textBefore + insertText + textAfter);
           
           // Setze den Cursor hinter den eingefügten Link
-          setTimeout(() => {
+          // ✅ MEMORY LEAK FIX: Timeout-ID speichern und cleanup
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
+          timeoutRef.current = setTimeout(() => {
             if (textareaRef.current) {
               const newPos = cursorPos + insertText.length;
               textareaRef.current.selectionStart = newPos;
               textareaRef.current.selectionEnd = newPos;
               textareaRef.current.focus();
             }
+            timeoutRef.current = null;
           }, 0);
         } else {
           setDescription(description + insertText);
@@ -663,13 +697,18 @@ const EditRequestModal = ({
           setDescription(textBefore + insertText + textAfter);
           
           // Setze den Cursor hinter den eingefügten Link
-          setTimeout(() => {
+          // ✅ MEMORY LEAK FIX: Timeout-ID speichern und cleanup
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
+          timeoutRef.current = setTimeout(() => {
             if (textareaRef.current) {
               const newPos = cursorPos + insertText.length;
               textareaRef.current.selectionStart = newPos;
               textareaRef.current.selectionEnd = newPos;
               textareaRef.current.focus();
             }
+            timeoutRef.current = null;
           }, 0);
         } else {
           setDescription(description + insertText);
@@ -960,12 +999,16 @@ const EditRequestModal = ({
         <select
           className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
           value={type}
-          onChange={(e) => setType(e.target.value as any)}
+          onChange={(e) => handleTypeChange(e.target.value)}
         >
-          <option value="vacation">{t('requests.types.vacation')}</option>
+          <option value="event">{t('requests.types.event')}</option>
+          <option value="repair">{t('requests.types.repair')}</option>
           <option value="improvement_suggestion">{t('requests.types.improvement_suggestion')}</option>
-          <option value="sick_leave">{t('requests.types.sick_leave')}</option>
+          <option value="buy_order">{t('requests.types.buy_order')}</option>
           <option value="employment_certificate">{t('requests.types.employment_certificate')}</option>
+          <option value="vacation">{t('requests.types.vacation')}</option>
+          <option value="permit">{t('requests.types.permit')}</option>
+          <option value="sick_leave">{t('requests.types.sick_leave')}</option>
           <option value="other">{t('requests.types.other')}</option>
         </select>
       </div>
@@ -976,7 +1019,18 @@ const EditRequestModal = ({
           type="date"
           className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
           value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
+          min={getMinDateForType(type)}
+          onChange={(e) => {
+            const selectedDate = e.target.value;
+            const minDate = getMinDateForType(type);
+            // Validierung: Datum darf nicht vor Mindestdatum liegen
+            if (selectedDate && selectedDate < minDate) {
+              // Setze auf Mindestdatum falls ungültig
+              setDueDate(minDate);
+            } else {
+              setDueDate(selectedDate);
+            }
+          }}
         />
       </div>
 

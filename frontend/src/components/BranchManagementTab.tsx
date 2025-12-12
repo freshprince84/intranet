@@ -860,7 +860,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                                                                 }`}
                                                             >
-                                                                {tab === 'whatsapp' ? 'WhatsApp' : tab === 'lobbypms' ? 'LobbyPMS' : tab === 'boldpayment' ? 'Bold Payment' : tab === 'doorsystem' ? 'TTLock' : tab === 'email' ? 'Email' : 'Nachrichten'}
+                                                                {tab === 'whatsapp' ? 'WhatsApp' : tab === 'lobbypms' ? 'LobbyPMS' : tab === 'boldpayment' ? 'Bold Payment' : tab === 'doorsystem' ? 'TTLock' : tab === 'email' ? 'Email' : t('branches.messagesTab', { defaultValue: 'Nachrichten' })}
                                                             </button>
                                                         ))}
                                                     </nav>
@@ -1714,7 +1714,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                                                                 }`}
                                                             >
-                                                                {tab === 'whatsapp' ? 'WhatsApp' : tab === 'lobbypms' ? 'LobbyPMS' : tab === 'boldpayment' ? 'Bold Payment' : tab === 'doorsystem' ? 'TTLock' : tab === 'email' ? 'Email' : 'Nachrichten'}
+                                                                {tab === 'whatsapp' ? 'WhatsApp' : tab === 'lobbypms' ? 'LobbyPMS' : tab === 'boldpayment' ? 'Bold Payment' : tab === 'doorsystem' ? 'TTLock' : tab === 'email' ? 'Email' : t('branches.messagesTab', { defaultValue: 'Nachrichten' })}
                                                             </button>
                                                         ))}
                                                     </nav>

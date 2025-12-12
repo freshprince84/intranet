@@ -440,6 +440,25 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
             return res.status(400).json({ message: 'Fehlende erforderliche Felder' });
         }
 
+        // Validierung: RequestType
+        const validRequestTypes: RequestType[] = [
+            'vacation',
+            'improvement_suggestion',
+            'sick_leave',
+            'employment_certificate',
+            'event',
+            'permit',
+            'buy_order',
+            'repair',
+            'other'
+        ];
+
+        if (type && !validRequestTypes.includes(type as RequestType)) {
+            return res.status(400).json({ 
+                message: `Ungültiger Request Type: ${type}. Gültige Types: ${validRequestTypes.join(', ')}` 
+            });
+        }
+
         const requesterId = parseInt(requested_by_id, 10);
         const responsibleId = parseInt(responsible_id, 10);
         const branchId = parseInt(branch_id, 10);
@@ -615,6 +634,25 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
 
         if (!existingRequest) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
+        }
+
+        // Validierung: RequestType
+        const validRequestTypes: RequestType[] = [
+            'vacation',
+            'improvement_suggestion',
+            'sick_leave',
+            'employment_certificate',
+            'event',
+            'permit',
+            'buy_order',
+            'repair',
+            'other'
+        ];
+
+        if (type && !validRequestTypes.includes(type as RequestType)) {
+            return res.status(400).json({ 
+                message: `Ungültiger Request Type: ${type}. Gültige Types: ${validRequestTypes.join(', ')}` 
+            });
         }
 
         const userId = parseInt(req.userId as string, 10);
