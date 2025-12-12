@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
 import { NotificationType } from '@prisma/client';
@@ -6,11 +7,6 @@ import { getPriceAnalysisNotificationText, getUserLanguage } from '../utils/tran
 import { logger } from '../utils/logger';
 
 const prisma = new PrismaClient();
-
-interface AuthenticatedRequest extends Request {
-  userId?: string;
-  roleId?: string;
-}
 
 /**
  * Controller für Preisregeln

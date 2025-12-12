@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth';
+import authenticate from '../middleware/auth';
 import { checkPermission } from '../middleware/permissionMiddleware';
 import { priceAnalysisController } from '../controllers/priceAnalysisController';
 import { priceRecommendationController } from '../controllers/priceRecommendationController';
