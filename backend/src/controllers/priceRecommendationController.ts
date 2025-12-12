@@ -1,14 +1,10 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth';
 import { PriceRecommendationService } from '../services/priceRecommendationService';
 import { createNotificationIfEnabled } from './notificationController';
 import { NotificationType } from '@prisma/client';
 import { getPriceAnalysisNotificationText, getUserLanguage } from '../utils/translations';
 import { logger } from '../utils/logger';
-
-interface AuthenticatedRequest extends Request {
-  userId?: string;
-  roleId?: string;
-}
 
 /**
  * Controller für Preisempfehlungen
