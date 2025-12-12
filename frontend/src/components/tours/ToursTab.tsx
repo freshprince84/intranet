@@ -89,6 +89,13 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     const [tourFilterLogicalOperators, setTourFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
     const [tourActiveFilterName, setTourActiveFilterName] = useState<string>(t('tours.filters.current', 'Aktuell'));
     const [tourSelectedFilterId, setTourSelectedFilterId] = useState<number | null>(null);
+    
+    // ✅ PERFORMANCE: Ref-Pattern für tourFilterLogicalOperators (verhindert Re-Creation von loadTours)
+    const tourFilterLogicalOperatorsRef = useRef(tourFilterLogicalOperators);
+    
+    useEffect(() => {
+        tourFilterLogicalOperatorsRef.current = tourFilterLogicalOperators;
+    }, [tourFilterLogicalOperators]);
     const [isCreateTourModalOpen, setIsCreateTourModalOpen] = useState(false);
     const [isEditTourModalOpen, setIsEditTourModalOpen] = useState(false);
     const [isTourDetailsModalOpen, setIsTourDetailsModalOpen] = useState(false);
@@ -164,6 +171,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     }, [cardMetadataOrder, hiddenCardMetadata]);
     
     // Funktion zum Laden der Tours
+    // ✅ PERFORMANCE: Ref-Pattern verwendet (tourFilterLogicalOperatorsRef) statt State als Dependency
     const loadTours = useCallback(async (filterId?: number, filterConditions?: any[], background = false) => {
         try {
             if (!background) {
@@ -177,7 +185,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
             } else if (filterConditions && filterConditions.length > 0) {
                 params.filterConditions = JSON.stringify({
                     conditions: filterConditions,
-                    operators: tourFilterLogicalOperators
+                    operators: tourFilterLogicalOperatorsRef.current  // ✅ Ref verwenden statt State
                 });
             }
             
@@ -214,7 +222,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                 setToursLoading(false);
             }
         }
-    }, [tourFilterLogicalOperators, t, showMessage]);
+    }, [t, showMessage]);  // ✅ tourFilterLogicalOperators entfernt (Ref verwendet)
     
     // ✅ MEMORY: Cleanup - Alle großen Arrays beim Unmount löschen
     useEffect(() => {
@@ -227,21 +235,24 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     // ✅ ENTFERNT: Lade Tours beim Mount - wird jetzt durch Standard-Pattern gemacht
     
     // Tour-Filter-Funktionen
-    const applyTourFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    // ✅ PERFORMANCE: Mit useCallback stabilisiert (verhindert Endlosschleife in useEffect)
+    const applyTourFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         setTourFilterConditions(conditions);
         setTourFilterLogicalOperators(operators);
         loadTours(undefined, conditions, false);
-    };
+    }, [loadTours]);
     
-    const resetTourFilterConditions = () => {
+    // ✅ PERFORMANCE: Mit useCallback stabilisiert
+    const resetTourFilterConditions = useCallback(() => {
         setTourFilterConditions([]);
         setTourFilterLogicalOperators([]);
         setTourActiveFilterName(t('tours.filters.current', 'Aktuell'));
         setTourSelectedFilterId(null);
         loadTours();
-    };
+    }, [loadTours, t]);
     
-    const handleTourFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    // ✅ PERFORMANCE: Mit useCallback stabilisiert (verhindert Endlosschleife in useEffect)
+    const handleTourFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         setTourSelectedFilterId(id);
         setTourActiveFilterName(name);
         if (id) {
@@ -249,14 +260,25 @@ const ToursTab: React.FC<ToursTabProps> = () => {
         } else {
             await applyTourFilterConditions(conditions, operators);
         }
-    };
+    }, [loadTours, applyTourFilterConditions]);
     
     // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung
     const filterContext = useFilterContext();
     const { loadFilters } = filterContext;
     
+    // ✅ PERFORMANCE: Ref verhindert mehrfache Anwendung des Default-Filters (Endlosschleife)
+    const initialLoadAttemptedRef = useRef(false);
+    
     useEffect(() => {
+        // ✅ PERFORMANCE: Verhindere mehrfache Ausführung
+        if (initialLoadAttemptedRef.current) {
+            return;
+        }
+        
         const initialize = async () => {
+            // ✅ PERFORMANCE: Markiere als versucht, BEVOR async Operation startet
+            initialLoadAttemptedRef.current = true;
+            
             if (!hasPermission('tours', 'read', 'table')) {
                 return;
             }

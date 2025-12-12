@@ -48,6 +48,7 @@
     "force": "Erzwingen",
     "previousDay": "Vorheriger Tag",
     "nextDay": "Nächster Tag",
+    "to": "bis",
     "searchPlaceholder": "Suchen...",
     "showFilter": "Filter anzeigen",
     "collapse": "Einklappen",
@@ -2013,6 +2014,39 @@
         "responsible": "Verantwortlich",
         "time": "Zeit"
       }
+    },
+    "period": {
+      "today": "Heute",
+      "week": "Diese Woche",
+      "month": "Diesen Monat",
+      "year": "Dieses Jahr",
+      "custom": "Benutzerdefiniert"
+    },
+    "userActivity": {
+      "tasks": {
+        "title": "User Tasks Aktivität",
+        "tasksCreated": "Tasks erstellt",
+        "tasksDeleted": "Tasks gelöscht",
+        "statusChanges": "Status-Änderungen"
+      },
+      "requests": {
+        "title": "User Requests Aktivität",
+        "requestsCreated": "Requests erstellt",
+        "requestsDeleted": "Requests gelöscht",
+        "statusChanges": "Status-Änderungen"
+      }
+    },
+    "taskActivity": {
+      "title": "Task Aktivität",
+      "createdBy": "Erstellt von",
+      "deletedBy": "Gelöscht von",
+      "statusHistory": "Status-Historie"
+    },
+    "requestActivity": {
+      "title": "Request Aktivität",
+      "createdBy": "Erstellt von",
+      "deletedBy": "Gelöscht von",
+      "statusHistory": "Status-Historie"
     },
     "monthlyReports": {
       "title": "Monatsabrechnungen",

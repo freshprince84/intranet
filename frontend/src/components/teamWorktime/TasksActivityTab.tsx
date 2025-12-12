@@ -12,7 +12,7 @@ const TasksActivityTab: React.FC = () => {
     const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
     const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
     
-    const { period, dateRange } = useDateRange();
+    const { period, setPeriod, startDate, setStartDate, endDate, setEndDate, dateRange } = useDateRange();
     
     const { data, loading, error } = useActivityData({
         type: 'tasks',
@@ -41,7 +41,14 @@ const TasksActivityTab: React.FC = () => {
                 {t('analytics.taskActivity.title', { defaultValue: 'Task Aktivität' })}
             </h2>
             
-            <DateRangeSelector />
+            <DateRangeSelector
+                period={period}
+                setPeriod={setPeriod}
+                startDate={startDate}
+                setStartDate={setStartDate}
+                endDate={endDate}
+                setEndDate={setEndDate}
+            />
             
             {loading && <div className="text-center py-8">{t('common.loading', { defaultValue: 'Laden...' })}</div>}
             {error && <div className="text-red-600 py-4">{error}</div>}
