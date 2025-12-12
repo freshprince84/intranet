@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PencilIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, InformationCircleIcon, Squares2X2Icon, TableCellsIcon, ArrowDownTrayIcon, PhotoIcon } from '@heroicons/react/24/outline';
-import { API_ENDPOINTS, API_URL } from '../../config/api.ts';
+import { API_ENDPOINTS, API_BASE_URL } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
@@ -110,6 +110,8 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     // Bildgenerierung States
     const [generatingImages, setGeneratingImages] = useState<Record<number, boolean>>({});
     const [imageGenerationJobs, setImageGenerationJobs] = useState<Record<number, string | null>>({});
+    const pollingIntervalsRef = useRef<Record<number, NodeJS.Timeout>>({});
+    const pollCountRef = useRef<Record<number, number>>({});
     
     // Tabellen-Einstellungen
     const {
@@ -258,35 +260,42 @@ const ToursTab: React.FC<ToursTabProps> = () => {
             }
         } catch (err: any) {
             console.error('Fehler beim Starten der Bildgenerierung:', err);
-            showMessage(
-                err.response?.data?.message || t('tours.imageGenerationFailed', { defaultValue: 'Fehler bei Bildgenerierung' }),
-                'error'
-            );
+            const errorMessage = err.response?.data?.message || err.message || t('tours.imageGenerationFailed', { defaultValue: 'Fehler bei Bildgenerierung' });
+            showMessage(errorMessage, 'error');
             setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
         }
     }, [t, showMessage, loadTours]);
     
     // Polling für Bildgenerierungs-Status
     useEffect(() => {
-        const pollingIntervals: Record<number, NodeJS.Timeout> = {};
-        const pollingTimeouts: Record<number, NodeJS.Timeout> = {};
-        
+        // Starte Polling nur für neue Jobs (die noch kein Intervall haben)
         Object.entries(imageGenerationJobs).forEach(([tourIdStr, jobId]) => {
             if (!jobId) return;
             
             const tourId = parseInt(tourIdStr, 10);
-            let pollCount = 0;
+            
+            // Überspringe, wenn bereits ein Polling läuft
+            if (pollingIntervalsRef.current[tourId]) {
+                return;
+            }
+            
+            // Initialisiere Poll-Count für diesen Job
+            if (!pollCountRef.current[tourId]) {
+                pollCountRef.current[tourId] = 0;
+            }
+            
             const maxPolls = 30; // Max. 60 Sekunden (30 * 2 Sekunden)
             
-            // Polling-Intervall
-            pollingIntervals[tourId] = setInterval(async () => {
+            // Polling-Intervall starten
+            pollingIntervalsRef.current[tourId] = setInterval(async () => {
                 try {
-                    pollCount++;
+                    pollCountRef.current[tourId] = (pollCountRef.current[tourId] || 0) + 1;
                     
                     // Timeout nach 60 Sekunden
-                    if (pollCount > maxPolls) {
-                        clearInterval(pollingIntervals[tourId]);
-                        delete pollingIntervals[tourId];
+                    if (pollCountRef.current[tourId] > maxPolls) {
+                        clearInterval(pollingIntervalsRef.current[tourId]);
+                        delete pollingIntervalsRef.current[tourId];
+                        delete pollCountRef.current[tourId];
                         setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
                         setImageGenerationJobs(prev => {
                             const newJobs = { ...prev };
@@ -311,8 +320,9 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                         
                         if (status === 'completed') {
                             // Erfolg: Polling stoppen
-                            clearInterval(pollingIntervals[tourId]);
-                            delete pollingIntervals[tourId];
+                            clearInterval(pollingIntervalsRef.current[tourId]);
+                            delete pollingIntervalsRef.current[tourId];
+                            delete pollCountRef.current[tourId];
                             setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
                             setImageGenerationJobs(prev => {
                                 const newJobs = { ...prev };
@@ -326,8 +336,9 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                             await loadTours();
                         } else if (status === 'failed') {
                             // Fehler: Polling stoppen
-                            clearInterval(pollingIntervals[tourId]);
-                            delete pollingIntervals[tourId];
+                            clearInterval(pollingIntervalsRef.current[tourId]);
+                            delete pollingIntervalsRef.current[tourId];
+                            delete pollCountRef.current[tourId];
                             setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
                             setImageGenerationJobs(prev => {
                                 const newJobs = { ...prev };
@@ -345,8 +356,9 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                     console.error('Fehler beim Polling:', err);
                     // Fehler beim Polling: Wenn Job nicht gefunden, stoppe Polling
                     if (err.response?.status === 404) {
-                        clearInterval(pollingIntervals[tourId]);
-                        delete pollingIntervals[tourId];
+                        clearInterval(pollingIntervalsRef.current[tourId]);
+                        delete pollingIntervalsRef.current[tourId];
+                        delete pollCountRef.current[tourId];
                         setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
                         setImageGenerationJobs(prev => {
                             const newJobs = { ...prev };
@@ -365,8 +377,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
         
         // ✅ MEMORY LEAK PREVENTION: Cleanup-Funktion
         return () => {
-            Object.values(pollingIntervals).forEach(interval => clearInterval(interval));
-            Object.values(pollingTimeouts).forEach(timeout => clearTimeout(timeout));
+            Object.values(pollingIntervalsRef.current).forEach(interval => clearInterval(interval));
         };
     }, [imageGenerationJobs, t, showMessage, loadTours]);
     
@@ -421,98 +432,49 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     
     // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung mit leeren Dependencies (wie in Requests.tsx)
     useEffect(() => {
-        if (process.env.NODE_ENV === 'development') {
-            console.log('[ToursTab] useEffect triggered', { 
-                permissionsLoading, 
-                initialLoadAttempted: initialLoadAttemptedRef.current 
-            });
-        }
-        
         // ✅ STANDARD: Warte bis Berechtigungen geladen sind
         if (permissionsLoading) {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[ToursTab] Warte auf Berechtigungen...');
-            }
             return;
         }
         
         // ✅ PERFORMANCE: Verhindere mehrfache Ausführung
         if (initialLoadAttemptedRef.current) {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[ToursTab] Initial load bereits versucht, überspringe');
-            }
             return;
         }
         
         const initialize = async () => {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('[ToursTab] Starte Initialisierung...');
-            }
-            
             // ✅ PERFORMANCE: Markiere als versucht, BEVOR async Operation startet
             initialLoadAttemptedRef.current = true;
             
             try {
                 // ✅ STANDARD: Prüfe Berechtigung direkt (nicht in Dependencies!)
-                const hasPermissionToView = hasPermission('tours', 'read', 'table');
-                if (process.env.NODE_ENV === 'development') {
-                    console.log('[ToursTab] Berechtigung geprüft:', hasPermissionToView);
-                }
-                
-                if (!hasPermissionToView) {
-                    if (process.env.NODE_ENV === 'development') {
-                        console.log('[ToursTab] Keine Berechtigung, beende Initialisierung');
-                    }
+                if (!hasPermission('tours', 'read', 'table')) {
                     return;
                 }
                 
                 // 1. Filter laden (wartet auf State-Update)
-                if (process.env.NODE_ENV === 'development') {
-                    console.log('[ToursTab] Lade Filter für:', TOURS_TABLE_ID);
-                }
                 const filters = await loadFilters(TOURS_TABLE_ID);
-                if (process.env.NODE_ENV === 'development') {
-                    console.log('[ToursTab] Filter geladen:', filters.length, 'Filter gefunden');
-                }
                 
                 // 2. Default-Filter anwenden (IMMER vorhanden!)
                 const defaultFilter = filters.find(f => f.name === 'Aktuell');
-                if (process.env.NODE_ENV === 'development') {
-                    console.log('[ToursTab] Default-Filter gesucht:', defaultFilter ? 'gefunden' : 'NICHT GEFUNDEN');
-                    if (defaultFilter) {
-                        console.log('[ToursTab] Default-Filter Details:', {
-                            id: defaultFilter.id,
-                            name: defaultFilter.name,
-                            conditionsCount: defaultFilter.conditions?.length || 0
-                        });
-                    }
-                }
-                
                 if (defaultFilter) {
-                    if (process.env.NODE_ENV === 'development') {
-                        console.log('[ToursTab] Wende Default-Filter an...');
-                    }
                     await handleTourFilterChange(
                         defaultFilter.name,
                         defaultFilter.id,
                         defaultFilter.conditions,
                         defaultFilter.operators
                     );
-                    if (process.env.NODE_ENV === 'development') {
-                        console.log('[ToursTab] Default-Filter angewendet');
-                    }
                     return; // Daten werden durch handleTourFilterChange geladen
                 }
                 
                 // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
-                if (process.env.NODE_ENV === 'development') {
-                    console.log('[ToursTab] FALLBACK: Lade Daten ohne Filter');
-                }
                 await loadTours();
             } catch (error) {
                 // ✅ PERFORMANCE: Bei Fehler Ref zurücksetzen, damit Retry möglich ist
                 initialLoadAttemptedRef.current = false;
-                console.error('[ToursTab] Fehler beim Initialisieren:', error);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('[ToursTab] Fehler beim Initialisieren:', error);
+                }
             }
         };
         
@@ -1176,7 +1138,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                 {/* Bild-Anzeige */}
                                 {tour.imageUrl && (
                                     <img 
-                                        src={`${API_URL}${tour.imageUrl}`}
+                                        src={`${API_BASE_URL}${tour.imageUrl}`}
                                         alt={tour.title || 'Tour Bild'}
                                         className="w-full h-48 object-cover rounded-lg mb-2"
                                         loading="lazy"
