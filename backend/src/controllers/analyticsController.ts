@@ -308,10 +308,11 @@ export const getTodosChronological = async (req: Request, res: Response) => {
         const start = startOfDay(selectedDate);
         const end = endOfDay(selectedDate);
 
-        // Kombiniere taskFilter mit Zeitfilter
+        // Kombiniere taskFilter mit Zeitfilter und Soft-Delete-Filter
         const where: any = {
             AND: [
                 taskFilter,
+                getNotDeletedFilter(),
                 {
                     OR: [
                         {
@@ -393,6 +394,22 @@ export const getTodosChronological = async (req: Request, res: Response) => {
                     select: {
                         id: true,
                         name: true
+                    }
+                },
+                createdBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true
+                    }
+                },
+                deletedBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true
                     }
                 },
                 // ✅ PERFORMANCE: Nur Count, KEINE Binary-Daten
@@ -517,9 +534,38 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
                         name: true
                     }
                 },
+                deletedBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true
+                    }
+                },
                 // ✅ PERFORMANCE: Nur Count, KEINE Binary-Daten
                 _count: {
                     select: { attachments: true }
+                },
+                statusHistory: {
+                    where: {
+                        changedAt: {
+                            gte: start,
+                            lte: end
+                        }
+                    },
+                    orderBy: {
+                        changedAt: 'desc'
+                    },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                username: true
+                            }
+                        }
+                    }
                 }
             },
             orderBy: {

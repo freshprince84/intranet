@@ -8,13 +8,9 @@ import ActiveUsersList from '../components/teamWorktime/ActiveUsersList.tsx';
 import TodoAnalyticsTab from '../components/teamWorktime/TodoAnalyticsTab.tsx';
 import RequestAnalyticsTab from '../components/teamWorktime/RequestAnalyticsTab.tsx';
 import ShiftPlannerTab from '../components/teamWorktime/ShiftPlannerTab.tsx';
-import UserTasksActivityTab from '../components/teamWorktime/UserTasksActivityTab.tsx';
-import UserRequestsActivityTab from '../components/teamWorktime/UserRequestsActivityTab.tsx';
-import TasksActivityTab from '../components/teamWorktime/TasksActivityTab.tsx';
-import RequestsActivityTab from '../components/teamWorktime/RequestsActivityTab.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 
-type TabType = 'worktimes' | 'shifts' | 'todos' | 'requests' | 'user-tasks' | 'user-requests' | 'tasks-activity' | 'requests-activity';
+type TabType = 'worktimes' | 'shifts' | 'todos' | 'requests';
 
 const TeamWorktimeControl: React.FC = () => {
   const { t } = useTranslation();
@@ -263,46 +259,6 @@ const TeamWorktimeControl: React.FC = () => {
                 >
                   {t('teamWorktime.tabs.requests')}
                 </button>
-                <button
-                  onClick={() => setActiveTab('user-tasks')}
-                  className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
-                    activeTab === 'user-tasks'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {t('teamWorktime.tabs.userTasksActivity', { defaultValue: 'User Tasks Aktivität' })}
-                </button>
-                <button
-                  onClick={() => setActiveTab('user-requests')}
-                  className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
-                    activeTab === 'user-requests'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {t('teamWorktime.tabs.userRequestsActivity', { defaultValue: 'User Requests Aktivität' })}
-                </button>
-                <button
-                  onClick={() => setActiveTab('tasks-activity')}
-                  className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
-                    activeTab === 'tasks-activity'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {t('teamWorktime.tabs.tasksActivity', { defaultValue: 'Tasks Aktivität' })}
-                </button>
-                <button
-                  onClick={() => setActiveTab('requests-activity')}
-                  className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
-                    activeTab === 'requests-activity'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {t('teamWorktime.tabs.requestsActivity', { defaultValue: 'Requests Aktivität' })}
-                </button>
               </nav>
             </div>
             
@@ -328,18 +284,6 @@ const TeamWorktimeControl: React.FC = () => {
             )}
             {activeTab === 'requests' && (
               <RequestAnalyticsTab selectedDate={selectedDate} />
-            )}
-            {activeTab === 'user-tasks' && (
-              <UserTasksActivityTab />
-            )}
-            {activeTab === 'user-requests' && (
-              <UserRequestsActivityTab />
-            )}
-            {activeTab === 'tasks-activity' && (
-              <TasksActivityTab />
-            )}
-            {activeTab === 'requests-activity' && (
-              <RequestsActivityTab />
             )}
           </div>
       </div>
