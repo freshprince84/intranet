@@ -97,7 +97,7 @@ process.on('SIGTERM', async () => {
   logger.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
   await stopWorkers();
   // ✅ MEMORY: Cleanup Timer
-  cleanupTimers(); // index.ts Timer
+  await cleanupTimers(); // index.ts Timer
   cleanupAppTimers(); // app.ts Timer
   cleanupRateLimiter(); // rateLimiter Timer
   // ✅ PERFORMANCE: Prisma-Instanz disconnecten
@@ -112,7 +112,7 @@ process.on('SIGINT', async () => {
   logger.log('SIGINT signal empfangen. Server wird heruntergefahren...');
   await stopWorkers();
   // ✅ MEMORY: Cleanup Timer
-  cleanupTimers(); // index.ts Timer
+  await cleanupTimers(); // index.ts Timer
   cleanupAppTimers(); // app.ts Timer
   cleanupRateLimiter(); // rateLimiter Timer
   // ✅ PERFORMANCE: Prisma-Instanz disconnecten
@@ -144,6 +144,7 @@ passcodeCleanupTimeout = setTimeout(async () => {
     ReservationPasscodeCleanupScheduler.start();
     
     // Rate Shopping Scheduler
+    const { RateShoppingScheduler } = await import('./services/rateShoppingScheduler');
     RateShoppingScheduler.start();
   } catch (error) {
     logger.error('[Timer] Fehler beim Starten des Passcode-Cleanup-Schedulers:', error);
@@ -151,7 +152,7 @@ passcodeCleanupTimeout = setTimeout(async () => {
 }, 1000); // Starte nach 1 Sekunde
 
 // ✅ MEMORY: Cleanup-Funktion für Server-Shutdown
-export const cleanupTimers = () => {
+export const cleanupTimers = async () => {
   if (tourBookingSchedulerInterval) {
     clearInterval(tourBookingSchedulerInterval);
     tourBookingSchedulerInterval = null;
@@ -166,7 +167,12 @@ export const cleanupTimers = () => {
   cacheCleanupService.stop();
   
   // Rate Shopping Scheduler stoppen
-  RateShoppingScheduler.stop();
+  try {
+    const { RateShoppingScheduler } = await import('./services/rateShoppingScheduler');
+    RateShoppingScheduler.stop();
+  } catch (error) {
+    logger.error('[Cleanup] Fehler beim Stoppen des Rate Shopping Schedulers:', error);
+  }
 };
 
 logger.log('✅ Reservation-Passcode-Cleanup-Scheduler wird gestartet (prüft täglich um 11:00 Uhr)');
