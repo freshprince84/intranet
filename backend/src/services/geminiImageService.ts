@@ -4,6 +4,20 @@ import path from 'path';
 import { logger } from '../utils/logger';
 
 /**
+ * Generische Konfiguration für Bildgenerierung
+ */
+export interface ImageGenerationConfig {
+  entityType: 'tour' | 'reservation' | 'task' | 'event' | 'product';
+  entityId: number;
+  title: string;
+  description: string;
+  outputDir: string;
+  filenamePattern: string;
+  imageTypes: ('main' | 'gallery' | 'flyer')[];
+  apiKey?: string;
+}
+
+/**
  * Gemini Image Generation Service (Nano Banana)
  * 
  * Generiert Bilder mit Google Gemini API (gemini-2.5-flash-image)
@@ -95,20 +109,6 @@ export class GeminiImageService {
       });
       throw error;
     }
-  }
-
-  /**
-   * Generische Konfiguration für Bildgenerierung
-   */
-  export interface ImageGenerationConfig {
-    entityType: 'tour' | 'reservation' | 'task' | 'event' | 'product';
-    entityId: number;
-    title: string;
-    description: string;
-    outputDir: string;
-    filenamePattern: string;
-    imageTypes: ('main' | 'gallery' | 'flyer')[];
-    apiKey?: string;
   }
 
   /**

@@ -57,6 +57,7 @@ const claudeConsoleService_1 = require("./services/claudeConsoleService");
 const queues_1 = require("./queues");
 const prisma_1 = require("./utils/prisma");
 const logger_1 = require("./utils/logger");
+const cacheCleanupService_1 = require("./services/cacheCleanupService");
 // ENCRYPTION_KEY-Prüfung beim Start
 const encryptionKey = process.env.ENCRYPTION_KEY;
 if (!encryptionKey) {
@@ -80,13 +81,42 @@ const server = http_1.default.createServer(app_1.default);
 // Claude Console WebSocket-Service integrieren
 const claudeConsoleService = (0, claudeConsoleService_1.getClaudeConsoleService)();
 claudeConsoleService.setupWebSocketServer(server);
-// Server starten
-server.listen(PORT, () => {
-    logger_1.logger.log(`🚀 Server läuft auf Port ${PORT}`);
-    logger_1.logger.log(`📊 Database verfügbar`);
-    logger_1.logger.log(`🔍 Claude API verfügbar unter /api/claude/`);
-    logger_1.logger.log(`🖥️ Claude Console WebSocket verfügbar unter ws://localhost:${PORT}/ws/claude-console`);
-}).on('error', (err) => {
+// ✅ FIX: Warte auf DB-Verbindung bevor Server startet
+const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Prisma Connection mit Retry
+        let connected = false;
+        for (let attempt = 1; attempt <= 5; attempt++) {
+            try {
+                yield prisma_1.prisma.$connect();
+                logger_1.logger.log('✅ Prisma DB-Verbindung hergestellt');
+                connected = true;
+                break;
+            }
+            catch (err) {
+                logger_1.logger.warn(`[Prisma] Verbindungsversuch ${attempt}/5 fehlgeschlagen, retry in 2s...`);
+                yield new Promise(r => setTimeout(r, 2000));
+            }
+        }
+        if (!connected) {
+            logger_1.logger.error('❌ Konnte keine DB-Verbindung herstellen nach 5 Versuchen!');
+            process.exit(1);
+        }
+    }
+    catch (err) {
+        logger_1.logger.error('❌ DB-Verbindungsfehler:', err);
+        process.exit(1);
+    }
+    // Server starten
+    server.listen(PORT, () => {
+        logger_1.logger.log(`🚀 Server läuft auf Port ${PORT}`);
+        logger_1.logger.log(`📊 Database verfügbar`);
+        logger_1.logger.log(`🔍 Claude API verfügbar unter /api/claude/`);
+        logger_1.logger.log(`🖥️ Claude Console WebSocket verfügbar unter ws://localhost:${PORT}/ws/claude-console`);
+    });
+});
+startServer();
+server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
         logger_1.logger.error(`\n❌ FEHLER: Port ${PORT} ist bereits belegt!`);
         logger_1.logger.error(`\n📋 Lösungsvorschläge:`);
@@ -165,8 +195,12 @@ const cleanupTimers = () => {
         passcodeCleanupTimeout = null;
         logger_1.logger.log('✅ Passcode-Cleanup-Timeout gestoppt');
     }
+    // ✅ MEMORY-LEAK-FIX: Cache-Cleanup-Service stoppen
+    cacheCleanupService_1.cacheCleanupService.stop();
 };
 exports.cleanupTimers = cleanupTimers;
 logger_1.logger.log('✅ Reservation-Passcode-Cleanup-Scheduler wird gestartet (prüft täglich um 11:00 Uhr)');
+// ✅ MEMORY-LEAK-FIX: Starte Cache-Cleanup-Service
+cacheCleanupService_1.cacheCleanupService.start();
 exports.default = server;
 //# sourceMappingURL=index.js.map

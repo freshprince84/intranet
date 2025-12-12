@@ -125,6 +125,8 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (Object.keys(filterWhereClause).length > 0) {
             baseWhereConditions.push(filterWhereClause);
         }
+        // ✅ SOFT DELETE: Füge deletedAt Filter hinzu
+        baseWhereConditions.push((0, prisma_1.getNotDeletedFilter)());
         // Kombiniere alle Filter
         const whereClause = baseWhereConditions.length === 1
             ? baseWhereConditions[0]
@@ -220,7 +222,8 @@ const getTaskById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
         const task = yield prisma_1.prisma.task.findFirst({
-            where: Object.assign({ id: taskId }, isolationFilter),
+            where: Object.assign(Object.assign({ id: taskId }, isolationFilter), (0, prisma_1.getNotDeletedFilter)() // ✅ SOFT DELETE: Nur nicht gelöschte Tasks
+            ),
             include: {
                 responsible: {
                     select: userSelect
@@ -284,14 +287,16 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         }
         // Erstelle ein Basis-Datenobjekt ohne responsibleId/roleId
+        const taskStatus = taskData.status || 'open';
         const taskCreateData = {
             title: taskData.title,
             description: taskData.description || '',
-            status: taskData.status || 'open',
+            status: taskStatus,
             qualityControlId: taskData.qualityControlId,
             branchId: taskData.branchId,
             dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
-            organizationId: req.organizationId || null
+            organizationId: req.organizationId || null,
+            createdById: req.userId ? Number(req.userId) : null // NEU: Wer hat den Task erstellt
         };
         // Füge responsibleId nur hinzu, wenn ein Wert angegeben ist (nicht null oder undefined)
         if (taskData.responsibleId) {
@@ -345,6 +350,19 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 relatedEntityType: 'create'
             });
         }
+        // ✅ INITIAL STATUS-HISTORIE: Erstelle initiale Status-Historie
+        if (req.userId) {
+            yield prisma_1.prisma.taskStatusHistory.create({
+                data: {
+                    taskId: task.id,
+                    userId: Number(req.userId),
+                    oldStatus: null, // Initial: kein alter Status
+                    newStatus: taskStatus,
+                    branchId: taskData.branchId,
+                    changedAt: new Date()
+                }
+            });
+        }
         res.status(201).json(task);
     }
     catch (error) {
@@ -379,7 +397,8 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Aktuellen Task abrufen, um Änderungen zu erkennen
         // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
         const currentTask = yield prisma_1.prisma.task.findFirst({
-            where: Object.assign({ id: taskId }, isolationFilter),
+            where: Object.assign(Object.assign({ id: taskId }, isolationFilter), (0, prisma_1.getNotDeletedFilter)() // ✅ SOFT DELETE: Nur nicht gelöschte Tasks
+            ),
             include: {
                 responsible: {
                     select: userSelect
@@ -770,7 +789,8 @@ const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
         // Task vor dem Löschen abrufen, um Benachrichtigungen zu senden
         const task = yield prisma_1.prisma.task.findFirst({
-            where: Object.assign({ id: taskId }, isolationFilter),
+            where: Object.assign(Object.assign({ id: taskId }, isolationFilter), (0, prisma_1.getNotDeletedFilter)() // ✅ SOFT DELETE: Nur nicht gelöschte Tasks
+            ),
             include: {
                 responsible: {
                     select: userSelect
@@ -783,16 +803,14 @@ const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (!task) {
             return res.status(404).json({ error: 'Task nicht gefunden' });
         }
-        // Lösche abhängige Datensätze vor dem Löschen des Tasks
-        // TaskCerebroCarticle und WorkTimeTask haben keine Cascade Delete
-        yield prisma_1.prisma.taskCerebroCarticle.deleteMany({
-            where: { taskId: taskId }
-        });
-        yield prisma_1.prisma.workTimeTask.deleteMany({
-            where: { taskId: taskId }
-        });
-        yield prisma_1.prisma.task.delete({
-            where: { id: taskId }
+        // ✅ SOFT DELETE: Statt hard delete, setze deletedAt
+        // Abhängige Datensätze bleiben erhalten (TaskCerebroCarticle, WorkTimeTask)
+        yield prisma_1.prisma.task.update({
+            where: { id: taskId },
+            data: {
+                deletedAt: new Date(),
+                deletedById: req.userId ? Number(req.userId) : null
+            }
         });
         // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
         if (task.responsibleId) {

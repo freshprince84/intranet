@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import { OTARateShoppingService } from '../services/otaRateShoppingService';
+import { createNotificationIfEnabled } from './notificationController';
+import { NotificationType } from '@prisma/client';
+import { getPriceAnalysisNotificationText, getUserLanguage } from '../utils/translations';
 import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
@@ -59,6 +62,32 @@ export const otaController = {
         new Date(startDate),
         new Date(endDate)
       );
+
+      // Notification erstellen (wird später bei Job-Abschluss aktualisiert)
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      if (userId) {
+        try {
+          const language = await getUserLanguage(userId);
+          const notificationText = getPriceAnalysisNotificationText(
+            language,
+            'rateShoppingCompleted',
+            platform
+          );
+          
+          // Notification wird später bei Job-Abschluss/Fehler aktualisiert
+          // Hier nur als Info-Notification
+          await createNotificationIfEnabled({
+            userId,
+            title: 'Rate Shopping gestartet',
+            message: `Rate Shopping für ${platform} wurde gestartet.`,
+            type: NotificationType.system,
+            relatedEntityId: jobId,
+            relatedEntityType: 'started'
+          });
+        } catch (error) {
+          logger.error('Fehler beim Erstellen der Notification:', error);
+        }
+      }
 
       res.json({
         success: true,

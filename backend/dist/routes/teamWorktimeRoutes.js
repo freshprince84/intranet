@@ -37,5 +37,11 @@ router.get('/analytics/requests-chronological', analyticsController_1.getRequest
 router.get('/analytics/todos-frequency', analyticsController_1.getTodosFrequencyAnalysis);
 // Schicht-basierte Analysen für To-Dos (Tab 2)
 router.get('/analytics/todos-shifts', analyticsController_1.getTodosShiftAnalysis);
+// User-zentrierte Aktivitäts-Analysen (NEU)
+router.get('/analytics/user-tasks-activity', analyticsController_1.getUserTasksActivity);
+router.get('/analytics/user-requests-activity', analyticsController_1.getUserRequestsActivity);
+// Task/Request-zentrierte Aktivitäts-Analysen (NEU)
+router.get('/analytics/tasks-activity', analyticsController_1.getTasksActivity);
+router.get('/analytics/requests-activity', analyticsController_1.getRequestsActivity);
 exports.default = router;
 //# sourceMappingURL=teamWorktimeRoutes.js.map

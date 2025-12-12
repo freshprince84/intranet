@@ -1788,30 +1788,30 @@ model PasswordEntryAuditLog {
 // ============================================
 
 model OTAListing {
-  id              Int      @id @default(autoincrement())
-  branchId        Int
-  branch          Branch   @relation(fields: [branchId], references: [id])
-  
+  id       Int    @id @default(autoincrement())
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id])
+
   // OTA-Informationen
-  platform        String   // 'booking.com', 'hostelworld.com', etc.
-  listingId       String   // Eindeutige ID des Inserats auf der OTA-Plattform
-  listingUrl      String?  // URL zum Inserat
-  
+  platform   String // 'booking.com', 'hostelworld.com', etc.
+  listingId  String // Eindeutige ID des Inserats auf der OTA-Plattform
+  listingUrl String? // URL zum Inserat
+
   // Zimmerkategorie
-  categoryId      Int?     // LobbyPMS category_id
-  roomType        String   // 'private' | 'dorm'
-  roomName        String?  // Name des Zimmers/Kategorie
-  
+  categoryId Int? // LobbyPMS category_id
+  roomType   String // 'private' | 'dorm'
+  roomName   String? // Name des Zimmers/Kategorie
+
   // Status
-  isActive        Boolean  @default(true)
-  
+  isActive Boolean @default(true)
+
   // Metadaten
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  priceData       OTAPriceData[]
-  
+  priceData OTAPriceData[]
+
   @@unique([branchId, platform, listingId])
   @@index([branchId])
   @@index([platform])
@@ -1820,23 +1820,23 @@ model OTAListing {
 }
 
 model OTAPriceData {
-  id              Int      @id @default(autoincrement())
-  listingId       Int
-  listing         OTAListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  
+  id        Int        @id @default(autoincrement())
+  listingId Int
+  listing   OTAListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
   // Datum und Preis
-  date            DateTime @db.Date
-  price           Decimal  @db.Decimal(10, 2)
-  currency        String   @default("COP")
-  
+  date     DateTime @db.Date
+  price    Decimal  @db.Decimal(10, 2)
+  currency String   @default("COP")
+
   // Verfügbarkeit
-  available       Boolean  @default(true)
-  availableRooms  Int?     // Anzahl verfügbarer Zimmer
-  
+  available      Boolean @default(true)
+  availableRooms Int? // Anzahl verfügbarer Zimmer
+
   // Metadaten
-  scrapedAt       DateTime @default(now()) // Wann wurden die Daten gesammelt
-  source          String?  // 'rate_shopper' | 'api' | 'manual'
-  
+  scrapedAt DateTime @default(now()) // Wann wurden die Daten gesammelt
+  source    String? // 'rate_shopper' | 'api' | 'manual'
+
   @@unique([listingId, date])
   @@index([listingId])
   @@index([date])
@@ -1845,40 +1845,40 @@ model OTAPriceData {
 }
 
 model PriceAnalysis {
-  id              Int      @id @default(autoincrement())
-  branchId        Int
-  branch          Branch   @relation(fields: [branchId], references: [id])
-  
+  id       Int    @id @default(autoincrement())
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id])
+
   // Zeitraum
-  analysisDate    DateTime @db.Date // Datum der Analyse
-  startDate       DateTime @db.Date // Startdatum des analysierten Zeitraums
-  endDate         DateTime @db.Date // Enddatum (normalerweise +3 Monate)
-  
+  analysisDate DateTime @db.Date // Datum der Analyse
+  startDate    DateTime @db.Date // Startdatum des analysierten Zeitraums
+  endDate      DateTime @db.Date // Enddatum (normalerweise +3 Monate)
+
   // Zimmerkategorie
-  categoryId      Int?     // LobbyPMS category_id
-  roomType        String   // 'private' | 'dorm'
-  
+  categoryId Int? // LobbyPMS category_id
+  roomType   String // 'private' | 'dorm'
+
   // Analyse-Daten
-  currentPrice    Decimal? @db.Decimal(10, 2) // Aktueller Preis
-  averagePrice    Decimal? @db.Decimal(10, 2) // Durchschnittspreis im Zeitraum
-  minPrice        Decimal? @db.Decimal(10, 2) // Minimalpreis
-  maxPrice        Decimal? @db.Decimal(10, 2) // Maximalpreis
-  
+  currentPrice Decimal? @db.Decimal(10, 2) // Aktueller Preis
+  averagePrice Decimal? @db.Decimal(10, 2) // Durchschnittspreis im Zeitraum
+  minPrice     Decimal? @db.Decimal(10, 2) // Minimalpreis
+  maxPrice     Decimal? @db.Decimal(10, 2) // Maximalpreis
+
   // Belegung
-  occupancyRate   Decimal? @db.Decimal(5, 2) // Belegungsrate (0-100)
-  availableRooms  Int?     // Verfügbare Zimmer
-  
+  occupancyRate  Decimal? @db.Decimal(5, 2) // Belegungsrate (0-100)
+  availableRooms Int? // Verfügbare Zimmer
+
   // Wettbewerb
   competitorAvgPrice Decimal? @db.Decimal(10, 2) // Durchschnittspreis der Konkurrenz
-  pricePosition    String?  // 'above' | 'below' | 'equal' // Position im Markt
-  
+  pricePosition      String? // 'above' | 'below' | 'equal' // Position im Markt
+
   // Metadaten
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
   recommendations PriceRecommendation[]
-  
+
   @@unique([branchId, analysisDate, categoryId, roomType])
   @@index([branchId])
   @@index([analysisDate])
@@ -1890,39 +1890,39 @@ model PriceAnalysis {
 }
 
 model PriceRecommendation {
-  id              Int      @id @default(autoincrement())
-  analysisId      Int?
-  analysis        PriceAnalysis? @relation(fields: [analysisId], references: [id])
-  
-  branchId        Int
-  branch          Branch   @relation(fields: [branchId], references: [id])
-  
+  id         Int            @id @default(autoincrement())
+  analysisId Int?
+  analysis   PriceAnalysis? @relation(fields: [analysisId], references: [id])
+
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id])
+
   // Datum und Zimmer
-  date            DateTime @db.Date
-  categoryId      Int?     // LobbyPMS category_id
-  roomType        String   // 'private' | 'dorm'
-  
+  date       DateTime @db.Date
+  categoryId Int? // LobbyPMS category_id
+  roomType   String // 'private' | 'dorm'
+
   // Empfehlung
-  recommendedPrice Decimal @db.Decimal(10, 2)
-  currentPrice     Decimal? @db.Decimal(10, 2)
-  priceChange      Decimal? @db.Decimal(10, 2) // Differenz zum aktuellen Preis
+  recommendedPrice   Decimal  @db.Decimal(10, 2)
+  currentPrice       Decimal? @db.Decimal(10, 2)
+  priceChange        Decimal? @db.Decimal(10, 2) // Differenz zum aktuellen Preis
   priceChangePercent Decimal? @db.Decimal(5, 2) // Prozentuale Änderung
-  
+
   // Begründung
-  appliedRules     Json?   // Array der angewendeten Regeln
-  reasoning        String? // Textuelle Begründung
-  
+  appliedRules Json? // Array der angewendeten Regeln
+  reasoning    String? // Textuelle Begründung
+
   // Status
-  status          String   @default("pending") // 'pending' | 'approved' | 'applied' | 'rejected'
-  appliedAt       DateTime? // Wann wurde die Empfehlung ins LobbyPMS eingespielt
-  appliedBy       Int?     // User-ID, der die Empfehlung angewendet hat
-  approvedAt      DateTime?
-  approvedBy      Int?     // User-ID, der die Empfehlung genehmigt hat
-  
+  status     String    @default("pending") // 'pending' | 'approved' | 'applied' | 'rejected'
+  appliedAt  DateTime? // Wann wurde die Empfehlung ins LobbyPMS eingespielt
+  appliedBy  Int? // User-ID, der die Empfehlung angewendet hat
+  approvedAt DateTime?
+  approvedBy Int? // User-ID, der die Empfehlung genehmigt hat
+
   // Metadaten
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([branchId, date, categoryId, roomType])
   @@index([branchId])
   @@index([date])
@@ -1935,24 +1935,24 @@ model PriceRecommendation {
 }
 
 model PricingRule {
-  id              Int      @id @default(autoincrement())
-  branchId        Int
-  branch          Branch   @relation(fields: [branchId], references: [id])
-  
+  id       Int    @id @default(autoincrement())
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id])
+
   // Regel-Definition
-  name            String   // Name der Regel (z.B. "Hohe Belegung - Preise erhöhen")
-  description     String?  // Beschreibung
-  
+  name        String // Name der Regel (z.B. "Hohe Belegung - Preise erhöhen")
+  description String? // Beschreibung
+
   // Bedingungen
-  conditions      Json     // JSON mit Bedingungen:
+  conditions Json // JSON mit Bedingungen:
   // {
   //   "occupancyRate": { "operator": ">", "value": 80 },
   //   "competitorPriceDiff": { "operator": "<", "value": -10 },
   //   "dayOfWeek": [5, 6] // Wochenende
   // }
-  
+
   // Aktion
-  action          Json     // JSON mit Aktion:
+  action Json // JSON mit Aktion:
   // {
   //   "type": "increase" | "decrease" | "set",
   //   "value": 10, // Prozent oder absoluter Wert
@@ -1961,52 +1961,52 @@ model PricingRule {
   //   "maxPrice": 200000, // Maximalpreis
   //   "cumulative": true // Kumulativ oder nicht
   // }
-  
+
   // Anwendungsbereich
-  roomTypes       Json?    // ['private', 'dorm'] oder null für alle
-  categoryIds     Json?    // [34280, 34281] oder null für alle
-  
+  roomTypes   Json? // ['private', 'dorm'] oder null für alle
+  categoryIds Json? // [34280, 34281] oder null für alle
+
   // Priorität
-  priority        Int      @default(0) // Höhere Zahl = höhere Priorität
-  
+  priority Int @default(0) // Höhere Zahl = höhere Priorität
+
   // Status
-  isActive        Boolean  @default(true)
-  
+  isActive Boolean @default(true)
+
   // Metadaten
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  createdBy       Int?     // User-ID
-  createdByUser   User?    @relation(fields: [createdBy], references: [id])
-  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     Int? // User-ID
+  createdByUser User?    @relation(fields: [createdBy], references: [id])
+
   @@index([branchId])
   @@index([isActive])
   @@index([priority])
 }
 
 model RateShoppingJob {
-  id              Int      @id @default(autoincrement())
-  branchId        Int
-  branch          Branch   @relation(fields: [branchId], references: [id])
-  
+  id       Int    @id @default(autoincrement())
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id])
+
   // Job-Informationen
-  platform        String   // 'booking.com', 'hostelworld.com', etc.
-  status          String   @default("pending") // 'pending' | 'running' | 'completed' | 'failed'
-  
+  platform String // 'booking.com', 'hostelworld.com', etc.
+  status   String @default("pending") // 'pending' | 'running' | 'completed' | 'failed'
+
   // Zeitraum
-  startDate       DateTime @db.Date
-  endDate         DateTime @db.Date
-  
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+
   // Ergebnisse
-  listingsFound   Int      @default(0)
-  pricesCollected Int      @default(0)
-  errors          Json?    // Array von Fehlern
-  
+  listingsFound   Int   @default(0)
+  pricesCollected Int   @default(0)
+  errors          Json? // Array von Fehlern
+
   // Metadaten
-  startedAt       DateTime?
-  completedAt     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
   @@index([branchId])
   @@index([status])
   @@index([platform])

@@ -12,18 +12,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.userCache = void 0;
 const prisma_1 = require("../utils/prisma");
 const logger_1 = require("../utils/logger");
+const cacheCleanupService_1 = require("./cacheCleanupService");
 /**
  * In-Memory Cache für User-Daten aus authMiddleware
  *
  * Reduziert Datenbank-Queries drastisch, da authMiddleware bei JEDEM Request
  * eine komplexe Query ausführt (User + Roles + Permissions + Settings).
  *
- * TTL: 30 Sekunden (User-Daten ändern sich selten, aber müssen aktuell bleiben)
+ * TTL: 5 Minuten
+ * MAX_SIZE: 200 Einträge (LRU-Eviction bei Überschreitung)
+ * Auto-Cleanup: Ja (via CacheCleanupService)
  */
 class UserCache {
     constructor() {
         this.cache = new Map();
-        this.TTL_MS = 5 * 60 * 1000; // 5 Minuten (statt 30 Sekunden - reduziert DB-Queries um 90%)
+        this.TTL_MS = 5 * 60 * 1000; // 5 Minuten
+        this.MAX_SIZE = 200; // Maximale Anzahl Einträge
     }
     /**
      * Prüft, ob ein Cache-Eintrag noch gültig ist
@@ -118,7 +122,50 @@ class UserCache {
             validEntries
         };
     }
+    /**
+     * Entfernt abgelaufene Einträge und führt LRU-Eviction durch
+     * Wird vom CacheCleanupService aufgerufen
+     *
+     * @returns Anzahl gelöschter Einträge
+     */
+    cleanup() {
+        const now = Date.now();
+        let deleted = 0;
+        // 1. Entferne abgelaufene Einträge
+        for (const [key, entry] of this.cache) {
+            if ((now - entry.timestamp) >= this.TTL_MS) {
+                this.cache.delete(key);
+                deleted++;
+            }
+        }
+        // 2. LRU-Eviction wenn MAX_SIZE überschritten
+        if (this.cache.size > this.MAX_SIZE) {
+            // Sortiere nach Timestamp (älteste zuerst)
+            const entries = Array.from(this.cache.entries())
+                .sort((a, b) => a[1].timestamp - b[1].timestamp);
+            // Lösche älteste Einträge bis unter MAX_SIZE
+            const toDelete = this.cache.size - this.MAX_SIZE;
+            for (let i = 0; i < toDelete; i++) {
+                this.cache.delete(entries[i][0]);
+                deleted++;
+            }
+        }
+        return deleted;
+    }
+    /**
+     * Registriert Cache beim CacheCleanupService
+     */
+    register() {
+        cacheCleanupService_1.cacheCleanupService.register({
+            name: 'userCache',
+            cleanup: () => this.cleanup(),
+            getStats: () => this.getStats(),
+            clear: () => this.clear()
+        });
+    }
 }
 // Singleton-Instanz
 exports.userCache = new UserCache();
+// Registriere beim CacheCleanupService
+exports.userCache.register();
 //# sourceMappingURL=userCache.js.map

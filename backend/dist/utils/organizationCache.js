@@ -12,10 +12,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.organizationCache = void 0;
 const prisma_1 = require("./prisma");
 const logger_1 = require("./logger");
+const cacheCleanupService_1 = require("../services/cacheCleanupService");
+/**
+ * In-Memory Cache für Organization-Daten
+ *
+ * TTL: 10 Minuten
+ * MAX_SIZE: 200 Einträge
+ * Auto-Cleanup: Ja
+ */
 class OrganizationCache {
     constructor() {
         this.cache = new Map();
-        this.TTL_MS = 10 * 60 * 1000; // 10 Minuten Cache (statt 2 Minuten - reduziert DB-Queries um 80%)
+        this.TTL_MS = 10 * 60 * 1000;
+        this.MAX_SIZE = 200;
     }
     isCacheValid(entry) {
         if (!entry)
@@ -112,6 +121,35 @@ class OrganizationCache {
             validEntries
         };
     }
+    cleanup() {
+        const now = Date.now();
+        let deleted = 0;
+        for (const [key, entry] of this.cache) {
+            if ((now - entry.timestamp) >= this.TTL_MS) {
+                this.cache.delete(key);
+                deleted++;
+            }
+        }
+        if (this.cache.size > this.MAX_SIZE) {
+            const entries = Array.from(this.cache.entries())
+                .sort((a, b) => a[1].timestamp - b[1].timestamp);
+            const toDelete = this.cache.size - this.MAX_SIZE;
+            for (let i = 0; i < toDelete; i++) {
+                this.cache.delete(entries[i][0]);
+                deleted++;
+            }
+        }
+        return deleted;
+    }
+    register() {
+        cacheCleanupService_1.cacheCleanupService.register({
+            name: 'organizationCache',
+            cleanup: () => this.cleanup(),
+            getStats: () => this.getStats(),
+            clear: () => this.clear()
+        });
+    }
 }
 exports.organizationCache = new OrganizationCache();
+exports.organizationCache.register();
 //# sourceMappingURL=organizationCache.js.map

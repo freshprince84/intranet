@@ -24,9 +24,11 @@ function convertFilterConditionsToPrismaWhere(conditions, operators, entityType,
     if (conditions.length === 0) {
         return {};
     }
-    // Konvertiere jede Bedingung in eine Prisma Where-Klausel
+    // ✅ OPTIMIERUNG: Kombiniere mehrere notEquals/equals für dieselbe Spalte mit AND zu notIn/in
+    const optimizedConditions = optimizeFilterConditions(conditions, operators);
+    // Konvertiere jede optimierte Bedingung in eine Prisma Where-Klausel
     const prismaConditions = [];
-    for (const cond of conditions) {
+    for (const cond of optimizedConditions) {
         const whereClause = convertSingleCondition(cond, entityType, req);
         if (Object.keys(whereClause).length > 0) {
             prismaConditions.push(whereClause);
@@ -35,37 +37,159 @@ function convertFilterConditionsToPrismaWhere(conditions, operators, entityType,
     if (prismaConditions.length === 0) {
         return {};
     }
-    // UND/ODER-Verknüpfungen
-    if (operators.length === 0 || operators.every(op => op === 'AND')) {
-        // Alle UND: Kombiniere mit AND
-        return { AND: prismaConditions };
+    // ✅ KORREKT: AND hat höhere Präzedenz als OR (wie in Mathematik/Logik)
+    // Beispiel: A OR B AND C AND D = A OR (B AND C AND D)
+    // 
+    // Algorithmus:
+    // 1. Gruppiere aufeinanderfolgende ANDs
+    // 2. Verbinde die Gruppen mit OR
+    if (prismaConditions.length === 1) {
+        return prismaConditions[0];
     }
-    else if (operators.every(op => op === 'OR')) {
-        // Alle ODER: Kombiniere mit OR
-        return { OR: prismaConditions };
+    // Schritt 1: Teile bei OR in Gruppen auf
+    const groups = [[prismaConditions[0]]];
+    for (let i = 1; i < prismaConditions.length; i++) {
+        const operator = operators[i - 1] || 'AND';
+        if (operator === 'OR') {
+            // OR: Neue Gruppe starten
+            groups.push([prismaConditions[i]]);
+        }
+        else {
+            // AND: Zur aktuellen Gruppe hinzufügen
+            groups[groups.length - 1].push(prismaConditions[i]);
+        }
     }
-    else {
-        // Gemischte Verknüpfungen: Gruppiere nach Operator-Sequenz
-        const grouped = [];
-        let currentGroup = [prismaConditions[0]];
-        for (let i = 1; i < prismaConditions.length; i++) {
-            const operator = operators[i - 1];
-            if (operator === 'AND') {
-                currentGroup.push(prismaConditions[i]);
-            }
-            else {
-                // ODER: Aktuelle Gruppe abschließen, neue Gruppe starten
-                if (currentGroup.length > 0) {
-                    grouped.push(currentGroup.length === 1 ? currentGroup[0] : { AND: currentGroup });
+    // Schritt 2: Jede Gruppe zu AND-Klausel konvertieren
+    const groupClauses = groups.map(group => {
+        if (group.length === 1) {
+            return group[0];
+        }
+        return { AND: group };
+    });
+    // Schritt 3: Alle Gruppen mit OR verbinden
+    if (groupClauses.length === 1) {
+        return groupClauses[0];
+    }
+    return { OR: groupClauses };
+}
+/**
+ * ✅ OPTIMIERUNG: Kombiniert mehrere notEquals/equals Bedingungen für dieselbe Spalte
+ *
+ * Regeln:
+ * - Mehrere notEquals für dieselbe Spalte mit AND → kombiniert zu notIn
+ * - Mehrere equals für dieselbe Spalte mit OR → kombiniert zu in
+ * - Bei gemischten Operatoren bleiben sie einzeln
+ * - Reihenfolge wird beibehalten (andere Spalten dazwischen bleiben erhalten)
+ *
+ * @param conditions - Array von Filter-Bedingungen
+ * @param operators - Array von logischen Operatoren ('AND' | 'OR')
+ * @returns Optimiertes Array von Filter-Bedingungen
+ */
+function optimizeFilterConditions(conditions, operators) {
+    if (conditions.length <= 1) {
+        return conditions;
+    }
+    // Prüfe, ob alle Operatoren AND sind (nur dann können wir notEquals kombinieren)
+    const allAnd = operators.length === 0 || operators.every(op => op === 'AND');
+    // Prüfe, ob alle Operatoren OR sind (nur dann können wir equals kombinieren)
+    const allOr = operators.length > 0 && operators.every(op => op === 'OR');
+    if (!allAnd && !allOr) {
+        // Gemischte Verknüpfungen: Keine Optimierung möglich
+        return conditions;
+    }
+    // ✅ OPTIMIERUNG: Gruppiere Bedingungen nach Spalte UND behalte Reihenfolge
+    // Verwende Map mit Spalten-Key, aber verarbeite in Reihenfolge
+    const columnGroups = new Map();
+    // Erste Durchlauf: Gruppiere nach Spalte
+    for (let i = 0; i < conditions.length; i++) {
+        const cond = conditions[i];
+        if (!columnGroups.has(cond.column)) {
+            columnGroups.set(cond.column, {
+                equals: [],
+                notEquals: [],
+                others: [],
+                firstIndex: i
+            });
+        }
+        const group = columnGroups.get(cond.column);
+        if (cond.operator === 'equals') {
+            group.equals.push(cond);
+        }
+        else if (cond.operator === 'notEquals') {
+            group.notEquals.push(cond);
+        }
+        else {
+            group.others.push(cond);
+        }
+    }
+    // Zweiter Durchlauf: Erstelle optimiertes Array in korrekter Reihenfolge
+    const optimized = [];
+    const processedColumns = new Set();
+    for (let i = 0; i < conditions.length; i++) {
+        const cond = conditions[i];
+        // Wenn diese Spalte bereits verarbeitet wurde, überspringe
+        if (processedColumns.has(cond.column)) {
+            continue;
+        }
+        const group = columnGroups.get(cond.column);
+        // ✅ OPTIMIERUNG: Mehrere notEquals mit AND → kombiniert zu notIn
+        if (allAnd && group.notEquals.length > 1) {
+            const values = [];
+            for (const c of group.notEquals) {
+                if (c.value !== null && c.value !== undefined) {
+                    // Wenn value bereits ein Array ist (sollte nicht passieren, aber sicherheitshalber), flach machen
+                    if (Array.isArray(c.value)) {
+                        values.push(...c.value);
+                    }
+                    else {
+                        values.push(c.value);
+                    }
                 }
-                currentGroup = [prismaConditions[i]];
+            }
+            if (values.length > 0) {
+                optimized.push({
+                    column: cond.column,
+                    operator: 'notIn',
+                    value: values
+                });
             }
         }
-        if (currentGroup.length > 0) {
-            grouped.push(currentGroup.length === 1 ? currentGroup[0] : { AND: currentGroup });
+        else {
+            // Einzelne notEquals beibehalten
+            optimized.push(...group.notEquals);
         }
-        return grouped.length === 1 ? grouped[0] : { OR: grouped };
+        // ✅ OPTIMIERUNG: Mehrere equals mit OR → kombiniert zu in
+        if (allOr && group.equals.length > 1) {
+            const values = [];
+            for (const c of group.equals) {
+                if (c.value !== null && c.value !== undefined) {
+                    // Wenn value bereits ein Array ist (sollte nicht passieren, aber sicherheitshalber), flach machen
+                    if (Array.isArray(c.value)) {
+                        values.push(...c.value);
+                    }
+                    else {
+                        values.push(c.value);
+                    }
+                }
+            }
+            if (values.length > 0) {
+                optimized.push({
+                    column: cond.column,
+                    operator: 'in',
+                    value: values
+                });
+            }
+        }
+        else {
+            // Einzelne equals beibehalten
+            optimized.push(...group.equals);
+        }
+        // Andere Operatoren immer beibehalten
+        optimized.push(...group.others);
+        // Markiere Spalte als verarbeitet
+        processedColumns.add(cond.column);
     }
+    return optimized;
 }
 /**
  * Konvertiert eine einzelne Filter-Bedingung in eine Prisma Where-Klausel
@@ -111,6 +235,14 @@ function convertSingleCondition(condition, entityType, req) {
             else if (operator === 'notEquals') {
                 return { status: { not: resolvedValue } };
             }
+            else if (operator === 'in') {
+                // ✅ OPTIMIERUNG: Kombinierte equals mit OR
+                return { status: { in: Array.isArray(resolvedValue) ? resolvedValue : [resolvedValue] } };
+            }
+            else if (operator === 'notIn') {
+                // ✅ OPTIMIERUNG: Kombinierte notEquals mit AND
+                return { status: { notIn: Array.isArray(resolvedValue) ? resolvedValue : [resolvedValue] } };
+            }
             return {};
         case 'title':
             // ✅ FIX: title wird für Reservations nicht unterstützt (haben kein title-Feld)
@@ -137,6 +269,14 @@ function convertSingleCondition(condition, entityType, req) {
                 }
                 else if (operator === 'notEquals') {
                     return { type: { not: resolvedValue } };
+                }
+                else if (operator === 'in') {
+                    // ✅ OPTIMIERUNG: Kombinierte equals mit OR
+                    return { type: { in: Array.isArray(resolvedValue) ? resolvedValue : [resolvedValue] } };
+                }
+                else if (operator === 'notIn') {
+                    // ✅ OPTIMIERUNG: Kombinierte notEquals mit AND
+                    return { type: { notIn: Array.isArray(resolvedValue) ? resolvedValue : [resolvedValue] } };
                 }
             }
             return {};
@@ -177,6 +317,14 @@ function convertSingleCondition(condition, entityType, req) {
                 }
                 else if (operator === 'notEquals') {
                     return { paymentStatus: { not: resolvedValue } };
+                }
+                else if (operator === 'in') {
+                    // ✅ OPTIMIERUNG: Kombinierte equals mit OR
+                    return { paymentStatus: { in: Array.isArray(resolvedValue) ? resolvedValue : [resolvedValue] } };
+                }
+                else if (operator === 'notIn') {
+                    // ✅ OPTIMIERUNG: Kombinierte notEquals mit AND
+                    return { paymentStatus: { notIn: Array.isArray(resolvedValue) ? resolvedValue : [resolvedValue] } };
                 }
             }
             return {};
@@ -246,14 +394,29 @@ function convertSingleCondition(condition, entityType, req) {
         case 'onlineCheckInCompleted':
             if (entityType === 'reservation') {
                 // ✅ Konvertiere Wert zu Boolean (resolvedValue ist string | number | Date)
-                const boolValue = typeof resolvedValue === 'boolean'
-                    ? resolvedValue
-                    : (resolvedValue === 'true' || resolvedValue === '1' || resolvedValue === 1);
                 if (operator === 'equals') {
+                    const boolValue = typeof resolvedValue === 'boolean'
+                        ? resolvedValue
+                        : (resolvedValue === 'true' || resolvedValue === '1' || resolvedValue === 1);
                     return { onlineCheckInCompleted: boolValue };
                 }
                 else if (operator === 'notEquals') {
+                    const boolValue = typeof resolvedValue === 'boolean'
+                        ? resolvedValue
+                        : (resolvedValue === 'true' || resolvedValue === '1' || resolvedValue === 1);
                     return { onlineCheckInCompleted: { not: boolValue } };
+                }
+                else if (operator === 'in') {
+                    // ✅ OPTIMIERUNG: Kombinierte equals mit OR (konvertiere alle Werte zu Boolean)
+                    const values = Array.isArray(resolvedValue) ? resolvedValue : [resolvedValue];
+                    const boolValues = values.map(v => typeof v === 'boolean' ? v : (v === 'true' || v === '1' || v === 1));
+                    return { onlineCheckInCompleted: { in: boolValues } };
+                }
+                else if (operator === 'notIn') {
+                    // ✅ OPTIMIERUNG: Kombinierte notEquals mit AND (konvertiere alle Werte zu Boolean)
+                    const values = Array.isArray(resolvedValue) ? resolvedValue : [resolvedValue];
+                    const boolValues = values.map(v => typeof v === 'boolean' ? v : (v === 'true' || v === '1' || v === 1));
+                    return { onlineCheckInCompleted: { notIn: boolValues } };
                 }
             }
             return {};
@@ -347,6 +510,83 @@ function convertDateCondition(value, operator, fieldName = 'dueDate') {
  * Konvertiert User/Role-Bedingungen
  */
 function convertUserRoleCondition(value, operator, entityType, field) {
+    // ✅ OPTIMIERUNG: Handle in/notIn für kombinierte Bedingungen
+    if (operator === 'in' || operator === 'notIn') {
+        const values = Array.isArray(value) ? value : [value];
+        const userIds = [];
+        const roleIds = [];
+        for (const val of values) {
+            if (typeof val === 'string') {
+                if (val.startsWith('user-')) {
+                    const userId = parseInt(val.replace('user-', ''), 10);
+                    if (!isNaN(userId)) {
+                        userIds.push(userId);
+                    }
+                }
+                else if (val.startsWith('role-')) {
+                    const roleId = parseInt(val.replace('role-', ''), 10);
+                    if (!isNaN(roleId)) {
+                        roleIds.push(roleId);
+                    }
+                }
+            }
+        }
+        // Kombiniere User- und Role-IDs (falls beide vorhanden)
+        if (userIds.length > 0 && roleIds.length > 0) {
+            // Komplex: Beide Typen vorhanden - muss mit OR kombiniert werden
+            const conditions = [];
+            if (userIds.length > 0) {
+                if (field === 'responsible' && entityType === 'task') {
+                    conditions.push({ responsibleId: operator === 'notIn' ? { notIn: userIds } : { in: userIds } });
+                }
+                else if (field === 'responsible' && entityType === 'request') {
+                    conditions.push({ responsibleId: operator === 'notIn' ? { notIn: userIds } : { in: userIds } });
+                }
+                else if (field === 'qualityControl' && entityType === 'task') {
+                    conditions.push({ qualityControlId: operator === 'notIn' ? { notIn: userIds } : { in: userIds } });
+                }
+                else if (field === 'requestedBy' && entityType === 'request') {
+                    conditions.push({ requesterId: operator === 'notIn' ? { notIn: userIds } : { in: userIds } });
+                }
+                else if (field === 'createdBy' && entityType === 'tour') {
+                    conditions.push({ createdById: operator === 'notIn' ? { notIn: userIds } : { in: userIds } });
+                }
+                else if (field === 'bookedBy' && entityType === 'tour_booking') {
+                    conditions.push({ bookedById: operator === 'notIn' ? { notIn: userIds } : { in: userIds } });
+                }
+            }
+            if (roleIds.length > 0 && field === 'responsible' && entityType === 'task') {
+                conditions.push({ roleId: operator === 'notIn' ? { notIn: roleIds } : { in: roleIds } });
+            }
+            return conditions.length > 1 ? { OR: conditions } : (conditions[0] || {});
+        }
+        else if (userIds.length > 0) {
+            // Nur User-IDs
+            if (field === 'responsible' && entityType === 'task') {
+                return { responsibleId: operator === 'notIn' ? { notIn: userIds } : { in: userIds } };
+            }
+            else if (field === 'responsible' && entityType === 'request') {
+                return { responsibleId: operator === 'notIn' ? { notIn: userIds } : { in: userIds } };
+            }
+            else if (field === 'qualityControl' && entityType === 'task') {
+                return { qualityControlId: operator === 'notIn' ? { notIn: userIds } : { in: userIds } };
+            }
+            else if (field === 'requestedBy' && entityType === 'request') {
+                return { requesterId: operator === 'notIn' ? { notIn: userIds } : { in: userIds } };
+            }
+            else if (field === 'createdBy' && entityType === 'tour') {
+                return { createdById: operator === 'notIn' ? { notIn: userIds } : { in: userIds } };
+            }
+            else if (field === 'bookedBy' && entityType === 'tour_booking') {
+                return { bookedById: operator === 'notIn' ? { notIn: userIds } : { in: userIds } };
+            }
+        }
+        else if (roleIds.length > 0 && field === 'responsible' && entityType === 'task') {
+            // Nur Role-IDs
+            return { roleId: operator === 'notIn' ? { notIn: roleIds } : { in: roleIds } };
+        }
+        return {};
+    }
     if (typeof value !== 'string') {
         return {};
     }

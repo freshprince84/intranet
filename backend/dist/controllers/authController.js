@@ -15,7 +15,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetPassword = exports.requestPasswordReset = exports.getCurrentUser = exports.logout = exports.login = exports.register = void 0;
+exports.resetPassword = exports.requestPasswordReset = exports.logout = exports.login = exports.register = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
@@ -328,70 +328,6 @@ const logout = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.logout = logout;
-const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const userId = parseInt(req.userId, 10);
-        if (isNaN(userId)) {
-            return res.status(401).json({ message: 'Nicht authentifiziert' });
-        }
-        // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
-        const user = yield prisma_1.prisma.user.findUnique({
-            where: { id: userId },
-            include: {
-                roles: {
-                    include: {
-                        role: {
-                            include: {
-                                permissions: true,
-                                organization: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        displayName: true,
-                                        logo: true
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        if (!user) {
-            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
-        }
-        const userResponse = {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            roles: user.roles.map(r => ({
-                role: {
-                    id: r.role.id,
-                    name: r.role.name,
-                    permissions: r.role.permissions,
-                    organization: r.role.organization ? {
-                        id: r.role.organization.id,
-                        name: r.role.organization.name,
-                        displayName: r.role.organization.displayName,
-                        logo: r.role.organization.logo
-                    } : null
-                },
-                lastUsed: r.lastUsed
-            }))
-        };
-        res.json({ user: userResponse });
-    }
-    catch (error) {
-        logger_1.logger.error('getCurrentUser Fehler:', error);
-        res.status(500).json({
-            message: 'Fehler beim Abrufen des Benutzers',
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
-    }
-});
-exports.getCurrentUser = getCurrentUser;
 /**
  * Anfrage zum Zurücksetzen des Passworts
  * Sendet eine E-Mail mit Reset-Link an die hinterlegte E-Mail-Adresse des Benutzers
