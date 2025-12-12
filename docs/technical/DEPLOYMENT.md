@@ -424,10 +424,9 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         
-        # ✅ FIX: Erhöhe Upload-Limit für Dokumenten-Uploads (KI-basierte Erkennung)
-        # Base64-kodierte Bilder sind sehr groß (2-5MB für ein Foto)
-        # Standard ist 1MB, was zu 413 "Request Entity Too Large" Fehlern führt
-        # Siehe auch: docs/technical/NGINX_CLIENT_MAX_BODY_SIZE_FIX.md
+        # ✅ WICHTIG: Upload-Limit für Dokumenten-Uploads (Base64-kodierte Bilder sind sehr groß)
+        # Base64-kodierte Bilder sind ~33% größer als Original (1MB Bild → ~1.3MB Base64)
+        # Standard ist 1M, muss für Dokumenten-Uploads erhöht werden
         client_max_body_size 10M;
     }
 
@@ -963,11 +962,10 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         
-        # ✅ FIX: Erhöhe Upload-Limit für Dokumenten-Uploads (KI-basierte Erkennung)
-        # Base64-kodierte Bilder sind sehr groß (2-5MB für ein Foto)
-        # Standard ist 1MB, was zu 413 "Request Entity Too Large" Fehlern führt
+        # ✅ WICHTIG: Upload-Limit für Dokumenten-Uploads (Base64-kodierte Bilder sind sehr groß)
+        # Base64-kodierte Bilder sind ~33% größer als Original (1MB Bild → ~1.3MB Base64)
+        # Standard ist 1M, muss für Dokumenten-Uploads erhöht werden
         client_max_body_size 10M;
-        # Weitere Proxy-Einstellungen...
     }
 }
 ```
