@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usePermissions } from '../hooks/usePermissions';
+import { usePermissions } from '../hooks/usePermissions.ts';
 import { useMessage } from '../contexts/MessageContext';
 import { useError } from '../contexts/ErrorContext';
 import Layout from '../components/Layout';
