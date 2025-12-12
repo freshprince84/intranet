@@ -286,7 +286,7 @@ const Worktracker: React.FC = () => {
         { id: 'responsible', label: t('tasks.columns.responsible'), shortLabel: t('tasks.columns.responsible').substring(0, 3) },
         { id: 'qualityControl', label: t('tasks.columns.qualityControl'), shortLabel: t('tasks.columns.qualityControl').substring(0, 2) },
     ], [t]);
-
+    
     // Definiere Spalten für FilterPane (ohne actions und responsibleAndQualityControl)
     // ✅ OPTIMIERUNG: Ableiten aus availableColumns und filterOnlyColumns (DRY-Prinzip)
     const filterPaneColumns = useMemo(() => {

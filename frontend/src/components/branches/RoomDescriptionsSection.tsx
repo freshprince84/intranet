@@ -52,7 +52,10 @@ const RoomDescriptionsSection: React.FC<RoomDescriptionsSectionProps> = ({ branc
       // Extrahiere eindeutige categoryIds
       const categoryMap = new Map<number, { roomName: string; roomType: 'compartida' | 'privada' }>();
       
-      response.data.reservations?.forEach((reservation: any) => {
+      // Backend gibt data.data zurück (nicht data.reservations)
+      const reservations = response.data.data || [];
+      
+      reservations.forEach((reservation: any) => {
         if (reservation.categoryId && reservation.roomNumber) {
           // Bestimme roomType basierend auf roomNumber (Dorms enthalten "(")
           const isDorm = reservation.roomNumber.includes('(');
