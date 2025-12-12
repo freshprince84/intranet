@@ -11,8 +11,8 @@ const UserTasksActivityTab: React.FC = () => {
     const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
     const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
     
-    // DateRange wird von DateRangeSelector verwaltet
-    const { period, dateRange } = useDateRange();
+    // DateRange State
+    const { period, setPeriod, startDate, setStartDate, endDate, setEndDate, dateRange } = useDateRange();
     
     const { data, loading, error } = useActivityData({
         type: 'user-tasks',
@@ -29,7 +29,14 @@ const UserTasksActivityTab: React.FC = () => {
                 {t('analytics.userActivity.tasks.title', { defaultValue: 'User Tasks Aktivität' })}
             </h2>
             
-            <DateRangeSelector />
+            <DateRangeSelector
+                period={period}
+                setPeriod={setPeriod}
+                startDate={startDate}
+                setStartDate={setStartDate}
+                endDate={endDate}
+                setEndDate={setEndDate}
+            />
             
             {loading && <div className="text-center py-8">{t('common.loading', { defaultValue: 'Laden...' })}</div>}
             {error && <div className="text-red-600 py-4">{error}</div>}

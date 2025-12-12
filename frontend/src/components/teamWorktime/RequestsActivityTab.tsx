@@ -12,7 +12,7 @@ const RequestsActivityTab: React.FC = () => {
     const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(undefined);
     const [expandedRequests, setExpandedRequests] = useState<Set<number>>(new Set());
     
-    const { period, dateRange } = useDateRange();
+    const { period, setPeriod, startDate, setStartDate, endDate, setEndDate, dateRange } = useDateRange();
     
     const { data, loading, error } = useActivityData({
         type: 'requests',
@@ -41,7 +41,14 @@ const RequestsActivityTab: React.FC = () => {
                 {t('analytics.requestActivity.title', { defaultValue: 'Request Aktivität' })}
             </h2>
             
-            <DateRangeSelector />
+            <DateRangeSelector
+                period={period}
+                setPeriod={setPeriod}
+                startDate={startDate}
+                setStartDate={setStartDate}
+                endDate={endDate}
+                setEndDate={setEndDate}
+            />
             
             {loading && <div className="text-center py-8">{t('common.loading', { defaultValue: 'Laden...' })}</div>}
             {error && <div className="text-red-600 py-4">{error}</div>}

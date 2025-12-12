@@ -46,6 +46,7 @@
     "force": "Force",
     "previousDay": "Previous day",
     "nextDay": "Next day",
+    "to": "to",
     "searchPlaceholder": "Search...",
     "showFilter": "Show filter",
     "collapse": "Collapse",
@@ -1498,7 +1499,11 @@
       "worktimes": "Work Times & Activities",
       "shifts": "Shift Plan",
       "todos": "To-Do Analytics",
-      "requests": "Request Analytics"
+      "requests": "Request Analytics",
+      "userTasksActivity": "User Tasks Activity",
+      "userRequestsActivity": "User Requests Activity",
+      "tasksActivity": "Tasks Activity",
+      "requestsActivity": "Requests Activity"
     },
     "titles": {
       "todos": "To-Do Analytics",
@@ -1969,6 +1974,39 @@
         "responsible": "Responsible",
         "time": "Time"
       }
+    },
+    "period": {
+      "today": "Today",
+      "week": "This Week",
+      "month": "This Month",
+      "year": "This Year",
+      "custom": "Custom"
+    },
+    "userActivity": {
+      "tasks": {
+        "title": "User Tasks Activity",
+        "tasksCreated": "Tasks created",
+        "tasksDeleted": "Tasks deleted",
+        "statusChanges": "Status changes"
+      },
+      "requests": {
+        "title": "User Requests Activity",
+        "requestsCreated": "Requests created",
+        "requestsDeleted": "Requests deleted",
+        "statusChanges": "Status changes"
+      }
+    },
+    "taskActivity": {
+      "title": "Task Activity",
+      "createdBy": "Created by",
+      "deletedBy": "Deleted by",
+      "statusHistory": "Status history"
+    },
+    "requestActivity": {
+      "title": "Request Activity",
+      "createdBy": "Created by",
+      "deletedBy": "Deleted by",
+      "statusHistory": "Status history"
     },
     "monthlyReports": {
       "title": "Monthly Billing",

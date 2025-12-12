@@ -1,10 +1,25 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDateRange, Period } from '../../hooks/useDateRange.ts';
+import { Period } from '../../hooks/useDateRange.ts';
 
-export const DateRangeSelector: React.FC = () => {
+interface DateRangeSelectorProps {
+    period: Period;
+    setPeriod: (period: Period) => void;
+    startDate: string;
+    setStartDate: (date: string) => void;
+    endDate: string;
+    setEndDate: (date: string) => void;
+}
+
+export const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
+    period,
+    setPeriod,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate
+}) => {
     const { t } = useTranslation();
-    const { period, setPeriod, startDate, setStartDate, endDate, setEndDate } = useDateRange();
     
     return (
         <div className="flex items-center gap-4 mb-4">
@@ -28,7 +43,7 @@ export const DateRangeSelector: React.FC = () => {
                         onChange={(e) => setStartDate(e.target.value)}
                         className="px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                     />
-                    <span className="text-gray-600 dark:text-gray-400">{t('common.to', { defaultValue: 'bis' })}</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('common.to', { defaultValue: 'bis' }) || 'bis'}</span>
                     <input
                         type="date"
                         value={endDate}

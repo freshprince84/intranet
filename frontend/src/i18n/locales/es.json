@@ -46,6 +46,7 @@
     "force": "Forzar",
     "previousDay": "Día anterior",
     "nextDay": "Día siguiente",
+    "to": "a",
     "searchPlaceholder": "Buscar...",
     "showFilter": "Mostrar filtro",
     "collapse": "Contraer",
@@ -1495,7 +1496,11 @@
       "worktimes": "Tiempos de trabajo y actividades",
       "shifts": "Plan de Turnos",
       "todos": "Evaluaciones de tareas",
-      "requests": "Evaluaciones de solicitudes"
+      "requests": "Evaluaciones de solicitudes",
+      "userTasksActivity": "Actividad de Tareas de Usuario",
+      "userRequestsActivity": "Actividad de Solicitudes de Usuario",
+      "tasksActivity": "Actividad de Tareas",
+      "requestsActivity": "Actividad de Solicitudes"
     },
     "titles": {
       "todos": "Evaluaciones de tareas",
@@ -1966,6 +1971,39 @@
         "responsible": "Responsable",
         "time": "Tiempo"
       }
+    },
+    "period": {
+      "today": "Hoy",
+      "week": "Esta Semana",
+      "month": "Este Mes",
+      "year": "Este Año",
+      "custom": "Personalizado"
+    },
+    "userActivity": {
+      "tasks": {
+        "title": "Actividad de Tareas de Usuario",
+        "tasksCreated": "Tareas creadas",
+        "tasksDeleted": "Tareas eliminadas",
+        "statusChanges": "Cambios de estado"
+      },
+      "requests": {
+        "title": "Actividad de Solicitudes de Usuario",
+        "requestsCreated": "Solicitudes creadas",
+        "requestsDeleted": "Solicitudes eliminadas",
+        "statusChanges": "Cambios de estado"
+      }
+    },
+    "taskActivity": {
+      "title": "Actividad de Tareas",
+      "createdBy": "Creado por",
+      "deletedBy": "Eliminado por",
+      "statusHistory": "Historial de estado"
+    },
+    "requestActivity": {
+      "title": "Actividad de Solicitudes",
+      "createdBy": "Creado por",
+      "deletedBy": "Eliminado por",
+      "statusHistory": "Historial de estado"
     },
     "monthlyReports": {
       "title": "Facturación mensual",
