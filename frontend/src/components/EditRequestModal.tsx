@@ -80,6 +80,8 @@ interface EditRequestModalProps {
     id: number;
     title: string;
     description?: string;
+    type?: 'vacation' | 'improvement_suggestion' | 'sick_leave' | 'employment_certificate' | 'event' | 'permit' | 'buy_order' | 'repair' | 'other';
+    isPrivate?: boolean;
     responsible: {
       id: number;
     };
@@ -262,14 +264,30 @@ const EditRequestModal = ({
       fetchData();
       fetchAttachments();
       // Aktualisiere State wenn Request-Props sich ändern
+      const requestType = request.type || 'other';
+      const requestDueDate = request.dueDate ? request.dueDate.split('T')[0] : '';
+      
       setTitle(request.title);
       setDescription(removeImageMarkdown(request.description || ''));
       setResponsibleId(request.responsible.id);
       setBranchId(request.branch.id);
-      setType((request as any).type || 'other');
-      setIsPrivate((request as any).isPrivate || false);
-      setDueDate(request.dueDate ? request.dueDate.split('T')[0] : '');
+      setType(requestType);
+      setIsPrivate(request.isPrivate || false);
       setCreateTodo(request.createTodo);
+      
+      // Validiere und passe Due Date an, wenn es nicht dem Type entspricht
+      if (requestDueDate) {
+        const minDate = getMinDateForType(requestType);
+        if (requestDueDate < minDate) {
+          // Datum liegt vor Mindestdatum - setze auf Default-Datum für diesen Type
+          setDueDate(getDefaultDateForType(requestType));
+        } else {
+          setDueDate(requestDueDate);
+        }
+      } else {
+        // Kein Datum vorhanden - setze Default-Datum für diesen Type
+        setDueDate(getDefaultDateForType(requestType));
+      }
     }
   }, [isOpen, request]);
 
