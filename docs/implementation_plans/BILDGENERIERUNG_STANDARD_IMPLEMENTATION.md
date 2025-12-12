@@ -317,7 +317,13 @@ GET /api/tours/:id/generate-images/status
 - ✅ Bessere UX
 - ✅ Retry-Mechanismus bei Fehlern
 
-**Entscheidung:** Option B - Asynchron mit Queue
+**Entscheidung:** Option B - Asynchron mit Queue + Synchroner Fallback
+
+**Fallback-Strategie:**
+- Wenn `QUEUE_ENABLED=false` → Synchroner Modus
+- Wenn Redis nicht verfügbar → Synchroner Modus
+- Frontend erhält Warnung: "Queue nicht verfügbar, verwende synchronen Modus"
+- Funktioniert immer, auch ohne Queue (langsamer, aber funktional)
 
 ---
 
@@ -476,6 +482,43 @@ router.get('/:id/generate-images/status', authMiddleware, organizationMiddleware
 // 2. Bilder hochladen (wie manueller Upload)
 // 3. Tour-Daten aktualisieren
 // 4. Job-Status aktualisieren
+// 5. ✅ TEMPORÄRE DATEIEN CLEANUP: Falls Upload fehlschlägt, temporäre Dateien löschen
+```
+
+**Temporäre Dateien Cleanup:**
+- Bilder werden zunächst in temporärem Verzeichnis generiert
+- Nach erfolgreichem Upload: Temporäre Dateien löschen
+- Bei Fehler: Temporäre Dateien löschen (verhindert Disk-Space Leak)
+- Cleanup-Logik in Worker, nicht in Service (Service nur für Generierung)
+
+**Implementierung:**
+```typescript
+try {
+  // Bilder generieren
+  const generatedImages = await GeminiImageService.generateTourImages(...);
+  
+  // Bilder hochladen
+  await uploadTourImages(tourId, generatedImages);
+  
+  // ✅ Cleanup: Temporäre Dateien löschen
+  fs.unlinkSync(generatedImages.mainImage);
+  generatedImages.galleryImages.forEach(img => fs.unlinkSync(img));
+  fs.unlinkSync(generatedImages.flyer);
+} catch (error) {
+  // ✅ Cleanup auch bei Fehler
+  if (generatedImages) {
+    try {
+      if (fs.existsSync(generatedImages.mainImage)) fs.unlinkSync(generatedImages.mainImage);
+      generatedImages.galleryImages.forEach(img => {
+        if (fs.existsSync(img)) fs.unlinkSync(img);
+      });
+      if (fs.existsSync(generatedImages.flyer)) fs.unlinkSync(generatedImages.flyer);
+    } catch (cleanupError) {
+      logger.error('[ImageGenerationWorker] Fehler beim Cleanup:', cleanupError);
+    }
+  }
+  throw error;
+}
 ```
 
 ---
@@ -529,6 +572,37 @@ TOURS: {
 - Polling-Intervall: 2 Sekunden
 - Max. Polling-Dauer: 60 Sekunden
 - Automatisches Stoppen bei Erfolg/Fehler
+- **MEMORY LEAK PREVENTION:** Polling-Intervalle MÜSSEN in `useEffect` Cleanup-Funktion aufgeräumt werden
+
+**Implementierung (MUSS so gemacht werden):**
+```tsx
+useEffect(() => {
+  if (!jobId || status === 'completed' || status === 'failed') {
+    return; // Kein Polling nötig
+  }
+
+  const intervalId = setInterval(async () => {
+    // Status abrufen
+    const response = await axiosInstance.get(API_ENDPOINTS.TOURS.GENERATE_IMAGES_STATUS(tourId));
+    // Status aktualisieren
+    setStatus(response.data.status);
+    
+    if (response.data.status === 'completed' || response.data.status === 'failed') {
+      clearInterval(intervalId); // Stoppe Polling
+    }
+  }, 2000); // 2 Sekunden
+
+  // ✅ MEMORY LEAK PREVENTION: Cleanup-Funktion
+  return () => {
+    clearInterval(intervalId);
+  };
+}, [jobId, status, tourId]); // Dependencies: jobId, status, tourId
+```
+
+**Risiko ohne Cleanup:**
+- ❌ Polling läuft weiter wenn Component unmounted wird
+- ❌ Memory Leak durch nicht entfernte Intervalle
+- ❌ Performance-Beeinträchtigung durch unnötige API-Calls
 
 #### 4.3 Caching
 - Kein Caching nötig (Bilder werden direkt in DB gespeichert)
@@ -539,8 +613,33 @@ TOURS: {
 ## 🔒 SICHERHEIT UND BERECHTIGUNGEN
 
 ### Berechtigungen
-- **Erforderlich:** `tour_edit` mit `write` und `button`
+
+**Frontend:**
+- **Erforderlich:** `hasPermission('tour_edit', 'write', 'button')`
 - **Gleiche Berechtigung wie:** Tour bearbeiten, Bild hochladen
+- **Verwendung:** Button nur sichtbar wenn Berechtigung vorhanden
+
+**Backend:**
+- **Erforderlich:** `checkUserPermission(userId, roleId, 'tour_edit', 'write', 'button')`
+- **Prüfung:** In Controller vor Job-Erstellung
+- **Fehler:** 403 Forbidden wenn keine Berechtigung
+
+**Berechtigungsprüfung im Controller:**
+```typescript
+const hasPermission = await checkUserPermission(
+  parseInt(req.userId),
+  parseInt(req.roleId),
+  'tour_edit',
+  'write',
+  'button'
+);
+if (!hasPermission) {
+  return res.status(403).json({
+    success: false,
+    message: 'Keine Berechtigung zum Generieren von Tour-Bildern'
+  });
+}
+```
 
 ### API-Key-Verwaltung
 - API-Key in `.env` als `GEMINI_API_KEY`
@@ -559,19 +658,47 @@ TOURS: {
 ### Aktuell (ohne Queue)
 - **Bildgenerierung:** 10-30 Sekunden pro Bild
 - **5 Bilder:** 50-150 Sekunden
+- **Frontend blockiert:** Ja (50-150 Sekunden)
+- **API-Response:** 50-150 Sekunden (blockiert)
+- **User-Experience:** ❌ Schlecht (Browser hängt, Timeout-Risiko)
+
+### Mit Queue (Asynchron)
+- **API-Response:** <100ms (Job wird zur Queue hinzugefügt)
+- **Bildgenerierung:** 50-150 Sekunden (im Hintergrund, Worker)
+- **Frontend blockiert:** Nein (sofortige Response)
+- **Polling-Overhead:** 1 Request alle 2 Sekunden (30 Requests in 60 Sekunden)
+- **User-Experience:** ✅ Gut (sofortige Response, Status-Updates)
+
+### Mit Fallback (Synchron, wenn Queue nicht verfügbar)
+- **API-Response:** 50-150 Sekunden (blockiert)
 - **Frontend blockiert:** Ja
-- **User-Experience:** ❌ Schlecht
+- **User-Experience:** ⚠️ Akzeptabel (funktioniert, aber langsam)
+- **Warnung:** Frontend zeigt "Queue nicht verfügbar, verwende synchronen Modus"
 
-### Mit Queue
-- **API-Response:** <100ms
-- **Bildgenerierung:** 50-150 Sekunden (im Hintergrund)
-- **Frontend blockiert:** Nein
-- **User-Experience:** ✅ Gut
+### Performance-Beeinflussung des Systems
 
-### Optimierungen
-- **Parallele Generierung:** Nicht möglich (API-Limit)
-- **Caching:** Nicht nötig (einmalige Generierung)
-- **Lazy-Loading:** Bilder werden lazy geladen
+**Backend:**
+- **Queue-Modus:** Keine Beeinflussung (Worker läuft im Hintergrund)
+- **Synchron-Modus:** Request-Thread blockiert 50-150 Sekunden
+- **Redis-Verbindung:** Minimal (nur für Job-Status)
+- **Disk I/O:** 5 Dateien schreiben (ca. 2-5 MB pro Tour)
+
+**Frontend:**
+- **Polling-Overhead:** 1 Request alle 2 Sekunden pro aktiver Generierung
+- **Memory:** Minimal (nur Status-State, keine großen Daten)
+- **CPU:** Minimal (nur Polling-Logik)
+
+**Optimierungen:**
+- **Parallele Generierung:** Nicht möglich (Gemini API-Limit)
+- **Caching:** Nicht nötig (einmalige Generierung pro Tour)
+- **Lazy-Loading:** Bilder werden lazy geladen (bereits implementiert)
+- **Polling-Begrenzung:** Max. 5 gleichzeitige Polling-Intervalle pro User
+
+**Memory Leak Prevention:**
+- ✅ Polling-Intervalle werden in `useEffect` Cleanup aufgeräumt
+- ✅ Temporäre Dateien werden nach Upload/Fehler gelöscht
+- ✅ Keine Event-Listener ohne Cleanup
+- ✅ Keine URL.createObjectURL() ohne revokeObjectURL()
 
 ---
 
@@ -594,41 +721,70 @@ TOURS: {
 
 ## 📝 ÜBERSETZUNGEN (I18N)
 
-**Erforderliche Übersetzungen:**
+**Standard:** Alle Texte müssen mit `t()` und `defaultValue` verwendet werden (siehe CODING_STANDARDS.md, Zeile 42-77).
+
+**Erforderliche Übersetzungen (müssen in ALLEN 3 Sprachen hinzugefügt werden):**
 
 ```json
-// de.json
+// frontend/src/i18n/locales/de.json (nach Zeile 3016, innerhalb "tours")
 {
   "tours": {
+    // ... bestehende Keys ...
     "generateImages": "Bilder generieren",
     "generatingImages": "Bilder werden generiert...",
     "imagesGenerated": "Bilder erfolgreich generiert",
     "imageGenerationFailed": "Fehler bei Bildgenerierung",
-    "imageGenerationProgress": "Fortschritt: {progress}%"
+    "imageGenerationProgress": "Fortschritt: {progress}%",
+    "imageGenerationStarted": "Bildgenerierung gestartet",
+    "imageGenerationQueued": "Bildgenerierung in Warteschlange",
+    "imageGenerationTimeout": "Bildgenerierung hat zu lange gedauert",
+    "imageGenerationNoQueue": "Queue-System nicht verfügbar, verwende synchronen Modus",
+    "imageGenerationRedisError": "Redis-Verbindungsfehler, verwende synchronen Modus"
   }
 }
 
-// en.json
+// frontend/src/i18n/locales/en.json (nach Zeile 2950, innerhalb "tours")
 {
   "tours": {
+    // ... bestehende Keys ...
     "generateImages": "Generate images",
     "generatingImages": "Generating images...",
     "imagesGenerated": "Images generated successfully",
     "imageGenerationFailed": "Image generation failed",
-    "imageGenerationProgress": "Progress: {progress}%"
+    "imageGenerationProgress": "Progress: {progress}%",
+    "imageGenerationStarted": "Image generation started",
+    "imageGenerationQueued": "Image generation queued",
+    "imageGenerationTimeout": "Image generation took too long",
+    "imageGenerationNoQueue": "Queue system not available, using synchronous mode",
+    "imageGenerationRedisError": "Redis connection error, using synchronous mode"
   }
 }
 
-// es.json
+// frontend/src/i18n/locales/es.json (nach Zeile 2949, innerhalb "tours")
 {
   "tours": {
+    // ... bestehende Keys ...
     "generateImages": "Generar imágenes",
     "generatingImages": "Generando imágenes...",
     "imagesGenerated": "Imágenes generadas exitosamente",
     "imageGenerationFailed": "Error al generar imágenes",
-    "imageGenerationProgress": "Progreso: {progress}%"
+    "imageGenerationProgress": "Progreso: {progress}%",
+    "imageGenerationStarted": "Generación de imágenes iniciada",
+    "imageGenerationQueued": "Generación de imágenes en cola",
+    "imageGenerationTimeout": "La generación de imágenes tardó demasiado",
+    "imageGenerationNoQueue": "Sistema de cola no disponible, usando modo sincrónico",
+    "imageGenerationRedisError": "Error de conexión Redis, usando modo sincrónico"
   }
 }
+```
+
+**Verwendung in Komponenten:**
+```tsx
+// ✅ RICHTIG
+{t('tours.generateImages', { defaultValue: 'Bilder generieren' })}
+
+// ❌ FALSCH
+'Bilder generieren' // Hardcoded Text
 ```
 
 ---
@@ -653,12 +809,16 @@ REDIS_PORT=6379
 
 ### Backend
 - [ ] `GeminiImageService` refactoren (generisch)
-- [ ] Queue für Bildgenerierung erstellen
-- [ ] Worker für Bildgenerierung implementieren
+- [ ] Queue für Bildgenerierung erstellen (`getImageGenerationQueue()`)
+- [ ] Worker für Bildgenerierung implementieren (`imageGenerationWorker.ts`)
+- [ ] Worker in `queues/index.ts` registrieren
 - [ ] Controller-Endpunkte: `POST /api/tours/:id/generate-images`
 - [ ] Controller-Endpunkte: `GET /api/tours/:id/generate-images/status`
-- [ ] Berechtigungsprüfung implementieren
-- [ ] Error-Handling und Logging
+- [ ] Berechtigungsprüfung implementieren (`checkUserPermission`)
+- [ ] **FALLBACK:** Synchroner Modus wenn Queue nicht verfügbar
+- [ ] **CLEANUP:** Temporäre Dateien nach Upload/Fehler löschen
+- [ ] Error-Handling für alle Fehlerfälle (API-Key, Rate-Limits, etc.)
+- [ ] Logging für alle Operationen
 
 ### Frontend
 - [ ] API-Endpunkte in `api.ts` hinzufügen
@@ -667,9 +827,12 @@ REDIS_PORT=6379
 - [ ] Handler-Funktion `handleGenerateImages()`
 - [ ] Loading-State während Generierung
 - [ ] Status-Polling implementieren
+- [ ] **MEMORY LEAK PREVENTION:** Polling-Intervalle in `useEffect` Cleanup aufräumen
 - [ ] Bild-Anzeige in Card hinzufügen
-- [ ] Übersetzungen hinzufügen (de, en, es)
+- [ ] Übersetzungen hinzufügen (de, en, es) - **ALLE Keys mit defaultValue**
 - [ ] Error-Handling und User-Feedback
+- [ ] Timeout-Handling (max. 60 Sekunden Polling)
+- [ ] Fallback-Meldung wenn Queue nicht verfügbar
 
 ### Testing
 - [ ] Backend-Tests
@@ -687,22 +850,93 @@ REDIS_PORT=6379
 ## ⚠️ RISIKEN UND MITIGATION
 
 ### Risiko 1: API-Rate-Limits
+**Risiko:** Gemini API hat Rate-Limits (z.B. 60 Requests/Minute)
+**Auswirkung:** Fehler 429 (Too Many Requests)
 **Mitigation:**
-- Queue verhindert zu viele gleichzeitige Requests
-- Retry-Mechanismus mit Backoff
-- Error-Handling für Rate-Limit-Fehler
+- Queue verhindert zu viele gleichzeitige Requests (Concurrency: 2-3)
+- Retry-Mechanismus mit exponential Backoff (2s, 4s, 8s)
+- Error-Handling für Rate-Limit-Fehler (429 Status Code)
+- Job wird automatisch retried nach Backoff-Delay
 
 ### Risiko 2: Lange Generierungszeit
+**Risiko:** Bildgenerierung dauert 10-30 Sekunden pro Bild (5 Bilder = 50-150 Sekunden)
+**Auswirkung:** Frontend blockiert, Timeout-Risiko
 **Mitigation:**
-- Asynchrone Verarbeitung (keine Blockierung)
-- Status-Polling für Fortschritt
-- Timeout-Handling (120 Sekunden)
+- Asynchrone Verarbeitung mit Queue (keine Blockierung)
+- Status-Polling für Fortschritt (alle 2 Sekunden)
+- Timeout-Handling (120 Sekunden pro Job)
+- Frontend zeigt Loading-State während Polling
 
 ### Risiko 3: API-Key-Kosten
+**Risiko:** Gemini API ist kostenpflichtig (Pay-as-you-go)
+**Auswirkung:** Unerwartete Kosten
 **Mitigation:**
-- API-Key in `.env` (nicht im Code)
-- Logging für API-Usage
-- Monitoring der Kosten
+- API-Key in `.env` (nicht im Code, nicht im Frontend)
+- Logging für API-Usage (Anzahl Requests, Fehler)
+- Monitoring der Kosten (Google Cloud Console)
+- Rate-Limiting verhindert zu viele Requests
+
+### Risiko 4: Redis nicht verfügbar
+**Risiko:** Redis-Verbindung fehlgeschlagen oder Redis nicht gestartet
+**Auswirkung:** Queue funktioniert nicht, Jobs werden nicht verarbeitet
+**Mitigation:**
+- Health-Check vor Job-Erstellung (`checkQueueHealth()`)
+- **Synchroner Fallback:** Wenn Queue nicht verfügbar, synchroner Modus
+- Frontend erhält Warnung: "Queue nicht verfügbar, verwende synchronen Modus"
+- Job wird direkt verarbeitet (blockiert Request, aber funktioniert)
+
+**Fallback-Implementierung:**
+```typescript
+const queueAvailable = await checkQueueHealth();
+if (!queueAvailable || process.env.QUEUE_ENABLED !== 'true') {
+  // Synchroner Fallback
+  logger.warn('[TourController] Queue nicht verfügbar, verwende synchronen Modus');
+  const images = await GeminiImageService.generateTourImages(...);
+  await uploadTourImages(tourId, images);
+  return res.json({ success: true, mode: 'synchronous' });
+}
+// Asynchroner Modus mit Queue
+```
+
+### Risiko 5: API-Key ungültig oder fehlt
+**Risiko:** `GEMINI_API_KEY` nicht gesetzt oder ungültig
+**Auswirkung:** Alle Bildgenerierungs-Requests schlagen fehl
+**Mitigation:**
+- Prüfung beim Service-Start: Warnung wenn Key fehlt
+- Error-Handling: Klare Fehlermeldung an Frontend
+- Frontend zeigt: "API-Key nicht konfiguriert" (nur für Admins)
+
+### Risiko 6: Temporäre Dateien nicht aufgeräumt
+**Risiko:** Bei Fehlern bleiben temporäre Dateien auf Disk
+**Auswirkung:** Disk-Space Leak, Server läuft voll
+**Mitigation:**
+- Cleanup in Worker bei Erfolg UND Fehler
+- Try/Finally Block für garantierte Cleanup
+- Logging wenn Cleanup fehlschlägt
+
+### Risiko 7: Memory Leaks durch Polling
+**Risiko:** Polling-Intervalle werden nicht aufgeräumt
+**Auswirkung:** Memory wächst kontinuierlich, Performance-Beeinträchtigung
+**Mitigation:**
+- **MUSS:** `useEffect` Cleanup-Funktion mit `clearInterval()`
+- **MUSS:** Polling stoppen wenn Component unmounted wird
+- **MUSS:** Polling stoppen wenn Status 'completed' oder 'failed'
+
+### Risiko 8: Viele gleichzeitige Polling-Requests
+**Risiko:** Mehrere Touren gleichzeitig → viele Polling-Requests
+**Auswirkung:** Server-Overload, Performance-Beeinträchtigung
+**Mitigation:**
+- Polling nur für aktive Jobs (nicht für alle Touren)
+- Max. 5 gleichzeitige Polling-Intervalle pro User
+- Automatisches Stoppen nach 60 Sekunden (Timeout)
+
+### Risiko 9: Job-Status verloren
+**Risiko:** Redis restart → Jobs verloren
+**Auswirkung:** Frontend pollt ewig, keine Bilder
+**Mitigation:**
+- Job-Status auch in DB speichern (optional, für Persistenz)
+- Timeout im Frontend (60 Sekunden max)
+- Fallback: Frontend zeigt "Status unbekannt, bitte neu versuchen"
 
 ---
 
@@ -731,11 +965,83 @@ REDIS_PORT=6379
 
 ---
 
+## 🔔 NOTIFICATIONS
+
+**Entscheidung:** Keine automatische Notification-Erstellung
+
+**Begründung:**
+- User sieht Status direkt im Frontend (Polling)
+- `showMessage()` zeigt bereits Erfolg/Fehler
+- Zusätzliche Notification wäre redundant
+- Keine Notification-API-Integration nötig
+
+**Alternative (falls gewünscht):**
+- Notification nur bei Fehler (optional)
+- Notification nur wenn User Seite verlässt während Generierung (optional)
+
+---
+
+## 📋 VOLLSTÄNDIGE IMPLEMENTIERUNGS-CHECKLISTE
+
+### Phase 1: Service-Refactoring
+- [ ] `GeminiImageService.generateImages()` - Generische Methode
+- [ ] `GeminiImageService.generateTourImages()` - Wrapper-Methode
+- [ ] Temporäres Verzeichnis für Bildgenerierung
+- [ ] Error-Handling für API-Fehler (Rate-Limits, Invalid Key, etc.)
+
+### Phase 2: Queue-Integration
+- [ ] `getImageGenerationQueue()` in `queueService.ts`
+- [ ] `imageGenerationWorker.ts` erstellen
+- [ ] Worker in `queues/index.ts` registrieren
+- [ ] Job-Status-Tracking (progress, error, completed)
+- [ ] Cleanup von temporären Dateien (bei Erfolg UND Fehler)
+
+### Phase 3: Backend API
+- [ ] `POST /api/tours/:id/generate-images` - Controller
+- [ ] `GET /api/tours/:id/generate-images/status` - Controller
+- [ ] Berechtigungsprüfung (`checkUserPermission`)
+- [ ] Fallback: Synchroner Modus wenn Queue nicht verfügbar
+- [ ] Route-Registrierung in `routes/tours.ts`
+- [ ] Error-Handling für alle Fehlerfälle
+
+### Phase 4: Frontend-Integration
+- [ ] API-Endpunkte in `api.ts`
+- [ ] Button in Card-Ansicht (mit Permission-Check)
+- [ ] Button in Table-Ansicht (mit Permission-Check)
+- [ ] `handleGenerateImages()` Handler
+- [ ] Status-Polling mit `useEffect`
+- [ ] **MEMORY LEAK PREVENTION:** Cleanup-Funktion für Polling
+- [ ] Loading-State während Generierung
+- [ ] Bild-Anzeige in Card (falls vorhanden)
+- [ ] Timeout-Handling (max. 60 Sekunden)
+- [ ] Fallback-Meldung wenn Queue nicht verfügbar
+
+### Phase 5: Übersetzungen (I18N)
+- [ ] Alle Keys in `de.json` hinzufügen (mit defaultValue)
+- [ ] Alle Keys in `en.json` hinzufügen (mit defaultValue)
+- [ ] Alle Keys in `es.json` hinzufügen (mit defaultValue)
+- [ ] `t()` Funktionen in Komponenten verwenden (keine Hardcoded-Texte)
+
+### Phase 6: Testing
+- [ ] Backend: Service-Test (Bildgenerierung)
+- [ ] Backend: Controller-Test (API-Endpunkte)
+- [ ] Backend: Queue-Test (Worker verarbeitet Job)
+- [ ] Backend: Fallback-Test (synchroner Modus)
+- [ ] Frontend: Button-Rendering (nur bei Berechtigung)
+- [ ] Frontend: API-Call bei Button-Click
+- [ ] Frontend: Polling-Funktionalität
+- [ ] Frontend: Memory Leak Test (Polling-Cleanup)
+- [ ] Integration: Vollständiger Flow (Button → Queue → Worker → Upload → Anzeige)
+
+---
+
 **Nächste Schritte:**
-1. ✅ Planungsdokument erstellt
+1. ✅ Planungsdokument erstellt und vollständig geprüft
 2. ⏳ Warten auf Freigabe zur Implementierung
 3. ⏳ Phase 1: Service-Refactoring
-4. ⏳ Phase 2: Backend API-Endpunkte
-5. ⏳ Phase 3: Frontend-Integration
-6. ⏳ Phase 4: Testing und Optimierung
+4. ⏳ Phase 2: Queue-Integration
+5. ⏳ Phase 3: Backend API-Endpunkte
+6. ⏳ Phase 4: Frontend-Integration
+7. ⏳ Phase 5: Übersetzungen
+8. ⏳ Phase 6: Testing
 
