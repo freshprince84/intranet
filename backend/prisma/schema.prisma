@@ -828,6 +828,10 @@ enum RequestType {
   improvement_suggestion
   sick_leave
   employment_certificate
+  event
+  permit
+  buy_order
+  repair
   other
 }
 

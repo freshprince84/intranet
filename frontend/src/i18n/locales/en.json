@@ -606,6 +606,10 @@
       "improvement_suggestion": "Improvement Suggestion",
       "sick_leave": "Sick Leave",
       "employment_certificate": "Employment Certificate",
+      "event": "Event",
+      "permit": "Permit",
+      "buy_order": "Purchase Order",
+      "repair": "Repair",
       "other": "Other"
     }
   },

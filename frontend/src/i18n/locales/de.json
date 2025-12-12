@@ -295,6 +295,10 @@
       "improvement_suggestion": "Verbesserungsvorschlag",
       "sick_leave": "Krankmeldung",
       "employment_certificate": "Arbeitszeugnis",
+      "event": "Evento",
+      "permit": "Permiso",
+      "buy_order": "Pedido de venta",
+      "repair": "Reparacion",
       "other": "Sonstiges"
     },
     "createRequest": {

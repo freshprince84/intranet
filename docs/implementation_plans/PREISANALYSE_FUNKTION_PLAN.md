@@ -309,14 +309,61 @@ Das bereitgestellte Python-Skript zeigt:
 **Datei:** `backend/src/services/lobbyPmsService.ts`
 
 **Relevante Funktionen:**
-- `checkAvailability(startDate, endDate)`: Prüft Verfügbarkeit und Preise
-  - Gibt zurück: `categoryId`, `roomName`, `roomType` ('compartida' | 'privada'), `availableRooms`, `pricePerNight`, `currency`, `date`, `prices`
-  - Unterscheidet bereits zwischen Dorm (`compartida`) und Private (`privada`)
+- ✅ `checkAvailability(startDate, endDate)`: Prüft Verfügbarkeit und Preise
+  - **Gibt zurück:** Array von Objekten mit:
+    - `categoryId`: LobbyPMS category_id
+    - `roomName`: Name des Zimmers/Kategorie
+    - `roomType`: 'compartida' | 'privada'
+    - `availableRooms`: Anzahl verfügbarer Zimmer
+    - `pricePerNight`: Preis für 1 Person
+    - `currency`: Währung (Standard: 'COP')
+    - `date`: Datum im Format "YYYY-MM-DD"
+    - `prices`: Array mit `{ people: number, value: number }` für verschiedene Personenanzahlen
+  - **Unterscheidet bereits zwischen Dorm (`compartida`) und Private (`privada`)**
+  - **Funktioniert bereits** - kann direkt für Preisanalyse verwendet werden!
 
 **Erkenntnisse:**
-- Verfügbarkeits- und Preisdaten können bereits aus LobbyPMS abgerufen werden
-- Zimmerkategorien werden bereits unterschieden
-- Preise pro Kategorie und Tag sind verfügbar
+- ✅ Verfügbarkeits- und Preisdaten können bereits aus LobbyPMS abgerufen werden
+- ✅ Zimmerkategorien werden bereits unterschieden
+- ✅ Preise pro Kategorie und Tag sind verfügbar
+- ✅ **Preis-Extraktion funktioniert bereits** - reicht für Anfang der Preisanalyse
+
+**Beispiel-Response:**
+```typescript
+[
+  {
+    categoryId: 34280,
+    roomName: "El primo aventurero",
+    roomType: "compartida",
+    availableRooms: 5,
+    pricePerNight: 50000,
+    currency: "COP",
+    date: "2025-02-01",
+    prices: [
+      { people: 1, value: 50000 },
+      { people: 2, value: 90000 }
+    ]
+  },
+  {
+    categoryId: 34312,
+    roomName: "Doble básica",
+    roomType: "privada",
+    availableRooms: 2,
+    pricePerNight: 120000,
+    currency: "COP",
+    date: "2025-02-01",
+    prices: [
+      { people: 1, value: 120000 },
+      { people: 2, value: 200000 }
+    ]
+  }
+]
+```
+
+**Nutzung für Preisanalyse:**
+- Diese Daten können direkt für `PriceAnalysisService` verwendet werden
+- Keine zusätzliche API-Integration nötig für Preis-Extraktion
+- Daten können täglich abgerufen und in `PriceAnalysis` Tabelle gespeichert werden
 
 #### 4.2.2 Zimmerkategorien-Erkennung
 
@@ -665,14 +712,35 @@ model User {
 
 **Funktionen:**
 - `analyzePrices(branchId, startDate, endDate, categoryId?, roomType?)`: Führt Preisanalyse durch
+  - **Nutzt:** `LobbyPmsService.checkAvailability()` für aktuelle Preise
+  - **Speichert:** Ergebnisse in `PriceAnalysis` Tabelle
 - `calculateOccupancyRate(branchId, date, categoryId)`: Berechnet Belegungsrate
+  - **Nutzt:** `availableRooms` aus LobbyPMS und Reservierungen aus `Reservation` Model
+  - **Formel:** `(totalRooms - availableRooms) / totalRooms * 100`
 - `compareWithCompetitors(branchId, date, categoryId)`: Vergleicht mit Konkurrenzpreisen
+  - **Nutzt:** OTA-Preisdaten aus `OTAPriceData` (wenn verfügbar)
 - `getHistoricalPrices(branchId, categoryId, days)`: Holt historische Preisdaten
+  - **Nutzt:** Gespeicherte `PriceAnalysis` Einträge
+  - **Fallback:** `LobbyPmsService.checkAvailability()` für aktuelle Daten
 
 **Datenquellen:**
-- Eigene Reservierungen (aus Reservation Model)
-- LobbyPMS Verfügbarkeitsdaten
-- OTA-Preisdaten (aus OTAPriceData)
+- ✅ **LobbyPMS Verfügbarkeitsdaten** (via `checkAvailability()`) - **HAUPTQUELLE**
+- ✅ Eigene Reservierungen (aus Reservation Model) - für Belegungsrate
+- ⚠️ OTA-Preisdaten (aus OTAPriceData) - optional, wenn Rate-Shopping implementiert
+
+**Implementierung:**
+```typescript
+async analyzePrices(branchId: number, startDate: Date, endDate: Date) {
+  // 1. Hole aktuelle Preise aus LobbyPMS
+  const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+  const availabilityData = await lobbyPmsService.checkAvailability(startDate, endDate);
+  
+  // 2. Gruppiere nach Kategorie und Datum
+  // 3. Berechne Durchschnittspreise, Min/Max
+  // 4. Berechne Belegungsrate aus Reservierungen
+  // 5. Speichere in PriceAnalysis Tabelle
+}
+```
 
 #### 6.1.3 PriceRecommendationService
 
@@ -693,11 +761,13 @@ model User {
 - Wendet Aktionen an (kumulativ oder einzeln, je nach Konfiguration)
 - Validiert Ergebnis (Min/Max-Preise, etc.)
 
-#### 6.1.4 LobbyPMSPriceUpdateService
+#### 6.1.4 LobbyPMSPriceUpdateService (OPTIONAL - Später)
 
 **Zweck:** Spielt Preisempfehlungen ins LobbyPMS ein
 
-**Funktionen:**
+**Status:** ⚠️ **VERSCHOBEN** - Wird später implementiert, wenn API-Endpoints durch Ausprobieren identifiziert wurden
+
+**Funktionen (für später):**
 - `updatePrices(branchId, recommendations)`: Aktualisiert Preise im LobbyPMS
 - `updatePriceForDate(branchId, date, categoryId, price)`: Aktualisiert Preis für ein Datum
 - `batchUpdatePrices(branchId, priceUpdates)`: Batch-Update für mehrere Preise
@@ -705,20 +775,21 @@ model User {
 
 **Integration:**
 - Nutzt bestehenden `LobbyPmsService`
-- Erweitert um Preis-Update-Endpoints
+- Erweitert um Preis-Update-Endpoints (durch Ausprobieren identifizieren)
 - Fehlerbehandlung und Rollback bei Fehlern
 
 **Bekannte API-Struktur (aus Python-Skript und aktuellem Code):**
 - Base URL: `https://api.lobbypms.com`
 - Authentifizierung: Bearer Token im Header (`Authorization: Bearer {apiKey}`)
-- Verfügbarkeits-Endpoint: `GET /api/v2/available-rooms`
+- Verfügbarkeits-Endpoint: `GET /api/v2/available-rooms` ✅ **FUNKTIONIERT**
   - Gibt Preise zurück in: `category.plans[0].prices[]` (Array mit `{ people: number, value: number }`)
-- **Preis-Update-Endpoint:** Noch zu identifizieren (siehe Abschnitt 9.4)
+- **Preis-Update-Endpoint:** ❌ Nicht verfügbar - wird später durch Ausprobieren identifiziert
 
 **Aktuelle Implementierung:**
-- `LobbyPmsService.checkAvailability()` ruft bereits `/api/v2/available-rooms` auf
-- Gibt Preise zurück: `pricePerNight` (für 1 Person) und `prices[]` (für alle Personenanzahlen)
-- **KEINE Preis-Update-Funktion vorhanden** - muss implementiert werden
+- ✅ `LobbyPmsService.checkAvailability()` ruft bereits `/api/v2/available-rooms` auf
+- ✅ Gibt Preise zurück: `pricePerNight` (für 1 Person) und `prices[]` (für alle Personenanzahlen)
+- ✅ **Preis-Extraktion funktioniert bereits** - reicht für Anfang
+- ❌ **Preis-Update-Funktion** - wird später implementiert
 
 ### 6.2 Controller
 
@@ -747,8 +818,10 @@ model User {
 - `POST /api/price-recommendations/generate`: Generiert neue Preisempfehlungen
 - `POST /api/price-recommendations/:id/approve`: Genehmigt eine Empfehlung
 - `POST /api/price-recommendations/:id/reject`: Lehnt eine Empfehlung ab
-- `POST /api/price-recommendations/:id/apply`: Wendet eine Empfehlung an (spielt ins LobbyPMS ein)
-- `POST /api/price-recommendations/batch-apply`: Wendet mehrere Empfehlungen an
+- `POST /api/price-recommendations/:id/apply`: Wendet eine Empfehlung an (spielt ins LobbyPMS ein) ⚠️ **SPÄTER**
+- `POST /api/price-recommendations/batch-apply`: Wendet mehrere Empfehlungen an ⚠️ **SPÄTER**
+
+**Hinweis:** Die "Anwenden"-Funktionen werden später implementiert, wenn LobbyPMS Preis-Update-Endpoints identifiziert wurden. Für den Anfang können Preisempfehlungen im Frontend angezeigt werden.
 
 #### 6.2.4 PricingRuleController
 
@@ -823,13 +896,16 @@ model User {
 **Funktionen:**
 - Übersicht über alle Preisempfehlungen
 - Filter nach Branch, Zeitraum, Status
-- Batch-Aktionen (Genehmigen, Ablehnen, Anwenden)
+- Batch-Aktionen (Genehmigen, Ablehnen)
+- ⚠️ **Anwenden-Button:** Später implementiert (wenn LobbyPMS Preis-Update-Endpoints verfügbar)
+- **Export-Funktion:** CSV/Excel-Export für manuelle Übertragung ins LobbyPMS
 
 **Komponenten:**
 - `PriceRecommendationList`: Liste aller Empfehlungen
 - `PriceRecommendationCard`: Karte für einzelne Empfehlung
 - `PriceRecommendationFilters`: Filter-Komponente
-- `BatchActions`: Batch-Aktionen-Komponente
+- `BatchActions`: Batch-Aktionen-Komponente (Genehmigen, Ablehnen, Export)
+- `ExportButton`: Exportiert ausgewählte Empfehlungen als CSV/Excel
 
 #### 7.1.4 OTAListingsPage
 
@@ -976,18 +1052,30 @@ model User {
 
 **Dauer:** ~3-4 Wochen
 
-### Phase 5: LobbyPMS-Integration
+### Phase 5: LobbyPMS-Integration (OPTIONAL - Später)
 
 **Ziel:** Preisempfehlungen ins LobbyPMS einspielen
 
-**Schritte:**
-1. LobbyPMS API-Endpoints für Preis-Updates recherchieren
+**Status:** ⚠️ **VERSCHOBEN** - LobbyPMS API-Dokumentation nicht verfügbar
+- Preis-Extraktion aus LobbyPMS funktioniert bereits (Phase 1-4 reichen für Anfang)
+- Preis-Updates ins LobbyPMS werden später implementiert (durch Ausprobieren)
+
+**Schritte (für später):**
+1. LobbyPMS API-Endpoints für Preis-Updates durch Ausprobieren identifizieren
 2. LobbyPMSPriceUpdateService implementieren
 3. Batch-Update-Funktionalität
 4. Validierung und Fehlerbehandlung
 5. Frontend: Anwenden-Button in PriceRecommendationsPage
 
-**Dauer:** ~1-2 Wochen
+**Dauer:** ~1-2 Wochen (wenn Endpoints identifiziert)
+
+**Hinweis:** Für den Anfang reicht es, Preise aus LobbyPMS zu extrahieren und zu analysieren. Die Preisempfehlungen können im Frontend angezeigt werden, auch ohne sie direkt ins LobbyPMS einzuspielen.
+
+**Alternative Implementierung (ohne Preis-Updates):**
+- Preisempfehlungen werden im Frontend angezeigt
+- Benutzer kann Empfehlungen manuell ins LobbyPMS übertragen (Copy-Paste oder Export)
+- Oder: Export-Funktion für Preis-Updates (CSV/Excel) für manuelle Übertragung
+- Später: Automatische Übertragung wenn API-Endpoints identifiziert wurden
 
 ### Phase 6: Testing und Optimierung
 
@@ -1002,7 +1090,9 @@ model User {
 
 **Dauer:** ~2-3 Wochen
 
-**Gesamtdauer:** ~11-17 Wochen
+**Gesamtdauer:** ~9-15 Wochen (ohne Phase 5)
+
+**Hinweis:** Phase 5 (LobbyPMS Preis-Updates) wird später implementiert, da API-Dokumentation nicht verfügbar ist. Für den Anfang reicht es, Preise aus LobbyPMS zu extrahieren und Preisempfehlungen im Frontend anzuzeigen.
 
 ---
 
@@ -1159,7 +1249,7 @@ Das Python-Skript zeigt einen Ansatz für dynamische Preisgestaltung:
    - Prioritäten setzen: Welche Features zuerst?
    - UI/UX-Mockups erstellen
 
-**WICHTIG:** Die Implementierung von Phase 5 (LobbyPMS-Integration) kann erst starten, wenn der Preis-Update-Endpoint identifiziert wurde!
+**WICHTIG:** Phase 5 (LobbyPMS Preis-Updates) wird später implementiert. Für den Anfang reicht es, Preise aus LobbyPMS zu extrahieren (bereits vorhanden via `checkAvailability()`) und Preisempfehlungen im Frontend anzuzeigen.
 
 ### 11.2 Während der Implementierung
 
@@ -1192,7 +1282,12 @@ Dieses Dokument beschreibt die Planung einer umfassenden Preisanalyse-Funktion f
 
 Die Implementierung erfolgt in 6 Phasen über einen Zeitraum von ca. 11-17 Wochen. Wichtige offene Fragen betreffen die Rate-Shopping-Implementierung, die Komplexität der Regel-Engine und die verfügbaren LobbyPMS API-Endpoints.
 
-**Nächster Schritt:** Recherche zu LobbyPMS API-Endpoints für Preis-Updates und OTA-APIs, bevor mit der Implementierung begonnen wird.
+**Nächster Schritt:** 
+1. ✅ Preis-Extraktion aus LobbyPMS funktioniert bereits - kann direkt verwendet werden
+2. ⚠️ OTA-APIs recherchieren (Booking.com, Hostelworld) oder Rate-Shopping implementieren
+3. ⚠️ LobbyPMS Preis-Update-Endpoints später durch Ausprobieren identifizieren
+
+**WICHTIG:** Die Implementierung kann mit Phase 1-4 starten, da Preis-Extraktion bereits funktioniert. Phase 5 (Preis-Updates ins LobbyPMS) wird später implementiert.
 
 ---
 
@@ -1286,4 +1381,970 @@ const newPrice = Math.max(
 - `LobbyPMSPriceUpdateService` erstellen
 - Funktionen basierend auf identifiziertem Endpoint implementieren
 - Validierung und Fehlerbehandlung hinzufügen
+
+---
+
+## 14. ⚠️ KRITISCH: Übersetzungen (i18n) - MANDATORY
+
+**🚨 WICHTIGSTE REGEL: Übersetzungen sind TEIL DER IMPLEMENTIERUNG, nicht optional!**
+
+### 14.1 Frontend-Übersetzungen
+
+**Dateien:**
+- `frontend/src/i18n/locales/de.json`
+- `frontend/src/i18n/locales/en.json`
+- `frontend/src/i18n/locales/es.json`
+
+**Vollständige Übersetzungskeys:**
+
+```json
+{
+  "priceAnalysis": {
+    "title": "Preisanalyse",
+    "overview": "Übersicht",
+    "listings": "Inserate",
+    "analysis": "Analyse",
+    "recommendations": "Preisvorschläge",
+    "rules": "Preisregeln",
+    "rateShopping": "Rate Shopping",
+    "branch": "Branch",
+    "platform": "Plattform",
+    "category": "Kategorie",
+    "roomType": "Zimmertyp",
+    "currentPrice": "Aktueller Preis",
+    "recommendedPrice": "Empfohlener Preis",
+    "priceChange": "Preisänderung",
+    "occupancyRate": "Belegungsrate",
+    "competitorPrice": "Konkurrenzpreis",
+    "date": "Datum",
+    "apply": "Anwenden",
+    "reject": "Ablehnen",
+    "createRule": "Regel erstellen",
+    "editRule": "Regel bearbeiten",
+    "deleteRule": "Regel löschen",
+    "ruleName": "Regelname",
+    "conditions": "Bedingungen",
+    "action": "Aktion",
+    "priority": "Priorität",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "noRecommendations": "Keine Preisvorschläge vorhanden",
+    "noListings": "Keine Inserate vorhanden",
+    "loading": "Lädt...",
+    "error": "Fehler beim Laden der Daten",
+    "saveSuccess": "Preisvorschlag erfolgreich angewendet",
+    "saveError": "Fehler beim Anwenden des Preisvorschlags",
+    "ruleCreated": "Regel erfolgreich erstellt",
+    "ruleUpdated": "Regel erfolgreich aktualisiert",
+    "ruleDeleted": "Regel erfolgreich gelöscht",
+    "confirmDelete": "Wirklich löschen?",
+    "filter": {
+      "branch": "Branch filtern",
+      "platform": "Plattform filtern",
+      "category": "Kategorie filtern",
+      "dateRange": "Zeitraum filtern"
+    },
+    "table": {
+      "date": "Datum",
+      "category": "Kategorie",
+      "roomType": "Zimmertyp",
+      "currentPrice": "Aktueller Preis",
+      "recommendedPrice": "Empfohlener Preis",
+      "change": "Änderung",
+      "occupancy": "Belegung",
+      "competitor": "Konkurrenz",
+      "actions": "Aktionen"
+    },
+    "rules": {
+      "name": "Regelname",
+      "conditions": "Bedingungen",
+      "action": "Aktion",
+      "priority": "Priorität",
+      "status": "Status",
+      "scope": "Anwendungsbereich",
+      "roomTypes": "Zimmerarten",
+      "categories": "Kategorien",
+      "branches": "Branches"
+    },
+    "notifications": {
+      "recommendationCreated": "Neuer Preisvorschlag erstellt",
+      "recommendationApplied": "Preisvorschlag angewendet",
+      "ruleCreated": "Preisregel erstellt",
+      "ruleUpdated": "Preisregel aktualisiert",
+      "ruleDeleted": "Preisregel gelöscht",
+      "rateShoppingCompleted": "Rate Shopping abgeschlossen",
+      "rateShoppingFailed": "Rate Shopping fehlgeschlagen"
+    }
+  }
+}
+```
+
+**Verwendung in Komponenten:**
+
+```tsx
+// ✅ RICHTIG
+const { t } = useTranslation();
+<h2>{t('priceAnalysis.title', { defaultValue: 'Preisanalyse' })}</h2>
+<button title={t('priceAnalysis.apply', { defaultValue: 'Anwenden' })}>
+  <CheckIcon className="h-4 w-4" />
+</button>
+
+// ❌ FALSCH - Hardcoded Text
+<h2>Preisanalyse</h2>
+<button>Anwenden</button>
+```
+
+### 14.2 Backend-Übersetzungen
+
+**Datei:** `backend/src/utils/translations.ts`
+
+**Hinzufügen:**
+
+```typescript
+// Preisanalyse-Notifications
+const priceAnalysisNotifications: Record<string, PriceAnalysisNotificationTranslations> = {
+  de: {
+    recommendationCreated: (categoryName: string, date: string) => ({
+      title: 'Neuer Preisvorschlag erstellt',
+      message: `Für ${categoryName} am ${date} wurde ein neuer Preisvorschlag erstellt.`
+    }),
+    recommendationApplied: (categoryName: string, date: string) => ({
+      title: 'Preisvorschlag angewendet',
+      message: `Der Preisvorschlag für ${categoryName} am ${date} wurde erfolgreich angewendet.`
+    }),
+    ruleCreated: (ruleName: string) => ({
+      title: 'Preisregel erstellt',
+      message: `Die Preisregel "${ruleName}" wurde erfolgreich erstellt.`
+    }),
+    ruleUpdated: (ruleName: string) => ({
+      title: 'Preisregel aktualisiert',
+      message: `Die Preisregel "${ruleName}" wurde aktualisiert.`
+    }),
+    ruleDeleted: (ruleName: string) => ({
+      title: 'Preisregel gelöscht',
+      message: `Die Preisregel "${ruleName}" wurde gelöscht.`
+    }),
+    rateShoppingCompleted: (platform: string) => ({
+      title: 'Rate Shopping abgeschlossen',
+      message: `Rate Shopping für ${platform} wurde erfolgreich abgeschlossen.`
+    }),
+    rateShoppingFailed: (platform: string, error: string) => ({
+      title: 'Rate Shopping fehlgeschlagen',
+      message: `Rate Shopping für ${platform} ist fehlgeschlagen: ${error}`
+    })
+  },
+  es: { /* ... vollständige Übersetzungen ... */ },
+  en: { /* ... vollständige Übersetzungen ... */ }
+};
+
+export function getPriceAnalysisNotificationText(
+  language: string,
+  type: 'recommendationCreated' | 'recommendationApplied' | 'ruleCreated' | 'ruleUpdated' | 'ruleDeleted' | 'rateShoppingCompleted' | 'rateShoppingFailed',
+  ...args: any[]
+): { title: string; message: string } {
+  const lang = language in priceAnalysisNotifications ? language : 'de';
+  const translations = priceAnalysisNotifications[lang];
+  
+  switch (type) {
+    case 'recommendationCreated':
+      return translations.recommendationCreated(args[0], args[1]);
+    case 'recommendationApplied':
+      return translations.recommendationApplied(args[0], args[1]);
+    case 'ruleCreated':
+      return translations.ruleCreated(args[0]);
+    case 'ruleUpdated':
+      return translations.ruleUpdated(args[0]);
+    case 'ruleDeleted':
+      return translations.ruleDeleted(args[0]);
+    case 'rateShoppingCompleted':
+      return translations.rateShoppingCompleted(args[0]);
+    case 'rateShoppingFailed':
+      return translations.rateShoppingFailed(args[0], args[1]);
+    default:
+      return translations.recommendationCreated(args[0], args[1]);
+  }
+}
+```
+
+**Siehe auch:**
+- [CODING_STANDARDS.md](../core/CODING_STANDARDS.md) - Abschnitt "Übersetzungen"
+- [IMPLEMENTATION_CHECKLIST.md](../core/IMPLEMENTATION_CHECKLIST.md) - Abschnitt "Übersetzungen"
+
+---
+
+## 15. ⚠️ KRITISCH: Notifications - MANDATORY
+
+**🚨 WICHTIGSTE REGEL: Notifications sind TEIL DER IMPLEMENTIERUNG, nicht optional!**
+
+### 15.1 Notification-Typen
+
+**Für Preisanalyse-Funktion:**
+- Preisvorschlag erstellt
+- Preisvorschlag angewendet
+- Regel erstellt/aktualisiert/gelöscht
+- Rate Shopping abgeschlossen/fehlgeschlagen
+
+### 15.2 Backend-Implementierung
+
+**In allen Controllern:**
+
+```typescript
+import { createNotificationIfEnabled } from './notificationController';
+import { NotificationType } from '@prisma/client';
+import { getPriceAnalysisNotificationText, getUserLanguage } from '../utils/translations';
+
+// Bei Preisvorschlag-Erstellung
+export const createPriceRecommendation = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // ... Preisvorschlag erstellen ...
+    
+    // Notification erstellen
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
+    const notificationText = getPriceAnalysisNotificationText(
+      language,
+      'recommendationCreated',
+      category.name,
+      date.toISOString().split('T')[0]
+    );
+    
+    await createNotificationIfEnabled({
+      userId,
+      title: notificationText.title,
+      message: notificationText.message,
+      type: NotificationType.system, // Oder neuer Typ 'priceAnalysis'
+      relatedEntityId: recommendation.id,
+      relatedEntityType: 'created' // ⚠️ NICHT targetId/targetType verwenden!
+    });
+    
+    // ...
+  } catch (error) {
+    // ...
+  }
+};
+
+// Bei Preisvorschlag-Anwendung
+export const applyPriceRecommendation = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // ... Preisvorschlag anwenden ...
+    
+    // Notification erstellen
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
+    const notificationText = getPriceAnalysisNotificationText(
+      language,
+      'recommendationApplied',
+      category.name,
+      date.toISOString().split('T')[0]
+    );
+    
+    await createNotificationIfEnabled({
+      userId,
+      title: notificationText.title,
+      message: notificationText.message,
+      type: NotificationType.system,
+      relatedEntityId: recommendation.id,
+      relatedEntityType: 'applied' // ⚠️ NICHT targetId/targetType verwenden!
+    });
+    
+    // ...
+  } catch (error) {
+    // ...
+  }
+};
+
+// Bei Regel-Erstellung/Update/Delete
+export const createPricingRule = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // ... Regel erstellen ...
+    
+    // Notification erstellen
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
+    const notificationText = getPriceAnalysisNotificationText(
+      language,
+      'ruleCreated',
+      rule.name
+    );
+    
+    await createNotificationIfEnabled({
+      userId,
+      title: notificationText.title,
+      message: notificationText.message,
+      type: NotificationType.system,
+      relatedEntityId: rule.id,
+      relatedEntityType: 'created' // ⚠️ NICHT targetId/targetType verwenden!
+    });
+    
+    // ...
+  } catch (error) {
+    // ...
+  }
+};
+
+// Bei Rate-Shopping-Abschluss/Fehler
+export const runRateShopping = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // ... Rate Shopping durchführen ...
+    
+    // Notification bei Erfolg
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
+    const notificationText = getPriceAnalysisNotificationText(
+      language,
+      'rateShoppingCompleted',
+      platform
+    );
+    
+    await createNotificationIfEnabled({
+      userId,
+      title: notificationText.title,
+      message: notificationText.message,
+      type: NotificationType.system,
+      relatedEntityId: job.id,
+      relatedEntityType: 'completed' // ⚠️ NICHT targetId/targetType verwenden!
+    });
+    
+    // ...
+  } catch (error) {
+    // Notification bei Fehler
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
+    const notificationText = getPriceAnalysisNotificationText(
+      language,
+      'rateShoppingFailed',
+      platform,
+      error.message
+    );
+    
+    await createNotificationIfEnabled({
+      userId,
+      title: notificationText.title,
+      message: notificationText.message,
+      type: NotificationType.system,
+      relatedEntityId: job.id,
+      relatedEntityType: 'failed' // ⚠️ NICHT targetId/targetType verwenden!
+    });
+    
+    // ...
+  }
+};
+```
+
+**⚠️ WICHTIG:**
+- **NICHT verwenden:** `targetId` und `targetType` (veraltet!)
+- **IMMER verwenden:** `relatedEntityId` und `relatedEntityType`
+
+**Siehe auch:**
+- [NOTIFICATION_SYSTEM.md](../modules/NOTIFICATION_SYSTEM.md) - Vollständige Notification-System-Dokumentation
+- [IMPLEMENTATION_CHECKLIST.md](../core/IMPLEMENTATION_CHECKLIST.md) - Abschnitt "Notifications"
+
+---
+
+## 16. ⚠️ KRITISCH: Berechtigungen - MANDATORY
+
+**🚨 WICHTIGSTE REGEL: Berechtigungen sind TEIL DER IMPLEMENTIERUNG, nicht optional!**
+
+### 16.1 Seed-File aktualisieren
+
+**Datei:** `backend/prisma/seed.ts`
+
+**Hinzufügen:**
+
+```typescript
+// Neue Seiten hinzufügen
+const ALL_PAGES = [
+  'dashboard',
+  'worktracker',
+  'price_analysis', // ← NEU
+  'price_analysis_listings', // ← NEU
+  'price_analysis_recommendations', // ← NEU
+  'price_analysis_rules', // ← NEU
+  'price_analysis_rate_shopping', // ← NEU
+  // ...
+];
+
+// Neue Tabellen hinzufügen
+const ALL_TABLES = [
+  'requests',
+  'price_analysis_listings', // ← NEU
+  'price_analysis_recommendations', // ← NEU
+  'price_analysis_rules', // ← NEU
+  // ...
+];
+
+// Neue Buttons hinzufügen
+const ALL_BUTTONS = [
+  'user_create',
+  'price_analysis_create_rule', // ← NEU
+  'price_analysis_edit_rule', // ← NEU
+  'price_analysis_delete_rule', // ← NEU
+  'price_analysis_apply_recommendation', // ← NEU
+  'price_analysis_reject_recommendation', // ← NEU
+  'price_analysis_run_rate_shopping', // ← NEU
+  // ...
+];
+
+// Berechtigungen für Admin-Rolle
+const adminPermissionMap: Record<string, AccessLevel> = {
+  // Seiten
+  'page_price_analysis': 'both',
+  'page_price_analysis_listings': 'both',
+  'page_price_analysis_recommendations': 'both',
+  'page_price_analysis_rules': 'both',
+  'page_price_analysis_rate_shopping': 'both',
+  
+  // Tabellen
+  'table_price_analysis_listings': 'both',
+  'table_price_analysis_recommendations': 'both',
+  'table_price_analysis_rules': 'both',
+  
+  // Buttons
+  'button_price_analysis_create_rule': 'both',
+  'button_price_analysis_edit_rule': 'both',
+  'button_price_analysis_delete_rule': 'both',
+  'button_price_analysis_apply_recommendation': 'both',
+  'button_price_analysis_reject_recommendation': 'both',
+  'button_price_analysis_run_rate_shopping': 'both',
+  // ...
+};
+
+// Berechtigungen für User-Rolle (nur Lesen)
+const userPermissionMap: Record<string, AccessLevel> = {
+  'page_price_analysis': 'read',
+  'page_price_analysis_listings': 'read',
+  'page_price_analysis_recommendations': 'read',
+  'page_price_analysis_rules': 'read',
+  'page_price_analysis_rate_shopping': 'read',
+  
+  'table_price_analysis_listings': 'read',
+  'table_price_analysis_recommendations': 'read',
+  'table_price_analysis_rules': 'read',
+  // ...
+};
+```
+
+**Testen:**
+```bash
+npx prisma db seed
+```
+
+### 16.2 Frontend-Berechtigungen
+
+**In allen Komponenten:**
+
+```tsx
+import { usePermissions } from '../hooks/usePermissions.ts';
+
+const PriceAnalysis = () => {
+  const { hasPermission } = usePermissions();
+  
+  // Seiten-Berechtigung prüfen
+  if (!hasPermission('price_analysis', 'read', 'page')) {
+    return <div>Zugriff verweigert</div>;
+  }
+  
+  return (
+    <div>
+      {/* Buttons nur anzeigen wenn Berechtigung vorhanden */}
+      {hasPermission('price_analysis_create_rule', 'write', 'button') && (
+        <button title={t('priceAnalysis.createRule', { defaultValue: 'Regel erstellen' })}>
+          <PlusIcon className="h-4 w-4" />
+        </button>
+      )}
+      
+      {hasPermission('price_analysis_apply_recommendation', 'write', 'button') && (
+        <button title={t('priceAnalysis.apply', { defaultValue: 'Anwenden' })}>
+          <CheckIcon className="h-4 w-4" />
+        </button>
+      )}
+      
+      {/* ... */}
+    </div>
+  );
+};
+```
+
+### 16.3 Backend-Berechtigungen
+
+**In allen Routes:**
+
+```typescript
+import { checkPermission } from '../middleware/permissionMiddleware.ts';
+
+router.get(
+  '/api/price-analysis',
+  authenticate,
+  checkPermission('price_analysis', 'read', 'page'),
+  priceAnalysisController.getPriceAnalysis
+);
+
+router.post(
+  '/api/price-analysis/rules',
+  authenticate,
+  checkPermission('price_analysis_create_rule', 'write', 'button'),
+  priceAnalysisController.createPricingRule
+);
+
+router.put(
+  '/api/price-analysis/rules/:id',
+  authenticate,
+  checkPermission('price_analysis_edit_rule', 'write', 'button'),
+  priceAnalysisController.updatePricingRule
+);
+
+router.delete(
+  '/api/price-analysis/rules/:id',
+  authenticate,
+  checkPermission('price_analysis_delete_rule', 'write', 'button'),
+  priceAnalysisController.deletePricingRule
+);
+
+router.post(
+  '/api/price-analysis/recommendations/:id/apply',
+  authenticate,
+  checkPermission('price_analysis_apply_recommendation', 'write', 'button'),
+  priceAnalysisController.applyPriceRecommendation
+);
+```
+
+**Siehe auch:**
+- [BERECHTIGUNGSSYSTEM.md](../technical/BERECHTIGUNGSSYSTEM.md) - Vollständige Berechtigungssystem-Dokumentation
+- [IMPLEMENTATION_CHECKLIST.md](../core/IMPLEMENTATION_CHECKLIST.md) - Abschnitt "Berechtigungen"
+
+---
+
+## 17. 🔴 Performance-Optimierung - KRITISCH
+
+### 17.1 Tägliche Preisanalyse - Queue-System
+
+**Problem:**
+- Täglich Analyse für **3 Monate × alle Kategorien × alle Branches**
+- Beispiel: 90 Tage × 10 Kategorien × 3 Branches = **2.700 Analysen pro Tag**
+- **Risiko:** Backend-Overload, Memory-Overflow, DB-Overload
+
+**Lösung: Queue-System mit Batch-Processing**
+
+```typescript
+import { Queue } from 'bull';
+import Redis from 'ioredis';
+
+const redis = new Redis({ host: 'localhost', port: 6379 });
+const priceAnalysisQueue = new Queue('price-analysis', {
+  redis: { host: 'localhost', port: 6379 },
+  limiter: {
+    max: 10, // Max 10 Jobs gleichzeitig
+    duration: 1000 // Pro Sekunde
+  }
+});
+
+// Täglich um 3:00 Uhr
+cron.schedule('0 3 * * *', async () => {
+  const branches = await prisma.branch.findMany();
+  const categories = await prisma.category.findMany(); // Aus LobbyPMS
+  
+  // Für jeden Branch
+  for (const branch of branches) {
+    // Für jede Kategorie
+    for (const category of categories) {
+      // Job in Queue einreihen (nicht direkt ausführen!)
+      await priceAnalysisQueue.add('analyze', {
+        branchId: branch.id,
+        categoryId: category.id,
+        startDate: new Date(),
+        endDate: addMonths(new Date(), 3)
+      }, {
+        attempts: 3, // 3 Versuche bei Fehler
+        backoff: {
+          type: 'exponential',
+          delay: 2000
+        },
+        removeOnComplete: true, // Jobs nach Abschluss entfernen
+        removeOnFail: false // Fehlgeschlagene Jobs behalten für Debugging
+      });
+    }
+  }
+});
+
+// Worker: Verarbeitet Jobs nacheinander
+priceAnalysisQueue.process('analyze', 10, async (job) => {
+  const { branchId, categoryId, startDate, endDate } = job.data;
+  
+  try {
+    // Analyse durchführen (nur eine Kategorie auf einmal)
+    await analyzePriceForCategory(branchId, categoryId, startDate, endDate);
+    
+    // Progress updaten
+    job.progress(100);
+  } catch (error) {
+    logger.error(`Fehler bei Preisanalyse: ${error.message}`);
+    throw error; // Retry wird automatisch durchgeführt
+  }
+});
+```
+
+**Performance-Verbesserung:**
+- ✅ Jobs werden nacheinander verarbeitet (kein Overload)
+- ✅ Retry-Mechanismus bei Fehlern
+- ✅ Progress-Tracking
+- ✅ Memory wird nach jedem Job freigegeben
+
+### 17.2 Rate Shopping - Rate-Limiting
+
+**Problem:**
+- Rate Shopping für mehrere OTAs
+- Beispiel: 90 Tage × 10 Kategorien × 3 OTAs = **2.700 HTTP-Requests**
+- Rate-Limiting: 1 Request pro 2-3 Sekunden
+- **Dauer:** 2.700 × 2.5 Sekunden = **1.875 Stunden!**
+
+**Lösung: Queue-System mit Rate-Limiting**
+
+```typescript
+const rateShoppingQueue = new Queue('rate-shopping', {
+  redis: { host: 'localhost', port: 6379 },
+  limiter: {
+    max: 1, // Max 1 Job gleichzeitig
+    duration: 2500 // Alle 2.5 Sekunden
+  }
+});
+
+// Rate Shopping Job
+rateShoppingQueue.process('shop', 1, async (job) => {
+  const { branchId, categoryId, date, platform } = job.data;
+  
+  // Rate-Limiting: Warte 2-3 Sekunden zwischen Requests
+  await delay(2000 + Math.random() * 1000);
+  
+  try {
+    const price = await scrapePrice(platform, branchId, categoryId, date);
+    
+    // Preis speichern
+    await prisma.otaPriceData.create({
+      data: {
+        listingId: listing.id,
+        date: new Date(date),
+        price: price,
+        currency: 'COP'
+      }
+    });
+    
+    job.progress(100);
+  } catch (error) {
+    logger.error(`Fehler bei Rate Shopping: ${error.message}`);
+    throw error; // Retry wird automatisch durchgeführt
+  }
+});
+```
+
+### 17.3 Komplexe Berechnungen - Caching
+
+**Problem:**
+- Multi-Faktor-Algorithmus ist sehr komplex
+- Beispiel: 2.700 Analysen × 10 Faktoren = **27.000 Berechnungen pro Tag**
+
+**Lösung: Caching**
+
+```typescript
+import NodeCache from 'node-cache';
+
+const calculationCache = new NodeCache({ 
+  stdTTL: 3600, // 1 Stunde Cache
+  maxKeys: 10000 // Max 10.000 Keys im Cache
+});
+
+function calculateRecommendedPrice(
+  analysisData: PriceAnalysisData,
+  rules: PricingRule[]
+): number {
+  // Cache-Key: Alle relevanten Daten
+  const cacheKey = JSON.stringify({
+    currentPrice: analysisData.currentPrice,
+    occupancyRate: analysisData.occupancyRate,
+    competitorPrice: analysisData.competitor.averagePrice,
+    date: analysisData.date.toISOString(),
+    categoryId: analysisData.categoryId,
+    rulesHash: hashRules(rules) // Hash der Regeln
+  });
+  
+  // Prüfe Cache
+  const cached = calculationCache.get<number>(cacheKey);
+  if (cached !== undefined) {
+    return cached; // Cache-Hit: Sofort zurückgeben
+  }
+  
+  // Berechnung durchführen
+  let recommendedPrice = analysisData.currentPrice;
+  
+  // ... Multi-Faktor-Berechnung ...
+  
+  // Ergebnis cachen
+  calculationCache.set(cacheKey, recommendedPrice);
+  
+  return recommendedPrice;
+}
+```
+
+**Performance-Verbesserung:**
+- ✅ Caching: Gleiche Berechnungen werden nicht wiederholt
+- ✅ Cache-TTL: 1 Stunde (Preise ändern sich nicht so schnell)
+- ✅ Memory-Effizient: Nur Ergebnisse werden gecacht
+
+### 17.4 Datenbank-Indizes
+
+**Hinzufügen zu Prisma-Schema:**
+
+```prisma
+model PriceAnalysis {
+  // ... Felder ...
+  
+  @@index([branchId, analysisDate]) // Composite Index für häufige Queries
+  @@index([categoryId, analysisDate])
+  @@index([roomType, analysisDate])
+}
+
+model PriceRecommendation {
+  // ... Felder ...
+  
+  @@index([branchId, date, status]) // Composite Index für häufige Queries
+  @@index([categoryId, date])
+  @@index([status, date])
+}
+
+model OTAPriceData {
+  // ... Felder ...
+  
+  @@index([listingId, date]) // Composite Index für häufige Queries
+  @@index([date, platform])
+}
+```
+
+**Siehe auch:**
+- [PERFORMANCE_ANALYSE_VOLLSTAENDIG.md](../technical/PERFORMANCE_ANALYSE_VOLLSTAENDIG.md) - Vollständige Performance-Analyse
+
+---
+
+## 18. 🔴 Memory Leak-Prävention - KRITISCH
+
+### 18.1 IntersectionObserver (Frontend)
+
+**Problem:** Observer werden nicht disconnected bei Unmount
+
+**Lösung:**
+
+```tsx
+// ✅ RICHTIG: Cleanup bei Unmount
+useEffect(() => {
+  const observer = new IntersectionObserver((entries) => {
+    // ...
+  });
+  
+  const element = ref.current;
+  if (element) {
+    observer.observe(element);
+  }
+  
+  return () => {
+    if (element) {
+      observer.unobserve(element);
+    }
+    observer.disconnect(); // WICHTIG: Disconnect bei Unmount!
+  };
+}, []);
+```
+
+### 18.2 Timer (Cron-Jobs)
+
+**Problem:** Timer werden nicht gecleared bei Server-Shutdown
+
+**Lösung:**
+
+```typescript
+// ✅ RICHTIG: Timer-Referenzen speichern und clearen
+let cronJobInterval: NodeJS.Timeout | null = null;
+
+function startPriceAnalysisCron() {
+  // Alten Timer clearen falls vorhanden
+  if (cronJobInterval) {
+    clearInterval(cronJobInterval);
+  }
+  
+  // Neuen Timer starten
+  cronJobInterval = setInterval(async () => {
+    await runPriceAnalysis();
+  }, 24 * 60 * 60 * 1000); // Täglich
+}
+
+// Bei Server-Shutdown: Timer clearen
+process.on('SIGTERM', () => {
+  if (cronJobInterval) {
+    clearInterval(cronJobInterval);
+    cronJobInterval = null;
+  }
+});
+
+process.on('SIGINT', () => {
+  if (cronJobInterval) {
+    clearInterval(cronJobInterval);
+    cronJobInterval = null;
+  }
+});
+```
+
+### 18.3 Event Listeners (Frontend)
+
+**Problem:** Event Listeners werden nicht entfernt bei Unmount
+
+**Lösung:**
+
+```tsx
+// ✅ RICHTIG: Event Listener entfernen bei Unmount
+useEffect(() => {
+  const handleResize = () => {
+    // ...
+  };
+  
+  window.addEventListener('resize', handleResize);
+  
+  return () => {
+    window.removeEventListener('resize', handleResize); // WICHTIG: Remove bei Unmount!
+  };
+}, []);
+```
+
+### 18.4 DB-Connections (Backend)
+
+**Problem:** Connections werden nicht geschlossen bei Fehlern
+
+**Lösung:**
+
+```typescript
+// ✅ RICHTIG: Prisma Client richtig verwenden
+// Prisma Client verwaltet Connection Pool automatisch
+// Aber: Bei Fehlern sicherstellen, dass Transaction abgebrochen wird
+
+try {
+  await prisma.$transaction(async (tx) => {
+    // ... DB-Operationen ...
+  });
+} catch (error) {
+  // Transaction wird automatisch abgebrochen
+  logger.error('Fehler bei DB-Transaction:', error);
+  throw error;
+}
+```
+
+**Siehe auch:**
+- [MEMORY_LEAKS_UND_PERFORMANCE_FIXES_2025-12-11.md](../technical/MEMORY_LEAKS_UND_PERFORMANCE_FIXES_2025-12-11.md) - Vollständige Memory Leak Fixes
+
+---
+
+## 19. 🔴 Weitere Risiken
+
+### 19.1 Rate Shopping - ToS-Verstöße
+
+**Risiko:**
+- Automatisierte Requests können gegen ToS verstoßen
+- IP-Blocking bei zu vielen Requests
+- Rechtliche Konsequenzen möglich
+
+**Lösung:**
+- ✅ Rate-Limiting: Max 1 Request alle 2-3 Sekunden
+- ✅ Realistische Browser-Headers
+- ✅ robots.txt respektieren
+- ✅ Proxy-Rotation (optional)
+- ✅ Legal Review vor Implementierung
+
+### 19.2 Datenqualität
+
+**Risiko:**
+- Fehlerhafte Daten aus LobbyPMS API
+- Fehlerhafte Konkurrenzpreise (Scraping-Fehler)
+- Fehlerhafte historische Daten
+
+**Lösung:**
+- ✅ Validierung aller Daten vor Verwendung
+- ✅ Fehlerbehandlung bei fehlerhaften Daten
+- ✅ Logging aller Fehler
+- ✅ Manuelle Korrektur-Möglichkeit
+
+### 19.3 Skalierbarkeit
+
+**Risiko:**
+- System funktioniert nur für kleine Datenmengen
+- Bei vielen Branches/Kategorien: Performance-Probleme
+
+**Lösung:**
+- ✅ Queue-System für Batch-Processing
+- ✅ Caching für wiederholte Berechnungen
+- ✅ Pagination für große Datenmengen
+- ✅ Indexes auf häufig gefilterten Feldern
+
+---
+
+## 20. 📋 Vollständige Implementierungs-Checkliste
+
+### ✅ Übersetzungen
+- [ ] Frontend-Übersetzungen in `de.json`, `en.json`, `es.json`
+- [ ] Backend-Übersetzungen in `translations.ts`
+- [ ] Alle `t()` Funktionen in Komponenten
+- [ ] Test in allen 3 Sprachen
+
+### ✅ Notifications
+- [ ] `createNotificationIfEnabled` in allen Controllern
+- [ ] Backend-Übersetzungen für Notifications
+- [ ] Frontend-Übersetzungen für Notifications
+- [ ] `relatedEntityId` und `relatedEntityType` verwenden (NICHT `targetId`/`targetType`!)
+
+### ✅ Berechtigungen
+- [ ] Seiten in `ALL_PAGES` Array
+- [ ] Tabellen in `ALL_TABLES` Array
+- [ ] Buttons in `ALL_BUTTONS` Array
+- [ ] Berechtigungen für alle Rollen definiert
+- [ ] Frontend-Berechtigungsprüfungen
+- [ ] Backend-Berechtigungsprüfungen
+- [ ] Seed-File getestet: `npx prisma db seed`
+
+### ✅ Performance
+- [ ] Queue-System für Batch-Processing
+- [ ] Caching für wiederholte Berechnungen
+- [ ] Rate-Limiting für Rate Shopping
+- [ ] Pagination für große Datenmengen
+- [ ] Indexes auf häufig gefilterten Feldern
+
+### ✅ Memory Leaks
+- [ ] IntersectionObserver cleanup
+- [ ] Timer cleanup
+- [ ] Event Listener cleanup
+- [ ] DB-Connections richtig geschlossen
+
+### ✅ Weitere Aspekte
+- [ ] Error Handling
+- [ ] Logging
+- [ ] Validierung
+- [ ] Testing
+
+---
+
+## 21. Zusammenfassung - Aktualisiert
+
+Dieses Dokument beschreibt die Planung einer umfassenden Preisanalyse-Funktion für das Intranet-System. Die Funktion ermöglicht es:
+
+1. **OTA-Inserate zu verwalten** und Preise von Konkurrenten zu sammeln
+2. **Preise zu analysieren** für die nächsten 3 Monate, pro Tag und Zimmerkategorie
+3. **Zimmerkategorien zu unterscheiden** (Private vs. Dorm)
+4. **Preisempfehlungen zu generieren** basierend auf konfigurierbaren Regeln und vollständigem Multi-Faktor-Algorithmus
+5. **Empfehlungen ins LobbyPMS einzuspielen** über die API (später)
+
+**KRITISCH: Diese Aspekte MÜSSEN bei der Implementierung beachtet werden:**
+- ✅ **Übersetzungen:** MANDATORY - Ohne Übersetzungen wird Feature nicht akzeptiert!
+- ✅ **Notifications:** MANDATORY - Für alle wichtigen Aktionen
+- ✅ **Berechtigungen:** MANDATORY - Für alle Seiten/Tabellen/Buttons
+- ✅ **Performance:** KRITISCH - Queue-System, Caching, Rate-Limiting
+- ✅ **Memory Leaks:** KRITISCH - Cleanup bei Unmount, Timer cleanup
+- ✅ **ToS-Verstöße:** KRITISCH - Legal Review vor Rate Shopping
+
+**Siehe auch:**
+- [PREISANALYSE_VOLLSTAENDIGE_ALGORITHMUS.md](PREISANALYSE_VOLLSTAENDIGE_ALGORITHMUS.md) - Vollständiger Multi-Faktor-Algorithmus
+- [PREISANALYSE_ABLAUF_DETAILLIERT.md](PREISANALYSE_ABLAUF_DETAILLIERT.md) - Detaillierter Ablauf
+- [PREISANALYSE_VOLLSTAENDIGE_ANALYSE_UND_FEHLENDE_ASPEKTE.md](PREISANALYSE_VOLLSTAENDIGE_ANALYSE_UND_FEHLENDE_ASPEKTE.md) - Vollständige Analyse aller fehlenden Aspekte
 
