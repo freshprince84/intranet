@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PencilIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, InformationCircleIcon, Squares2X2Icon, TableCellsIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
-import { API_ENDPOINTS } from '../../config/api.ts';
+import { PencilIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, InformationCircleIcon, Squares2X2Icon, TableCellsIcon, ArrowDownTrayIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { API_ENDPOINTS, API_URL } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
@@ -106,6 +106,10 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+    
+    // Bildgenerierung States
+    const [generatingImages, setGeneratingImages] = useState<Record<number, boolean>>({});
+    const [imageGenerationJobs, setImageGenerationJobs] = useState<Record<number, string | null>>({});
     
     // Tabellen-Einstellungen
     const {
@@ -223,6 +227,133 @@ const ToursTab: React.FC<ToursTabProps> = () => {
             }
         }
     }, [t, showMessage]);  // ✅ tourFilterLogicalOperators entfernt (Ref verwendet)
+    
+    // Handler für Bildgenerierung
+    const handleGenerateImages = useCallback(async (tourId: number) => {
+        try {
+            setGeneratingImages(prev => ({ ...prev, [tourId]: true }));
+            
+            const response = await axiosInstance.post(API_ENDPOINTS.TOURS.GENERATE_IMAGES(tourId));
+            
+            if (response.data.success) {
+                if (response.data.mode === 'synchronous') {
+                    // Synchroner Modus: Fertig
+                    showMessage(
+                        t('tours.imagesGenerated', { defaultValue: 'Bilder erfolgreich generiert' }),
+                        'success'
+                    );
+                    setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
+                    await loadTours();
+                } else {
+                    // Asynchroner Modus: Polling starten
+                    const jobId = response.data.jobId;
+                    setImageGenerationJobs(prev => ({ ...prev, [tourId]: jobId }));
+                    showMessage(
+                        t('tours.imageGenerationStarted', { defaultValue: 'Bildgenerierung gestartet' }),
+                        'info'
+                    );
+                }
+            } else {
+                throw new Error(response.data.message || 'Fehler beim Starten der Bildgenerierung');
+            }
+        } catch (err: any) {
+            console.error('Fehler beim Starten der Bildgenerierung:', err);
+            showMessage(
+                err.response?.data?.message || t('tours.imageGenerationFailed', { defaultValue: 'Fehler bei Bildgenerierung' }),
+                'error'
+            );
+            setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
+        }
+    }, [t, showMessage, loadTours]);
+    
+    // Polling für Bildgenerierungs-Status
+    useEffect(() => {
+        const pollingIntervals: Record<number, NodeJS.Timeout> = {};
+        const pollingTimeouts: Record<number, NodeJS.Timeout> = {};
+        
+        Object.entries(imageGenerationJobs).forEach(([tourIdStr, jobId]) => {
+            if (!jobId) return;
+            
+            const tourId = parseInt(tourIdStr, 10);
+            let pollCount = 0;
+            const maxPolls = 30; // Max. 60 Sekunden (30 * 2 Sekunden)
+            
+            // Polling-Intervall
+            pollingIntervals[tourId] = setInterval(async () => {
+                try {
+                    pollCount++;
+                    
+                    // Timeout nach 60 Sekunden
+                    if (pollCount > maxPolls) {
+                        clearInterval(pollingIntervals[tourId]);
+                        delete pollingIntervals[tourId];
+                        setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
+                        setImageGenerationJobs(prev => {
+                            const newJobs = { ...prev };
+                            delete newJobs[tourId];
+                            return newJobs;
+                        });
+                        showMessage(
+                            t('tours.imageGenerationTimeout', { defaultValue: 'Bildgenerierung hat zu lange gedauert' }),
+                            'warning'
+                        );
+                        return;
+                    }
+                    
+                    const response = await axiosInstance.get(
+                        API_ENDPOINTS.TOURS.GENERATE_IMAGES_STATUS(tourId),
+                        { params: { jobId } }
+                    );
+                    
+                    if (response.data.success) {
+                        const status = response.data.status;
+                        const progress = response.data.progress || 0;
+                        
+                        if (status === 'completed') {
+                            // Erfolg: Polling stoppen
+                            clearInterval(pollingIntervals[tourId]);
+                            delete pollingIntervals[tourId];
+                            setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
+                            setImageGenerationJobs(prev => {
+                                const newJobs = { ...prev };
+                                delete newJobs[tourId];
+                                return newJobs;
+                            });
+                            showMessage(
+                                t('tours.imagesGenerated', { defaultValue: 'Bilder erfolgreich generiert' }),
+                                'success'
+                            );
+                            await loadTours();
+                        } else if (status === 'failed') {
+                            // Fehler: Polling stoppen
+                            clearInterval(pollingIntervals[tourId]);
+                            delete pollingIntervals[tourId];
+                            setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
+                            setImageGenerationJobs(prev => {
+                                const newJobs = { ...prev };
+                                delete newJobs[tourId];
+                                return newJobs;
+                            });
+                            showMessage(
+                                t('tours.imageGenerationFailed', { defaultValue: 'Fehler bei Bildgenerierung' }),
+                                'error'
+                            );
+                        }
+                        // 'waiting' oder 'active': Weiter pollen
+                    }
+                } catch (err: any) {
+                    console.error('Fehler beim Polling:', err);
+                    // Fehler beim Polling: Weiter versuchen (nicht stoppen)
+                }
+            }, 2000); // Alle 2 Sekunden
+        });
+        
+        // ✅ MEMORY LEAK PREVENTION: Cleanup-Funktion
+        return () => {
+            Object.values(pollingIntervals).forEach(interval => clearInterval(interval));
+            Object.values(pollingTimeouts).forEach(timeout => clearTimeout(timeout));
+        };
+    }, [imageGenerationJobs, t, showMessage, loadTours]);
     
     // ✅ MEMORY: Cleanup - Alle großen Arrays beim Unmount löschen
     useEffect(() => {
@@ -883,21 +1014,44 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                                                         </div>
                                                                     </div>
                                                                     {hasPermission('tour_edit', 'write', 'button') && (
-                                                                        <div className="relative group">
-                                                                            <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setSelectedTour(tour);
-                                                                                    setIsEditTourModalOpen(true);
-                                                                                }}
-                                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                            >
-                                                                                <PencilIcon className="h-4 w-4" />
-                                                                            </button>
-                                                                            <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                {t('tours.edit', 'Bearbeiten')}
+                                                                        <>
+                                                                            <div className="relative group">
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleGenerateImages(tour.id);
+                                                                                    }}
+                                                                                    disabled={generatingImages[tour.id] || false}
+                                                                                    className={`p-1.5 transition-colors ${
+                                                                                        generatingImages[tour.id]
+                                                                                            ? 'text-gray-400 cursor-not-allowed'
+                                                                                            : 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300'
+                                                                                    }`}
+                                                                                >
+                                                                                    <PhotoIcon className="h-4 w-4" />
+                                                                                </button>
+                                                                                <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                    {generatingImages[tour.id]
+                                                                                        ? t('tours.generatingImages', { defaultValue: 'Bilder werden generiert...' })
+                                                                                        : t('tours.generateImages', { defaultValue: 'Bilder generieren' })}
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
+                                                                            <div className="relative group">
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        setSelectedTour(tour);
+                                                                                        setIsEditTourModalOpen(true);
+                                                                                    }}
+                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                >
+                                                                                    <PencilIcon className="h-4 w-4" />
+                                                                                </button>
+                                                                                <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                    {t('tours.edit', 'Bearbeiten')}
+                                                                                </div>
+                                                                            </div>
+                                                                        </>
                                                                     )}
                                                                 </div>
                                                             </td>
@@ -936,6 +1090,16 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                 key={tour.id}
                                 className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 hover:shadow-md transition-shadow"
                             >
+                                {/* Bild-Anzeige */}
+                                {tour.imageUrl && (
+                                    <img 
+                                        src={`${API_URL}${tour.imageUrl}`}
+                                        alt={tour.title || 'Tour Bild'}
+                                        className="w-full h-48 object-cover rounded-lg mb-2"
+                                        loading="lazy"
+                                    />
+                                )}
+                                
                                 <div className="flex items-start justify-between mb-2">
                                     <h4 className="text-lg font-semibold dark:text-white">{tour?.title || '-'}</h4>
                                     {hasPermission('tour_edit', 'write', 'button') ? (
@@ -996,7 +1160,26 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                 </div>
                                 
                                 {hasPermission('tour_edit', 'write', 'button') && (
-                                    <div className="mt-4 flex justify-end">
+                                    <div className="mt-4 flex justify-end gap-2">
+                                        {/* Bildgenerierungs-Button */}
+                                        <div className="relative group">
+                                            <button
+                                                onClick={() => handleGenerateImages(tour.id)}
+                                                disabled={generatingImages[tour.id] || false}
+                                                className={`p-1.5 rounded transition-colors ${
+                                                    generatingImages[tour.id]
+                                                        ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 cursor-not-allowed'
+                                                        : 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                                                }`}
+                                            >
+                                                <PhotoIcon className="h-4 w-4" />
+                                            </button>
+                                            <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {generatingImages[tour.id]
+                                                    ? t('tours.generatingImages', { defaultValue: 'Bilder werden generiert...' })
+                                                    : t('tours.generateImages', { defaultValue: 'Bilder generieren' })}
+                                            </div>
+                                        </div>
                                         <button
                                             onClick={() => {
                                                 setSelectedTour(tour);

@@ -2162,11 +2162,12 @@ async function main() {
               });
 
               if (!existingFilter) {
-                // ToDos: responsible = role
+                // ToDos: responsible = role UND status != done
                 const conditions = [
-                  { column: 'responsible', operator: 'equals', value: `role-${role.id}` }
+                  { column: 'responsible', operator: 'equals', value: `role-${role.id}` },
+                  { column: 'status', operator: 'notEquals', value: 'done' }
                 ];
-                const operators: string[] = [];
+                const operators: string[] = ['AND'];
 
                 // Finde die höchste order-Nummer in der Gruppe
                 const maxOrder = await prisma.savedFilter.findFirst({
@@ -2213,19 +2214,21 @@ async function main() {
               let operators: string[] = [];
 
               if (table.id === 'requests-table') {
-                // Requests: requestedBy = user ODER responsible = user UND status != approved UND status != denied
+                // Requests: (requestedBy AND status != approved AND status != denied) OR (responsible AND status != approved AND status != denied)
                 conditions = [
                   { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'status', operator: 'notEquals', value: 'approved' },
+                  { column: 'status', operator: 'notEquals', value: 'denied' },
                   { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
                   { column: 'status', operator: 'notEquals', value: 'approved' },
                   { column: 'status', operator: 'notEquals', value: 'denied' }
                 ];
-                operators = ['OR', 'AND', 'AND'];
+                operators = ['AND', 'AND', 'OR', 'AND', 'AND'];
               } else if (table.id === 'worktracker-todos') {
-                // ToDos: responsible = user ODER qualityControl = user UND status != done
+                // ToDos: qualityControl = user ODER responsible = user UND status != done
                 conditions = [
-                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
                   { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
                   { column: 'status', operator: 'notEquals', value: 'done' }
                 ];
                 operators = ['OR', 'AND'];

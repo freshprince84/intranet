@@ -3051,7 +3051,17 @@
       "validation": {
         "nameRequired": "Name ist erforderlich"
       }
-    }
+    },
+    "generateImages": "Bilder generieren",
+    "generatingImages": "Bilder werden generiert...",
+    "imagesGenerated": "Bilder erfolgreich generiert",
+    "imageGenerationFailed": "Fehler bei Bildgenerierung",
+    "imageGenerationProgress": "Fortschritt: {progress}%",
+    "imageGenerationStarted": "Bildgenerierung gestartet",
+    "imageGenerationQueued": "Bildgenerierung in Warteschlange",
+    "imageGenerationTimeout": "Bildgenerierung hat zu lange gedauert",
+    "imageGenerationNoQueue": "Queue-System nicht verfügbar, verwende synchronen Modus",
+    "imageGenerationRedisError": "Redis-Verbindungsfehler, verwende synchronen Modus"
   },
   "tourBookings": {
     "title": "Tour-Buchungen",

@@ -2984,7 +2984,17 @@
       "validation": {
         "nameRequired": "El nombre es obligatorio"
       }
-    }
+    },
+    "generateImages": "Generar imágenes",
+    "generatingImages": "Generando imágenes...",
+    "imagesGenerated": "Imágenes generadas exitosamente",
+    "imageGenerationFailed": "Error al generar imágenes",
+    "imageGenerationProgress": "Progreso: {progress}%",
+    "imageGenerationStarted": "Generación de imágenes iniciada",
+    "imageGenerationQueued": "Generación de imágenes en cola",
+    "imageGenerationTimeout": "La generación de imágenes tardó demasiado",
+    "imageGenerationNoQueue": "Sistema de cola no disponible, usando modo sincrónico",
+    "imageGenerationRedisError": "Error de conexión Redis, usando modo sincrónico"
   },
   "tourBookings": {
     "title": "Reservas de Tours",

@@ -8,6 +8,8 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { logger } from '../utils/logger';
+import { getImageGenerationQueue, checkQueueHealth } from '../services/queueService';
+import { GeminiImageService } from '../services/geminiImageService';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -1099,5 +1101,263 @@ export const exportTours = async (req: Request, res: Response) => {
     });
   }
 };
+
+// POST /api/tours/:id/generate-images - Startet Bildgenerierung
+export const generateTourImages = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tourId = parseInt(id, 10);
+
+    if (isNaN(tourId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ungültige Tour-ID'
+      });
+    }
+
+    // Berechtigung prüfen
+    const hasPermission = await checkUserPermission(
+      parseInt(req.userId),
+      parseInt(req.roleId),
+      'tour_edit',
+      'write',
+      'button'
+    );
+    if (!hasPermission) {
+      return res.status(403).json({
+        success: false,
+        message: 'Keine Berechtigung zum Generieren von Tour-Bildern'
+      });
+    }
+
+    // Prüfe ob Tour existiert
+    const tour = await prisma.tour.findUnique({
+      where: { id: tourId },
+      select: { id: true, title: true, description: true, organizationId: true }
+    });
+
+    if (!tour) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tour nicht gefunden'
+      });
+    }
+
+    // Prüfe Organization-Isolation
+    const organizationId = (req as any).organizationId;
+    if (tour.organizationId !== organizationId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Keine Berechtigung für diese Tour'
+      });
+    }
+
+    // Prüfe ob Queue verfügbar ist
+    const queueAvailable = await checkQueueHealth();
+    const queueEnabled = process.env.QUEUE_ENABLED === 'true';
+
+    // Fallback: Synchroner Modus wenn Queue nicht verfügbar
+    if (!queueAvailable || !queueEnabled) {
+      logger.warn(`[generateTourImages] Queue nicht verfügbar, verwende synchronen Modus für Tour ${tourId}`);
+      
+      try {
+        // Synchroner Modus: Direkt generieren und hochladen
+        const generatedImages = await GeminiImageService.generateTourImages(
+          tour.id,
+          tour.title || '',
+          tour.description || '',
+          process.env.GEMINI_API_KEY
+        );
+
+        // Lade Hauptbild hoch
+        if (generatedImages.mainImage && fs.existsSync(generatedImages.mainImage)) {
+          await uploadImageDirectly(tourId, generatedImages.mainImage);
+        }
+
+        // Lade Galerie-Bilder hoch
+        for (const galleryImage of generatedImages.galleryImages) {
+          if (fs.existsSync(galleryImage)) {
+            await uploadGalleryImageDirectly(tourId, galleryImage);
+          }
+        }
+
+        // Cleanup temporäre Dateien
+        cleanupTemporaryFiles(generatedImages);
+
+        return res.json({
+          success: true,
+          mode: 'synchronous',
+          message: 'Bilder erfolgreich generiert (synchroner Modus)'
+        });
+      } catch (error: any) {
+        logger.error(`[generateTourImages] Fehler im synchronen Modus:`, error);
+        return res.status(500).json({
+          success: false,
+          message: error.message || 'Fehler bei Bildgenerierung'
+        });
+      }
+    }
+
+    // Asynchroner Modus: Job zur Queue hinzufügen
+    const queue = getImageGenerationQueue();
+    const job = await queue.add(
+      'generate-tour-images',
+      {
+        tourId: tour.id,
+        organizationId,
+        userId: parseInt(req.userId)
+      },
+      {
+        jobId: `tour-${tourId}-${Date.now()}` // Eindeutige Job-ID
+      }
+    );
+
+    logger.log(`[generateTourImages] Job zur Queue hinzugefügt: ${job.id} für Tour ${tourId}`);
+
+    res.json({
+      success: true,
+      mode: 'asynchronous',
+      jobId: job.id,
+      message: 'Bildgenerierung gestartet'
+    });
+  } catch (error: any) {
+    logger.error('[generateTourImages] Fehler:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Fehler beim Starten der Bildgenerierung'
+    });
+  }
+};
+
+// GET /api/tours/:id/generate-images/status - Prüft Status der Bildgenerierung
+export const getTourImageGenerationStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tourId = parseInt(id, 10);
+
+    if (isNaN(tourId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ungültige Tour-ID'
+      });
+    }
+
+    const jobId = req.query.jobId as string;
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Job-ID erforderlich'
+      });
+    }
+
+    const queue = getImageGenerationQueue();
+    const job = await queue.getJob(jobId);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job nicht gefunden'
+      });
+    }
+
+    const state = await job.getState();
+    const progress = job.progress as number || 0;
+
+    let status: 'waiting' | 'active' | 'completed' | 'failed' = 'waiting';
+    if (state === 'completed') {
+      status = 'completed';
+    } else if (state === 'failed') {
+      status = 'failed';
+    } else if (state === 'active') {
+      status = 'active';
+    }
+
+    res.json({
+      success: true,
+      status,
+      progress,
+      jobId: job.id
+    });
+  } catch (error: any) {
+    logger.error('[getTourImageGenerationStatus] Fehler:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Fehler beim Abrufen des Status'
+    });
+  }
+};
+
+// Hilfsfunktion: Lädt Bild direkt hoch (ohne HTTP)
+async function uploadImageDirectly(tourId: number, imagePath: string): Promise<void> {
+  // Altes Bild löschen (falls vorhanden)
+  const tour = await prisma.tour.findUnique({
+    where: { id: tourId },
+    select: { imageUrl: true }
+  });
+
+  if (tour?.imageUrl) {
+    const oldImagePath = path.join(__dirname, '../../uploads/tours', path.basename(tour.imageUrl));
+    if (fs.existsSync(oldImagePath)) {
+      fs.unlinkSync(oldImagePath);
+    }
+  }
+
+  // Kopiere Bild in uploads-Verzeichnis
+  const filename = `tour-${tourId}-main-${Date.now()}.png`;
+  const destPath = path.join(__dirname, '../../uploads/tours', filename);
+  fs.copyFileSync(imagePath, destPath);
+
+  // Aktualisiere Tour
+  const imageUrl = `/uploads/tours/${filename}`;
+  await prisma.tour.update({
+    where: { id: tourId },
+    data: { imageUrl }
+  });
+}
+
+// Hilfsfunktion: Lädt Galerie-Bild direkt hoch (ohne HTTP)
+async function uploadGalleryImageDirectly(tourId: number, imagePath: string): Promise<void> {
+  // Lade aktuelle Galerie-URLs
+  const tour = await prisma.tour.findUnique({
+    where: { id: tourId },
+    select: { galleryUrls: true }
+  });
+
+  const currentUrls = (tour?.galleryUrls as string[]) || [];
+
+  // Kopiere Bild in uploads-Verzeichnis
+  const filename = `tour-${tourId}-gallery-${Date.now()}.png`;
+  const destPath = path.join(__dirname, '../../uploads/tours', filename);
+  fs.copyFileSync(imagePath, destPath);
+
+  // Füge neue URL hinzu
+  const newUrl = `/uploads/tours/${filename}`;
+  const updatedUrls = [...currentUrls, newUrl];
+
+  // Aktualisiere Tour
+  await prisma.tour.update({
+    where: { id: tourId },
+    data: { galleryUrls: updatedUrls }
+  });
+}
+
+// Hilfsfunktion: Bereinigt temporäre Dateien
+function cleanupTemporaryFiles(images: { mainImage: string; galleryImages: string[]; flyer: string }): void {
+  try {
+    if (images.mainImage && fs.existsSync(images.mainImage)) {
+      fs.unlinkSync(images.mainImage);
+    }
+    images.galleryImages.forEach((img) => {
+      if (fs.existsSync(img)) {
+        fs.unlinkSync(img);
+      }
+    });
+    if (images.flyer && fs.existsSync(images.flyer)) {
+      fs.unlinkSync(images.flyer);
+    }
+  } catch (error: any) {
+    logger.error('[cleanupTemporaryFiles] Fehler:', error);
+  }
+}
 
 
