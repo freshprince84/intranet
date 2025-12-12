@@ -247,7 +247,6 @@ function getImageGenerationQueue() {
                     type: 'exponential',
                     delay: 5000, // Längerer Backoff für Rate-Limits
                 },
-                timeout: 120000, // 120 Sekunden Timeout (für 5 Bilder)
                 removeOnComplete: {
                     age: 24 * 3600,
                     count: 1000,

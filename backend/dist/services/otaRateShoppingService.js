@@ -8,13 +8,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OTARateShoppingService = void 0;
 const client_1 = require("@prisma/client");
-const logger_1 = __importDefault(require("../utils/logger"));
+const logger_1 = require("../utils/logger");
 const prisma = new client_1.PrismaClient();
 /**
  * Service für OTA Rate Shopping
@@ -47,7 +44,7 @@ class OTARateShoppingService {
                         status: 'pending'
                     }
                 });
-                logger_1.default.log(`Rate Shopping Job erstellt: ID ${job.id}, Platform: ${platform}, Branch: ${branchId}`);
+                logger_1.logger.log(`Rate Shopping Job erstellt: ID ${job.id}, Platform: ${platform}, Branch: ${branchId}`);
                 // TODO: Implementierung des Rate Shopping
                 // - Web Scraping oder API-Integration
                 // - Preisdaten sammeln
@@ -56,7 +53,7 @@ class OTARateShoppingService {
                 return job.id;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Erstellen des Rate Shopping Jobs:', error);
+                logger_1.logger.error('Fehler beim Erstellen des Rate Shopping Jobs:', error);
                 throw error;
             }
         });
@@ -90,7 +87,7 @@ class OTARateShoppingService {
                 return listings;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Abrufen der OTA-Listings:', error);
+                logger_1.logger.error('Fehler beim Abrufen der OTA-Listings:', error);
                 throw error;
             }
         });
@@ -123,7 +120,7 @@ class OTARateShoppingService {
                 return listing;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Erstellen/Aktualisieren des OTA-Listings:', error);
+                logger_1.logger.error('Fehler beim Erstellen/Aktualisieren des OTA-Listings:', error);
                 throw error;
             }
         });
@@ -172,7 +169,7 @@ class OTARateShoppingService {
                 return priceData;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Speichern der Preisdaten:', error);
+                logger_1.logger.error('Fehler beim Speichern der Preisdaten:', error);
                 throw error;
             }
         });
@@ -203,7 +200,7 @@ class OTARateShoppingService {
                 return priceData;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Abrufen der Preisdaten:', error);
+                logger_1.logger.error('Fehler beim Abrufen der Preisdaten:', error);
                 throw error;
             }
         });

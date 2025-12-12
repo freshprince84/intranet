@@ -15,12 +15,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createImageGenerationWorker = createImageGenerationWorker;
 const bullmq_1 = require("bullmq");
 const geminiImageService_1 = require("../../services/geminiImageService");
+const tourImageUploadService_1 = require("../../services/tourImageUploadService");
 const prisma_1 = require("../../utils/prisma");
 const logger_1 = require("../../utils/logger");
 const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
-const form_data_1 = __importDefault(require("form-data"));
-const axios_1 = __importDefault(require("axios"));
 /**
  * Erstellt einen Worker für Image-Generation-Jobs
  * Verarbeitet Bildgenerierung im Hintergrund
@@ -52,17 +50,17 @@ function createImageGenerationWorker(connection) {
             logger_1.logger.log(`[Image Generation Worker] Generiere Bilder für Tour: ${tour.title}`);
             generatedImages = yield geminiImageService_1.GeminiImageService.generateTourImages(tour.id, tour.title, tour.description || '', process.env.GEMINI_API_KEY);
             yield job.updateProgress(60);
-            // Lade Hauptbild hoch
+            // Lade Hauptbild hoch (direkt, ohne HTTP)
             if (generatedImages.mainImage && fs_1.default.existsSync(generatedImages.mainImage)) {
-                yield uploadTourImage(tourId, generatedImages.mainImage, 'main');
+                yield tourImageUploadService_1.TourImageUploadService.uploadImageDirectly(tourId, generatedImages.mainImage);
                 logger_1.logger.log(`[Image Generation Worker] Hauptbild hochgeladen: ${generatedImages.mainImage}`);
             }
             yield job.updateProgress(70);
-            // Lade Galerie-Bilder hoch
+            // Lade Galerie-Bilder hoch (direkt, ohne HTTP)
             for (let i = 0; i < generatedImages.galleryImages.length; i++) {
                 const galleryImage = generatedImages.galleryImages[i];
                 if (fs_1.default.existsSync(galleryImage)) {
-                    yield uploadTourGalleryImage(tourId, galleryImage);
+                    yield tourImageUploadService_1.TourImageUploadService.uploadGalleryImageDirectly(tourId, galleryImage);
                     logger_1.logger.log(`[Image Generation Worker] Galerie-Bild ${i} hochgeladen: ${galleryImage}`);
                 }
                 yield job.updateProgress(70 + (i + 1) * 5); // 70-85%
@@ -90,61 +88,9 @@ function createImageGenerationWorker(connection) {
     }), {
         connection,
         concurrency: parseInt(process.env.QUEUE_CONCURRENCY || '2'), // 2 Jobs parallel (Bildgenerierung ist CPU-intensiv)
-    });
-}
-/**
- * Lädt ein Bild für eine Tour hoch (Hauptbild)
- */
-function uploadTourImage(tourId, imagePath, type) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const formData = new form_data_1.default();
-            formData.append('image', fs_1.default.createReadStream(imagePath), {
-                filename: path_1.default.basename(imagePath),
-                contentType: 'image/png'
-            });
-            // Verwende interne API (localhost) für Upload
-            const apiUrl = process.env.API_URL || 'http://localhost:5000';
-            const response = yield axios_1.default.post(`${apiUrl}/api/tours/${tourId}/image`, formData, {
-                headers: formData.getHeaders(),
-                maxBodyLength: Infinity,
-                maxContentLength: Infinity,
-            });
-            if (!response.data.success) {
-                throw new Error(`Upload fehlgeschlagen: ${response.data.message}`);
-            }
-        }
-        catch (error) {
-            logger_1.logger.error(`[Image Generation Worker] Fehler beim Upload des Hauptbildes:`, error);
-            throw error;
-        }
-    });
-}
-/**
- * Lädt ein Galerie-Bild für eine Tour hoch
- */
-function uploadTourGalleryImage(tourId, imagePath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const formData = new form_data_1.default();
-            formData.append('image', fs_1.default.createReadStream(imagePath), {
-                filename: path_1.default.basename(imagePath),
-                contentType: 'image/png'
-            });
-            // Verwende interne API (localhost) für Upload
-            const apiUrl = process.env.API_URL || 'http://localhost:5000';
-            const response = yield axios_1.default.post(`${apiUrl}/api/tours/${tourId}/gallery`, formData, {
-                headers: formData.getHeaders(),
-                maxBodyLength: Infinity,
-                maxContentLength: Infinity,
-            });
-            if (!response.data.success) {
-                throw new Error(`Upload fehlgeschlagen: ${response.data.message}`);
-            }
-        }
-        catch (error) {
-            logger_1.logger.error(`[Image Generation Worker] Fehler beim Upload des Galerie-Bildes:`, error);
-            throw error;
+        limiter: {
+            max: 2, // Max. 2 Jobs gleichzeitig
+            duration: 1000
         }
     });
 }

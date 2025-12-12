@@ -1,11 +1,9 @@
 import { Worker, Job } from 'bullmq';
 import { GeminiImageService } from '../../services/geminiImageService';
+import { TourImageUploadService } from '../../services/tourImageUploadService';
 import { prisma } from '../../utils/prisma';
 import { logger } from '../../utils/logger';
 import fs from 'fs';
-import path from 'path';
-import FormData from 'form-data';
-import axios from 'axios';
 
 /**
  * Job-Daten für Tour-Bildgenerierung
@@ -64,19 +62,19 @@ export function createImageGenerationWorker(connection: any): Worker {
 
         await job.updateProgress(60);
 
-        // Lade Hauptbild hoch
+        // Lade Hauptbild hoch (direkt, ohne HTTP)
         if (generatedImages.mainImage && fs.existsSync(generatedImages.mainImage)) {
-          await uploadTourImage(tourId, generatedImages.mainImage, 'main');
+          await TourImageUploadService.uploadImageDirectly(tourId, generatedImages.mainImage);
           logger.log(`[Image Generation Worker] Hauptbild hochgeladen: ${generatedImages.mainImage}`);
         }
 
         await job.updateProgress(70);
 
-        // Lade Galerie-Bilder hoch
+        // Lade Galerie-Bilder hoch (direkt, ohne HTTP)
         for (let i = 0; i < generatedImages.galleryImages.length; i++) {
           const galleryImage = generatedImages.galleryImages[i];
           if (fs.existsSync(galleryImage)) {
-            await uploadTourGalleryImage(tourId, galleryImage);
+            await TourImageUploadService.uploadGalleryImageDirectly(tourId, galleryImage);
             logger.log(`[Image Generation Worker] Galerie-Bild ${i} hochgeladen: ${galleryImage}`);
           }
           await job.updateProgress(70 + (i + 1) * 5); // 70-85%
@@ -119,69 +117,6 @@ export function createImageGenerationWorker(connection: any): Worker {
   );
 }
 
-/**
- * Lädt ein Bild für eine Tour hoch (Hauptbild)
- */
-async function uploadTourImage(tourId: number, imagePath: string, type: 'main'): Promise<void> {
-  try {
-    const formData = new FormData();
-    formData.append('image', fs.createReadStream(imagePath), {
-      filename: path.basename(imagePath),
-      contentType: 'image/png'
-    });
-
-    // Verwende interne API (localhost) für Upload
-    const apiUrl = process.env.API_URL || 'http://localhost:5000';
-    const response = await axios.post(
-      `${apiUrl}/api/tours/${tourId}/image`,
-      formData,
-      {
-        headers: formData.getHeaders(),
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-      }
-    );
-
-    if (!response.data.success) {
-      throw new Error(`Upload fehlgeschlagen: ${response.data.message}`);
-    }
-  } catch (error: any) {
-    logger.error(`[Image Generation Worker] Fehler beim Upload des Hauptbildes:`, error);
-    throw error;
-  }
-}
-
-/**
- * Lädt ein Galerie-Bild für eine Tour hoch
- */
-async function uploadTourGalleryImage(tourId: number, imagePath: string): Promise<void> {
-  try {
-    const formData = new FormData();
-    formData.append('image', fs.createReadStream(imagePath), {
-      filename: path.basename(imagePath),
-      contentType: 'image/png'
-    });
-
-    // Verwende interne API (localhost) für Upload
-    const apiUrl = process.env.API_URL || 'http://localhost:5000';
-    const response = await axios.post(
-      `${apiUrl}/api/tours/${tourId}/gallery`,
-      formData,
-      {
-        headers: formData.getHeaders(),
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-      }
-    );
-
-    if (!response.data.success) {
-      throw new Error(`Upload fehlgeschlagen: ${response.data.message}`);
-    }
-  } catch (error: any) {
-    logger.error(`[Image Generation Worker] Fehler beim Upload des Galerie-Bildes:`, error);
-    throw error;
-  }
-}
 
 /**
  * Bereinigt temporäre Dateien
