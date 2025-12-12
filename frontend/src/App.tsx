@@ -182,6 +182,13 @@ const App: React.FC = () => {
                                                                 </Suspense>
                                                             </ProtectedRoute>
                                                         } />
+                                                        <Route path="/price-analysis" element={
+                                                            <ProtectedRoute entity="price_analysis" accessLevel="read">
+                                                                <Suspense fallback={<LoadingScreen />}>
+                                                                    <PriceAnalysis />
+                                                                </Suspense>
+                                                            </ProtectedRoute>
+                                                        } />
                                                     </Route>
                                                     </Routes>
                                                     <OnboardingTour />
