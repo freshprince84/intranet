@@ -1523,7 +1523,11 @@
       "worktimes": "Arbeitszeiten & Aktivitäten",
       "shifts": "Schichtplan",
       "todos": "To-Do-Auswertungen",
-      "requests": "Request-Auswertungen"
+      "requests": "Request-Auswertungen",
+      "userTasksActivity": "User Tasks Aktivität",
+      "userRequestsActivity": "User Requests Aktivität",
+      "tasksActivity": "Tasks Aktivität",
+      "requestsActivity": "Requests Aktivität"
     },
     "titles": {
       "todos": "To-Do-Auswertungen",

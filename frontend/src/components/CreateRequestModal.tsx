@@ -192,12 +192,14 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
               }));
             }
 
-            // 3. Fälligkeitsdatum: Basierend auf Type
-            const defaultDate = getDefaultDateForType(formData.type);
-            setFormData(prevData => ({ 
-              ...prevData, 
-              due_date: defaultDate 
-            }));
+            // 3. Fälligkeitsdatum: Basierend auf Type (verwende prevData.type für aktuellen Wert)
+            setFormData(prevData => {
+              const defaultDate = getDefaultDateForType(prevData.type);
+              return {
+                ...prevData,
+                due_date: defaultDate
+              };
+            });
           }
         } catch (err) {
           console.error('Fehler beim Laden der Daten:', err);
@@ -988,18 +990,6 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 type="date"
                 className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                 value={formData.due_date}
-                min={getMinDateForType(formData.type)}
-                onChange={(e) => {
-                  const selectedDate = e.target.value;
-                  const minDate = getMinDateForType(formData.type);
-                  // Validierung: Datum darf nicht vor Mindestdatum liegen
-                  if (selectedDate && selectedDate < minDate) {
-                    // Setze auf Mindestdatum falls ungültig
-                    setFormData({ ...formData, due_date: minDate });
-                  } else {
-                    setFormData({ ...formData, due_date: selectedDate });
-                  }
-                }}
                 min={getMinDateForType(formData.type)}
                 onChange={(e) => {
                   const selectedDate = e.target.value;
