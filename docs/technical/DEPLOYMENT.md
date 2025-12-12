@@ -423,6 +423,26 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # ✅ FIX: Erhöhe Upload-Limit für Dokumenten-Uploads (KI-basierte Erkennung)
+        # Base64-kodierte Bilder sind sehr groß (2-5MB für ein Foto)
+        # Standard ist 1MB, was zu 413 "Request Entity Too Large" Fehlern führt
+        # Siehe auch: docs/technical/NGINX_CLIENT_MAX_BODY_SIZE_FIX.md
+        client_max_body_size 10M;
+    }
+
+    # Uploads-Verzeichnis (serviert durch Express)
+    location /uploads {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Caching für Bilder
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800";
     }
 
     # Websocket-Verbindungen (falls verwendet)
@@ -934,6 +954,19 @@ server {
     
     location /api {
         proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # ✅ FIX: Erhöhe Upload-Limit für Dokumenten-Uploads (KI-basierte Erkennung)
+        # Base64-kodierte Bilder sind sehr groß (2-5MB für ein Foto)
+        # Standard ist 1MB, was zu 413 "Request Entity Too Large" Fehlern führt
+        client_max_body_size 10M;
         # Weitere Proxy-Einstellungen...
     }
 }

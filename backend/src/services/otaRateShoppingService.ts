@@ -41,16 +41,274 @@ export class OTARateShoppingService {
 
       logger.log(`Rate Shopping Job erstellt: ID ${job.id}, Platform: ${platform}, Branch: ${branchId}`);
 
-      // TODO: Implementierung des Rate Shopping
-      // - Web Scraping oder API-Integration
-      // - Preisdaten sammeln
-      // - In OTAPriceData speichern
-      // - Job-Status aktualisieren
+      // Asynchron ausführen (nicht blockieren)
+      this.executeRateShopping(job.id, branchId, platform, startDate, endDate).catch(error => {
+        logger.error(`Fehler beim Ausführen des Rate Shopping Jobs ${job.id}:`, error);
+      });
 
       return job.id;
     } catch (error) {
       logger.error('Fehler beim Erstellen des Rate Shopping Jobs:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Führt den Rate Shopping Job aus
+   * 
+   * @param jobId - Job-ID
+   * @param branchId - Branch-ID
+   * @param platform - OTA-Plattform
+   * @param startDate - Startdatum
+   * @param endDate - Enddatum
+   */
+  private static async executeRateShopping(
+    jobId: number,
+    branchId: number,
+    platform: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<void> {
+    try {
+      // Job-Status auf 'running' setzen
+      await prisma.rateShoppingJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'running',
+          startedAt: new Date()
+        }
+      });
+
+      logger.log(`[Rate Shopping] Starte Job ${jobId} für ${platform}, Branch ${branchId}`);
+
+      // Hole alle aktiven Listings für diese Plattform
+      const listings = await prisma.oTAListing.findMany({
+        where: {
+          branchId,
+          platform,
+          isActive: true
+        }
+      });
+
+      if (listings.length === 0) {
+        logger.warn(`[Rate Shopping] Keine aktiven Listings gefunden für ${platform}, Branch ${branchId}`);
+        await prisma.rateShoppingJob.update({
+          where: { id: jobId },
+          data: {
+            status: 'completed',
+            completedAt: new Date(),
+            listingsFound: 0,
+            pricesCollected: 0
+          }
+        });
+        return;
+      }
+
+      let totalPricesCollected = 0;
+      const errors: any[] = [];
+
+      // Für jedes Listing Preise sammeln
+      for (const listing of listings) {
+        try {
+          const pricesCollected = await this.scrapeOTA(
+            listing.id,
+            platform,
+            listing.listingUrl || '',
+            startDate,
+            endDate
+          );
+          totalPricesCollected += pricesCollected;
+        } catch (error: any) {
+          logger.error(`[Rate Shopping] Fehler beim Scraping für Listing ${listing.id}:`, error);
+          errors.push({
+            listingId: listing.id,
+            error: error.message || String(error)
+          });
+        }
+
+        // Rate-Limiting: Warte 2 Sekunden zwischen Listings
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      // Job-Status auf 'completed' setzen
+      await prisma.rateShoppingJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'completed',
+          completedAt: new Date(),
+          listingsFound: listings.length,
+          pricesCollected: totalPricesCollected,
+          errors: errors.length > 0 ? errors : null
+        }
+      });
+
+      logger.log(`[Rate Shopping] Job ${jobId} abgeschlossen: ${totalPricesCollected} Preise gesammelt`);
+    } catch (error) {
+      logger.error(`[Rate Shopping] Fehler beim Ausführen des Jobs ${jobId}:`, error);
+      await prisma.rateShoppingJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'failed',
+          completedAt: new Date(),
+          errors: [{ error: error instanceof Error ? error.message : String(error) }]
+        }
+      });
+    }
+  }
+
+  /**
+   * Generische Funktion zum Scrapen einer OTA-Plattform
+   * 
+   * @param listingId - Listing-ID in der Datenbank
+   * @param platform - OTA-Plattform
+   * @param listingUrl - URL des Listings
+   * @param startDate - Startdatum
+   * @param endDate - Enddatum
+   * @returns Anzahl gesammelter Preise
+   */
+  private static async scrapeOTA(
+    listingId: number,
+    platform: string,
+    listingUrl: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<number> {
+    if (!listingUrl) {
+      throw new Error(`Keine URL für Listing ${listingId} angegeben`);
+    }
+
+    switch (platform.toLowerCase()) {
+      case 'booking.com':
+        return await this.scrapeBookingCom(listingId, listingUrl, startDate, endDate);
+      case 'hostelworld.com':
+      case 'hostelworld':
+        return await this.scrapeHostelworld(listingId, listingUrl, startDate, endDate);
+      default:
+        throw new Error(`Plattform ${platform} wird noch nicht unterstützt`);
+    }
+  }
+
+  /**
+   * Sammelt Preise von Booking.com
+   * 
+   * @param listingId - Listing-ID in der Datenbank
+   * @param listingUrl - URL des Listings
+   * @param startDate - Startdatum
+   * @param endDate - Enddatum
+   * @returns Anzahl gesammelter Preise
+   */
+  private static async scrapeBookingCom(
+    listingId: number,
+    listingUrl: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<number> {
+    // TODO: Implementierung mit Web Scraping (Cheerio) oder API
+    // Für jetzt: Placeholder-Implementierung
+    logger.log(`[Booking.com] Scraping für Listing ${listingId} von ${startDate.toISOString()} bis ${endDate.toISOString()}`);
+    
+    // Simuliere Preise (später durch echtes Scraping ersetzen)
+    const pricesCollected = 0;
+    
+    // Beispiel-Struktur für später:
+    // 1. HTTP-Request mit axios
+    // 2. HTML parsen mit cheerio
+    // 3. Preise extrahieren
+    // 4. In savePriceData speichern
+    
+    return pricesCollected;
+  }
+
+  /**
+   * Sammelt Preise von Hostelworld
+   * 
+   * @param listingId - Listing-ID in der Datenbank
+   * @param listingUrl - URL des Listings
+   * @param startDate - Startdatum
+   * @param endDate - Enddatum
+   * @returns Anzahl gesammelter Preise
+   */
+  private static async scrapeHostelworld(
+    listingId: number,
+    listingUrl: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<number> {
+    // TODO: Implementierung mit Web Scraping (Cheerio) oder API
+    // Für jetzt: Placeholder-Implementierung
+    logger.log(`[Hostelworld] Scraping für Listing ${listingId} von ${startDate.toISOString()} bis ${endDate.toISOString()}`);
+    
+    // Simuliere Preise (später durch echtes Scraping ersetzen)
+    const pricesCollected = 0;
+    
+    // Beispiel-Struktur für später:
+    // 1. HTTP-Request mit axios
+    // 2. HTML parsen mit cheerio
+    // 3. Preise extrahieren
+    // 4. In savePriceData speichern
+    
+    return pricesCollected;
+  }
+
+  /**
+   * Gibt Konkurrenzpreise für ein bestimmtes Datum zurück
+   * 
+   * @param branchId - Branch-ID
+   * @param date - Datum
+   * @param categoryId - Kategorie-ID (optional)
+   * @returns Durchschnittspreis der Konkurrenz
+   */
+  static async getCompetitorPrices(
+    branchId: number,
+    date: Date,
+    categoryId?: number
+  ): Promise<number | null> {
+    try {
+      // Hole alle OTA-Listings für diesen Branch
+      const where: any = {
+        branchId,
+        isActive: true
+      };
+
+      if (categoryId) {
+        where.categoryId = categoryId;
+      }
+
+      const listings = await prisma.oTAListing.findMany({
+        where,
+        include: {
+          priceData: {
+            where: {
+              date: date
+            }
+          }
+        }
+      });
+
+      if (listings.length === 0) {
+        return null;
+      }
+
+      // Berechne Durchschnittspreis
+      let totalPrice = 0;
+      let count = 0;
+
+      for (const listing of listings) {
+        if (listing.priceData.length > 0) {
+          const price = Number(listing.priceData[0].price);
+          totalPrice += price;
+          count++;
+        }
+      }
+
+      if (count === 0) {
+        return null;
+      }
+
+      return totalPrice / count;
+    } catch (error) {
+      logger.error('Fehler beim Abrufen der Konkurrenzpreise:', error);
+      return null;
     }
   }
 

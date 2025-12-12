@@ -142,6 +142,9 @@ passcodeCleanupTimeout = setTimeout(async () => {
   try {
     const { ReservationPasscodeCleanupScheduler } = await import('./services/reservationPasscodeCleanupScheduler');
     ReservationPasscodeCleanupScheduler.start();
+    
+    // Rate Shopping Scheduler
+    RateShoppingScheduler.start();
   } catch (error) {
     logger.error('[Timer] Fehler beim Starten des Passcode-Cleanup-Schedulers:', error);
   }
@@ -161,6 +164,9 @@ export const cleanupTimers = () => {
   }
   // ✅ MEMORY-LEAK-FIX: Cache-Cleanup-Service stoppen
   cacheCleanupService.stop();
+  
+  // Rate Shopping Scheduler stoppen
+  RateShoppingScheduler.stop();
 };
 
 logger.log('✅ Reservation-Passcode-Cleanup-Scheduler wird gestartet (prüft täglich um 11:00 Uhr)');

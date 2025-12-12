@@ -352,6 +352,27 @@ export const API_ENDPOINTS = {
         AUDIT_LOGS: (id: number) => `/password-manager/${id}/audit-logs`,
         PERMISSIONS: (id: number) => `/password-manager/${id}/permissions`,
         GENERATE_PASSWORD: '/password-manager/generate-password'
+    },
+    // Price Analysis
+    PRICE_ANALYSIS: {
+        BASE: '/price-analysis',
+        ANALYZE: '/price-analysis/analyze',
+        BY_ID: (id: number) => `/price-analysis/${id}`,
+        RECOMMENDATIONS: {
+            BASE: '/price-analysis/recommendations',
+            GENERATE: '/price-analysis/recommendations/generate',
+            APPLY: (id: number) => `/price-analysis/recommendations/${id}/apply`,
+            APPROVE: (id: number) => `/price-analysis/recommendations/${id}/approve`,
+            REJECT: (id: number) => `/price-analysis/recommendations/${id}/reject`
+        },
+        RULES: {
+            BASE: '/price-analysis/rules',
+            BY_ID: (id: number) => `/price-analysis/rules/${id}`
+        },
+        OTA: {
+            LISTINGS: '/price-analysis/ota/listings',
+            RATE_SHOPPING: '/price-analysis/ota/rate-shopping'
+        }
     }
 };
 
@@ -377,6 +398,24 @@ export const getTaskAttachmentUrl = (taskId: number, attachmentId: number): stri
  */
 export const getRequestAttachmentUrl = (requestId: number, attachmentId: number): string => {
   return `${API_URL}${API_ENDPOINTS.REQUESTS.ATTACHMENT(requestId, attachmentId)}`;
+};
+
+/**
+ * Generiert eine vollständige URL für ein Tour-Hauptbild
+ * Verwendet API_URL für korrekte URL-Generierung in Entwicklung und Produktion
+ * Standard: Verwendet API-Endpunkt statt direkter /uploads URL
+ */
+export const getTourImageUrl = (tourId: number): string => {
+  return `${API_URL}/tours/${tourId}/image`;
+};
+
+/**
+ * Generiert eine vollständige URL für ein Tour-Galerie-Bild
+ * Verwendet API_URL für korrekte URL-Generierung in Entwicklung und Produktion
+ * Standard: Verwendet API-Endpunkt statt direkter /uploads URL
+ */
+export const getTourGalleryImageUrl = (tourId: number, imageIndex: number): string => {
+  return `${API_URL}/tours/${tourId}/gallery/${imageIndex}`;
 };
 
 // Exportiere die API-Endpunkte als Standard-Export

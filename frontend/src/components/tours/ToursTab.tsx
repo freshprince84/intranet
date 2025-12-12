@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PencilIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, InformationCircleIcon, Squares2X2Icon, TableCellsIcon, ArrowDownTrayIcon, PhotoIcon } from '@heroicons/react/24/outline';
-import { API_ENDPOINTS, API_BASE_URL } from '../../config/api.ts';
+import { API_ENDPOINTS, getTourImageUrl } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
@@ -1138,7 +1138,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                 {/* Bild-Anzeige */}
                                 {tour.imageUrl && (
                                     <img 
-                                        src={`${API_BASE_URL}${tour.imageUrl}`}
+                                        src={getTourImageUrl(tour.id)}
                                         alt={tour.title || 'Tour Bild'}
                                         className="w-full h-48 object-cover rounded-lg mb-2"
                                         loading="lazy"

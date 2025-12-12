@@ -88,7 +88,8 @@
     "payroll": "Lohnabrechnung",
     "cerebro": "Cerebro",
     "organization": "Organisation",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "priceAnalysis": "Preisanalyse"
   },
   "settings": {
     "title": "Einstellungen",

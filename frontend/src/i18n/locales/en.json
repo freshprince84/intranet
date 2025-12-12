@@ -85,7 +85,8 @@
     "payroll": "Payroll",
     "cerebro": "Cerebro",
     "organization": "Organization",
-    "settings": "Settings"
+    "settings": "Settings",
+    "priceAnalysis": "Price Analysis"
   },
   "settings": {
     "title": "Settings",

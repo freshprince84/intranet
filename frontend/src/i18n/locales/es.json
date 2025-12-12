@@ -85,7 +85,8 @@
     "payroll": "Nómina",
     "cerebro": "Cerebro",
     "organization": "Organización",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "priceAnalysis": "Análisis de Precios"
   },
   "settings": {
     "title": "Configuración",

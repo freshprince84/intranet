@@ -18,7 +18,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 // Definiere die möglichen Seitenbezeichnungen
-type PageName = 'dashboard' | 'worktracker' | 'consultations' | 'team_worktime_control' | 'organization_management' | 'settings' | 'profile' | 'cerebro' | 'payroll';
+type PageName = 'dashboard' | 'worktracker' | 'consultations' | 'team_worktime_control' | 'organization_management' | 'settings' | 'profile' | 'cerebro' | 'payroll' | 'price_analysis';
 
 // Definiere die Struktur für die Menüelemente
 interface MenuItem {
