@@ -24,6 +24,11 @@ const router = Router();
 // Öffentliche Route für Export (ohne Auth, für Website/Soziale Medien)
 router.get('/export', exportTours);
 
+// Öffentliche Routen für Bildabrufe ohne Authentifizierung (wie bei Requests/Tasks)
+// WICHTIG: Muss VOR authMiddleware stehen, damit <img> Tags ohne Auth funktionieren
+router.get('/:id/image', getTourImage);
+router.get('/:id/gallery/:index', getTourGalleryImage);
+
 // Alle anderen Routen mit Authentifizierung schützen
 router.use(authMiddleware);
 router.use(organizationMiddleware);
@@ -35,10 +40,6 @@ router.post('/', createTour);
 router.put('/:id', updateTour);
 router.put('/:id/toggle-active', toggleTourActive);
 router.get('/:id/bookings', getTourBookings);
-
-// Bild-Routen (GET vor POST, damit :id nicht mit /image kollidiert)
-router.get('/:id/image', getTourImage);
-router.get('/:id/gallery/:index', getTourGalleryImage);
 
 // Bildgenerierungs-Routen (GET vor POST)
 router.get('/:id/generate-images/status', getTourImageGenerationStatus);
