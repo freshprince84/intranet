@@ -13,7 +13,11 @@ router.use(organization_1.organizationMiddleware);
 // Benutzer-Routen
 router.get('/', userController_1.getAllUsers);
 router.get('/dropdown', userController_1.getAllUsersForDropdown);
-router.get('/profile', userController_1.getCurrentUser);
+// ✅ STANDARD: /users/profile leitet auf getUserById um (eine Methode für alles)
+router.get('/profile', (req, res) => {
+    req.params.id = req.userId;
+    return (0, userController_1.getUserById)(req, res);
+});
 router.get('/profile/complete', userController_1.isProfileComplete);
 router.get('/active-language', userController_1.getUserActiveLanguage);
 router.get('/debug/branches', userController_1.debugUserBranches); // Debug-Endpoint

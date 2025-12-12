@@ -189,7 +189,7 @@ export class EmailReservationService {
         }
       } else {
         if (!reservation.guestPhone) {
-          logger.log(`[EmailReservation] Keine Telefonnummer vorhanden, WhatsApp-Nachricht wird nicht versendet`);
+        logger.log(`[EmailReservation] Keine Telefonnummer vorhanden, WhatsApp-Nachricht wird nicht versendet`);
         }
         if (reservation.invitationSentAt) {
           logger.log(`[EmailReservation] Einladung bereits versendet (durch Sofort-Versendung)`);

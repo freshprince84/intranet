@@ -12,11 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateGuestContactQueue = exports.paymentQueue = exports.notificationQueue = exports.reservationQueue = void 0;
+exports.imageGenerationQueue = exports.updateGuestContactQueue = exports.paymentQueue = exports.notificationQueue = exports.reservationQueue = void 0;
 exports.getReservationQueue = getReservationQueue;
 exports.getNotificationQueue = getNotificationQueue;
 exports.getPaymentQueue = getPaymentQueue;
 exports.getUpdateGuestContactQueue = getUpdateGuestContactQueue;
+exports.getImageGenerationQueue = getImageGenerationQueue;
 exports.checkQueueHealth = checkQueueHealth;
 exports.getRedisConnection = getRedisConnection;
 exports.closeQueues = closeQueues;
@@ -44,7 +45,7 @@ function getConnection() {
             family: 4, // IPv4 erzwingen (wichtig für Memurai auf Windows)
             maxRetriesPerRequest: null, // Wichtig für BullMQ
             lazyConnect: true, // Verbindung wird erst beim ersten Gebrauch hergestellt
-            enableOfflineQueue: false, // Keine Offline-Queue, um Fehler zu vermeiden
+            enableOfflineQueue: true, // Queue Befehle wenn Redis kurzzeitig nicht erreichbar
             retryStrategy: (times) => {
                 const delay = Math.min(times * 50, 2000);
                 return delay;
@@ -231,6 +232,47 @@ exports.updateGuestContactQueue = new Proxy({}, {
     },
 });
 /**
+ * Image Generation Queue
+ * Verarbeitet Jobs für Bildgenerierung (Tours, Reservations, etc.)
+ * Lazy Initialization: Queue wird nur erstellt, wenn gebraucht
+ */
+let imageGenerationQueueInstance = null;
+function getImageGenerationQueue() {
+    if (!imageGenerationQueueInstance) {
+        imageGenerationQueueInstance = new bullmq_1.Queue('image-generation', {
+            connection: getConnection(),
+            defaultJobOptions: {
+                attempts: 2, // Weniger Versuche, da Bildgenerierung teuer ist
+                backoff: {
+                    type: 'exponential',
+                    delay: 5000, // Längerer Backoff für Rate-Limits
+                },
+                timeout: 120000, // 120 Sekunden Timeout (für 5 Bilder)
+                removeOnComplete: {
+                    age: 24 * 3600,
+                    count: 1000,
+                },
+                removeOnFail: {
+                    age: 7 * 24 * 3600,
+                },
+            },
+        });
+    }
+    return imageGenerationQueueInstance;
+}
+// Export für Rückwärtskompatibilität
+exports.imageGenerationQueue = new Proxy({}, {
+    get(target, prop) {
+        const queue = getImageGenerationQueue();
+        const value = queue[prop];
+        // Wenn es eine Funktion ist, binde sie an die Queue-Instanz
+        if (typeof value === 'function') {
+            return value.bind(queue);
+        }
+        return value;
+    },
+});
+/**
  * Health-Check für Redis-Verbindung
  * @returns true wenn Redis erreichbar ist
  */
@@ -275,6 +317,7 @@ function closeQueues() {
                 notificationQueueInstance,
                 paymentQueueInstance,
                 updateGuestContactQueueInstance,
+                imageGenerationQueueInstance,
             ].filter((q) => q !== null);
             if (queues.length > 0) {
                 yield Promise.all(queues.map((q) => q.close()));

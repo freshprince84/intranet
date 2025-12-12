@@ -1208,7 +1208,8 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
         userId: parseInt(req.userId)
       },
       {
-        jobId: `tour-${tourId}-${Date.now()}` // Eindeutige Job-ID
+        jobId: `tour-${tourId}-${Date.now()}`, // Eindeutige Job-ID
+        timeout: 120000 // 120 Sekunden Timeout (für 5 Bilder)
       }
     );
 

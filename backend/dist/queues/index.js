@@ -13,6 +13,7 @@ exports.startWorkers = startWorkers;
 exports.stopWorkers = stopWorkers;
 const reservationWorker_1 = require("./workers/reservationWorker");
 const updateGuestContactWorker_1 = require("./workers/updateGuestContactWorker");
+const imageGenerationWorker_1 = require("./workers/imageGenerationWorker");
 const queueService_1 = require("../services/queueService");
 const logger_1 = require("../utils/logger");
 let workers = [];
@@ -60,6 +61,18 @@ function startWorkers() {
             });
             updateGuestContactWorker.on('error', (err) => {
                 logger_1.logger.error('[Queue] ❌ UpdateGuestContact Worker-Fehler:', err);
+            });
+            // Image Generation Worker
+            const imageGenerationWorker = (0, imageGenerationWorker_1.createImageGenerationWorker)(connection);
+            workers.push(imageGenerationWorker);
+            imageGenerationWorker.on('completed', (job) => {
+                logger_1.logger.log(`[Queue] ✅ Image Generation Job ${job.id} erfolgreich abgeschlossen`);
+            });
+            imageGenerationWorker.on('failed', (job, err) => {
+                logger_1.logger.error(`[Queue] ❌ Image Generation Job ${job === null || job === void 0 ? void 0 : job.id} fehlgeschlagen:`, err.message);
+            });
+            imageGenerationWorker.on('error', (err) => {
+                logger_1.logger.error('[Queue] ❌ Image Generation Worker-Fehler:', err);
             });
             logger_1.logger.log('[Queue] ✅ Workers gestartet');
             logger_1.logger.log(`[Queue] Concurrency: ${process.env.QUEUE_CONCURRENCY || '5'} Jobs parallel`);

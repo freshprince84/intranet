@@ -48,7 +48,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.debugUserBranches = exports.getOnboardingAnalytics = exports.resetOnboarding = exports.trackOnboardingEvent = exports.completeOnboarding = exports.updateOnboardingProgress = exports.getOnboardingStatus = exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.getUserActiveLanguage = exports.updateUserSettings = exports.updateUserBranches = exports.updateUserRoles = exports.isProfileComplete = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsersForDropdown = exports.getAllUsers = void 0;
+exports.debugUserBranches = exports.getOnboardingAnalytics = exports.resetOnboarding = exports.trackOnboardingEvent = exports.completeOnboarding = exports.updateOnboardingProgress = exports.getOnboardingStatus = exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.getUserActiveLanguage = exports.updateUserSettings = exports.updateUserBranches = exports.updateUserRoles = exports.isProfileComplete = exports.updateProfile = exports.updateUserById = exports.getUserById = exports.getAllUsersForDropdown = exports.getAllUsers = void 0;
 const client_1 = require("@prisma/client");
 const prisma_1 = require("../utils/prisma");
 const bcrypt_1 = __importDefault(require("bcrypt"));
@@ -141,77 +141,23 @@ const getAllUsersForDropdown = (req, res) => __awaiter(void 0, void 0, void 0, f
 });
 exports.getAllUsersForDropdown = getAllUsersForDropdown;
 // Spezifischen Benutzer abrufen
+// ✅ STANDARD: Eine Methode für alle User-Abfragen (Profile und UserManagement)
 const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.params.id, 10);
+        const authenticatedRequest = req;
+        const authenticatedUserId = authenticatedRequest.userId ? parseInt(authenticatedRequest.userId, 10) : null;
+        const roleId = authenticatedRequest.roleId ? parseInt(authenticatedRequest.roleId, 10) : null;
         if (isNaN(userId)) {
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
-        const user = yield prisma_1.prisma.user.findUnique({
-            where: { id: userId },
-            include: {
-                roles: {
-                    include: {
-                        role: {
-                            include: {
-                                permissions: true,
-                                organization: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        displayName: true
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                branches: {
-                    include: {
-                        branch: true
-                    }
-                },
-                identificationDocuments: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1 // Neuestes Dokument
-                }
-            }
-        });
-        if (!user) {
-            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
-        }
-        res.json(user);
-    }
-    catch (error) {
-        logger_1.logger.error('Error in getUserById:', error);
-        res.status(500).json({
-            message: 'Fehler beim Abrufen des Benutzers',
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
-    }
-});
-exports.getUserById = getUserById;
-// Aktuellen Benutzer abrufen
-const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const userId = parseInt(req.userId, 10);
-        const roleId = parseInt(req.roleId, 10); // Die roleId aus dem Token lesen
-        if (isNaN(userId)) {
-            return res.status(401).json({ message: 'Nicht authentifiziert' });
-        }
-        // ✅ PERFORMANCE: Optional Fields - nur laden wenn explizit angefragt
+        // ✅ STANDARD: Optionale Parameter für Performance-Optimierung
         const includeSettings = req.query.includeSettings === 'true';
         const includeInvoiceSettings = req.query.includeInvoiceSettings === 'true';
-        const includeDocuments = req.query.includeDocuments === 'true';
-        // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
+        // ✅ STANDARD: identificationDocuments werden IMMER geladen (essentielle Felder)
         const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
-            select: Object.assign(Object.assign(Object.assign(Object.assign({ id: true, username: true, email: true, firstName: true, lastName: true, birthday: true, bankDetails: true, contract: true, salary: true, normalWorkingHours: true, gender: true, phoneNumber: true, country: true, language: true, profileComplete: true, identificationNumber: true }, (includeSettings ? { settings: true } : {})), (includeInvoiceSettings ? { invoiceSettings: true } : {})), (includeDocuments ? {
-                identificationDocuments: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 1 // Neuestes Dokument
-                }
-            } : {})), { roles: {
+            include: Object.assign(Object.assign({ roles: {
                     include: {
                         role: {
                             include: {
@@ -227,33 +173,50 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                             }
                         }
                     }
-                } })
+                }, branches: {
+                    include: {
+                        branch: true
+                    }
+                }, identificationDocuments: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1 // Neuestes Dokument
+                } }, (includeSettings ? { settings: true } : {})), (includeInvoiceSettings ? { invoiceSettings: true } : {}))
         });
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
-        // Die Rolle aus dem Token als aktive Rolle markieren
-        if (!isNaN(roleId)) {
-            const modifiedUser = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { 
-                            // Korrigiere String 'null' zu echtem null
-                            logo: roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo }) : null }), lastUsed: roleEntry.role.id === roleId }))) });
+        // ✅ STANDARD: lastUsed setzen, wenn es der aktuelle User ist
+        if (authenticatedUserId === userId && roleId) {
+            const modifiedUser = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => {
+                    const isActiveRole = roleEntry.role.id === roleId;
+                    return Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { 
+                                // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
+                                logo: isActiveRole
+                                    ? (roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo)
+                                    : null // ✅ Inaktive Roles: Logo = null (spart Memory)
+                             }) : null }), lastUsed: isActiveRole });
+                }) });
             return res.json(modifiedUser);
         }
         // Stelle sicher, dass das Logo-Feld explizit zurückgegeben wird
+        // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
         const userWithLogo = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { 
-                        // Korrigiere String 'null' zu echtem null
-                        logo: roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo }) : null }) }))) });
+                        // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
+                        logo: roleEntry.lastUsed
+                            ? (roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo)
+                            : null // ✅ Inaktive Roles: Logo = null (spart Memory)
+                     }) : null }) }))) });
         res.json(userWithLogo);
     }
     catch (error) {
-        logger_1.logger.error('Error in getCurrentUser:', error);
+        logger_1.logger.error('Error in getUserById:', error);
         res.status(500).json({
-            message: 'Fehler beim Abrufen des Benutzerprofils',
+            message: 'Fehler beim Abrufen des Benutzers',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
         });
     }
 });
-exports.getCurrentUser = getCurrentUser;
+exports.getUserById = getUserById;
 // Spezifischen Benutzer aktualisieren
 const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -1265,7 +1228,8 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
                                     select: {
                                         id: true,
                                         name: true,
-                                        displayName: true
+                                        displayName: true,
+                                        logo: true
                                     }
                                 }
                             }
@@ -1275,7 +1239,17 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 settings: true
             }
         });
-        return res.json(updatedUser);
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+        // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
+        const userWithOptimizedLogo = Object.assign(Object.assign({}, updatedUser), { roles: updatedUser.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { 
+                        // ✅ MEMORY FIX: Logo nur für aktive Role behalten, für inaktive auf null setzen
+                        logo: roleEntry.lastUsed
+                            ? (roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo)
+                            : null // ✅ Inaktive Roles: Logo = null (spart Memory)
+                     }) : null }) }))) });
+        return res.json(userWithOptimizedLogo);
     }
     catch (error) {
         logger_1.logger.error('Error in switchUserRole:', error);

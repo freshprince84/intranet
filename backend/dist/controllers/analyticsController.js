@@ -9,12 +9,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getTodosShiftAnalysis = exports.getTodosFrequencyAnalysis = exports.getRequestsChronological = exports.getTodosChronological = exports.getRequestsByUserForDate = exports.getTodosByUserForDate = void 0;
+exports.getRequestsActivity = exports.getTasksActivity = exports.getUserRequestsActivity = exports.getUserTasksActivity = exports.getTodosShiftAnalysis = exports.getTodosFrequencyAnalysis = exports.getRequestsChronological = exports.getTodosChronological = exports.getRequestsByUserForDate = exports.getTodosByUserForDate = void 0;
 const client_1 = require("@prisma/client");
 const organization_1 = require("../middleware/organization");
 const date_fns_1 = require("date-fns");
 const prisma_1 = require("../utils/prisma");
 const logger_1 = require("../utils/logger");
+const dateHelpers_1 = require("../utils/dateHelpers");
 // To-Dos pro User für ein bestimmtes Datum
 const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -55,17 +56,21 @@ const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, fu
                             }
                         ]
                     },
-                    include: {
+                    // ✅ PERFORMANCE: Nur benötigte Felder, KEINE Attachments (Binary-Daten)
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        updatedAt: true,
+                        createdAt: true,
                         branch: {
                             select: {
                                 id: true,
                                 name: true
                             }
                         },
-                        attachments: {
-                            orderBy: {
-                                uploadedAt: 'desc'
-                            }
+                        _count: {
+                            select: { attachments: true }
                         }
                     }
                 },
@@ -91,17 +96,21 @@ const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, fu
                             }
                         ]
                     },
-                    include: {
+                    // ✅ PERFORMANCE: Nur benötigte Felder, KEINE Attachments (Binary-Daten)
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        updatedAt: true,
+                        createdAt: true,
                         branch: {
                             select: {
                                 id: true,
                                 name: true
                             }
                         },
-                        attachments: {
-                            orderBy: {
-                                uploadedAt: 'desc'
-                            }
+                        _count: {
+                            select: { attachments: true }
                         }
                     }
                 }
@@ -181,17 +190,20 @@ const getRequestsByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0,
                             }
                         ]
                     },
-                    include: {
+                    // ✅ PERFORMANCE: Nur benötigte Felder, KEINE Attachments
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        createdAt: true,
                         branch: {
                             select: {
                                 id: true,
                                 name: true
                             }
                         },
-                        attachments: {
-                            orderBy: {
-                                uploadedAt: 'desc'
-                            }
+                        _count: {
+                            select: { attachments: true }
                         }
                     }
                 },
@@ -207,17 +219,20 @@ const getRequestsByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0,
                             }
                         ]
                     },
-                    include: {
+                    // ✅ PERFORMANCE: Nur benötigte Felder, KEINE Attachments
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        createdAt: true,
                         branch: {
                             select: {
                                 id: true,
                                 name: true
                             }
                         },
-                        attachments: {
-                            orderBy: {
-                                uploadedAt: 'desc'
-                            }
+                        _count: {
+                            select: { attachments: true }
                         }
                     }
                 }
@@ -253,8 +268,7 @@ const getRequestsByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0,
                         status: r.status,
                         role: r.role,
                         branch: r.branch,
-                        createdAt: r.createdAt,
-                        updatedAt: r.updatedAt
+                        createdAt: r.createdAt
                     }))
                 }
             };
@@ -364,10 +378,9 @@ const getTodosChronological = (req, res) => __awaiter(void 0, void 0, void 0, fu
                         name: true
                     }
                 },
-                attachments: {
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
+                // ✅ PERFORMANCE: Nur Count, KEINE Binary-Daten
+                _count: {
+                    select: { attachments: true }
                 },
                 statusHistory: {
                     where: {
@@ -480,10 +493,9 @@ const getRequestsChronological = (req, res) => __awaiter(void 0, void 0, void 0,
                         name: true
                     }
                 },
-                attachments: {
-                    orderBy: {
-                        uploadedAt: 'desc'
-                    }
+                // ✅ PERFORMANCE: Nur Count, KEINE Binary-Daten
+                _count: {
+                    select: { attachments: true }
                 }
             },
             orderBy: {
@@ -903,4 +915,384 @@ const getTodosShiftAnalysis = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.getTodosShiftAnalysis = getTodosShiftAnalysis;
+// User-zentriert: Tasks
+const getUserTasksActivity = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // ✅ PAGINATION: Query-Parameter
+        const limit = parseInt(req.query.limit, 10) || 50;
+        const offset = parseInt(req.query.offset, 10) || 0;
+        const period = req.query.period || 'today';
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const userId = req.query.userId ? parseInt(req.query.userId, 10) : undefined;
+        const branchId = req.query.branchId ? parseInt(req.query.branchId, 10) : undefined;
+        const { start, end } = (0, dateHelpers_1.getDateRange)(period, startDate, endDate);
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
+        // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+        const tasks = yield prisma_1.prisma.task.findMany({
+            where: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, isolationFilter), (0, prisma_1.getNotDeletedFilter)()), { createdAt: { gte: start, lte: end } }), (userId ? { createdById: userId } : {})), (branchId ? { branchId: branchId } : {})),
+            select: {
+                id: true,
+                title: true,
+                createdAt: true,
+                createdById: true,
+                deletedAt: true,
+                deletedById: true,
+                _count: {
+                    select: { attachments: true }
+                },
+                createdBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                },
+                deletedBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            take: limit,
+            skip: offset,
+            orderBy: { createdAt: 'desc' }
+        });
+        // Status-Änderungen für diese Tasks
+        const taskIds = tasks.map(t => t.id);
+        const statusChanges = yield prisma_1.prisma.taskStatusHistory.findMany({
+            where: {
+                taskId: { in: taskIds },
+                changedAt: { gte: start, lte: end }
+            },
+            select: {
+                taskId: true,
+                userId: true,
+                oldStatus: true,
+                newStatus: true,
+                changedAt: true,
+                user: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { changedAt: 'desc' }
+        });
+        const totalCount = yield prisma_1.prisma.task.count({
+            where: Object.assign(Object.assign(Object.assign({}, isolationFilter), (0, prisma_1.getNotDeletedFilter)()), { createdAt: { gte: start, lte: end } })
+        });
+        // Gruppiere nach User
+        const userActivity = {};
+        tasks.forEach(task => {
+            if (task.createdById) {
+                if (!userActivity[task.createdById]) {
+                    userActivity[task.createdById] = {
+                        user: task.createdBy,
+                        tasksCreated: [],
+                        tasksDeleted: [],
+                        statusChanges: []
+                    };
+                }
+                userActivity[task.createdById].tasksCreated.push(task);
+            }
+            if (task.deletedAt && task.deletedById) {
+                if (!userActivity[task.deletedById]) {
+                    userActivity[task.deletedById] = {
+                        user: task.deletedBy,
+                        tasksCreated: [],
+                        tasksDeleted: [],
+                        statusChanges: []
+                    };
+                }
+                userActivity[task.deletedById].tasksDeleted.push(task);
+            }
+        });
+        statusChanges.forEach(change => {
+            if (!userActivity[change.userId]) {
+                userActivity[change.userId] = {
+                    user: change.user,
+                    tasksCreated: [],
+                    tasksDeleted: [],
+                    statusChanges: []
+                };
+            }
+            userActivity[change.userId].statusChanges.push(change);
+        });
+        res.json({
+            data: Object.values(userActivity),
+            totalCount,
+            hasMore: offset + tasks.length < totalCount
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Fehler beim Abrufen der User Tasks Aktivität:', error);
+        res.status(500).json({ error: 'Fehler beim Abrufen der User Tasks Aktivität' });
+    }
+});
+exports.getUserTasksActivity = getUserTasksActivity;
+// User-zentriert: Requests
+const getUserRequestsActivity = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // ✅ PAGINATION: Query-Parameter
+        const limit = parseInt(req.query.limit, 10) || 50;
+        const offset = parseInt(req.query.offset, 10) || 0;
+        const period = req.query.period || 'today';
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const userId = req.query.userId ? parseInt(req.query.userId, 10) : undefined;
+        const branchId = req.query.branchId ? parseInt(req.query.branchId, 10) : undefined;
+        const { start, end } = (0, dateHelpers_1.getDateRange)(period, startDate, endDate);
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
+        // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+        const requests = yield prisma_1.prisma.request.findMany({
+            where: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, isolationFilter), (0, prisma_1.getNotDeletedFilter)()), { createdAt: { gte: start, lte: end } }), (userId ? { requesterId: userId } : {})), (branchId ? { branchId: branchId } : {})),
+            select: {
+                id: true,
+                title: true,
+                createdAt: true,
+                requesterId: true,
+                deletedAt: true,
+                deletedById: true,
+                _count: {
+                    select: { attachments: true }
+                },
+                requester: {
+                    select: { id: true, firstName: true, lastName: true }
+                },
+                deletedBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            take: limit,
+            skip: offset,
+            orderBy: { createdAt: 'desc' }
+        });
+        // Status-Änderungen für diese Requests
+        const requestIds = requests.map(r => r.id);
+        const statusChanges = yield prisma_1.prisma.requestStatusHistory.findMany({
+            where: {
+                requestId: { in: requestIds },
+                changedAt: { gte: start, lte: end }
+            },
+            select: {
+                requestId: true,
+                userId: true,
+                oldStatus: true,
+                newStatus: true,
+                changedAt: true,
+                user: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { changedAt: 'desc' }
+        });
+        const totalCount = yield prisma_1.prisma.request.count({
+            where: Object.assign(Object.assign(Object.assign({}, isolationFilter), (0, prisma_1.getNotDeletedFilter)()), { createdAt: { gte: start, lte: end } })
+        });
+        // Gruppiere nach User
+        const userActivity = {};
+        requests.forEach(request => {
+            if (request.requesterId) {
+                if (!userActivity[request.requesterId]) {
+                    userActivity[request.requesterId] = {
+                        user: request.requester,
+                        requestsCreated: [],
+                        requestsDeleted: [],
+                        statusChanges: []
+                    };
+                }
+                userActivity[request.requesterId].requestsCreated.push(request);
+            }
+            if (request.deletedAt && request.deletedById) {
+                if (!userActivity[request.deletedById]) {
+                    userActivity[request.deletedById] = {
+                        user: request.deletedBy,
+                        requestsCreated: [],
+                        requestsDeleted: [],
+                        statusChanges: []
+                    };
+                }
+                userActivity[request.deletedById].requestsDeleted.push(request);
+            }
+        });
+        statusChanges.forEach(change => {
+            if (!userActivity[change.userId]) {
+                userActivity[change.userId] = {
+                    user: change.user,
+                    requestsCreated: [],
+                    requestsDeleted: [],
+                    statusChanges: []
+                };
+            }
+            userActivity[change.userId].statusChanges.push(change);
+        });
+        res.json({
+            data: Object.values(userActivity),
+            totalCount,
+            hasMore: offset + requests.length < totalCount
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Fehler beim Abrufen der User Requests Aktivität:', error);
+        res.status(500).json({ error: 'Fehler beim Abrufen der User Requests Aktivität' });
+    }
+});
+exports.getUserRequestsActivity = getUserRequestsActivity;
+// Task-zentriert
+const getTasksActivity = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // ✅ PAGINATION: Query-Parameter
+        const limit = parseInt(req.query.limit, 10) || 50;
+        const offset = parseInt(req.query.offset, 10) || 0;
+        const period = req.query.period || 'today';
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const userId = req.query.userId ? parseInt(req.query.userId, 10) : undefined;
+        const branchId = req.query.branchId ? parseInt(req.query.branchId, 10) : undefined;
+        const includeDeleted = req.query.includeDeleted === 'true';
+        const { start, end } = (0, dateHelpers_1.getDateRange)(period, startDate, endDate);
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
+        // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+        const tasks = yield prisma_1.prisma.task.findMany({
+            where: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, isolationFilter), (includeDeleted ? {} : (0, prisma_1.getNotDeletedFilter)())), { createdAt: { gte: start, lte: end } }), (userId ? { createdById: userId } : {})), (branchId ? { branchId: branchId } : {})),
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                createdAt: true,
+                createdById: true,
+                deletedAt: true,
+                deletedById: true,
+                _count: {
+                    select: { attachments: true, statusHistory: true }
+                },
+                createdBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                },
+                deletedBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            take: limit,
+            skip: offset,
+            orderBy: { createdAt: 'desc' }
+        });
+        // Status-Historie für diese Tasks
+        const taskIds = tasks.map(t => t.id);
+        const statusHistory = yield prisma_1.prisma.taskStatusHistory.findMany({
+            where: {
+                taskId: { in: taskIds }
+            },
+            select: {
+                taskId: true,
+                userId: true,
+                oldStatus: true,
+                newStatus: true,
+                changedAt: true,
+                user: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { changedAt: 'asc' }
+        });
+        // Gruppiere Status-Historie nach Task
+        const statusHistoryByTask = {};
+        statusHistory.forEach(change => {
+            if (!statusHistoryByTask[change.taskId]) {
+                statusHistoryByTask[change.taskId] = [];
+            }
+            statusHistoryByTask[change.taskId].push(change);
+        });
+        // Kombiniere Tasks mit Status-Historie
+        const tasksWithHistory = tasks.map(task => (Object.assign(Object.assign({}, task), { statusHistory: statusHistoryByTask[task.id] || [] })));
+        const totalCount = yield prisma_1.prisma.task.count({
+            where: Object.assign(Object.assign(Object.assign({}, isolationFilter), (includeDeleted ? {} : (0, prisma_1.getNotDeletedFilter)())), { createdAt: { gte: start, lte: end } })
+        });
+        res.json({
+            data: tasksWithHistory,
+            totalCount,
+            hasMore: offset + tasks.length < totalCount
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Fehler beim Abrufen der Tasks Aktivität:', error);
+        res.status(500).json({ error: 'Fehler beim Abrufen der Tasks Aktivität' });
+    }
+});
+exports.getTasksActivity = getTasksActivity;
+// Request-zentriert
+const getRequestsActivity = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // ✅ PAGINATION: Query-Parameter
+        const limit = parseInt(req.query.limit, 10) || 50;
+        const offset = parseInt(req.query.offset, 10) || 0;
+        const period = req.query.period || 'today';
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const userId = req.query.userId ? parseInt(req.query.userId, 10) : undefined;
+        const branchId = req.query.branchId ? parseInt(req.query.branchId, 10) : undefined;
+        const includeDeleted = req.query.includeDeleted === 'true';
+        const { start, end } = (0, dateHelpers_1.getDateRange)(period, startDate, endDate);
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
+        // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+        const requests = yield prisma_1.prisma.request.findMany({
+            where: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, isolationFilter), (includeDeleted ? {} : (0, prisma_1.getNotDeletedFilter)())), { createdAt: { gte: start, lte: end } }), (userId ? { requesterId: userId } : {})), (branchId ? { branchId: branchId } : {})),
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                createdAt: true,
+                requesterId: true,
+                deletedAt: true,
+                deletedById: true,
+                _count: {
+                    select: { attachments: true, statusHistory: true }
+                },
+                requester: {
+                    select: { id: true, firstName: true, lastName: true }
+                },
+                deletedBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            take: limit,
+            skip: offset,
+            orderBy: { createdAt: 'desc' }
+        });
+        // Status-Historie für diese Requests
+        const requestIds = requests.map(r => r.id);
+        const statusHistory = yield prisma_1.prisma.requestStatusHistory.findMany({
+            where: {
+                requestId: { in: requestIds }
+            },
+            select: {
+                requestId: true,
+                userId: true,
+                oldStatus: true,
+                newStatus: true,
+                changedAt: true,
+                user: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { changedAt: 'asc' }
+        });
+        // Gruppiere Status-Historie nach Request
+        const statusHistoryByRequest = {};
+        statusHistory.forEach(change => {
+            if (!statusHistoryByRequest[change.requestId]) {
+                statusHistoryByRequest[change.requestId] = [];
+            }
+            statusHistoryByRequest[change.requestId].push(change);
+        });
+        // Kombiniere Requests mit Status-Historie
+        const requestsWithHistory = requests.map(request => (Object.assign(Object.assign({}, request), { statusHistory: statusHistoryByRequest[request.id] || [] })));
+        const totalCount = yield prisma_1.prisma.request.count({
+            where: Object.assign(Object.assign(Object.assign({}, isolationFilter), (includeDeleted ? {} : (0, prisma_1.getNotDeletedFilter)())), { createdAt: { gte: start, lte: end } })
+        });
+        res.json({
+            data: requestsWithHistory,
+            totalCount,
+            hasMore: offset + requests.length < totalCount
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('Fehler beim Abrufen der Requests Aktivität:', error);
+        res.status(500).json({ error: 'Fehler beim Abrufen der Requests Aktivität' });
+    }
+});
+exports.getRequestsActivity = getRequestsActivity;
 //# sourceMappingURL=analyticsController.js.map

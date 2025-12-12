@@ -18,6 +18,7 @@ exports.getUserNotificationText = getUserNotificationText;
 exports.getRoleNotificationText = getRoleNotificationText;
 exports.getSystemNotificationText = getSystemNotificationText;
 exports.getPayrollPDFTranslations = getPayrollPDFTranslations;
+exports.getPriceAnalysisNotificationText = getPriceAnalysisNotificationText;
 const prisma_1 = require("./prisma");
 const userLanguageCache_1 = require("../services/userLanguageCache");
 const logger_1 = require("./logger");
@@ -929,5 +930,119 @@ function getPayrollPDFTranslations(language) {
     const lang = language || 'de';
     const translations = payrollPDFTranslations[lang];
     return translations || payrollPDFTranslations['de']; // Fallback zu Deutsch
+}
+const priceAnalysisNotifications = {
+    de: {
+        recommendationCreated: (categoryName, date) => ({
+            title: 'Neuer Preisvorschlag erstellt',
+            message: `Für ${categoryName} am ${date} wurde ein neuer Preisvorschlag erstellt.`
+        }),
+        recommendationApplied: (categoryName, date) => ({
+            title: 'Preisvorschlag angewendet',
+            message: `Der Preisvorschlag für ${categoryName} am ${date} wurde erfolgreich angewendet.`
+        }),
+        ruleCreated: (ruleName) => ({
+            title: 'Preisregel erstellt',
+            message: `Die Preisregel "${ruleName}" wurde erfolgreich erstellt.`
+        }),
+        ruleUpdated: (ruleName) => ({
+            title: 'Preisregel aktualisiert',
+            message: `Die Preisregel "${ruleName}" wurde aktualisiert.`
+        }),
+        ruleDeleted: (ruleName) => ({
+            title: 'Preisregel gelöscht',
+            message: `Die Preisregel "${ruleName}" wurde gelöscht.`
+        }),
+        rateShoppingCompleted: (platform) => ({
+            title: 'Rate Shopping abgeschlossen',
+            message: `Rate Shopping für ${platform} wurde erfolgreich abgeschlossen.`
+        }),
+        rateShoppingFailed: (platform, error) => ({
+            title: 'Rate Shopping fehlgeschlagen',
+            message: `Rate Shopping für ${platform} ist fehlgeschlagen: ${error}`
+        })
+    },
+    es: {
+        recommendationCreated: (categoryName, date) => ({
+            title: 'Nueva recomendación de precio creada',
+            message: `Se ha creado una nueva recomendación de precio para ${categoryName} el ${date}.`
+        }),
+        recommendationApplied: (categoryName, date) => ({
+            title: 'Recomendación de precio aplicada',
+            message: `La recomendación de precio para ${categoryName} el ${date} se ha aplicado exitosamente.`
+        }),
+        ruleCreated: (ruleName) => ({
+            title: 'Regla de precios creada',
+            message: `La regla de precios "${ruleName}" se ha creado exitosamente.`
+        }),
+        ruleUpdated: (ruleName) => ({
+            title: 'Regla de precios actualizada',
+            message: `La regla de precios "${ruleName}" ha sido actualizada.`
+        }),
+        ruleDeleted: (ruleName) => ({
+            title: 'Regla de precios eliminada',
+            message: `La regla de precios "${ruleName}" ha sido eliminada.`
+        }),
+        rateShoppingCompleted: (platform) => ({
+            title: 'Comparación de precios completada',
+            message: `La comparación de precios para ${platform} se ha completado exitosamente.`
+        }),
+        rateShoppingFailed: (platform, error) => ({
+            title: 'Comparación de precios fallida',
+            message: `La comparación de precios para ${platform} ha fallado: ${error}`
+        })
+    },
+    en: {
+        recommendationCreated: (categoryName, date) => ({
+            title: 'New price recommendation created',
+            message: `A new price recommendation for ${categoryName} on ${date} has been created.`
+        }),
+        recommendationApplied: (categoryName, date) => ({
+            title: 'Price recommendation applied',
+            message: `The price recommendation for ${categoryName} on ${date} has been successfully applied.`
+        }),
+        ruleCreated: (ruleName) => ({
+            title: 'Pricing rule created',
+            message: `The pricing rule "${ruleName}" has been successfully created.`
+        }),
+        ruleUpdated: (ruleName) => ({
+            title: 'Pricing rule updated',
+            message: `The pricing rule "${ruleName}" has been updated.`
+        }),
+        ruleDeleted: (ruleName) => ({
+            title: 'Pricing rule deleted',
+            message: `The pricing rule "${ruleName}" has been deleted.`
+        }),
+        rateShoppingCompleted: (platform) => ({
+            title: 'Rate shopping completed',
+            message: `Rate shopping for ${platform} has been successfully completed.`
+        }),
+        rateShoppingFailed: (platform, error) => ({
+            title: 'Rate shopping failed',
+            message: `Rate shopping for ${platform} has failed: ${error}`
+        })
+    }
+};
+function getPriceAnalysisNotificationText(language, type, ...args) {
+    const lang = language in priceAnalysisNotifications ? language : 'de';
+    const translations = priceAnalysisNotifications[lang];
+    switch (type) {
+        case 'recommendationCreated':
+            return translations.recommendationCreated(args[0], args[1]);
+        case 'recommendationApplied':
+            return translations.recommendationApplied(args[0], args[1]);
+        case 'ruleCreated':
+            return translations.ruleCreated(args[0]);
+        case 'ruleUpdated':
+            return translations.ruleUpdated(args[0]);
+        case 'ruleDeleted':
+            return translations.ruleDeleted(args[0]);
+        case 'rateShoppingCompleted':
+            return translations.rateShoppingCompleted(args[0]);
+        case 'rateShoppingFailed':
+            return translations.rateShoppingFailed(args[0], args[1]);
+        default:
+            return translations.recommendationCreated(args[0], args[1]);
+    }
 }
 //# sourceMappingURL=translations.js.map

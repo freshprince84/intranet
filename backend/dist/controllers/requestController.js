@@ -162,6 +162,8 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (Object.keys(filterWhereClause).length > 0) {
             baseWhereConditions.push(filterWhereClause);
         }
+        // ✅ SOFT DELETE: Füge deletedAt Filter hinzu
+        baseWhereConditions.push((0, prisma_1.getNotDeletedFilter)());
         // Kombiniere alle Filter
         const whereClause = baseWhereConditions.length === 1
             ? baseWhereConditions[0]
@@ -298,6 +300,7 @@ const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function*
             id: parseInt(id),
             AND: [
                 isolationFilter,
+                (0, prisma_1.getNotDeletedFilter)(), // ✅ SOFT DELETE: Nur nicht gelöschte Requests
                 {
                     OR: [
                         Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
@@ -374,6 +377,23 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!title || !requested_by_id || !responsible_id || !branch_id) {
             return res.status(400).json({ message: 'Fehlende erforderliche Felder' });
         }
+        // Validierung: RequestType
+        const validRequestTypes = [
+            'vacation',
+            'improvement_suggestion',
+            'sick_leave',
+            'employment_certificate',
+            'event',
+            'permit',
+            'buy_order',
+            'repair',
+            'other'
+        ];
+        if (type && !validRequestTypes.includes(type)) {
+            return res.status(400).json({
+                message: `Ungültiger Request Type: ${type}. Gültige Types: ${validRequestTypes.join(', ')}`
+            });
+        }
         const requesterId = parseInt(requested_by_id, 10);
         const responsibleId = parseInt(responsible_id, 10);
         const branchId = parseInt(branch_id, 10);
@@ -406,11 +426,12 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
         }
         // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const requestStatus = status || 'approval';
         const request = yield (0, prisma_1.executeWithRetry)(() => prisma_1.prisma.request.create({
             data: {
                 title,
                 description: description || '',
-                status: status,
+                status: requestStatus,
                 type: type,
                 isPrivate: is_private,
                 requesterId,
@@ -487,6 +508,19 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         else {
             logger_1.logger.log(`[createRequest] Requester und Responsible sind identisch, keine Notifications erstellt`);
         }
+        // ✅ INITIAL STATUS-HISTORIE: Erstelle initiale Status-Historie
+        if (req.userId) {
+            yield prisma_1.prisma.requestStatusHistory.create({
+                data: {
+                    requestId: request.id,
+                    userId: Number(req.userId),
+                    oldStatus: null, // Initial: kein alter Status
+                    newStatus: requestStatus,
+                    branchId: branchId,
+                    changedAt: new Date()
+                }
+            });
+        }
         res.status(201).json(formattedRequest);
     }
     catch (error) {
@@ -503,7 +537,8 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Prüfe, ob der Request existiert und zur Organisation gehört
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
         const existingRequest = yield prisma_1.prisma.request.findFirst({
-            where: Object.assign({ id: parseInt(id) }, isolationFilter),
+            where: Object.assign(Object.assign({ id: parseInt(id) }, isolationFilter), (0, prisma_1.getNotDeletedFilter)() // ✅ SOFT DELETE: Nur nicht gelöschte Requests
+            ),
             include: {
                 requester: {
                     select: userSelect
@@ -518,6 +553,23 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
         if (!existingRequest) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
+        }
+        // Validierung: RequestType
+        const validRequestTypes = [
+            'vacation',
+            'improvement_suggestion',
+            'sick_leave',
+            'employment_certificate',
+            'event',
+            'permit',
+            'buy_order',
+            'repair',
+            'other'
+        ];
+        if (type && !validRequestTypes.includes(type)) {
+            return res.status(400).json({
+                message: `Ungültiger Request Type: ${type}. Gültige Types: ${validRequestTypes.join(', ')}`
+            });
         }
         const userId = parseInt(req.userId, 10);
         const roleId = parseInt(req.roleId, 10);
@@ -587,8 +639,21 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         }));
-        // Benachrichtigungen bei Statusänderungen
+        // ✅ STATUS-HISTORIE: Speichere Status-Änderungen
         if (status && status !== existingRequest.status) {
+            // Status-Historie speichern
+            if (req.userId) {
+                yield prisma_1.prisma.requestStatusHistory.create({
+                    data: {
+                        requestId: parseInt(id),
+                        userId: Number(req.userId),
+                        oldStatus: existingRequest.status,
+                        newStatus: status,
+                        branchId: existingRequest.branchId,
+                        changedAt: new Date()
+                    }
+                });
+            }
             // Benachrichtigung für den Ersteller
             const userLang = yield (0, translations_1.getUserLanguage)(updatedRequest.requesterId);
             const notificationText = (0, translations_1.getRequestNotificationText)(userLang, 'status_changed', updatedRequest.title, true, status);
@@ -734,7 +799,8 @@ const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Prüfe, ob der Request existiert und zur Organisation gehört
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
         const request = yield prisma_1.prisma.request.findFirst({
-            where: Object.assign({ id: parseInt(id) }, isolationFilter),
+            where: Object.assign(Object.assign({ id: parseInt(id) }, isolationFilter), (0, prisma_1.getNotDeletedFilter)() // ✅ SOFT DELETE: Nur nicht gelöschte Requests
+            ),
             include: {
                 requester: {
                     select: userSelect
@@ -747,21 +813,39 @@ const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!request) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
         }
-        // Benachrichtigung für den Ersteller
-        const userLang = yield (0, translations_1.getUserLanguage)(request.requesterId);
-        const notificationText = (0, translations_1.getRequestNotificationText)(userLang, 'deleted', request.title);
+        // ✅ SOFT DELETE: Statt hard delete, setze deletedAt
+        yield prisma_1.prisma.request.update({
+            where: { id: parseInt(id) },
+            data: {
+                deletedAt: new Date(),
+                deletedById: req.userId ? Number(req.userId) : null
+            }
+        });
+        // ✅ NOTIFICATIONS: Benachrichtigungen bei Soft Delete
+        // Benachrichtigung für den Requester
+        const requesterLang = yield (0, translations_1.getUserLanguage)(request.requesterId);
+        const requesterNotificationText = (0, translations_1.getRequestNotificationText)(requesterLang, 'deleted', request.title);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: request.requesterId,
-            relatedEntityId: request.id,
-            relatedEntityType: 'delete',
+            title: requesterNotificationText.title,
+            message: requesterNotificationText.message,
             type: client_1.NotificationType.request,
-            title: notificationText.title,
-            message: notificationText.message
+            relatedEntityId: parseInt(id),
+            relatedEntityType: 'delete' // ✅ WICHTIG: 'delete' für Soft Delete
         });
-        // Lösche den Request
-        yield prisma_1.prisma.request.delete({
-            where: { id: parseInt(id) }
-        });
+        // Benachrichtigung für den Verantwortlichen
+        if (request.responsibleId && request.responsibleId !== request.requesterId) {
+            const responsibleLang = yield (0, translations_1.getUserLanguage)(request.responsibleId);
+            const responsibleNotificationText = (0, translations_1.getRequestNotificationText)(responsibleLang, 'deleted', request.title);
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: request.responsibleId,
+                title: responsibleNotificationText.title,
+                message: responsibleNotificationText.message,
+                type: client_1.NotificationType.request,
+                relatedEntityId: parseInt(id),
+                relatedEntityType: 'delete' // ✅ WICHTIG: 'delete' für Soft Delete
+            });
+        }
         res.json({ message: 'Request erfolgreich gelöscht' });
     }
     catch (error) {

@@ -111,6 +111,10 @@ export function createImageGenerationWorker(connection: any): Worker {
     {
       connection,
       concurrency: parseInt(process.env.QUEUE_CONCURRENCY || '2'), // 2 Jobs parallel (Bildgenerierung ist CPU-intensiv)
+      limiter: {
+        max: 2, // Max. 2 Jobs gleichzeitig
+        duration: 1000
+      }
     }
   );
 }

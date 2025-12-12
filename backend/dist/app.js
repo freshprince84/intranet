@@ -56,6 +56,7 @@ const tours_1 = __importDefault(require("./routes/tours"));
 const tourBookings_1 = __importDefault(require("./routes/tourBookings"));
 const tourReservations_1 = __importDefault(require("./routes/tourReservations"));
 const tourProviders_1 = __importDefault(require("./routes/tourProviders"));
+const priceAnalysisRoutes_1 = __importDefault(require("./routes/priceAnalysisRoutes"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
 const reservationScheduler_1 = require("./services/reservationScheduler");
@@ -63,6 +64,7 @@ const reservationScheduler_1 = require("./services/reservationScheduler");
 // import { EmailReservationScheduler } from './services/emailReservationScheduler';
 const lobbyPmsReservationScheduler_1 = require("./services/lobbyPmsReservationScheduler");
 const reservationAutoCancelScheduler_1 = require("./services/reservationAutoCancelScheduler");
+const reservationAutoInvitationScheduler_1 = require("./services/reservationAutoInvitationScheduler");
 const queues_1 = require("./queues");
 const logger_1 = require("./utils/logger");
 const app = (0, express_1.default)();
@@ -172,6 +174,8 @@ reservationScheduler_1.ReservationScheduler.start();
 lobbyPmsReservationScheduler_1.LobbyPmsReservationScheduler.start();
 // Automatische Stornierung von nicht bezahlten Reservierungen
 reservationAutoCancelScheduler_1.ReservationAutoCancelScheduler.start();
+// NEU: Automatische Versendung von Check-in-Einladungen (1 Tag vor Check-in um 08:00 Uhr in Zeitzone der Organisation)
+reservationAutoInvitationScheduler_1.ReservationAutoInvitationScheduler.start();
 // Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
 // EmailReservationScheduler.start();
 // Starte Queue Workers (wenn aktiviert)
@@ -253,6 +257,7 @@ app.use('/api/worktime', worktime_1.default);
 app.use('/api/settings', settings_1.default);
 app.use('/api/notifications', notifications_1.default);
 app.use('/api/password-manager', passwordManager_1.default);
+app.use('/api/price-analysis', priceAnalysisRoutes_1.default);
 app.use('/api/table-settings', tableSettings_1.default);
 app.use('/api/cerebro', cerebro_1.default);
 app.use('/api/team-worktime', teamWorktimeRoutes_1.default);

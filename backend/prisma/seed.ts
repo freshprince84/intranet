@@ -28,7 +28,12 @@ const ALL_PAGES = [
   'settings',
   'profile',
   'tour_management', // NEU: Touren-Verwaltung
-  'password_manager' // NEU: Passwort-Manager
+  'password_manager', // NEU: Passwort-Manager
+  'price_analysis', // NEU: Preisanalyse
+  'price_analysis_listings', // NEU: Preisanalyse - Inserate
+  'price_analysis_recommendations', // NEU: Preisanalyse - Empfehlungen
+  'price_analysis_rules', // NEU: Preisanalyse - Regeln
+  'price_analysis_rate_shopping' // NEU: Preisanalyse - Rate Shopping
 ];
 
 // ALLE TABELLEN IM SYSTEM
@@ -51,7 +56,10 @@ const ALL_TABLES = [
   'organization_users',  // auf organization_management
   'tours',             // NEU: auf tour_management
   'tour_bookings',     // NEU: auf tour_management
-  'tour_providers'     // NEU: auf organization_management
+  'tour_providers',    // NEU: auf organization_management
+  'price_analysis_listings', // NEU: auf price_analysis_listings
+  'price_analysis_recommendations', // NEU: auf price_analysis_recommendations
+  'price_analysis_rules' // NEU: auf price_analysis_rules
 ];
 
 // ALLE BUTTONS IM SYSTEM
@@ -357,6 +365,11 @@ async function main() {
     userPermissionMap['page_profile'] = 'both';
     userPermissionMap['page_tour_management'] = 'read'; // NEU: User können Touren-Verwaltung sehen
     userPermissionMap['page_organization_management'] = 'read'; // Sichtbar für User OHNE Organisation
+    userPermissionMap['page_price_analysis'] = 'read'; // NEU: User können Preisanalyse sehen
+    userPermissionMap['page_price_analysis_listings'] = 'read'; // NEU: User können Inserate sehen
+    userPermissionMap['page_price_analysis_recommendations'] = 'read'; // NEU: User können Empfehlungen sehen
+    userPermissionMap['page_price_analysis_rules'] = 'read'; // NEU: User können Regeln sehen
+    userPermissionMap['page_price_analysis_rate_shopping'] = 'read'; // NEU: User können Rate Shopping sehen
     // NICHT: team_worktime_control (bleibt 'none')
     
     // TABELLEN: alle AUSSER die auf worktracker, workcenter & organisation
@@ -368,6 +381,9 @@ async function main() {
     userPermissionMap['table_reservations'] = 'both';    // worktracker (in To Do's Box)
     userPermissionMap['table_tours'] = 'read';           // NEU: User können Touren sehen
     userPermissionMap['table_tour_bookings'] = 'read';  // NEU: User können Buchungen sehen
+    userPermissionMap['table_price_analysis_listings'] = 'read'; // NEU: User können Inserate sehen
+    userPermissionMap['table_price_analysis_recommendations'] = 'read'; // NEU: User können Empfehlungen sehen
+    userPermissionMap['table_price_analysis_rules'] = 'read'; // NEU: User können Regeln sehen
     // NICHT: tasks, users, roles, team_worktime, worktime, branches (bleiben 'none')
     // users & roles bleiben 'none', damit Tabs sichtbar aber inaktiv sind (PRO-Markierung)
     
@@ -388,6 +404,7 @@ async function main() {
     userPermissionMap['button_tour_view'] = 'both';           // NEU: User können Touren ansehen
     userPermissionMap['button_tour_booking_create'] = 'both'; // NEU: User können Touren buchen
     // NICHT: todo_*, task_*, user_*, role_*, database_*, settings_system, payroll_*, worktime_edit/delete
+    // NICHT: price_analysis_* Buttons (User haben nur Leserechte)
 
     await ensureAllPermissionsForRole(userRole.id, userPermissionMap);
 

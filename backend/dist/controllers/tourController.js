@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.exportTours = exports.getTourBookings = exports.toggleTourActive = exports.updateTour = exports.deleteTourGalleryImage = exports.getTourGalleryImage = exports.getTourImage = exports.uploadTourGalleryImage = exports.uploadTourImage = exports.createTour = exports.getTourById = exports.getAllTours = exports.tourImageUpload = void 0;
+exports.getTourImageGenerationStatus = exports.generateTourImages = exports.exportTours = exports.getTourBookings = exports.toggleTourActive = exports.updateTour = exports.deleteTourGalleryImage = exports.getTourGalleryImage = exports.getTourImage = exports.uploadTourGalleryImage = exports.uploadTourImage = exports.createTour = exports.getTourById = exports.getAllTours = exports.tourImageUpload = void 0;
 const prisma_1 = require("../utils/prisma");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
 const filterCache_1 = require("../services/filterCache");
@@ -21,6 +21,8 @@ const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const logger_1 = require("../utils/logger");
+const queueService_1 = require("../services/queueService");
+const geminiImageService_1 = require("../services/geminiImageService");
 const userSelect = {
     id: true,
     username: true,
@@ -950,4 +952,225 @@ const exportTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.exportTours = exportTours;
+// POST /api/tours/:id/generate-images - Startet Bildgenerierung
+const generateTourImages = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const tourId = parseInt(id, 10);
+        if (isNaN(tourId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültige Tour-ID'
+            });
+        }
+        // Berechtigung prüfen
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        if (!hasPermission) {
+            return res.status(403).json({
+                success: false,
+                message: 'Keine Berechtigung zum Generieren von Tour-Bildern'
+            });
+        }
+        // Prüfe ob Tour existiert
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: { id: true, title: true, description: true, organizationId: true }
+        });
+        if (!tour) {
+            return res.status(404).json({
+                success: false,
+                message: 'Tour nicht gefunden'
+            });
+        }
+        // Prüfe Organization-Isolation
+        const organizationId = req.organizationId;
+        if (tour.organizationId !== organizationId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Keine Berechtigung für diese Tour'
+            });
+        }
+        // Prüfe ob Queue verfügbar ist
+        const queueAvailable = yield (0, queueService_1.checkQueueHealth)();
+        const queueEnabled = process.env.QUEUE_ENABLED === 'true';
+        // Fallback: Synchroner Modus wenn Queue nicht verfügbar
+        if (!queueAvailable || !queueEnabled) {
+            logger_1.logger.warn(`[generateTourImages] Queue nicht verfügbar, verwende synchronen Modus für Tour ${tourId}`);
+            try {
+                // Synchroner Modus: Direkt generieren und hochladen
+                const generatedImages = yield geminiImageService_1.GeminiImageService.generateTourImages(tour.id, tour.title || '', tour.description || '', process.env.GEMINI_API_KEY);
+                // Lade Hauptbild hoch
+                if (generatedImages.mainImage && fs_1.default.existsSync(generatedImages.mainImage)) {
+                    yield uploadImageDirectly(tourId, generatedImages.mainImage);
+                }
+                // Lade Galerie-Bilder hoch
+                for (const galleryImage of generatedImages.galleryImages) {
+                    if (fs_1.default.existsSync(galleryImage)) {
+                        yield uploadGalleryImageDirectly(tourId, galleryImage);
+                    }
+                }
+                // Cleanup temporäre Dateien
+                cleanupTemporaryFiles(generatedImages);
+                return res.json({
+                    success: true,
+                    mode: 'synchronous',
+                    message: 'Bilder erfolgreich generiert (synchroner Modus)'
+                });
+            }
+            catch (error) {
+                logger_1.logger.error(`[generateTourImages] Fehler im synchronen Modus:`, error);
+                return res.status(500).json({
+                    success: false,
+                    message: error.message || 'Fehler bei Bildgenerierung'
+                });
+            }
+        }
+        // Asynchroner Modus: Job zur Queue hinzufügen
+        const queue = (0, queueService_1.getImageGenerationQueue)();
+        const job = yield queue.add('generate-tour-images', {
+            tourId: tour.id,
+            organizationId,
+            userId: parseInt(req.userId)
+        }, {
+            jobId: `tour-${tourId}-${Date.now()}` // Eindeutige Job-ID
+        });
+        logger_1.logger.log(`[generateTourImages] Job zur Queue hinzugefügt: ${job.id} für Tour ${tourId}`);
+        res.json({
+            success: true,
+            mode: 'asynchronous',
+            jobId: job.id,
+            message: 'Bildgenerierung gestartet'
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('[generateTourImages] Fehler:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Fehler beim Starten der Bildgenerierung'
+        });
+    }
+});
+exports.generateTourImages = generateTourImages;
+// GET /api/tours/:id/generate-images/status - Prüft Status der Bildgenerierung
+const getTourImageGenerationStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const tourId = parseInt(id, 10);
+        if (isNaN(tourId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültige Tour-ID'
+            });
+        }
+        const jobId = req.query.jobId;
+        if (!jobId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Job-ID erforderlich'
+            });
+        }
+        const queue = (0, queueService_1.getImageGenerationQueue)();
+        const job = yield queue.getJob(jobId);
+        if (!job) {
+            return res.status(404).json({
+                success: false,
+                message: 'Job nicht gefunden'
+            });
+        }
+        const state = yield job.getState();
+        const progress = job.progress || 0;
+        let status = 'waiting';
+        if (state === 'completed') {
+            status = 'completed';
+        }
+        else if (state === 'failed') {
+            status = 'failed';
+        }
+        else if (state === 'active') {
+            status = 'active';
+        }
+        res.json({
+            success: true,
+            status,
+            progress,
+            jobId: job.id
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('[getTourImageGenerationStatus] Fehler:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Fehler beim Abrufen des Status'
+        });
+    }
+});
+exports.getTourImageGenerationStatus = getTourImageGenerationStatus;
+// Hilfsfunktion: Lädt Bild direkt hoch (ohne HTTP)
+function uploadImageDirectly(tourId, imagePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Altes Bild löschen (falls vorhanden)
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: { imageUrl: true }
+        });
+        if (tour === null || tour === void 0 ? void 0 : tour.imageUrl) {
+            const oldImagePath = path_1.default.join(__dirname, '../../uploads/tours', path_1.default.basename(tour.imageUrl));
+            if (fs_1.default.existsSync(oldImagePath)) {
+                fs_1.default.unlinkSync(oldImagePath);
+            }
+        }
+        // Kopiere Bild in uploads-Verzeichnis
+        const filename = `tour-${tourId}-main-${Date.now()}.png`;
+        const destPath = path_1.default.join(__dirname, '../../uploads/tours', filename);
+        fs_1.default.copyFileSync(imagePath, destPath);
+        // Aktualisiere Tour
+        const imageUrl = `/uploads/tours/${filename}`;
+        yield prisma_1.prisma.tour.update({
+            where: { id: tourId },
+            data: { imageUrl }
+        });
+    });
+}
+// Hilfsfunktion: Lädt Galerie-Bild direkt hoch (ohne HTTP)
+function uploadGalleryImageDirectly(tourId, imagePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Lade aktuelle Galerie-URLs
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: { galleryUrls: true }
+        });
+        const currentUrls = (tour === null || tour === void 0 ? void 0 : tour.galleryUrls) || [];
+        // Kopiere Bild in uploads-Verzeichnis
+        const filename = `tour-${tourId}-gallery-${Date.now()}.png`;
+        const destPath = path_1.default.join(__dirname, '../../uploads/tours', filename);
+        fs_1.default.copyFileSync(imagePath, destPath);
+        // Füge neue URL hinzu
+        const newUrl = `/uploads/tours/${filename}`;
+        const updatedUrls = [...currentUrls, newUrl];
+        // Aktualisiere Tour
+        yield prisma_1.prisma.tour.update({
+            where: { id: tourId },
+            data: { galleryUrls: updatedUrls }
+        });
+    });
+}
+// Hilfsfunktion: Bereinigt temporäre Dateien
+function cleanupTemporaryFiles(images) {
+    try {
+        if (images.mainImage && fs_1.default.existsSync(images.mainImage)) {
+            fs_1.default.unlinkSync(images.mainImage);
+        }
+        images.galleryImages.forEach((img) => {
+            if (fs_1.default.existsSync(img)) {
+                fs_1.default.unlinkSync(img);
+            }
+        });
+        if (images.flyer && fs_1.default.existsSync(images.flyer)) {
+            fs_1.default.unlinkSync(images.flyer);
+        }
+    }
+    catch (error) {
+        logger_1.logger.error('[cleanupTemporaryFiles] Fehler:', error);
+    }
+}
 //# sourceMappingURL=tourController.js.map

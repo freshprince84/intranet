@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.branchEmailSettingsSchema = exports.branchDoorSystemSettingsSchema = exports.branchBoldPaymentSettingsSchema = exports.branchLobbyPmsSettingsSchema = void 0;
+exports.branchSettingsSchema = exports.messageTemplatesSchema = exports.branchEmailSettingsSchema = exports.branchDoorSystemSettingsSchema = exports.branchBoldPaymentSettingsSchema = exports.branchLobbyPmsSettingsSchema = void 0;
 const zod_1 = require("zod");
 /**
  * Zod-Schemas für Branch-Settings Validierung
@@ -48,5 +48,35 @@ exports.branchEmailSettingsSchema = zod_1.z.object({
 }).refine((data) => { var _a; return !((_a = data.imap) === null || _a === void 0 ? void 0 : _a.enabled) || (data.imap.host && data.imap.user && data.imap.password); }, {
     message: 'IMAP Host, User und Password sind erforderlich wenn IMAP aktiviert ist',
     path: ['imap']
+});
+// NEU: Schema für Message Templates
+const messageTemplateLanguageSchema = zod_1.z.object({
+    whatsappTemplateName: zod_1.z.string().min(1, 'WhatsApp Template Name ist erforderlich'),
+    whatsappTemplateParams: zod_1.z.array(zod_1.z.string()).default([]),
+    emailSubject: zod_1.z.string().min(1, 'Email Betreff ist erforderlich'),
+    emailContent: zod_1.z.string().min(1, 'Email Inhalt ist erforderlich')
+});
+exports.messageTemplatesSchema = zod_1.z.object({
+    checkInInvitation: zod_1.z.object({
+        en: messageTemplateLanguageSchema,
+        es: messageTemplateLanguageSchema,
+        de: messageTemplateLanguageSchema
+    }),
+    checkInConfirmation: zod_1.z.object({
+        en: messageTemplateLanguageSchema,
+        es: messageTemplateLanguageSchema,
+        de: messageTemplateLanguageSchema
+    })
+});
+// Haupt-Schema für Branch Settings
+exports.branchSettingsSchema = zod_1.z.object({
+    name: zod_1.z.string().min(1, 'Name ist erforderlich'),
+    whatsappSettings: zod_1.z.any().optional(),
+    lobbyPmsSettings: exports.branchLobbyPmsSettingsSchema.optional(),
+    boldPaymentSettings: exports.branchBoldPaymentSettingsSchema.optional(),
+    doorSystemSettings: exports.branchDoorSystemSettingsSchema.optional(),
+    emailSettings: exports.branchEmailSettingsSchema.optional(),
+    messageTemplates: exports.messageTemplatesSchema.optional(),
+    autoSendReservationInvitation: zod_1.z.boolean().optional()
 });
 //# sourceMappingURL=branchSettingsSchema.js.map

@@ -12,18 +12,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.worktimeCache = void 0;
 const prisma_1 = require("../utils/prisma");
 const logger_1 = require("../utils/logger");
+const cacheCleanupService_1 = require("./cacheCleanupService");
 /**
  * In-Memory Cache für aktive Worktime
  *
- * Reduziert Datenbank-Queries drastisch, da getActiveWorktime sehr häufig
- * aufgerufen wird (alle 30 Sekunden Polling).
- *
- * TTL: 5 Sekunden (kurz, da sich Status schnell ändern kann)
+ * TTL: 30 Sekunden
+ * MAX_SIZE: 200 Einträge
+ * Auto-Cleanup: Ja
  */
 class WorktimeCache {
     constructor() {
         this.cache = new Map();
-        this.TTL_MS = 30 * 1000; // 30 Sekunden (gleich wie Polling-Intervall - reduziert DB-Queries um 83%)
+        this.TTL_MS = 30 * 1000;
+        this.MAX_SIZE = 200;
     }
     /**
      * Prüft, ob ein Cache-Eintrag noch gültig ist
@@ -94,7 +95,46 @@ class WorktimeCache {
     clear() {
         this.cache.clear();
     }
+    getStats() {
+        const now = Date.now();
+        let validEntries = 0;
+        for (const entry of this.cache.values()) {
+            if ((now - entry.timestamp) < this.TTL_MS) {
+                validEntries++;
+            }
+        }
+        return { size: this.cache.size, validEntries };
+    }
+    cleanup() {
+        const now = Date.now();
+        let deleted = 0;
+        for (const [key, entry] of this.cache) {
+            if ((now - entry.timestamp) >= this.TTL_MS) {
+                this.cache.delete(key);
+                deleted++;
+            }
+        }
+        if (this.cache.size > this.MAX_SIZE) {
+            const entries = Array.from(this.cache.entries())
+                .sort((a, b) => a[1].timestamp - b[1].timestamp);
+            const toDelete = this.cache.size - this.MAX_SIZE;
+            for (let i = 0; i < toDelete; i++) {
+                this.cache.delete(entries[i][0]);
+                deleted++;
+            }
+        }
+        return deleted;
+    }
+    register() {
+        cacheCleanupService_1.cacheCleanupService.register({
+            name: 'worktimeCache',
+            cleanup: () => this.cleanup(),
+            getStats: () => this.getStats(),
+            clear: () => this.clear()
+        });
+    }
 }
 // Singleton-Instanz
 exports.worktimeCache = new WorktimeCache();
+exports.worktimeCache.register();
 //# sourceMappingURL=worktimeCache.js.map

@@ -463,6 +463,26 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
             }
         }
+        else if (contactType === 'email' && reservation.guestEmail) {
+            // NEU: Email-Versendung für contactType === 'email'
+            try {
+                const result = yield reservationNotificationService_1.ReservationNotificationService.sendReservationInvitation(reservation.id, {
+                    guestEmail: reservation.guestEmail,
+                    amount,
+                    currency
+                });
+                if (result.success) {
+                    logger_1.logger.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und Email erfolgreich versendet`);
+                }
+                else {
+                    logger_1.logger.warn(`[Reservation] ⚠️ Reservierung ${reservation.id} erstellt, aber Email fehlgeschlagen: ${result.error}`);
+                }
+            }
+            catch (error) {
+                logger_1.logger.error('[Reservation] ❌ Fehler beim Versenden der Email:', error);
+                // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
+            }
+        }
         // Hole die aktuelle Reservierung mit allen Feldern (inkl. Updates wie sentMessage, status, etc.)
         const finalReservation = yield prisma_1.prisma.reservation.findUnique({
             where: { id: reservation.id },
@@ -540,13 +560,22 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const offset = req.query.offset
             ? parseInt(req.query.offset, 10)
             : 0; // Standard: 0
+        // ✅ BRANCH-FILTER: branchId Query-Parameter unterstützen
+        const queryBranchId = req.query.branchId
+            ? parseInt(req.query.branchId, 10)
+            : undefined;
         // ✅ ROLLEN-ISOLATION: Baue Where-Clause basierend auf Rolle
         const whereClause = {
             organizationId: req.organizationId
         };
-        // Admin/Owner: Alle Reservations der Organisation (kein Branch-Filter)
-        if ((0, organization_1.isAdminOrOwner)(req)) {
-            // Kein Branch-Filter für Admin/Owner
+        // ✅ BRANCH-FILTER: Wenn branchId als Query-Parameter übergeben wurde, verwende diesen (hat Priorität)
+        if (queryBranchId && !isNaN(queryBranchId)) {
+            whereClause.branchId = queryBranchId;
+            logger_1.logger.log(`[Reservation] Filtere nach Branch ${queryBranchId} (Query-Parameter)`);
+        }
+        // Admin/Owner: Alle Reservations der Organisation (kein Branch-Filter, außer Query-Parameter)
+        else if ((0, organization_1.isAdminOrOwner)(req)) {
+            // Kein Branch-Filter für Admin/Owner (wenn kein Query-Parameter)
             logger_1.logger.log(`[Reservation] Admin/Owner: Zeige alle Reservations der Organisation`);
         }
         else {

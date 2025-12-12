@@ -20,6 +20,9 @@ router.get('/:id/bookings', tourController_1.getTourBookings);
 // Bild-Routen (GET vor POST, damit :id nicht mit /image kollidiert)
 router.get('/:id/image', tourController_1.getTourImage);
 router.get('/:id/gallery/:index', tourController_1.getTourGalleryImage);
+// Bildgenerierungs-Routen (GET vor POST)
+router.get('/:id/generate-images/status', tourController_1.getTourImageGenerationStatus);
+router.post('/:id/generate-images', tourController_1.generateTourImages);
 // Bild-Upload-Routen
 router.post('/:id/image', tourController_1.tourImageUpload.single('image'), tourController_1.uploadTourImage);
 router.post('/:id/gallery', tourController_1.tourImageUpload.single('image'), tourController_1.uploadTourGalleryImage);

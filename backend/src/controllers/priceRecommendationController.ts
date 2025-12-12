@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import { PriceRecommendationService } from '../services/priceRecommendationService';
+import { createNotificationIfEnabled } from './notificationController';
+import { NotificationType } from '@prisma/client';
+import { getPriceAnalysisNotificationText, getUserLanguage } from '../utils/translations';
 import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
@@ -76,6 +79,32 @@ export const priceRecommendationController = {
         recommendationId,
         userId
       );
+
+      // Notification erstellen
+      if (success) {
+        try {
+          const recommendation = await PriceRecommendationService.getRecommendationById(recommendationId);
+          
+          const language = await getUserLanguage(userId);
+          const notificationText = getPriceAnalysisNotificationText(
+            language,
+            'recommendationApplied',
+            `Kategorie ${recommendation.categoryId || 'Unbekannt'}`,
+            new Date(recommendation.date).toISOString().split('T')[0]
+          );
+          
+          await createNotificationIfEnabled({
+            userId,
+            title: notificationText.title,
+            message: notificationText.message,
+            type: NotificationType.system,
+            relatedEntityId: recommendationId,
+            relatedEntityType: 'applied'
+          });
+        } catch (error) {
+          logger.error('Fehler beim Erstellen der Notification:', error);
+        }
+      }
 
       res.json({
         success,

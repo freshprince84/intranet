@@ -43,49 +43,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.executeWithRetry = exports.prisma = void 0;
+exports.getNotDeletedFilter = exports.executeWithRetry = exports.prisma = void 0;
 const client_1 = require("@prisma/client");
 const library_1 = require("@prisma/client/runtime/library");
 // Singleton-Pattern für Prisma Client
 // Verhindert mehrere Instanzen in Development (Hot Reload)
 const globalForPrisma = globalThis;
-// ✅ PERFORMANCE: Connection Pool optimiert (empfohlen von Prisma)
-// connection_limit: 25 für normale Anwendungen (laut Prisma Best Practices)
-// pool_timeout: 20 Sekunden
-const connectionLimit = 25; // Empfohlen: CPUs * 2 + 1, aber 25 ist sicher
-const poolTimeout = 20;
-// DATABASE_URL mit connection_limit
+// ✅ PERFORMANCE: Connection Pool - Werte aus DATABASE_URL verwenden oder Defaults
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
     throw new Error('DATABASE_URL environment variable is not set');
 }
-// Erstelle URL mit connection_limit
-let urlWithPool;
-try {
-    const url = new URL(databaseUrl.replace(/^postgresql:/, 'http:'));
-    // Entferne connection_limit und pool_timeout falls vorhanden
-    url.searchParams.delete('connection_limit');
-    url.searchParams.delete('pool_timeout');
-    // Setze neue Werte
-    url.searchParams.set('connection_limit', connectionLimit.toString());
-    url.searchParams.set('pool_timeout', poolTimeout.toString());
-    urlWithPool = url.toString().replace(/^http:/, 'postgresql:');
-}
-catch (_b) {
-    // Fallback: Einfache String-Ersetzung wenn URL-Parsing fehlschlägt
-    urlWithPool = databaseUrl.includes('connection_limit=')
-        ? databaseUrl.replace(/[?&]connection_limit=\d+/, '').replace(/connection_limit=\d+[&?]/, '')
-            .replace(/[?&]pool_timeout=\d+/, '').replace(/pool_timeout=\d+[&?]/, '')
-            + (databaseUrl.includes('?') ? '&' : '?') + `connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`
-        : `${databaseUrl}${databaseUrl.includes('?') ? '&' : '?'}connection_limit=${connectionLimit}&pool_timeout=${poolTimeout}`;
-}
+// Extrahiere connection_limit aus DATABASE_URL oder nutze Default
+const urlParams = new URLSearchParams(databaseUrl.split('?')[1] || '');
+const connectionLimit = parseInt(urlParams.get('connection_limit') || '10', 10); // Default: 10 (nicht 25!)
+const poolTimeout = parseInt(urlParams.get('pool_timeout') || '30', 10); // Default: 30s
 const enableQueryLogging = process.env.ENABLE_QUERY_LOGGING === 'true' || process.env.NODE_ENV === 'development';
+// ✅ Nutze DATABASE_URL direkt - Werte werden dort konfiguriert
 exports.prisma = (_a = globalForPrisma.prisma) !== null && _a !== void 0 ? _a : new client_1.PrismaClient({
-    datasources: {
-        db: {
-            url: urlWithPool
-        }
-    },
     log: enableQueryLogging ? ['query', 'error', 'warn'] : ['error'],
 });
 if (process.env.NODE_ENV !== 'production') {
@@ -148,4 +123,14 @@ const executeWithRetry = (operation_1, ...args_1) => __awaiter(void 0, [operatio
 });
 exports.executeWithRetry = executeWithRetry;
 // Graceful Shutdown wird in index.ts behandelt
+/**
+ * Helper-Funktion für Soft Delete Filter
+ * Verwendet in allen Queries, die Tasks/Requests abfragen
+ *
+ * @returns Prisma Where-Klausel für nicht gelöschte Einträge
+ */
+const getNotDeletedFilter = () => ({
+    deletedAt: null
+});
+exports.getNotDeletedFilter = getNotDeletedFilter;
 //# sourceMappingURL=prisma.js.map

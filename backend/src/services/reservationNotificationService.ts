@@ -588,8 +588,8 @@ export class ReservationNotificationService {
             } else {
               // Fallback auf alte hardcodierte Nachricht (sollte nicht passieren)
               logger.warn(`[ReservationNotification] Kein Template gefunden, verwende Fallback`);
-              if (languageCode === 'en') {
-                sentMessage = `Hello ${reservation.guestName},
+            if (languageCode === 'en') {
+              sentMessage = `Hello ${reservation.guestName},
 
 We are pleased to welcome you to La Familia Hostel!
 
@@ -602,8 +602,8 @@ ${paymentLink}
 Please write us briefly once you have completed both the check-in and payment. Thank you!
 
 We look forward to seeing you tomorrow!`;
-              } else {
-                sentMessage = `Hola ${reservation.guestName},
+            } else {
+              sentMessage = `Hola ${reservation.guestName},
 
 ¡Nos complace darte la bienvenida a La Familia Hostel!
 
@@ -659,10 +659,10 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
                   .replace(/\{\{paymentLink\}\}/g, paymentLink);
               })
             : [
-                reservation.guestName,
-                checkInLink,
-                paymentLink
-              ];
+            reservation.guestName,
+            checkInLink,
+            paymentLink
+          ];
 
           logger.log(`[ReservationNotification] Versuche Session Message (24h-Fenster), bei Fehler: Template Message`);
           logger.log(`[ReservationNotification] Template Name (Basis): ${baseTemplateName}`);
@@ -791,8 +791,8 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             } else {
               // Fallback auf alte hardcodierte Nachricht (sollte nicht passieren)
               logger.warn(`[ReservationNotification] Kein Template gefunden für Email, verwende Fallback`);
-              if (languageCode === 'en') {
-                emailMessage = `Hello ${reservation.guestName},
+            if (languageCode === 'en') {
+              emailMessage = `Hello ${reservation.guestName},
 
 We are pleased to welcome you to La Familia Hostel!
 
@@ -805,8 +805,8 @@ ${paymentLink}
 Please write us briefly once you have completed both the check-in and payment. Thank you!
 
 We look forward to seeing you tomorrow!`;
-              } else {
-                emailMessage = `Hola ${reservation.guestName},
+            } else {
+              emailMessage = `Hola ${reservation.guestName},
 
 ¡Nos complace darte la bienvenida a La Familia Hostel!
 
@@ -1556,22 +1556,22 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         } else {
           // Fallback auf alte hardcodierte Nachricht (sollte nicht passieren)
           logger.warn(`[ReservationNotification] Kein Template gefunden für sendPasscodeNotification, verwende Fallback`);
-          if (languageCode === 'en') {
-            const greeting = `Hello ${reservation.guestName},`;
-            const contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomDisplay} Access: - Door PIN: ${doorPin || 'N/A'}`;
-            
-            messageText = `Welcome,
+        if (languageCode === 'en') {
+          const greeting = `Hello ${reservation.guestName},`;
+          const contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomDisplay} Access: - Door PIN: ${doorPin || 'N/A'}`;
+          
+          messageText = `Welcome,
 
 ${greeting}
 
 ${contentText}
 
 We wish you a pleasant stay!`;
-          } else {
-            const greeting = `Hola ${reservation.guestName},`;
-            const contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomDisplay} Acceso: - PIN de la puerta: ${doorPin || 'N/A'}`;
-            
-            messageText = `Bienvenido,
+        } else {
+          const greeting = `Hola ${reservation.guestName},`;
+          const contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomDisplay} Acceso: - PIN de la puerta: ${doorPin || 'N/A'}`;
+          
+          messageText = `Bienvenido,
 
 ${greeting}
 

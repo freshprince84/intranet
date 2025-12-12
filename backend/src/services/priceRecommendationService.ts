@@ -112,6 +112,31 @@ export class PriceRecommendationService {
   }
 
   /**
+   * Ruft eine einzelne Preisempfehlung ab
+   * 
+   * @param recommendationId - Empfehlungs-ID
+   * @returns Preisempfehlung
+   */
+  static async getRecommendationById(recommendationId: number) {
+    try {
+      const recommendation = await prisma.priceRecommendation.findUnique({
+        where: {
+          id: recommendationId
+        }
+      });
+
+      if (!recommendation) {
+        throw new Error(`Preisempfehlung mit ID ${recommendationId} nicht gefunden`);
+      }
+
+      return recommendation;
+    } catch (error) {
+      logger.error('Fehler beim Abrufen der Preisempfehlung:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Ruft Preisempfehlungen für einen Branch ab
    * 
    * @param branchId - Branch-ID

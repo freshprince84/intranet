@@ -1,5 +1,8 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { createNotificationIfEnabled } from './notificationController';
+import { NotificationType } from '@prisma/client';
+import { getPriceAnalysisNotificationText, getUserLanguage } from '../utils/translations';
 import { logger } from '../utils/logger';
 
 const prisma = new PrismaClient();
@@ -147,6 +150,29 @@ export const pricingRuleController = {
         }
       });
 
+      // Notification erstellen
+      if (userId) {
+        try {
+          const language = await getUserLanguage(userId);
+          const notificationText = getPriceAnalysisNotificationText(
+            language,
+            'ruleCreated',
+            rule.name
+          );
+          
+          await createNotificationIfEnabled({
+            userId,
+            title: notificationText.title,
+            message: notificationText.message,
+            type: NotificationType.system,
+            relatedEntityId: rule.id,
+            relatedEntityType: 'created'
+          });
+        } catch (error) {
+          logger.error('Fehler beim Erstellen der Notification:', error);
+        }
+      }
+
       res.status(201).json(rule);
     } catch (error: any) {
       logger.error('Fehler beim Erstellen der Preisregel:', error);
@@ -198,6 +224,30 @@ export const pricingRuleController = {
         }
       });
 
+      // Notification erstellen
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      if (userId) {
+        try {
+          const language = await getUserLanguage(userId);
+          const notificationText = getPriceAnalysisNotificationText(
+            language,
+            'ruleUpdated',
+            rule.name
+          );
+          
+          await createNotificationIfEnabled({
+            userId,
+            title: notificationText.title,
+            message: notificationText.message,
+            type: NotificationType.system,
+            relatedEntityId: rule.id,
+            relatedEntityType: 'updated'
+          });
+        } catch (error) {
+          logger.error('Fehler beim Erstellen der Notification:', error);
+        }
+      }
+
       res.json(rule);
     } catch (error: any) {
       logger.error('Fehler beim Aktualisieren der Preisregel:', error);
@@ -222,11 +272,42 @@ export const pricingRuleController = {
         });
       }
 
+      // Regel vor dem Löschen abrufen für Notification
+      const rule = await prisma.pricingRule.findUnique({
+        where: {
+          id: ruleId
+        }
+      });
+
       await prisma.pricingRule.delete({
         where: {
           id: ruleId
         }
       });
+
+      // Notification erstellen
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      if (userId && rule) {
+        try {
+          const language = await getUserLanguage(userId);
+          const notificationText = getPriceAnalysisNotificationText(
+            language,
+            'ruleDeleted',
+            rule.name
+          );
+          
+          await createNotificationIfEnabled({
+            userId,
+            title: notificationText.title,
+            message: notificationText.message,
+            type: NotificationType.system,
+            relatedEntityId: ruleId,
+            relatedEntityType: 'deleted'
+          });
+        } catch (error) {
+          logger.error('Fehler beim Erstellen der Notification:', error);
+        }
+      }
 
       res.json({
         success: true,

@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { PriceAnalysisService } from '../services/priceAnalysisService';
 import { PriceRecommendationService } from '../services/priceRecommendationService';
+import { createNotificationIfEnabled } from './notificationController';
+import { NotificationType } from '@prisma/client';
+import { getPriceAnalysisNotificationText, getUserLanguage } from '../utils/translations';
 import { logger } from '../utils/logger';
 
 interface AuthenticatedRequest extends Request {
@@ -31,6 +34,31 @@ export const priceAnalysisController = {
         new Date(startDate),
         new Date(endDate)
       );
+
+      // Notification erstellen
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      if (userId) {
+        try {
+          const language = await getUserLanguage(userId);
+          const notificationText = getPriceAnalysisNotificationText(
+            language,
+            'recommendationCreated',
+            'Alle Kategorien',
+            new Date(startDate).toISOString().split('T')[0]
+          );
+          
+          await createNotificationIfEnabled({
+            userId,
+            title: notificationText.title,
+            message: `Preisanalyse für ${analysisCount} Kategorien abgeschlossen.`,
+            type: NotificationType.system,
+            relatedEntityId: branchId,
+            relatedEntityType: 'analyzed'
+          });
+        } catch (error) {
+          logger.error('Fehler beim Erstellen der Notification:', error);
+        }
+      }
 
       res.json({
         success: true,
@@ -128,6 +156,31 @@ export const priceAnalysisController = {
         new Date(startDate),
         new Date(endDate)
       );
+
+      // Notification erstellen
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      if (userId && recommendationCount > 0) {
+        try {
+          const language = await getUserLanguage(userId);
+          const notificationText = getPriceAnalysisNotificationText(
+            language,
+            'recommendationCreated',
+            'Alle Kategorien',
+            new Date(startDate).toISOString().split('T')[0]
+          );
+          
+          await createNotificationIfEnabled({
+            userId,
+            title: notificationText.title,
+            message: `${recommendationCount} Preisvorschläge wurden generiert.`,
+            type: NotificationType.system,
+            relatedEntityId: branchId,
+            relatedEntityType: 'generated'
+          });
+        } catch (error) {
+          logger.error('Fehler beim Erstellen der Notification:', error);
+        }
+      }
 
       res.json({
         success: true,
