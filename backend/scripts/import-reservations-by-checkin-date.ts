@@ -229,7 +229,10 @@ async function importReservationsByCheckInDate() {
             if (isDorm) {
               const dormName = reservation.category?.name || null;
               const bedNumber = assignedRoom?.name || null;
-              roomNumber = bedNumber;
+              // Für Dorms: roomNumber = "Zimmername (Bettnummer)" damit alle Betten im gleichen Dorm die gleiche Beschreibung verwenden
+              roomNumber = dormName && bedNumber 
+                ? `${dormName} (${bedNumber})`  // z.B. "La tia artista (Cama 5)"
+                : bedNumber || dormName || null;
               roomDescription = dormName;
             } else {
               // Für Privatzimmer: assigned_room.name = Zimmername

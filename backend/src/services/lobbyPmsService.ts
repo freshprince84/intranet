@@ -1046,8 +1046,10 @@ export class LobbyPmsService {
       // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
       const dormName = lobbyReservation.category?.name || null;
       const bedNumber = assignedRoom?.name || null;
-      // Für Dorms: roomNumber = Bettnummer, roomDescription = Zimmername
-      roomNumber = bedNumber;
+      // Für Dorms: roomNumber = "Zimmername (Bettnummer)" damit alle Betten im gleichen Dorm die gleiche Beschreibung verwenden
+      roomNumber = dormName && bedNumber 
+        ? `${dormName} (${bedNumber})`  // z.B. "La tia artista (Cama 5)"
+        : bedNumber || dormName || null;
       roomDescription = dormName;
     } else {
       // Für Privatzimmer: assigned_room.name = Zimmername

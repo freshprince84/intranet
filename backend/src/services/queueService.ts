@@ -226,6 +226,49 @@ export const updateGuestContactQueue = new Proxy({} as Queue, {
 });
 
 /**
+ * Image Generation Queue
+ * Verarbeitet Jobs für Bildgenerierung (Tours, Reservations, etc.)
+ * Lazy Initialization: Queue wird nur erstellt, wenn gebraucht
+ */
+let imageGenerationQueueInstance: Queue | null = null;
+export function getImageGenerationQueue(): Queue {
+  if (!imageGenerationQueueInstance) {
+    imageGenerationQueueInstance = new Queue('image-generation', {
+      connection: getConnection(),
+      defaultJobOptions: {
+        attempts: 2, // Weniger Versuche, da Bildgenerierung teuer ist
+        backoff: {
+          type: 'exponential',
+          delay: 5000, // Längerer Backoff für Rate-Limits
+        },
+        timeout: 120000, // 120 Sekunden Timeout (für 5 Bilder)
+        removeOnComplete: {
+          age: 24 * 3600,
+          count: 1000,
+        },
+        removeOnFail: {
+          age: 7 * 24 * 3600,
+        },
+      },
+    });
+  }
+  return imageGenerationQueueInstance;
+}
+
+// Export für Rückwärtskompatibilität
+export const imageGenerationQueue = new Proxy({} as Queue, {
+  get(target, prop) {
+    const queue = getImageGenerationQueue();
+    const value = queue[prop as keyof Queue];
+    // Wenn es eine Funktion ist, binde sie an die Queue-Instanz
+    if (typeof value === 'function') {
+      return value.bind(queue);
+    }
+    return value;
+  },
+});
+
+/**
  * Health-Check für Redis-Verbindung
  * @returns true wenn Redis erreichbar ist
  */
@@ -268,6 +311,7 @@ export async function closeQueues(): Promise<void> {
       notificationQueueInstance,
       paymentQueueInstance,
       updateGuestContactQueueInstance,
+      imageGenerationQueueInstance,
     ].filter((q) => q !== null) as Queue[];
 
     if (queues.length > 0) {
