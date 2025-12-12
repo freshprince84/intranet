@@ -189,6 +189,8 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
     });
     const [activeSettingsTab, setActiveSettingsTab] = useState<'whatsapp' | 'lobbypms' | 'boldpayment' | 'doorsystem' | 'email' | 'messages'>('whatsapp');
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+    const [selectedTemplateType, setSelectedTemplateType] = useState<'checkInInvitation' | 'checkInConfirmation'>('checkInInvitation');
+    const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'es' | 'de'>('en');
     const [searchTerm, setSearchTerm] = useState('');
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
@@ -2525,6 +2527,8 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                             {t('branches.messageType', { defaultValue: 'Mitteilungstyp' })}
                                                                         </label>
                                                                         <select
+                                                                            value={selectedTemplateType}
+                                                                            onChange={(e) => setSelectedTemplateType(e.target.value as 'checkInInvitation' | 'checkInConfirmation')}
                                                                             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
                                                                         >
                                                                             <option value="checkInInvitation">
@@ -2542,6 +2546,8 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                             {t('branches.language', { defaultValue: 'Sprache' })}
                                                                         </label>
                                                                         <select
+                                                                            value={selectedLanguage}
+                                                                            onChange={(e) => setSelectedLanguage(e.target.value as 'en' | 'es' | 'de')}
                                                                             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
                                                                         >
                                                                             <option value="en">{t('branches.language.en', { defaultValue: 'Englisch' })}</option>
@@ -2551,60 +2557,139 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                     </div>
 
                                                                     {/* Template Fields */}
-                                                                    <div className="space-y-4">
-                                                                        <div>
-                                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                                {t('branches.whatsappTemplateName', { defaultValue: 'WhatsApp Template Name' })}
-                                                                            </label>
-                                                                            <input
-                                                                                type="text"
-                                                                                placeholder="reservation_checkin_invitation_en"
-                                                                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
-                                                                            />
-                                                                        </div>
+                                                                    {(() => {
+                                                                        const currentTemplate = formData.messageTemplates?.[selectedTemplateType]?.[selectedLanguage] || {
+                                                                            whatsappTemplateName: '',
+                                                                            whatsappTemplateParams: [] as string[],
+                                                                            emailSubject: '',
+                                                                            emailContent: ''
+                                                                        };
+                                                                        
+                                                                        return (
+                                                                            <div className="space-y-4">
+                                                                                <div>
+                                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                        {t('branches.whatsappTemplateName', { defaultValue: 'WhatsApp Template Name' })}
+                                                                                    </label>
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={currentTemplate.whatsappTemplateName || ''}
+                                                                                        onChange={(e) => {
+                                                                                            setFormData({
+                                                                                                ...formData,
+                                                                                                messageTemplates: {
+                                                                                                    ...formData.messageTemplates,
+                                                                                                    [selectedTemplateType]: {
+                                                                                                        ...formData.messageTemplates?.[selectedTemplateType],
+                                                                                                        [selectedLanguage]: {
+                                                                                                            ...currentTemplate,
+                                                                                                            whatsappTemplateName: e.target.value
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                            });
+                                                                                        }}
+                                                                                        placeholder="reservation_checkin_invitation_en"
+                                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                    />
+                                                                                </div>
 
-                                                                        <div>
-                                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                                {t('branches.whatsappTemplateParams', { defaultValue: 'WhatsApp Template Parameter' })}
-                                                                            </label>
-                                                                            <input
-                                                                                type="text"
-                                                                                placeholder="{{1}}, {{2}}, {{3}}"
-                                                                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
-                                                                            />
-                                                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                                                {t('branches.whatsappTemplateParamsHint', { defaultValue: 'Komma-separiert, z.B. {{1}}, {{2}}, {{3}}' })}
-                                                                            </p>
-                                                                        </div>
+                                                                                <div>
+                                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                        {t('branches.whatsappTemplateParams', { defaultValue: 'WhatsApp Template Parameter' })}
+                                                                                    </label>
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={Array.isArray(currentTemplate.whatsappTemplateParams) ? currentTemplate.whatsappTemplateParams.join(', ') : (currentTemplate.whatsappTemplateParams || '')}
+                                                                                        onChange={(e) => {
+                                                                                            const params = e.target.value.split(',').map(p => p.trim()).filter(p => p);
+                                                                                            setFormData({
+                                                                                                ...formData,
+                                                                                                messageTemplates: {
+                                                                                                    ...formData.messageTemplates,
+                                                                                                    [selectedTemplateType]: {
+                                                                                                        ...formData.messageTemplates?.[selectedTemplateType],
+                                                                                                        [selectedLanguage]: {
+                                                                                                            ...currentTemplate,
+                                                                                                            whatsappTemplateParams: params
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                            });
+                                                                                        }}
+                                                                                        placeholder="{{1}}, {{2}}, {{3}}"
+                                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                    />
+                                                                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                                                        {t('branches.whatsappTemplateParamsHint', { defaultValue: 'Komma-separiert, z.B. {{1}}, {{2}}, {{3}}' })}
+                                                                                    </p>
+                                                                                </div>
 
-                                                                        <div>
-                                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                                {t('branches.emailSubject', { defaultValue: 'Email Betreff' })}
-                                                                            </label>
-                                                                            <input
-                                                                                type="text"
-                                                                                placeholder="Welcome to La Familia Hostel - Online Check-in"
-                                                                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
-                                                                            />
-                                                                        </div>
+                                                                                <div>
+                                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                        {t('branches.emailSubject', { defaultValue: 'Email Betreff' })}
+                                                                                    </label>
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={currentTemplate.emailSubject || ''}
+                                                                                        onChange={(e) => {
+                                                                                            setFormData({
+                                                                                                ...formData,
+                                                                                                messageTemplates: {
+                                                                                                    ...formData.messageTemplates,
+                                                                                                    [selectedTemplateType]: {
+                                                                                                        ...formData.messageTemplates?.[selectedTemplateType],
+                                                                                                        [selectedLanguage]: {
+                                                                                                            ...currentTemplate,
+                                                                                                            emailSubject: e.target.value
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                            });
+                                                                                        }}
+                                                                                        placeholder="Welcome to La Familia Hostel - Online Check-in"
+                                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                    />
+                                                                                </div>
 
-                                                                        <div>
-                                                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                                {t('branches.emailContent', { defaultValue: 'Email Inhalt' })}
-                                                                            </label>
-                                                                            <textarea
-                                                                                rows={10}
-                                                                                placeholder="Hello {{guestName}}, ..."
-                                                                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
-                                                                            />
-                                                                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                                                {t('branches.templateVariables', { defaultValue: 'Verfügbare Variablen' })}: 
-                                                                                <span className="font-mono">
-                                                                                    {t('branches.templateVariables.checkInInvitation', { defaultValue: '{{guestName}}, {{checkInLink}}, {{paymentLink}}' })}
-                                                                                </span>
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
+                                                                                <div>
+                                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                        {t('branches.emailContent', { defaultValue: 'Email Inhalt' })}
+                                                                                    </label>
+                                                                                    <textarea
+                                                                                        rows={10}
+                                                                                        value={currentTemplate.emailContent || ''}
+                                                                                        onChange={(e) => {
+                                                                                            setFormData({
+                                                                                                ...formData,
+                                                                                                messageTemplates: {
+                                                                                                    ...formData.messageTemplates,
+                                                                                                    [selectedTemplateType]: {
+                                                                                                        ...formData.messageTemplates?.[selectedTemplateType],
+                                                                                                        [selectedLanguage]: {
+                                                                                                            ...currentTemplate,
+                                                                                                            emailContent: e.target.value
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                            });
+                                                                                        }}
+                                                                                        placeholder="Hello {{guestName}}, ..."
+                                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                    />
+                                                                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                                                        {t('branches.templateVariables', { defaultValue: 'Verfügbare Variablen' })}: 
+                                                                                        <span className="font-mono">
+                                                                                            {selectedTemplateType === 'checkInInvitation' 
+                                                                                                ? t('branches.templateVariables.checkInInvitation', { defaultValue: '{{guestName}}, {{checkInLink}}, {{paymentLink}}' })
+                                                                                                : t('branches.templateVariables.checkInConfirmation', { defaultValue: '{{guestName}}, {{roomDisplay}}, {{doorPin}}, {{doorAppName}}' })
+                                                                                            }
+                                                                                        </span>
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })()}
                                                                 </div>
                                                             </div>
                                                         </div>

@@ -174,21 +174,42 @@ model TaskDeleteHistory {
 
 **Datei:** `backend/src/controllers/taskController.ts`
 
-**Änderung:**
+**Änderungen:**
+1. `createdById` hinzufügen
+2. Initiale Status-Historie erstellen
+
 ```typescript
 export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) => {
     // ... bestehender Code ...
     
+    const taskStatus = taskData.status || 'open';
+    
     const taskCreateData: any = {
         title: taskData.title,
         description: taskData.description || '',
-        status: taskData.status || 'open',
+        status: taskStatus,
         qualityControlId: taskData.qualityControlId,
         branchId: taskData.branchId,
         dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
         organizationId: req.organizationId || null,
         createdById: req.userId ? Number(req.userId) : null  // NEU
     };
+    
+    // ... rest des Codes zum Erstellen des Tasks ...
+    
+    // ✅ INITIAL STATUS-HISTORIE: Erstelle initiale Status-Historie
+    if (req.userId) {
+        await prisma.taskStatusHistory.create({
+            data: {
+                taskId: task.id,
+                userId: Number(req.userId),
+                oldStatus: null, // Initial: kein alter Status
+                newStatus: taskStatus,
+                branchId: taskData.branchId,
+                changedAt: new Date()
+            }
+        });
+    }
     
     // ... rest des Codes ...
 };
@@ -217,7 +238,34 @@ export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
         // ✅ OPTIONAL: Abhängige Datensätze können bleiben (Cascade Delete wird nicht ausgelöst)
         // Oder: Abhängige Datensätze auch soft-deleten (falls nötig)
         
-        // ... Benachrichtigungen ...
+        // ✅ NOTIFICATIONS: Benachrichtigungen bei Soft Delete (bereits vorhanden, bleibt gleich)
+        // Benachrichtigung für den Verantwortlichen
+        if (task.responsibleId) {
+            const userLang = await getUserLanguage(task.responsibleId);
+            const notificationText = getTaskNotificationText(userLang, 'deleted', task.title);
+            await createNotificationIfEnabled({
+                userId: task.responsibleId,
+                title: notificationText.title,
+                message: notificationText.message,
+                type: NotificationType.task,
+                relatedEntityId: taskId,
+                relatedEntityType: 'delete' // ✅ WICHTIG: 'delete' für Soft Delete
+            });
+        }
+        
+        // Benachrichtigung für die Qualitätskontrolle
+        if (task.qualityControlId && task.qualityControlId !== task.responsibleId) {
+            const userLang = await getUserLanguage(task.qualityControlId);
+            const notificationText = getTaskNotificationText(userLang, 'deleted', task.title);
+            await createNotificationIfEnabled({
+                userId: task.qualityControlId,
+                title: notificationText.title,
+                message: notificationText.message,
+                type: NotificationType.task,
+                relatedEntityId: taskId,
+                relatedEntityType: 'delete' // ✅ WICHTIG: 'delete' für Soft Delete
+            });
+        }
     } catch (error) {
         // ... Fehlerbehandlung ...
     }
@@ -226,7 +274,39 @@ export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
 
 **WICHTIG:** Alle Queries müssen `deletedAt IS NULL` Filter enthalten!
 
-#### 3.3 Request-Controller: `updateRequest` erweitern
+#### 3.3 Request-Controller: `createRequest` erweitern (Initial Status-Historie)
+
+**Datei:** `backend/src/controllers/requestController.ts`
+
+**Änderung:** Initiale Status-Historie beim Erstellen
+
+```typescript
+export const createRequest = async (req: Request<{}, {}, RequestData>, res: Response) => {
+    // ... bestehender Code zum Erstellen des Requests ...
+    
+    const requestStatus = req.body.status || 'approval';
+    
+    // ... Request erstellen ...
+    
+    // ✅ INITIAL STATUS-HISTORIE: Erstelle initiale Status-Historie
+    if (req.userId) {
+        await prisma.requestStatusHistory.create({
+            data: {
+                requestId: request.id,
+                userId: Number(req.userId),
+                oldStatus: null, // Initial: kein alter Status
+                newStatus: requestStatus as RequestStatus,
+                branchId: request.branchId,
+                changedAt: new Date()
+            }
+        });
+    }
+    
+    // ... rest des Codes ...
+};
+```
+
+#### 3.4 Request-Controller: `updateRequest` erweitern
 
 **Datei:** `backend/src/controllers/requestController.ts`
 
@@ -253,7 +333,7 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
 };
 ```
 
-#### 3.4 Request-Controller: `deleteRequest` auf Soft Delete umstellen
+#### 3.5 Request-Controller: `deleteRequest` auf Soft Delete umstellen
 
 **Datei:** `backend/src/controllers/requestController.ts`
 
@@ -272,14 +352,41 @@ export const deleteRequest = async (req: Request<{ id: string }>, res: Response)
             }
         });
         
-        // ... Benachrichtigungen ...
+        // ✅ NOTIFICATIONS: Benachrichtigungen bei Soft Delete
+        // Benachrichtigung für den Requester
+        if (existingRequest.requesterId) {
+            const userLang = await getUserLanguage(existingRequest.requesterId);
+            const notificationText = getRequestNotificationText(userLang, 'deleted', existingRequest.title);
+            await createNotificationIfEnabled({
+                userId: existingRequest.requesterId,
+                title: notificationText.title,
+                message: notificationText.message,
+                type: NotificationType.request,
+                relatedEntityId: parseInt(id),
+                relatedEntityType: 'delete' // ✅ WICHTIG: 'delete' für Soft Delete
+            });
+        }
+        
+        // Benachrichtigung für den Verantwortlichen
+        if (existingRequest.responsibleId && existingRequest.responsibleId !== existingRequest.requesterId) {
+            const userLang = await getUserLanguage(existingRequest.responsibleId);
+            const notificationText = getRequestNotificationText(userLang, 'deleted', existingRequest.title);
+            await createNotificationIfEnabled({
+                userId: existingRequest.responsibleId,
+                title: notificationText.title,
+                message: notificationText.message,
+                type: NotificationType.request,
+                relatedEntityId: parseInt(id),
+                relatedEntityType: 'delete' // ✅ WICHTIG: 'delete' für Soft Delete
+            });
+        }
     } catch (error) {
         // ... Fehlerbehandlung ...
     }
 };
 ```
 
-#### 3.5 Alle Task/Request Queries erweitern
+#### 3.6 Alle Task/Request Queries erweitern
 
 **WICHTIG:** Alle Queries müssen `deletedAt IS NULL` Filter enthalten!
 
@@ -311,27 +418,143 @@ const tasks = await prisma.task.findMany({
 
 **Datei:** `backend/src/controllers/analyticsController.ts`
 
+**⚠️ WICHTIG:** 
+- Pagination implementieren
+- `deletedAt IS NULL` Filter verwenden
+- Nur benötigte Felder selektieren (keine Attachments!)
+
 **Neue Funktionen:**
 
 ```typescript
 // User-zentriert: Tasks
 export const getUserTasksActivity = async (req: Request, res: Response) => {
+    // ✅ PAGINATION: Query-Parameter
+    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const offset = parseInt(req.query.offset as string, 10) || 0;
+    
     // Query-Parameter:
     // - userId (optional, falls leer: alle User)
     // - startDate, endDate (oder period: 'today'|'week'|'month'|'year')
     // - branchId (optional)
     
-    // Rückgabe:
-    // - User-Liste mit:
-    //   - Tasks erstellt (mit createdAt, createdBy)
-    //   - Status-Änderungen (aus TaskStatusHistory, mit changedAt, userId, oldStatus, newStatus)
-    //   - Tasks gelöscht (mit deletedAt, deletedById)
-    // - Alle chronologisch sortiert
+    const { start, end } = getDateRange(
+        req.query.period as any || 'today',
+        req.query.startDate as string,
+        req.query.endDate as string
+    );
+    
+    const isolationFilter = getDataIsolationFilter(req as any, 'task');
+    
+    // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+    const tasks = await prisma.task.findMany({
+        where: {
+            ...isolationFilter,
+            ...getNotDeletedFilter(), // ✅ WICHTIG: deletedAt IS NULL
+            createdAt: { gte: start, lte: end },
+            ...(req.query.userId ? { createdById: parseInt(req.query.userId as string, 10) } : {}),
+            ...(req.query.branchId ? { branchId: parseInt(req.query.branchId as string, 10) } : {})
+        },
+        select: {
+            id: true,
+            title: true,
+            createdAt: true,
+            createdById: true,
+            deletedAt: true,
+            deletedById: true,
+            _count: {
+                select: { attachments: true } // Nur Count, keine Binary-Daten!
+            },
+            createdBy: {
+                select: { id: true, firstName: true, lastName: true }
+            },
+            deletedBy: {
+                select: { id: true, firstName: true, lastName: true }
+            }
+        },
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: 'desc' }
+    });
+    
+    // Status-Änderungen für diese Tasks
+    const taskIds = tasks.map(t => t.id);
+    const statusChanges = await prisma.taskStatusHistory.findMany({
+        where: {
+            taskId: { in: taskIds },
+            changedAt: { gte: start, lte: end }
+        },
+        select: {
+            taskId: true,
+            userId: true,
+            oldStatus: true,
+            newStatus: true,
+            changedAt: true,
+            user: {
+                select: { id: true, firstName: true, lastName: true }
+            }
+        },
+        orderBy: { changedAt: 'desc' }
+    });
+    
+    const totalCount = await prisma.task.count({
+        where: {
+            ...isolationFilter,
+            ...getNotDeletedFilter(),
+            createdAt: { gte: start, lte: end }
+        }
+    });
+    
+    // Gruppiere nach User
+    const userActivity: Record<number, any> = {};
+    
+    tasks.forEach(task => {
+        if (task.createdById) {
+            if (!userActivity[task.createdById]) {
+                userActivity[task.createdById] = {
+                    user: task.createdBy,
+                    tasksCreated: [],
+                    tasksDeleted: [],
+                    statusChanges: []
+                };
+            }
+            userActivity[task.createdById].tasksCreated.push(task);
+        }
+        
+        if (task.deletedAt && task.deletedById) {
+            if (!userActivity[task.deletedById]) {
+                userActivity[task.deletedById] = {
+                    user: task.deletedBy,
+                    tasksCreated: [],
+                    tasksDeleted: [],
+                    statusChanges: []
+                };
+            }
+            userActivity[task.deletedById].tasksDeleted.push(task);
+        }
+    });
+    
+    statusChanges.forEach(change => {
+        if (!userActivity[change.userId]) {
+            userActivity[change.userId] = {
+                user: change.user,
+                tasksCreated: [],
+                tasksDeleted: [],
+                statusChanges: []
+            };
+        }
+        userActivity[change.userId].statusChanges.push(change);
+    });
+    
+    res.json({
+        data: Object.values(userActivity),
+        totalCount,
+        hasMore: offset + tasks.length < totalCount
+    });
 };
 
 // User-zentriert: Requests
 export const getUserRequestsActivity = async (req: Request, res: Response) => {
-    // Analog zu getUserTasksActivity
+    // Analog zu getUserTasksActivity, aber für Requests
     // - Requests erstellt (mit createdAt, requesterId)
     // - Status-Änderungen (aus RequestStatusHistory)
     // - Requests gelöscht (mit deletedAt, deletedById)
@@ -340,25 +563,120 @@ export const getUserRequestsActivity = async (req: Request, res: Response) => {
 
 #### 4.2 Neue Endpunkte für Task/Request-zentrierte Analyse
 
+**⚠️ WICHTIG:** 
+- Pagination implementieren
+- `deletedAt IS NULL` Filter verwenden (oder explizit gelöschte anzeigen)
+- Nur benötigte Felder selektieren (keine Attachments!)
+
 ```typescript
 // Task-zentriert
 export const getTasksActivity = async (req: Request, res: Response) => {
+    // ✅ PAGINATION: Query-Parameter
+    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const offset = parseInt(req.query.offset as string, 10) || 0;
+    
     // Query-Parameter:
     // - startDate, endDate (oder period)
     // - branchId (optional)
     // - userId (optional, Filter nach createdBy)
+    // - includeDeleted (optional, boolean - zeigt auch gelöschte Tasks)
     
-    // Rückgabe:
-    // - Task-Liste mit:
-    //   - createdAt, createdBy (User)
-    //   - Status-Änderungen (aus TaskStatusHistory, chronologisch)
-    //   - deletedAt, deletedBy (falls gelöscht)
-    // - Chronologisch nach createdAt sortiert
+    const { start, end } = getDateRange(
+        req.query.period as any || 'today',
+        req.query.startDate as string,
+        req.query.endDate as string
+    );
+    
+    const isolationFilter = getDataIsolationFilter(req as any, 'task');
+    const includeDeleted = req.query.includeDeleted === 'true';
+    
+    // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+    const tasks = await prisma.task.findMany({
+        where: {
+            ...isolationFilter,
+            ...(includeDeleted ? {} : getNotDeletedFilter()), // Optional: gelöschte anzeigen
+            createdAt: { gte: start, lte: end },
+            ...(req.query.userId ? { createdById: parseInt(req.query.userId as string, 10) } : {}),
+            ...(req.query.branchId ? { branchId: parseInt(req.query.branchId as string, 10) } : {})
+        },
+        select: {
+            id: true,
+            title: true,
+            status: true,
+            createdAt: true,
+            createdById: true,
+            deletedAt: true,
+            deletedById: true,
+            _count: {
+                select: { attachments: true, statusHistory: true } // Nur Count!
+            },
+            createdBy: {
+                select: { id: true, firstName: true, lastName: true }
+            },
+            deletedBy: {
+                select: { id: true, firstName: true, lastName: true }
+            }
+        },
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: 'desc' }
+    });
+    
+    // Status-Historie für diese Tasks
+    const taskIds = tasks.map(t => t.id);
+    const statusHistory = await prisma.taskStatusHistory.findMany({
+        where: {
+            taskId: { in: taskIds }
+        },
+        select: {
+            taskId: true,
+            userId: true,
+            oldStatus: true,
+            newStatus: true,
+            changedAt: true,
+            user: {
+                select: { id: true, firstName: true, lastName: true }
+            }
+        },
+        orderBy: { changedAt: 'asc' } // Chronologisch
+    });
+    
+    // Gruppiere Status-Historie nach Task
+    const statusHistoryByTask: Record<number, any[]> = {};
+    statusHistory.forEach(change => {
+        if (!statusHistoryByTask[change.taskId]) {
+            statusHistoryByTask[change.taskId] = [];
+        }
+        statusHistoryByTask[change.taskId].push(change);
+    });
+    
+    // Kombiniere Tasks mit Status-Historie
+    const tasksWithHistory = tasks.map(task => ({
+        ...task,
+        statusHistory: statusHistoryByTask[task.id] || []
+    }));
+    
+    const totalCount = await prisma.task.count({
+        where: {
+            ...isolationFilter,
+            ...(includeDeleted ? {} : getNotDeletedFilter()),
+            createdAt: { gte: start, lte: end }
+        }
+    });
+    
+    res.json({
+        data: tasksWithHistory,
+        totalCount,
+        hasMore: offset + tasks.length < totalCount
+    });
 };
 
 // Request-zentriert
 export const getRequestsActivity = async (req: Request, res: Response) => {
-    // Analog zu getTasksActivity
+    // Analog zu getTasksActivity, aber für Requests
+    // - Requests erstellt (mit createdAt, requesterId)
+    // - Status-Änderungen (aus RequestStatusHistory, chronologisch)
+    // - deletedAt, deletedBy (falls gelöscht)
 };
 ```
 
@@ -549,12 +867,14 @@ export const DateRangeSelector: React.FC = () => {
 };
 ```
 
-#### 6.3 Hook: `useActivityData` (Caching)
+#### 6.3 Hook: `useActivityData` (Caching) - KORRIGIERT
 
 **Datei:** `frontend/src/hooks/useActivityData.ts`
 
+**⚠️ WICHTIG: Memory Leak Prevention!**
+
 ```typescript
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axiosInstance from '../config/axios';
 import { API_ENDPOINTS } from '../config/api';
 
@@ -575,19 +895,32 @@ export const useActivityData = (options: UseActivityDataOptions) => {
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     
+    // ✅ MEMORY: Ref für options, um Memory Leak zu vermeiden
+    const optionsRef = useRef(options);
+    useEffect(() => {
+        optionsRef.current = options;
+    }, [options]);
+    
     // ✅ CACHING: Cache-Key basierend auf Parametern
     const cacheKey = options.cacheKey || `${options.type}-${options.period}-${options.startDate}-${options.endDate}-${options.userId}-${options.branchId}`;
     
+    // ✅ MEMORY: fetchData ohne options-Dependency (verwendet Ref)
     const fetchData = useCallback(async () => {
+        const opts = optionsRef.current; // Ref verwenden!
+        
         // ✅ CACHING: Prüfe lokalen Cache (sessionStorage)
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) {
-            const cachedData = JSON.parse(cached);
-            const cacheAge = Date.now() - cachedData.timestamp;
-            // Cache gültig für 5 Minuten
-            if (cacheAge < 5 * 60 * 1000) {
-                setData(cachedData.data);
-                return;
+            try {
+                const cachedData = JSON.parse(cached);
+                const cacheAge = Date.now() - cachedData.timestamp;
+                // Cache gültig für 5 Minuten
+                if (cacheAge < 5 * 60 * 1000) {
+                    setData(cachedData.data);
+                    return;
+                }
+            } catch (e) {
+                // Cache invalid, weiter mit Fetch
             }
         }
         
@@ -596,16 +929,16 @@ export const useActivityData = (options: UseActivityDataOptions) => {
         
         try {
             const params: any = {
-                period: options.period
+                period: opts.period
             };
             
-            if (options.startDate) params.startDate = options.startDate;
-            if (options.endDate) params.endDate = options.endDate;
-            if (options.userId) params.userId = options.userId;
-            if (options.branchId) params.branchId = options.branchId;
+            if (opts.startDate) params.startDate = opts.startDate;
+            if (opts.endDate) params.endDate = opts.endDate;
+            if (opts.userId) params.userId = opts.userId;
+            if (opts.branchId) params.branchId = opts.branchId;
             
             let endpoint = '';
-            switch (options.type) {
+            switch (opts.type) {
                 case 'user-tasks':
                     endpoint = API_ENDPOINTS.TEAM_WORKTIME.ANALYTICS.USER_TASKS_ACTIVITY;
                     break;
@@ -623,10 +956,14 @@ export const useActivityData = (options: UseActivityDataOptions) => {
             const response = await axiosInstance.get(endpoint, { params });
             
             // ✅ CACHING: Speichere in sessionStorage
-            sessionStorage.setItem(cacheKey, JSON.stringify({
-                data: response.data,
-                timestamp: Date.now()
-            }));
+            try {
+                sessionStorage.setItem(cacheKey, JSON.stringify({
+                    data: response.data,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                // sessionStorage voll oder nicht verfügbar, ignoriere
+            }
             
             setData(response.data);
         } catch (err: any) {
@@ -634,11 +971,19 @@ export const useActivityData = (options: UseActivityDataOptions) => {
         } finally {
             setLoading(false);
         }
-    }, [cacheKey, options]);
+    }, [cacheKey]); // Nur cacheKey als Dependency!
     
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+    
+    // ✅ MEMORY: Optional: Cleanup für Cache beim Unmount
+    useEffect(() => {
+        return () => {
+            // Optional: Cache löschen beim Unmount
+            // sessionStorage.removeItem(cacheKey);
+        };
+    }, [cacheKey]);
     
     return {
         data,
@@ -860,29 +1205,316 @@ interface ActivityTimelineProps {
 3. Frontend-Tests für Komponenten
 4. E2E-Tests für User-Flows
 
+## ⚠️ KRITISCHE FEHLENDE PUNKTE - MÜSSEN ERGÄNZT WERDEN
+
+### 1. Initial Status-Historie beim Erstellen
+
+**Problem:** Beim Erstellen von Tasks/Requests wird keine initiale Status-Historie erstellt.
+
+**Lösung:**
+- **Tasks:** Beim `createTask` initiale Status-Historie mit `oldStatus: null`, `newStatus: 'open'` (oder übergebenem Status) erstellen
+- **Requests:** Beim `createRequest` initiale Status-Historie mit `oldStatus: null`, `newStatus: 'approval'` (oder übergebenem Status) erstellen
+
+**Dateien:**
+- `backend/src/controllers/taskController.ts` - `createTask` erweitern
+- `backend/src/controllers/requestController.ts` - `createRequest` erweitern
+
+### 2. Alle Queries mit deletedAt Filter erweitern
+
+**Problem:** 45 Controller-Dateien müssen geprüft werden, ob sie Tasks/Requests abfragen.
+
+**Vollständige Liste der zu prüfenden Dateien:**
+- `backend/src/controllers/taskController.ts` - Alle Queries
+- `backend/src/controllers/requestController.ts` - Alle Queries
+- `backend/src/controllers/analyticsController.ts` - Alle Queries
+- `backend/src/controllers/branchController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/reservationController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/userController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/lobbyPmsController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/authController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/whatsappController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/organizationController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/worktimeController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/userAvailabilityController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/urlMetadataController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/ttlockController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/tourReservationController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/tourProviderController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/tourController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/tourBookingController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/teamWorktimeController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/taskAttachmentController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/tableSettingsController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/shiftTemplateController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/shiftSwapController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/shiftController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/settingsController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/savedFilterController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/roleController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/requestAttachmentController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/payrollController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/passwordManagerController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/notificationController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/monthlyConsultationReportController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/lifecycleController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/joinRequestController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/invoiceSettingsController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/identificationDocumentController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/emailReservationController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/databaseController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/consultationInvoiceController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/consultationController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/clientController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/cerebroMediaController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/cerebroExternalLinksController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/cerebroController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+- `backend/src/controllers/boldPaymentController.ts` - Prüfen ob Tasks/Requests abgefragt werden
+
+**Helper-Funktion:**
+```typescript
+// backend/src/utils/prisma.ts
+export const getNotDeletedFilter = () => ({
+    deletedAt: null
+});
+
+// Verwendung in ALLEN Queries:
+const tasks = await prisma.task.findMany({
+    where: {
+        ...getNotDeletedFilter(),
+        // ... andere Filter ...
+    }
+});
+```
+
+### 3. Memory Leaks in useActivityData Hook
+
+**Problem:** `useActivityData` Hook hat Memory Leak durch `useEffect` mit `fetchData` als Dependency.
+
+**Lösung:**
+```typescript
+// ❌ VORHER (FALSCH - Memory Leak):
+const fetchData = useCallback(async () => {
+    // ...
+}, [cacheKey, options]); // options ist Objekt → wird bei jedem Render neu erstellt!
+
+useEffect(() => {
+    fetchData();
+}, [fetchData]); // fetchData wird bei jedem Render neu erstellt → Memory Leak!
+
+// ✅ NACHHER (RICHTIG):
+const optionsRef = useRef(options);
+useEffect(() => {
+    optionsRef.current = options;
+}, [options]);
+
+const fetchData = useCallback(async () => {
+    const opts = optionsRef.current; // Ref verwenden!
+    // ...
+}, []); // Keine Dependencies!
+
+useEffect(() => {
+    fetchData();
+}, [fetchData]); // fetchData ist jetzt stabil
+```
+
+**Zusätzlich:** Cleanup für sessionStorage Cache beim Unmount:
+```typescript
+useEffect(() => {
+    return () => {
+        // Optional: Cache löschen beim Unmount (oder bei Tab-Wechsel)
+        // sessionStorage.removeItem(cacheKey);
+    };
+}, [cacheKey]);
+```
+
+### 4. Pagination für Analytics-Endpunkte
+
+**Problem:** Keine Pagination in Analytics-Endpunkten → kann bei großen Datenmengen zu Performance-Problemen führen.
+
+**Lösung:**
+- Alle Analytics-Endpunkte müssen Pagination unterstützen
+- Query-Parameter: `limit` (default: 50), `offset` (default: 0)
+- Rückgabe: `{ data: [...], totalCount: number, hasMore: boolean }`
+
+**Beispiel:**
+```typescript
+export const getUserTasksActivity = async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const offset = parseInt(req.query.offset as string, 10) || 0;
+    
+    // ... Query mit take/skip ...
+    
+    const totalCount = await prisma.task.count({ where: { ... } });
+    
+    res.json({
+        data: results,
+        totalCount,
+        hasMore: offset + results.length < totalCount
+    });
+};
+```
+
+### 5. Berechtigungen für neue Tabs
+
+**Problem:** Neue Tabs brauchen Berechtigungen.
+
+**Lösung:**
+- **Seed-File:** Keine neuen Berechtigungen nötig (Tabs sind Teil von `team_worktime_control` Page)
+- **Frontend:** Prüfe `team_worktime_control` Page-Berechtigung (bereits vorhanden)
+- **Backend:** Prüfe `isTeamManager` Middleware (bereits vorhanden)
+
+**Dateien:**
+- `backend/prisma/seed.ts` - Keine Änderung nötig
+- `frontend/src/pages/TeamWorktimeControl.tsx` - Bereits vorhanden
+- `backend/src/routes/teamWorktimeRoutes.ts` - Bereits vorhanden
+
+### 6. Übersetzungen (I18N)
+
+**Problem:** Alle neuen Texte müssen übersetzt werden.
+
+**Lösung:**
+- Alle Texte in neuen Komponenten müssen `t()` verwenden
+- Übersetzungskeys in `de.json`, `en.json`, `es.json` hinzufügen
+
+**Benötigte Übersetzungskeys:**
+```json
+{
+  "analytics": {
+    "period": {
+      "today": "Heute",
+      "week": "Diese Woche",
+      "month": "Diesen Monat",
+      "year": "Dieses Jahr",
+      "custom": "Benutzerdefiniert"
+    },
+    "userActivity": {
+      "title": "User-Aktivität",
+      "tasksCreated": "Tasks erstellt",
+      "tasksDeleted": "Tasks gelöscht",
+      "statusChanges": "Status-Änderungen"
+    },
+    "taskActivity": {
+      "title": "Task-Aktivität",
+      "createdBy": "Erstellt von",
+      "deletedBy": "Gelöscht von",
+      "statusHistory": "Status-Historie"
+    }
+  }
+}
+```
+
+**Dateien:**
+- `frontend/src/i18n/locales/de.json`
+- `frontend/src/i18n/locales/en.json`
+- `frontend/src/i18n/locales/es.json`
+
+### 7. Notifications bei Soft Delete
+
+**Problem:** Bei Soft Delete müssen Notifications gesendet werden.
+
+**Lösung:**
+- `deleteTask` und `deleteRequest` müssen `createNotificationIfEnabled` aufrufen
+- `relatedEntityType: 'delete'` verwenden
+- Übersetzungen in `backend/src/utils/translations.ts` prüfen (bereits vorhanden: `getTaskNotificationText`, `getRequestNotificationText`)
+
+**Dateien:**
+- `backend/src/controllers/taskController.ts` - `deleteTask` erweitern
+- `backend/src/controllers/requestController.ts` - `deleteRequest` erweitern
+
+### 8. Filter-System Integration
+
+**Problem:** Neue Analytics-Tabs müssen Filter-System unterstützen.
+
+**Lösung:**
+- `FilterPane` Komponente verwenden (bereits vorhanden)
+- `SavedFilterTags` Komponente verwenden (bereits vorhanden)
+- Filter-Logik in Backend-Endpunkten implementieren
+
+**Dateien:**
+- `frontend/src/components/teamWorktime/UserTasksActivityTab.tsx` - FilterPane integrieren
+- `frontend/src/components/teamWorktime/UserRequestsActivityTab.tsx` - FilterPane integrieren
+- `frontend/src/components/teamWorktime/TasksActivityTab.tsx` - FilterPane integrieren
+- `frontend/src/components/teamWorktime/RequestsActivityTab.tsx` - FilterPane integrieren
+
+### 9. Table Settings Integration
+
+**Problem:** Neue Analytics-Tabs müssen Table Settings unterstützen.
+
+**Lösung:**
+- `useTableSettings` Hook verwenden (bereits vorhanden)
+- Spalten-Reihenfolge, versteckte Spalten, View-Mode speichern
+
+**Dateien:**
+- Alle neuen Tab-Komponenten müssen `useTableSettings` verwenden
+
+### 10. Rückwärtskompatibilität
+
+**Problem:** Bestehende Tasks/Requests haben `createdById = null`.
+
+**Lösung:**
+- Migration muss `createdById` als nullable hinzufügen
+- Bestehende Daten bleiben `null` (OK für Analytics)
+- Neue Tasks/Requests bekommen `createdById` gesetzt
+
+### 11. Performance-Risiken
+
+**Risiken:**
+1. **Soft Delete wächst DB:** Gelöschte Tasks/Requests bleiben in DB
+   - **Lösung:** Optionales Cleanup-Script nach X Tagen (später implementieren)
+2. **Performance bei vielen gelöschten Einträgen:** Queries werden langsamer
+   - **Lösung:** Indizes auf `deletedAt` (bereits geplant)
+3. **Migration kann lange dauern:** Bei vielen Daten
+   - **Lösung:** Migration in Schritten, Indizes nach Migration erstellen
+4. **Breaking Changes:** Bestehende Queries müssen angepasst werden
+   - **Lösung:** Helper-Funktion `getNotDeletedFilter()` verwenden
+
+### 12. Memory Leak Prevention
+
+**Regeln:**
+1. **JEDER `setTimeout`/`setInterval` MUSS Cleanup haben:**
+   ```typescript
+   useEffect(() => {
+       const timeoutId = setTimeout(() => {}, 100);
+       return () => clearTimeout(timeoutId);
+   }, []);
+   ```
+2. **useCallback mit Objekt-Dependencies vermeiden:**
+   ```typescript
+   // ❌ FALSCH:
+   const fetchData = useCallback(() => {}, [options]); // options ist Objekt!
+   
+   // ✅ RICHTIG:
+   const optionsRef = useRef(options);
+   useEffect(() => { optionsRef.current = options; }, [options]);
+   const fetchData = useCallback(() => {
+       const opts = optionsRef.current; // Ref verwenden!
+   }, []);
+   ```
+3. **sessionStorage Cache Cleanup:** Optional beim Unmount oder Tab-Wechsel
+
 ## Offene Fragen / Entscheidungsbedarf
 
 1. **Soft Delete vs. Hard Delete:**
    - Soft Delete: Einfacher, aber Daten bleiben in DB
    - Hard Delete: Sauberer, aber Historie verloren
-   - **Empfehlung:** Soft Delete für Analytics, Hard Delete optional nach X Tagen
+   - **Entscheidung:** Soft Delete für Analytics, Hard Delete optional nach X Tagen
 
 2. **Separate Delete-Historie-Tabellen:**
    - Pro: Vollständige Historie auch nach Hard-Delete
    - Contra: Zusätzliche Komplexität
-   - **Empfehlung:** Erst Soft Delete, später optional erweitern
+   - **Entscheidung:** Erst Soft Delete, später optional erweitern
 
 3. **Tab-Struktur:**
    - Viele Tabs vs. Sub-Tabs
-   - **Empfehlung:** Neue Tabs, da bestehende bereits komplex
+   - **Entscheidung:** Neue Tabs, da bestehende bereits komplex
 
 4. **Caching-Strategie:**
    - Redis vs. In-Memory
-   - **Empfehlung:** Redis für Production, In-Memory für Development
+   - **Entscheidung:** Redis für Production, In-Memory für Development
 
 5. **Pagination:**
    - Infinite Scroll vs. Page-based
-   - **Empfehlung:** Infinite Scroll für bessere UX
+   - **Entscheidung:** Infinite Scroll für bessere UX
 
 ## Zusammenfassung
 
@@ -908,8 +1540,77 @@ interface ActivityTimelineProps {
 
 **Geschätzter Aufwand:**
 - Datenbank: 2-3 Stunden
-- Backend: 8-10 Stunden
-- Frontend: 12-15 Stunden
-- Testing: 4-6 Stunden
-- **Gesamt: 26-34 Stunden**
+- Backend: 12-15 Stunden (inkl. alle Queries prüfen, Pagination, Notifications)
+- Frontend: 15-18 Stunden (inkl. Memory Leak Fixes, Übersetzungen, Filter-Integration)
+- Testing: 6-8 Stunden
+- **Gesamt: 35-44 Stunden**
+
+## ✅ CHECKLISTE FÜR IMPLEMENTIERUNG
+
+### Datenbank
+- [ ] Schema-Änderungen in `schema.prisma`
+- [ ] Migration erstellen (rückwärtskompatibel!)
+- [ ] Indizes hinzufügen
+- [ ] Migration testen (lokal)
+- [ ] Migration auf Server anwenden
+
+### Backend - Controller-Anpassungen
+- [ ] `createTask` erweitern (`createdById` + Initial Status-Historie)
+- [ ] `createRequest` erweitern (Initial Status-Historie)
+- [ ] `deleteTask` auf Soft Delete umstellen + Notifications
+- [ ] `deleteRequest` auf Soft Delete umstellen + Notifications
+- [ ] `updateRequest` erweitern (Status-Historie)
+- [ ] **ALLE 45 Controller-Dateien prüfen** auf Task/Request Queries
+- [ ] `getNotDeletedFilter()` Helper-Funktion erstellen
+- [ ] Alle Queries mit `deletedAt IS NULL` Filter erweitern
+
+### Backend - Analytics-Controller
+- [ ] `getUserTasksActivity` implementieren (mit Pagination!)
+- [ ] `getUserRequestsActivity` implementieren (mit Pagination!)
+- [ ] `getTasksActivity` implementieren (mit Pagination!)
+- [ ] `getRequestsActivity` implementieren (mit Pagination!)
+- [ ] `getDateRange` Helper-Funktion erstellen
+- [ ] Routes registrieren
+- [ ] API-Endpunkte in Frontend config hinzufügen
+
+### Frontend - Hooks/Komponenten
+- [ ] `useDateRange` Hook erstellen
+- [ ] `DateRangeSelector` Komponente erstellen
+- [ ] `useActivityData` Hook erstellen (**Memory Leak Fix!**)
+- [ ] `ActivityTimeline` Komponente erstellen
+- [ ] `useActivityFilters` Hook erstellen
+
+### Frontend - Tab-Komponenten
+- [ ] `UserTasksActivityTab.tsx` erstellen
+- [ ] `UserRequestsActivityTab.tsx` erstellen
+- [ ] `TasksActivityTab.tsx` erstellen
+- [ ] `RequestsActivityTab.tsx` erstellen
+- [ ] Filter-System integrieren (FilterPane, SavedFilterTags)
+- [ ] Table Settings integrieren (useTableSettings)
+- [ ] **Übersetzungen hinzufügen** (de.json, en.json, es.json)
+
+### Frontend - TeamWorktimeControl
+- [ ] Neue Tabs hinzufügen
+- [ ] Tab-Navigation erweitern
+- [ ] Berechtigungen prüfen (bereits vorhanden)
+
+### Performance & Memory Leaks
+- [ ] Memory Leak Fix in `useActivityData` (useRef statt useCallback)
+- [ ] Cleanup für sessionStorage Cache
+- [ ] Pagination in allen Analytics-Endpunkten
+- [ ] Nur benötigte Felder selektieren (keine Attachments!)
+- [ ] Indizes auf `deletedAt` prüfen
+
+### Testing
+- [ ] Unit-Tests für Backend
+- [ ] Integration-Tests für API-Endpunkte
+- [ ] Frontend-Tests für Komponenten
+- [ ] E2E-Tests für User-Flows
+- [ ] Memory Leak Tests (React DevTools Profiler)
+- [ ] Performance-Tests (große Datenmengen)
+
+### Dokumentation
+- [ ] Implementation Report erstellen
+- [ ] API-Dokumentation aktualisieren
+- [ ] User-Dokumentation aktualisieren
 

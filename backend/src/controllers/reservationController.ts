@@ -613,15 +613,24 @@ export const getAllReservations = async (req: Request, res: Response) => {
     const offset = req.query.offset 
         ? parseInt(req.query.offset as string, 10) 
         : 0; // Standard: 0
+    // ✅ BRANCH-FILTER: branchId Query-Parameter unterstützen
+    const queryBranchId = req.query.branchId 
+        ? parseInt(req.query.branchId as string, 10) 
+        : undefined;
 
     // ✅ ROLLEN-ISOLATION: Baue Where-Clause basierend auf Rolle
     const whereClause: any = {
       organizationId: req.organizationId
     };
 
-    // Admin/Owner: Alle Reservations der Organisation (kein Branch-Filter)
-    if (isAdminOrOwner(req)) {
-      // Kein Branch-Filter für Admin/Owner
+    // ✅ BRANCH-FILTER: Wenn branchId als Query-Parameter übergeben wurde, verwende diesen (hat Priorität)
+    if (queryBranchId && !isNaN(queryBranchId)) {
+      whereClause.branchId = queryBranchId;
+      logger.log(`[Reservation] Filtere nach Branch ${queryBranchId} (Query-Parameter)`);
+    }
+    // Admin/Owner: Alle Reservations der Organisation (kein Branch-Filter, außer Query-Parameter)
+    else if (isAdminOrOwner(req)) {
+      // Kein Branch-Filter für Admin/Owner (wenn kein Query-Parameter)
       logger.log(`[Reservation] Admin/Owner: Zeige alle Reservations der Organisation`);
     } else {
       // User/Andere Rollen: Nur Reservations der eigenen Branch
