@@ -4,7 +4,7 @@ import { usePermissions } from '../../hooks/usePermissions.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useError } from '../../contexts/ErrorContext.tsx';
 import { useBranch } from '../../contexts/BranchContext.tsx';
-import { API_ENDPOINTS } from '../../config/api';
+import { API_ENDPOINTS } from '../../config/api.ts';
 import axios from 'axios';
 
 interface OTAListing {
