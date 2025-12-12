@@ -22,7 +22,7 @@
 --   }
 -- }
 
--- Update für alle Branches, die noch keine messageTemplates haben
+-- Update NUR für Branches Manila (ID: 3) und Poblado (ID: 4)
 UPDATE "Branch"
 SET "messageTemplates" = '{
   "checkInInvitation": {
@@ -66,7 +66,7 @@ SET "messageTemplates" = '{
     }
   }
 }'::jsonb
-WHERE "messageTemplates" IS NULL;
+WHERE "id" IN (3, 4);
 
--- Zeige Anzahl aktualisierter Branches
-SELECT COUNT(*) as "updated_branches" FROM "Branch" WHERE "messageTemplates" IS NOT NULL;
+-- Zeige aktualisierte Branches
+SELECT id, name, "messageTemplates" IS NOT NULL as "has_templates" FROM "Branch" WHERE "id" IN (3, 4);
