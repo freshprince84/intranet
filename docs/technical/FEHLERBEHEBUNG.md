@@ -310,58 +310,6 @@ In `pm2 status` sieht man einen hohen Wert bei Neustarts
 
 ### Dokumentenerkennung
 
-#### Fehler: 413 "Request Entity Too Large" bei Dokumenten-Upload
-
-**Symptom:**
-```
-413 Request Entity Too Large
-Failed to load resource: the server responded with a status of 413
-```
-
-**Ursache:**
-- Nginx blockiert große Requests (standardmäßig 1MB Limit)
-- KI-basierte Dokumentenerkennung sendet Base64-kodierte Bilder im JSON-Body
-- Base64-kodierte Bilder sind sehr groß (2-5MB für ein Foto)
-- Nginx blockiert den Request, bevor er Express erreicht
-
-**Warum ist das jetzt nötig?**
-- **Vorher (OCR)**: Tesseract.js wurde clientseitig verwendet - Bilder wurden NICHT an Server gesendet
-- **Jetzt (OpenAI)**: Bilder werden als Base64-String an `/api/document-recognition` gesendet
-- Daher ist jetzt `client_max_body_size` in Nginx erforderlich
-
-**Lösung:**
-1. Öffnen Sie die Nginx-Konfigurationsdatei:
-   ```bash
-   sudo nano /etc/nginx/sites-available/intranet
-   ```
-   
-2. Fügen Sie `client_max_body_size 10M;` in der `/api` location hinzu:
-   ```nginx
-   location /api {
-       proxy_pass http://localhost:5000;
-       # ... andere Proxy-Einstellungen ...
-       
-       # ✅ FIX: Erhöhe Upload-Limit für Dokumenten-Uploads
-       client_max_body_size 10M;
-   }
-   ```
-   
-3. Prüfen Sie die Syntax:
-   ```bash
-   sudo nginx -t
-   ```
-   
-4. Laden Sie Nginx neu (ohne Neustart):
-   ```bash
-   sudo systemctl reload nginx
-   ```
-
-**Alternative:** Falls Sie die Konfigurationsdatei nicht finden:
-```bash
-# Finde die aktive Nginx-Konfiguration
-sudo nginx -T | grep -A 20 "location /api"
-```
-
 #### Fehler: "Cannot find module 'express-validator'"
 
 **Symptom:**

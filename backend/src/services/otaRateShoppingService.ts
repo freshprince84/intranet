@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
 const prisma = new PrismaClient();
 
@@ -234,20 +236,194 @@ export class OTARateShoppingService {
     startDate: Date,
     endDate: Date
   ): Promise<number> {
-    // TODO: Implementierung mit Web Scraping (Cheerio) oder API
-    // Für jetzt: Placeholder-Implementierung
-    logger.log(`[Hostelworld] Scraping für Listing ${listingId} von ${startDate.toISOString()} bis ${endDate.toISOString()}`);
-    
-    // Simuliere Preise (später durch echtes Scraping ersetzen)
-    const pricesCollected = 0;
-    
-    // Beispiel-Struktur für später:
-    // 1. HTTP-Request mit axios
-    // 2. HTML parsen mit cheerio
-    // 3. Preise extrahieren
-    // 4. In savePriceData speichern
-    
-    return pricesCollected;
+    try {
+      logger.log(`[Hostelworld] Starte Scraping für Listing ${listingId} von ${startDate.toISOString()} bis ${endDate.toISOString()}`);
+      
+      let pricesCollected = 0;
+      
+      // Iteriere über alle Daten im Zeitraum
+      const currentDate = new Date(startDate);
+      const end = new Date(endDate);
+      
+      while (currentDate <= end) {
+        try {
+          // Erstelle URL mit Check-in Datum
+          const checkInDate = currentDate.toISOString().split('T')[0];
+          const checkOutDate = new Date(currentDate);
+          checkOutDate.setDate(checkOutDate.getDate() + 1);
+          const checkOutDateStr = checkOutDate.toISOString().split('T')[0];
+          
+          // Hostelworld URL-Format: /hostels/{hostel-name}-{id}?dateFrom={date}&dateTo={date}
+          let urlWithDates = listingUrl;
+          if (urlWithDates.includes('?')) {
+            urlWithDates = `${urlWithDates}&dateFrom=${checkInDate}&dateTo=${checkOutDateStr}`;
+          } else {
+            urlWithDates = `${urlWithDates}?dateFrom=${checkInDate}&dateTo=${checkOutDateStr}`;
+          }
+          
+          // HTTP-Request mit User-Agent
+          const response = await axios.get(urlWithDates, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.5',
+              'Accept-Encoding': 'gzip, deflate, br',
+              'Connection': 'keep-alive',
+              'Upgrade-Insecure-Requests': '1'
+            },
+            timeout: 30000, // 30 Sekunden Timeout
+            maxRedirects: 5
+          });
+          
+          // HTML parsen
+          const $ = cheerio.load(response.data);
+          
+          // Preise extrahieren - verschiedene mögliche Selektoren für Hostelworld
+          let price: number | null = null;
+          let available = true;
+          let availableRooms: number | null = null;
+          
+          // Versuche verschiedene Selektoren für Hostelworld
+          // 1. .price-amount oder .price
+          const priceElement1 = $('.price-amount, .price').first();
+          if (priceElement1.length > 0) {
+            const priceText = priceElement1.text().replace(/[^\d,.-]/g, '').replace(',', '.');
+            const priceMatch = priceText.match(/(\d+\.?\d*)/);
+            if (priceMatch) {
+              price = parseFloat(priceMatch[1]);
+            }
+          }
+          
+          // 2. [data-price] oder data-price attribute
+          if (!price) {
+            const priceElement2 = $('[data-price]').first();
+            if (priceElement2.length > 0) {
+              const priceAttr = priceElement2.attr('data-price');
+              if (priceAttr) {
+                price = parseFloat(priceAttr);
+              }
+            }
+          }
+          
+          // 3. .room-price oder .dorm-price
+          if (!price) {
+            const priceElement3 = $('.room-price, .dorm-price, .private-price').first();
+            if (priceElement3.length > 0) {
+              const priceText = priceElement3.text().replace(/[^\d,.-]/g, '').replace(',', '.');
+              const priceMatch = priceText.match(/(\d+\.?\d*)/);
+              if (priceMatch) {
+                price = parseFloat(priceMatch[1]);
+              }
+            }
+          }
+          
+          // 4. Suche nach Preis in verschiedenen Formaten im Body
+          if (!price) {
+            const priceRegex = /(?:€|EUR|USD|\$|COP|COL|GBP|£)\s*(\d+[.,]?\d*)/gi;
+            const bodyText = $('body').text();
+            const matches = bodyText.match(priceRegex);
+            if (matches && matches.length > 0) {
+              // Nimm den ersten Preis-Match
+              const priceText = matches[0].replace(/[^\d,.-]/g, '').replace(',', '.');
+              const priceMatch = priceText.match(/(\d+\.?\d*)/);
+              if (priceMatch) {
+                price = parseFloat(priceMatch[1]);
+              }
+            }
+          }
+          
+          // Verfügbarkeit prüfen
+          // 1. Prüfe auf "Nicht verfügbar" oder ähnliche Meldungen
+          const unavailableTexts = [
+            'not available',
+            'nicht verfügbar',
+            'no beds available',
+            'keine betten verfügbar',
+            'sold out',
+            'ausgebucht',
+            'fully booked',
+            'voll belegt'
+          ];
+          
+          const bodyTextLower = $('body').text().toLowerCase();
+          for (const text of unavailableTexts) {
+            if (bodyTextLower.includes(text.toLowerCase())) {
+              available = false;
+              break;
+            }
+          }
+          
+          // 2. Prüfe auf Verfügbarkeits-Indikatoren
+          if (available) {
+            const availableIndicators = [
+              '.availability',
+              '.beds-available',
+              '[data-available]',
+              '.room-available'
+            ];
+            
+            for (const selector of availableIndicators) {
+              const element = $(selector).first();
+              if (element.length > 0) {
+                const text = element.text().toLowerCase();
+                if (text.includes('available') || text.includes('verfügbar')) {
+                  // Versuche Anzahl verfügbarer Betten zu extrahieren
+                  const bedMatch = text.match(/(\d+)\s*(?:bed|bett|beds|betten)/i);
+                  if (bedMatch) {
+                    availableRooms = parseInt(bedMatch[1], 10);
+                  }
+                  break;
+                }
+              }
+            }
+          }
+          
+          // 3. Prüfe auf "Book now" Button (indiziert Verfügbarkeit)
+          if (available) {
+            const bookButton = $('.book-now, .book-button, [data-action="book"]').first();
+            if (bookButton.length > 0) {
+              const buttonText = bookButton.text().toLowerCase();
+              if (buttonText.includes('book') || buttonText.includes('buchen')) {
+                available = true;
+              }
+            }
+          }
+          
+          // Speichere Preisdaten, wenn Preis gefunden wurde
+          if (price && price > 0) {
+            await this.savePriceData(
+              listingId,
+              new Date(currentDate),
+              price,
+              'COP', // Standard-Währung, kann später aus URL/Seite extrahiert werden
+              available,
+              availableRooms,
+              'rate_shopper'
+            );
+            pricesCollected++;
+            logger.log(`[Hostelworld] Preis für ${checkInDate}: ${price} COP, verfügbar: ${available}`);
+          } else {
+            logger.warn(`[Hostelworld] Kein Preis gefunden für ${checkInDate}`);
+          }
+          
+          // Rate-Limiting: Warte 3 Sekunden zwischen Requests
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Nächster Tag
+          currentDate.setDate(currentDate.getDate() + 1);
+        } catch (error: any) {
+          logger.error(`[Hostelworld] Fehler beim Scraping für ${currentDate.toISOString().split('T')[0]}:`, error.message);
+          // Weiter mit nächstem Tag
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      }
+      
+      logger.log(`[Hostelworld] Scraping abgeschlossen für Listing ${listingId}: ${pricesCollected} Preise gesammelt`);
+      return pricesCollected;
+    } catch (error: any) {
+      logger.error(`[Hostelworld] Fehler beim Scraping für Listing ${listingId}:`, error);
+      throw error;
+    }
   }
 
   /**

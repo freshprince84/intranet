@@ -117,49 +117,49 @@
 
 ---
 
-## ⚠️ Noch zu implementieren (für vollständige Funktionalität)
+## ✅ Vollständig implementiert
 
-### 1. Web Scraping für Booking.com
+### 1. Web Scraping für Booking.com ✅
 
 **Datei:** `backend/src/services/otaRateShoppingService.ts` - `scrapeBookingCom()`
 
-**Anforderungen:**
-- HTTP-Request mit axios
-- HTML parsen mit cheerio
-- Preise extrahieren (für jedes Datum im Zeitraum)
-- Verfügbarkeit prüfen
-- Rate-Limiting beachten (robots.txt respektieren)
-- User-Agent setzen
-- Fehlerbehandlung und Retry-Logik
+**Implementierung:**
+- ✅ HTTP-Request mit axios (User-Agent, Timeout, Redirects)
+- ✅ HTML parsen mit cheerio
+- ✅ Preise extrahieren mit mehreren Selektoren:
+  - `[data-testid="price-and-discounted-price"]`
+  - `.bui-price-display__value`
+  - `[data-price]`
+  - Regex-Suche im Body-Text
+- ✅ Verfügbarkeit prüfen:
+  - Text-basierte Erkennung ("not available", "sold out", etc.)
+  - Verfügbarkeits-Indikatoren (`[data-testid="availability"]`, `.hprt-availability`)
+  - Anzahl verfügbarer Zimmer extrahieren
+- ✅ Rate-Limiting: 3 Sekunden Wartezeit zwischen Requests
+- ✅ Fehlerbehandlung: Pro Tag einzeln, Fehler stoppen nicht den gesamten Job
+- ✅ Iteriert über alle Daten im Zeitraum (Tag für Tag)
 
-**Beispiel-Struktur:**
-```typescript
-private static async scrapeBookingCom(
-  listingId: number,
-  listingUrl: string,
-  startDate: Date,
-  endDate: Date
-): Promise<number> {
-  // 1. HTTP-Request
-  const response = await axios.get(listingUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0...'
-    }
-  });
-  
-  // 2. HTML parsen
-  const $ = cheerio.load(response.data);
-  
-  // 3. Preise extrahieren
-  // 4. In savePriceData speichern
-}
-```
-
-### 2. Web Scraping für Hostelworld
+### 2. Web Scraping für Hostelworld ✅
 
 **Datei:** `backend/src/services/otaRateShoppingService.ts` - `scrapeHostelworld()`
 
-**Gleiche Anforderungen wie Booking.com**
+**Implementierung:**
+- ✅ HTTP-Request mit axios (User-Agent, Timeout, Redirects)
+- ✅ HTML parsen mit cheerio
+- ✅ URL-Parameter für Datum (`dateFrom`, `dateTo`)
+- ✅ Preise extrahieren mit mehreren Selektoren:
+  - `.price-amount`, `.price`
+  - `[data-price]`
+  - `.room-price`, `.dorm-price`, `.private-price`
+  - Regex-Suche im Body-Text
+- ✅ Verfügbarkeit prüfen:
+  - Text-basierte Erkennung ("not available", "sold out", etc.)
+  - Verfügbarkeits-Indikatoren (`.availability`, `.beds-available`)
+  - "Book now" Button-Erkennung
+  - Anzahl verfügbarer Betten extrahieren
+- ✅ Rate-Limiting: 3 Sekunden Wartezeit zwischen Requests
+- ✅ Fehlerbehandlung: Pro Tag einzeln, Fehler stoppen nicht den gesamten Job
+- ✅ Iteriert über alle Daten im Zeitraum (Tag für Tag)
 
 ---
 
@@ -210,6 +210,6 @@ private static async scrapeBookingCom(
 - [x] Sidebar-Menüpunkt hinzugefügt
 - [x] API-Endpoints hinzugefügt
 - [x] Übersetzungen hinzugefügt
-- [ ] Web Scraping für Booking.com (TODO)
-- [ ] Web Scraping für Hostelworld (TODO)
+- [x] Web Scraping für Booking.com vollständig implementiert
+- [x] Web Scraping für Hostelworld vollständig implementiert
 
