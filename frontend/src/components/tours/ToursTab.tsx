@@ -69,7 +69,7 @@ const getTourHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> =>
 
 const ToursTab: React.FC<ToursTabProps> = () => {
     const { t } = useTranslation();
-    const { hasPermission } = usePermissions();
+    const { hasPermission, loading: permissionsLoading } = usePermissions();
     const { showMessage } = useMessage();
     
     // Fehlerbehandlung mit Fallback
@@ -383,10 +383,14 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     }, [loadTours, t]);
     
     // ✅ PERFORMANCE: Mit useCallback stabilisiert (verhindert Endlosschleife in useEffect)
+    // ✅ STANDARD: Wie in Requests.tsx - State setzen BEVOR Daten geladen werden
     const handleTourFilterChange = useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
         setTourSelectedFilterId(id);
         setTourActiveFilterName(name);
         if (id) {
+            // ✅ STANDARD: State setzen BEVOR Daten geladen werden (wie in Requests.tsx:706-708)
+            setTourFilterConditions(conditions);
+            setTourFilterLogicalOperators(operators);
             await loadTours(id);
         } else {
             await applyTourFilterConditions(conditions, operators);
@@ -401,7 +405,13 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     const initialLoadAttemptedRef = useRef(false);
     
     // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung mit leeren Dependencies (wie in Requests.tsx)
+    // ✅ STANDARD: Warte auf Berechtigungen (wie in JoinRequestsList.tsx)
     useEffect(() => {
+        // ✅ STANDARD: Warte bis Berechtigungen geladen sind
+        if (permissionsLoading) {
+            return;
+        }
+        
         // ✅ PERFORMANCE: Verhindere mehrfache Ausführung
         if (initialLoadAttemptedRef.current) {
             return;
@@ -412,6 +422,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
             initialLoadAttemptedRef.current = true;
             
             try {
+                // ✅ STANDARD: Prüfe Berechtigung direkt (nicht in Dependencies!)
                 if (!hasPermission('tours', 'read', 'table')) {
                     return;
                 }
@@ -443,7 +454,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
         };
         
         initialize();
-    }, []); // ✅ STANDARD: Leere Dependencies wie im Standard-Pattern (Requests.tsx:760)
+    }, [permissionsLoading]); // ✅ STANDARD: Nur permissionsLoading als Dependency (wie in JoinRequestsList.tsx)
     
     const handleTourSort = (key: TourSortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
