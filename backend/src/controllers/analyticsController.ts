@@ -2,8 +2,9 @@ import { Request, Response } from 'express';
 import { TaskStatus, RequestStatus } from '@prisma/client';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import { startOfDay, endOfDay, parseISO, format } from 'date-fns';
-import { prisma } from '../utils/prisma';
+import { prisma, getNotDeletedFilter } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { getDateRange, Period } from '../utils/dateHelpers';
 
 // To-Dos pro User für ein bestimmtes Datum
 export const getTodosByUserForDate = async (req: Request, res: Response) => {
@@ -972,6 +973,464 @@ export const getTodosShiftAnalysis = async (req: Request, res: Response) => {
     } catch (error) {
         logger.error('Fehler beim Abrufen der Schicht-Analyse:', error);
         res.status(500).json({ error: 'Fehler beim Abrufen der Schicht-Analyse' });
+    }
+};
+
+// User-zentriert: Tasks
+export const getUserTasksActivity = async (req: Request, res: Response) => {
+    try {
+        // ✅ PAGINATION: Query-Parameter
+        const limit = parseInt(req.query.limit as string, 10) || 50;
+        const offset = parseInt(req.query.offset as string, 10) || 0;
+        
+        const period = (req.query.period as Period) || 'today';
+        const startDate = req.query.startDate as string | undefined;
+        const endDate = req.query.endDate as string | undefined;
+        const userId = req.query.userId ? parseInt(req.query.userId as string, 10) : undefined;
+        const branchId = req.query.branchId ? parseInt(req.query.branchId as string, 10) : undefined;
+        
+        const { start, end } = getDateRange(period, startDate, endDate);
+        const isolationFilter = getDataIsolationFilter(req as any, 'task');
+        
+        // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+        const tasks = await prisma.task.findMany({
+            where: {
+                ...isolationFilter,
+                ...getNotDeletedFilter(),
+                createdAt: { gte: start, lte: end },
+                ...(userId ? { createdById: userId } : {}),
+                ...(branchId ? { branchId: branchId } : {})
+            },
+            select: {
+                id: true,
+                title: true,
+                createdAt: true,
+                createdById: true,
+                deletedAt: true,
+                deletedById: true,
+                _count: {
+                    select: { attachments: true }
+                },
+                createdBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                },
+                deletedBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            take: limit,
+            skip: offset,
+            orderBy: { createdAt: 'desc' }
+        });
+        
+        // Status-Änderungen für diese Tasks
+        const taskIds = tasks.map(t => t.id);
+        const statusChanges = await prisma.taskStatusHistory.findMany({
+            where: {
+                taskId: { in: taskIds },
+                changedAt: { gte: start, lte: end }
+            },
+            select: {
+                taskId: true,
+                userId: true,
+                oldStatus: true,
+                newStatus: true,
+                changedAt: true,
+                user: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { changedAt: 'desc' }
+        });
+        
+        const totalCount = await prisma.task.count({
+            where: {
+                ...isolationFilter,
+                ...getNotDeletedFilter(),
+                createdAt: { gte: start, lte: end }
+            }
+        });
+        
+        // Gruppiere nach User
+        const userActivity: Record<number, any> = {};
+        
+        tasks.forEach(task => {
+            if (task.createdById) {
+                if (!userActivity[task.createdById]) {
+                    userActivity[task.createdById] = {
+                        user: task.createdBy,
+                        tasksCreated: [],
+                        tasksDeleted: [],
+                        statusChanges: []
+                    };
+                }
+                userActivity[task.createdById].tasksCreated.push(task);
+            }
+            
+            if (task.deletedAt && task.deletedById) {
+                if (!userActivity[task.deletedById]) {
+                    userActivity[task.deletedById] = {
+                        user: task.deletedBy,
+                        tasksCreated: [],
+                        tasksDeleted: [],
+                        statusChanges: []
+                    };
+                }
+                userActivity[task.deletedById].tasksDeleted.push(task);
+            }
+        });
+        
+        statusChanges.forEach(change => {
+            if (!userActivity[change.userId]) {
+                userActivity[change.userId] = {
+                    user: change.user,
+                    tasksCreated: [],
+                    tasksDeleted: [],
+                    statusChanges: []
+                };
+            }
+            userActivity[change.userId].statusChanges.push(change);
+        });
+        
+        res.json({
+            data: Object.values(userActivity),
+            totalCount,
+            hasMore: offset + tasks.length < totalCount
+        });
+    } catch (error) {
+        logger.error('Fehler beim Abrufen der User Tasks Aktivität:', error);
+        res.status(500).json({ error: 'Fehler beim Abrufen der User Tasks Aktivität' });
+    }
+};
+
+// User-zentriert: Requests
+export const getUserRequestsActivity = async (req: Request, res: Response) => {
+    try {
+        // ✅ PAGINATION: Query-Parameter
+        const limit = parseInt(req.query.limit as string, 10) || 50;
+        const offset = parseInt(req.query.offset as string, 10) || 0;
+        
+        const period = (req.query.period as Period) || 'today';
+        const startDate = req.query.startDate as string | undefined;
+        const endDate = req.query.endDate as string | undefined;
+        const userId = req.query.userId ? parseInt(req.query.userId as string, 10) : undefined;
+        const branchId = req.query.branchId ? parseInt(req.query.branchId as string, 10) : undefined;
+        
+        const { start, end } = getDateRange(period, startDate, endDate);
+        const isolationFilter = getDataIsolationFilter(req as any, 'request');
+        
+        // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+        const requests = await prisma.request.findMany({
+            where: {
+                ...isolationFilter,
+                ...getNotDeletedFilter(),
+                createdAt: { gte: start, lte: end },
+                ...(userId ? { requesterId: userId } : {}),
+                ...(branchId ? { branchId: branchId } : {})
+            },
+            select: {
+                id: true,
+                title: true,
+                createdAt: true,
+                requesterId: true,
+                deletedAt: true,
+                deletedById: true,
+                _count: {
+                    select: { attachments: true }
+                },
+                requester: {
+                    select: { id: true, firstName: true, lastName: true }
+                },
+                deletedBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            take: limit,
+            skip: offset,
+            orderBy: { createdAt: 'desc' }
+        });
+        
+        // Status-Änderungen für diese Requests
+        const requestIds = requests.map(r => r.id);
+        const statusChanges = await prisma.requestStatusHistory.findMany({
+            where: {
+                requestId: { in: requestIds },
+                changedAt: { gte: start, lte: end }
+            },
+            select: {
+                requestId: true,
+                userId: true,
+                oldStatus: true,
+                newStatus: true,
+                changedAt: true,
+                user: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { changedAt: 'desc' }
+        });
+        
+        const totalCount = await prisma.request.count({
+            where: {
+                ...isolationFilter,
+                ...getNotDeletedFilter(),
+                createdAt: { gte: start, lte: end }
+            }
+        });
+        
+        // Gruppiere nach User
+        const userActivity: Record<number, any> = {};
+        
+        requests.forEach(request => {
+            if (request.requesterId) {
+                if (!userActivity[request.requesterId]) {
+                    userActivity[request.requesterId] = {
+                        user: request.requester,
+                        requestsCreated: [],
+                        requestsDeleted: [],
+                        statusChanges: []
+                    };
+                }
+                userActivity[request.requesterId].requestsCreated.push(request);
+            }
+            
+            if (request.deletedAt && request.deletedById) {
+                if (!userActivity[request.deletedById]) {
+                    userActivity[request.deletedById] = {
+                        user: request.deletedBy,
+                        requestsCreated: [],
+                        requestsDeleted: [],
+                        statusChanges: []
+                    };
+                }
+                userActivity[request.deletedById].requestsDeleted.push(request);
+            }
+        });
+        
+        statusChanges.forEach(change => {
+            if (!userActivity[change.userId]) {
+                userActivity[change.userId] = {
+                    user: change.user,
+                    requestsCreated: [],
+                    requestsDeleted: [],
+                    statusChanges: []
+                };
+            }
+            userActivity[change.userId].statusChanges.push(change);
+        });
+        
+        res.json({
+            data: Object.values(userActivity),
+            totalCount,
+            hasMore: offset + requests.length < totalCount
+        });
+    } catch (error) {
+        logger.error('Fehler beim Abrufen der User Requests Aktivität:', error);
+        res.status(500).json({ error: 'Fehler beim Abrufen der User Requests Aktivität' });
+    }
+};
+
+// Task-zentriert
+export const getTasksActivity = async (req: Request, res: Response) => {
+    try {
+        // ✅ PAGINATION: Query-Parameter
+        const limit = parseInt(req.query.limit as string, 10) || 50;
+        const offset = parseInt(req.query.offset as string, 10) || 0;
+        
+        const period = (req.query.period as Period) || 'today';
+        const startDate = req.query.startDate as string | undefined;
+        const endDate = req.query.endDate as string | undefined;
+        const userId = req.query.userId ? parseInt(req.query.userId as string, 10) : undefined;
+        const branchId = req.query.branchId ? parseInt(req.query.branchId as string, 10) : undefined;
+        const includeDeleted = req.query.includeDeleted === 'true';
+        
+        const { start, end } = getDateRange(period, startDate, endDate);
+        const isolationFilter = getDataIsolationFilter(req as any, 'task');
+        
+        // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+        const tasks = await prisma.task.findMany({
+            where: {
+                ...isolationFilter,
+                ...(includeDeleted ? {} : getNotDeletedFilter()),
+                createdAt: { gte: start, lte: end },
+                ...(userId ? { createdById: userId } : {}),
+                ...(branchId ? { branchId: branchId } : {})
+            },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                createdAt: true,
+                createdById: true,
+                deletedAt: true,
+                deletedById: true,
+                _count: {
+                    select: { attachments: true, statusHistory: true }
+                },
+                createdBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                },
+                deletedBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            take: limit,
+            skip: offset,
+            orderBy: { createdAt: 'desc' }
+        });
+        
+        // Status-Historie für diese Tasks
+        const taskIds = tasks.map(t => t.id);
+        const statusHistory = await prisma.taskStatusHistory.findMany({
+            where: {
+                taskId: { in: taskIds }
+            },
+            select: {
+                taskId: true,
+                userId: true,
+                oldStatus: true,
+                newStatus: true,
+                changedAt: true,
+                user: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { changedAt: 'asc' }
+        });
+        
+        // Gruppiere Status-Historie nach Task
+        const statusHistoryByTask: Record<number, any[]> = {};
+        statusHistory.forEach(change => {
+            if (!statusHistoryByTask[change.taskId]) {
+                statusHistoryByTask[change.taskId] = [];
+            }
+            statusHistoryByTask[change.taskId].push(change);
+        });
+        
+        // Kombiniere Tasks mit Status-Historie
+        const tasksWithHistory = tasks.map(task => ({
+            ...task,
+            statusHistory: statusHistoryByTask[task.id] || []
+        }));
+        
+        const totalCount = await prisma.task.count({
+            where: {
+                ...isolationFilter,
+                ...(includeDeleted ? {} : getNotDeletedFilter()),
+                createdAt: { gte: start, lte: end }
+            }
+        });
+        
+        res.json({
+            data: tasksWithHistory,
+            totalCount,
+            hasMore: offset + tasks.length < totalCount
+        });
+    } catch (error) {
+        logger.error('Fehler beim Abrufen der Tasks Aktivität:', error);
+        res.status(500).json({ error: 'Fehler beim Abrufen der Tasks Aktivität' });
+    }
+};
+
+// Request-zentriert
+export const getRequestsActivity = async (req: Request, res: Response) => {
+    try {
+        // ✅ PAGINATION: Query-Parameter
+        const limit = parseInt(req.query.limit as string, 10) || 50;
+        const offset = parseInt(req.query.offset as string, 10) || 0;
+        
+        const period = (req.query.period as Period) || 'today';
+        const startDate = req.query.startDate as string | undefined;
+        const endDate = req.query.endDate as string | undefined;
+        const userId = req.query.userId ? parseInt(req.query.userId as string, 10) : undefined;
+        const branchId = req.query.branchId ? parseInt(req.query.branchId as string, 10) : undefined;
+        const includeDeleted = req.query.includeDeleted === 'true';
+        
+        const { start, end } = getDateRange(period, startDate, endDate);
+        const isolationFilter = getDataIsolationFilter(req as any, 'request');
+        
+        // ✅ PERFORMANCE: Nur benötigte Felder selektieren (keine Attachments!)
+        const requests = await prisma.request.findMany({
+            where: {
+                ...isolationFilter,
+                ...(includeDeleted ? {} : getNotDeletedFilter()),
+                createdAt: { gte: start, lte: end },
+                ...(userId ? { requesterId: userId } : {}),
+                ...(branchId ? { branchId: branchId } : {})
+            },
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                createdAt: true,
+                requesterId: true,
+                deletedAt: true,
+                deletedById: true,
+                _count: {
+                    select: { attachments: true, statusHistory: true }
+                },
+                requester: {
+                    select: { id: true, firstName: true, lastName: true }
+                },
+                deletedBy: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            take: limit,
+            skip: offset,
+            orderBy: { createdAt: 'desc' }
+        });
+        
+        // Status-Historie für diese Requests
+        const requestIds = requests.map(r => r.id);
+        const statusHistory = await prisma.requestStatusHistory.findMany({
+            where: {
+                requestId: { in: requestIds }
+            },
+            select: {
+                requestId: true,
+                userId: true,
+                oldStatus: true,
+                newStatus: true,
+                changedAt: true,
+                user: {
+                    select: { id: true, firstName: true, lastName: true }
+                }
+            },
+            orderBy: { changedAt: 'asc' }
+        });
+        
+        // Gruppiere Status-Historie nach Request
+        const statusHistoryByRequest: Record<number, any[]> = {};
+        statusHistory.forEach(change => {
+            if (!statusHistoryByRequest[change.requestId]) {
+                statusHistoryByRequest[change.requestId] = [];
+            }
+            statusHistoryByRequest[change.requestId].push(change);
+        });
+        
+        // Kombiniere Requests mit Status-Historie
+        const requestsWithHistory = requests.map(request => ({
+            ...request,
+            statusHistory: statusHistoryByRequest[request.id] || []
+        }));
+        
+        const totalCount = await prisma.request.count({
+            where: {
+                ...isolationFilter,
+                ...(includeDeleted ? {} : getNotDeletedFilter()),
+                createdAt: { gte: start, lte: end }
+            }
+        });
+        
+        res.json({
+            data: requestsWithHistory,
+            totalCount,
+            hasMore: offset + requests.length < totalCount
+        });
+    } catch (error) {
+        logger.error('Fehler beim Abrufen der Requests Aktivität:', error);
+        res.status(500).json({ error: 'Fehler beim Abrufen der Requests Aktivität' });
     }
 };
 

@@ -99,3 +99,13 @@ export const executeWithRetry = async <T>(
 };
 
 // Graceful Shutdown wird in index.ts behandelt
+
+/**
+ * Helper-Funktion für Soft Delete Filter
+ * Verwendet in allen Queries, die Tasks/Requests abfragen
+ * 
+ * @returns Prisma Where-Klausel für nicht gelöschte Einträge
+ */
+export const getNotDeletedFilter = () => ({
+    deletedAt: null
+});

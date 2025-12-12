@@ -49,14 +49,18 @@ model User {
   joinRequestsSent         OrganizationJoinRequest[]     @relation("JoinRequester")
   requestsRequester        Request[]                     @relation("requester")
   requestsResponsible      Request[]                     @relation("responsible")
+  requestsDeleted          Request[]                     @relation("RequestDeleter") // NEU
   savedFilters             SavedFilter[]
   filterGroups             FilterGroup[]
   settings                 Settings?
   tasksQualityControl      Task[]                        @relation("quality_control")
   tasksResponsible         Task[]                        @relation("responsible")
+  tasksCreated             Task[]                        @relation("TaskCreator") // NEU
+  tasksDeleted             Task[]                        @relation("TaskDeleter") // NEU
   userNotificationSettings UserNotificationSettings?
   roles                    UserRole[]
   tableSettings            UserTableSettings[]
+  requestStatusChanges     RequestStatusHistory[]        @relation("request_status_changes") // NEU
   branches                 UsersBranches[]
   workTimes                WorkTime[]
   taskStatusChanges        TaskStatusHistory[]           @relation("task_status_changes")
@@ -201,36 +205,37 @@ model Permission {
 }
 
 model Branch {
-  id                    Int                          @id @default(autoincrement())
-  name                  String                       @unique
-  createdAt             DateTime                     @default(now())
-  updatedAt             DateTime                     @updatedAt
-  organizationId        Int?
-  organization          Organization?                @relation(fields: [organizationId], references: [id])
-  whatsappSettings      Json? // WhatsApp-Konfiguration pro Branch
-  lobbyPmsSettings      Json? // NEU: LobbyPMS-Konfiguration pro Branch
-  lobbyPmsLastSyncAt    DateTime? // OPTIMIERUNG: Letzte erfolgreiche LobbyPMS Sync-Zeit (für Caching)
-  boldPaymentSettings   Json? // NEU: Bold Payment-Konfiguration pro Branch
-  doorSystemSettings    Json? // NEU: TTLock/Türsystem-Konfiguration pro Branch
-  emailSettings         Json? // NEU: Email-Konfiguration pro Branch (SMTP + IMAP)
-  messageTemplates      Json? // NEU: Konfigurierbare Mitteilungsvorlagen (Check-in-Einladung, Check-in-Bestätigung)
-  autoSendReservationInvitation Boolean? @default(false) // NEU: Automatisches Versenden von Check-in-Einladungen aktivieren/deaktivieren
-  requests              Request[]
-  tasks                 Task[]
-  users                 UsersBranches[]
-  workTimes             WorkTime[]
-  taskStatusChanges     TaskStatusHistory[]
-  roles                 RoleBranch[] // Rollen, die für diese Branch verfügbar sind
-  whatsappConversations WhatsAppConversation[]
-  whatsappMessages      WhatsAppMessage[]            @relation("WhatsAppMessages")
-  phoneNumberMappings   WhatsAppPhoneNumberMapping[]
-  shiftTemplates        ShiftTemplate[]
-  shifts                Shift[]
-  availabilities        UserAvailability[]
-  reservations          Reservation[] // NEU: Relation zu Reservierungen
-  tours                 Tour[]                       @relation("TourBranches")
-  tourBookings          TourBooking[]                @relation("TourBookingBranches")
-  tourProviders         TourProvider[]               @relation("TourProviderBranches")
+  id                            Int                          @id @default(autoincrement())
+  name                          String                       @unique
+  createdAt                     DateTime                     @default(now())
+  updatedAt                     DateTime                     @updatedAt
+  organizationId                Int?
+  organization                  Organization?                @relation(fields: [organizationId], references: [id])
+  whatsappSettings              Json? // WhatsApp-Konfiguration pro Branch
+  lobbyPmsSettings              Json? // NEU: LobbyPMS-Konfiguration pro Branch
+  lobbyPmsLastSyncAt            DateTime? // OPTIMIERUNG: Letzte erfolgreiche LobbyPMS Sync-Zeit (für Caching)
+  boldPaymentSettings           Json? // NEU: Bold Payment-Konfiguration pro Branch
+  doorSystemSettings            Json? // NEU: TTLock/Türsystem-Konfiguration pro Branch
+  emailSettings                 Json? // NEU: Email-Konfiguration pro Branch (SMTP + IMAP)
+  messageTemplates              Json? // NEU: Konfigurierbare Mitteilungsvorlagen (Check-in-Einladung, Check-in-Bestätigung)
+  autoSendReservationInvitation Boolean?                     @default(false) // NEU: Automatisches Versenden von Check-in-Einladungen aktivieren/deaktivieren
+  requests                      Request[]
+  tasks                         Task[]
+  users                         UsersBranches[]
+  workTimes                     WorkTime[]
+  taskStatusChanges             TaskStatusHistory[]
+  requestStatusChanges          RequestStatusHistory[] // NEU: Request Status-Historie
+  roles                         RoleBranch[] // Rollen, die für diese Branch verfügbar sind
+  whatsappConversations         WhatsAppConversation[]
+  whatsappMessages              WhatsAppMessage[]            @relation("WhatsAppMessages")
+  phoneNumberMappings           WhatsAppPhoneNumberMapping[]
+  shiftTemplates                ShiftTemplate[]
+  shifts                        Shift[]
+  availabilities                UserAvailability[]
+  reservations                  Reservation[] // NEU: Relation zu Reservierungen
+  tours                         Tour[]                       @relation("TourBranches")
+  tourBookings                  TourBooking[]                @relation("TourBookingBranches")
+  tourProviders                 TourProvider[]               @relation("TourProviderBranches")
 }
 
 model UsersBranches {
@@ -293,11 +298,16 @@ model Task {
   updatedAt        DateTime              @updatedAt
   roleId           Int?
   organizationId   Int?
+  createdById      Int? // NEU: Wer hat den Task erstellt
+  deletedAt        DateTime? // NEU: Soft Delete
+  deletedById      Int? // NEU: Wer hat den Task gelöscht
   organization     Organization?         @relation(fields: [organizationId], references: [id])
   branch           Branch                @relation(fields: [branchId], references: [id])
   qualityControl   User                  @relation("quality_control", fields: [qualityControlId], references: [id])
   responsible      User?                 @relation("responsible", fields: [responsibleId], references: [id])
   role             Role?                 @relation(fields: [roleId], references: [id])
+  createdBy        User?                 @relation("TaskCreator", fields: [createdById], references: [id])
+  deletedBy        User?                 @relation("TaskDeleter", fields: [deletedById], references: [id])
   attachments      TaskAttachment[]
   carticles        TaskCerebroCarticle[]
   workTimeLinks    WorkTimeTask[]
@@ -315,6 +325,9 @@ model Task {
   @@index([roleId])
   @@index([dueDate])
   @@index([title]) // Für contains/startsWith/endsWith Filter
+  @@index([createdById, createdAt(sort: Desc)]) // NEU: Für Analytics
+  @@index([deletedAt]) // NEU: Für Soft Delete Filter
+  @@index([deletedById]) // NEU: Für Analytics
 }
 
 model Request {
@@ -332,12 +345,16 @@ model Request {
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
   organizationId Int?
+  deletedAt      DateTime? // NEU: Soft Delete
+  deletedById    Int? // NEU: Wer hat den Request gelöscht
   organization   Organization?            @relation(fields: [organizationId], references: [id])
   branch         Branch                   @relation(fields: [branchId], references: [id])
   requester      User                     @relation("requester", fields: [requesterId], references: [id])
   responsible    User                     @relation("responsible", fields: [responsibleId], references: [id])
+  deletedBy      User?                    @relation("RequestDeleter", fields: [deletedById], references: [id])
   attachments    RequestAttachment[]
   carticles      RequestCerebroCarticle[]
+  statusHistory  RequestStatusHistory[] // NEU: Status-Historie
 
   // Performance-Indizes für Filter-Queries
   @@index([organizationId, isPrivate, createdAt(sort: Desc)])
@@ -348,6 +365,9 @@ model Request {
   @@index([branchId])
   @@index([dueDate])
   @@index([title]) // Für contains/startsWith/endsWith Filter
+  @@index([deletedAt]) // NEU: Für Soft Delete Filter
+  @@index([deletedById]) // NEU: Für Analytics
+  @@index([requesterId, createdAt(sort: Desc)]) // NEU: Für Analytics (bereits vorhanden, aber explizit dokumentiert)
 }
 
 model Settings {
@@ -803,6 +823,24 @@ model TaskStatusHistory {
   branch    Branch      @relation(fields: [branchId], references: [id])
 
   @@index([taskId])
+  @@index([userId])
+  @@index([changedAt])
+  @@index([branchId])
+}
+
+model RequestStatusHistory {
+  id        Int            @id @default(autoincrement())
+  requestId Int
+  userId    Int
+  oldStatus RequestStatus?
+  newStatus RequestStatus
+  changedAt DateTime       @default(now())
+  branchId  Int
+  request   Request        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user      User           @relation("request_status_changes", fields: [userId], references: [id])
+  branch    Branch         @relation(fields: [branchId], references: [id])
+
+  @@index([requestId])
   @@index([userId])
   @@index([changedAt])
   @@index([branchId])

@@ -15,7 +15,11 @@ import {
   getTodosChronological,
   getRequestsChronological,
   getTodosFrequencyAnalysis,
-  getTodosShiftAnalysis
+  getTodosShiftAnalysis,
+  getUserTasksActivity,
+  getUserRequestsActivity,
+  getTasksActivity,
+  getRequestsActivity
 } from '../controllers/analyticsController';
 
 const router = express.Router();
@@ -58,5 +62,13 @@ router.get('/analytics/todos-frequency', getTodosFrequencyAnalysis);
 
 // Schicht-basierte Analysen für To-Dos (Tab 2)
 router.get('/analytics/todos-shifts', getTodosShiftAnalysis);
+
+// User-zentrierte Aktivitäts-Analysen (NEU)
+router.get('/analytics/user-tasks-activity', getUserTasksActivity);
+router.get('/analytics/user-requests-activity', getUserRequestsActivity);
+
+// Task/Request-zentrierte Aktivitäts-Analysen (NEU)
+router.get('/analytics/tasks-activity', getTasksActivity);
+router.get('/analytics/requests-activity', getRequestsActivity);
 
 export default router; 
