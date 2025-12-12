@@ -285,6 +285,56 @@ Website nicht erreichbar oder 404/502 Fehler
    sudo systemctl restart nginx
    ```
 
+#### Fehler: 413 Request Entity Too Large (Dokumenten-Upload)
+
+**Symptom:**
+Beim Upload von Identifikationsdokumenten erscheint der Fehler "413 Request Entity Too Large"
+
+**Ursache:**
+- Base64-kodierte Bilder werden als JSON im Request Body gesendet
+- Base64-kodierte Bilder sind ~33% größer als Original (1MB Bild → ~1.3MB Base64)
+- Nginx Standard-Limit ist 1M, was für Dokumenten-Uploads zu klein ist
+
+**Lösung - Terminal-Befehle:**
+
+1. **Nginx-Konfigurationsdatei öffnen:**
+   ```bash
+   sudo nano /etc/nginx/sites-available/intranet
+   ```
+   (Oder: `/etc/nginx/sites-available/default` falls andere Datei verwendet wird)
+
+2. **In der `location /api` Sektion hinzufügen:**
+   ```nginx
+   location /api {
+       # ... bestehende Konfiguration ...
+       client_max_body_size 10M;
+   }
+   ```
+
+3. **Nginx-Konfiguration testen:**
+   ```bash
+   sudo nginx -t
+   ```
+
+4. **Nginx neu laden (ohne Downtime):**
+   ```bash
+   sudo systemctl reload nginx
+   ```
+
+5. **Prüfen ob Nginx läuft:**
+   ```bash
+   sudo systemctl status nginx
+   ```
+
+**Alternative: Prüfen welche Konfigurationsdatei verwendet wird:**
+```bash
+# Finde aktive Nginx-Konfiguration
+sudo nginx -T | grep -A 20 "location /api"
+
+# Oder prüfe welche Datei aktiv ist
+ls -la /etc/nginx/sites-enabled/
+```
+
 ### PM2-Probleme
 
 #### Fehler: PM2-Prozesse stürzen wiederholt ab
