@@ -140,7 +140,13 @@ export const API_ENDPOINTS = {
             TODOS_CHRONOLOGICAL: '/team-worktime/analytics/todos-chronological',
             REQUESTS_CHRONOLOGICAL: '/team-worktime/analytics/requests-chronological',
             TODOS_FREQUENCY: '/team-worktime/analytics/todos-frequency',
-            TODOS_SHIFTS: '/team-worktime/analytics/todos-shifts'
+            TODOS_SHIFTS: '/team-worktime/analytics/todos-shifts',
+            // NEU: User-zentrierte Aktivitäts-Analysen
+            USER_TASKS_ACTIVITY: '/team-worktime/analytics/user-tasks-activity',
+            USER_REQUESTS_ACTIVITY: '/team-worktime/analytics/user-requests-activity',
+            // NEU: Task/Request-zentrierte Aktivitäts-Analysen
+            TASKS_ACTIVITY: '/team-worktime/analytics/tasks-activity',
+            REQUESTS_ACTIVITY: '/team-worktime/analytics/requests-activity'
         }
     },
     // Shift Planning

@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { Prisma, RequestStatus, RequestType, NotificationType } from '@prisma/client';
-import { prisma, executeWithRetry } from '../utils/prisma';
+import { prisma, executeWithRetry, getNotDeletedFilter } from '../utils/prisma';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getRequestNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, getUserOrganizationFilter, isAdminOrOwner } from '../middleware/organization';
@@ -193,6 +193,9 @@ export const getAllRequests = async (req: Request, res: Response) => {
             baseWhereConditions.push(filterWhereClause);
         }
         
+        // ✅ SOFT DELETE: Füge deletedAt Filter hinzu
+        baseWhereConditions.push(getNotDeletedFilter());
+        
         // Kombiniere alle Filter
         const whereClause: Prisma.RequestWhereInput = baseWhereConditions.length === 1
             ? baseWhereConditions[0]
@@ -344,6 +347,7 @@ export const getRequestById = async (req: Request<{ id: string }>, res: Response
             id: parseInt(id),
             AND: [
                 isolationFilter,
+                getNotDeletedFilter(), // ✅ SOFT DELETE: Nur nicht gelöschte Requests
                 {
                     OR: [
                         // Öffentliche Requests
@@ -503,12 +507,13 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
         }
 
         // ✅ PERFORMANCE: executeWithRetry für DB-Query
+        const requestStatus = (status as RequestStatus) || 'approval';
         const request = await executeWithRetry(() =>
             prisma.request.create({
             data: {
                 title,
                 description: description || '',
-                status: status as RequestStatus,
+                status: requestStatus,
                 type: type as RequestType,
                 isPrivate: is_private,
                 requesterId,
@@ -588,6 +593,20 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
             logger.log(`[createRequest] Requester und Responsible sind identisch, keine Notifications erstellt`);
         }
 
+        // ✅ INITIAL STATUS-HISTORIE: Erstelle initiale Status-Historie
+        if (req.userId) {
+            await prisma.requestStatusHistory.create({
+                data: {
+                    requestId: request.id,
+                    userId: Number(req.userId),
+                    oldStatus: null, // Initial: kein alter Status
+                    newStatus: requestStatus,
+                    branchId: branchId,
+                    changedAt: new Date()
+                }
+            });
+        }
+
         res.status(201).json(formattedRequest);
     } catch (error) {
         logger.error('Error creating request:', error);
@@ -617,7 +636,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
         const existingRequest = await prisma.request.findFirst({
             where: {
                 id: parseInt(id),
-                ...isolationFilter
+                ...isolationFilter,
+                ...getNotDeletedFilter() // ✅ SOFT DELETE: Nur nicht gelöschte Requests
             },
             include: {
                 requester: {
@@ -738,8 +758,22 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
             })
         );
 
-        // Benachrichtigungen bei Statusänderungen
+        // ✅ STATUS-HISTORIE: Speichere Status-Änderungen
         if (status && status !== existingRequest.status) {
+            // Status-Historie speichern
+            if (req.userId) {
+                await prisma.requestStatusHistory.create({
+                    data: {
+                        requestId: parseInt(id),
+                        userId: Number(req.userId),
+                        oldStatus: existingRequest.status,
+                        newStatus: status as RequestStatus,
+                        branchId: existingRequest.branchId,
+                        changedAt: new Date()
+                    }
+                });
+            }
+            
             // Benachrichtigung für den Ersteller
             const userLang = await getUserLanguage(updatedRequest.requesterId);
             const notificationText = getRequestNotificationText(userLang, 'status_changed', updatedRequest.title, true, status);
@@ -903,7 +937,8 @@ export const deleteRequest = async (req: Request<{ id: string }>, res: Response)
         const request = await prisma.request.findFirst({
             where: {
                 id: parseInt(id),
-                ...isolationFilter
+                ...isolationFilter,
+                ...getNotDeletedFilter() // ✅ SOFT DELETE: Nur nicht gelöschte Requests
             },
             include: {
                 requester: {
@@ -919,22 +954,41 @@ export const deleteRequest = async (req: Request<{ id: string }>, res: Response)
             return res.status(404).json({ message: 'Request nicht gefunden' });
         }
 
-        // Benachrichtigung für den Ersteller
-        const userLang = await getUserLanguage(request.requesterId);
-        const notificationText = getRequestNotificationText(userLang, 'deleted', request.title);
-        await createNotificationIfEnabled({
-            userId: request.requesterId,
-            relatedEntityId: request.id,
-            relatedEntityType: 'delete',
-            type: NotificationType.request,
-            title: notificationText.title,
-            message: notificationText.message
+        // ✅ SOFT DELETE: Statt hard delete, setze deletedAt
+        await prisma.request.update({
+            where: { id: parseInt(id) },
+            data: {
+                deletedAt: new Date(),
+                deletedById: req.userId ? Number(req.userId) : null
+            }
         });
 
-        // Lösche den Request
-        await prisma.request.delete({
-            where: { id: parseInt(id) }
+        // ✅ NOTIFICATIONS: Benachrichtigungen bei Soft Delete
+        // Benachrichtigung für den Requester
+        const requesterLang = await getUserLanguage(request.requesterId);
+        const requesterNotificationText = getRequestNotificationText(requesterLang, 'deleted', request.title);
+        await createNotificationIfEnabled({
+            userId: request.requesterId,
+            title: requesterNotificationText.title,
+            message: requesterNotificationText.message,
+            type: NotificationType.request,
+            relatedEntityId: parseInt(id),
+            relatedEntityType: 'delete' // ✅ WICHTIG: 'delete' für Soft Delete
         });
+
+        // Benachrichtigung für den Verantwortlichen
+        if (request.responsibleId && request.responsibleId !== request.requesterId) {
+            const responsibleLang = await getUserLanguage(request.responsibleId);
+            const responsibleNotificationText = getRequestNotificationText(responsibleLang, 'deleted', request.title);
+            await createNotificationIfEnabled({
+                userId: request.responsibleId,
+                title: responsibleNotificationText.title,
+                message: responsibleNotificationText.message,
+                type: NotificationType.request,
+                relatedEntityId: parseInt(id),
+                relatedEntityType: 'delete' // ✅ WICHTIG: 'delete' für Soft Delete
+            });
+        }
 
         res.json({ message: 'Request erfolgreich gelöscht' });
     } catch (error) {
