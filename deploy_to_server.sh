@@ -44,6 +44,13 @@ npx prisma generate
 echo "✅ Prisma Client generiert"
 echo ""
 
+# 5.5. Filter-Migration ausführen
+echo "🔧 Schritt 5.5: Filter-Migration ausführen..."
+cd /var/www/intranet/backend
+npm run migrate-filters
+echo "✅ Filter-Migration abgeschlossen"
+echo ""
+
 # 6. Seed ausführen
 echo "🌱 Schritt 6: Seed ausführen..."
 cd /var/www/intranet/backend

@@ -369,6 +369,8 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
         const existingLobbyPms = branch.lobbyPmsSettings || {};
         // Bold Payment Settings: Prüfe ob es ein String ist (JSON) oder bereits ein Objekt
         let existingBoldPayment: any = branch.boldPaymentSettings;
+        console.log('[BranchManagementTab] Branch.boldPaymentSettings (roh):', branch.boldPaymentSettings);
+        console.log('[BranchManagementTab] Branch.boldPaymentSettings (typ):', typeof branch.boldPaymentSettings);
         if (!existingBoldPayment) {
             existingBoldPayment = {};
         } else if (typeof existingBoldPayment === 'string') {
@@ -379,12 +381,15 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                 existingBoldPayment = {};
             }
         }
+        console.log('[BranchManagementTab] existingBoldPayment (verarbeitet):', existingBoldPayment);
+        console.log('[BranchManagementTab] existingBoldPayment.apiKey:', existingBoldPayment.apiKey);
+        console.log('[BranchManagementTab] existingBoldPayment.merchantId:', existingBoldPayment.merchantId);
         const existingDoorSystem = branch.doorSystemSettings || {};
         const existingEmail = branch.emailSettings || {};
         const existingMessageTemplates = (branch as any).messageTemplates || {};
         const existingAutoSend = (branch as any).autoSendReservationInvitation || false;
         
-        setFormData({ 
+        const newFormData = { 
             name: branch.name,
             whatsappSettings: {
                 provider: existingWhatsapp.provider || 'whatsapp-business-api',
@@ -456,7 +461,9 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                 }
             },
             autoSendReservationInvitation: existingAutoSend
-        });
+        };
+        console.log('[BranchManagementTab] newFormData.boldPaymentSettings:', newFormData.boldPaymentSettings);
+        setFormData(newFormData);
         setIsModalOpen(true);
     };
 

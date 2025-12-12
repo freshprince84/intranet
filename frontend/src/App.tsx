@@ -40,6 +40,7 @@ const Cerebro = React.lazy(() => import('./pages/Cerebro.tsx'));
 const Payroll = React.lazy(() => import('./pages/Payroll.tsx'));
 const Consultations = React.lazy(() => import('./pages/Consultations.tsx'));
 const ReservationDetails = React.lazy(() => import('./components/reservations/ReservationDetails.tsx'));
+const PriceAnalysis = React.lazy(() => import('./pages/PriceAnalysis.tsx'));
 
 const App: React.FC = () => {
     // Claude Console nur im Development-Modus initialisieren

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import axiosInstance from '../../config/axios.ts';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
-import { API_ENDPOINTS, API_BASE_URL } from '../../config/api.ts';
+import { API_ENDPOINTS, getTourImageUrl, getTourGalleryImageUrl } from '../../config/api.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
 import { Tour, TourType, TourProvider } from '../../types/tour.ts';
 import useMessage from '../../hooks/useMessage.ts';
@@ -47,9 +47,9 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
     const [externalBookingUrl, setExternalBookingUrl] = useState(tour?.externalBookingUrl || '');
     const [branchId, setBranchId] = useState<number | ''>(tour?.branchId || '');
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(tour?.imageUrl ? `${API_BASE_URL || ''}${tour.imageUrl}` : null);
+    const [imagePreview, setImagePreview] = useState<string | null>(tour?.imageUrl ? getTourImageUrl(tour.id) : null);
     const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
-    const [galleryPreviews, setGalleryPreviews] = useState<string[]>(tour?.galleryUrls?.map(url => `${API_BASE_URL || ''}${url}`) || []);
+    const [galleryPreviews, setGalleryPreviews] = useState<string[]>(tour?.galleryUrls?.map((url, index) => getTourGalleryImageUrl(tour.id, index)) || []);
     const [uploadingImage, setUploadingImage] = useState(false);
     
     const [branches, setBranches] = useState<Branch[]>([]);
@@ -107,8 +107,8 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
             setExternalProviderId(tour.externalProviderId || '');
             setExternalBookingUrl(tour.externalBookingUrl || '');
             setBranchId(tour.branchId || '');
-            setImagePreview(tour.imageUrl ? `${API_BASE_URL || ''}${tour.imageUrl}` : null);
-            setGalleryPreviews(tour.galleryUrls?.map(url => `${API_BASE_URL || ''}${url}`) || []);
+            setImagePreview(tour.imageUrl ? getTourImageUrl(tour.id) : null);
+            setGalleryPreviews(tour.galleryUrls?.map((url, index) => getTourGalleryImageUrl(tour.id, index)) || []);
         }
     }, [tour]);
     
