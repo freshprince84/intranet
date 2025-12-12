@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import axiosInstance from '../../config/axios.ts';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
-import { API_ENDPOINTS } from '../../config/api.ts';
+import { API_ENDPOINTS, API_BASE_URL } from '../../config/api.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
 import { Tour, TourType, TourProvider } from '../../types/tour.ts';
 import useMessage from '../../hooks/useMessage.ts';

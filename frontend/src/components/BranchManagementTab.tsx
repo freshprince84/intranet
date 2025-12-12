@@ -367,7 +367,18 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
         setEditingBranch(branch);
         const existingWhatsapp = branch.whatsappSettings || {};
         const existingLobbyPms = branch.lobbyPmsSettings || {};
-        const existingBoldPayment = branch.boldPaymentSettings || {};
+        // Bold Payment Settings: Prüfe ob es ein String ist (JSON) oder bereits ein Objekt
+        let existingBoldPayment: any = branch.boldPaymentSettings;
+        if (!existingBoldPayment) {
+            existingBoldPayment = {};
+        } else if (typeof existingBoldPayment === 'string') {
+            try {
+                existingBoldPayment = JSON.parse(existingBoldPayment);
+            } catch (e) {
+                console.error('Fehler beim Parsen von boldPaymentSettings:', e);
+                existingBoldPayment = {};
+            }
+        }
         const existingDoorSystem = branch.doorSystemSettings || {};
         const existingEmail = branch.emailSettings || {};
         const existingMessageTemplates = (branch as any).messageTemplates || {};
