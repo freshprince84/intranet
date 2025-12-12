@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../../hooks/usePermissions.ts';
-import { useMessage } from '../../contexts/MessageContext';
-import { useError } from '../../contexts/ErrorContext';
-import { useBranch } from '../../contexts/BranchContext';
+import useMessage from '../../hooks/useMessage.ts';
+import { useError } from '../../contexts/ErrorContext.tsx';
+import { useBranch } from '../../contexts/BranchContext.tsx';
 import { API_ENDPOINTS } from '../../config/api';
 import axios from 'axios';
 

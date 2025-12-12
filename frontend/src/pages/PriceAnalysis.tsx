@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { useMessage } from '../contexts/MessageContext';
-import { useError } from '../contexts/ErrorContext';
-import Layout from '../components/Layout';
-import OTAListingsTab from '../components/priceAnalysis/OTAListingsTab';
+import useMessage from '../hooks/useMessage.ts';
+import { useError } from '../contexts/ErrorContext.tsx';
+import OTAListingsTab from '../components/priceAnalysis/OTAListingsTab.tsx';
 
 const PriceAnalysis: React.FC = () => {
     const { t } = useTranslation();
@@ -21,23 +20,20 @@ const PriceAnalysis: React.FC = () => {
 
     // Prüfe Berechtigung
     if (permissionsLoading) {
-        return <Layout><div>Lädt...</div></Layout>;
+        return <div>Lädt...</div>;
     }
 
     if (!hasPermission('price_analysis', 'read', 'page')) {
         return (
-            <Layout>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                    <h2>{t('common.error')}</h2>
-                    <p>{t('common.noPermission')}</p>
-                </div>
-            </Layout>
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+                <h2>{t('common.error')}</h2>
+                <p>{t('common.noPermission')}</p>
+            </div>
         );
     }
 
     return (
-        <Layout>
-            <div style={{ padding: '20px' }}>
+        <div style={{ padding: '20px' }}>
                 <h1>{t('priceAnalysis.title')}</h1>
                 
                 {/* Tabs */}
@@ -107,7 +103,6 @@ const PriceAnalysis: React.FC = () => {
                 {activeTab === 'recommendations' && <div>{t('priceAnalysis.recommendations')} - Coming soon</div>}
                 {activeTab === 'rules' && <div>{t('priceAnalysis.rules')} - Coming soon</div>}
             </div>
-        </Layout>
     );
 };
 
