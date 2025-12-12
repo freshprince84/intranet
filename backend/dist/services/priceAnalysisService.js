@@ -8,13 +8,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PriceAnalysisService = void 0;
 const client_1 = require("@prisma/client");
-const logger_1 = __importDefault(require("../utils/logger"));
+const logger_1 = require("../utils/logger");
 const lobbyPmsService_1 = require("./lobbyPmsService");
 const prisma = new client_1.PrismaClient();
 /**
@@ -38,7 +35,7 @@ class PriceAnalysisService {
     static analyzePrices(branchId, startDate, endDate) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                logger_1.default.log(`Starte Preisanalyse für Branch ${branchId}, Zeitraum: ${startDate.toISOString()} - ${endDate.toISOString()}`);
+                logger_1.logger.log(`Starte Preisanalyse für Branch ${branchId}, Zeitraum: ${startDate.toISOString()} - ${endDate.toISOString()}`);
                 // LobbyPMS Service für Branch erstellen
                 const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
                 // Verfügbarkeitsdaten aus LobbyPMS abrufen
@@ -85,11 +82,11 @@ class PriceAnalysisService {
                     });
                     analysisCount++;
                 }
-                logger_1.default.log(`Preisanalyse abgeschlossen: ${analysisCount} Analysen erstellt`);
+                logger_1.logger.log(`Preisanalyse abgeschlossen: ${analysisCount} Analysen erstellt`);
                 return analysisCount;
             }
             catch (error) {
-                logger_1.default.error('Fehler bei der Preisanalyse:', error);
+                logger_1.logger.error('Fehler bei der Preisanalyse:', error);
                 throw error;
             }
         });
@@ -133,7 +130,7 @@ class PriceAnalysisService {
                 return analyses;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Abrufen der Preisanalysen:', error);
+                logger_1.logger.error('Fehler beim Abrufen der Preisanalysen:', error);
                 throw error;
             }
         });
@@ -161,7 +158,7 @@ class PriceAnalysisService {
                 return analysis;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Abrufen der Preisanalyse:', error);
+                logger_1.logger.error('Fehler beim Abrufen der Preisanalyse:', error);
                 throw error;
             }
         });

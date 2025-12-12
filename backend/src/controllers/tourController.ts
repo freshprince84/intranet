@@ -10,6 +10,7 @@ import fs from 'fs';
 import { logger } from '../utils/logger';
 import { getImageGenerationQueue, checkQueueHealth } from '../services/queueService';
 import { GeminiImageService } from '../services/geminiImageService';
+import { TourImageUploadService } from '../services/tourImageUploadService';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -1171,13 +1172,13 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
 
         // Lade Hauptbild hoch
         if (generatedImages.mainImage && fs.existsSync(generatedImages.mainImage)) {
-          await uploadImageDirectly(tourId, generatedImages.mainImage);
+          await TourImageUploadService.uploadImageDirectly(tourId, generatedImages.mainImage);
         }
 
         // Lade Galerie-Bilder hoch
         for (const galleryImage of generatedImages.galleryImages) {
           if (fs.existsSync(galleryImage)) {
-            await uploadGalleryImageDirectly(tourId, galleryImage);
+            await TourImageUploadService.uploadGalleryImageDirectly(tourId, galleryImage);
           }
         }
 
@@ -1287,59 +1288,6 @@ export const getTourImageGenerationStatus = async (req: Request, res: Response) 
   }
 };
 
-// Hilfsfunktion: Lädt Bild direkt hoch (ohne HTTP)
-async function uploadImageDirectly(tourId: number, imagePath: string): Promise<void> {
-  // Altes Bild löschen (falls vorhanden)
-  const tour = await prisma.tour.findUnique({
-    where: { id: tourId },
-    select: { imageUrl: true }
-  });
-
-  if (tour?.imageUrl) {
-    const oldImagePath = path.join(__dirname, '../../uploads/tours', path.basename(tour.imageUrl));
-    if (fs.existsSync(oldImagePath)) {
-      fs.unlinkSync(oldImagePath);
-    }
-  }
-
-  // Kopiere Bild in uploads-Verzeichnis
-  const filename = `tour-${tourId}-main-${Date.now()}.png`;
-  const destPath = path.join(__dirname, '../../uploads/tours', filename);
-  fs.copyFileSync(imagePath, destPath);
-
-  // Aktualisiere Tour
-  const imageUrl = `/uploads/tours/${filename}`;
-  await prisma.tour.update({
-    where: { id: tourId },
-    data: { imageUrl }
-  });
-}
-
-// Hilfsfunktion: Lädt Galerie-Bild direkt hoch (ohne HTTP)
-async function uploadGalleryImageDirectly(tourId: number, imagePath: string): Promise<void> {
-  // Lade aktuelle Galerie-URLs
-  const tour = await prisma.tour.findUnique({
-    where: { id: tourId },
-    select: { galleryUrls: true }
-  });
-
-  const currentUrls = (tour?.galleryUrls as string[]) || [];
-
-  // Kopiere Bild in uploads-Verzeichnis
-  const filename = `tour-${tourId}-gallery-${Date.now()}.png`;
-  const destPath = path.join(__dirname, '../../uploads/tours', filename);
-  fs.copyFileSync(imagePath, destPath);
-
-  // Füge neue URL hinzu
-  const newUrl = `/uploads/tours/${filename}`;
-  const updatedUrls = [...currentUrls, newUrl];
-
-  // Aktualisiere Tour
-  await prisma.tour.update({
-    where: { id: tourId },
-    data: { galleryUrls: updatedUrls }
-  });
-}
 
 // Hilfsfunktion: Bereinigt temporäre Dateien
 function cleanupTemporaryFiles(images: { mainImage: string; galleryImages: string[]; flyer: string }): void {

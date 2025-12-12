@@ -343,7 +343,22 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                     }
                 } catch (err: any) {
                     console.error('Fehler beim Polling:', err);
-                    // Fehler beim Polling: Weiter versuchen (nicht stoppen)
+                    // Fehler beim Polling: Wenn Job nicht gefunden, stoppe Polling
+                    if (err.response?.status === 404) {
+                        clearInterval(pollingIntervals[tourId]);
+                        delete pollingIntervals[tourId];
+                        setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
+                        setImageGenerationJobs(prev => {
+                            const newJobs = { ...prev };
+                            delete newJobs[tourId];
+                            return newJobs;
+                        });
+                        showMessage(
+                            t('tours.imageGenerationFailed', { defaultValue: 'Fehler bei Bildgenerierung' }),
+                            'error'
+                        );
+                    }
+                    // Sonst: Weiter versuchen (nicht stoppen)
                 }
             }, 2000); // Alle 2 Sekunden
         });
@@ -405,56 +420,104 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     const initialLoadAttemptedRef = useRef(false);
     
     // ✅ STANDARD: Filter-Laden und Default-Filter-Anwendung mit leeren Dependencies (wie in Requests.tsx)
-    // ✅ STANDARD: Warte auf Berechtigungen (wie in JoinRequestsList.tsx)
     useEffect(() => {
+        if (process.env.NODE_ENV === 'development') {
+            console.log('[ToursTab] useEffect triggered', { 
+                permissionsLoading, 
+                initialLoadAttempted: initialLoadAttemptedRef.current 
+            });
+        }
+        
         // ✅ STANDARD: Warte bis Berechtigungen geladen sind
         if (permissionsLoading) {
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[ToursTab] Warte auf Berechtigungen...');
+            }
             return;
         }
         
         // ✅ PERFORMANCE: Verhindere mehrfache Ausführung
         if (initialLoadAttemptedRef.current) {
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[ToursTab] Initial load bereits versucht, überspringe');
+            }
             return;
         }
         
         const initialize = async () => {
+            if (process.env.NODE_ENV === 'development') {
+                console.log('[ToursTab] Starte Initialisierung...');
+            }
+            
             // ✅ PERFORMANCE: Markiere als versucht, BEVOR async Operation startet
             initialLoadAttemptedRef.current = true;
             
             try {
                 // ✅ STANDARD: Prüfe Berechtigung direkt (nicht in Dependencies!)
-                if (!hasPermission('tours', 'read', 'table')) {
+                const hasPermissionToView = hasPermission('tours', 'read', 'table');
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('[ToursTab] Berechtigung geprüft:', hasPermissionToView);
+                }
+                
+                if (!hasPermissionToView) {
+                    if (process.env.NODE_ENV === 'development') {
+                        console.log('[ToursTab] Keine Berechtigung, beende Initialisierung');
+                    }
                     return;
                 }
                 
                 // 1. Filter laden (wartet auf State-Update)
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('[ToursTab] Lade Filter für:', TOURS_TABLE_ID);
+                }
                 const filters = await loadFilters(TOURS_TABLE_ID);
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('[ToursTab] Filter geladen:', filters.length, 'Filter gefunden');
+                }
                 
                 // 2. Default-Filter anwenden (IMMER vorhanden!)
                 const defaultFilter = filters.find(f => f.name === 'Aktuell');
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('[ToursTab] Default-Filter gesucht:', defaultFilter ? 'gefunden' : 'NICHT GEFUNDEN');
+                    if (defaultFilter) {
+                        console.log('[ToursTab] Default-Filter Details:', {
+                            id: defaultFilter.id,
+                            name: defaultFilter.name,
+                            conditionsCount: defaultFilter.conditions?.length || 0
+                        });
+                    }
+                }
+                
                 if (defaultFilter) {
+                    if (process.env.NODE_ENV === 'development') {
+                        console.log('[ToursTab] Wende Default-Filter an...');
+                    }
                     await handleTourFilterChange(
                         defaultFilter.name,
                         defaultFilter.id,
                         defaultFilter.conditions,
                         defaultFilter.operators
                     );
+                    if (process.env.NODE_ENV === 'development') {
+                        console.log('[ToursTab] Default-Filter angewendet');
+                    }
                     return; // Daten werden durch handleTourFilterChange geladen
                 }
                 
                 // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('[ToursTab] FALLBACK: Lade Daten ohne Filter');
+                }
                 await loadTours();
             } catch (error) {
                 // ✅ PERFORMANCE: Bei Fehler Ref zurücksetzen, damit Retry möglich ist
                 initialLoadAttemptedRef.current = false;
-                if (process.env.NODE_ENV === 'development') {
-                    console.error('[ToursTab] Fehler beim Initialisieren:', error);
-                }
+                console.error('[ToursTab] Fehler beim Initialisieren:', error);
             }
         };
         
         initialize();
-    }, [permissionsLoading]); // ✅ STANDARD: Nur permissionsLoading als Dependency (wie in JoinRequestsList.tsx)
+    }, [permissionsLoading]); // ✅ STANDARD: permissionsLoading als Dependency (wird erneut ausgeführt wenn Berechtigungen geladen sind)
     
     const handleTourSort = (key: TourSortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)

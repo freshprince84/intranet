@@ -8,13 +8,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PriceRecommendationService = void 0;
 const client_1 = require("@prisma/client");
-const logger_1 = __importDefault(require("../utils/logger"));
+const logger_1 = require("../utils/logger");
 const priceAnalysisService_1 = require("./priceAnalysisService");
 const prisma = new client_1.PrismaClient();
 /**
@@ -37,7 +34,7 @@ class PriceRecommendationService {
     static generateRecommendations(branchId, startDate, endDate) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                logger_1.default.log(`Starte Generierung von Preisempfehlungen für Branch ${branchId}`);
+                logger_1.logger.log(`Starte Generierung von Preisempfehlungen für Branch ${branchId}`);
                 // Aktive Regeln laden
                 const rules = yield prisma.pricingRule.findMany({
                     where: {
@@ -49,7 +46,7 @@ class PriceRecommendationService {
                     }
                 });
                 if (rules.length === 0) {
-                    logger_1.default.log(`Keine aktiven Regeln für Branch ${branchId} gefunden`);
+                    logger_1.logger.log(`Keine aktiven Regeln für Branch ${branchId} gefunden`);
                     return 0;
                 }
                 // Preisanalysen abrufen
@@ -103,11 +100,11 @@ class PriceRecommendationService {
                         recommendationCount++;
                     }
                 }
-                logger_1.default.log(`Preisempfehlungen generiert: ${recommendationCount} Empfehlungen erstellt`);
+                logger_1.logger.log(`Preisempfehlungen generiert: ${recommendationCount} Empfehlungen erstellt`);
                 return recommendationCount;
             }
             catch (error) {
-                logger_1.default.error('Fehler bei der Generierung von Preisempfehlungen:', error);
+                logger_1.logger.error('Fehler bei der Generierung von Preisempfehlungen:', error);
                 throw error;
             }
         });
@@ -132,7 +129,7 @@ class PriceRecommendationService {
                 return recommendation;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Abrufen der Preisempfehlung:', error);
+                logger_1.logger.error('Fehler beim Abrufen der Preisempfehlung:', error);
                 throw error;
             }
         });
@@ -173,7 +170,7 @@ class PriceRecommendationService {
                 return recommendations;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Abrufen der Preisempfehlungen:', error);
+                logger_1.logger.error('Fehler beim Abrufen der Preisempfehlungen:', error);
                 throw error;
             }
         });
@@ -213,11 +210,11 @@ class PriceRecommendationService {
                         appliedBy: userId
                     }
                 });
-                logger_1.default.log(`Preisempfehlung ${recommendationId} wurde angewendet`);
+                logger_1.logger.log(`Preisempfehlung ${recommendationId} wurde angewendet`);
                 return true;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Anwenden der Preisempfehlung:', error);
+                logger_1.logger.error('Fehler beim Anwenden der Preisempfehlung:', error);
                 throw error;
             }
         });
@@ -242,11 +239,11 @@ class PriceRecommendationService {
                         approvedBy: userId
                     }
                 });
-                logger_1.default.log(`Preisempfehlung ${recommendationId} wurde genehmigt`);
+                logger_1.logger.log(`Preisempfehlung ${recommendationId} wurde genehmigt`);
                 return true;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Genehmigen der Preisempfehlung:', error);
+                logger_1.logger.error('Fehler beim Genehmigen der Preisempfehlung:', error);
                 throw error;
             }
         });
@@ -268,11 +265,11 @@ class PriceRecommendationService {
                         status: 'rejected'
                     }
                 });
-                logger_1.default.log(`Preisempfehlung ${recommendationId} wurde abgelehnt`);
+                logger_1.logger.log(`Preisempfehlung ${recommendationId} wurde abgelehnt`);
                 return true;
             }
             catch (error) {
-                logger_1.default.error('Fehler beim Ablehnen der Preisempfehlung:', error);
+                logger_1.logger.error('Fehler beim Ablehnen der Preisempfehlung:', error);
                 throw error;
             }
         });

@@ -23,6 +23,7 @@ const fs_1 = __importDefault(require("fs"));
 const logger_1 = require("../utils/logger");
 const queueService_1 = require("../services/queueService");
 const geminiImageService_1 = require("../services/geminiImageService");
+const tourImageUploadService_1 = require("../services/tourImageUploadService");
 const userSelect = {
     id: true,
     username: true,
@@ -1001,12 +1002,12 @@ const generateTourImages = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 const generatedImages = yield geminiImageService_1.GeminiImageService.generateTourImages(tour.id, tour.title || '', tour.description || '', process.env.GEMINI_API_KEY);
                 // Lade Hauptbild hoch
                 if (generatedImages.mainImage && fs_1.default.existsSync(generatedImages.mainImage)) {
-                    yield uploadImageDirectly(tourId, generatedImages.mainImage);
+                    yield tourImageUploadService_1.TourImageUploadService.uploadImageDirectly(tourId, generatedImages.mainImage);
                 }
                 // Lade Galerie-Bilder hoch
                 for (const galleryImage of generatedImages.galleryImages) {
                     if (fs_1.default.existsSync(galleryImage)) {
-                        yield uploadGalleryImageDirectly(tourId, galleryImage);
+                        yield tourImageUploadService_1.TourImageUploadService.uploadGalleryImageDirectly(tourId, galleryImage);
                     }
                 }
                 // Cleanup temporäre Dateien
@@ -1105,55 +1106,6 @@ const getTourImageGenerationStatus = (req, res) => __awaiter(void 0, void 0, voi
     }
 });
 exports.getTourImageGenerationStatus = getTourImageGenerationStatus;
-// Hilfsfunktion: Lädt Bild direkt hoch (ohne HTTP)
-function uploadImageDirectly(tourId, imagePath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Altes Bild löschen (falls vorhanden)
-        const tour = yield prisma_1.prisma.tour.findUnique({
-            where: { id: tourId },
-            select: { imageUrl: true }
-        });
-        if (tour === null || tour === void 0 ? void 0 : tour.imageUrl) {
-            const oldImagePath = path_1.default.join(__dirname, '../../uploads/tours', path_1.default.basename(tour.imageUrl));
-            if (fs_1.default.existsSync(oldImagePath)) {
-                fs_1.default.unlinkSync(oldImagePath);
-            }
-        }
-        // Kopiere Bild in uploads-Verzeichnis
-        const filename = `tour-${tourId}-main-${Date.now()}.png`;
-        const destPath = path_1.default.join(__dirname, '../../uploads/tours', filename);
-        fs_1.default.copyFileSync(imagePath, destPath);
-        // Aktualisiere Tour
-        const imageUrl = `/uploads/tours/${filename}`;
-        yield prisma_1.prisma.tour.update({
-            where: { id: tourId },
-            data: { imageUrl }
-        });
-    });
-}
-// Hilfsfunktion: Lädt Galerie-Bild direkt hoch (ohne HTTP)
-function uploadGalleryImageDirectly(tourId, imagePath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Lade aktuelle Galerie-URLs
-        const tour = yield prisma_1.prisma.tour.findUnique({
-            where: { id: tourId },
-            select: { galleryUrls: true }
-        });
-        const currentUrls = (tour === null || tour === void 0 ? void 0 : tour.galleryUrls) || [];
-        // Kopiere Bild in uploads-Verzeichnis
-        const filename = `tour-${tourId}-gallery-${Date.now()}.png`;
-        const destPath = path_1.default.join(__dirname, '../../uploads/tours', filename);
-        fs_1.default.copyFileSync(imagePath, destPath);
-        // Füge neue URL hinzu
-        const newUrl = `/uploads/tours/${filename}`;
-        const updatedUrls = [...currentUrls, newUrl];
-        // Aktualisiere Tour
-        yield prisma_1.prisma.tour.update({
-            where: { id: tourId },
-            data: { galleryUrls: updatedUrls }
-        });
-    });
-}
 // Hilfsfunktion: Bereinigt temporäre Dateien
 function cleanupTemporaryFiles(images) {
     try {
