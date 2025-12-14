@@ -177,11 +177,11 @@ async function deleteInactiveUsers() {
 
           // 9. ShiftSwapRequests
           await tx.shiftSwapRequest.deleteMany({
-            where: { requesterId: user.id }
+            where: { requestedBy: user.id }
           });
 
           await tx.shiftSwapRequest.deleteMany({
-            where: { requesteeId: user.id }
+            where: { requestedFrom: user.id }
           });
 
           // 10. UserAvailability
@@ -201,11 +201,11 @@ async function deleteInactiveUsers() {
           });
 
           await tx.cerebroExternalLink.deleteMany({
-            where: { userId: user.id }
+            where: { createdById: user.id }
           });
 
           await tx.cerebroMedia.deleteMany({
-            where: { userId: user.id }
+            where: { createdById: user.id }
           });
 
           // 12. ConsultationInvoices
@@ -289,7 +289,7 @@ async function deleteInactiveUsers() {
 
           // 27. TourBookings
           await tx.tourBooking.deleteMany({
-            where: { bookedBy: user.id }
+            where: { bookedById: user.id }
           });
 
           // 28. PasswordEntries (wo User Ersteller ist)
@@ -310,14 +310,11 @@ async function deleteInactiveUsers() {
 
           // 31. PricingRules
           await tx.pricingRule.updateMany({
-            where: { createdById: user.id },
-            data: { createdById: 1 } // Setze auf Admin als Fallback
+            where: { createdBy: user.id },
+            data: { createdBy: 1 } // Setze auf Admin als Fallback
           });
 
-          // 32. WhatsAppConversations (userId Feld)
-          await tx.whatsAppConversation.deleteMany({
-            where: { userId: user.id }
-          });
+          // 32. WhatsAppConversations (bereits oben gelöscht, entferne doppelte Zeile)
 
           // 33. Lösche den Benutzer selbst
           await tx.user.delete({
