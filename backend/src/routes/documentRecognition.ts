@@ -84,25 +84,45 @@ router.post('/', [
       // Extrahiere den JSON-Teil aus der Antwort
       const aiResponse = openaiResponse.data.choices[0].message.content;
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'documentRecognition.ts:85',message:'OpenAI Response received',data:{responseLength:aiResponse?.length||0,responseStart:aiResponse?.substring(0,200)||'null',startsWithBrace:aiResponse?.trim().startsWith('{')||false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       // Versuche, JSON aus der Antwort zu extrahieren (falls die Antwort Text enthält)
       let documentData;
       try {
         // Wenn die Antwort direkt ein JSON-Objekt ist
         if (aiResponse.trim().startsWith('{')) {
           documentData = JSON.parse(aiResponse);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'documentRecognition.ts:92',message:'JSON parsed directly',data:{hasFirstName:!!documentData.firstName,hasLastName:!!documentData.lastName,hasBirthday:!!documentData.birthday},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
         } else {
           // Suche nach JSON-Code-Block in der Antwort
           const jsonMatch = aiResponse.match(/\`\`\`json\n([\s\S]*?)\n\`\`\`/) || 
                             aiResponse.match(/\`\`\`\n([\s\S]*?)\n\`\`\`/) ||
                             aiResponse.match(/\{[\s\S]*\}/);
           
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'documentRecognition.ts:96',message:'JSON match attempt',data:{hasMatch:!!jsonMatch,matchType:jsonMatch?0:(aiResponse.match(/\`\`\`json\n([\s\S]*?)\n\`\`\`/)?'json':(aiResponse.match(/\`\`\`\n([\s\S]*?)\n\`\`\`/)?'code':(aiResponse.match(/\{[\s\S]*\}/)?'brace':'none')))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          
           if (jsonMatch) {
             documentData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'documentRecognition.ts:100',message:'JSON parsed from match',data:{hasFirstName:!!documentData.firstName,hasLastName:!!documentData.lastName,hasBirthday:!!documentData.birthday},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
           } else {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'documentRecognition.ts:102',message:'No JSON match found',data:{responsePreview:aiResponse.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
             throw new Error('Konnte kein JSON in der KI-Antwort finden');
           }
         }
       } catch (parseError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'documentRecognition.ts:105',message:'JSON parse error',data:{error:parseError instanceof Error?parseError.message:'unknown',responsePreview:aiResponse?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         logger.error('Fehler beim Parsen der KI-Antwort:', parseError);
         return res.status(500).json({ 
           error: 'Fehler bei der Verarbeitung der KI-Antwort', 

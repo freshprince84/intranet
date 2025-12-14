@@ -104,8 +104,13 @@ export const getAllBranches = async (req: Request, res: Response) => {
                     if (decrypted && typeof decrypted === 'object') {
                         branch.boldPaymentSettings = decrypted;
                         // Log für Debugging: Prüfe ob Werte vorhanden sind (auch verschlüsselt)
-                        if (!decrypted.apiKey && !decrypted.merchantId) {
+                        // Wenn Entschlüsselung fehlgeschlagen ist, bleiben verschlüsselte Werte erhalten (mit ':')
+                        const hasApiKey = decrypted.apiKey && typeof decrypted.apiKey === 'string';
+                        const hasMerchantId = decrypted.merchantId && typeof decrypted.merchantId === 'string';
+                        if (!hasApiKey && !hasMerchantId) {
                             logger.warn(`[Branch Controller] Bold Payment Settings für Branch ${branch.id} hat keine apiKey/merchantId Werte (auch nicht verschlüsselt)`);
+                        } else if ((hasApiKey && decrypted.apiKey.includes(':')) || (hasMerchantId && decrypted.merchantId.includes(':'))) {
+                            logger.info(`[Branch Controller] Bold Payment Settings für Branch ${branch.id} enthält verschlüsselte Werte (Entschlüsselung fehlgeschlagen)`);
                         }
                     } else {
                         // Falls Entschlüsselung komplett fehlschlägt, behalte Original
@@ -115,8 +120,6 @@ export const getAllBranches = async (req: Request, res: Response) => {
                     logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
                     // Bei Fehler: behalte Original-Settings (verschlüsselt)
                 }
-            } else {
-                logger.warn(`[Branch Controller] Branch ${branch.id} hat keine boldPaymentSettings`);
             }
             
             // Entschlüssele Door System Settings

@@ -414,10 +414,15 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                 autoSendInvitation: existingLobbyPms.autoSendInvitation || false
             },
             boldPaymentSettings: {
-                // Verwende die Werte direkt - auch wenn sie verschlüsselt sind (mit ':')
-                // Das Frontend zeigt sie dann an, auch wenn Entschlüsselung fehlgeschlagen ist
-                apiKey: existingBoldPayment.apiKey || '',
-                merchantId: existingBoldPayment.merchantId || '',
+                // Wenn Entschlüsselung fehlgeschlagen ist, sind die Werte verschlüsselt (Format: "iv:authTag:encrypted")
+                // Diese sollten NICHT im Frontend angezeigt werden (Sicherheit)
+                // Daher: Wenn Wert verschlüsselt ist (enthält ':'), zeige leer
+                apiKey: (existingBoldPayment.apiKey && !existingBoldPayment.apiKey.includes(':')) 
+                    ? existingBoldPayment.apiKey 
+                    : '',
+                merchantId: (existingBoldPayment.merchantId && !existingBoldPayment.merchantId.includes(':')) 
+                    ? existingBoldPayment.merchantId 
+                    : '',
                 environment: existingBoldPayment.environment || 'sandbox'
             },
             doorSystemSettings: {

@@ -119,6 +119,9 @@ const Profile: React.FC = () => {
       const response = await axiosInstance.get('/users/profile');
       
       if (response.data) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:121',message:'fetchUserProfile response received',data:{hasIdentificationDocuments:!!response.data.identificationDocuments,identificationDocumentsCount:response.data.identificationDocuments?.length||0,identificationDocumentsType:Array.isArray(response.data.identificationDocuments)?'array':'other'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         const profileData = {
           ...response.data,
           birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null,
@@ -129,6 +132,9 @@ const Profile: React.FC = () => {
           phoneNumber: response.data.phoneNumber || null,
           identificationDocuments: response.data.identificationDocuments || [], // Explizit setzen
         };
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:131',message:'profileData prepared with identificationDocuments',data:{identificationDocumentsCount:profileData.identificationDocuments?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         setUser(profileData);
         setFormData(profileData);
       }
@@ -433,9 +439,18 @@ const Profile: React.FC = () => {
                         <IdentificationDocumentForm
                           userId={user.id}
                           onDocumentSaved={async () => {
+                            // #region agent log
+                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:435',message:'onDocumentSaved called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                            // #endregion
                             setShowDocumentUpload(false);
                             await fetchUserProfile(); // Aktualisiere Profil nach Upload (WARTEN auf Abschluss!)
+                            // #region agent log
+                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:437',message:'fetchUserProfile completed',data:{hasDocumentListRef:!!documentListRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                            // #endregion
                             documentListRef.current?.loadDocuments(); // Dokument-Liste aktualisieren
+                            // #region agent log
+                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:438',message:'loadDocuments called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                            // #endregion
                             setIsEditing(false); // Edit-Modus nach Upload zurücksetzen
                             showMessage('Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.', 'success');
                             

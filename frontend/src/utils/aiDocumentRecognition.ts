@@ -61,8 +61,15 @@ export const recognizeDocumentWithAI = async (imageData: string): Promise<Partia
     const result = await response.json();
     logger.log('KI-Ergebnis:', result);
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiDocumentRecognition.ts:61',message:'AI recognition result received',data:{hasFirstName:!!result.firstName,hasLastName:!!result.lastName,hasBirthday:!!result.birthday,resultKeys:Object.keys(result),resultEmpty:Object.keys(result).length===0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     return result;
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'aiDocumentRecognition.ts:65',message:'AI recognition error',data:{error:error instanceof Error?error.message:'unknown',errorType:error instanceof Error?error.constructor.name:'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     console.error('Fehler bei der KI-basierten Dokumentenerkennung:', error);
     
     // Bei Fehlern ein leeres Objekt zurückgeben
