@@ -1,12 +1,10 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { createNotificationIfEnabled } from './notificationController';
 import { NotificationType } from '@prisma/client';
-import { getPriceAnalysisNotificationText, getUserLanguage } from '../utils/translations';
+import { getPriceAnalysisNotificationText, getPriceAnalysisErrorText, getUserLanguage } from '../utils/translations';
 import { logger } from '../utils/logger';
-
-const prisma = new PrismaClient();
 
 /**
  * Controller für Preisregeln
@@ -52,9 +50,11 @@ export const pricingRuleController = {
 
       res.json(rules);
     } catch (error: any) {
-      logger.error('Fehler beim Abrufen der Preisregeln:', error);
+      logger.error('Error fetching pricing rules:', error);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
       res.status(500).json({ 
-        message: 'Fehler beim Abrufen der Preisregeln',
+        message: getPriceAnalysisErrorText(language, 'errorFetchingRules'),
         error: error.message 
       });
     }
@@ -67,10 +67,12 @@ export const pricingRuleController = {
   getRuleById: async (req: AuthenticatedRequest, res: Response) => {
     try {
       const ruleId = parseInt(req.params.id, 10);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
 
       if (isNaN(ruleId)) {
         return res.status(400).json({ 
-          message: 'Ungültige Regel-ID' 
+          message: getPriceAnalysisErrorText(language, 'invalidRuleId')
         });
       }
 
@@ -92,15 +94,17 @@ export const pricingRuleController = {
 
       if (!rule) {
         return res.status(404).json({ 
-          message: 'Preisregel nicht gefunden' 
+          message: getPriceAnalysisErrorText(language, 'ruleNotFound')
         });
       }
 
       res.json(rule);
     } catch (error: any) {
-      logger.error('Fehler beim Abrufen der Preisregel:', error);
+      logger.error('Error fetching pricing rule:', error);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
       res.status(500).json({ 
-        message: 'Fehler beim Abrufen der Preisregel',
+        message: getPriceAnalysisErrorText(language, 'errorFetchingRule'),
         error: error.message 
       });
     }
@@ -114,10 +118,11 @@ export const pricingRuleController = {
     try {
       const { branchId, name, description, conditions, action, roomTypes, categoryIds, priority, isActive } = req.body;
       const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
 
       if (!branchId || !name || !conditions || !action) {
         return res.status(400).json({ 
-          message: 'branchId, name, conditions und action sind erforderlich' 
+          message: getPriceAnalysisErrorText(language, 'requiredFieldsMissing')
         });
       }
 
@@ -149,7 +154,6 @@ export const pricingRuleController = {
       // Notification erstellen
       if (userId) {
         try {
-          const language = await getUserLanguage(userId);
           const notificationText = getPriceAnalysisNotificationText(
             language,
             'ruleCreated',
@@ -165,15 +169,17 @@ export const pricingRuleController = {
             relatedEntityType: 'created'
           });
         } catch (error) {
-          logger.error('Fehler beim Erstellen der Notification:', error);
+          logger.error('Error creating notification:', error);
         }
       }
 
       res.status(201).json(rule);
     } catch (error: any) {
-      logger.error('Fehler beim Erstellen der Preisregel:', error);
+      logger.error('Error creating pricing rule:', error);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
       res.status(500).json({ 
-        message: 'Fehler beim Erstellen der Preisregel',
+        message: getPriceAnalysisErrorText(language, 'errorCreatingRule'),
         error: error.message 
       });
     }
@@ -187,10 +193,12 @@ export const pricingRuleController = {
     try {
       const ruleId = parseInt(req.params.id, 10);
       const { name, description, conditions, action, roomTypes, categoryIds, priority, isActive } = req.body;
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
 
       if (isNaN(ruleId)) {
         return res.status(400).json({ 
-          message: 'Ungültige Regel-ID' 
+          message: getPriceAnalysisErrorText(language, 'invalidRuleId')
         });
       }
 
@@ -221,10 +229,8 @@ export const pricingRuleController = {
       });
 
       // Notification erstellen
-      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
       if (userId) {
         try {
-          const language = await getUserLanguage(userId);
           const notificationText = getPriceAnalysisNotificationText(
             language,
             'ruleUpdated',
@@ -240,15 +246,17 @@ export const pricingRuleController = {
             relatedEntityType: 'updated'
           });
         } catch (error) {
-          logger.error('Fehler beim Erstellen der Notification:', error);
+          logger.error('Error creating notification:', error);
         }
       }
 
       res.json(rule);
     } catch (error: any) {
-      logger.error('Fehler beim Aktualisieren der Preisregel:', error);
+      logger.error('Error updating pricing rule:', error);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
       res.status(500).json({ 
-        message: 'Fehler beim Aktualisieren der Preisregel',
+        message: getPriceAnalysisErrorText(language, 'errorUpdatingRule'),
         error: error.message 
       });
     }
@@ -261,10 +269,12 @@ export const pricingRuleController = {
   deleteRule: async (req: AuthenticatedRequest, res: Response) => {
     try {
       const ruleId = parseInt(req.params.id, 10);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
 
       if (isNaN(ruleId)) {
         return res.status(400).json({ 
-          message: 'Ungültige Regel-ID' 
+          message: getPriceAnalysisErrorText(language, 'invalidRuleId')
         });
       }
 
@@ -282,10 +292,8 @@ export const pricingRuleController = {
       });
 
       // Notification erstellen
-      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
       if (userId && rule) {
         try {
-          const language = await getUserLanguage(userId);
           const notificationText = getPriceAnalysisNotificationText(
             language,
             'ruleDeleted',
@@ -301,18 +309,20 @@ export const pricingRuleController = {
             relatedEntityType: 'deleted'
           });
         } catch (error) {
-          logger.error('Fehler beim Erstellen der Notification:', error);
+          logger.error('Error creating notification:', error);
         }
       }
 
       res.json({
         success: true,
-        message: 'Preisregel wurde gelöscht'
+        message: getPriceAnalysisErrorText(language, 'ruleDeleted')
       });
     } catch (error: any) {
-      logger.error('Fehler beim Löschen der Preisregel:', error);
+      logger.error('Error deleting pricing rule:', error);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
       res.status(500).json({ 
-        message: 'Fehler beim Löschen der Preisregel',
+        message: getPriceAnalysisErrorText(language, 'errorDeletingRule'),
         error: error.message 
       });
     }

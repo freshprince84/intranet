@@ -127,6 +127,7 @@ const Profile: React.FC = () => {
           language: response.data.language || 'es',
           gender: response.data.gender || null,
           phoneNumber: response.data.phoneNumber || null,
+          identificationDocuments: response.data.identificationDocuments || [], // Explizit setzen
         };
         setUser(profileData);
         setFormData(profileData);
@@ -433,7 +434,7 @@ const Profile: React.FC = () => {
                           userId={user.id}
                           onDocumentSaved={async () => {
                             setShowDocumentUpload(false);
-                            fetchUserProfile(); // Aktualisiere Profil nach Upload
+                            await fetchUserProfile(); // Aktualisiere Profil nach Upload (WARTEN auf Abschluss!)
                             documentListRef.current?.loadDocuments(); // Dokument-Liste aktualisieren
                             setIsEditing(false); // Edit-Modus nach Upload zurücksetzen
                             showMessage('Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.', 'success');

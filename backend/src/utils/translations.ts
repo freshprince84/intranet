@@ -1117,6 +1117,8 @@ type PriceAnalysisNotificationTranslations = {
   ruleDeleted: (ruleName: string) => { title: string; message: string };
   rateShoppingCompleted: (platform: string) => { title: string; message: string };
   rateShoppingFailed: (platform: string, error: string) => { title: string; message: string };
+  analysisCompleted: (analysisCount: number) => { title: string; message: string };
+  recommendationsGenerated: (recommendationCount: number) => { title: string; message: string };
 };
 
 const priceAnalysisNotifications: Record<string, PriceAnalysisNotificationTranslations> = {
@@ -1148,6 +1150,14 @@ const priceAnalysisNotifications: Record<string, PriceAnalysisNotificationTransl
     rateShoppingFailed: (platform: string, error: string) => ({
       title: 'Rate Shopping fehlgeschlagen',
       message: `Rate Shopping für ${platform} ist fehlgeschlagen: ${error}`
+    }),
+    analysisCompleted: (analysisCount: number) => ({
+      title: 'Preisanalyse abgeschlossen',
+      message: `Preisanalyse für ${analysisCount} Kategorien abgeschlossen.`
+    }),
+    recommendationsGenerated: (recommendationCount: number) => ({
+      title: 'Preisvorschläge generiert',
+      message: `${recommendationCount} Preisvorschläge wurden generiert.`
     })
   },
   es: {
@@ -1178,6 +1188,14 @@ const priceAnalysisNotifications: Record<string, PriceAnalysisNotificationTransl
     rateShoppingFailed: (platform: string, error: string) => ({
       title: 'Comparación de precios fallida',
       message: `La comparación de precios para ${platform} ha fallado: ${error}`
+    }),
+    analysisCompleted: (analysisCount: number) => ({
+      title: 'Análisis de precios completado',
+      message: `Análisis de precios para ${analysisCount} categorías completado.`
+    }),
+    recommendationsGenerated: (recommendationCount: number) => ({
+      title: 'Recomendaciones de precio generadas',
+      message: `Se generaron ${recommendationCount} recomendaciones de precio.`
     })
   },
   en: {
@@ -1208,13 +1226,21 @@ const priceAnalysisNotifications: Record<string, PriceAnalysisNotificationTransl
     rateShoppingFailed: (platform: string, error: string) => ({
       title: 'Rate shopping failed',
       message: `Rate shopping for ${platform} has failed: ${error}`
+    }),
+    analysisCompleted: (analysisCount: number) => ({
+      title: 'Price analysis completed',
+      message: `Price analysis for ${analysisCount} categories completed.`
+    }),
+    recommendationsGenerated: (recommendationCount: number) => ({
+      title: 'Price recommendations generated',
+      message: `${recommendationCount} price recommendations were generated.`
     })
   }
 };
 
 export function getPriceAnalysisNotificationText(
   language: string,
-  type: 'recommendationCreated' | 'recommendationApplied' | 'ruleCreated' | 'ruleUpdated' | 'ruleDeleted' | 'rateShoppingCompleted' | 'rateShoppingFailed',
+  type: 'recommendationCreated' | 'recommendationApplied' | 'ruleCreated' | 'ruleUpdated' | 'ruleDeleted' | 'rateShoppingCompleted' | 'rateShoppingFailed' | 'analysisCompleted' | 'recommendationsGenerated',
   ...args: any[]
 ): { title: string; message: string } {
   const lang = language in priceAnalysisNotifications ? language : 'de';
@@ -1235,7 +1261,147 @@ export function getPriceAnalysisNotificationText(
       return translations.rateShoppingCompleted(args[0]);
     case 'rateShoppingFailed':
       return translations.rateShoppingFailed(args[0], args[1]);
+    case 'analysisCompleted':
+      return translations.analysisCompleted(args[0]);
+    case 'recommendationsGenerated':
+      return translations.recommendationsGenerated(args[0]);
     default:
       return translations.recommendationCreated(args[0], args[1]);
   }
+}
+
+// ============================================
+// Price Analysis Error Texts
+// ============================================
+
+type PriceAnalysisErrorTranslations = {
+  branchIdRequired: string;
+  invalidRecommendationId: string;
+  invalidRuleId: string;
+  invalidAnalysisId: string;
+  notAuthenticated: string;
+  recommendationNotFound: string;
+  ruleNotFound: string;
+  requiredFieldsMissing: string;
+  requiredAnalysisFieldsMissing: string;
+  errorFetchingRecommendations: string;
+  errorApplyingRecommendation: string;
+  errorApprovingRecommendation: string;
+  errorRejectingRecommendation: string;
+  errorFetchingRules: string;
+  errorFetchingRule: string;
+  errorCreatingRule: string;
+  errorUpdatingRule: string;
+  errorDeletingRule: string;
+  errorAnalyzing: string;
+  errorFetchingAnalyses: string;
+  errorFetchingAnalysis: string;
+  errorGeneratingRecommendations: string;
+  recommendationApplied: string;
+  recommendationApproved: string;
+  recommendationRejected: string;
+  ruleCreated: string;
+  ruleUpdated: string;
+  ruleDeleted: string;
+};
+
+const priceAnalysisErrorTexts: Record<string, PriceAnalysisErrorTranslations> = {
+  de: {
+    branchIdRequired: 'branchId ist erforderlich',
+    invalidRecommendationId: 'Ungültige Empfehlungs-ID',
+    invalidRuleId: 'Ungültige Regel-ID',
+    invalidAnalysisId: 'Ungültige Analyse-ID',
+    notAuthenticated: 'Nicht authentifiziert',
+    recommendationNotFound: 'Preisempfehlung nicht gefunden',
+    ruleNotFound: 'Preisregel nicht gefunden',
+    requiredFieldsMissing: 'branchId, name, conditions und action sind erforderlich',
+    requiredAnalysisFieldsMissing: 'branchId, startDate und endDate sind erforderlich',
+    errorFetchingRecommendations: 'Fehler beim Abrufen der Preisempfehlungen',
+    errorApplyingRecommendation: 'Fehler beim Anwenden der Preisempfehlung',
+    errorApprovingRecommendation: 'Fehler beim Genehmigen der Preisempfehlung',
+    errorRejectingRecommendation: 'Fehler beim Ablehnen der Preisempfehlung',
+    errorFetchingRules: 'Fehler beim Abrufen der Preisregeln',
+    errorFetchingRule: 'Fehler beim Abrufen der Preisregel',
+    errorCreatingRule: 'Fehler beim Erstellen der Preisregel',
+    errorUpdatingRule: 'Fehler beim Aktualisieren der Preisregel',
+    errorDeletingRule: 'Fehler beim Löschen der Preisregel',
+    errorAnalyzing: 'Fehler bei der Preisanalyse',
+    errorFetchingAnalyses: 'Fehler beim Abrufen der Preisanalysen',
+    errorFetchingAnalysis: 'Fehler beim Abrufen der Preisanalyse',
+    errorGeneratingRecommendations: 'Fehler bei der Generierung von Preisempfehlungen',
+    recommendationApplied: 'Preisempfehlung wurde angewendet',
+    recommendationApproved: 'Preisempfehlung wurde genehmigt',
+    recommendationRejected: 'Preisempfehlung wurde abgelehnt',
+    ruleCreated: 'Preisregel wurde erstellt',
+    ruleUpdated: 'Preisregel wurde aktualisiert',
+    ruleDeleted: 'Preisregel wurde gelöscht'
+  },
+  es: {
+    branchIdRequired: 'branchId es requerido',
+    invalidRecommendationId: 'ID de recomendación inválida',
+    invalidRuleId: 'ID de regla inválida',
+    invalidAnalysisId: 'ID de análisis inválida',
+    notAuthenticated: 'No autenticado',
+    recommendationNotFound: 'Recomendación de precio no encontrada',
+    ruleNotFound: 'Regla de precios no encontrada',
+    requiredFieldsMissing: 'branchId, name, conditions y action son requeridos',
+    requiredAnalysisFieldsMissing: 'branchId, startDate y endDate son requeridos',
+    errorFetchingRecommendations: 'Error al obtener las recomendaciones de precio',
+    errorApplyingRecommendation: 'Error al aplicar la recomendación de precio',
+    errorApprovingRecommendation: 'Error al aprobar la recomendación de precio',
+    errorRejectingRecommendation: 'Error al rechazar la recomendación de precio',
+    errorFetchingRules: 'Error al obtener las reglas de precio',
+    errorFetchingRule: 'Error al obtener la regla de precio',
+    errorCreatingRule: 'Error al crear la regla de precio',
+    errorUpdatingRule: 'Error al actualizar la regla de precio',
+    errorDeletingRule: 'Error al eliminar la regla de precio',
+    errorAnalyzing: 'Error en el análisis de precios',
+    errorFetchingAnalyses: 'Error al obtener los análisis de precio',
+    errorFetchingAnalysis: 'Error al obtener el análisis de precio',
+    errorGeneratingRecommendations: 'Error al generar recomendaciones de precio',
+    recommendationApplied: 'Recomendación de precio aplicada',
+    recommendationApproved: 'Recomendación de precio aprobada',
+    recommendationRejected: 'Recomendación de precio rechazada',
+    ruleCreated: 'Regla de precios creada',
+    ruleUpdated: 'Regla de precios actualizada',
+    ruleDeleted: 'Regla de precios eliminada'
+  },
+  en: {
+    branchIdRequired: 'branchId is required',
+    invalidRecommendationId: 'Invalid recommendation ID',
+    invalidRuleId: 'Invalid rule ID',
+    invalidAnalysisId: 'Invalid analysis ID',
+    notAuthenticated: 'Not authenticated',
+    recommendationNotFound: 'Price recommendation not found',
+    ruleNotFound: 'Pricing rule not found',
+    requiredFieldsMissing: 'branchId, name, conditions and action are required',
+    requiredAnalysisFieldsMissing: 'branchId, startDate and endDate are required',
+    errorFetchingRecommendations: 'Error fetching price recommendations',
+    errorApplyingRecommendation: 'Error applying price recommendation',
+    errorApprovingRecommendation: 'Error approving price recommendation',
+    errorRejectingRecommendation: 'Error rejecting price recommendation',
+    errorFetchingRules: 'Error fetching pricing rules',
+    errorFetchingRule: 'Error fetching pricing rule',
+    errorCreatingRule: 'Error creating pricing rule',
+    errorUpdatingRule: 'Error updating pricing rule',
+    errorDeletingRule: 'Error deleting pricing rule',
+    errorAnalyzing: 'Error analyzing prices',
+    errorFetchingAnalyses: 'Error fetching price analyses',
+    errorFetchingAnalysis: 'Error fetching price analysis',
+    errorGeneratingRecommendations: 'Error generating price recommendations',
+    recommendationApplied: 'Price recommendation applied',
+    recommendationApproved: 'Price recommendation approved',
+    recommendationRejected: 'Price recommendation rejected',
+    ruleCreated: 'Pricing rule created',
+    ruleUpdated: 'Pricing rule updated',
+    ruleDeleted: 'Pricing rule deleted'
+  }
+};
+
+export function getPriceAnalysisErrorText(
+  language: string,
+  errorType: keyof PriceAnalysisErrorTranslations
+): string {
+  const lang = language in priceAnalysisErrorTexts ? language : 'de';
+  return priceAnalysisErrorTexts[lang][errorType];
 }

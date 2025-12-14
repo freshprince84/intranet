@@ -324,6 +324,11 @@ function convertSingleCondition(
     case 'checkOutDate':
       return convertDateCondition(resolvedValue, operator, column);
 
+    case 'time':
+      // ✅ FIX: "time" Spalte filtert auf createdAt (Erstellungszeit)
+      // Bei Todos wird updatedAt angezeigt, aber für Filter verwenden wir createdAt
+      return convertDateCondition(resolvedValue, operator, 'createdAt');
+
     case 'Deadline':
     case 'deadline':
       // ✅ FIX: Deadline → paymentDeadline (korrekter Feldname im Schema)
