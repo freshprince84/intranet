@@ -47,8 +47,8 @@ const PriceRecommendationsTab: React.FC = () => {
     const { openSidepane, closeSidepane } = useSidepane();
     
     const handleError = errorContext?.handleError || ((err: any) => {
-        console.error('Fehler:', err);
-        const errorMessage = err?.response?.data?.message || err?.message || 'Ein Fehler ist aufgetreten';
+        console.error(t('common.error', 'Fehler'), err);
+        const errorMessage = err?.response?.data?.message || err?.message || t('common.errorOccurred', 'Ein Fehler ist aufgetreten');
         showMessage(errorMessage, 'error');
     });
 
