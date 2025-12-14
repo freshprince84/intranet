@@ -73,7 +73,7 @@ const getOperatorsByColumnType = (columnId: string, t: (key: string) => string):
   ];
 
   // Je nach Spaltentyp entsprechende Operatoren zurückgeben
-  if (columnId === 'dueDate' || columnId === 'startTime' || columnId === 'checkInDate' || columnId === 'checkOutDate' || columnId === 'arrivalTime') {
+  if (columnId === 'dueDate' || columnId === 'startTime' || columnId === 'checkInDate' || columnId === 'checkOutDate' || columnId === 'arrivalTime' || columnId === 'time') {
     return dateOperators;
   } else if (columnId === 'duration' || columnId === 'amount') {
     return durationOperators;
@@ -481,7 +481,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
     }
     
     // Für Datumsfelder ein Datumseingabefeld rendern
-    if (columnId === 'dueDate' || columnId === 'startTime' || columnId === 'checkInDate' || columnId === 'checkOutDate' || columnId === 'arrivalTime') {
+    if (columnId === 'dueDate' || columnId === 'startTime' || columnId === 'checkInDate' || columnId === 'checkOutDate' || columnId === 'arrivalTime' || columnId === 'time') {
       // Prüfe ob der Wert eine Variable ist
       const isVariable = value === '__TODAY__';
       const isCustomDate = !isVariable && value;

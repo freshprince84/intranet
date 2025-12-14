@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { PriceRecommendationService } from '../services/priceRecommendationService';
 import { createNotificationIfEnabled } from './notificationController';
 import { NotificationType } from '@prisma/client';
-import { getPriceAnalysisNotificationText, getUserLanguage } from '../utils/translations';
+import { getPriceAnalysisNotificationText, getPriceAnalysisErrorText, getUserLanguage } from '../utils/translations';
 import { logger } from '../utils/logger';
 
 /**
@@ -28,8 +28,10 @@ export const priceRecommendationController = {
         : undefined;
 
       if (!branchId) {
+        const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+        const language = userId ? await getUserLanguage(userId) : 'de';
         return res.status(400).json({ 
-          message: 'branchId ist erforderlich' 
+          message: getPriceAnalysisErrorText(language, 'branchIdRequired')
         });
       }
 
@@ -42,9 +44,11 @@ export const priceRecommendationController = {
 
       res.json(recommendations);
     } catch (error: any) {
-      logger.error('Fehler beim Abrufen der Preisempfehlungen:', error);
+      logger.error('Error fetching price recommendations:', error);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
       res.status(500).json({ 
-        message: 'Fehler beim Abrufen der Preisempfehlungen',
+        message: getPriceAnalysisErrorText(language, 'errorFetchingRecommendations'),
         error: error.message 
       });
     }
@@ -58,16 +62,17 @@ export const priceRecommendationController = {
     try {
       const recommendationId = parseInt(req.params.id, 10);
       const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
 
       if (isNaN(recommendationId)) {
         return res.status(400).json({ 
-          message: 'Ungültige Empfehlungs-ID' 
+          message: getPriceAnalysisErrorText(language, 'invalidRecommendationId')
         });
       }
 
       if (!userId) {
         return res.status(401).json({ 
-          message: 'Nicht authentifiziert' 
+          message: getPriceAnalysisErrorText(language, 'notAuthenticated')
         });
       }
 
@@ -81,7 +86,6 @@ export const priceRecommendationController = {
         try {
           const recommendation = await PriceRecommendationService.getRecommendationById(recommendationId);
           
-          const language = await getUserLanguage(userId);
           const notificationText = getPriceAnalysisNotificationText(
             language,
             'recommendationApplied',
@@ -98,18 +102,20 @@ export const priceRecommendationController = {
             relatedEntityType: 'applied'
           });
         } catch (error) {
-          logger.error('Fehler beim Erstellen der Notification:', error);
+          logger.error('Error creating notification:', error);
         }
       }
 
       res.json({
         success,
-        message: 'Preisempfehlung wurde angewendet'
+        message: getPriceAnalysisErrorText(language, 'recommendationApplied')
       });
     } catch (error: any) {
-      logger.error('Fehler beim Anwenden der Preisempfehlung:', error);
+      logger.error('Error applying price recommendation:', error);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
       res.status(500).json({ 
-        message: 'Fehler beim Anwenden der Preisempfehlung',
+        message: getPriceAnalysisErrorText(language, 'errorApplyingRecommendation'),
         error: error.message 
       });
     }
@@ -123,16 +129,17 @@ export const priceRecommendationController = {
     try {
       const recommendationId = parseInt(req.params.id, 10);
       const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
 
       if (isNaN(recommendationId)) {
         return res.status(400).json({ 
-          message: 'Ungültige Empfehlungs-ID' 
+          message: getPriceAnalysisErrorText(language, 'invalidRecommendationId')
         });
       }
 
       if (!userId) {
         return res.status(401).json({ 
-          message: 'Nicht authentifiziert' 
+          message: getPriceAnalysisErrorText(language, 'notAuthenticated')
         });
       }
 
@@ -143,12 +150,14 @@ export const priceRecommendationController = {
 
       res.json({
         success,
-        message: 'Preisempfehlung wurde genehmigt'
+        message: getPriceAnalysisErrorText(language, 'recommendationApproved')
       });
     } catch (error: any) {
-      logger.error('Fehler beim Genehmigen der Preisempfehlung:', error);
+      logger.error('Error approving price recommendation:', error);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
       res.status(500).json({ 
-        message: 'Fehler beim Genehmigen der Preisempfehlung',
+        message: getPriceAnalysisErrorText(language, 'errorApprovingRecommendation'),
         error: error.message 
       });
     }
@@ -162,10 +171,12 @@ export const priceRecommendationController = {
     try {
       const recommendationId = parseInt(req.params.id, 10);
       const reason = req.body.reason as string | undefined;
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
 
       if (isNaN(recommendationId)) {
         return res.status(400).json({ 
-          message: 'Ungültige Empfehlungs-ID' 
+          message: getPriceAnalysisErrorText(language, 'invalidRecommendationId')
         });
       }
 
@@ -176,12 +187,14 @@ export const priceRecommendationController = {
 
       res.json({
         success,
-        message: 'Preisempfehlung wurde abgelehnt'
+        message: getPriceAnalysisErrorText(language, 'recommendationRejected')
       });
     } catch (error: any) {
-      logger.error('Fehler beim Ablehnen der Preisempfehlung:', error);
+      logger.error('Error rejecting price recommendation:', error);
+      const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+      const language = userId ? await getUserLanguage(userId) : 'de';
       res.status(500).json({ 
-        message: 'Fehler beim Ablehnen der Preisempfehlung',
+        message: getPriceAnalysisErrorText(language, 'errorRejectingRecommendation'),
         error: error.message 
       });
     }
