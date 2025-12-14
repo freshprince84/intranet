@@ -50,6 +50,10 @@ export const addDocument = async (req: Request, res: Response) => {
       const userId = parseInt(req.params.userId);
       const { documentType, documentNumber, issueDate, expiryDate, issuingCountry, issuingAuthority, imageData, firstName, lastName, birthday, gender, country } = req.body;
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:51',message:'Request body received',data:{hasFirstName:!!firstName,hasLastName:!!lastName,hasBirthday:!!birthday,hasGender:!!gender,hasCountry:!!country,isFormData:req.headers['content-type']?.includes('multipart/form-data')||false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       // Validierung
       if (!documentType || !documentNumber || !issuingCountry) {
         return res.status(400).json({ error: 'Dokumenttyp, Dokumentnummer und ausstellendes Land sind erforderlich' });
@@ -105,12 +109,19 @@ export const addDocument = async (req: Request, res: Response) => {
         }
       }
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:106',message:'User update data prepared',data:{updateDataKeys:Object.keys(userUpdateDataFromRequest),updateDataCount:Object.keys(userUpdateDataFromRequest).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+
       // Update User, falls Daten vorhanden (VOR AI-Erkennung)
       if (Object.keys(userUpdateDataFromRequest).length > 0) {
         await prisma.user.update({
           where: { id: userId },
           data: userUpdateDataFromRequest
         });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:113',message:'User updated with request data',data:{userId,updatedFields:Object.keys(userUpdateDataFromRequest)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         logger.log(`[addDocument] User ${userId} aktualisiert mit User-Daten aus Request:`, userUpdateDataFromRequest);
       }
 
@@ -180,18 +191,34 @@ export const addDocument = async (req: Request, res: Response) => {
                 const aiResponse = recognitionResponse.data.choices[0].message.content;
                 let recognizedData: any = {};
                 
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:191',message:'Backend AI response received',data:{responseLength:aiResponse?.length||0,responseStart:aiResponse?.substring(0,200)||'null',startsWithBrace:aiResponse?.trim().startsWith('{')||false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
+                
                 try {
                   if (aiResponse.trim().startsWith('{')) {
                     recognizedData = JSON.parse(aiResponse);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:196',message:'Backend JSON parsed directly',data:{hasFirstName:!!recognizedData.firstName,hasLastName:!!recognizedData.lastName,hasBirthday:!!recognizedData.birthday},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                    // #endregion
                   } else {
                     const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/) || 
                                       aiResponse.match(/```\n([\s\S]*?)\n```/) ||
                                       aiResponse.match(/\{[\s\S]*\}/);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:198',message:'Backend JSON match attempt',data:{hasMatch:!!jsonMatch},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                    // #endregion
                     if (jsonMatch) {
                       recognizedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:201',message:'Backend JSON parsed from match',data:{hasFirstName:!!recognizedData.firstName,hasLastName:!!recognizedData.lastName,hasBirthday:!!recognizedData.birthday},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                      // #endregion
                     }
                   }
                 } catch (parseError) {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:204',message:'Backend JSON parse error',data:{error:parseError instanceof Error?parseError.message:'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                  // #endregion
                   logger.error('Fehler beim Parsen der KI-Antwort:', parseError);
                 }
 
@@ -235,11 +262,17 @@ export const addDocument = async (req: Request, res: Response) => {
                 }
 
                 // Update User, falls Daten erkannt wurden
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:238',message:'Backend user update data prepared from AI',data:{updateDataKeys:Object.keys(userUpdateData),updateDataCount:Object.keys(userUpdateData).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
                 if (Object.keys(userUpdateData).length > 0) {
                   await prisma.user.update({
                     where: { id: userId },
                     data: userUpdateData
                   });
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:241',message:'Backend user updated with AI data',data:{userId,updatedFields:Object.keys(userUpdateData)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                  // #endregion
                   logger.log(`[addDocument] User ${userId} aktualisiert mit erkannten Daten:`, userUpdateData);
                 }
 

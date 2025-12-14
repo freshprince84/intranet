@@ -146,6 +146,10 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
         country: recognizedData.issuingCountry || recognizedData.country
       };
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IdentificationDocumentForm.tsx:141',message:'User data extracted from recognition',data:{hasFirstName:!!userData.firstName,hasLastName:!!userData.lastName,hasBirthday:!!userData.birthday,hasGender:!!userData.gender,hasCountry:!!userData.country},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
       setRecognizedUserData(userData);
       
       // Erfolgsmeldung anzeigen
@@ -224,12 +228,18 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
           if (issuingAuthority) formData.append('issuingAuthority', issuingAuthority);
           
           // User-Daten an FormData anhängen
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IdentificationDocumentForm.tsx:227',message:'Before appending user data to FormData',data:{hasRecognizedUserData:!!recognizedUserData,hasFirstName:!!recognizedUserData?.firstName,hasLastName:!!recognizedUserData?.lastName,hasBirthday:!!recognizedUserData?.birthday},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           if (recognizedUserData) {
             if (recognizedUserData.firstName) formData.append('firstName', recognizedUserData.firstName);
             if (recognizedUserData.lastName) formData.append('lastName', recognizedUserData.lastName);
             if (recognizedUserData.birthday) formData.append('birthday', recognizedUserData.birthday);
             if (recognizedUserData.gender) formData.append('gender', recognizedUserData.gender);
             if (recognizedUserData.country) formData.append('country', recognizedUserData.country);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IdentificationDocumentForm.tsx:233',message:'User data appended to FormData',data:{appendedFields:['firstName','lastName','birthday','gender','country'].filter(f=>recognizedUserData[f as keyof typeof recognizedUserData])},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
           }
           
           formData.append('documentFile', file);

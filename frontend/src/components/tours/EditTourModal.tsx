@@ -676,14 +676,16 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
                                             alt="Vorschau"
                                             className="max-w-xs h-48 object-cover rounded-md border border-gray-300 dark:border-gray-600"
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={removeMainImage}
-                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                            title={t('tours.deleteImage', 'Hauptbild löschen')}
-                                        >
-                                            <XMarkIcon className="h-4 w-4" />
-                                        </button>
+                                        {tour?.imageUrl && (
+                                            <button
+                                                type="button"
+                                                onClick={removeMainImage}
+                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-10 shadow-lg"
+                                                title={t('tours.deleteImage', 'Hauptbild löschen')}
+                                            >
+                                                <XMarkIcon className="h-4 w-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>
