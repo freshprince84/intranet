@@ -23,8 +23,6 @@ import { FilterCondition } from '../FilterRow.tsx';
 import DataCard, { MetadataItem } from '../shared/DataCard.tsx';
 import CardGrid from '../shared/CardGrid.tsx';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
-import { DateRangeSelector } from '../analytics/DateRangeSelector.tsx';
-import { useDateRange } from '../../hooks/useDateRange.ts';
 
 interface RequestAnalyticsTabProps {
   selectedDate?: string; // Optional für Rückwärtskompatibilität
@@ -83,7 +81,6 @@ const defaultColumnOrder = ['time', 'title', 'status', 'requester', 'responsible
 
 const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate }) => {
   const { t } = useTranslation();
-  const { period, setPeriod, startDate, setStartDate, endDate, setEndDate, dateRange } = useDateRange();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,15 +158,12 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
         
         const params: any = {};
         
-        // Unterstütze sowohl selectedDate (Rückwärtskompatibilität) als auch dateRange
+        // Unterstütze selectedDate für Rückwärtskompatibilität
         if (selectedDate) {
           params.date = selectedDate;
         } else {
-          params.period = period;
-          if (period === 'custom') {
-            params.startDate = startDate;
-            params.endDate = endDate;
-          }
+          // Standard: Diese Woche, wenn kein selectedDate vorhanden
+          params.period = 'week';
         }
         
         // Filter-Bedingungen als JSON-String senden
@@ -195,10 +189,8 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
       }
     };
 
-    if (selectedDate || dateRange) {
-      fetchRequests();
-    }
-  }, [selectedDate, period, startDate, endDate, dateRange, filterConditions]);
+    fetchRequests();
+  }, [selectedDate, filterConditions, filterLogicalOperators, selectedFilterId]);
 
   // Filter-Handler
   const applyFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
@@ -341,20 +333,6 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 request-analytics-wrapper">
-      {/* Datumsbereich-Auswahl */}
-      {!selectedDate && (
-        <div className="px-3 sm:px-4 md:px-6 pt-4">
-          <DateRangeSelector
-            period={period}
-            setPeriod={setPeriod}
-            startDate={startDate}
-            setStartDate={setStartDate}
-            endDate={endDate}
-            setEndDate={setEndDate}
-          />
-        </div>
-      )}
-      
       {/* Titelzeile */}
       <div className="flex items-center justify-between mb-4 px-3 sm:px-4 md:px-6">
         {/* Linke Seite: Titel mit Icon */}

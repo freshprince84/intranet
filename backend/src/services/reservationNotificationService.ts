@@ -238,6 +238,66 @@ export class ReservationNotificationService {
   }
 
   /**
+   * Lädt roomDescription aus Branch-Settings (falls categoryId vorhanden)
+   * 
+   * @param reservation - Reservation mit optionalem categoryId
+   * @param languageCode - Sprache für Labels ('en' | 'es' | 'de')
+   * @returns Formatierte roomDescription oder Fallback auf reservation.roomDescription
+   */
+  public static async loadRoomDescriptionFromBranchSettings(
+    reservation: Reservation & { categoryId?: number },
+    languageCode: 'en' | 'es' | 'de'
+  ): Promise<string> {
+    // Fallback auf reservation.roomDescription
+    let roomDescription: string = reservation.roomDescription || 'N/A';
+    
+    // Prüfe ob categoryId und branchId vorhanden
+    if (!(reservation as any).categoryId || !reservation.branchId) {
+      return roomDescription;
+    }
+
+    try {
+      // Lade Branch mit nur lobbyPmsSettings (Performance: nur benötigtes Feld)
+      const branch = await prisma.branch.findUnique({
+        where: { id: reservation.branchId },
+        select: { lobbyPmsSettings: true }
+      });
+      
+      if (branch?.lobbyPmsSettings) {
+        const { decryptBranchApiSettings } = require('../utils/encryption');
+        const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+        const lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings;
+        const roomDesc = lobbyPmsSettings?.roomDescriptions?.[(reservation as any).categoryId];
+        
+        if (roomDesc) {
+          // Übersetzungen für Bild/Video Labels
+          const imageLabel = languageCode === 'en' ? 'Image' : languageCode === 'es' ? 'Imagen' : 'Bild';
+          const videoLabel = languageCode === 'en' ? 'Video' : languageCode === 'es' ? 'Video' : 'Video';
+          
+          // Formatiere Beschreibung: Text + Bild-Link + Video-Link
+          const parts: string[] = [];
+          if (roomDesc.text) {
+            parts.push(roomDesc.text);
+          }
+          if (roomDesc.imageUrl) {
+            parts.push(`${imageLabel}: ${roomDesc.imageUrl}`);
+          }
+          if (roomDesc.videoUrl) {
+            parts.push(`${videoLabel}: ${roomDesc.videoUrl}`);
+          }
+          roomDescription = parts.length > 0 ? parts.join('\n') : reservation.roomDescription || 'N/A';
+        }
+      }
+    } catch (error) {
+      logger.warn(`[ReservationNotification] Fehler beim Laden der Zimmer-Beschreibung aus Branch-Settings:`, error);
+      // Fallback auf reservation.roomDescription
+      roomDescription = reservation.roomDescription || 'N/A';
+    }
+
+    return roomDescription;
+  }
+
+  /**
    * Loggt eine Notification in die Datenbank
    * 
    * @param reservationId - ID der Reservierung
@@ -1264,6 +1324,20 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           const whatsappService = reservation.branchId
             ? new WhatsAppService(undefined, reservation.branchId)
             : new WhatsAppService(reservation.organizationId);
+          
+          // Ermittle Sprache für roomDescription
+          const { CountryLanguageService } = require('./countryLanguageService');
+          const languageCode = CountryLanguageService.getLanguageForReservation({
+            guestNationality: reservation.guestNationality,
+            guestPhone: reservation.guestPhone
+          }) as 'en' | 'es' | 'de';
+          
+          // Lade roomDescription aus Branch-Settings
+          const roomDescription = await this.loadRoomDescriptionFromBranchSettings(
+            reservation,
+            languageCode
+          );
+          
           // Formatiere Zimmer-Anzeige: Dorm = "Zimmername (Bettnummer)", Private = "Zimmername"
           const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
           let roomDisplay: string;
@@ -1281,7 +1355,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             reservation.guestName,
             reservation.guestPhone,
             roomDisplay, // Formatierte Zimmer-Anzeige
-            '', // roomDescription wird nicht mehr separat benötigt
+            roomDescription, // roomDescription aus Branch-Settings
             doorPin || 'N/A',
             doorAppName || 'TTLock',
             {
@@ -1545,11 +1619,18 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           languageCode
         );
 
+        // Lade roomDescription aus Branch-Settings
+        const roomDescription = await this.loadRoomDescriptionFromBranchSettings(
+          reservation,
+          languageCode
+        );
+
         if (template) {
           // Ersetze Variablen im Template
           messageText = this.replaceTemplateVariables(template.emailContent, {
             guestName: reservation.guestName,
             roomDisplay: roomDisplay,
+            roomDescription: roomDescription,
             doorPin: doorPin || 'N/A',
             doorAppName: doorAppName || 'TTLock'
           });
@@ -1676,6 +1757,12 @@ ${contentText}
               ? `Hello ${reservation.guestName},`
               : `Hola ${reservation.guestName},`;
             
+            // Lade roomDescription aus Branch-Settings
+            const roomDescription = await this.loadRoomDescriptionFromBranchSettings(
+              reservation,
+              languageCode as 'en' | 'es' | 'de'
+            );
+            
             // Formatiere Zimmer-Anzeige: Dorm = "Zimmername (Bettnummer)", Private = "Zimmername"
             const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
             let roomDisplay: string;
@@ -1691,9 +1778,15 @@ ${contentText}
             
             let contentText: string;
             if (languageCode === 'en') {
-              contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomDisplay} Access: - Door PIN: ${doorPin}`;
+              const roomInfo = roomDescription && roomDescription !== 'N/A' 
+                ? `- Room: ${roomDisplay}\n- Description: ${roomDescription}`
+                : `- Room: ${roomDisplay}`;
+              contentText = `Your check-in has been completed successfully!\n\nYour room information:\n${roomInfo}\n\nAccess:\n- Door PIN: ${doorPin}`;
             } else {
-              contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomDisplay} Acceso: - PIN de la puerta: ${doorPin}`;
+              const roomInfo = roomDescription && roomDescription !== 'N/A'
+                ? `- Habitación: ${roomDisplay}\n- Descripción: ${roomDescription}`
+                : `- Habitación: ${roomDisplay}`;
+              contentText = `¡Tu check-in se ha completado exitosamente!\n\nInformación de tu habitación:\n${roomInfo}\n\nAcceso:\n- PIN de la puerta: ${doorPin}`;
             }
             
             const templateParams = [greeting, contentText];
@@ -1714,11 +1807,23 @@ ${contentText}
             );
           } else {
             // Verwende Standard-Template
+            // Lade roomDescription aus Branch-Settings
+            const { CountryLanguageService } = require('./countryLanguageService');
+            const languageCode = CountryLanguageService.getLanguageForReservation({
+              guestNationality: reservation.guestNationality,
+              guestPhone: reservation.guestPhone
+            }) as 'en' | 'es' | 'de';
+            
+            const roomDescription = await this.loadRoomDescriptionFromBranchSettings(
+              reservation,
+              languageCode
+            );
+            
             const whatsappSuccessResult = await whatsappService.sendCheckInConfirmation(
               reservation.guestName,
               finalGuestPhone,
               reservation.roomNumber || 'N/A',
-              reservation.roomDescription || 'N/A',
+              roomDescription,
               doorPin || 'N/A',
               doorAppName || 'TTLock',
               {
@@ -1932,11 +2037,25 @@ ${contentText}
         const whatsappService = reservation.branchId
           ? new WhatsAppService(undefined, reservation.branchId)
           : new WhatsAppService(reservation.organizationId);
+        
+        // Ermittle Sprache für roomDescription
+        const { CountryLanguageService } = require('./countryLanguageService');
+        const languageCode = CountryLanguageService.getLanguageForReservation({
+          guestNationality: reservation.guestNationality,
+          guestPhone: reservation.guestPhone
+        }) as 'en' | 'es' | 'de';
+        
+        // Lade roomDescription aus Branch-Settings
+        const roomDescription = await this.loadRoomDescriptionFromBranchSettings(
+          reservation,
+          languageCode
+        );
+        
         await whatsappService.sendCheckInConfirmation(
           reservation.guestName,
           reservation.guestPhone,
           reservation.roomNumber || 'N/A',
-          reservation.roomDescription || 'N/A',
+          roomDescription,
           doorPin || 'N/A',
           doorAppName || 'TTLock'
         );
@@ -2139,46 +2258,11 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       guestPhone: reservation.guestPhone
     }) as 'en' | 'es' | 'de';
 
-    // Übersetzungen für Bild/Video Labels
-    const imageLabel = languageCode === 'en' ? 'Image' : languageCode === 'es' ? 'Imagen' : 'Bild';
-    const videoLabel = languageCode === 'en' ? 'Video' : languageCode === 'es' ? 'Video' : 'Video';
-
     // Lade roomDescription aus Branch-Settings (falls categoryId vorhanden)
-    let roomDescription: string = reservation.roomDescription || 'N/A';
-    if ((reservation as any).categoryId && reservation.branchId) {
-      try {
-        const branch = await prisma.branch.findUnique({
-          where: { id: reservation.branchId },
-          select: { lobbyPmsSettings: true }
-        });
-        
-        if (branch?.lobbyPmsSettings) {
-          const { decryptBranchApiSettings } = require('../utils/encryption');
-          const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
-          const lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings;
-          const roomDesc = lobbyPmsSettings?.roomDescriptions?.[(reservation as any).categoryId];
-          
-          if (roomDesc) {
-            // Formatiere Beschreibung: Text, Bild-Link, Video-Link
-            const parts: string[] = [];
-            if (roomDesc.text) {
-              parts.push(roomDesc.text);
-            }
-            if (roomDesc.imageUrl) {
-              parts.push(`${imageLabel}: ${roomDesc.imageUrl}`);
-            }
-            if (roomDesc.videoUrl) {
-              parts.push(`${videoLabel}: ${roomDesc.videoUrl}`);
-            }
-            roomDescription = parts.length > 0 ? parts.join('\n') : reservation.roomDescription || 'N/A';
-          }
-        }
-      } catch (error) {
-        logger.warn(`[ReservationNotification] Fehler beim Laden der Zimmer-Beschreibung für E-Mail:`, error);
-        // Fallback auf reservation.roomDescription
-        roomDescription = reservation.roomDescription || 'N/A';
-      }
-    }
+    const roomDescription = await this.loadRoomDescriptionFromBranchSettings(
+      reservation,
+      languageCode
+    );
 
     // NEU: Lade Template aus Branch Settings
 
@@ -2205,6 +2289,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       ? this.replaceTemplateVariables(template.emailContent, {
           guestName: reservation.guestName,
           roomDisplay: roomDisplay,
+          roomDescription: roomDescription,
           doorPin: doorPin || 'N/A',
           doorAppName: doorAppName || 'TTLock'
         })

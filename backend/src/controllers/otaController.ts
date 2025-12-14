@@ -43,21 +43,26 @@ export const otaController = {
    * POST /api/ota/rate-shopping
    */
   runRateShopping: async (req: AuthenticatedRequest, res: Response) => {
+    logger.log('[OTA Controller] runRateShopping aufgerufen');
     try {
       const { branchId, platform, startDate, endDate } = req.body;
+      logger.log(`[OTA Controller] Request Body:`, { branchId, platform, startDate, endDate });
 
       if (!branchId || !platform || !startDate || !endDate) {
+        logger.warn('[OTA Controller] Fehlende Parameter:', { branchId, platform, startDate, endDate });
         return res.status(400).json({ 
           message: 'branchId, platform, startDate und endDate sind erforderlich' 
         });
       }
 
+      logger.log(`[OTA Controller] Rufe OTARateShoppingService.runRateShopping auf...`);
       const jobId = await OTARateShoppingService.runRateShopping(
         branchId,
         platform,
         new Date(startDate),
         new Date(endDate)
       );
+      logger.log(`[OTA Controller] Job erstellt mit ID: ${jobId}`);
 
       // Notification erstellen (wird später bei Job-Abschluss aktualisiert)
       const userId = req.userId ? parseInt(req.userId, 10) : undefined;

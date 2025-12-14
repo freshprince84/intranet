@@ -29,8 +29,10 @@ export class OTARateShoppingService {
     startDate: Date,
     endDate: Date
   ): Promise<number> {
+    logger.log(`[OTARateShoppingService] runRateShopping aufgerufen: Branch ${branchId}, Platform ${platform}, Start: ${startDate.toISOString()}, End: ${endDate.toISOString()}`);
     try {
       // Job erstellen
+      logger.log(`[OTARateShoppingService] Erstelle Rate Shopping Job in DB...`);
       const job = await prisma.rateShoppingJob.create({
         data: {
           branchId,
@@ -41,13 +43,16 @@ export class OTARateShoppingService {
         }
       });
 
-      logger.log(`Rate Shopping Job erstellt: ID ${job.id}, Platform: ${platform}, Branch: ${branchId}`);
+      logger.log(`[OTARateShoppingService] ✅ Rate Shopping Job erstellt: ID ${job.id}, Platform: ${platform}, Branch: ${branchId}`);
 
       // Asynchron ausführen (nicht blockieren)
+      logger.log(`[OTARateShoppingService] Starte asynchrones executeRateShopping für Job ${job.id}...`);
       this.executeRateShopping(job.id, branchId, platform, startDate, endDate).catch(error => {
-        logger.error(`Fehler beim Ausführen des Rate Shopping Jobs ${job.id}:`, error);
+        logger.error(`[OTARateShoppingService] ❌ Fehler beim Ausführen des Rate Shopping Jobs ${job.id}:`, error);
+        logger.error(`[OTARateShoppingService] Error Stack:`, error instanceof Error ? error.stack : 'Kein Stack verfügbar');
       });
 
+      logger.log(`[OTARateShoppingService] executeRateShopping wurde aufgerufen (asynchron), gebe Job ID ${job.id} zurück`);
       return job.id;
     } catch (error) {
       logger.error('Fehler beim Erstellen des Rate Shopping Jobs:', error);
@@ -71,8 +76,10 @@ export class OTARateShoppingService {
     startDate: Date,
     endDate: Date
   ): Promise<void> {
+    logger.log(`[OTARateShoppingService] ⚡ executeRateShopping START für Job ${jobId}, Branch ${branchId}, Platform ${platform}`);
     try {
       // Job-Status auf 'running' setzen
+      logger.log(`[OTARateShoppingService] Setze Job ${jobId} Status auf 'running'...`);
       await prisma.rateShoppingJob.update({
         where: { id: jobId },
         data: {
@@ -80,8 +87,9 @@ export class OTARateShoppingService {
           startedAt: new Date()
         }
       });
+      logger.log(`[OTARateShoppingService] ✅ Job ${jobId} Status auf 'running' gesetzt`);
 
-      logger.log(`[Rate Shopping] Starte Job ${jobId} für ${platform}, Branch ${branchId}`);
+      logger.log(`[OTARateShoppingService] Starte Job ${jobId} für ${platform}, Branch ${branchId}`);
 
       // Hole alle aktiven Listings für diese Plattform
       const listings = await prisma.oTAListing.findMany({
