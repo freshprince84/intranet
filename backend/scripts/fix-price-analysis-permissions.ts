@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { userCache } from '../src/services/userCache';
 
 const prisma = new PrismaClient();
 
@@ -65,7 +66,33 @@ async function main() {
     }
   }
 
+  // Invalidiere UserCache für alle User mit Admin-Rollen
+  console.log('\n🔄 Invalidiere UserCache für alle Admin-User...');
+  const adminUsers = await prisma.user.findMany({
+    where: {
+      roles: {
+        some: {
+          role: {
+            OR: [
+              { id: 1 },
+              { name: 'Admin' }
+            ]
+          }
+        }
+      }
+    },
+    select: {
+      id: true
+    }
+  });
+
+  for (const user of adminUsers) {
+    userCache.invalidate(user.id);
+  }
+
+  console.log(`✅ UserCache invalidiert für ${adminUsers.length} Admin-User`);
   console.log('\n✅ Fertig!');
+  console.log('\n⚠️  WICHTIG: User müssen sich neu einloggen oder 5 Minuten warten, damit neue Permissions geladen werden!');
 }
 
 main()
