@@ -137,8 +137,7 @@ async function deleteInactiveUsers() {
 
           // 6. Requests (wo User requester/responsible ist)
           // WICHTIG: Requests können nicht einfach gelöscht werden, da sie wichtige Daten enthalten
-          // Setze requesterId/responsibleId auf NULL oder einen anderen User
-          // Für jetzt: Setze auf NULL (kann später angepasst werden)
+          // Setze requesterId/responsibleId auf Admin, da beide required sind
           await tx.request.updateMany({
             where: { requesterId: user.id },
             data: { requesterId: 1 } // Setze auf Admin (ID 1) als Fallback
@@ -146,7 +145,7 @@ async function deleteInactiveUsers() {
 
           await tx.request.updateMany({
             where: { responsibleId: user.id },
-            data: { responsibleId: null }
+            data: { responsibleId: 1 } // Setze auf Admin (ID 1) als Fallback, da responsibleId required ist
           });
 
           await tx.request.updateMany({
