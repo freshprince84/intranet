@@ -698,7 +698,8 @@
       "settings": "Settings",
       "profile": "Profile",
       "tour_management": "Tour Management",
-      "password_manager": "Password Manager"
+      "password_manager": "Password Manager",
+      "price_analysis": "Price Analysis"
     },
     "tables": {
       "tasks": "Tasks",
@@ -718,7 +719,12 @@
       "branches": "Branches",
       "monthly_reports": "Monthly Reports",
       "tours": "Tours",
-      "tour_bookings": "Tour Bookings"
+      "tour_bookings": "Tour Bookings",
+      "ota_listings": "OTA Listings",
+      "price_analyses": "Price Analyses",
+      "price_recommendations": "Price Recommendations",
+      "pricing_rules": "Pricing Rules",
+      "rate_shopping_jobs": "Rate Shopping Jobs"
     },
     "buttons": {
       "worktime_start": "Start",
@@ -772,7 +778,13 @@
       "tour_provider_delete": "Delete Provider",
       "password_entry_create": "Create Entry",
       "password_entry_edit": "Edit Entry",
-      "password_entry_delete": "Delete Entry"
+      "password_entry_delete": "Delete Entry",
+      "price_analysis_create_rule": "Create Rule",
+      "price_analysis_edit_rule": "Edit Rule",
+      "price_analysis_delete_rule": "Delete Rule",
+      "price_analysis_apply_recommendation": "Apply Recommendation",
+      "price_analysis_reject_recommendation": "Reject Recommendation",
+      "price_analysis_run_rate_shopping": "Run Rate Shopping"
     }
   },
   "countries": {

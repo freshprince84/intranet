@@ -736,7 +736,8 @@
       "settings": "Configuración",
       "profile": "Perfil",
       "tour_management": "Gestión de Tours",
-      "password_manager": "Administrador de Contraseñas"
+      "password_manager": "Administrador de Contraseñas",
+      "price_analysis": "Análisis de Precios"
     },
     "tables": {
       "tasks": "Tareas",
@@ -754,7 +755,14 @@
       "settings": "Configuración",
       "notifications": "Notificaciones",
       "branches": "Sucursales",
-      "monthly_reports": "Informes mensuales"
+      "monthly_reports": "Informes mensuales",
+      "tours": "Tours",
+      "tour_bookings": "Reservas de Tours",
+      "ota_listings": "Listados OTA",
+      "price_analyses": "Análisis de Precios",
+      "price_recommendations": "Recomendaciones de Precios",
+      "pricing_rules": "Reglas de Precios",
+      "rate_shopping_jobs": "Trabajos de Rate Shopping"
     },
     "buttons": {
       "worktime_start": "Iniciar",
@@ -808,7 +816,13 @@
       "tour_provider_delete": "Eliminar Proveedor",
       "password_entry_create": "Crear Entrada",
       "password_entry_edit": "Editar Entrada",
-      "password_entry_delete": "Eliminar Entrada"
+      "password_entry_delete": "Eliminar Entrada",
+      "price_analysis_create_rule": "Crear Regla",
+      "price_analysis_edit_rule": "Editar Regla",
+      "price_analysis_delete_rule": "Eliminar Regla",
+      "price_analysis_apply_recommendation": "Aplicar Recomendación",
+      "price_analysis_reject_recommendation": "Rechazar Recomendación",
+      "price_analysis_run_rate_shopping": "Ejecutar Rate Shopping"
     }
   },
   "countries": {

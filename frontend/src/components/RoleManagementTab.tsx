@@ -38,7 +38,8 @@ const defaultPages = [
   'settings',
   'profile',
   'tour_management', // NEU: Touren-Verwaltung
-  'password_manager' // NEU: Passwort-Manager
+  'password_manager', // NEU: Passwort-Manager
+  'price_analysis' // NEU: Preisanalyse
 ];
 
 // ALLE TABELLEN IM SYSTEM (synchron mit Backend)
@@ -60,7 +61,12 @@ const defaultTables = [
   'settings',          // auf settings
   'monthly_reports',    // auf consultations/reports
   'tours',             // NEU: auf tour_management
-  'tour_bookings'      // NEU: auf tour_management
+  'tour_bookings',     // NEU: auf tour_management
+  'ota_listings',      // NEU: auf price_analysis
+  'price_analyses',    // NEU: auf price_analysis
+  'price_recommendations', // NEU: auf price_analysis
+  'pricing_rules',     // NEU: auf price_analysis
+  'rate_shopping_jobs' // NEU: auf price_analysis
 ];
 
 // ALLE BUTTONS IM SYSTEM (synchron mit Backend)
@@ -141,7 +147,15 @@ const defaultButtons = [
   // Password Manager Buttons
   'password_entry_create',
   'password_entry_edit',
-  'password_entry_delete'
+  'password_entry_delete',
+  
+  // Price Analysis Buttons
+  'price_analysis_create_rule',
+  'price_analysis_edit_rule',
+  'price_analysis_delete_rule',
+  'price_analysis_apply_recommendation',
+  'price_analysis_reject_recommendation',
+  'price_analysis_run_rate_shopping'
 ];
 
 // Definiert die Zuordnung von Tabellen zu ihren übergeordneten Seiten
@@ -163,7 +177,12 @@ const tableToPageMapping = {
   'settings': 'settings',
   'monthly_reports': 'consultations',
   'tours': 'tour_management',
-  'tour_bookings': 'tour_management'
+  'tour_bookings': 'tour_management',
+  'ota_listings': 'price_analysis',
+  'price_analyses': 'price_analysis',
+  'price_recommendations': 'price_analysis',
+  'pricing_rules': 'price_analysis',
+  'rate_shopping_jobs': 'price_analysis'
 };
 
 // Definiert die Zuordnung von Buttons zu ihren übergeordneten Seiten/Bereichen
@@ -219,7 +238,13 @@ const buttonToPageMapping = {
   'tour_provider_delete': 'tour_management',
   'password_entry_create': 'password_manager',
   'password_entry_edit': 'password_manager',
-  'password_entry_delete': 'password_manager'
+  'password_entry_delete': 'password_manager',
+  'price_analysis_create_rule': 'price_analysis',
+  'price_analysis_edit_rule': 'price_analysis',
+  'price_analysis_delete_rule': 'price_analysis',
+  'price_analysis_apply_recommendation': 'price_analysis',
+  'price_analysis_reject_recommendation': 'price_analysis',
+  'price_analysis_run_rate_shopping': 'price_analysis'
 };
 
 // Definiert die Zuordnung von Buttons zu ihren zugehörigen Tabellen
@@ -279,6 +304,13 @@ const buttonToTableMapping: Record<string, string | null> = {
   'password_entry_create': null,
   'password_entry_edit': null,
   'password_entry_delete': null,
+  // Price Analysis Buttons → entsprechende Tabellen
+  'price_analysis_create_rule': 'pricing_rules',
+  'price_analysis_edit_rule': 'pricing_rules',
+  'price_analysis_delete_rule': 'pricing_rules',
+  'price_analysis_apply_recommendation': 'price_recommendations',
+  'price_analysis_reject_recommendation': 'price_recommendations',
+  'price_analysis_run_rate_shopping': 'rate_shopping_jobs',
   // Buttons ohne direkte Tabelle-Zuordnung
   'database_reset_table': null,
   'database_logs': null,
