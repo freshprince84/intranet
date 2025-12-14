@@ -149,6 +149,9 @@ export const usePermissions = () => {
     };
 
     const loadPermissions = () => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePermissions.ts:151',message:'loadPermissions called',data:{userExists:!!user,userId:user?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B,D'})}).catch(()=>{});
+        // #endregion
         try {
             if (!user || !user.roles || user.roles.length === 0) {
                 setCurrentRole(null);
@@ -174,6 +177,9 @@ export const usePermissions = () => {
 
             setCurrentRole(formattedRole);
             setPermissions(formattedPermissions);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePermissions.ts:179',message:'Permissions set',data:{permissionsCount:formattedPermissions.length,permissionsEntities:formattedPermissions.map(p=>p.entity),hasPageProfile:formattedPermissions.some(p=>p.entity==='page_profile'&&p.entityType==='page')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C'})}).catch(()=>{});
+            // #endregion
             setError(null);
         } catch (err) {
             console.error('Fehler beim Laden der Berechtigungen:', err);
@@ -184,7 +190,13 @@ export const usePermissions = () => {
     };
 
     const hasPermission = (entity: string, requiredLevel: AccessLevel = 'read', entityType: string = 'page'): boolean => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePermissions.ts:186',message:'hasPermission called',data:{entity,requiredLevel,entityType,permissionsLength:permissions?.length||0,permissionsDefined:permissions!==undefined,loading},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,B'})}).catch(()=>{});
+        // #endregion
         if (!permissions || permissions.length === 0) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePermissions.ts:189',message:'No permissions - returning false',data:{entity,permissionsLength:permissions?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
             return false;
         }
 
@@ -194,6 +206,9 @@ export const usePermissions = () => {
         );
 
         if (!permission) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'usePermissions.ts:197',message:'Permission not found',data:{entity,entityType,permissionsCount:permissions.length,permissionsEntities:permissions.map(p=>p.entity)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
             return false;
         }
 

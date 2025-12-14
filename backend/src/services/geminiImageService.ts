@@ -194,19 +194,41 @@ export class GeminiImageService {
   private static buildMainImagePrompt(title: string, description: string, entityType: string, branding?: BrandingInfo): string {
     const brandingPrompt = branding ? this.buildBrandingPromptPart(branding) : '';
     
+    // Extrahiere relevante Informationen aus Beschreibung (ohne Text zu generieren)
+    const contextInfo = this.extractVisualContext(description);
+    
     if (entityType === 'tour') {
-      return `Create a beautiful, professional tourism promotional image for "${title}". ${description}. 
-      The image should be vibrant, inviting, and showcase the destination. 
-      Style: Professional travel photography, high quality, colorful, appealing to tourists. 
-      Include scenic views, cultural elements, and adventure activities. 
+      return `Create a realistic, professional tourism promotional photograph. 
+      
+      Context: This image represents a tour about ${title}. ${contextInfo}
+      
+      Requirements:
+      - Realistic photography of actual existing places and destinations
+      - NO TEXT, NO WORDS, NO LETTERS, NO WRITING anywhere in the image
+      - Professional travel photography style, high quality, vibrant colors
+      - Showcase real scenic views, authentic cultural elements, and genuine adventure activities
+      - The image should be vibrant, inviting, and represent the actual destination accurately
+      - Use natural lighting and authentic photography techniques
+      - Avoid any fictional or invented elements
       ${brandingPrompt}
-      Aspect ratio: 16:9, high resolution.`.trim();
+      
+      Technical: Aspect ratio 16:9, high resolution, professional quality.
+      CRITICAL: Do not include any text, words, letters, or writing in the image.`.trim();
     }
     // Fallback für andere Entitäten
-    return `Create a beautiful, professional promotional image for "${title}". ${description}. 
-    Style: Professional photography, high quality, colorful, appealing. 
+    return `Create a realistic, professional promotional photograph.
+    
+    Context: This image represents ${title}. ${contextInfo}
+    
+    Requirements:
+    - Realistic photography of actual existing places or products
+    - NO TEXT, NO WORDS, NO LETTERS, NO WRITING anywhere in the image
+    - Professional photography style, high quality, vibrant colors
+    - Authentic representation without fictional elements
     ${brandingPrompt}
-    Aspect ratio: 16:9, high resolution.`.trim();
+    
+    Technical: Aspect ratio 16:9, high resolution.
+    CRITICAL: Do not include any text, words, letters, or writing in the image.`.trim();
   }
 
   /**
@@ -214,74 +236,156 @@ export class GeminiImageService {
    */
   private static buildGalleryPrompts(title: string, description: string, entityType: string, branding?: BrandingInfo): string[] {
     const brandingPrompt = branding ? this.buildBrandingPromptPart(branding) : '';
+    const contextInfo = this.extractVisualContext(description);
     
     if (entityType === 'tour') {
       return [
-        `Create a stunning landscape photo showcasing the main attraction from "${title}". ${description}. 
-        Style: Professional travel photography, golden hour lighting, vibrant colors. 
-        ${brandingPrompt}`.trim(),
+        `Create a realistic, stunning landscape photograph of the main attraction from the tour about ${title}. ${contextInfo}
         
-        `Create an image showing tourists enjoying activities from "${title}". ${description}. 
-        Style: Candid travel photography, people having fun, authentic experience. 
-        ${brandingPrompt}`.trim(),
+        Requirements:
+        - Realistic photography of actual existing places
+        - NO TEXT, NO WORDS, NO LETTERS, NO WRITING anywhere in the image
+        - Professional travel photography, golden hour lighting, vibrant colors
+        - Authentic representation of real destinations
+        ${brandingPrompt}
         
-        `Create a beautiful cultural or architectural detail image from "${title}". ${description}. 
-        Style: Professional travel photography, focus on local culture and heritage. 
-        ${brandingPrompt}`.trim()
+        CRITICAL: Do not include any text, words, letters, or writing in the image.`.trim(),
+        
+        `Create a realistic photograph showing tourists enjoying activities from the tour about ${title}. ${contextInfo}
+        
+        Requirements:
+        - Realistic photography of actual people and places
+        - NO TEXT, NO WORDS, NO LETTERS, NO WRITING anywhere in the image
+        - Candid travel photography style, people having fun, authentic experience
+        - Natural, unposed moments in real locations
+        ${brandingPrompt}
+        
+        CRITICAL: Do not include any text, words, letters, or writing in the image.`.trim(),
+        
+        `Create a realistic photograph of cultural or architectural details from the tour about ${title}. ${contextInfo}
+        
+        Requirements:
+        - Realistic photography of actual existing cultural or architectural elements
+        - NO TEXT, NO WORDS, NO LETTERS, NO WRITING anywhere in the image
+        - Professional travel photography, focus on authentic local culture and heritage
+        - Real details from genuine locations
+        ${brandingPrompt}
+        
+        CRITICAL: Do not include any text, words, letters, or writing in the image.`.trim()
       ];
     }
     // Fallback für andere Entitäten
     return [
-      `Create a professional image showcasing "${title}". ${description}. 
-      Style: Professional photography, high quality, vibrant colors. 
-      ${brandingPrompt}`.trim(),
+      `Create a realistic, professional photograph showcasing ${title}. ${contextInfo}
       
-      `Create another professional image for "${title}". ${description}. 
-      Style: Professional photography, different angle or perspective. 
-      ${brandingPrompt}`.trim(),
+      Requirements:
+      - Realistic photography of actual existing places or products
+      - NO TEXT, NO WORDS, NO LETTERS, NO WRITING anywhere in the image
+      - Professional photography, high quality, vibrant colors
+      ${brandingPrompt}
       
-      `Create a detail image for "${title}". ${description}. 
-      Style: Professional photography, focus on key features. 
-      ${brandingPrompt}`.trim()
+      CRITICAL: Do not include any text, words, letters, or writing in the image.`.trim(),
+      
+      `Create another realistic, professional photograph for ${title}. ${contextInfo}
+      
+      Requirements:
+      - Realistic photography, different angle or perspective
+      - NO TEXT, NO WORDS, NO LETTERS, NO WRITING anywhere in the image
+      - Authentic representation
+      ${brandingPrompt}
+      
+      CRITICAL: Do not include any text, words, letters, or writing in the image.`.trim(),
+      
+      `Create a realistic detail photograph for ${title}. ${contextInfo}
+      
+      Requirements:
+      - Realistic photography of actual key features
+      - NO TEXT, NO WORDS, NO LETTERS, NO WRITING anywhere in the image
+      - Professional photography, focus on authentic details
+      ${brandingPrompt}
+      
+      CRITICAL: Do not include any text, words, letters, or writing in the image.`.trim()
     ];
   }
 
   /**
    * Erstellt Prompt für Flyer
+   * 
+   * HINWEIS: Flyer können Text enthalten, aber wir verwenden hier trotzdem eine realistische Basis
+   * und fügen Text später per Overlay hinzu (falls gewünscht)
    */
   private static buildFlyerPrompt(title: string, description: string, entityType: string, branding?: BrandingInfo): string {
     const brandingPrompt = branding ? this.buildBrandingPromptPart(branding) : '';
+    const contextInfo = this.extractVisualContext(description);
     
     if (entityType === 'tour') {
-      return `Create a professional, eye-catching tour flyer/poster for "${title}". 
-      ${description}
+      return `Create a realistic, professional tour flyer/poster design background for a tour about ${title}. ${contextInfo}
       
       Requirements:
-      - Professional design, travel brochure style
-      - Include tour title prominently
-      - Show key highlights and attractions
-      - Include visual elements that represent the tour activities
-      - Colorful, inviting design
-      - Text should be readable and well-placed
+      - Realistic photography-based design, travel brochure style
+      - Show real key highlights and attractions from actual destinations
+      - Include authentic visual elements that represent the actual tour activities
+      - Colorful, inviting design with realistic imagery
+      - Professional travel agency flyer style, modern design, vibrant colors
+      - Use real photographs of actual places as background elements
+      - NO TEXT, NO WORDS, NO LETTERS, NO WRITING in the image (text will be added separately)
       - Aspect ratio: 3:4 (portrait orientation for flyer)
       - High resolution, print-ready quality
       ${brandingPrompt ? `- ${brandingPrompt}` : ''}
       
-      Style: Professional travel agency flyer, modern design, vibrant colors, appealing to tourists.`.trim();
+      CRITICAL: Do not include any text, words, letters, or writing in the image. Use only realistic photography of actual places.`.trim();
     }
     // Fallback für andere Entitäten
-    return `Create a professional, eye-catching flyer/poster for "${title}". 
-    ${description}
+    return `Create a realistic, professional flyer/poster design background for ${title}. ${contextInfo}
     
     Requirements:
-    - Professional design
-    - Include title prominently
-    - Show key features
-    - Colorful, inviting design
-    - Text should be readable and well-placed
+    - Realistic photography-based design
+    - Show real key features from actual places or products
+    - Colorful, inviting design with authentic imagery
+    - NO TEXT, NO WORDS, NO LETTERS, NO WRITING in the image (text will be added separately)
     - Aspect ratio: 3:4 (portrait orientation)
     - High resolution, print-ready quality
-    ${brandingPrompt ? `- ${brandingPrompt}` : ''}`.trim();
+    ${brandingPrompt ? `- ${brandingPrompt}` : ''}
+    
+    CRITICAL: Do not include any text, words, letters, or writing in the image.`.trim();
+  }
+
+  /**
+   * Extrahiert visuellen Kontext aus Beschreibung, ohne Text zu generieren
+   * Entfernt Markdown, Listen-Symbole, etc. und fokussiert auf visuelle Elemente
+   */
+  private static extractVisualContext(description: string): string {
+    if (!description) return '';
+    
+    // Entferne Markdown-Formatierung
+    let cleaned = description
+      .replace(/\*\*/g, '') // Bold
+      .replace(/\*/g, '') // Italic/List
+      .replace(/#{1,6}\s/g, '') // Headers
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Links
+      .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '') // Images
+      .replace(/`([^`]+)`/g, '$1') // Code
+      .replace(/\n{2,}/g, '. ') // Mehrfache Zeilenumbrüche
+      .replace(/\n/g, '. ') // Einzelne Zeilenumbrüche
+      .replace(/\s+/g, ' ') // Mehrfache Leerzeichen
+      .trim();
+    
+    // Fokussiere auf visuelle Elemente (Orte, Aktivitäten, Sehenswürdigkeiten)
+    // Entferne Preise, Zeiten, technische Details
+    cleaned = cleaned
+      .replace(/\d+\s*(COP|USD|EUR|€|\$)/gi, '') // Preise
+      .replace(/\d+\s*(Stunden|hours|horas)/gi, '') // Dauer
+      .replace(/\d+\s*(Teilnehmer|participants|participantes)/gi, '') // Teilnehmer
+      .replace(/Price:.*?\./gi, '') // Preis-Zeilen
+      .replace(/Location:.*?\./gi, '') // Location-Zeilen (behalte aber den Ort selbst)
+      .trim();
+    
+    // Kürze auf maximal 200 Zeichen für Kontext
+    if (cleaned.length > 200) {
+      cleaned = cleaned.substring(0, 197) + '...';
+    }
+    
+    return cleaned ? `The tour involves: ${cleaned}` : '';
   }
 
   /**

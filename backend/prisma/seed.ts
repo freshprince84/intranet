@@ -1025,14 +1025,16 @@ async function main() {
       where: { username: 'admin' },
       update: {
         firstName: 'Pat',
-        lastName: 'Admin'
+        lastName: 'Admin',
+        active: true // Admin muss immer aktiv sein
       },
       create: {
         username: 'admin',
         email: 'admin@example.com',
         password: hashedPassword,
         firstName: 'Pat',
-        lastName: 'Admin'
+        lastName: 'Admin',
+        active: true
       },
       include: {
         roles: {
@@ -1137,18 +1139,34 @@ async function main() {
     console.log('👥 Erstelle weitere Benutzer...');
 
     // Rebeca Benitez für Org 2 (NUR Org 2!)
-    const rebecaPassword = await bcrypt.hash('admin123', 10);
-    const rebecaUser = await prisma.user.upsert({
-      where: { username: 'rebeca-benitez' },
-      update: {},
-      create: {
-        username: 'rebeca-benitez',
-        email: 'rebeca.benitez@mosaik.ch',
-        password: rebecaPassword,
-        firstName: 'Rebeca',
-        lastName: 'Benitez'
-      }
+    // WICHTIG: Prüfe ob Benutzer existiert und inaktiv ist - dann nicht neu erstellen
+    const existingRebeca = await prisma.user.findUnique({
+      where: { username: 'rebeca-benitez' }
     });
+    
+    let rebecaUser;
+    if (existingRebeca && !existingRebeca.active) {
+      // Benutzer existiert aber ist inaktiv - NICHT reaktivieren
+      console.log(`⏭️ Rebeca Benitez existiert als inaktiver Benutzer - wird übersprungen`);
+      rebecaUser = existingRebeca;
+    } else {
+      const rebecaPassword = await bcrypt.hash('admin123', 10);
+      rebecaUser = await prisma.user.upsert({
+        where: { username: 'rebeca-benitez' },
+        update: {
+          // Stelle sicher, dass active nicht auf false gesetzt wird, wenn Benutzer bereits aktiv ist
+          active: existingRebeca?.active ?? true
+        },
+        create: {
+          username: 'rebeca-benitez',
+          email: 'rebeca.benitez@mosaik.ch',
+          password: rebecaPassword,
+          firstName: 'Rebeca',
+          lastName: 'Benitez',
+          active: true
+        }
+      });
+    }
     
     // Stelle sicher, dass Rebeca NUR Org 2 Rollen hat
     // Entferne alle Rollen, die nicht zu Org 2 gehören
@@ -1224,25 +1242,41 @@ async function main() {
     console.log(`✅ Rebeca Benitez-Benutzer: ${rebecaUser.username} (nur Org 2)`);
 
     // Christina Di Biaso für Org 2
-    const christinaPassword = await bcrypt.hash('admin123', 10);
-    const christinaUser = await prisma.user.upsert({
-      where: { username: 'christina-di-biaso' },
-      update: {},
-      create: {
-        username: 'christina-di-biaso',
-        email: 'christina.dibiaso@mosaik.ch',
-        password: christinaPassword,
-        firstName: 'Christina',
-        lastName: 'Di Biaso',
-        roles: {
-          create: {
-            roleId: org2UserRole.id,
-            lastUsed: true
+    // WICHTIG: Prüfe ob Benutzer existiert und inaktiv ist - dann nicht neu erstellen
+    const existingChristina = await prisma.user.findUnique({
+      where: { username: 'christina-di-biaso' }
+    });
+    
+    let christinaUser;
+    if (existingChristina && !existingChristina.active) {
+      // Benutzer existiert aber ist inaktiv - NICHT reaktivieren
+      console.log(`⏭️ Christina Di Biaso existiert als inaktiver Benutzer - wird übersprungen`);
+      christinaUser = existingChristina;
+    } else {
+      const christinaPassword = await bcrypt.hash('admin123', 10);
+      christinaUser = await prisma.user.upsert({
+        where: { username: 'christina-di-biaso' },
+        update: {
+          // Stelle sicher, dass active nicht auf false gesetzt wird, wenn Benutzer bereits aktiv ist
+          active: existingChristina?.active ?? true
+        },
+        create: {
+          username: 'christina-di-biaso',
+          email: 'christina.dibiaso@mosaik.ch',
+          password: christinaPassword,
+          firstName: 'Christina',
+          lastName: 'Di Biaso',
+          active: true,
+          roles: {
+            create: {
+              roleId: org2UserRole.id,
+              lastUsed: true
+            }
           }
         }
-      }
-    });
-    console.log(`✅ Christina Di Biaso-Benutzer: ${christinaUser.username}`);
+      });
+      console.log(`✅ Christina Di Biaso-Benutzer: ${christinaUser.username}`);
+    }
 
     // ========================================
     // 8. NIEDERLASSUNGEN ERSTELLEN

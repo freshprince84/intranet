@@ -1012,9 +1012,10 @@ export class WhatsAppAiService {
     prompt += '\n- get_tours: Hole verfügbare Touren (type, availableFrom, availableTo, limit)\n';
     prompt += '  WICHTIG: Verwende diese Function wenn der User nach Touren fragt!\n';
     prompt += '  WICHTIG: Diese Function zeigt eine Liste aller verfügbaren Touren\n';
-    prompt += '  WICHTIG: Jede Tour hat ein imageUrl-Feld - verwende dieses IMMER, um Bilder in Markdown-Format einzufügen!\n';
-    prompt += '  WICHTIG: Wenn imageUrl vorhanden ist, füge IMMER ein Bild in Markdown-Format ein: ![Tour-Name](imageUrl)\n';
-    prompt += '  WICHTIG: Format für Bilder: ![Tour-Titel](/api/tours/{tourId}/image) - verwende IMMER /api/tours/{tourId}/image als URL!\n';
+    prompt += '  KRITISCH: Bei get_tours() NUR Flyer-Bilder senden, KEINEN Text!\n';
+    prompt += '  KRITISCH: Jede Tour hat ein imageUrl-Feld - verwende dieses als Flyer-Bild!\n';
+    prompt += '  KRITISCH: Format für Flyer-Bilder: ![Tour-Titel](/api/tours/{tourId}/image) - verwende IMMER /api/tours/{tourId}/image als URL!\n';
+    prompt += '  KRITISCH: Sende NUR die Bilder, KEINEN Text in der Antwort! Der Text wird automatisch nach den Bildern hinzugefügt.\n';
     prompt += '  KRITISCH: Wenn User bereits eine Tour gewählt hat (z.B. "die 2.", "guatape", "tour 2"), rufe diese Function NICHT nochmal auf!\n';
     prompt += '  KRITISCH: Wenn User nach get_tours() eine Tour wählt, rufe stattdessen book_tour() auf!\n';
     prompt += '  KRITISCH: Liste NICHT alle Touren nochmal auf, wenn User bereits eine Tour gewählt hat!\n';
@@ -1025,13 +1026,16 @@ export class WhatsAppAiService {
     prompt += '    - User sagt "die 2." nach get_tours() → NICHT get_tours() nochmal, sondern book_tour()!\n';
     prompt += '\n- get_tour_details: Hole detaillierte Informationen zu einer Tour (tourId)\n';
     prompt += '  WICHTIG: Verwende diese Function wenn der User Details zu einer spezifischen Tour wissen möchte!\n';
-    prompt += '  WICHTIG: Diese Function gibt imageUrl und galleryUrls zurück - verwende diese IMMER, um Bilder in Markdown-Format einzufügen!\n';
-    prompt += '  WICHTIG: Wenn imageUrl vorhanden ist, füge IMMER ein Bild ein: ![Tour-Name](imageUrl)\n';
-    prompt += '  WICHTIG: Wenn galleryUrls vorhanden sind, füge ALLE Galerie-Bilder ein: ![Bild 1](galleryUrls[0]), ![Bild 2](galleryUrls[1]), etc.\n';
-    prompt += '  WICHTIG: Format für Bilder: ![Tour-Titel](/api/tours/{tourId}/image) und ![Galerie-Bild](/api/tours/{tourId}/gallery/{index})\n';
+    prompt += '  WICHTIG: Diese Function gibt imageUrl (Hauptbild) und galleryUrls (Galerie-Bilder) zurück!\n';
+    prompt += '  KRITISCH: Bei get_tour_details() NUR Bilder senden (Hauptbild + alle Galerie-Bilder), KEINEN Text!\n';
+    prompt += '  KRITISCH: Wenn imageUrl vorhanden ist, füge IMMER das Hauptbild ein: ![Tour-Name](imageUrl)\n';
+    prompt += '  KRITISCH: Wenn galleryUrls vorhanden sind, füge ALLE Galerie-Bilder ein: ![Bild 1](galleryUrls[0]), ![Bild 2](galleryUrls[1]), etc.\n';
+    prompt += '  KRITISCH: Format für Bilder: ![Tour-Titel](/api/tours/{tourId}/image) und ![Galerie-Bild](/api/tours/{tourId}/gallery/{index})\n';
+    prompt += '  KRITISCH: Sende NUR die Bilder, KEINEN Text in der Antwort! Der Text wird automatisch nach den Bildern hinzugefügt.\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "zeige mir details zu tour 1" → get_tour_details({ tourId: 1 })\n';
     prompt += '    - "was ist in tour 5 inkludiert?" → get_tour_details({ tourId: 5 })\n';
+    prompt += '    - "gibt es bilder zu tour 2?" → get_tour_details({ tourId: 2 })\n';
     prompt += '\n- book_tour: Erstelle eine Tour-Buchung (tourId, tourDate, numberOfParticipants, customerName, customerPhone/customerEmail)\n';
     prompt += '  WICHTIG: Verwende diese Function wenn der User eine Tour buchen möchte!\n';
     prompt += '  WICHTIG: Generiert automatisch Payment Link und setzt Zahlungsfrist (1 Stunde)\n';
@@ -1186,7 +1190,7 @@ export class WhatsAppAiService {
     prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
     prompt += '\nWICHTIG: Wenn check_room_availability mehrere Zimmer zurückgibt, zeige ALLE Zimmer in der Antwort an!';
     prompt += '\nWICHTIG: Jedes Zimmer im Function-Ergebnis (rooms Array) muss in der Antwort erwähnt werden!';
-    prompt += '\nWICHTIG: Wenn get_tours mehrere Touren zurückgibt, zeige ALLE Touren in der Antwort an!';
+    prompt += '\nWICHTIG: Wenn get_tours mehrere Touren zurückgibt, sende ALLE Flyer-Bilder (ein Bild pro Tour)!';
 
     return prompt;
   }

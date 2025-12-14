@@ -3,6 +3,7 @@ import { WhatsAppMessageParser, ParsedReservationMessage } from '../services/wha
 import { WhatsAppReservationService } from '../services/whatsappReservationService';
 import { WhatsAppMessageHandler } from '../services/whatsappMessageHandler';
 import { WhatsAppService } from '../services/whatsappService';
+import { LanguageDetectionService } from '../services/languageDetectionService';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 
@@ -235,14 +236,8 @@ export const handleWebhook = async (req: Request, res: Response) => {
               textMessage = textMessage.replace(match[0], '').trim();
             });
             
-            // Sende Text-Nachricht (ohne Bilder)
-            if (textMessage.trim().length > 0) {
-              if (isGroupMessage && groupId) {
-                await whatsappService.sendMessage(fromNumber, textMessage, undefined, groupId);
-              } else {
-                await whatsappService.sendMessage(fromNumber, textMessage);
-              }
-            }
+            // Entferne alle Leerzeilen und überflüssige Whitespace
+            textMessage = textMessage.replace(/\n{3,}/g, '\n\n').trim();
             
             // Sende Bilder separat
             const baseUrl = process.env.SERVER_URL || process.env.API_URL || 'https://65.109.228.106.nip.io';
@@ -279,6 +274,26 @@ export const handleWebhook = async (req: Request, res: Response) => {
                 logger.error(`[WhatsApp Webhook] Fehler beim Senden des Bildes:`, imageError);
                 // Weiter mit nächstem Bild
               }
+            }
+            
+            // Nach den Bildern: Sende Text-Nachricht (falls vorhanden) oder Standard-Text
+            let finalTextMessage = textMessage.trim();
+            
+            if (finalTextMessage.length === 0) {
+              // Standard-Text basierend auf Sprache
+              const language = LanguageDetectionService.detectLanguageFromPhoneNumber(fromNumber);
+              const standardTexts: Record<string, string> = {
+                es: 'Si estás interesado en alguna de estas tours, ¡házmelo saber!',
+                de: 'Wenn du an einer dieser Touren interessiert bist, lass es mich bitte wissen!',
+                en: 'If you are interested in any of these tours, please let me know!'
+              };
+              finalTextMessage = standardTexts[language] || standardTexts['es'];
+            }
+            
+            if (isGroupMessage && groupId) {
+              await whatsappService.sendMessage(fromNumber, finalTextMessage, undefined, groupId);
+            } else {
+              await whatsappService.sendMessage(fromNumber, finalTextMessage);
             }
           } else {
             // Keine Bilder, sende nur Text

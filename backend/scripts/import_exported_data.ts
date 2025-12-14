@@ -230,8 +230,8 @@ async function importUsers(stats: ImportStats) {
       
       if (existing) {
         // Update falls nötig (aber NICHT das Passwort!)
-        // WICHTIG: active-Status wird NUR aktualisiert, wenn er explizit in den Daten vorhanden ist
-        // Dies verhindert, dass inaktive User (z.B. in Organisation 1) durch Imports überschrieben werden
+        // WICHTIG: Wenn Benutzer bereits inaktiv ist, wird er NICHT reaktiviert
+        // Dies verhindert, dass gelöschte/inaktive User durch Imports wieder aktiviert werden
         const updateData: any = {
           email: user.email,
           firstName: user.firstName,
@@ -253,8 +253,13 @@ async function importUsers(stats: ImportStats) {
           taxIdentificationNumber: user.taxIdentificationNumber
         };
         
-        // Nur active setzen, wenn es explizit in den Daten vorhanden ist
-        if (user.active !== undefined && user.active !== null) {
+        // WICHTIG: Wenn Benutzer bereits inaktiv ist, NICHT reaktivieren
+        // Nur aktualisieren, wenn Benutzer bereits aktiv ist ODER wenn in Import-Daten explizit false steht
+        if (existing.active === false) {
+          // Benutzer ist inaktiv - NICHT reaktivieren, auch wenn in Import-Daten active: true steht
+          updateData.active = false;
+        } else if (user.active !== undefined && user.active !== null) {
+          // Benutzer ist aktiv - aktualisiere nur wenn explizit in Daten vorhanden
           updateData.active = Boolean(user.active);
         }
         
@@ -267,7 +272,7 @@ async function importUsers(stats: ImportStats) {
         console.log(`  🔄 Aktualisiert: ${user.username} (ID: ${existing.id})`);
       } else {
         // Erstelle neu
-        // WICHTIG: active-Status wird NUR gesetzt, wenn er explizit in den Daten vorhanden ist
+        // WICHTIG: Wenn active in Import-Daten false ist, wird Benutzer als inaktiv erstellt
         // Ansonsten wird der DEFAULT-Wert (true) aus dem Schema verwendet
         const createData: any = {
           username: user.username,
