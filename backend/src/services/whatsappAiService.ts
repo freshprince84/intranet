@@ -412,6 +412,10 @@ export class WhatsAppAiService {
         
         const finalMessage = finalResponse.data.choices[0].message.content;
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'whatsappAiService.ts:413',message:'AI finalMessage generiert',data:{messageLength:finalMessage.length,containsImageMarkdown:/!\[.*?\]\(.*?\)/.test(finalMessage),imageMatches:Array.from(finalMessage.matchAll(/!\[(.*?)\]\((.*?)\)/g)).map(m=>({alt:m[1],url:m[2]})),hasSandboxUrl:finalMessage.includes('sandbox:'),hasUploadsUrl:finalMessage.includes('/uploads/')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
         return {
           message: finalMessage,
           language

@@ -217,18 +217,31 @@ export const handleWebhook = async (req: Request, res: Response) => {
           logger.log('[WhatsApp Webhook] Antwort generiert:', response.substring(0, 100) + '...');
           logger.log('[WhatsApp Webhook] Vollständige Antwort:', response);
 
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'whatsappController.ts:218',message:'AI-Antwort analysiert',data:{responseLength:response.length,containsImageMarkdown:/!\[.*?\]\(.*?\)/.test(response),imageMatches:Array.from(response.matchAll(/!\[(.*?)\]\((.*?)\)/g)).map(m=>m[2])},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+
           // 4. Sende Antwort
           logger.log('[WhatsApp Webhook] Erstelle WhatsApp Service für Branch', branchId);
           const whatsappService = await WhatsAppService.getServiceForBranch(branchId);
           
           logger.log('[WhatsApp Webhook] Sende Antwort an', fromNumber, isGroupMessage ? `(Gruppe: ${groupId})` : '');
           
+          // #region agent log
+          const imageMatches = Array.from(response.matchAll(/!\[(.*?)\]\((.*?)\)/g));
+          fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'whatsappController.ts:227',message:'Vor sendMessage - Bildreferenzen gefunden',data:{imageCount:imageMatches.length,images:imageMatches.map(m=>({alt:m[1],url:m[2]})),willSendAsText:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+
           // Für Gruppen: Sende mit group_id, für Einzel-Chats: normale Nachricht
           if (isGroupMessage && groupId) {
             await whatsappService.sendMessage(fromNumber, response, undefined, groupId);
           } else {
             await whatsappService.sendMessage(fromNumber, response);
           }
+
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'whatsappController.ts:233',message:'Nach sendMessage - nur Text gesendet',data:{imageCount:imageMatches.length,imagesNotSent:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
 
           logger.log('[WhatsApp Webhook] ✅ Antwort erfolgreich gesendet');
 
