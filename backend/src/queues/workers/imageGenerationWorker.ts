@@ -89,7 +89,8 @@ export function createImageGenerationWorker(connection: any): Worker {
           tour.title,
           tour.description || '',
           process.env.GEMINI_API_KEY,
-          branding
+          branding,
+          tour.organization?.logo || undefined
         );
 
         await job.updateProgress(50);

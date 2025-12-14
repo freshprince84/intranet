@@ -1023,25 +1023,32 @@ export class WhatsAppFunctionHandlers {
         take: args.limit || 20
       });
       
-      const formattedTours = tours.map(t => ({
-        id: t.id,
-        title: t.title,
-        description: t.description || '',
-        type: t.type,
-        price: t.price ? Number(t.price) : null,
-        currency: t.currency || 'COP',
-        duration: t.duration,
-        maxParticipants: t.maxParticipants,
-        minParticipants: t.minParticipants,
-        location: t.location,
-        meetingPoint: t.meetingPoint,
-        imageUrl: t.imageUrl,
-        hasGallery: !!t.galleryUrls && Array.isArray(t.galleryUrls) && t.galleryUrls.length > 0
-      }));
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'whatsappFunctionHandlers.ts:1040',message:'get_tours Ergebnis',data:{toursCount:formattedTours.length,imageUrls:formattedTours.map(t=>({id:t.id,title:t.title,imageUrl:t.imageUrl})),hasSandboxUrls:formattedTours.some(t=>t.imageUrl?.includes('sandbox:')),hasRelativeUrls:formattedTours.some(t=>t.imageUrl?.startsWith('/uploads/'))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
+      const formattedTours = tours.map(t => {
+        // Konvertiere relative imageUrl zu API-URL
+        let imageUrl = t.imageUrl;
+        if (imageUrl && imageUrl.startsWith('/uploads/tours/')) {
+          // Konvertiere /uploads/tours/tour-1-main-xxx.png zu /api/tours/1/image
+          imageUrl = `/api/tours/${t.id}/image`;
+        } else if (!imageUrl) {
+          imageUrl = null;
+        }
+        
+        return {
+          id: t.id,
+          title: t.title,
+          description: t.description || '',
+          type: t.type,
+          price: t.price ? Number(t.price) : null,
+          currency: t.currency || 'COP',
+          duration: t.duration,
+          maxParticipants: t.maxParticipants,
+          minParticipants: t.minParticipants,
+          location: t.location,
+          meetingPoint: t.meetingPoint,
+          imageUrl: imageUrl, // API-URL statt relativer Pfad
+          hasGallery: !!t.galleryUrls && Array.isArray(t.galleryUrls) && t.galleryUrls.length > 0
+        };
+      });
 
       // Speichere Context in Conversation (falls conversationId vorhanden)
       if (conversationId) {
@@ -1136,6 +1143,22 @@ export class WhatsAppFunctionHandlers {
         }
       }
       
+      // Konvertiere relative imageUrl zu API-URL
+      let imageUrl = tour.imageUrl;
+      if (imageUrl && imageUrl.startsWith('/uploads/tours/')) {
+        imageUrl = `/api/tours/${tour.id}/image`;
+      } else if (!imageUrl) {
+        imageUrl = null;
+      }
+      
+      // Konvertiere galleryUrls zu API-URLs
+      const galleryApiUrls = galleryUrls.map((url: string, index: number) => {
+        if (url && url.startsWith('/uploads/tours/')) {
+          return `/api/tours/${tour.id}/gallery/${index}`;
+        }
+        return url;
+      });
+      
       return {
         id: tour.id,
         title: tour.title,
@@ -1151,8 +1174,8 @@ export class WhatsAppFunctionHandlers {
         includes: tour.includes,
         excludes: tour.excludes,
         requirements: tour.requirements,
-        imageUrl: tour.imageUrl,
-        galleryUrls: galleryUrls,
+        imageUrl: imageUrl, // API-URL statt relativer Pfad
+        galleryUrls: galleryApiUrls, // API-URLs statt relative Pfade
         availableFrom: tour.availableFrom?.toISOString() || null,
         availableTo: tour.availableTo?.toISOString() || null,
         branch: tour.branch ? { id: tour.branch.id, name: tour.branch.name } : null,

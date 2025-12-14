@@ -1392,7 +1392,23 @@
     "templateVariables.checkInConfirmation": "{{guestName}}, {{roomDisplay}}, {{doorPin}}, {{doorAppName}}",
     "preview": "Preview",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "roomDescriptions": {
+      "title": "Room Descriptions",
+      "description": "Descriptions of how to get to the rooms. These are used in check-in messages.",
+      "dorm": "Dorm",
+      "private": "Private Room",
+      "categoryId": "Category ID",
+      "text": "Text",
+      "textPlaceholder": "Description of how to get to the room...",
+      "imageUrl": "Image URL",
+      "videoUrl": "Video URL",
+      "image": "Image",
+      "video": "Video",
+      "noDescription": "No description available",
+      "noRooms": "No rooms found. Please import reservations from LobbyPMS first.",
+      "saveError": "Error saving description"
+    }
   },
   "cerebro": {
     "title": "Cerebro",
@@ -2966,6 +2982,17 @@
       "inactive": "Inactive",
       "all": "All"
     },
+    "imageLightbox": {
+      "title": "Image {{current}} of {{total}}",
+      "close": "Close",
+      "previous": "Previous image",
+      "next": "Next image",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "zoomReset": "Reset zoom",
+      "loading": "Loading image...",
+      "error": "Image could not be loaded"
+    },
     "validation": {
       "titleMinLength": "Title must be at least 3 characters long",
       "maxParticipantsMin": "Maximum participants must be >= minimum participants",
@@ -3075,9 +3102,9 @@
   "priceAnalysis": {
     "title": "Price Analysis",
     "listings": "OTA Listings",
-    "analysis": "Analysis",
-    "recommendations": "Recommendations",
-    "rules": "Rules",
+    "tabAnalysis": "Analysis",
+    "tabRecommendations": "Recommendations",
+    "tabRules": "Rules",
     "loading": "Loading...",
     "noListings": "No OTA listings found",
     "noAnalyses": "No price analyses found",

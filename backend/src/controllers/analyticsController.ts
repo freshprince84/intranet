@@ -5,6 +5,8 @@ import { startOfDay, endOfDay, parseISO, format } from 'date-fns';
 import { prisma, getNotDeletedFilter } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { getDateRange, Period } from '../utils/dateHelpers';
+import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } from '../utils/filterToPrisma';
+import { filterCache } from '../services/filterCache';
 
 // To-Dos pro User für ein bestimmtes Datum
 export const getTodosByUserForDate = async (req: Request, res: Response) => {
@@ -294,8 +296,13 @@ export const getRequestsByUserForDate = async (req: Request, res: Response) => {
 // Alle To-Dos chronologisch für ein Datum oder Datumsbereich (Tab 2)
 export const getTodosChronological = async (req: Request, res: Response) => {
     try {
-        const { date, period, startDate, endDate, branchId, userId } = req.query;
-        const currentUserId = req.userId;
+        const { date, period, startDate, endDate } = req.query;
+        
+        // Filter-Parameter aus Query lesen
+        const filterId = req.query.filterId as string | undefined;
+        const filterConditions = req.query.filterConditions 
+            ? JSON.parse(req.query.filterConditions as string) 
+            : undefined;
 
         // Datenisolation
         const taskFilter = getDataIsolationFilter(req, 'task');
@@ -318,11 +325,48 @@ export const getTodosChronological = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Datum oder Datumsbereich erforderlich' });
         }
 
-        // Kombiniere taskFilter mit Zeitfilter
+        // Filter-Bedingungen konvertieren (falls vorhanden)
+        let filterWhereClause: any = {};
+        if (filterId) {
+            // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
+            try {
+                const filterData = await filterCache.get(parseInt(filterId, 10));
+                if (filterData) {
+                    const conditions = JSON.parse(filterData.conditions);
+                    const operators = JSON.parse(filterData.operators);
+                    filterWhereClause = convertFilterConditionsToPrismaWhere(
+                        conditions,
+                        operators,
+                        'task',
+                        req
+                    );
+                    // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                    filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'task');
+                } else {
+                    logger.warn(`[getTodosChronological] Filter ${filterId} nicht gefunden`);
+                }
+            } catch (filterError) {
+                logger.error(`[getTodosChronological] Fehler beim Laden von Filter ${filterId}:`, filterError);
+                // Fallback: Versuche ohne Filter weiter
+            }
+        } else if (filterConditions) {
+            // Direkte Filter-Bedingungen
+            filterWhereClause = convertFilterConditionsToPrismaWhere(
+                filterConditions.conditions || filterConditions,
+                filterConditions.operators || [],
+                'task',
+                req
+            );
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'task');
+        }
+
+        // Kombiniere taskFilter mit Zeitfilter und Filter-Bedingungen
         // Zeige auch gelöschte Tasks, wenn sie im Zeitraum gelöscht wurden
         const where: any = {
             AND: [
                 taskFilter,
+                filterWhereClause,
                 {
                     OR: [
                         {
@@ -345,47 +389,8 @@ export const getTodosChronological = async (req: Request, res: Response) => {
                         }
                     ]
                 }
-            ]
+            ].filter(Boolean) // Entferne leere Objekte
         };
-
-        if (branchId) {
-            where.AND.push({
-                branchId: parseInt(branchId as string, 10)
-            });
-        }
-
-        if (userId) {
-            // Wenn userId gefiltert wird, überschreibe taskFilter
-            where.AND = [
-                {
-                    OR: [
-                        { responsibleId: parseInt(userId as string, 10) },
-                        { qualityControlId: parseInt(userId as string, 10) }
-                    ]
-                },
-                {
-                    OR: [
-                        {
-                            updatedAt: {
-                                gte: start,
-                                lte: end
-                            }
-                        },
-                        {
-                            createdAt: {
-                                gte: start,
-                                lte: end
-                            }
-                        }
-                    ]
-                }
-            ];
-            if (branchId) {
-                where.AND.push({
-                    branchId: parseInt(branchId as string, 10)
-                });
-            }
-        }
 
         const tasks = await prisma.task.findMany({
             where,
@@ -469,8 +474,13 @@ export const getTodosChronological = async (req: Request, res: Response) => {
 // Alle Requests chronologisch für ein Datum oder Datumsbereich (Tab 3)
 export const getRequestsChronological = async (req: Request, res: Response) => {
     try {
-        const { date, period, startDate, endDate, branchId, userId } = req.query;
-        const currentUserId = req.userId;
+        const { date, period, startDate, endDate } = req.query;
+        
+        // Filter-Parameter aus Query lesen
+        const filterId = req.query.filterId as string | undefined;
+        const filterConditions = req.query.filterConditions 
+            ? JSON.parse(req.query.filterConditions as string) 
+            : undefined;
 
         // Datenisolation
         const requestFilter = getDataIsolationFilter(req, 'request');
@@ -493,11 +503,48 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Datum oder Datumsbereich erforderlich' });
         }
 
-        // Kombiniere requestFilter mit Zeitfilter
+        // Filter-Bedingungen konvertieren (falls vorhanden)
+        let filterWhereClause: any = {};
+        if (filterId) {
+            // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
+            try {
+                const filterData = await filterCache.get(parseInt(filterId, 10));
+                if (filterData) {
+                    const conditions = JSON.parse(filterData.conditions);
+                    const operators = JSON.parse(filterData.operators);
+                    filterWhereClause = convertFilterConditionsToPrismaWhere(
+                        conditions,
+                        operators,
+                        'request',
+                        req
+                    );
+                    // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                    filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'request');
+                } else {
+                    logger.warn(`[getRequestsChronological] Filter ${filterId} nicht gefunden`);
+                }
+            } catch (filterError) {
+                logger.error(`[getRequestsChronological] Fehler beim Laden von Filter ${filterId}:`, filterError);
+                // Fallback: Versuche ohne Filter weiter
+            }
+        } else if (filterConditions) {
+            // Direkte Filter-Bedingungen
+            filterWhereClause = convertFilterConditionsToPrismaWhere(
+                filterConditions.conditions || filterConditions,
+                filterConditions.operators || [],
+                'request',
+                req
+            );
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'request');
+        }
+
+        // Kombiniere requestFilter mit Zeitfilter und Filter-Bedingungen
         // Zeige auch gelöschte Requests, wenn sie im Zeitraum gelöscht wurden
         const where: any = {
             AND: [
                 requestFilter,
+                filterWhereClause,
                 {
                     OR: [
                         {
@@ -520,37 +567,8 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
                         }
                     ]
                 }
-            ]
+            ].filter(Boolean) // Entferne leere Objekte
         };
-
-        if (branchId) {
-            where.AND.push({
-                branchId: parseInt(branchId as string, 10)
-            });
-        }
-
-        if (userId) {
-            // Wenn userId gefiltert wird, überschreibe requestFilter
-            where.AND = [
-                {
-                    OR: [
-                        { requesterId: parseInt(userId as string, 10) },
-                        { responsibleId: parseInt(userId as string, 10) }
-                    ]
-                },
-                {
-                    createdAt: {
-                        gte: start,
-                        lte: end
-                    }
-                }
-            ];
-            if (branchId) {
-                where.AND.push({
-                    branchId: parseInt(branchId as string, 10)
-                });
-            }
-        }
 
         const requests = await prisma.request.findMany({
             where,

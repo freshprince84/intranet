@@ -412,10 +412,6 @@ export class WhatsAppAiService {
         
         const finalMessage = finalResponse.data.choices[0].message.content;
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'whatsappAiService.ts:413',message:'AI finalMessage generiert',data:{messageLength:finalMessage.length,containsImageMarkdown:/!\[.*?\]\(.*?\)/.test(finalMessage),imageMatches:Array.from(finalMessage.matchAll(/!\[(.*?)\]\((.*?)\)/g)).map(m=>({alt:m[1],url:m[2]})),hasSandboxUrl:finalMessage.includes('sandbox:'),hasUploadsUrl:finalMessage.includes('/uploads/')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        
         return {
           message: finalMessage,
           language
@@ -1016,6 +1012,9 @@ export class WhatsAppAiService {
     prompt += '\n- get_tours: Hole verfügbare Touren (type, availableFrom, availableTo, limit)\n';
     prompt += '  WICHTIG: Verwende diese Function wenn der User nach Touren fragt!\n';
     prompt += '  WICHTIG: Diese Function zeigt eine Liste aller verfügbaren Touren\n';
+    prompt += '  WICHTIG: Jede Tour hat ein imageUrl-Feld - verwende dieses IMMER, um Bilder in Markdown-Format einzufügen!\n';
+    prompt += '  WICHTIG: Wenn imageUrl vorhanden ist, füge IMMER ein Bild in Markdown-Format ein: ![Tour-Name](imageUrl)\n';
+    prompt += '  WICHTIG: Format für Bilder: ![Tour-Titel](/api/tours/{tourId}/image) - verwende IMMER /api/tours/{tourId}/image als URL!\n';
     prompt += '  KRITISCH: Wenn User bereits eine Tour gewählt hat (z.B. "die 2.", "guatape", "tour 2"), rufe diese Function NICHT nochmal auf!\n';
     prompt += '  KRITISCH: Wenn User nach get_tours() eine Tour wählt, rufe stattdessen book_tour() auf!\n';
     prompt += '  KRITISCH: Liste NICHT alle Touren nochmal auf, wenn User bereits eine Tour gewählt hat!\n';
@@ -1026,6 +1025,10 @@ export class WhatsAppAiService {
     prompt += '    - User sagt "die 2." nach get_tours() → NICHT get_tours() nochmal, sondern book_tour()!\n';
     prompt += '\n- get_tour_details: Hole detaillierte Informationen zu einer Tour (tourId)\n';
     prompt += '  WICHTIG: Verwende diese Function wenn der User Details zu einer spezifischen Tour wissen möchte!\n';
+    prompt += '  WICHTIG: Diese Function gibt imageUrl und galleryUrls zurück - verwende diese IMMER, um Bilder in Markdown-Format einzufügen!\n';
+    prompt += '  WICHTIG: Wenn imageUrl vorhanden ist, füge IMMER ein Bild ein: ![Tour-Name](imageUrl)\n';
+    prompt += '  WICHTIG: Wenn galleryUrls vorhanden sind, füge ALLE Galerie-Bilder ein: ![Bild 1](galleryUrls[0]), ![Bild 2](galleryUrls[1]), etc.\n';
+    prompt += '  WICHTIG: Format für Bilder: ![Tour-Titel](/api/tours/{tourId}/image) und ![Galerie-Bild](/api/tours/{tourId}/gallery/{index})\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "zeige mir details zu tour 1" → get_tour_details({ tourId: 1 })\n';
     prompt += '    - "was ist in tour 5 inkludiert?" → get_tour_details({ tourId: 5 })\n';

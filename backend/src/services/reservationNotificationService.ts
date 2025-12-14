@@ -2132,6 +2132,17 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
     doorPin: string | null,
     doorAppName: string | null
   ): Promise<void> {
+    // Ermittle Sprache für Übersetzungen
+    const { CountryLanguageService } = require('./countryLanguageService');
+    const languageCode = CountryLanguageService.getLanguageForReservation({
+      guestNationality: reservation.guestNationality,
+      guestPhone: reservation.guestPhone
+    }) as 'en' | 'es' | 'de';
+
+    // Übersetzungen für Bild/Video Labels
+    const imageLabel = languageCode === 'en' ? 'Image' : languageCode === 'es' ? 'Imagen' : 'Bild';
+    const videoLabel = languageCode === 'en' ? 'Video' : languageCode === 'es' ? 'Video' : 'Video';
+
     // Lade roomDescription aus Branch-Settings (falls categoryId vorhanden)
     let roomDescription: string = reservation.roomDescription || 'N/A';
     if ((reservation as any).categoryId && reservation.branchId) {
@@ -2154,10 +2165,10 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
               parts.push(roomDesc.text);
             }
             if (roomDesc.imageUrl) {
-              parts.push(`Bild: ${roomDesc.imageUrl}`);
+              parts.push(`${imageLabel}: ${roomDesc.imageUrl}`);
             }
             if (roomDesc.videoUrl) {
-              parts.push(`Video: ${roomDesc.videoUrl}`);
+              parts.push(`${videoLabel}: ${roomDesc.videoUrl}`);
             }
             roomDescription = parts.length > 0 ? parts.join('\n') : reservation.roomDescription || 'N/A';
           }
@@ -2170,11 +2181,6 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
     }
 
     // NEU: Lade Template aus Branch Settings
-    const { CountryLanguageService } = require('./countryLanguageService');
-    const languageCode = CountryLanguageService.getLanguageForReservation({
-      guestNationality: reservation.guestNationality,
-      guestPhone: reservation.guestPhone
-    }) as 'en' | 'es' | 'de';
 
     const template = await this.getMessageTemplate(
       reservation.branchId,

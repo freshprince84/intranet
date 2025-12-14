@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useError } from '../../contexts/ErrorContext.tsx';
 import { useBranch } from '../../contexts/BranchContext.tsx';
 import { API_ENDPOINTS } from '../../config/api.ts';
-import axios from 'axios';
+import axiosInstance from '../../config/axios.ts';
 
 interface PriceRecommendation {
     id: number;
@@ -46,11 +46,18 @@ const PriceRecommendationsTab: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>('pending');
     const [generating, setGenerating] = useState(false);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (currentBranch) {
             loadRecommendations();
         }
+        
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
     }, [currentBranch, statusFilter]);
 
     const loadRecommendations = async () => {
@@ -58,7 +65,7 @@ const PriceRecommendationsTab: React.FC = () => {
 
         setLoading(true);
         try {
-            const response = await axios.get(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.BASE, {
+            const response = await axiosInstance.get(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.BASE, {
                 params: {
                     branchId: currentBranch.id,
                     status: statusFilter || undefined
@@ -86,7 +93,7 @@ const PriceRecommendationsTab: React.FC = () => {
             const endDate = new Date();
             endDate.setMonth(endDate.getMonth() + 3);
 
-            await axios.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.GENERATE, {
+            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.GENERATE, {
                 branchId: currentBranch.id,
                 startDate: startDate.toISOString().split('T')[0],
                 endDate: endDate.toISOString().split('T')[0]
@@ -94,7 +101,10 @@ const PriceRecommendationsTab: React.FC = () => {
 
             showMessage(t('priceAnalysis.recommendations.generated', 'Preisempfehlungen generiert'), 'success');
             
-            setTimeout(() => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(() => {
                 loadRecommendations();
             }, 2000);
         } catch (error: any) {
@@ -111,7 +121,7 @@ const PriceRecommendationsTab: React.FC = () => {
         }
 
         try {
-            await axios.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.APPROVE(recommendationId));
+            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.APPROVE(recommendationId));
             showMessage(t('priceAnalysis.recommendations.approved', 'Empfehlung genehmigt'), 'success');
             loadRecommendations();
         } catch (error: any) {
@@ -129,7 +139,7 @@ const PriceRecommendationsTab: React.FC = () => {
         if (reason === null) return; // User cancelled
 
         try {
-            await axios.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.REJECT(recommendationId), {
+            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.REJECT(recommendationId), {
                 reason: reason || undefined
             });
             showMessage(t('priceAnalysis.recommendations.rejected', 'Empfehlung abgelehnt'), 'success');
@@ -150,7 +160,7 @@ const PriceRecommendationsTab: React.FC = () => {
         }
 
         try {
-            await axios.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.APPLY(recommendationId));
+            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.APPLY(recommendationId));
             showMessage(t('priceAnalysis.recommendations.applied', 'Empfehlung angewendet'), 'success');
             loadRecommendations();
         } catch (error: any) {

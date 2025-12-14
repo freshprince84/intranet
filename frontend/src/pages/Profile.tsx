@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { UserCircleIcon, PencilIcon, DocumentTextIcon, XMarkIcon, CheckIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon, DocumentTextIcon, XMarkIcon, CheckIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '../config/api.ts';
 import useMessage from '../hooks/useMessage.ts';
 import IdentificationDocumentList from '../components/IdentificationDocumentList.tsx';
@@ -11,6 +11,7 @@ import IdentificationDocumentForm from '../components/IdentificationDocumentForm
 import LifecycleTab from '../components/LifecycleTab.tsx';
 import MyDocumentsTab from '../components/MyDocumentsTab.tsx';
 import { useOnboarding } from '../contexts/OnboardingContext.tsx';
+import { usePermissions } from '../hooks/usePermissions.ts';
 
 interface IdentificationDocument {
   id: number;
@@ -61,11 +62,13 @@ const Profile: React.FC = () => {
   const { showMessage } = useMessage();
   const { t } = useTranslation();
   const { completeStep } = useOnboarding();
+  const { hasPermission } = usePermissions();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
   const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'lifecycle' | 'myDocuments'>('profile');
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const documentListRef = useRef<{ loadDocuments: () => void }>(null);
 
   // Länder für die Auswahl (dynamisch aus Übersetzungen)
   const COUNTRIES = [
@@ -143,6 +146,7 @@ const Profile: React.FC = () => {
       ...prev,
       [name]: value === '' ? null : value
     }));
+    setIsEditing(true); // Automatisch Edit-Modus aktivieren (wie UserManagementTab)
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -184,7 +188,6 @@ const Profile: React.FC = () => {
         setUser(updatedData);
         setFormData(updatedData);
         showMessage('Profil erfolgreich aktualisiert', 'success');
-        setIsEditing(false);
         
         // User-Context aktualisieren, damit profileComplete State in usePermissions aktualisiert wird
         try {
@@ -225,10 +228,6 @@ const Profile: React.FC = () => {
     return <div className="flex justify-center items-center h-screen">Laden...</div>;
   }
 
-  const startEditing = () => {
-    setFormData(user); // Setze die Formulardaten auf die aktuellen Benutzerdaten
-    setIsEditing(true);
-  };
 
   // Prüfe ob Profil unvollständig ist (Phase 1: Basis-Profilinfos)
   // username, email, language - country NICHT nötig
@@ -240,6 +239,15 @@ const Profile: React.FC = () => {
       user.language
     );
   };
+
+  // Berechtigungsprüfung
+  if (!hasPermission('page_profile', 'read', 'page')) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        {t('common.noPermission', { defaultValue: 'Keine Berechtigung' })}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen dark:bg-gray-900" data-onboarding="profile-page">
@@ -320,14 +328,6 @@ const Profile: React.FC = () => {
               <UserCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
               {t('profile.userProfile')}
             </h2>
-            {!isEditing && (
-              <button
-                onClick={startEditing}
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-              >
-                <PencilIcon className="h-5 w-5" />
-              </button>
-            )}
           </div>
 
           {/* Hinweis: Profil ausfüllen um System freizuschalten */}
@@ -375,7 +375,6 @@ const Profile: React.FC = () => {
                   name="username"
                   value={isEditing ? formData.username || '' : user.username || ''}
                   onChange={handleInputChange}
-                  disabled={!isEditing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
@@ -389,7 +388,6 @@ const Profile: React.FC = () => {
                   name="email"
                   value={isEditing ? formData.email || '' : user.email || ''}
                   onChange={handleInputChange}
-                  disabled={!isEditing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
@@ -403,7 +401,6 @@ const Profile: React.FC = () => {
                   name="language"
                   value={isEditing ? formData.language || '' : user.language || ''}
                   onChange={handleInputChange}
-                  disabled={!isEditing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   required
                 >
@@ -448,6 +445,8 @@ const Profile: React.FC = () => {
                           onDocumentSaved={async () => {
                             setShowDocumentUpload(false);
                             fetchUserProfile(); // Aktualisiere Profil nach Upload
+                            documentListRef.current?.loadDocuments(); // Dokument-Liste aktualisieren
+                            setIsEditing(false); // Edit-Modus nach Upload zurücksetzen
                             showMessage('Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.', 'success');
                             
                             // Schließe Onboarding-Schritt ab, wenn aktiv
@@ -538,7 +537,6 @@ const Profile: React.FC = () => {
                             name="gender"
                             value={isEditing ? formData.gender || '' : user.gender || ''}
                             onChange={handleInputChange}
-                            disabled={!isEditing}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                           >
                             <option value="">{t('profile.selectGender')}</option>
@@ -638,7 +636,6 @@ const Profile: React.FC = () => {
                   name="phoneNumber"
                   value={isEditing ? formData.phoneNumber || '' : user.phoneNumber || ''}
                   onChange={handleInputChange}
-                  disabled={!isEditing}
                   placeholder="+573001234567"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
@@ -657,7 +654,6 @@ const Profile: React.FC = () => {
                   name="bankDetails"
                   value={isEditing ? formData.bankDetails || '' : user.bankDetails || ''}
                   onChange={handleInputChange}
-                  disabled={!isEditing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
@@ -665,32 +661,30 @@ const Profile: React.FC = () => {
               {/* Contract, Salary, Normal Working Hours ENTFERNEN - werden zu Lifecycle verschoben */}
             </div>
 
-            {isEditing && (
-              <div className="flex mt-6 space-x-3">
-                <button
-                  type="submit"
-                  className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600"
-                  title={t('common.save')}
-                >
-                  <CheckIcon className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                  title={t('common.cancel')}
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              </div>
-            )}
+            <div className="flex mt-6 space-x-3">
+              <button
+                type="submit"
+                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600"
+                title={t('common.save')}
+              >
+                <CheckIcon className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                title={t('common.cancel')}
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
           </form>
         </div>
       )}
 
       {activeTab === 'documents' && user && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-          <IdentificationDocumentList userId={user.id} />
+          <IdentificationDocumentList userId={user.id} ref={documentListRef} />
         </div>
       )}
 

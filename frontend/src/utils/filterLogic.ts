@@ -8,6 +8,8 @@
  * Nur die Code-Duplikation wurde entfernt, keine Funktionalitätsänderung!
  */
 
+import { startOfWeek, endOfWeek } from 'date-fns';
+
 export interface FilterCondition {
   column: string;
   operator: string;
@@ -256,13 +258,21 @@ export const evaluateDateCondition = (
   // Erstelle lokales Date-Objekt aus den UTC-Werten (ohne Zeitzone)
   const normalizedDate = new Date(dateYear, dateMonth, dateDay);
 
-  // Handle __TODAY__ dynamic date
+  // Handle __TODAY__, __WEEK_START__, __WEEK_END__ dynamic dates
   let conditionDate: Date;
   if (condition.value === '__TODAY__') {
     // Get today's date in local timezone (set to midnight)
     const localToday = new Date();
     localToday.setHours(0, 0, 0, 0);
     conditionDate = localToday;
+  } else if (condition.value === '__WEEK_START__') {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    weekStart.setHours(0, 0, 0, 0);
+    conditionDate = weekStart;
+  } else if (condition.value === '__WEEK_END__') {
+    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+    weekEnd.setHours(23, 59, 59, 999);
+    conditionDate = weekEnd;
   } else {
     const conditionDateRaw = new Date(condition.value as string);
     if (isNaN(conditionDateRaw.getTime())) {

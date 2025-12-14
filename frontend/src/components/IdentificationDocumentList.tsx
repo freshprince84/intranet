@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IdentificationDocument } from '../types/interfaces.ts';
 import * as idDocApi from '../api/identificationDocumentApi.ts';
@@ -11,7 +11,8 @@ interface IdentificationDocumentListProps {
   isAdmin?: boolean;
 }
 
-const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({ userId, isAdmin = false }) => {
+const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, IdentificationDocumentListProps>(
+  ({ userId, isAdmin = false }, ref) => {
   const { t } = useTranslation();
   const [documents, setDocuments] = useState<IdentificationDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,11 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
   useEffect(() => {
     loadDocuments();
   }, [userId]);
+
+  // Exponiere loadDocuments über Ref
+  useImperativeHandle(ref, () => ({
+    loadDocuments
+  }));
 
   // Dokument löschen
   const handleDeleteDocument = async (docId: number) => {
@@ -261,6 +267,6 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
       )}
     </div>
   );
-};
+});
 
 export default IdentificationDocumentList; 

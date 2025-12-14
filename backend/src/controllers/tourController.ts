@@ -1201,7 +1201,8 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
           tour.title || '',
           tour.description || '',
           process.env.GEMINI_API_KEY,
-          branding
+          branding,
+          tour.organization?.logo || undefined
         );
 
         // Lade Hauptbild hoch

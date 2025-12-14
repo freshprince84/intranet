@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { Request } from 'express';
 import { isAdminOrOwner } from '../middleware/organization';
+import { startOfWeek, endOfWeek } from 'date-fns';
 
 /**
  * Filter-Bedingung (wie im Frontend verwendet)
@@ -509,7 +510,7 @@ function convertSingleCondition(
  * @param fieldName - Der Name des Feldes ('dueDate', 'checkInDate', 'checkOutDate', etc.)
  */
 function convertDateCondition(value: any, operator: string, fieldName: string = 'dueDate'): any {
-  // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__ dynamic dates
+  // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__, __WEEK_START__, __WEEK_END__ dynamic dates
   let dateValue: Date;
   if (value === '__TODAY__') {
     const today = new Date();
@@ -525,6 +526,14 @@ function convertDateCondition(value: any, operator: string, fieldName: string = 
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(0, 0, 0, 0);
     dateValue = yesterday;
+  } else if (value === '__WEEK_START__') {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    weekStart.setHours(0, 0, 0, 0);
+    dateValue = weekStart;
+  } else if (value === '__WEEK_END__') {
+    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+    weekEnd.setHours(23, 59, 59, 999);
+    dateValue = weekEnd;
   } else {
     dateValue = new Date(value);
     if (isNaN(dateValue.getTime())) {

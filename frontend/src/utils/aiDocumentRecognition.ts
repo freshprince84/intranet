@@ -10,7 +10,7 @@ import { logger } from './logger.ts';
  * Kostenhinweis: Die OpenAI API ist kostenpflichtig, aber sehr günstig für diesen Anwendungsfall
  * (ca. 0,01-0,02€ pro Erkennung mit GPT-4 Vision)
  */
-export const recognizeDocumentWithAI = async (imageData: string): Promise<Partial<IdentificationDocument>> => {
+export const recognizeDocumentWithAI = async (imageData: string): Promise<Partial<IdentificationDocument & { firstName?: string; lastName?: string; birthday?: string; gender?: string; country?: string }>> => {
   try {
     logger.log('Starte KI-basierte Dokumentenerkennung...');
     

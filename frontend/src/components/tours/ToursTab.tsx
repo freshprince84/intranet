@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PencilIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, InformationCircleIcon, Squares2X2Icon, TableCellsIcon, ArrowDownTrayIcon, PhotoIcon } from '@heroicons/react/24/outline';
-import { API_ENDPOINTS, getTourImageUrl } from '../../config/api.ts';
+import { API_ENDPOINTS, getTourImageUrl, getTourGalleryImageUrl } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
@@ -15,6 +15,7 @@ import CreateTourModal from './CreateTourModal.tsx';
 import EditTourModal from './EditTourModal.tsx';
 import TourDetailsModal from './TourDetailsModal.tsx';
 import TourExportDialog from './TourExportDialog.tsx';
+import TourImageLightbox from './TourImageLightbox.tsx';
 import { Tour, TourType } from '../../types/tour.ts';
 import { FilterCondition } from '../FilterRow.tsx';
 import { applyFilters, evaluateUserRoleCondition } from '../../utils/filterLogic.ts';
@@ -100,6 +101,9 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     const [isEditTourModalOpen, setIsEditTourModalOpen] = useState(false);
     const [isTourDetailsModalOpen, setIsTourDetailsModalOpen] = useState(false);
     const [isTourExportDialogOpen, setIsTourExportDialogOpen] = useState(false);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [selectedTourForLightbox, setSelectedTourForLightbox] = useState<Tour | null>(null);
+    const [initialImageIndex, setInitialImageIndex] = useState(0);
     const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
     const [selectedTourId, setSelectedTourId] = useState<number | null>(null);
     const [displayLimit, setDisplayLimit] = useState<number>(10);
@@ -1140,9 +1144,33 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                     <img 
                                         src={getTourImageUrl(tour.id)}
                                         alt={tour.title || 'Tour Bild'}
-                                        className="w-full h-48 object-cover rounded-lg mb-2"
+                                        className="w-full h-48 object-cover rounded-lg mb-2 cursor-pointer hover:opacity-90 transition-opacity"
                                         loading="lazy"
+                                        onClick={() => {
+                                            setSelectedTourForLightbox(tour);
+                                            setInitialImageIndex(0);
+                                            setLightboxOpen(true);
+                                        }}
                                     />
+                                )}
+                                
+                                {/* Galerie-Thumbnails */}
+                                {tour.galleryUrls && tour.galleryUrls.length > 0 && (
+                                    <div className="flex gap-2 mb-2 overflow-x-auto">
+                                        {tour.galleryUrls.map((_, index) => (
+                                            <img
+                                                key={index}
+                                                src={getTourGalleryImageUrl(tour.id, index)}
+                                                alt={`${tour.title} - Galerie ${index + 1}`}
+                                                className="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
+                                                onClick={() => {
+                                                    setSelectedTourForLightbox(tour);
+                                                    setInitialImageIndex(index + 1); // +1 weil Index 0 = Hauptbild
+                                                    setLightboxOpen(true);
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
                                 )}
                                 
                                 <div className="flex items-start justify-between mb-2">
@@ -1298,6 +1326,21 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                 onClose={() => setIsTourExportDialogOpen(false)}
                 tourCount={filteredAndSortedTours.length}
             />
+            
+            {selectedTourForLightbox && (
+                <TourImageLightbox
+                    isOpen={lightboxOpen}
+                    onClose={() => {
+                        setLightboxOpen(false);
+                        setSelectedTourForLightbox(null);
+                    }}
+                    tourId={selectedTourForLightbox.id}
+                    initialImageIndex={initialImageIndex}
+                    imageUrl={selectedTourForLightbox.imageUrl}
+                    galleryUrls={selectedTourForLightbox.galleryUrls}
+                    tourTitle={selectedTourForLightbox.title}
+                />
+            )}
         </div>
     );
 };

@@ -6,6 +6,9 @@ import axios from 'axios';
 import { TaskAutomationService } from '../services/taskAutomationService';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { createNotificationIfEnabled } from './notificationController';
+import { NotificationType } from '@prisma/client';
+import { getUserNotificationText, getUserLanguage } from '../utils/translations';
 
 // Konfiguration für Datei-Upload
 const storage = multer.diskStorage({
@@ -45,7 +48,7 @@ export const addDocument = async (req: Request, res: Response) => {
       }
 
       const userId = parseInt(req.params.userId);
-      const { documentType, documentNumber, issueDate, expiryDate, issuingCountry, issuingAuthority, imageData } = req.body;
+      const { documentType, documentNumber, issueDate, expiryDate, issuingCountry, issuingAuthority, imageData, firstName, lastName, birthday, gender, country } = req.body;
       
       // Validierung
       if (!documentType || !documentNumber || !issuingCountry) {
@@ -85,6 +88,30 @@ export const addDocument = async (req: Request, res: Response) => {
           logger.error('Fehler beim Speichern des Kamerabilds:', error);
           return res.status(500).json({ error: 'Fehler beim Speichern des Bildes' });
         }
+      }
+
+      // User-Daten aus Request übernehmen (auch ohne Bild, VOR AI-Erkennung)
+      const userUpdateDataFromRequest: any = {};
+      if (firstName) userUpdateDataFromRequest.firstName = firstName;
+      if (lastName) userUpdateDataFromRequest.lastName = lastName;
+      if (birthday) userUpdateDataFromRequest.birthday = new Date(birthday);
+      if (gender && ['male', 'female', 'other'].includes(gender)) {
+        userUpdateDataFromRequest.gender = gender;
+      }
+      if (country) {
+        // Validiere Country-Code
+        if (['CO', 'CH', 'DE', 'AT'].includes(country)) {
+          userUpdateDataFromRequest.country = country;
+        }
+      }
+
+      // Update User, falls Daten vorhanden (VOR AI-Erkennung)
+      if (Object.keys(userUpdateDataFromRequest).length > 0) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: userUpdateDataFromRequest
+        });
+        logger.log(`[addDocument] User ${userId} aktualisiert mit User-Daten aus Request:`, userUpdateDataFromRequest);
       }
 
       const documentData = {
@@ -276,6 +303,24 @@ export const addDocument = async (req: Request, res: Response) => {
           logger.error('[addDocument] Fehler bei automatischer Verarbeitung:', error);
           // Fehler blockiert nicht die Dokumentenerstellung
         }
+      }
+
+      // Notification für User-Update erstellen
+      try {
+        const language = await getUserLanguage(userId);
+        const notificationText = getUserNotificationText(language, 'updated', true);
+        
+        await createNotificationIfEnabled({
+          userId: userId,
+          title: notificationText.title,
+          message: notificationText.message,
+          type: NotificationType.user,
+          relatedEntityId: userId,
+          relatedEntityType: 'update'
+        });
+      } catch (notificationError) {
+        logger.error('[addDocument] Fehler beim Erstellen der Notification:', notificationError);
+        // Fehler blockiert nicht die Dokumentenerstellung
       }
 
       res.status(201).json(document);
