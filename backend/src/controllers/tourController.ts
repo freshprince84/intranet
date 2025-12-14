@@ -754,6 +754,86 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
   }
 };
 
+// DELETE /api/tours/:id/image - Hauptbild löschen
+export const deleteTourImage = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tourId = parseInt(id, 10);
+
+    if (isNaN(tourId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ungültige Tour-ID'
+      });
+    }
+
+    // Berechtigung prüfen
+    const hasPermission = await checkUserPermission(
+      parseInt(req.userId),
+      parseInt(req.roleId),
+      'tour_edit',
+      'write',
+      'button'
+    );
+    if (!hasPermission) {
+      return res.status(403).json({
+        success: false,
+        message: 'Keine Berechtigung zum Bearbeiten von Touren'
+      });
+    }
+
+    // Lade Tour mit imageUrl
+    const tour = await prisma.tour.findUnique({
+      where: { id: tourId },
+      select: { imageUrl: true, organizationId: true }
+    });
+
+    if (!tour) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tour nicht gefunden'
+      });
+    }
+
+    // Prüfe Organization-Isolation
+    const userOrgId = parseInt(req.headers['x-organization-id'] as string);
+    if (tour.organizationId !== userOrgId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Keine Berechtigung für diese Tour'
+      });
+    }
+
+    // Lösche Bilddatei (falls vorhanden)
+    if (tour.imageUrl) {
+      const filename = path.basename(tour.imageUrl);
+      const imagePath = path.join(TOURS_UPLOAD_DIR, filename);
+      
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+        logger.log(`[deleteTourImage] Bilddatei gelöscht: ${imagePath}`);
+      }
+    }
+
+    // Setze imageUrl auf null
+    await prisma.tour.update({
+      where: { id: tourId },
+      data: { imageUrl: null }
+    });
+
+    res.json({
+      success: true,
+      message: 'Hauptbild erfolgreich gelöscht'
+    });
+  } catch (error) {
+    logger.error('[deleteTourImage] Fehler:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Fehler beim Löschen des Hauptbildes'
+    });
+  }
+};
+
 // PUT /api/tours/:id - Tour aktualisieren
 export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
   try {
