@@ -10,7 +10,11 @@ import {
   DocumentTextIcon,
   UserIcon,
   BuildingOfficeIcon,
-  ClockIcon
+  ClockIcon,
+  ArrowPathIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
@@ -19,9 +23,24 @@ import { FilterCondition } from '../FilterRow.tsx';
 import DataCard, { MetadataItem } from '../shared/DataCard.tsx';
 import CardGrid from '../shared/CardGrid.tsx';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
+import { DateRangeSelector } from '../analytics/DateRangeSelector.tsx';
+import { useDateRange } from '../../hooks/useDateRange.ts';
 
 interface RequestAnalyticsTabProps {
-  selectedDate: string;
+  selectedDate?: string; // Optional für Rückwärtskompatibilität
+}
+
+interface StatusHistoryItem {
+  id: number;
+  oldStatus: string | null;
+  newStatus: string;
+  changedAt: string;
+  user: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
 }
 
 interface Request {
@@ -46,20 +65,44 @@ interface Request {
   };
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
+  deletedBy?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    username: string;
+  } | null;
+  statusHistory?: StatusHistoryItem[];
 }
 
 // TableID für gespeicherte Filter
 const REQUEST_ANALYTICS_TABLE_ID = 'request-analytics-table';
 
 // Standardreihenfolge der Spalten
-const defaultColumnOrder = ['time', 'title', 'status', 'requester', 'responsible', 'branch'];
+const defaultColumnOrder = ['time', 'title', 'status', 'requester', 'responsible', 'branch', 'deletedAt'];
 
 const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate }) => {
   const { t } = useTranslation();
+  const { period, setPeriod, startDate, setStartDate, endDate, setEndDate, dateRange } = useDateRange();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  
+  // Expandierte Requests für Status-Historie
+  const [expandedRequests, setExpandedRequests] = useState<Set<number>>(new Set());
+  
+  const toggleRequestExpand = (requestId: number) => {
+    setExpandedRequests(prev => {
+      const next = new Set(prev);
+      if (next.has(requestId)) {
+        next.delete(requestId);
+      } else {
+        next.add(requestId);
+      }
+      return next;
+    });
+  };
   
   // Filter State Management (Controlled Mode)
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
@@ -105,7 +148,8 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
     { id: 'status', label: t('analytics.request.columns.status') },
     { id: 'requester', label: t('analytics.request.columns.requester') },
     { id: 'responsible', label: t('analytics.request.columns.responsible') },
-    { id: 'branch', label: t('analytics.request.columns.branch') }
+    { id: 'branch', label: t('analytics.request.columns.branch') },
+    { id: 'deletedAt', label: t('analytics.request.columns.deletedAt', { defaultValue: 'Gelöscht am' }) }
   ], [t]);
 
   // Lade Requests
@@ -115,9 +159,18 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
         setLoading(true);
         setError(null);
         
-        const params: any = {
-          date: selectedDate
-        };
+        const params: any = {};
+        
+        // Unterstütze sowohl selectedDate (Rückwärtskompatibilität) als auch dateRange
+        if (selectedDate) {
+          params.date = selectedDate;
+        } else {
+          params.period = period;
+          if (period === 'custom') {
+            params.startDate = startDate;
+            params.endDate = endDate;
+          }
+        }
         
         // Filter aus Bedingungen anwenden
         filterConditions.forEach(condition => {
@@ -145,10 +198,10 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
       }
     };
 
-    if (selectedDate) {
+    if (selectedDate || dateRange) {
       fetchRequests();
     }
-  }, [selectedDate, filterConditions]);
+  }, [selectedDate, period, startDate, endDate, dateRange, filterConditions]);
 
   // Filter-Handler
   const applyFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
@@ -290,6 +343,20 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 request-analytics-wrapper">
+      {/* Datumsbereich-Auswahl */}
+      {!selectedDate && (
+        <div className="px-3 sm:px-4 md:px-6 pt-4">
+          <DateRangeSelector
+            period={period}
+            setPeriod={setPeriod}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+          />
+        </div>
+      )}
+      
       {/* Titelzeile */}
       <div className="flex items-center justify-between mb-4 px-3 sm:px-4 md:px-6">
         {/* Linke Seite: Titel mit Icon */}
@@ -429,54 +496,132 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                   </td>
                 </tr>
               ) : (
-                filteredRequests.map((request) => (
-                  <tr key={request.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    {columnOrder.filter(id => visibleColumnIds.includes(id)).map((columnId) => {
-                      switch (columnId) {
-                        case 'time':
-                          return (
-                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {format(new Date(request.createdAt), 'HH:mm')}
-                            </td>
-                          );
-                        case 'title':
-                          return (
-                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
-                              {request.title}
-                            </td>
-                          );
-                        case 'status':
-                          return (
-                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(request.status)}`}>
-                                {getStatusLabel(request.status)}
-                              </span>
-                            </td>
-                          );
-                        case 'requester':
-                          return (
-                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {request.requester.firstName} {request.requester.lastName}
-                            </td>
-                          );
-                        case 'responsible':
-                          return (
-                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {request.responsible.firstName} {request.responsible.lastName}
-                            </td>
-                          );
-                        case 'branch':
-                          return (
-                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {request.branch.name}
-                            </td>
-                          );
-                        default:
-                          return null;
-                      }
-                    })}
-                  </tr>
-                ))
+                filteredRequests.map((request) => {
+                  const isExpanded = expandedRequests.has(request.id);
+                  const hasStatusHistory = request.statusHistory && request.statusHistory.length > 0;
+                  
+                  return (
+                    <React.Fragment key={request.id}>
+                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        {columnOrder.filter(id => visibleColumnIds.includes(id)).map((columnId) => {
+                          switch (columnId) {
+                            case 'time':
+                              return (
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  {format(new Date(request.createdAt), 'HH:mm')}
+                                </td>
+                              );
+                            case 'title':
+                              return (
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                  <div className="flex items-center gap-2">
+                                    {hasStatusHistory && (
+                                      <div className="relative group">
+                                        <button
+                                          onClick={() => toggleRequestExpand(request.id)}
+                                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                        >
+                                          {isExpanded ? (
+                                            <ChevronUpIcon className="h-4 w-4" />
+                                          ) : (
+                                            <ChevronDownIcon className="h-4 w-4" />
+                                          )}
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                          Status-Historie anzeigen
+                                        </div>
+                                      </div>
+                                    )}
+                                    <span>{request.title}</span>
+                                  </div>
+                                </td>
+                              );
+                            case 'status':
+                              return (
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(request.status)}`}>
+                                    {getStatusLabel(request.status)}
+                                  </span>
+                                </td>
+                              );
+                            case 'requester':
+                              return (
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  {request.requester.firstName} {request.requester.lastName}
+                                </td>
+                              );
+                            case 'responsible':
+                              return (
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  {request.responsible.firstName} {request.responsible.lastName}
+                                </td>
+                              );
+                            case 'branch':
+                              return (
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  {request.branch.name}
+                                </td>
+                              );
+                            case 'deletedAt':
+                              return (
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  {request.deletedAt ? (
+                                    <div className="flex items-center gap-2">
+                                      <TrashIcon className="h-4 w-4 text-red-500" />
+                                      <span>{format(new Date(request.deletedAt), 'dd.MM.yyyy HH:mm')}</span>
+                                      {request.deletedBy && (
+                                        <span className="text-gray-400">
+                                          ({request.deletedBy.firstName} {request.deletedBy.lastName})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                              );
+                            default:
+                              return null;
+                          }
+                        })}
+                      </tr>
+                      {/* Status-Historie Zeile */}
+                      {isExpanded && hasStatusHistory && (
+                        <tr className="bg-gray-50 dark:bg-gray-800/50">
+                          <td colSpan={columnOrder.filter(id => visibleColumnIds.includes(id)).length} className="px-3 sm:px-4 md:px-6 py-4">
+                            <div className="ml-4 border-l-2 border-blue-200 dark:border-blue-700 pl-4">
+                              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                                <ArrowPathIcon className="h-4 w-4" />
+                                Status-Wechsel
+                              </h4>
+                              <div className="space-y-2">
+                                {request.statusHistory!.map((historyItem) => (
+                                  <div key={historyItem.id} className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
+                                    <span className="font-medium">
+                                      {format(new Date(historyItem.changedAt), 'HH:mm:ss')}
+                                    </span>
+                                    <span className="text-gray-400">→</span>
+                                    <span className={`px-2 py-1 rounded-full ${getStatusColor(historyItem.oldStatus || 'approval')}`}>
+                                      {getStatusLabel(historyItem.oldStatus || 'approval')}
+                                    </span>
+                                    <span className="text-gray-400">→</span>
+                                    <span className={`px-2 py-1 rounded-full ${getStatusColor(historyItem.newStatus)}`}>
+                                      {getStatusLabel(historyItem.newStatus)}
+                                    </span>
+                                    <span className="text-gray-400">von</span>
+                                    <span className="font-medium">
+                                      {historyItem.user.firstName} {historyItem.user.lastName}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>

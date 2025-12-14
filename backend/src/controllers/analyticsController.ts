@@ -291,28 +291,38 @@ export const getRequestsByUserForDate = async (req: Request, res: Response) => {
     }
 };
 
-// Alle To-Dos chronologisch für ein Datum (Tab 2)
+// Alle To-Dos chronologisch für ein Datum oder Datumsbereich (Tab 2)
 export const getTodosChronological = async (req: Request, res: Response) => {
     try {
-        const { date, branchId, userId } = req.query;
+        const { date, period, startDate, endDate, branchId, userId } = req.query;
         const currentUserId = req.userId;
-
-        if (!date || typeof date !== 'string') {
-            return res.status(400).json({ error: 'Datum erforderlich' });
-        }
 
         // Datenisolation
         const taskFilter = getDataIsolationFilter(req, 'task');
 
-        const selectedDate = parseISO(date);
-        const start = startOfDay(selectedDate);
-        const end = endOfDay(selectedDate);
+        // Unterstütze sowohl einzelnes Datum als auch Datumsbereich
+        let start: Date;
+        let end: Date;
+        
+        if (period && (period === 'custom' || period === 'week' || period === 'month' || period === 'year' || period === 'today')) {
+            // Neues Format: Datumsbereich
+            const dateRange = getDateRange(period as Period, startDate as string | undefined, endDate as string | undefined);
+            start = startOfDay(parseISO(dateRange.start));
+            end = endOfDay(parseISO(dateRange.end));
+        } else if (date && typeof date === 'string') {
+            // Altes Format: Einzelnes Datum (Rückwärtskompatibilität)
+            const selectedDate = parseISO(date);
+            start = startOfDay(selectedDate);
+            end = endOfDay(selectedDate);
+        } else {
+            return res.status(400).json({ error: 'Datum oder Datumsbereich erforderlich' });
+        }
 
-        // Kombiniere taskFilter mit Zeitfilter und Soft-Delete-Filter
+        // Kombiniere taskFilter mit Zeitfilter
+        // Zeige auch gelöschte Tasks, wenn sie im Zeitraum gelöscht wurden
         const where: any = {
             AND: [
                 taskFilter,
-                getNotDeletedFilter(),
                 {
                     OR: [
                         {
@@ -323,6 +333,12 @@ export const getTodosChronological = async (req: Request, res: Response) => {
                         },
                         {
                             createdAt: {
+                                gte: start,
+                                lte: end
+                            }
+                        },
+                        {
+                            deletedAt: {
                                 gte: start,
                                 lte: end
                             }
@@ -450,32 +466,59 @@ export const getTodosChronological = async (req: Request, res: Response) => {
     }
 };
 
-// Alle Requests chronologisch für ein Datum (Tab 3)
+// Alle Requests chronologisch für ein Datum oder Datumsbereich (Tab 3)
 export const getRequestsChronological = async (req: Request, res: Response) => {
     try {
-        const { date, branchId, userId } = req.query;
+        const { date, period, startDate, endDate, branchId, userId } = req.query;
         const currentUserId = req.userId;
-
-        if (!date || typeof date !== 'string') {
-            return res.status(400).json({ error: 'Datum erforderlich' });
-        }
 
         // Datenisolation
         const requestFilter = getDataIsolationFilter(req, 'request');
 
-        const selectedDate = parseISO(date);
-        const start = startOfDay(selectedDate);
-        const end = endOfDay(selectedDate);
+        // Unterstütze sowohl einzelnes Datum als auch Datumsbereich
+        let start: Date;
+        let end: Date;
+        
+        if (period && (period === 'custom' || period === 'week' || period === 'month' || period === 'year' || period === 'today')) {
+            // Neues Format: Datumsbereich
+            const dateRange = getDateRange(period as Period, startDate as string | undefined, endDate as string | undefined);
+            start = startOfDay(parseISO(dateRange.start));
+            end = endOfDay(parseISO(dateRange.end));
+        } else if (date && typeof date === 'string') {
+            // Altes Format: Einzelnes Datum (Rückwärtskompatibilität)
+            const selectedDate = parseISO(date);
+            start = startOfDay(selectedDate);
+            end = endOfDay(selectedDate);
+        } else {
+            return res.status(400).json({ error: 'Datum oder Datumsbereich erforderlich' });
+        }
 
         // Kombiniere requestFilter mit Zeitfilter
+        // Zeige auch gelöschte Requests, wenn sie im Zeitraum gelöscht wurden
         const where: any = {
             AND: [
                 requestFilter,
                 {
-                    createdAt: {
-                        gte: start,
-                        lte: end
-                    }
+                    OR: [
+                        {
+                            createdAt: {
+                                gte: start,
+                                lte: end
+                            }
+                        },
+                        {
+                            updatedAt: {
+                                gte: start,
+                                lte: end
+                            }
+                        },
+                        {
+                            deletedAt: {
+                                gte: start,
+                                lte: end
+                            }
+                        }
+                    ]
                 }
             ]
         };

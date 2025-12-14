@@ -3127,5 +3127,53 @@
     "perTour": "Pro Tour",
     "average": "Durchschnitt",
     "byType": "Nach Tour-Typ"
+  },
+  "priceAnalysis": {
+    "title": "Preisanalyse",
+    "listings": "OTA-Listings",
+    "analysis": "Analyse",
+    "recommendations": "Empfehlungen",
+    "rules": "Regeln",
+    "loading": "Lädt...",
+    "noListings": "Keine OTA-Listings gefunden",
+    "noAnalyses": "Keine Preisanalysen gefunden",
+    "platform": "Plattform",
+    "roomType": "Zimmerart",
+    "roomName": "Zimmername",
+    "listingUrl": "Listing-URL",
+    "status": "Status",
+    "lastScraped": "Zuletzt gescraped",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "rateShopping": {
+      "run": "Rate Shopping starten",
+      "started": "Rate Shopping gestartet"
+    },
+    "analysis": {
+      "title": "Preisanalysen",
+      "run": "Preisanalyse starten",
+      "started": "Preisanalyse gestartet",
+      "date": "Datum",
+      "categoryId": "Kategorie",
+      "roomType": "Zimmerart",
+      "currentPrice": "Aktueller Preis",
+      "averagePrice": "Ø Preis",
+      "minPrice": "Min",
+      "maxPrice": "Max",
+      "occupancyRate": "Belegung",
+      "availableRooms": "Verfügbar",
+      "competitorPrice": "Konkurrenz",
+      "pricePosition": "Position",
+      "recommendations": "Empfehlungen"
+    },
+    "roomType": {
+      "dorm": "Dorm",
+      "private": "Privat"
+    },
+    "pricePosition": {
+      "above": "Über",
+      "below": "Unter",
+      "equal": "Gleich"
+    }
   }
 }

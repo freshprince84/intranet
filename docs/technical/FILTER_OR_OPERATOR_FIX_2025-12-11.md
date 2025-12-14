@@ -102,3 +102,7 @@ return { OR: groupClauses };
 - `backend/src/utils/filterToPrisma.ts` - Backend Filter-Konvertierung
 - `frontend/src/utils/filterLogic.ts` - Frontend Filter-Logik
 
+
+
+
+
