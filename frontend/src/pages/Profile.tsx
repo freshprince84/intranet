@@ -11,7 +11,6 @@ import IdentificationDocumentForm from '../components/IdentificationDocumentForm
 import LifecycleTab from '../components/LifecycleTab.tsx';
 import MyDocumentsTab from '../components/MyDocumentsTab.tsx';
 import { useOnboarding } from '../contexts/OnboardingContext.tsx';
-import { usePermissions } from '../hooks/usePermissions.ts';
 
 interface IdentificationDocument {
   id: number;
@@ -62,7 +61,6 @@ const Profile: React.FC = () => {
   const { showMessage } = useMessage();
   const { t } = useTranslation();
   const { completeStep } = useOnboarding();
-  const { hasPermission } = usePermissions();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
@@ -239,15 +237,6 @@ const Profile: React.FC = () => {
       user.language
     );
   };
-
-  // Berechtigungsprüfung
-  if (!hasPermission('page_profile', 'read', 'page')) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        {t('common.noPermission', { defaultValue: 'Keine Berechtigung' })}
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen dark:bg-gray-900" data-onboarding="profile-page">
