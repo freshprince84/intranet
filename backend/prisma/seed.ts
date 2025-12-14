@@ -140,7 +140,15 @@ const ALL_BUTTONS = [
   // Password Manager Buttons
   'password_entry_create',
   'password_entry_edit',
-  'password_entry_delete'
+  'password_entry_delete',
+  
+  // Price Analysis Buttons
+  'price_analysis_create_rule',
+  'price_analysis_edit_rule',
+  'price_analysis_delete_rule',
+  'price_analysis_apply_recommendation',
+  'price_analysis_reject_recommendation',
+  'price_analysis_run_rate_shopping'
 ];
 
 async function main() {
