@@ -1,11 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Dialog } from '@headlessui/react';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useError } from '../../contexts/ErrorContext.tsx';
 import { useBranch } from '../../contexts/BranchContext.tsx';
+import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
+import { 
+    SparklesIcon, 
+    CheckIcon, 
+    XMarkIcon, 
+    ArrowRightIcon 
+} from '@heroicons/react/24/outline';
 
 interface PriceRecommendation {
     id: number;
@@ -34,7 +42,9 @@ const PriceRecommendationsTab: React.FC = () => {
     const { hasPermission } = usePermissions();
     const { showMessage } = useMessage();
     const errorContext = useError();
-    const { currentBranch } = useBranch();
+    const { branches, selectedBranch } = useBranch();
+    const currentBranch = branches.find(b => b.id === selectedBranch) || null;
+    const { openSidepane, closeSidepane } = useSidepane();
     
     const handleError = errorContext?.handleError || ((err: any) => {
         console.error('Fehler:', err);
@@ -47,20 +57,36 @@ const PriceRecommendationsTab: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<string>('pending');
     const [generating, setGenerating] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // Modal/Sidepane states
+    const [rejectModalOpen, setRejectModalOpen] = useState(false);
+    const [applyModalOpen, setApplyModalOpen] = useState(false);
+    const [selectedRecommendationId, setSelectedRecommendationId] = useState<number | null>(null);
+    const [rejectReason, setRejectReason] = useState('');
+    const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 640);
 
+    // Überwache Bildschirmgröße
     useEffect(() => {
-        if (currentBranch) {
-            loadRecommendations();
-        }
-        
-        return () => {
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-            }
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 640);
         };
-    }, [currentBranch, statusFilter]);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
-    const loadRecommendations = async () => {
+    // Sidepane öffnen/schließen basierend auf Modal-Status
+    useEffect(() => {
+        if (rejectModalOpen || applyModalOpen) {
+            openSidepane();
+        } else {
+            closeSidepane();
+        }
+        return () => {
+            closeSidepane();
+        };
+    }, [rejectModalOpen, applyModalOpen, openSidepane, closeSidepane]);
+
+    const loadRecommendations = useCallback(async () => {
         if (!currentBranch) return;
 
         setLoading(true);
@@ -77,9 +103,21 @@ const PriceRecommendationsTab: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentBranch, statusFilter, handleError]);
 
-    const handleGenerateRecommendations = async () => {
+    useEffect(() => {
+        if (currentBranch) {
+            loadRecommendations();
+        }
+        
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, [currentBranch, statusFilter, loadRecommendations]);
+
+    const handleGenerateRecommendations = useCallback(async () => {
         if (!currentBranch) return;
 
         if (!hasPermission('price_analysis', 'write', 'page')) {
@@ -112,9 +150,9 @@ const PriceRecommendationsTab: React.FC = () => {
         } finally {
             setGenerating(false);
         }
-    };
+    }, [currentBranch, hasPermission, showMessage, t, handleError, loadRecommendations]);
 
-    const handleApprove = async (recommendationId: number) => {
+    const handleApprove = useCallback(async (recommendationId: number) => {
         if (!hasPermission('price_analysis_apply_recommendation', 'write', 'button')) {
             showMessage(t('common.noPermission'), 'error');
             return;
@@ -127,46 +165,57 @@ const PriceRecommendationsTab: React.FC = () => {
         } catch (error: any) {
             handleError(error);
         }
-    };
+    }, [hasPermission, showMessage, t, handleError, loadRecommendations]);
 
-    const handleReject = async (recommendationId: number) => {
+    const openRejectModal = useCallback((recommendationId: number) => {
         if (!hasPermission('price_analysis_apply_recommendation', 'write', 'button')) {
             showMessage(t('common.noPermission'), 'error');
             return;
         }
+        setSelectedRecommendationId(recommendationId);
+        setRejectReason('');
+        setRejectModalOpen(true);
+    }, [hasPermission, showMessage, t]);
 
-        const reason = window.prompt(t('priceAnalysis.recommendations.rejectReason', 'Grund für Ablehnung (optional):'));
-        if (reason === null) return; // User cancelled
+    const handleReject = useCallback(async () => {
+        if (!selectedRecommendationId) return;
 
         try {
-            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.REJECT(recommendationId), {
-                reason: reason || undefined
+            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.REJECT(selectedRecommendationId), {
+                reason: rejectReason || undefined
             });
             showMessage(t('priceAnalysis.recommendations.rejected', 'Empfehlung abgelehnt'), 'success');
+            setRejectModalOpen(false);
+            setSelectedRecommendationId(null);
+            setRejectReason('');
             loadRecommendations();
         } catch (error: any) {
             handleError(error);
         }
-    };
+    }, [selectedRecommendationId, rejectReason, showMessage, t, handleError, loadRecommendations]);
 
-    const handleApply = async (recommendationId: number) => {
+    const openApplyModal = useCallback((recommendationId: number) => {
         if (!hasPermission('price_analysis_apply_recommendation', 'write', 'button')) {
             showMessage(t('common.noPermission'), 'error');
             return;
         }
+        setSelectedRecommendationId(recommendationId);
+        setApplyModalOpen(true);
+    }, [hasPermission, showMessage, t]);
 
-        if (!window.confirm(t('priceAnalysis.recommendations.applyConfirm', 'Empfehlung wirklich anwenden?'))) {
-            return;
-        }
+    const handleApply = useCallback(async () => {
+        if (!selectedRecommendationId) return;
 
         try {
-            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.APPLY(recommendationId));
+            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.RECOMMENDATIONS.APPLY(selectedRecommendationId));
             showMessage(t('priceAnalysis.recommendations.applied', 'Empfehlung angewendet'), 'success');
+            setApplyModalOpen(false);
+            setSelectedRecommendationId(null);
             loadRecommendations();
         } catch (error: any) {
             handleError(error);
         }
-    };
+    }, [selectedRecommendationId, showMessage, t, handleError, loadRecommendations]);
 
     const formatPrice = (price: number | null): string => {
         if (price === null) return '-';
@@ -190,11 +239,11 @@ const PriceRecommendationsTab: React.FC = () => {
 
     const getStatusColor = (status: string): string => {
         switch (status) {
-            case 'pending': return '#ffc107';
-            case 'approved': return '#28a745';
-            case 'applied': return '#17a2b8';
-            case 'rejected': return '#dc3545';
-            default: return '#6c757d';
+            case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+            case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+            case 'applied': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+            case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
         }
     };
 
@@ -209,149 +258,163 @@ const PriceRecommendationsTab: React.FC = () => {
     };
 
     if (loading) {
-        return <div>{t('priceAnalysis.loading')}</div>;
+        return (
+            <div className="text-center py-4">
+                {t('priceAnalysis.loading')}
+            </div>
+        );
     }
 
     return (
-        <div>
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <button
-                    onClick={handleGenerateRecommendations}
-                    disabled={generating || !hasPermission('price_analysis', 'write', 'page')}
-                    style={{
-                        padding: '8px 16px',
-                        background: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: generating ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    {generating ? t('priceAnalysis.loading') : t('priceAnalysis.recommendations.generate', 'Empfehlungen generieren')}
-                </button>
-                
-                <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    style={{ padding: '8px' }}
-                >
-                    <option value="">{t('priceAnalysis.recommendations.allStatuses', 'Alle Status')}</option>
-                    <option value="pending">{t('priceAnalysis.recommendations.status.pending', 'Ausstehend')}</option>
-                    <option value="approved">{t('priceAnalysis.recommendations.status.approved', 'Genehmigt')}</option>
-                    <option value="applied">{t('priceAnalysis.recommendations.status.applied', 'Angewendet')}</option>
-                    <option value="rejected">{t('priceAnalysis.recommendations.status.rejected', 'Abgelehnt')}</option>
-                </select>
-            </div>
+        <>
+            <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+                <div className="mb-4 flex items-center gap-2 flex-wrap">
+                    <div className="relative group">
+                        <button
+                            onClick={handleGenerateRecommendations}
+                            disabled={generating || !hasPermission('price_analysis', 'write', 'page')}
+                            className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={t('priceAnalysis.recommendations.generate', 'Empfehlungen generieren')}
+                        >
+                            <SparklesIcon className={`h-5 w-5 ${generating ? 'animate-pulse' : ''}`} />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                            {t('priceAnalysis.recommendations.generate', 'Empfehlungen generieren')}
+                        </div>
+                    </div>
+                    
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                    >
+                        <option value="">{t('priceAnalysis.recommendations.allStatuses', 'Alle Status')}</option>
+                        <option value="pending">{t('priceAnalysis.recommendations.status.pending', 'Ausstehend')}</option>
+                        <option value="approved">{t('priceAnalysis.recommendations.status.approved', 'Genehmigt')}</option>
+                        <option value="applied">{t('priceAnalysis.recommendations.status.applied', 'Angewendet')}</option>
+                        <option value="rejected">{t('priceAnalysis.recommendations.status.rejected', 'Abgelehnt')}</option>
+                    </select>
+                </div>
 
-            {recommendations.length === 0 ? (
-                <div>{t('priceAnalysis.recommendations.noRecommendations', 'Keine Preisempfehlungen gefunden')}</div>
-            ) : (
-                <div>
-                    <h3>{t('priceAnalysis.recommendations.title', 'Preisempfehlungen')}</h3>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                            <thead>
-                                <tr style={{ background: '#f5f5f5' }}>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('priceAnalysis.recommendations.date', 'Datum')}</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('priceAnalysis.recommendations.categoryId', 'Kategorie')}</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('priceAnalysis.recommendations.roomType', 'Zimmerart')}</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right' }}>{t('priceAnalysis.recommendations.currentPrice', 'Aktueller Preis')}</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right' }}>{t('priceAnalysis.recommendations.recommendedPrice', 'Empfohlener Preis')}</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right' }}>{t('priceAnalysis.recommendations.change', 'Änderung')}</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('priceAnalysis.recommendations.reasoning', 'Begründung')}</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('priceAnalysis.recommendations.status', 'Status')}</th>
-                                    <th style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'left' }}>{t('common.actions', 'Aktionen')}</th>
+                {recommendations.length === 0 ? (
+                    <div className="text-center py-4 text-gray-600 dark:text-gray-400">
+                        {t('priceAnalysis.recommendations.noRecommendations', 'Keine Preisempfehlungen gefunden')}
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead className="bg-gray-50 dark:bg-gray-800">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        {t('priceAnalysis.recommendations.date', 'Datum')}
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        {t('priceAnalysis.recommendations.categoryId', 'Kategorie')}
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        {t('priceAnalysis.recommendations.roomType', 'Zimmerart')}
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        {t('priceAnalysis.recommendations.currentPrice', 'Aktueller Preis')}
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        {t('priceAnalysis.recommendations.recommendedPrice', 'Empfohlener Preis')}
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        {t('priceAnalysis.recommendations.change', 'Änderung')}
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        {t('priceAnalysis.recommendations.reasoning', 'Begründung')}
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        {t('priceAnalysis.recommendations.status', 'Status')}
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                        {t('common.actions', 'Aktionen')}
+                                    </th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                                 {recommendations.map((recommendation) => (
-                                    <tr key={recommendation.id}>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>{formatDate(recommendation.date)}</td>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>{recommendation.categoryId || '-'}</td>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>{recommendation.roomType === 'dorm' ? t('priceAnalysis.roomType.dorm', 'Dorm') : t('priceAnalysis.roomType.private', 'Privat')}</td>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right' }}>{formatPrice(recommendation.currentPrice)}</td>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>{formatPrice(recommendation.recommendedPrice)}</td>
-                                        <td style={{ 
-                                            border: '1px solid #ddd', 
-                                            padding: '8px', 
-                                            textAlign: 'right',
-                                            color: (recommendation.priceChangePercent || 0) >= 0 ? '#28a745' : '#dc3545'
-                                        }}>
+                                    <tr key={recommendation.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                            {formatDate(recommendation.date)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                            {recommendation.categoryId || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                            {recommendation.roomType === 'dorm' ? t('priceAnalysis.roomType.dorm', 'Dorm') : t('priceAnalysis.roomType.private', 'Privat')}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right">
+                                            {formatPrice(recommendation.currentPrice)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white text-right">
+                                            {formatPrice(recommendation.recommendedPrice)}
+                                        </td>
+                                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
+                                            (recommendation.priceChangePercent || 0) >= 0 
+                                                ? 'text-green-600 dark:text-green-400' 
+                                                : 'text-red-600 dark:text-red-400'
+                                        }`}>
                                             {formatPercent(recommendation.priceChangePercent)}
                                         </td>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px', maxWidth: '300px' }}>
-                                            <div style={{ 
-                                                whiteSpace: 'nowrap', 
-                                                overflow: 'hidden', 
-                                                textOverflow: 'ellipsis',
-                                                title: recommendation.reasoning || ''
-                                            }}>
+                                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-white max-w-xs">
+                                            <div className="truncate" title={recommendation.reasoning || ''}>
                                                 {recommendation.reasoning || '-'}
                                             </div>
                                         </td>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                                            <span style={{
-                                                padding: '4px 8px',
-                                                borderRadius: '4px',
-                                                background: getStatusColor(recommendation.status),
-                                                color: 'white',
-                                                fontSize: '12px'
-                                            }}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(recommendation.status)}`}>
                                                 {getStatusText(recommendation.status)}
                                             </span>
                                         </td>
-                                        <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                                            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            <div className="flex items-center gap-2">
                                                 {recommendation.status === 'pending' && (
                                                     <>
-                                                        <button
-                                                            onClick={() => handleApprove(recommendation.id)}
-                                                            disabled={!hasPermission('price_analysis_apply_recommendation', 'write', 'button')}
-                                                            style={{
-                                                                padding: '4px 8px',
-                                                                background: '#28a745',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                borderRadius: '4px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '12px'
-                                                            }}
-                                                        >
-                                                            {t('priceAnalysis.recommendations.approve', 'Genehmigen')}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleReject(recommendation.id)}
-                                                            disabled={!hasPermission('price_analysis_apply_recommendation', 'write', 'button')}
-                                                            style={{
-                                                                padding: '4px 8px',
-                                                                background: '#dc3545',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                borderRadius: '4px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '12px'
-                                                            }}
-                                                        >
-                                                            {t('priceAnalysis.recommendations.reject', 'Ablehnen')}
-                                                        </button>
+                                                        <div className="relative group">
+                                                            <button
+                                                                onClick={() => handleApprove(recommendation.id)}
+                                                                disabled={!hasPermission('price_analysis_apply_recommendation', 'write', 'button')}
+                                                                className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title={t('priceAnalysis.recommendations.approve', 'Genehmigen')}
+                                                            >
+                                                                <CheckIcon className="h-4 w-4" />
+                                                            </button>
+                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('priceAnalysis.recommendations.approve', 'Genehmigen')}
+                                                            </div>
+                                                        </div>
+                                                        <div className="relative group">
+                                                            <button
+                                                                onClick={() => openRejectModal(recommendation.id)}
+                                                                disabled={!hasPermission('price_analysis_apply_recommendation', 'write', 'button')}
+                                                                className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title={t('priceAnalysis.recommendations.reject', 'Ablehnen')}
+                                                            >
+                                                                <XMarkIcon className="h-4 w-4" />
+                                                            </button>
+                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('priceAnalysis.recommendations.reject', 'Ablehnen')}
+                                                            </div>
+                                                        </div>
                                                     </>
                                                 )}
                                                 {recommendation.status === 'approved' && (
-                                                    <button
-                                                        onClick={() => handleApply(recommendation.id)}
-                                                        disabled={!hasPermission('price_analysis_apply_recommendation', 'write', 'button')}
-                                                        style={{
-                                                            padding: '4px 8px',
-                                                            background: '#17a2b8',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            cursor: 'pointer',
-                                                            fontSize: '12px'
-                                                        }}
-                                                    >
-                                                        {t('priceAnalysis.recommendations.apply', 'Anwenden')}
-                                                    </button>
+                                                    <div className="relative group">
+                                                        <button
+                                                            onClick={() => openApplyModal(recommendation.id)}
+                                                            disabled={!hasPermission('price_analysis_apply_recommendation', 'write', 'button')}
+                                                            className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            title={t('priceAnalysis.recommendations.apply', 'Anwenden')}
+                                                        >
+                                                            <ArrowRightIcon className="h-4 w-4" />
+                                                        </button>
+                                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                            {t('priceAnalysis.recommendations.apply', 'Anwenden')}
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </div>
                                         </td>
@@ -360,11 +423,240 @@ const PriceRecommendationsTab: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
-                </div>
+                )}
+            </div>
+
+            {/* Reject Modal/Sidepane */}
+            {rejectModalOpen && (
+                <>
+                    {isMobile ? (
+                        <Dialog open={rejectModalOpen} onClose={() => setRejectModalOpen(false)} className="relative z-50">
+                            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+                            <div className="fixed inset-0 flex items-center justify-center p-4">
+                                <Dialog.Panel className="mx-auto max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+                                    <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                                        <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
+                                            {t('priceAnalysis.recommendations.reject', 'Empfehlung ablehnen')}
+                                        </Dialog.Title>
+                                        <button
+                                            onClick={() => setRejectModalOpen(false)}
+                                            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                                        >
+                                            <XMarkIcon className="h-6 w-6" />
+                                        </button>
+                                    </div>
+                                    <div className="p-6">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            {t('priceAnalysis.recommendations.rejectReason', 'Grund für Ablehnung (optional):')}
+                                        </label>
+                                        <textarea
+                                            value={rejectReason}
+                                            onChange={(e) => setRejectReason(e.target.value)}
+                                            rows={4}
+                                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                            placeholder={t('priceAnalysis.recommendations.rejectReasonPlaceholder', 'Grund eingeben...')}
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-2 p-6 border-t border-gray-200 dark:border-gray-700">
+                                        <div className="relative group">
+                                            <button
+                                                onClick={() => setRejectModalOpen(false)}
+                                                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                                title={t('common.cancel', 'Abbrechen')}
+                                            >
+                                                <XMarkIcon className="h-5 w-5" />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('common.cancel', 'Abbrechen')}
+                                            </div>
+                                        </div>
+                                        <div className="relative group">
+                                            <button
+                                                onClick={handleReject}
+                                                className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                                title={t('priceAnalysis.recommendations.reject', 'Ablehnen')}
+                                            >
+                                                <XMarkIcon className="h-5 w-5" />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('priceAnalysis.recommendations.reject', 'Ablehnen')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Dialog.Panel>
+                            </div>
+                        </Dialog>
+                    ) : (
+                        <div className="fixed top-16 bottom-0 right-0 max-w-md w-full bg-white dark:bg-gray-800 shadow-xl transform z-50 flex flex-col"
+                            style={{
+                                transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                                transform: rejectModalOpen ? 'translateX(0)' : 'translateX(100%)',
+                                pointerEvents: rejectModalOpen ? 'auto' : 'none'
+                            }}
+                        >
+                            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+                                <h2 className="text-lg font-semibold dark:text-white">
+                                    {t('priceAnalysis.recommendations.reject', 'Empfehlung ablehnen')}
+                                </h2>
+                                <button
+                                    onClick={() => setRejectModalOpen(false)}
+                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                >
+                                    <XMarkIcon className="h-6 w-6" />
+                                </button>
+                            </div>
+                            <div className="p-4 overflow-y-auto flex-1 min-h-0">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    {t('priceAnalysis.recommendations.rejectReason', 'Grund für Ablehnung (optional):')}
+                                </label>
+                                <textarea
+                                    value={rejectReason}
+                                    onChange={(e) => setRejectReason(e.target.value)}
+                                    rows={4}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    placeholder={t('priceAnalysis.recommendations.rejectReasonPlaceholder', 'Grund eingeben...')}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+                                <div className="relative group">
+                                    <button
+                                        onClick={() => setRejectModalOpen(false)}
+                                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                        title={t('common.cancel', 'Abbrechen')}
+                                    >
+                                        <XMarkIcon className="h-5 w-5" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('common.cancel', 'Abbrechen')}
+                                    </div>
+                                </div>
+                                <div className="relative group">
+                                    <button
+                                        onClick={handleReject}
+                                        className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                        title={t('priceAnalysis.recommendations.reject', 'Ablehnen')}
+                                    >
+                                        <XMarkIcon className="h-5 w-5" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('priceAnalysis.recommendations.reject', 'Ablehnen')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
-        </div>
+
+            {/* Apply Modal/Sidepane */}
+            {applyModalOpen && (
+                <>
+                    {isMobile ? (
+                        <Dialog open={applyModalOpen} onClose={() => setApplyModalOpen(false)} className="relative z-50">
+                            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+                            <div className="fixed inset-0 flex items-center justify-center p-4">
+                                <Dialog.Panel className="mx-auto max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+                                    <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                                        <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
+                                            {t('priceAnalysis.recommendations.applyConfirm', 'Empfehlung anwenden')}
+                                        </Dialog.Title>
+                                        <button
+                                            onClick={() => setApplyModalOpen(false)}
+                                            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                                        >
+                                            <XMarkIcon className="h-6 w-6" />
+                                        </button>
+                                    </div>
+                                    <div className="p-6">
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            {t('priceAnalysis.recommendations.applyConfirmText', 'Möchten Sie diese Empfehlung wirklich anwenden?')}
+                                        </p>
+                                    </div>
+                                    <div className="flex justify-end gap-2 p-6 border-t border-gray-200 dark:border-gray-700">
+                                        <div className="relative group">
+                                            <button
+                                                onClick={() => setApplyModalOpen(false)}
+                                                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                                title={t('common.cancel', 'Abbrechen')}
+                                            >
+                                                <XMarkIcon className="h-5 w-5" />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('common.cancel', 'Abbrechen')}
+                                            </div>
+                                        </div>
+                                        <div className="relative group">
+                                            <button
+                                                onClick={handleApply}
+                                                className="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                                title={t('priceAnalysis.recommendations.apply', 'Anwenden')}
+                                            >
+                                                <CheckIcon className="h-5 w-5" />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('priceAnalysis.recommendations.apply', 'Anwenden')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Dialog.Panel>
+                            </div>
+                        </Dialog>
+                    ) : (
+                        <div className="fixed top-16 bottom-0 right-0 max-w-md w-full bg-white dark:bg-gray-800 shadow-xl transform z-50 flex flex-col"
+                            style={{
+                                transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                                transform: applyModalOpen ? 'translateX(0)' : 'translateX(100%)',
+                                pointerEvents: applyModalOpen ? 'auto' : 'none'
+                            }}
+                        >
+                            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+                                <h2 className="text-lg font-semibold dark:text-white">
+                                    {t('priceAnalysis.recommendations.applyConfirm', 'Empfehlung anwenden')}
+                                </h2>
+                                <button
+                                    onClick={() => setApplyModalOpen(false)}
+                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                >
+                                    <XMarkIcon className="h-6 w-6" />
+                                </button>
+                            </div>
+                            <div className="p-4 overflow-y-auto flex-1 min-h-0">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {t('priceAnalysis.recommendations.applyConfirmText', 'Möchten Sie diese Empfehlung wirklich anwenden?')}
+                                </p>
+                            </div>
+                            <div className="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+                                <div className="relative group">
+                                    <button
+                                        onClick={() => setApplyModalOpen(false)}
+                                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                        title={t('common.cancel', 'Abbrechen')}
+                                    >
+                                        <XMarkIcon className="h-5 w-5" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('common.cancel', 'Abbrechen')}
+                                    </div>
+                                </div>
+                                <div className="relative group">
+                                    <button
+                                        onClick={handleApply}
+                                        className="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                        title={t('priceAnalysis.recommendations.apply', 'Anwenden')}
+                                    >
+                                        <CheckIcon className="h-5 w-5" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('priceAnalysis.recommendations.apply', 'Anwenden')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
+        </>
     );
 };
 
 export default PriceRecommendationsTab;
-

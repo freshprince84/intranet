@@ -51,34 +51,22 @@ npx prisma db seed
 echo "✅ Seed abgeschlossen"
 echo ""
 
-# 7. Daten importieren (mit Seed-Schutz)
-echo "📥 Schritt 7: Daten importieren..."
-cd /var/www/intranet/backend
-if [ -d "export_data" ] && [ "$(ls -A export_data/*.json 2>/dev/null)" ]; then
-  echo "   Export-Daten gefunden, starte Import..."
-  npx ts-node scripts/import_exported_data.ts
-  echo "✅ Daten importiert"
-else
-  echo "   ⚠️  Keine Export-Daten gefunden, überspringe Import"
-fi
-echo ""
-
-# 8. Backend Build
-echo "🔨 Schritt 8: Backend Build..."
+# 7. Backend Build
+echo "🔨 Schritt 7: Backend Build..."
 cd /var/www/intranet/backend
 npm run build
 echo "✅ Backend Build abgeschlossen"
 echo ""
 
-# 9. Frontend Build
-echo "🔨 Schritt 9: Frontend Build..."
+# 8. Frontend Build
+echo "🔨 Schritt 8: Frontend Build..."
 cd /var/www/intranet/frontend
 npm run build
 echo "✅ Frontend Build abgeschlossen"
 echo ""
 
-# 10. Redis prüfen und starten (falls nicht läuft)
-echo "🔍 Schritt 10: Redis-Status prüfen..."
+# 9. Redis prüfen und starten (falls nicht läuft)
+echo "🔍 Schritt 9: Redis-Status prüfen..."
 if ! systemctl is-active --quiet redis-server; then
   echo "   ⚠️  Redis läuft nicht, starte Redis..."
   sudo systemctl start redis-server
@@ -89,8 +77,8 @@ else
 fi
 echo ""
 
-# 11. Queue-Einstellungen in .env prüfen
-echo "📝 Schritt 11: Queue-Einstellungen prüfen..."
+# 10. Queue-Einstellungen in .env prüfen
+echo "📝 Schritt 10: Queue-Einstellungen prüfen..."
 cd /var/www/intranet/backend
 if ! grep -q "QUEUE_ENABLED=true" .env 2>/dev/null; then
   echo "   ⚠️  QUEUE_ENABLED nicht in .env gefunden"
@@ -104,7 +92,7 @@ else
 fi
 echo ""
 
-# 12. Zusammenfassung
+# 11. Zusammenfassung
 echo ""
 echo "============================================================"
 echo "✅ Deployment abgeschlossen!"

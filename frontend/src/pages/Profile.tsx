@@ -661,23 +661,23 @@ const Profile: React.FC = () => {
               {/* Contract, Salary, Normal Working Hours ENTFERNEN - werden zu Lifecycle verschoben */}
             </div>
 
-            <div className="flex mt-6 space-x-3">
-              <button
-                type="submit"
-                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600"
-                title={t('common.save')}
-              >
-                <CheckIcon className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                title={t('common.cancel')}
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
+              <div className="flex mt-6 space-x-3">
+                <button
+                  type="submit"
+                  className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600"
+                  title={t('common.save')}
+                >
+                  <CheckIcon className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                  title={t('common.cancel')}
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
           </form>
         </div>
       )}

@@ -98,14 +98,18 @@ const OTAListingsTab: React.FC = () => {
             const endDate = new Date();
             endDate.setMonth(endDate.getMonth() + 3);
 
-            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.OTA.RATE_SHOPPING, {
+            const response = await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.OTA.RATE_SHOPPING, {
                 branchId: currentBranch.id,
                 platform: selectedPlatform,
                 startDate: startDate.toISOString().split('T')[0],
                 endDate: endDate.toISOString().split('T')[0]
             });
 
-            showMessage(t('priceAnalysis.rateShopping.started', 'Rate Shopping gestartet'), 'success');
+            if (response.data?.success) {
+                showMessage(t('priceAnalysis.rateShopping.started', 'Rate Shopping gestartet'), 'success');
+            } else {
+                showMessage(response.data?.message || t('priceAnalysis.rateShopping.started', 'Rate Shopping gestartet'), 'success');
+            }
             
             // Lade Listings nach kurzer Verzögerung neu
             if (timeoutRef.current) {
