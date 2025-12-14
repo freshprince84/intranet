@@ -2161,8 +2161,10 @@ async function main() {
         }
       }
       
-      // Erstelle Standard-Filter für alle Benutzer
-      const allUsersForStandardFilters = await prisma.user.findMany();
+      // Erstelle Standard-Filter für alle AKTIVEN Benutzer
+      const allUsersForStandardFilters = await prisma.user.findMany({
+        where: { active: true }
+      });
       for (const user of allUsersForStandardFilters) {
         await createStandardFilters(user.id);
       }
@@ -2432,8 +2434,9 @@ async function main() {
       }
     }
 
-    // Hole alle Benutzer und erstelle Filter für jeden
+    // Hole alle AKTIVEN Benutzer und erstelle Filter für jeden
     const allUsers = await prisma.user.findMany({
+      where: { active: true },
       include: {
         roles: {
           include: {
