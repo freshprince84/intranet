@@ -362,19 +362,14 @@ export const getTodosChronological = async (req: Request, res: Response) => {
         }
 
         // Kombiniere taskFilter mit Zeitfilter und Filter-Bedingungen
-        // Zeige auch gelöschte Tasks, wenn sie im Zeitraum gelöscht wurden
+        // Zeige nur Tasks, die im Zeitraum erstellt, Status-Änderungen hatten oder gelöscht wurden
+        // NICHT: Tasks, die nur andere Updates hatten (z.B. Titel geändert)
         const where: any = {
             AND: [
                 taskFilter,
                 filterWhereClause,
                 {
                     OR: [
-                        {
-                            updatedAt: {
-                                gte: start,
-                                lte: end
-                            }
-                        },
                         {
                             createdAt: {
                                 gte: start,
@@ -385,6 +380,16 @@ export const getTodosChronological = async (req: Request, res: Response) => {
                             deletedAt: {
                                 gte: start,
                                 lte: end
+                            }
+                        },
+                        {
+                            statusHistory: {
+                                some: {
+                                    changedAt: {
+                                        gte: start,
+                                        lte: end
+                                    }
+                                }
                             }
                         }
                     ]
@@ -540,7 +545,8 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
         }
 
         // Kombiniere requestFilter mit Zeitfilter und Filter-Bedingungen
-        // Zeige auch gelöschte Requests, wenn sie im Zeitraum gelöscht wurden
+        // Zeige nur Requests, die im Zeitraum erstellt, Status-Änderungen hatten oder gelöscht wurden
+        // NICHT: Requests, die nur andere Updates hatten (z.B. Titel geändert)
         const where: any = {
             AND: [
                 requestFilter,
@@ -554,15 +560,19 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
                             }
                         },
                         {
-                            updatedAt: {
+                            deletedAt: {
                                 gte: start,
                                 lte: end
                             }
                         },
                         {
-                            deletedAt: {
-                                gte: start,
-                                lte: end
+                            statusHistory: {
+                                some: {
+                                    changedAt: {
+                                        gte: start,
+                                        lte: end
+                                    }
+                                }
                             }
                         }
                     ]

@@ -24,8 +24,6 @@ import { FilterCondition } from '../FilterRow.tsx';
 import DataCard, { MetadataItem } from '../shared/DataCard.tsx';
 import CardGrid from '../shared/CardGrid.tsx';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
-import { DateRangeSelector } from '../analytics/DateRangeSelector.tsx';
-import { useDateRange } from '../../hooks/useDateRange.ts';
 
 interface TodoAnalyticsTabProps {
   selectedDate?: string; // Optional für Rückwärtskompatibilität
@@ -90,7 +88,6 @@ const defaultColumnOrder = ['time', 'title', 'status', 'responsible', 'qualityCo
 
 const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => {
   const { t } = useTranslation();
-  const { period, setPeriod, startDate, setStartDate, endDate, setEndDate, dateRange } = useDateRange();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -192,15 +189,12 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         
         const params: any = {};
         
-        // Unterstütze sowohl selectedDate (Rückwärtskompatibilität) als auch dateRange
+        // Unterstütze selectedDate für Rückwärtskompatibilität
         if (selectedDate) {
           params.date = selectedDate;
         } else {
-          params.period = period;
-          if (period === 'custom') {
-            params.startDate = startDate;
-            params.endDate = endDate;
-          }
+          // Standard: Diese Woche, wenn kein selectedDate vorhanden
+          params.period = 'week';
         }
         
         // Filter-Bedingungen als JSON-String senden
@@ -226,10 +220,8 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       }
     };
 
-    if (selectedDate || dateRange) {
-      fetchTodos();
-    }
-  }, [selectedDate, period, startDate, endDate, dateRange, filterConditions]);
+    fetchTodos();
+  }, [selectedDate, filterConditions, filterLogicalOperators, selectedFilterId]);
 
   // Lade Häufigkeitsanalyse
   useEffect(() => {
@@ -427,20 +419,6 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 todo-analytics-wrapper">
-      {/* Datumsbereich-Auswahl */}
-      {!selectedDate && (
-        <div className="px-3 sm:px-4 md:px-6 pt-4">
-          <DateRangeSelector
-            period={period}
-            setPeriod={setPeriod}
-            startDate={startDate}
-            setStartDate={setStartDate}
-            endDate={endDate}
-            setEndDate={setEndDate}
-          />
-        </div>
-      )}
-      
       {/* Titelzeile */}
       <div className="flex items-center justify-between mb-4 px-3 sm:px-4 md:px-6">
         {/* Linke Seite: Titel mit Icon */}

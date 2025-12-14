@@ -841,7 +841,19 @@ export class BoldPaymentService {
                 // Wenn TTLock Code vorhanden, verwende sendCheckInConfirmation (mit Template-Fallback)
                 if (ttlockCode) {
                   const roomNumber = updatedReservation.roomNumber || 'N/A';
-                  const roomDescription = updatedReservation.roomDescription || 'N/A';
+                  
+                  // Lade roomDescription aus Branch-Settings
+                  const { ReservationNotificationService } = require('./reservationNotificationService');
+                  const { CountryLanguageService } = require('./countryLanguageService');
+                  const languageCode = CountryLanguageService.getLanguageForReservation({
+                    guestNationality: updatedReservation.guestNationality,
+                    guestPhone: updatedReservation.guestPhone
+                  }) as 'en' | 'es' | 'de';
+                  
+                  const roomDescription = await ReservationNotificationService.loadRoomDescriptionFromBranchSettings(
+                    updatedReservation,
+                    languageCode
+                  );
                   
                   logger.log(`[Bold Payment Webhook] Versende Check-in-Bestätigung mit PIN für Reservierung ${reservation.id}...`);
                   const whatsappSuccess = await whatsappService.sendCheckInConfirmation(
