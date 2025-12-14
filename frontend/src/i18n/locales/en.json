@@ -3106,6 +3106,56 @@
       "above": "Above",
       "below": "Below",
       "equal": "Equal"
+    },
+    "recommendations": {
+      "title": "Price Recommendations",
+      "generate": "Generate Recommendations",
+      "generated": "Price recommendations generated",
+      "noRecommendations": "No price recommendations found",
+      "date": "Date",
+      "categoryId": "Category",
+      "roomType": "Room Type",
+      "currentPrice": "Current Price",
+      "recommendedPrice": "Recommended Price",
+      "change": "Change",
+      "reasoning": "Reasoning",
+      "allStatuses": "All Statuses",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "applied": "Applied",
+        "rejected": "Rejected"
+      },
+      "approve": "Approve",
+      "reject": "Reject",
+      "apply": "Apply",
+      "approved": "Recommendation approved",
+      "rejected": "Recommendation rejected",
+      "applied": "Recommendation applied",
+      "applyConfirm": "Really apply recommendation?",
+      "rejectReason": "Reason for rejection (optional):"
+    },
+    "rules": {
+      "title": "Pricing Rules",
+      "create": "Create New Rule",
+      "edit": "Edit Rule",
+      "noRules": "No pricing rules found",
+      "name": "Name",
+      "description": "Description",
+      "priority": "Priority",
+      "status": "Status",
+      "createdBy": "Created By",
+      "createdAt": "Created At",
+      "conditions": "Conditions",
+      "action": "Action",
+      "roomTypes": "Room Types",
+      "categoryIds": "Category IDs",
+      "isActive": "Active",
+      "created": "Rule created",
+      "updated": "Rule updated",
+      "deleted": "Rule deleted",
+      "deleteConfirm": "Really delete rule?",
+      "invalidJson": "Invalid JSON format"
     }
   }
 }

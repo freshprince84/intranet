@@ -307,8 +307,8 @@ export const getTodosChronological = async (req: Request, res: Response) => {
         if (period && (period === 'custom' || period === 'week' || period === 'month' || period === 'year' || period === 'today')) {
             // Neues Format: Datumsbereich
             const dateRange = getDateRange(period as Period, startDate as string | undefined, endDate as string | undefined);
-            start = startOfDay(parseISO(dateRange.start));
-            end = endOfDay(parseISO(dateRange.end));
+            start = dateRange.start;
+            end = dateRange.end;
         } else if (date && typeof date === 'string') {
             // Altes Format: Einzelnes Datum (Rückwärtskompatibilität)
             const selectedDate = parseISO(date);
@@ -482,8 +482,8 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
         if (period && (period === 'custom' || period === 'week' || period === 'month' || period === 'year' || period === 'today')) {
             // Neues Format: Datumsbereich
             const dateRange = getDateRange(period as Period, startDate as string | undefined, endDate as string | undefined);
-            start = startOfDay(parseISO(dateRange.start));
-            end = endOfDay(parseISO(dateRange.end));
+            start = dateRange.start;
+            end = dateRange.end;
         } else if (date && typeof date === 'string') {
             // Altes Format: Einzelnes Datum (Rückwärtskompatibilität)
             const selectedDate = parseISO(date);

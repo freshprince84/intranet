@@ -3174,6 +3174,56 @@
       "above": "Über",
       "below": "Unter",
       "equal": "Gleich"
+    },
+    "recommendations": {
+      "title": "Preisempfehlungen",
+      "generate": "Empfehlungen generieren",
+      "generated": "Preisempfehlungen generiert",
+      "noRecommendations": "Keine Preisempfehlungen gefunden",
+      "date": "Datum",
+      "categoryId": "Kategorie",
+      "roomType": "Zimmerart",
+      "currentPrice": "Aktueller Preis",
+      "recommendedPrice": "Empfohlener Preis",
+      "change": "Änderung",
+      "reasoning": "Begründung",
+      "allStatuses": "Alle Status",
+      "status": {
+        "pending": "Ausstehend",
+        "approved": "Genehmigt",
+        "applied": "Angewendet",
+        "rejected": "Abgelehnt"
+      },
+      "approve": "Genehmigen",
+      "reject": "Ablehnen",
+      "apply": "Anwenden",
+      "approved": "Empfehlung genehmigt",
+      "rejected": "Empfehlung abgelehnt",
+      "applied": "Empfehlung angewendet",
+      "applyConfirm": "Empfehlung wirklich anwenden?",
+      "rejectReason": "Grund für Ablehnung (optional):"
+    },
+    "rules": {
+      "title": "Preisregeln",
+      "create": "Neue Regel erstellen",
+      "edit": "Regel bearbeiten",
+      "noRules": "Keine Preisregeln gefunden",
+      "name": "Name",
+      "description": "Beschreibung",
+      "priority": "Priorität",
+      "status": "Status",
+      "createdBy": "Erstellt von",
+      "createdAt": "Erstellt am",
+      "conditions": "Bedingungen",
+      "action": "Aktion",
+      "roomTypes": "Zimmerarten",
+      "categoryIds": "Kategorie-IDs",
+      "isActive": "Aktiv",
+      "created": "Regel erstellt",
+      "updated": "Regel aktualisiert",
+      "deleted": "Regel gelöscht",
+      "deleteConfirm": "Regel wirklich löschen?",
+      "invalidJson": "Ungültiges JSON-Format"
     }
   }
 }

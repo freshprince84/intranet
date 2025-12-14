@@ -5,6 +5,8 @@ import useMessage from '../hooks/useMessage.ts';
 import { useError } from '../contexts/ErrorContext.tsx';
 import OTAListingsTab from '../components/priceAnalysis/OTAListingsTab.tsx';
 import AnalysisTab from '../components/priceAnalysis/AnalysisTab.tsx';
+import PriceRecommendationsTab from '../components/priceAnalysis/PriceRecommendationsTab.tsx';
+import PricingRulesTab from '../components/priceAnalysis/PricingRulesTab.tsx';
 
 const PriceAnalysis: React.FC = () => {
     const { t } = useTranslation();
@@ -101,8 +103,8 @@ const PriceAnalysis: React.FC = () => {
                 {/* Tab Content */}
                 {activeTab === 'listings' && <OTAListingsTab />}
                 {activeTab === 'analysis' && <AnalysisTab />}
-                {activeTab === 'recommendations' && <div>{t('priceAnalysis.recommendations')} - Coming soon</div>}
-                {activeTab === 'rules' && <div>{t('priceAnalysis.rules')} - Coming soon</div>}
+                {activeTab === 'recommendations' && <PriceRecommendationsTab />}
+                {activeTab === 'rules' && <PricingRulesTab />}
             </div>
     );
 };

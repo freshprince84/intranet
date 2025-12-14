@@ -11,6 +11,7 @@ import { logger } from '../utils/logger';
 import { getImageGenerationQueue, checkQueueHealth } from '../services/queueService';
 import { GeminiImageService } from '../services/geminiImageService';
 import { TourImageUploadService } from '../services/tourImageUploadService';
+import { OrganizationBrandingService } from '../services/organizationBrandingService';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -1131,10 +1132,25 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
       });
     }
 
-    // Prüfe ob Tour existiert
+    // Prüfe Organization-Isolation
+    const organizationId = (req as any).organizationId;
+
+    // Prüfe ob Tour existiert und lade Organisation mit Logo
     const tour = await prisma.tour.findUnique({
       where: { id: tourId },
-      select: { id: true, title: true, description: true, organizationId: true }
+      select: { 
+        id: true, 
+        title: true, 
+        description: true, 
+        organizationId: true,
+        organization: {
+          select: {
+            id: true,
+            logo: true,
+            displayName: true
+          }
+        }
+      }
     });
 
     if (!tour) {
@@ -1144,8 +1160,6 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
       });
     }
 
-    // Prüfe Organization-Isolation
-    const organizationId = (req as any).organizationId;
     if (tour.organizationId !== organizationId) {
       return res.status(403).json({
         success: false,
@@ -1162,12 +1176,32 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
       logger.warn(`[generateTourImages] Queue nicht verfügbar, verwende synchronen Modus für Tour ${tourId}`);
       
       try {
+        // Extrahiere Branding aus Logo (falls vorhanden)
+        let branding = undefined;
+        if (tour.organization?.logo) {
+          try {
+            logger.log(`[generateTourImages] Extrahiere Branding aus Logo für Organisation ${tour.organization.displayName}`);
+            branding = await OrganizationBrandingService.extractBrandingFromLogo(tour.organization.logo);
+            logger.log(`[generateTourImages] Branding extrahiert:`, {
+              hasColors: !!branding.colors.primary,
+              hasFonts: !!branding.fonts,
+              hasStyle: !!branding.style
+            });
+          } catch (error: any) {
+            logger.warn(`[generateTourImages] Fehler bei Branding-Extraktion, verwende Standard:`, error.message);
+            // Fehler ist nicht kritisch, verwende Standard-Branding (undefined)
+          }
+        } else {
+          logger.log(`[generateTourImages] Kein Logo vorhanden für Organisation ${tour.organization?.displayName || organizationId}`);
+        }
+
         // Synchroner Modus: Direkt generieren und hochladen
         const generatedImages = await GeminiImageService.generateTourImages(
           tour.id,
           tour.title || '',
           tour.description || '',
-          process.env.GEMINI_API_KEY
+          process.env.GEMINI_API_KEY,
+          branding
         );
 
         // Lade Hauptbild hoch
