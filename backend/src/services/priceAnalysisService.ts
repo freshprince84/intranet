@@ -1,4 +1,5 @@
-import { PrismaClient, Decimal } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { logger } from '../utils/logger';
 import { LobbyPmsService } from './lobbyPmsService';
 

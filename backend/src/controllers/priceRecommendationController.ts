@@ -161,6 +161,7 @@ export const priceRecommendationController = {
   rejectRecommendation: async (req: AuthenticatedRequest, res: Response) => {
     try {
       const recommendationId = parseInt(req.params.id, 10);
+      const reason = req.body.reason as string | undefined;
 
       if (isNaN(recommendationId)) {
         return res.status(400).json({ 
@@ -169,7 +170,8 @@ export const priceRecommendationController = {
       }
 
       const success = await PriceRecommendationService.rejectRecommendation(
-        recommendationId
+        recommendationId,
+        reason
       );
 
       res.json({

@@ -3105,6 +3105,57 @@
       "above": "Arriba",
       "below": "Abajo",
       "equal": "Igual"
+    },
+    "recommendations": {
+      "title": "Recomendaciones de Precios",
+      "generate": "Generar Recomendaciones",
+      "generated": "Recomendaciones de precios generadas",
+      "noRecommendations": "No se encontraron recomendaciones de precios",
+      "date": "Fecha",
+      "categoryId": "Categoría",
+      "roomType": "Tipo de Habitación",
+      "currentPrice": "Precio Actual",
+      "recommendedPrice": "Precio Recomendado",
+      "change": "Cambio",
+      "reasoning": "Razonamiento",
+      "status": "Estado",
+      "allStatuses": "Todos los Estados",
+      "status": {
+        "pending": "Pendiente",
+        "approved": "Aprobado",
+        "applied": "Aplicado",
+        "rejected": "Rechazado"
+      },
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "apply": "Aplicar",
+      "approved": "Recomendación aprobada",
+      "rejected": "Recomendación rechazada",
+      "applied": "Recomendación aplicada",
+      "applyConfirm": "¿Realmente aplicar recomendación?",
+      "rejectReason": "Razón del rechazo (opcional):"
+    },
+    "rules": {
+      "title": "Reglas de Precios",
+      "create": "Crear Nueva Regla",
+      "edit": "Editar Regla",
+      "noRules": "No se encontraron reglas de precios",
+      "name": "Nombre",
+      "description": "Descripción",
+      "priority": "Prioridad",
+      "status": "Estado",
+      "createdBy": "Creado Por",
+      "createdAt": "Creado En",
+      "conditions": "Condiciones",
+      "action": "Acción",
+      "roomTypes": "Tipos de Habitación",
+      "categoryIds": "IDs de Categoría",
+      "isActive": "Activo",
+      "created": "Regla creada",
+      "updated": "Regla actualizada",
+      "deleted": "Regla eliminada",
+      "deleteConfirm": "¿Realmente eliminar regla?",
+      "invalidJson": "Formato JSON inválido"
     }
   }
 }

@@ -2,6 +2,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../utils/logger';
+import { BrandingInfo } from './organizationBrandingService';
 
 /**
  * Generische Konfiguration für Bildgenerierung
@@ -15,6 +16,7 @@ export interface ImageGenerationConfig {
   filenamePattern: string;
   imageTypes: ('main' | 'gallery' | 'flyer')[];
   apiKey?: string;
+  branding?: BrandingInfo;
 }
 
 /**
@@ -130,7 +132,7 @@ export class GeminiImageService {
 
     // Hauptbild generieren (falls gewünscht)
     if (config.imageTypes.includes('main')) {
-      const mainImagePrompt = this.buildMainImagePrompt(config.title, config.description, config.entityType);
+      const mainImagePrompt = this.buildMainImagePrompt(config.title, config.description, config.entityType, config.branding);
       const mainImagePath = path.join(
         config.outputDir,
         config.filenamePattern.replace('{type}', 'main').replace('{timestamp}', timestamp.toString())
@@ -141,7 +143,7 @@ export class GeminiImageService {
 
     // Galerie-Bilder generieren (falls gewünscht)
     if (config.imageTypes.includes('gallery')) {
-      const galleryPrompts = this.buildGalleryPrompts(config.title, config.description, config.entityType);
+      const galleryPrompts = this.buildGalleryPrompts(config.title, config.description, config.entityType, config.branding);
       for (let i = 0; i < galleryPrompts.length; i++) {
         const galleryPath = path.join(
           config.outputDir,
@@ -154,7 +156,7 @@ export class GeminiImageService {
 
     // Flyer generieren (falls gewünscht)
     if (config.imageTypes.includes('flyer')) {
-      const flyerPrompt = this.buildFlyerPrompt(config.title, config.description, config.entityType);
+      const flyerPrompt = this.buildFlyerPrompt(config.title, config.description, config.entityType, config.branding);
       const flyerPath = path.join(
         config.outputDir,
         config.filenamePattern.replace('{type}', 'flyer').replace('{timestamp}', timestamp.toString())
@@ -169,53 +171,67 @@ export class GeminiImageService {
   /**
    * Erstellt Prompt für Hauptbild
    */
-  private static buildMainImagePrompt(title: string, description: string, entityType: string): string {
+  private static buildMainImagePrompt(title: string, description: string, entityType: string, branding?: BrandingInfo): string {
+    const brandingPrompt = branding ? this.buildBrandingPromptPart(branding) : '';
+    
     if (entityType === 'tour') {
       return `Create a beautiful, professional tourism promotional image for "${title}". ${description}. 
       The image should be vibrant, inviting, and showcase the destination. 
       Style: Professional travel photography, high quality, colorful, appealing to tourists. 
       Include scenic views, cultural elements, and adventure activities. 
-      Aspect ratio: 16:9, high resolution.`;
+      ${brandingPrompt}
+      Aspect ratio: 16:9, high resolution.`.trim();
     }
     // Fallback für andere Entitäten
     return `Create a beautiful, professional promotional image for "${title}". ${description}. 
     Style: Professional photography, high quality, colorful, appealing. 
-    Aspect ratio: 16:9, high resolution.`;
+    ${brandingPrompt}
+    Aspect ratio: 16:9, high resolution.`.trim();
   }
 
   /**
    * Erstellt Prompts für Galerie-Bilder
    */
-  private static buildGalleryPrompts(title: string, description: string, entityType: string): string[] {
+  private static buildGalleryPrompts(title: string, description: string, entityType: string, branding?: BrandingInfo): string[] {
+    const brandingPrompt = branding ? this.buildBrandingPromptPart(branding) : '';
+    
     if (entityType === 'tour') {
       return [
         `Create a stunning landscape photo showcasing the main attraction from "${title}". ${description}. 
-        Style: Professional travel photography, golden hour lighting, vibrant colors.`,
+        Style: Professional travel photography, golden hour lighting, vibrant colors. 
+        ${brandingPrompt}`.trim(),
         
         `Create an image showing tourists enjoying activities from "${title}". ${description}. 
-        Style: Candid travel photography, people having fun, authentic experience.`,
+        Style: Candid travel photography, people having fun, authentic experience. 
+        ${brandingPrompt}`.trim(),
         
         `Create a beautiful cultural or architectural detail image from "${title}". ${description}. 
-        Style: Professional travel photography, focus on local culture and heritage.`
+        Style: Professional travel photography, focus on local culture and heritage. 
+        ${brandingPrompt}`.trim()
       ];
     }
     // Fallback für andere Entitäten
     return [
       `Create a professional image showcasing "${title}". ${description}. 
-      Style: Professional photography, high quality, vibrant colors.`,
+      Style: Professional photography, high quality, vibrant colors. 
+      ${brandingPrompt}`.trim(),
       
       `Create another professional image for "${title}". ${description}. 
-      Style: Professional photography, different angle or perspective.`,
+      Style: Professional photography, different angle or perspective. 
+      ${brandingPrompt}`.trim(),
       
       `Create a detail image for "${title}". ${description}. 
-      Style: Professional photography, focus on key features.`
+      Style: Professional photography, focus on key features. 
+      ${brandingPrompt}`.trim()
     ];
   }
 
   /**
    * Erstellt Prompt für Flyer
    */
-  private static buildFlyerPrompt(title: string, description: string, entityType: string): string {
+  private static buildFlyerPrompt(title: string, description: string, entityType: string, branding?: BrandingInfo): string {
+    const brandingPrompt = branding ? this.buildBrandingPromptPart(branding) : '';
+    
     if (entityType === 'tour') {
       return `Create a professional, eye-catching tour flyer/poster for "${title}". 
       ${description}
@@ -229,8 +245,9 @@ export class GeminiImageService {
       - Text should be readable and well-placed
       - Aspect ratio: 3:4 (portrait orientation for flyer)
       - High resolution, print-ready quality
+      ${brandingPrompt ? `- ${brandingPrompt}` : ''}
       
-      Style: Professional travel agency flyer, modern design, vibrant colors, appealing to tourists.`;
+      Style: Professional travel agency flyer, modern design, vibrant colors, appealing to tourists.`.trim();
     }
     // Fallback für andere Entitäten
     return `Create a professional, eye-catching flyer/poster for "${title}". 
@@ -243,7 +260,49 @@ export class GeminiImageService {
     - Colorful, inviting design
     - Text should be readable and well-placed
     - Aspect ratio: 3:4 (portrait orientation)
-    - High resolution, print-ready quality`;
+    - High resolution, print-ready quality
+    ${brandingPrompt ? `- ${brandingPrompt}` : ''}`.trim();
+  }
+
+  /**
+   * Erstellt Prompt-Teil für Branding-Informationen
+   */
+  private static buildBrandingPromptPart(branding: BrandingInfo): string {
+    const parts: string[] = [];
+
+    // Farben
+    if (branding.colors.primary) {
+      parts.push(`Use the primary color ${branding.colors.primary}`);
+      if (branding.colors.secondary) {
+        parts.push(`and secondary color ${branding.colors.secondary}`);
+      }
+      if (branding.colors.accent) {
+        parts.push(`with accent color ${branding.colors.accent}`);
+      }
+      parts.push('as the main corporate identity colors throughout the image.');
+    } else if (branding.colors.palette && branding.colors.palette.length > 0) {
+      parts.push(`Use the color palette: ${branding.colors.palette.join(', ')} as corporate identity colors.`);
+    }
+
+    // Schriftarten
+    if (branding.fonts?.style) {
+      parts.push(`Use a ${branding.fonts.style} typography style`);
+      if (branding.fonts.primary) {
+        parts.push(`(similar to ${branding.fonts.primary})`);
+      }
+      parts.push('for any text elements.');
+    }
+
+    // Stil
+    if (branding.style?.mood) {
+      parts.push(`The overall mood should be ${branding.style.mood}`);
+      if (branding.style.layout) {
+        parts.push(`with a ${branding.style.layout} layout style`);
+      }
+      parts.push('.');
+    }
+
+    return parts.length > 0 ? parts.join(' ') : '';
   }
 
   /**
@@ -254,7 +313,8 @@ export class GeminiImageService {
     tourId: number,
     tourTitle: string,
     tourDescription: string,
-    apiKey?: string
+    apiKey?: string,
+    branding?: BrandingInfo
   ): Promise<{ mainImage: string; galleryImages: string[]; flyer: string }> {
     const TOURS_UPLOAD_DIR = path.join(__dirname, '../../uploads/tours');
     
@@ -266,7 +326,8 @@ export class GeminiImageService {
       outputDir: TOURS_UPLOAD_DIR,
       filenamePattern: `tour-${tourId}-{type}-{timestamp}.png`,
       imageTypes: ['main', 'gallery', 'flyer'],
-      apiKey
+      apiKey,
+      branding
     };
 
     const result = await this.generateImages(config);

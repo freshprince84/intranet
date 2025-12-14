@@ -1,6 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { GeminiImageService } from '../../services/geminiImageService';
 import { TourImageUploadService } from '../../services/tourImageUploadService';
+import { OrganizationBrandingService } from '../../services/organizationBrandingService';
 import { prisma } from '../../utils/prisma';
 import { logger } from '../../utils/logger';
 import fs from 'fs';
@@ -35,9 +36,18 @@ export function createImageGenerationWorker(connection: any): Worker {
         // Aktualisiere Job-Status: processing
         await job.updateProgress(10);
 
-        // Lade Tour-Daten
+        // Lade Tour-Daten mit Organisation
         const tour = await prisma.tour.findUnique({
-          where: { id: tourId }
+          where: { id: tourId },
+          include: {
+            organization: {
+              select: {
+                id: true,
+                logo: true,
+                displayName: true
+              }
+            }
+          }
         });
 
         if (!tour) {
@@ -51,16 +61,38 @@ export function createImageGenerationWorker(connection: any): Worker {
 
         await job.updateProgress(20);
 
+        // Extrahiere Branding aus Logo (falls vorhanden)
+        let branding = undefined;
+        if (tour.organization?.logo) {
+          try {
+            logger.log(`[Image Generation Worker] Extrahiere Branding aus Logo für Organisation ${tour.organization.displayName}`);
+            branding = await OrganizationBrandingService.extractBrandingFromLogo(tour.organization.logo);
+            logger.log(`[Image Generation Worker] Branding extrahiert:`, {
+              hasColors: !!branding.colors.primary,
+              hasFonts: !!branding.fonts,
+              hasStyle: !!branding.style
+            });
+          } catch (error: any) {
+            logger.warn(`[Image Generation Worker] Fehler bei Branding-Extraktion, verwende Standard:`, error.message);
+            // Fehler ist nicht kritisch, verwende Standard-Branding (undefined)
+          }
+        } else {
+          logger.log(`[Image Generation Worker] Kein Logo vorhanden für Organisation ${tour.organization?.displayName || organizationId}`);
+        }
+
+        await job.updateProgress(30);
+
         // Generiere Bilder
         logger.log(`[Image Generation Worker] Generiere Bilder für Tour: ${tour.title}`);
         generatedImages = await GeminiImageService.generateTourImages(
           tour.id,
           tour.title,
           tour.description || '',
-          process.env.GEMINI_API_KEY
+          process.env.GEMINI_API_KEY,
+          branding
         );
 
-        await job.updateProgress(60);
+        await job.updateProgress(50);
 
         // Lade Hauptbild hoch (direkt, ohne HTTP)
         if (generatedImages.mainImage && fs.existsSync(generatedImages.mainImage)) {
@@ -68,7 +100,7 @@ export function createImageGenerationWorker(connection: any): Worker {
           logger.log(`[Image Generation Worker] Hauptbild hochgeladen: ${generatedImages.mainImage}`);
         }
 
-        await job.updateProgress(70);
+        await job.updateProgress(60);
 
         // Lade Galerie-Bilder hoch (direkt, ohne HTTP)
         for (let i = 0; i < generatedImages.galleryImages.length; i++) {
@@ -77,10 +109,10 @@ export function createImageGenerationWorker(connection: any): Worker {
             await TourImageUploadService.uploadGalleryImageDirectly(tourId, galleryImage);
             logger.log(`[Image Generation Worker] Galerie-Bild ${i} hochgeladen: ${galleryImage}`);
           }
-          await job.updateProgress(70 + (i + 1) * 5); // 70-85%
+          await job.updateProgress(60 + (i + 1) * 5); // 60-75%
         }
 
-        await job.updateProgress(90);
+        await job.updateProgress(80);
 
         // ✅ CLEANUP: Temporäre Dateien löschen
         cleanupTemporaryFiles(generatedImages);
