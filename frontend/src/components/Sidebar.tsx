@@ -138,6 +138,13 @@ const Sidebar: React.FC = () => {
             icon: <UserGroupIcon className="h-full w-full" />,
             page: 'organization_management',
             group: 'management'
+        },
+        {
+            name: t('menu.priceAnalysis'),
+            path: '/price-analysis',
+            icon: <CurrencyDollarIcon className="h-full w-full" />,
+            page: 'price_analysis',
+            group: 'management'
         }
     ];
 

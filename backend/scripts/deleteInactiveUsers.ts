@@ -132,7 +132,7 @@ async function deleteInactiveUsers() {
 
           await tx.task.updateMany({
             where: { qualityControlId: user.id },
-            data: { qualityControlId: null }
+            data: { qualityControlId: 1 } // Setze auf Admin (ID 1) als Fallback, da qualityControlId required ist
           });
 
           // 6. Requests (wo User requester/responsible ist)
