@@ -72,7 +72,8 @@ app.use(cors({
     const allowedOrigins = [
       'http://localhost:3000',      // Web-Frontend in Entwicklung
       'exp://',                     // Expo-Client während der Entwicklung
-      'https://65.109.228.106.nip.io',  // Produktionsumgebung
+      'https://65.109.228.106.nip.io',  // Produktionsumgebung (alte URL)
+      'https://newintranet.lafamilia-hostel.com',  // Produktionsumgebung (neue URL)
       'app://'                      // React Native App (production)
     ];
     
@@ -84,9 +85,10 @@ app.use(cors({
       return callback(null, true);
     }
     
-    // ✅ FIX: Erlaube alle Zugriffe auf die Produktions-URL, unabhängig von der Client-IP
+    // ✅ FIX: Erlaube alle Zugriffe auf die Produktions-URLs, unabhängig von der Client-IP
     // Dies stellt sicher, dass Login von allen Geräten funktioniert
-    if (origin === 'https://65.109.228.106.nip.io') {
+    if (origin === 'https://65.109.228.106.nip.io' || 
+        origin === 'https://newintranet.lafamilia-hostel.com') {
       return callback(null, true);
     }
     
