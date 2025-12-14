@@ -280,10 +280,10 @@ const TeamWorktimeControl: React.FC = () => {
               <ShiftPlannerTab selectedDate={selectedDate} />
             )}
             {activeTab === 'todos' && (
-              <TodoAnalyticsTab selectedDate={selectedDate} />
+              <TodoAnalyticsTab />
             )}
             {activeTab === 'requests' && (
-              <RequestAnalyticsTab selectedDate={selectedDate} />
+              <RequestAnalyticsTab />
             )}
           </div>
       </div>
