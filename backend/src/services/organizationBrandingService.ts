@@ -221,9 +221,8 @@ export class OrganizationBrandingService {
         .resize(200, 200, { fit: 'inside', withoutEnlargement: true })
         .toBuffer();
 
-      // Quantisiere auf 16 Farben für bessere Extraktion
+      // Extrahiere Rohdaten für Farb-Analyse
       const { data, info } = await sharp(resized)
-        .quantize({ colors: 16 })
         .raw()
         .toBuffer({ resolveWithObject: true });
 

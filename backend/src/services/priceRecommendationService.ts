@@ -331,7 +331,7 @@ export class PriceRecommendationService {
         for (const rule of rules) {
           // Prüfe ob Regel anwendbar ist
           if (this.evaluateRule(rule, analysis, currentPrice)) {
-            const action = rule.action as RuleAction;
+            const action = rule.action as unknown as RuleAction;
             const oldPrice = currentPrice;
             currentPrice = this.applyAction(action, currentPrice, originalPrice);
 
