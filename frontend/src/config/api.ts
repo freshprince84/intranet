@@ -357,6 +357,7 @@ export const API_ENDPOINTS = {
     PRICE_ANALYSIS: {
         BASE: '/price-analysis',
         ANALYZE: '/price-analysis/analyze',
+        ANALYSES: '/price-analysis',
         BY_ID: (id: number) => `/price-analysis/${id}`,
         RECOMMENDATIONS: {
             BASE: '/price-analysis/recommendations',

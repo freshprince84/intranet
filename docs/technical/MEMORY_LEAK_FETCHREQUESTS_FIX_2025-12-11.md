@@ -106,3 +106,7 @@ Der Fix reduziert das Memory-Leak bei Filter-Änderungen, aber **~1 GB RAM** ble
 - `docs/technical/FILTER_OR_OPERATOR_FIX_2025-12-11.md` - Filter ODER-Fix
 - `docs/technical/PERFORMANCE_ANALYSE_VOLLSTAENDIG.md` - Performance-Übersicht
 
+
+
+
+

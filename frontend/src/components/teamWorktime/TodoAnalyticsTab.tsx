@@ -14,7 +14,8 @@ import {
   ArrowPathIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
@@ -23,9 +24,11 @@ import { FilterCondition } from '../FilterRow.tsx';
 import DataCard, { MetadataItem } from '../shared/DataCard.tsx';
 import CardGrid from '../shared/CardGrid.tsx';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
+import { DateRangeSelector } from '../analytics/DateRangeSelector.tsx';
+import { useDateRange } from '../../hooks/useDateRange.ts';
 
 interface TodoAnalyticsTabProps {
-  selectedDate: string;
+  selectedDate?: string; // Optional für Rückwärtskompatibilität
 }
 
 interface StatusHistoryItem {
@@ -63,6 +66,19 @@ interface Todo {
   };
   updatedAt: string;
   createdAt: string;
+  createdBy?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
+  deletedAt?: string | null;
+  deletedBy?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    username: string;
+  } | null;
   statusHistory?: StatusHistoryItem[];
 }
 
@@ -70,10 +86,11 @@ interface Todo {
 const TODO_ANALYTICS_TABLE_ID = 'todo-analytics-table';
 
 // Standardreihenfolge der Spalten
-const defaultColumnOrder = ['time', 'title', 'status', 'responsible', 'qualityControl', 'branch'];
+const defaultColumnOrder = ['time', 'title', 'status', 'responsible', 'qualityControl', 'branch', 'createdBy', 'deletedAt'];
 
 const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => {
   const { t } = useTranslation();
+  const { period, setPeriod, startDate, setStartDate, endDate, setEndDate, dateRange } = useDateRange();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,7 +178,9 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
     { id: 'status', label: t('analytics.todo.columns.status') },
     { id: 'responsible', label: t('analytics.todo.columns.responsible') },
     { id: 'qualityControl', label: t('analytics.todo.columns.qualityControl') },
-    { id: 'branch', label: t('analytics.todo.columns.branch') }
+    { id: 'branch', label: t('analytics.todo.columns.branch') },
+    { id: 'createdBy', label: t('analytics.todo.columns.createdBy', { defaultValue: 'Erstellt von' }) },
+    { id: 'deletedAt', label: t('analytics.todo.columns.deletedAt', { defaultValue: 'Gelöscht am' }) }
   ], [t]);
 
   // Lade To-Dos
@@ -171,9 +190,18 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         setLoading(true);
         setError(null);
         
-        const params: any = {
-          date: selectedDate
-        };
+        const params: any = {};
+        
+        // Unterstütze sowohl selectedDate (Rückwärtskompatibilität) als auch dateRange
+        if (selectedDate) {
+          params.date = selectedDate;
+        } else {
+          params.period = period;
+          if (period === 'custom') {
+            params.startDate = startDate;
+            params.endDate = endDate;
+          }
+        }
         
         // Filter aus Bedingungen anwenden
         filterConditions.forEach(condition => {
@@ -201,10 +229,10 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       }
     };
 
-    if (selectedDate) {
+    if (selectedDate || dateRange) {
       fetchTodos();
     }
-  }, [selectedDate, filterConditions]);
+  }, [selectedDate, period, startDate, endDate, dateRange, filterConditions]);
 
   // Lade Häufigkeitsanalyse
   useEffect(() => {
@@ -401,6 +429,20 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 todo-analytics-wrapper">
+      {/* Datumsbereich-Auswahl */}
+      {!selectedDate && (
+        <div className="px-3 sm:px-4 md:px-6 pt-4">
+          <DateRangeSelector
+            period={period}
+            setPeriod={setPeriod}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+          />
+        </div>
+      )}
+      
       {/* Titelzeile */}
       <div className="flex items-center justify-between mb-4 px-3 sm:px-4 md:px-6">
         {/* Linke Seite: Titel mit Icon */}
@@ -1183,6 +1225,32 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                               return (
                                 <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {todo.branch.name}
+                                </td>
+                              );
+                            case 'createdBy':
+                              return (
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  {todo.createdBy
+                                    ? `${todo.createdBy.firstName} ${todo.createdBy.lastName}`
+                                    : '-'}
+                                </td>
+                              );
+                            case 'deletedAt':
+                              return (
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  {todo.deletedAt ? (
+                                    <div className="flex items-center gap-2">
+                                      <TrashIcon className="h-4 w-4 text-red-500" />
+                                      <span>{format(new Date(todo.deletedAt), 'dd.MM.yyyy HH:mm')}</span>
+                                      {todo.deletedBy && (
+                                        <span className="text-gray-400">
+                                          ({todo.deletedBy.firstName} {todo.deletedBy.lastName})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    '-'
+                                  )}
                                 </td>
                               );
                             default:

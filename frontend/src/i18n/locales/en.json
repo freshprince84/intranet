@@ -3059,5 +3059,53 @@
     "perTour": "Per Tour",
     "average": "Average",
     "byType": "By Tour Type"
+  },
+  "priceAnalysis": {
+    "title": "Price Analysis",
+    "listings": "OTA Listings",
+    "analysis": "Analysis",
+    "recommendations": "Recommendations",
+    "rules": "Rules",
+    "loading": "Loading...",
+    "noListings": "No OTA listings found",
+    "noAnalyses": "No price analyses found",
+    "platform": "Platform",
+    "roomType": "Room Type",
+    "roomName": "Room Name",
+    "listingUrl": "Listing URL",
+    "status": "Status",
+    "lastScraped": "Last Scraped",
+    "active": "Active",
+    "inactive": "Inactive",
+    "rateShopping": {
+      "run": "Start Rate Shopping",
+      "started": "Rate Shopping started"
+    },
+    "analysis": {
+      "title": "Price Analyses",
+      "run": "Start Price Analysis",
+      "started": "Price Analysis started",
+      "date": "Date",
+      "categoryId": "Category",
+      "roomType": "Room Type",
+      "currentPrice": "Current Price",
+      "averagePrice": "Avg Price",
+      "minPrice": "Min",
+      "maxPrice": "Max",
+      "occupancyRate": "Occupancy",
+      "availableRooms": "Available",
+      "competitorPrice": "Competitor",
+      "pricePosition": "Position",
+      "recommendations": "Recommendations"
+    },
+    "roomType": {
+      "dorm": "Dorm",
+      "private": "Private"
+    },
+    "pricePosition": {
+      "above": "Above",
+      "below": "Below",
+      "equal": "Equal"
+    }
   }
 }

@@ -3058,5 +3058,53 @@
     "perTour": "Por Tour",
     "average": "Promedio",
     "byType": "Por Tipo de Tour"
+  },
+  "priceAnalysis": {
+    "title": "Análisis de Precios",
+    "listings": "Listados OTA",
+    "analysis": "Análisis",
+    "recommendations": "Recomendaciones",
+    "rules": "Reglas",
+    "loading": "Cargando...",
+    "noListings": "No se encontraron listados OTA",
+    "noAnalyses": "No se encontraron análisis de precios",
+    "platform": "Plataforma",
+    "roomType": "Tipo de Habitación",
+    "roomName": "Nombre de Habitación",
+    "listingUrl": "URL del Listado",
+    "status": "Estado",
+    "lastScraped": "Última Extracción",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "rateShopping": {
+      "run": "Iniciar Rate Shopping",
+      "started": "Rate Shopping iniciado"
+    },
+    "analysis": {
+      "title": "Análisis de Precios",
+      "run": "Iniciar Análisis de Precios",
+      "started": "Análisis de Precios iniciado",
+      "date": "Fecha",
+      "categoryId": "Categoría",
+      "roomType": "Tipo de Habitación",
+      "currentPrice": "Precio Actual",
+      "averagePrice": "Precio Promedio",
+      "minPrice": "Mín",
+      "maxPrice": "Máx",
+      "occupancyRate": "Ocupación",
+      "availableRooms": "Disponible",
+      "competitorPrice": "Competencia",
+      "pricePosition": "Posición",
+      "recommendations": "Recomendaciones"
+    },
+    "roomType": {
+      "dorm": "Dormitorio",
+      "private": "Privada"
+    },
+    "pricePosition": {
+      "above": "Arriba",
+      "below": "Abajo",
+      "equal": "Igual"
+    }
   }
 }
