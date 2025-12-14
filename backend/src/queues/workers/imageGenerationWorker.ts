@@ -30,7 +30,7 @@ export function createImageGenerationWorker(connection: any): Worker {
 
       logger.log(`[Image Generation Worker] Starte Bildgenerierung für Tour ${tourId} (Job ID: ${job.id})`);
 
-      let generatedImages: { mainImage: string; galleryImages: string[]; flyer: string } | null = null;
+      let generatedImages: { flyer: string; galleryImages: string[] } | null = null;
 
       try {
         // Aktualisiere Job-Status: processing
@@ -95,10 +95,11 @@ export function createImageGenerationWorker(connection: any): Worker {
 
         await job.updateProgress(50);
 
-        // Lade Hauptbild hoch (direkt, ohne HTTP)
-        if (generatedImages.mainImage && fs.existsSync(generatedImages.mainImage)) {
-          await TourImageUploadService.uploadImageDirectly(tourId, generatedImages.mainImage);
-          logger.log(`[Image Generation Worker] Hauptbild hochgeladen: ${generatedImages.mainImage}`);
+        // Lade Flyer als Hauptbild hoch (direkt, ohne HTTP)
+        // WICHTIG: Der Flyer wird als imageUrl gespeichert (ist das Hauptbild)
+        if (generatedImages.flyer && fs.existsSync(generatedImages.flyer)) {
+          await TourImageUploadService.uploadImageDirectly(tourId, generatedImages.flyer);
+          logger.log(`[Image Generation Worker] Flyer als Hauptbild hochgeladen: ${generatedImages.flyer}`);
         }
 
         await job.updateProgress(60);
@@ -155,15 +156,9 @@ export function createImageGenerationWorker(connection: any): Worker {
  * Bereinigt temporäre Dateien
  * Wird bei Erfolg UND Fehler aufgerufen
  */
-function cleanupTemporaryFiles(images: { mainImage: string; galleryImages: string[]; flyer: string }): void {
+function cleanupTemporaryFiles(images: { flyer: string; galleryImages: string[] }): void {
   try {
-    // Lösche Hauptbild
-    if (images.mainImage && fs.existsSync(images.mainImage)) {
-      fs.unlinkSync(images.mainImage);
-      logger.log(`[Image Generation Worker] Temporäre Datei gelöscht: ${images.mainImage}`);
-    }
-
-    // Lösche Galerie-Bilder
+    // Lösche Galerie-Bilder (werden bereits hochgeladen)
     images.galleryImages.forEach((img) => {
       if (fs.existsSync(img)) {
         fs.unlinkSync(img);
@@ -171,11 +166,8 @@ function cleanupTemporaryFiles(images: { mainImage: string; galleryImages: strin
       }
     });
 
-    // Lösche Flyer
-    if (images.flyer && fs.existsSync(images.flyer)) {
-      fs.unlinkSync(images.flyer);
-      logger.log(`[Image Generation Worker] Temporäre Datei gelöscht: ${images.flyer}`);
-    }
+    // Flyer wird NICHT gelöscht, da er bereits als imageUrl hochgeladen wurde
+    // Die Datei bleibt im uploads-Verzeichnis und wird von der Tour referenziert
   } catch (cleanupError: any) {
     logger.error('[Image Generation Worker] Fehler beim Cleanup temporärer Dateien:', cleanupError);
     // Fehler beim Cleanup ist nicht kritisch, nur loggen

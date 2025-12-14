@@ -29,6 +29,7 @@ interface AuthenticatedRequest extends Request {
 export const checkPermission = (entity: string, requiredAccess: 'read' | 'write', entityType: 'page' | 'table' | 'cerebro' | 'button' = 'page') => {
     return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
+            logger.log(`[checkPermission] 🔍 Prüfe Permission: Entity=${entity}, EntityType=${entityType}, RequiredAccess=${requiredAccess}, Path=${req.path}`);
             const userId = parseInt(req.userId, 10);
             const roleId = parseInt(req.roleId, 10);
 
@@ -37,23 +38,23 @@ export const checkPermission = (entity: string, requiredAccess: 'read' | 'write'
                 return res.status(401).json({ message: 'Nicht authentifiziert' });
             }
 
+            logger.log(`[checkPermission] ✅ Authentifiziert: UserId=${userId}, RoleId=${roleId}`);
+
             // Prüfe, ob der Benutzer die erforderliche Berechtigung hat
             const hasAccess = await checkUserPermission(userId, roleId, entity, requiredAccess, entityType);
 
             if (!hasAccess) {
                 logger.error(`[checkPermission] ❌ VERWEIGERT: Entity=${entity}, EntityType=${entityType}, UserId=${userId}, RoleId=${roleId}`);
-            }
-
-            if (!hasAccess) {
                 return res.status(403).json({ 
                     message: 'Zugriff verweigert',
                     details: `Keine ausreichenden Berechtigungen für ${entityType} ${entity}`
                 });
             }
 
+            logger.log(`[checkPermission] ✅ Permission erteilt für Entity=${entity}, EntityType=${entityType}`);
             next();
         } catch (error) {
-            logger.error('Fehler bei der Berechtigungsprüfung:', error);
+            logger.error('[checkPermission] ❌ Fehler bei der Berechtigungsprüfung:', error);
             res.status(500).json({ message: 'Interner Server-Fehler' });
         }
     };
