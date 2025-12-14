@@ -1205,9 +1205,10 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
           tour.organization?.logo || undefined
         );
 
-        // Lade Hauptbild hoch
-        if (generatedImages.mainImage && fs.existsSync(generatedImages.mainImage)) {
-          await TourImageUploadService.uploadImageDirectly(tourId, generatedImages.mainImage);
+        // Lade Flyer als Hauptbild hoch (der Flyer ist das Hauptbild)
+        if (generatedImages.flyer && fs.existsSync(generatedImages.flyer)) {
+          await TourImageUploadService.uploadImageDirectly(tourId, generatedImages.flyer);
+          logger.log(`[generateTourImages] Flyer als Hauptbild hochgeladen: ${generatedImages.flyer}`);
         }
 
         // Lade Galerie-Bilder hoch
@@ -1217,7 +1218,7 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
           }
         }
 
-        // Cleanup temporäre Dateien
+        // Cleanup temporäre Dateien (Galerie-Bilder, Flyer bleibt als imageUrl)
         cleanupTemporaryFiles(generatedImages);
 
         return res.json({
@@ -1325,19 +1326,18 @@ export const getTourImageGenerationStatus = async (req: Request, res: Response) 
 
 
 // Hilfsfunktion: Bereinigt temporäre Dateien
-function cleanupTemporaryFiles(images: { mainImage: string; galleryImages: string[]; flyer: string }): void {
+function cleanupTemporaryFiles(images: { flyer: string; galleryImages: string[] }): void {
   try {
-    if (images.mainImage && fs.existsSync(images.mainImage)) {
-      fs.unlinkSync(images.mainImage);
-    }
+    // Lösche Galerie-Bilder (werden bereits hochgeladen)
     images.galleryImages.forEach((img) => {
       if (fs.existsSync(img)) {
         fs.unlinkSync(img);
+        logger.log(`[cleanupTemporaryFiles] Temporäre Datei gelöscht: ${img}`);
       }
     });
-    if (images.flyer && fs.existsSync(images.flyer)) {
-      fs.unlinkSync(images.flyer);
-    }
+
+    // Flyer wird NICHT gelöscht, da er bereits als imageUrl hochgeladen wurde
+    // Die Datei bleibt im uploads-Verzeichnis und wird von der Tour referenziert
   } catch (error: any) {
     logger.error('[cleanupTemporaryFiles] Fehler:', error);
   }

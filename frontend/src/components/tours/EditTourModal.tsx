@@ -139,6 +139,25 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
         }
     };
     
+    const removeMainImage = async () => {
+        if (!tour?.imageUrl) return;
+        
+        try {
+            await axiosInstance.delete(API_ENDPOINTS.TOURS.DELETE_IMAGE(tour.id));
+            // Lade Tour neu
+            const response = await axiosInstance.get(API_ENDPOINTS.TOURS.BY_ID(tour.id));
+            if (response.data.success) {
+                onTourUpdated(response.data.data);
+                setImagePreview(null);
+                setImageFile(null);
+                showMessage(t('tours.imageDeleted', 'Hauptbild erfolgreich gelöscht'), 'success');
+            }
+        } catch (err: any) {
+            console.error('Fehler beim Löschen des Hauptbildes:', err);
+            showMessage(err.response?.data?.message || t('errors.deleteError'), 'error');
+        }
+    };
+    
     const removeGalleryImage = async (index: number) => {
         // Wenn es ein existierendes Bild ist (aus tour.galleryUrls), lösche es vom Server
         const currentGallery = tour.galleryUrls || [];
@@ -651,12 +670,20 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                                 />
                                 {imagePreview && (
-                                    <div className="mt-2">
+                                    <div className="mt-2 relative inline-block">
                                         <img
                                             src={imagePreview}
                                             alt="Vorschau"
                                             className="max-w-xs h-48 object-cover rounded-md border border-gray-300 dark:border-gray-600"
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={removeMainImage}
+                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                            title={t('tours.deleteImage', 'Hauptbild löschen')}
+                                        >
+                                            <XMarkIcon className="h-4 w-4" />
+                                        </button>
                                     </div>
                                 )}
                             </div>

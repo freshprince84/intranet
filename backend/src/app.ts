@@ -84,7 +84,22 @@ app.use(cors({
       return callback(null, true);
     }
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    // ✅ FIX: Erlaube alle Zugriffe auf die Produktions-URL, unabhängig von der Client-IP
+    // Dies stellt sicher, dass Login von allen Geräten funktioniert
+    if (origin === 'https://65.109.228.106.nip.io') {
+      return callback(null, true);
+    }
+    
+    // Prüfe ob Origin in der Liste der erlaubten Origins ist
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed.endsWith('://')) {
+        // Für Präfixe wie 'exp://' und 'app://'
+        return origin.startsWith(allowed);
+      }
+      return origin === allowed;
+    });
+    
+    if (isAllowed || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
       logger.warn(`Origin ${origin} ist nicht erlaubt durch CORS`);

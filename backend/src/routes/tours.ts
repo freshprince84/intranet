@@ -11,6 +11,7 @@ import {
   uploadTourImage,
   uploadTourGalleryImage,
   deleteTourGalleryImage,
+  deleteTourImage,
   getTourImage,
   getTourGalleryImage,
   generateTourImages,
@@ -47,6 +48,7 @@ router.post('/:id/generate-images', generateTourImages);
 
 // Bild-Upload-Routen
 router.post('/:id/image', tourImageUpload.single('image'), uploadTourImage);
+router.delete('/:id/image', deleteTourImage);
 router.post('/:id/gallery', tourImageUpload.single('image'), uploadTourGalleryImage);
 router.delete('/:id/gallery/:imageIndex', deleteTourGalleryImage);
 

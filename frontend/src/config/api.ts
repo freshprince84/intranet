@@ -105,6 +105,7 @@ export const API_ENDPOINTS = {
         EXPORT: '/tours/export',
         TOGGLE_ACTIVE: (id: number) => `/tours/${id}/toggle-active`,
         UPLOAD_IMAGE: (id: number) => `/tours/${id}/image`,
+        DELETE_IMAGE: (id: number) => `/tours/${id}/image`,
         UPLOAD_GALLERY: (id: number) => `/tours/${id}/gallery`,
         DELETE_GALLERY_IMAGE: (id: number, imageIndex: number) => `/tours/${id}/gallery/${imageIndex}`,
         GENERATE_IMAGES: (id: number) => `/tours/${id}/generate-images`,

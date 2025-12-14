@@ -487,6 +487,8 @@ export class GeminiImageService {
   /**
    * Generiert mehrere Bilder für eine Tour
    * Wrapper um generateImages() mit Tour-spezifischen Einstellungen
+   * 
+   * WICHTIG: Der Flyer wird als Hauptbild (imageUrl) verwendet, nicht mainImage!
    */
   static async generateTourImages(
     tourId: number,
@@ -495,7 +497,7 @@ export class GeminiImageService {
     apiKey?: string,
     branding?: BrandingInfo,
     logoBase64?: string
-  ): Promise<{ mainImage: string; galleryImages: string[]; flyer: string }> {
+  ): Promise<{ flyer: string; galleryImages: string[] }> {
     const TOURS_UPLOAD_DIR = path.join(__dirname, '../../uploads/tours');
     
     const config: ImageGenerationConfig = {
@@ -505,7 +507,7 @@ export class GeminiImageService {
       description: tourDescription,
       outputDir: TOURS_UPLOAD_DIR,
       filenamePattern: `tour-${tourId}-{type}-{timestamp}.png`,
-      imageTypes: ['main', 'gallery', 'flyer'],
+      imageTypes: ['gallery', 'flyer'], // Nur Flyer + Galerie, kein mainImage mehr
       apiKey,
       branding,
       logoBase64
@@ -513,15 +515,14 @@ export class GeminiImageService {
 
     const result = await this.generateImages(config);
 
-    // Type-Safety: Stelle sicher, dass alle Bilder vorhanden sind
-    if (!result.mainImage || !result.flyer || result.galleryImages.length === 0) {
+    // Type-Safety: Stelle sicher, dass Flyer und Galerie-Bilder vorhanden sind
+    if (!result.flyer || result.galleryImages.length === 0) {
       throw new Error('Nicht alle Bilder konnten generiert werden');
     }
 
     return {
-      mainImage: result.mainImage,
-      galleryImages: result.galleryImages,
-      flyer: result.flyer
+      flyer: result.flyer,
+      galleryImages: result.galleryImages
     };
   }
 }
