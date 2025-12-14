@@ -111,8 +111,15 @@ router.post('/', [
       }
 
       logger.log('Dokumentdaten erfolgreich extrahiert:', documentData);
-      // Sende die Dokumentdaten zurück
-      return res.json(documentData);
+      // Sende die Dokumentdaten zurück (inkl. User-Daten)
+      return res.json({
+        ...documentData,
+        firstName: documentData.firstName,
+        lastName: documentData.lastName,
+        birthday: documentData.birthday,
+        gender: documentData.gender,
+        country: documentData.issuingCountry || documentData.country
+      });
     } catch (openaiError: any) {
       logger.error('Fehler bei der Anfrage an OpenAI:', openaiError.message);
       logger.error('OpenAI Status:', openaiError.response?.status);

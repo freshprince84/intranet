@@ -5,7 +5,7 @@ import useMessage from '../../hooks/useMessage.ts';
 import { useError } from '../../contexts/ErrorContext.tsx';
 import { useBranch } from '../../contexts/BranchContext.tsx';
 import { API_ENDPOINTS } from '../../config/api.ts';
-import axios from 'axios';
+import axiosInstance from '../../config/axios.ts';
 
 interface PricingRule {
     id: number;
@@ -68,7 +68,7 @@ const PricingRulesTab: React.FC = () => {
 
         setLoading(true);
         try {
-            const response = await axios.get(API_ENDPOINTS.PRICE_ANALYSIS.RULES.BASE, {
+            const response = await axiosInstance.get(API_ENDPOINTS.PRICE_ANALYSIS.RULES.BASE, {
                 params: {
                     branchId: currentBranch.id
                 }
@@ -117,7 +117,7 @@ const PricingRulesTab: React.FC = () => {
         }
 
         try {
-            await axios.delete(API_ENDPOINTS.PRICE_ANALYSIS.RULES.BY_ID(ruleId));
+            await axiosInstance.delete(API_ENDPOINTS.PRICE_ANALYSIS.RULES.BY_ID(ruleId));
             showMessage(t('priceAnalysis.rules.deleted', 'Regel gelöscht'), 'success');
             loadRules();
         } catch (error: any) {
@@ -157,10 +157,10 @@ const PricingRulesTab: React.FC = () => {
             };
 
             if (editingRule) {
-                await axios.put(API_ENDPOINTS.PRICE_ANALYSIS.RULES.BY_ID(editingRule.id), payload);
+                await axiosInstance.put(API_ENDPOINTS.PRICE_ANALYSIS.RULES.BY_ID(editingRule.id), payload);
                 showMessage(t('priceAnalysis.rules.updated', 'Regel aktualisiert'), 'success');
             } else {
-                await axios.post(API_ENDPOINTS.PRICE_ANALYSIS.RULES.BASE, payload);
+                await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.RULES.BASE, payload);
                 showMessage(t('priceAnalysis.rules.created', 'Regel erstellt'), 'success');
             }
 

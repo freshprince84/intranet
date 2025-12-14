@@ -1898,6 +1898,8 @@ async function main() {
           
           // Standard-Filter für Todo Analytics (todo-analytics-table)
           const todoAnalyticsTableId = 'todo-analytics-table';
+          
+          // "Alle" Filter
           await prisma.savedFilter.upsert({
             where: {
               userId_tableId_name: {
@@ -1919,8 +1921,50 @@ async function main() {
             }
           });
           
+          // "Eigene Aufgaben - Diese Woche" Filter
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: todoAnalyticsTableId,
+                name: 'Eigene Aufgaben - Diese Woche'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'responsible', operator: 'equals', value: `user-${userId}` },
+                { column: 'qualityControl', operator: 'equals', value: `user-${userId}` },
+                { column: 'createdAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'createdAt', operator: 'before', value: '__WEEK_END__' },
+                { column: 'updatedAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'updatedAt', operator: 'before', value: '__WEEK_END__' },
+                { column: 'deletedAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'deletedAt', operator: 'before', value: '__WEEK_END__' }
+              ]),
+              operators: JSON.stringify(['OR', 'AND', 'AND', 'OR', 'AND', 'OR', 'AND'])
+            },
+            create: {
+              userId,
+              tableId: todoAnalyticsTableId,
+              name: 'Eigene Aufgaben - Diese Woche',
+              conditions: JSON.stringify([
+                { column: 'responsible', operator: 'equals', value: `user-${userId}` },
+                { column: 'qualityControl', operator: 'equals', value: `user-${userId}` },
+                { column: 'createdAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'createdAt', operator: 'before', value: '__WEEK_END__' },
+                { column: 'updatedAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'updatedAt', operator: 'before', value: '__WEEK_END__' },
+                { column: 'deletedAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'deletedAt', operator: 'before', value: '__WEEK_END__' }
+              ]),
+              operators: JSON.stringify(['OR', 'AND', 'AND', 'OR', 'AND', 'OR', 'AND'])
+            }
+          });
+          
           // Standard-Filter für Request Analytics (request-analytics-table)
           const requestAnalyticsTableId = 'request-analytics-table';
+          
+          // "Alle" Filter
           await prisma.savedFilter.upsert({
             where: {
               userId_tableId_name: {
@@ -1939,6 +1983,46 @@ async function main() {
               name: 'Alle',
               conditions: JSON.stringify([]),
               operators: JSON.stringify([])
+            }
+          });
+          
+          // "Eigene Requests - Diese Woche" Filter
+          await prisma.savedFilter.upsert({
+            where: {
+              userId_tableId_name: {
+                userId,
+                tableId: requestAnalyticsTableId,
+                name: 'Eigene Requests - Diese Woche'
+              }
+            },
+            update: {
+              conditions: JSON.stringify([
+                { column: 'requestedBy', operator: 'equals', value: `user-${userId}` },
+                { column: 'responsible', operator: 'equals', value: `user-${userId}` },
+                { column: 'createdAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'createdAt', operator: 'before', value: '__WEEK_END__' },
+                { column: 'updatedAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'updatedAt', operator: 'before', value: '__WEEK_END__' },
+                { column: 'deletedAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'deletedAt', operator: 'before', value: '__WEEK_END__' }
+              ]),
+              operators: JSON.stringify(['OR', 'AND', 'AND', 'OR', 'AND', 'OR', 'AND'])
+            },
+            create: {
+              userId,
+              tableId: requestAnalyticsTableId,
+              name: 'Eigene Requests - Diese Woche',
+              conditions: JSON.stringify([
+                { column: 'requestedBy', operator: 'equals', value: `user-${userId}` },
+                { column: 'responsible', operator: 'equals', value: `user-${userId}` },
+                { column: 'createdAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'createdAt', operator: 'before', value: '__WEEK_END__' },
+                { column: 'updatedAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'updatedAt', operator: 'before', value: '__WEEK_END__' },
+                { column: 'deletedAt', operator: 'after', value: '__WEEK_START__' },
+                { column: 'deletedAt', operator: 'before', value: '__WEEK_END__' }
+              ]),
+              operators: JSON.stringify(['OR', 'AND', 'AND', 'OR', 'AND', 'OR', 'AND'])
             }
           });
           
@@ -2106,15 +2190,17 @@ async function main() {
         // Tabellen für die Filter
         const tables = [
           { id: 'requests-table', name: 'Requests' },
-          { id: 'worktracker-todos', name: 'ToDos' }
+          { id: 'worktracker-todos', name: 'ToDos' },
+          { id: 'todo-analytics-table', name: 'Todo Analytics' },
+          { id: 'request-analytics-table', name: 'Request Analytics' }
         ];
 
         for (const table of tables) {
           // Erstelle oder hole Filter-Gruppen
           // WICHTIG: Roles-Gruppe wird nur erstellt wenn auch Rollen-Filter erstellt werden (nicht bei Requests)
           let rolesGroup: any = null;
-          if (table.id === 'worktracker-todos') {
-            // Nur für Tasks: Roles-Gruppe erstellen
+          if (table.id === 'worktracker-todos' || table.id === 'todo-analytics-table') {
+            // Nur für Tasks und Todo Analytics: Roles-Gruppe erstellen
             rolesGroup = await prisma.filterGroup.findFirst({
               where: {
                 userId,
@@ -2171,8 +2257,8 @@ async function main() {
             console.log(`  ✅ Filter-Gruppe "${groupNames.users}" für ${table.name} erstellt`);
           }
 
-          // Erstelle Filter für jede Rolle (nur für Tasks, nicht für Requests)
-          if (table.id === 'worktracker-todos' && rolesGroup) {
+          // Erstelle Filter für jede Rolle (nur für Tasks und Todo Analytics, nicht für Requests)
+          if ((table.id === 'worktracker-todos' || table.id === 'todo-analytics-table') && rolesGroup) {
             for (const role of roles) {
               const filterName = role.name;
               
@@ -2187,12 +2273,23 @@ async function main() {
               });
 
               if (!existingFilter) {
-                // ToDos: responsible = role UND status != done
-                const conditions = [
-                  { column: 'responsible', operator: 'equals', value: `role-${role.id}` },
-                  { column: 'status', operator: 'notEquals', value: 'done' }
-                ];
-                const operators: string[] = ['AND'];
+                let conditions: any[] = [];
+                let operators: string[] = [];
+                
+                if (table.id === 'worktracker-todos') {
+                  // ToDos: responsible = role UND status != done
+                  conditions = [
+                    { column: 'responsible', operator: 'equals', value: `role-${role.id}` },
+                    { column: 'status', operator: 'notEquals', value: 'done' }
+                  ];
+                  operators = ['AND'];
+                } else if (table.id === 'todo-analytics-table') {
+                  // Todo Analytics: responsible = role (keine Status-Filterung, da Analytics alle Status zeigt)
+                  conditions = [
+                    { column: 'responsible', operator: 'equals', value: `role-${role.id}` }
+                  ];
+                  operators = [];
+                }
 
                 // Finde die höchste order-Nummer in der Gruppe
                 const maxOrder = await prisma.savedFilter.findFirst({
@@ -2257,6 +2354,20 @@ async function main() {
                   { column: 'status', operator: 'notEquals', value: 'done' }
                 ];
                 operators = ['OR', 'AND'];
+              } else if (table.id === 'todo-analytics-table') {
+                // Todo Analytics: responsible = user ODER qualityControl = user (keine Status-Filterung, da Analytics alle Status zeigt)
+                conditions = [
+                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` }
+                ];
+                operators = ['OR'];
+              } else if (table.id === 'request-analytics-table') {
+                // Request Analytics: requestedBy = user ODER responsible = user (keine Status-Filterung, da Analytics alle Status zeigt)
+                conditions = [
+                  { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` }
+                ];
+                operators = ['OR'];
               }
 
               // Finde die höchste order-Nummer in der Gruppe

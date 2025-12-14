@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useError } from '../../contexts/ErrorContext.tsx';
 import { useBranch } from '../../contexts/BranchContext.tsx';
 import { API_ENDPOINTS } from '../../config/api.ts';
-import axios from 'axios';
+import axiosInstance from '../../config/axios.ts';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 interface OTAListing {
     id: number;
@@ -34,21 +35,6 @@ interface OTAPriceData {
     source: string | null;
 }
 
-interface RateShoppingJob {
-    id: number;
-    branchId: number;
-    platform: string;
-    status: string;
-    startDate: string;
-    endDate: string;
-    listingsFound: number;
-    pricesCollected: number;
-    errors: any;
-    startedAt: string | null;
-    completedAt: string | null;
-    createdAt: string;
-}
-
 const OTAListingsTab: React.FC = () => {
     const { t } = useTranslation();
     const { hasPermission } = usePermissions();
@@ -66,19 +52,14 @@ const OTAListingsTab: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [rateShoppingLoading, setRateShoppingLoading] = useState(false);
     const [selectedPlatform, setSelectedPlatform] = useState<string>('booking.com');
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    useEffect(() => {
-        if (currentBranch) {
-            loadListings();
-        }
-    }, [currentBranch]);
-
-    const loadListings = async () => {
+    const loadListings = useCallback(async () => {
         if (!currentBranch) return;
 
         setLoading(true);
         try {
-            const response = await axios.get(API_ENDPOINTS.PRICE_ANALYSIS.OTA.LISTINGS, {
+            const response = await axiosInstance.get(API_ENDPOINTS.PRICE_ANALYSIS.OTA.LISTINGS, {
                 params: {
                     branchId: currentBranch.id
                 }
@@ -89,9 +70,21 @@ const OTAListingsTab: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentBranch, handleError]);
 
-    const handleRunRateShopping = async () => {
+    useEffect(() => {
+        if (currentBranch) {
+            loadListings();
+        }
+        
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, [currentBranch, loadListings]);
+
+    const handleRunRateShopping = useCallback(async () => {
         if (!currentBranch) return;
 
         if (!hasPermission('price_analysis_run_rate_shopping', 'write', 'button')) {
@@ -105,7 +98,7 @@ const OTAListingsTab: React.FC = () => {
             const endDate = new Date();
             endDate.setMonth(endDate.getMonth() + 3);
 
-            await axios.post(API_ENDPOINTS.PRICE_ANALYSIS.OTA.RATE_SHOPPING, {
+            await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.OTA.RATE_SHOPPING, {
                 branchId: currentBranch.id,
                 platform: selectedPlatform,
                 startDate: startDate.toISOString().split('T')[0],
@@ -115,7 +108,10 @@ const OTAListingsTab: React.FC = () => {
             showMessage(t('priceAnalysis.rateShopping.started', 'Rate Shopping gestartet'), 'success');
             
             // Lade Listings nach kurzer Verzögerung neu
-            setTimeout(() => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(() => {
                 loadListings();
             }, 2000);
         } catch (error: any) {
@@ -123,72 +119,105 @@ const OTAListingsTab: React.FC = () => {
         } finally {
             setRateShoppingLoading(false);
         }
-    };
+    }, [currentBranch, selectedPlatform, hasPermission, showMessage, t, handleError, loadListings]);
 
     if (loading) {
-        return <div>{t('priceAnalysis.loading')}</div>;
+        return (
+            <div className="text-center py-4">
+                {t('priceAnalysis.loading')}
+            </div>
+        );
     }
 
     return (
-        <div>
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+            <div className="mb-4 flex items-center gap-2">
                 <select
                     value={selectedPlatform}
                     onChange={(e) => setSelectedPlatform(e.target.value)}
-                    style={{ padding: '8px' }}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
                 >
                     <option value="booking.com">Booking.com</option>
                     <option value="hostelworld.com">Hostelworld</option>
                 </select>
-                <button
-                    onClick={handleRunRateShopping}
-                    disabled={rateShoppingLoading || !hasPermission('price_analysis_run_rate_shopping', 'write', 'button')}
-                    style={{
-                        padding: '8px 16px',
-                        background: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: rateShoppingLoading ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    {rateShoppingLoading ? t('priceAnalysis.loading') : t('priceAnalysis.rateShopping.run', 'Rate Shopping starten')}
-                </button>
+                <div className="relative group">
+                    <button
+                        onClick={handleRunRateShopping}
+                        disabled={rateShoppingLoading || !hasPermission('price_analysis_run_rate_shopping', 'write', 'button')}
+                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={t('priceAnalysis.rateShopping.run', 'Rate Shopping starten')}
+                    >
+                        <ArrowPathIcon className={`h-5 w-5 ${rateShoppingLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('priceAnalysis.rateShopping.run', 'Rate Shopping starten')}
+                    </div>
+                </div>
             </div>
 
             {listings.length === 0 ? (
-                <div>{t('priceAnalysis.noListings')}</div>
+                <div className="text-center py-4 text-gray-600 dark:text-gray-400">
+                    {t('priceAnalysis.noListings')}
+                </div>
             ) : (
-                <div>
-                    <h3>{t('priceAnalysis.listings')}</h3>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-800">
                             <tr>
-                                <th style={{ border: '1px solid #ddd', padding: '8px' }}>{t('priceAnalysis.platform')}</th>
-                                <th style={{ border: '1px solid #ddd', padding: '8px' }}>{t('priceAnalysis.roomType')}</th>
-                                <th style={{ border: '1px solid #ddd', padding: '8px' }}>{t('priceAnalysis.roomName')}</th>
-                                <th style={{ border: '1px solid #ddd', padding: '8px' }}>{t('priceAnalysis.listingUrl')}</th>
-                                <th style={{ border: '1px solid #ddd', padding: '8px' }}>{t('priceAnalysis.status')}</th>
-                                <th style={{ border: '1px solid #ddd', padding: '8px' }}>{t('priceAnalysis.lastScraped')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                    {t('priceAnalysis.platform')}
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                    {t('priceAnalysis.roomType')}
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                    {t('priceAnalysis.roomName')}
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                    {t('priceAnalysis.listingUrl')}
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                    {t('priceAnalysis.status')}
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                    {t('priceAnalysis.lastScraped')}
+                                </th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                             {listings.map((listing) => (
-                                <tr key={listing.id}>
-                                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{listing.platform}</td>
-                                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{listing.roomType}</td>
-                                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{listing.roomName || '-'}</td>
-                                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
+                                <tr key={listing.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                        {listing.platform}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                        {listing.roomType}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                        {listing.roomName || '-'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                         {listing.listingUrl ? (
-                                            <a href={listing.listingUrl} target="_blank" rel="noopener noreferrer">
+                                            <a 
+                                                href={listing.listingUrl} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                            >
                                                 {t('common.view')}
                                             </a>
                                         ) : '-'}
                                     </td>
-                                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                                        {listing.isActive ? t('priceAnalysis.active') : t('priceAnalysis.inactive')}
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                            listing.isActive 
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                        }`}>
+                                            {listing.isActive ? t('priceAnalysis.active') : t('priceAnalysis.inactive')}
+                                        </span>
                                     </td>
-                                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                         {listing.priceData.length > 0
                                             ? new Date(listing.priceData[0].scrapedAt).toLocaleDateString()
                                             : '-'}
@@ -204,4 +233,3 @@ const OTAListingsTab: React.FC = () => {
 };
 
 export default OTAListingsTab;
-

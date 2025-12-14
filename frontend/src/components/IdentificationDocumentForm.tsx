@@ -36,6 +36,13 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isRecognizing, setIsRecognizing] = useState<boolean>(false);
   const [recognitionError, setRecognitionError] = useState<string | null>(null);
+  const [recognizedUserData, setRecognizedUserData] = useState<{
+    firstName?: string;
+    lastName?: string;
+    birthday?: string;
+    gender?: string;
+    country?: string;
+  } | null>(null);
   
   const { showMessage } = useMessage();
   
@@ -130,6 +137,17 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
         setIssuingAuthority(recognizedData.issuingAuthority);
       }
       
+      // User-Daten aus erkannten Daten extrahieren
+      const userData = {
+        firstName: recognizedData.firstName,
+        lastName: recognizedData.lastName,
+        birthday: recognizedData.birthday,
+        gender: recognizedData.gender,
+        country: recognizedData.issuingCountry || recognizedData.country
+      };
+      
+      setRecognizedUserData(userData);
+      
       // Erfolgsmeldung anzeigen
       showMessage(t('identificationDocuments.form.recognitionSuccess'), 'success');
       
@@ -204,6 +222,16 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
           if (issueDate) formData.append('issueDate', issueDate);
           if (expiryDate) formData.append('expiryDate', expiryDate);
           if (issuingAuthority) formData.append('issuingAuthority', issuingAuthority);
+          
+          // User-Daten an FormData anhängen
+          if (recognizedUserData) {
+            if (recognizedUserData.firstName) formData.append('firstName', recognizedUserData.firstName);
+            if (recognizedUserData.lastName) formData.append('lastName', recognizedUserData.lastName);
+            if (recognizedUserData.birthday) formData.append('birthday', recognizedUserData.birthday);
+            if (recognizedUserData.gender) formData.append('gender', recognizedUserData.gender);
+            if (recognizedUserData.country) formData.append('country', recognizedUserData.country);
+          }
+          
           formData.append('documentFile', file);
           
           await idDocApi.addDocumentWithFile(userId, formData);
@@ -218,7 +246,12 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
               issuingCountry,
               issueDate,
               expiryDate,
-              issuingAuthority
+              issuingAuthority,
+              firstName: recognizedUserData?.firstName,
+              lastName: recognizedUserData?.lastName,
+              birthday: recognizedUserData?.birthday,
+              gender: recognizedUserData?.gender,
+              country: recognizedUserData?.country
             }
           );
         } else {

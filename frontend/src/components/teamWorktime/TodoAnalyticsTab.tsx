@@ -203,18 +203,15 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
           }
         }
         
-        // Filter aus Bedingungen anwenden
-        filterConditions.forEach(condition => {
-          if (condition.column === 'branch' && condition.value) {
-            params.branchId = condition.value;
-          }
-          if (condition.column === 'responsible' && condition.value) {
-            params.userId = condition.value;
-          }
-          if (condition.column === 'status' && condition.value) {
-            // Status-Filter würde hier angewendet werden, falls Backend es unterstützt
-          }
-        });
+        // Filter-Bedingungen als JSON-String senden
+        if (selectedFilterId) {
+          params.filterId = selectedFilterId;
+        } else if (filterConditions.length > 0) {
+          params.filterConditions = JSON.stringify({
+            conditions: filterConditions,
+            operators: filterLogicalOperators
+          });
+        }
         
         const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ANALYTICS.TODOS_CHRONOLOGICAL, {
           params
@@ -316,7 +313,8 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       const filters = await loadFilters(TODO_ANALYTICS_TABLE_ID);
       
       // 2. Default-Filter anwenden (IMMER vorhanden!)
-      const defaultFilter = filters.find(f => f.name === 'Alle');
+      // Versuche zuerst "Eigene Aufgaben - Diese Woche", dann Fallback auf "Alle"
+      const defaultFilter = filters.find(f => f.name === 'Eigene Aufgaben - Diese Woche') || filters.find(f => f.name === 'Alle');
       if (defaultFilter) {
         await handleFilterChange(
           defaultFilter.name,

@@ -510,7 +510,23 @@
     "cancel": "Abbrechen",
     "filterCreated": "Alle-Filter für Branches erstellt",
     "createStandardFiltersError": "Fehler beim Erstellen der Standard-Filter",
-    "setInitialFilterError": "Fehler beim Setzen des initialen Filters"
+    "setInitialFilterError": "Fehler beim Setzen des initialen Filters",
+    "roomDescriptions": {
+      "title": "Zimmer-Beschreibungen",
+      "description": "Beschreibungen, wie man zu den Zimmern kommt. Diese werden in den Check-in-Nachrichten verwendet.",
+      "dorm": "Dorm",
+      "private": "Privatzimmer",
+      "categoryId": "Category ID",
+      "text": "Text",
+      "textPlaceholder": "Beschreibung, wie man zum Zimmer kommt...",
+      "imageUrl": "Bild-URL",
+      "videoUrl": "Video-URL",
+      "image": "Bild",
+      "video": "Video",
+      "noDescription": "Keine Beschreibung vorhanden",
+      "noRooms": "Keine Zimmer gefunden. Importieren Sie zuerst Reservierungen aus LobbyPMS.",
+      "saveError": "Fehler beim Speichern der Beschreibung"
+    }
   },
   "users": {
     "title": "Benutzer",
@@ -3032,6 +3048,17 @@
       "inactive": "Inaktive",
       "all": "Alle"
     },
+    "imageLightbox": {
+      "title": "Bild {{current}} von {{total}}",
+      "close": "Schließen",
+      "previous": "Vorheriges Bild",
+      "next": "Nächstes Bild",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "zoomReset": "Zoom zurücksetzen",
+      "loading": "Bild wird geladen...",
+      "error": "Bild konnte nicht geladen werden"
+    },
     "validation": {
       "titleMinLength": "Titel muss mindestens 3 Zeichen lang sein",
       "maxParticipantsMin": "Maximale Teilnehmeranzahl muss >= minimale Teilnehmeranzahl sein",
@@ -3143,9 +3170,9 @@
   "priceAnalysis": {
     "title": "Preisanalyse",
     "listings": "OTA-Listings",
-    "analysis": "Analyse",
-    "recommendations": "Empfehlungen",
-    "rules": "Regeln",
+    "tabAnalysis": "Analyse",
+    "tabRecommendations": "Empfehlungen",
+    "tabRules": "Regeln",
     "loading": "Lädt...",
     "noListings": "Keine OTA-Listings gefunden",
     "noAnalyses": "Keine Preisanalysen gefunden",

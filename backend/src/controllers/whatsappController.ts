@@ -217,31 +217,77 @@ export const handleWebhook = async (req: Request, res: Response) => {
           logger.log('[WhatsApp Webhook] Antwort generiert:', response.substring(0, 100) + '...');
           logger.log('[WhatsApp Webhook] Vollständige Antwort:', response);
 
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'whatsappController.ts:218',message:'AI-Antwort analysiert',data:{responseLength:response.length,containsImageMarkdown:/!\[.*?\]\(.*?\)/.test(response),imageMatches:Array.from(response.matchAll(/!\[(.*?)\]\((.*?)\)/g)).map(m=>m[2])},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-
           // 4. Sende Antwort
           logger.log('[WhatsApp Webhook] Erstelle WhatsApp Service für Branch', branchId);
           const whatsappService = await WhatsAppService.getServiceForBranch(branchId);
           
           logger.log('[WhatsApp Webhook] Sende Antwort an', fromNumber, isGroupMessage ? `(Gruppe: ${groupId})` : '');
           
-          // #region agent log
+          // Extrahiere Bildreferenzen aus AI-Antwort (Markdown-Format: ![alt](url))
           const imageMatches = Array.from(response.matchAll(/!\[(.*?)\]\((.*?)\)/g));
-          fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'whatsappController.ts:227',message:'Vor sendMessage - Bildreferenzen gefunden',data:{imageCount:imageMatches.length,images:imageMatches.map(m=>({alt:m[1],url:m[2]})),willSendAsText:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-
-          // Für Gruppen: Sende mit group_id, für Einzel-Chats: normale Nachricht
-          if (isGroupMessage && groupId) {
-            await whatsappService.sendMessage(fromNumber, response, undefined, groupId);
+          
+          if (imageMatches.length > 0) {
+            logger.log(`[WhatsApp Webhook] ${imageMatches.length} Bildreferenzen gefunden, sende separat`);
+            
+            // Entferne Bildreferenzen aus Text-Nachricht
+            let textMessage = response;
+            imageMatches.forEach(match => {
+              textMessage = textMessage.replace(match[0], '').trim();
+            });
+            
+            // Sende Text-Nachricht (ohne Bilder)
+            if (textMessage.trim().length > 0) {
+              if (isGroupMessage && groupId) {
+                await whatsappService.sendMessage(fromNumber, textMessage, undefined, groupId);
+              } else {
+                await whatsappService.sendMessage(fromNumber, textMessage);
+              }
+            }
+            
+            // Sende Bilder separat
+            const baseUrl = process.env.SERVER_URL || process.env.API_URL || 'https://65.109.228.106.nip.io';
+            
+            for (const match of imageMatches) {
+              const imageUrl = match[2]; // URL aus Markdown
+              const caption = match[1] || undefined; // Alt-Text als Caption
+              
+              // Konvertiere relative URLs zu absoluten HTTPS-URLs
+              let publicImageUrl = imageUrl;
+              if (imageUrl.startsWith('/uploads/tours/')) {
+                // Konvertiere /uploads/tours/tour-1-main-xxx.png zu /api/tours/{id}/image
+                const filename = imageUrl.split('/').pop() || '';
+                const tourIdMatch = filename.match(/tour-(\d+)-main-/);
+                if (tourIdMatch) {
+                  const tourId = tourIdMatch[1];
+                  publicImageUrl = `${baseUrl}/api/tours/${tourId}/image`;
+                } else {
+                  // Fallback: direkte URL
+                  publicImageUrl = `${baseUrl}${imageUrl}`;
+                }
+              } else if (imageUrl.startsWith('/api/tours/')) {
+                // Bereits API-URL, füge nur Base-URL hinzu
+                publicImageUrl = `${baseUrl}${imageUrl}`;
+              } else if (!imageUrl.startsWith('http')) {
+                // Relative URL ohne /uploads
+                publicImageUrl = `${baseUrl}${imageUrl}`;
+              }
+              
+              try {
+                logger.log(`[WhatsApp Webhook] Sende Bild: ${publicImageUrl}`);
+                await whatsappService.sendImage(fromNumber, publicImageUrl, caption);
+              } catch (imageError: any) {
+                logger.error(`[WhatsApp Webhook] Fehler beim Senden des Bildes:`, imageError);
+                // Weiter mit nächstem Bild
+              }
+            }
           } else {
-            await whatsappService.sendMessage(fromNumber, response);
+            // Keine Bilder, sende nur Text
+            if (isGroupMessage && groupId) {
+              await whatsappService.sendMessage(fromNumber, response, undefined, groupId);
+            } else {
+              await whatsappService.sendMessage(fromNumber, response);
+            }
           }
-
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'whatsappController.ts:233',message:'Nach sendMessage - nur Text gesendet',data:{imageCount:imageMatches.length,imagesNotSent:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
 
           logger.log('[WhatsApp Webhook] ✅ Antwort erfolgreich gesendet');
 

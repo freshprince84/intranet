@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import useMessage from '../hooks/useMessage.ts';
-import { useError } from '../contexts/ErrorContext.tsx';
 import OTAListingsTab from '../components/priceAnalysis/OTAListingsTab.tsx';
 import AnalysisTab from '../components/priceAnalysis/AnalysisTab.tsx';
 import PriceRecommendationsTab from '../components/priceAnalysis/PriceRecommendationsTab.tsx';
@@ -11,103 +9,94 @@ import PricingRulesTab from '../components/priceAnalysis/PricingRulesTab.tsx';
 const PriceAnalysis: React.FC = () => {
     const { t } = useTranslation();
     const { hasPermission, loading: permissionsLoading } = usePermissions();
-    const { showMessage } = useMessage();
-    const errorContext = useError();
-    const handleError = errorContext?.handleError || ((err: any) => {
-        console.error('Fehler:', err);
-        const errorMessage = err?.response?.data?.message || err?.message || 'Ein Fehler ist aufgetreten';
-        showMessage(errorMessage, 'error');
-    });
 
     const [activeTab, setActiveTab] = useState<'listings' | 'analysis' | 'recommendations' | 'rules'>('listings');
 
     // Prüfe Berechtigung
     if (permissionsLoading) {
-        return <div>Lädt...</div>;
+        return (
+            <div className="p-6 text-center">
+                {t('common.loading', { defaultValue: 'Lädt...' })}
+            </div>
+        );
     }
 
     if (!hasPermission('price_analysis', 'read', 'page')) {
         return (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-                <h2>{t('common.error')}</h2>
-                <p>{t('common.noPermission')}</p>
+            <div className="p-6 text-center">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                    {t('common.error')}
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                    {t('common.noPermission')}
+                </p>
             </div>
         );
     }
 
     return (
-        <div style={{ padding: '20px' }}>
-                <h1>{t('priceAnalysis.title')}</h1>
-                
-                {/* Tabs */}
-                <div style={{ 
-                    borderBottom: '1px solid #ddd', 
-                    marginBottom: '20px',
-                    display: 'flex',
-                    gap: '20px'
-                }}>
+        <div className="p-6">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
+                {t('priceAnalysis.title')}
+            </h1>
+            
+            {/* Tabs */}
+            <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+                <nav className="-mb-px flex space-x-2 overflow-x-auto">
                     <button
+                        type="button"
                         onClick={() => setActiveTab('listings')}
-                        style={{
-                            padding: '10px 20px',
-                            border: 'none',
-                            background: activeTab === 'listings' ? '#007bff' : 'transparent',
-                            color: activeTab === 'listings' ? 'white' : '#333',
-                            cursor: 'pointer',
-                            borderBottom: activeTab === 'listings' ? '2px solid #007bff' : '2px solid transparent'
-                        }}
+                        className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
+                            activeTab === 'listings'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
                     >
                         {t('priceAnalysis.listings')}
                     </button>
                     <button
+                        type="button"
                         onClick={() => setActiveTab('analysis')}
-                        style={{
-                            padding: '10px 20px',
-                            border: 'none',
-                            background: activeTab === 'analysis' ? '#007bff' : 'transparent',
-                            color: activeTab === 'analysis' ? 'white' : '#333',
-                            cursor: 'pointer',
-                            borderBottom: activeTab === 'analysis' ? '2px solid #007bff' : '2px solid transparent'
-                        }}
+                        className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
+                            activeTab === 'analysis'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
                     >
-                        {t('priceAnalysis.analysis')}
+                        {t('priceAnalysis.tabAnalysis')}
                     </button>
                     <button
+                        type="button"
                         onClick={() => setActiveTab('recommendations')}
-                        style={{
-                            padding: '10px 20px',
-                            border: 'none',
-                            background: activeTab === 'recommendations' ? '#007bff' : 'transparent',
-                            color: activeTab === 'recommendations' ? 'white' : '#333',
-                            cursor: 'pointer',
-                            borderBottom: activeTab === 'recommendations' ? '2px solid #007bff' : '2px solid transparent'
-                        }}
+                        className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
+                            activeTab === 'recommendations'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
                     >
-                        {t('priceAnalysis.recommendations')}
+                        {t('priceAnalysis.tabRecommendations')}
                     </button>
                     <button
+                        type="button"
                         onClick={() => setActiveTab('rules')}
-                        style={{
-                            padding: '10px 20px',
-                            border: 'none',
-                            background: activeTab === 'rules' ? '#007bff' : 'transparent',
-                            color: activeTab === 'rules' ? 'white' : '#333',
-                            cursor: 'pointer',
-                            borderBottom: activeTab === 'rules' ? '2px solid #007bff' : '2px solid transparent'
-                        }}
+                        className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
+                            activeTab === 'rules'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
                     >
-                        {t('priceAnalysis.rules')}
+                        {t('priceAnalysis.tabRules')}
                     </button>
-                </div>
-
-                {/* Tab Content */}
-                {activeTab === 'listings' && <OTAListingsTab />}
-                {activeTab === 'analysis' && <AnalysisTab />}
-                {activeTab === 'recommendations' && <PriceRecommendationsTab />}
-                {activeTab === 'rules' && <PricingRulesTab />}
+                </nav>
             </div>
+
+            {/* Tab Content */}
+            {activeTab === 'listings' && <OTAListingsTab />}
+            {activeTab === 'analysis' && <AnalysisTab />}
+            {activeTab === 'recommendations' && <PriceRecommendationsTab />}
+            {activeTab === 'rules' && <PricingRulesTab />}
+        </div>
     );
 };
 
 export default PriceAnalysis;
-

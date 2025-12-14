@@ -46,6 +46,11 @@ export const addDocumentWithCameraImage = async (
     issueDate?: string;
     expiryDate?: string;
     issuingAuthority?: string;
+    firstName?: string;
+    lastName?: string;
+    birthday?: string;
+    gender?: string;
+    country?: string;
   }
 ): Promise<IdentificationDocument> => {
   try {

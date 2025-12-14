@@ -694,7 +694,23 @@
     "templateVariables.checkInConfirmation": "{{guestName}}, {{roomDisplay}}, {{doorPin}}, {{doorAppName}}",
     "preview": "Vista Previa",
     "save": "Guardar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "roomDescriptions": {
+      "title": "Descripciones de Habitaciones",
+      "description": "Descripciones de cómo llegar a las habitaciones. Estas se utilizan en los mensajes de check-in.",
+      "dorm": "Dormitorio",
+      "private": "Habitación Privada",
+      "categoryId": "ID de Categoría",
+      "text": "Texto",
+      "textPlaceholder": "Descripción de cómo llegar a la habitación...",
+      "imageUrl": "URL de Imagen",
+      "videoUrl": "URL de Video",
+      "image": "Imagen",
+      "video": "Video",
+      "noDescription": "No hay descripción disponible",
+      "noRooms": "No se encontraron habitaciones. Por favor, importe primero las reservaciones desde LobbyPMS.",
+      "saveError": "Error al guardar la descripción"
+    }
   },
   "roles": {
     "title": "Roles",
@@ -2967,6 +2983,17 @@
       "inactive": "Inactivo",
       "all": "Todos"
     },
+    "imageLightbox": {
+      "title": "Imagen {{current}} de {{total}}",
+      "close": "Cerrar",
+      "previous": "Imagen anterior",
+      "next": "Imagen siguiente",
+      "zoomIn": "Acercar",
+      "zoomOut": "Alejar",
+      "zoomReset": "Restablecer zoom",
+      "loading": "Cargando imagen...",
+      "error": "No se pudo cargar la imagen"
+    },
     "validation": {
       "titleMinLength": "El título debe tener al menos 3 caracteres",
       "maxParticipantsMin": "El número máximo de participantes debe ser >= número mínimo",
@@ -3076,9 +3103,9 @@
   "priceAnalysis": {
     "title": "Análisis de Precios",
     "listings": "Listados OTA",
-    "analysis": "Análisis",
-    "recommendations": "Recomendaciones",
-    "rules": "Reglas",
+    "tabAnalysis": "Análisis",
+    "tabRecommendations": "Recomendaciones",
+    "tabRules": "Reglas",
     "loading": "Cargando...",
     "noListings": "No se encontraron listados OTA",
     "noAnalyses": "No se encontraron análisis de precios",

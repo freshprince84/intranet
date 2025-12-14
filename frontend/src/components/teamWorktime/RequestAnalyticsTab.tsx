@@ -172,18 +172,15 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
           }
         }
         
-        // Filter aus Bedingungen anwenden
-        filterConditions.forEach(condition => {
-          if (condition.column === 'branch' && condition.value) {
-            params.branchId = condition.value;
-          }
-          if (condition.column === 'requester' && condition.value) {
-            params.userId = condition.value;
-          }
-          if (condition.column === 'status' && condition.value) {
-            // Status-Filter würde hier angewendet werden, falls Backend es unterstützt
-          }
-        });
+        // Filter-Bedingungen als JSON-String senden
+        if (selectedFilterId) {
+          params.filterId = selectedFilterId;
+        } else if (filterConditions.length > 0) {
+          params.filterConditions = JSON.stringify({
+            conditions: filterConditions,
+            operators: filterLogicalOperators
+          });
+        }
         
         const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ANALYTICS.REQUESTS_CHRONOLOGICAL, {
           params
@@ -233,7 +230,8 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
       const filters = await loadFilters(REQUEST_ANALYTICS_TABLE_ID);
       
       // 2. Default-Filter anwenden (IMMER vorhanden!)
-      const defaultFilter = filters.find(f => f.name === 'Alle');
+      // Versuche zuerst "Eigene Requests - Diese Woche", dann Fallback auf "Alle"
+      const defaultFilter = filters.find(f => f.name === 'Eigene Requests - Diese Woche') || filters.find(f => f.name === 'Alle');
       if (defaultFilter) {
         await handleFilterChange(
           defaultFilter.name,

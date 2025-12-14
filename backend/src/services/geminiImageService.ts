@@ -1,6 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import sharp from 'sharp';
 import { logger } from '../utils/logger';
 import { BrandingInfo } from './organizationBrandingService';
 
@@ -17,6 +18,7 @@ export interface ImageGenerationConfig {
   imageTypes: ('main' | 'gallery' | 'flyer')[];
   apiKey?: string;
   branding?: BrandingInfo;
+  logoBase64?: string; // Logo als Base64-String für Overlay
 }
 
 /**
@@ -138,6 +140,12 @@ export class GeminiImageService {
         config.filenamePattern.replace('{type}', 'main').replace('{timestamp}', timestamp.toString())
       );
       await this.generateImage(mainImagePrompt, mainImagePath, config.apiKey);
+      
+      // Logo hinzufügen (falls vorhanden)
+      if (config.logoBase64) {
+        await this.addLogoToImage(mainImagePath, config.logoBase64);
+      }
+      
       result.mainImage = mainImagePath;
     }
 
@@ -150,6 +158,12 @@ export class GeminiImageService {
           config.filenamePattern.replace('{type}', `gallery-${i}`).replace('{timestamp}', timestamp.toString())
         );
         await this.generateImage(galleryPrompts[i], galleryPath, config.apiKey);
+        
+        // Logo hinzufügen (falls vorhanden)
+        if (config.logoBase64) {
+          await this.addLogoToImage(galleryPath, config.logoBase64);
+        }
+        
         result.galleryImages.push(galleryPath);
       }
     }
@@ -162,6 +176,12 @@ export class GeminiImageService {
         config.filenamePattern.replace('{type}', 'flyer').replace('{timestamp}', timestamp.toString())
       );
       await this.generateImage(flyerPrompt, flyerPath, config.apiKey);
+      
+      // Logo hinzufügen (falls vorhanden)
+      if (config.logoBase64) {
+        await this.addLogoToImage(flyerPath, config.logoBase64);
+      }
+      
       result.flyer = flyerPath;
     }
 
@@ -306,6 +326,61 @@ export class GeminiImageService {
   }
 
   /**
+   * Fügt Logo oben rechts auf ein Bild hinzu
+   */
+  private static async addLogoToImage(imagePath: string, logoBase64: string): Promise<void> {
+    try {
+      // Parse Base64-String
+      let imageData = logoBase64;
+      if (logoBase64.startsWith('data:')) {
+        imageData = logoBase64.replace(/^data:image\/[^;]+;base64,/, '');
+      }
+
+      // Konvertiere Base64 zu Buffer
+      const logoBuffer = Buffer.from(imageData, 'base64');
+
+      // Lade das generierte Bild
+      const image = sharp(imagePath);
+      const imageMetadata = await image.metadata();
+      const imageWidth = imageMetadata.width || 1920;
+      const imageHeight = imageMetadata.height || 1080;
+
+      // Berechne Logo-Größe (10% der Bildbreite, max. 200px)
+      const logoSize = Math.min(imageWidth * 0.1, 200);
+      const padding = Math.max(logoSize * 0.1, 10); // 10% des Logos oder min. 10px
+
+      // Resize Logo
+      const resizedLogo = await sharp(logoBuffer)
+        .resize(Math.round(logoSize), Math.round(logoSize), {
+          fit: 'inside',
+          withoutEnlargement: true
+        })
+        .png()
+        .toBuffer();
+
+      // Position: oben rechts
+      const left = imageWidth - logoSize - padding;
+      const top = padding;
+
+      // Composite Logo auf Bild
+      await image
+        .composite([
+          {
+            input: resizedLogo,
+            left: Math.round(left),
+            top: Math.round(top)
+          }
+        ])
+        .toFile(imagePath);
+
+      logger.log(`[GeminiImageService] Logo hinzugefügt zu ${imagePath}`);
+    } catch (error: any) {
+      logger.warn(`[GeminiImageService] Fehler beim Hinzufügen des Logos zu ${imagePath}:`, error.message);
+      // Fehler ist nicht kritisch, Bild bleibt ohne Logo
+    }
+  }
+
+  /**
    * Generiert mehrere Bilder für eine Tour
    * Wrapper um generateImages() mit Tour-spezifischen Einstellungen
    */
@@ -314,7 +389,8 @@ export class GeminiImageService {
     tourTitle: string,
     tourDescription: string,
     apiKey?: string,
-    branding?: BrandingInfo
+    branding?: BrandingInfo,
+    logoBase64?: string
   ): Promise<{ mainImage: string; galleryImages: string[]; flyer: string }> {
     const TOURS_UPLOAD_DIR = path.join(__dirname, '../../uploads/tours');
     
@@ -327,7 +403,8 @@ export class GeminiImageService {
       filenamePattern: `tour-${tourId}-{type}-{timestamp}.png`,
       imageTypes: ['main', 'gallery', 'flyer'],
       apiKey,
-      branding
+      branding,
+      logoBase64
     };
 
     const result = await this.generateImages(config);
