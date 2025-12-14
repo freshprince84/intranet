@@ -265,10 +265,17 @@ async function deleteInactiveUsers() {
             data: { generatedBy: 1 } // Setze auf Admin als Fallback
           });
 
-          // 23. PasswordResetTokens
-          await tx.passwordResetToken.deleteMany({
-            where: { userId: user.id }
-          });
+          // 23. PasswordResetTokens (falls Tabelle existiert)
+          try {
+            await tx.passwordResetToken.deleteMany({
+              where: { userId: user.id }
+            });
+          } catch (error: any) {
+            // Tabelle existiert möglicherweise nicht - ignorieren
+            if (!error.message?.includes('does not exist')) {
+              throw error;
+            }
+          }
 
           // 24. OnboardingEvents
           await tx.onboardingEvent.deleteMany({
