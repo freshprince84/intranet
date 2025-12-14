@@ -66,266 +66,165 @@ async function deleteInactiveUsers() {
       try {
         console.log(`\n🗑️  Lösche Benutzer: ${user.username} (ID: ${user.id})...`);
 
-        await prisma.$transaction(async (tx) => {
-          // 1. Organisation-bezogene Abhängigkeiten
-          await tx.organizationJoinRequest.deleteMany({
-            where: { requesterId: user.id }
-          });
-          // processedBy wird automatisch auf NULL gesetzt (ON DELETE SET NULL)
-
-          await tx.organizationInvitation.deleteMany({
-            where: { invitedBy: user.id }
-          });
-          // acceptedBy wird automatisch auf NULL gesetzt (ON DELETE SET NULL)
-
-          // 2. Rollen und Branches
-          await tx.userRole.deleteMany({
-            where: { userId: user.id }
-          });
-
-          await tx.usersBranches.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 3. Einstellungen und Benachrichtigungen
-          await tx.settings.deleteMany({
-            where: { userId: user.id }
-          });
-
-          await tx.notification.deleteMany({
-            where: { userId: user.id }
-          });
-
-          await tx.userNotificationSettings.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 4. Filter und Tabelleneinstellungen
-          await tx.savedFilter.deleteMany({
-            where: { userId: user.id }
-          });
-
-          await tx.filterGroup.deleteMany({
-            where: { userId: user.id }
-          });
-
-          await tx.userTableSettings.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 5. Tasks (wo User verantwortlich/ersteller ist)
-          // Setze responsibleId, createdById, deletedById auf NULL
-          await tx.task.updateMany({
-            where: { responsibleId: user.id },
-            data: { responsibleId: null }
-          });
-
-          await tx.task.updateMany({
-            where: { createdById: user.id },
-            data: { createdById: null }
-          });
-
-          await tx.task.updateMany({
-            where: { deletedById: user.id },
-            data: { deletedById: null }
-          });
-
-          await tx.task.updateMany({
-            where: { qualityControlId: user.id },
-            data: { qualityControlId: 1 } // Setze auf Admin (ID 1) als Fallback, da qualityControlId required ist
-          });
-
-          // 6. Requests (wo User requester/responsible ist)
-          // WICHTIG: Requests können nicht einfach gelöscht werden, da sie wichtige Daten enthalten
-          // Setze requesterId/responsibleId auf Admin, da beide required sind
-          await tx.request.updateMany({
-            where: { requesterId: user.id },
-            data: { requesterId: 1 } // Setze auf Admin (ID 1) als Fallback
-          });
-
-          await tx.request.updateMany({
-            where: { responsibleId: user.id },
-            data: { responsibleId: 1 } // Setze auf Admin (ID 1) als Fallback, da responsibleId required ist
-          });
-
-          await tx.request.updateMany({
-            where: { deletedById: user.id },
-            data: { deletedById: null }
-          });
-
-          // 7. WorkTimes
-          await tx.workTime.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 8. Shifts
-          await tx.shift.updateMany({
-            where: { userId: user.id },
-            data: { userId: null }
-          });
-
-          await tx.shift.updateMany({
-            where: { createdBy: user.id },
-            data: { createdBy: 1 } // Setze auf Admin als Fallback
-          });
-
-          await tx.shift.updateMany({
-            where: { confirmedBy: user.id },
-            data: { confirmedBy: null }
-          });
-
-          // 9. ShiftSwapRequests
-          await tx.shiftSwapRequest.deleteMany({
-            where: { requestedBy: user.id }
-          });
-
-          await tx.shiftSwapRequest.deleteMany({
-            where: { requestedFrom: user.id }
-          });
-
-          // 10. UserAvailability
-          await tx.userAvailability.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 11. Cerebro
-          await tx.cerebroCarticle.updateMany({
-            where: { createdById: user.id },
-            data: { createdById: 1 } // Setze auf Admin als Fallback
-          });
-
-          await tx.cerebroCarticle.updateMany({
-            where: { updatedById: user.id },
-            data: { updatedById: null }
-          });
-
-          await tx.cerebroExternalLink.deleteMany({
-            where: { createdById: user.id }
-          });
-
-          await tx.cerebroMedia.deleteMany({
-            where: { createdById: user.id }
-          });
-
-          // 12. ConsultationInvoices
-          await tx.consultationInvoice.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 13. MonthlyReports
-          await tx.monthlyConsultationReport.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 14. Payrolls
-          await tx.employeePayroll.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 15. IdentificationDocuments
-          await tx.identificationDocument.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 16. InvoiceSettings
-          await tx.invoiceSettings.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 17. RequestStatusHistory
-          await tx.requestStatusHistory.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 18. TaskStatusHistory
-          await tx.taskStatusHistory.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 19. EmployeeLifecycle
-          await tx.employeeLifecycle.deleteMany({
-            where: { userId: user.id }
-          });
-
-          // 20. LifecycleEvents (wo User Triggerer ist)
-          await tx.lifecycleEvent.updateMany({
-            where: { triggeredBy: user.id },
-            data: { triggeredBy: 1 } // Setze auf Admin als Fallback
-          });
-
-          // 21. EmploymentCertificates
-          await tx.employmentCertificate.updateMany({
-            where: { generatedBy: user.id },
-            data: { generatedBy: 1 } // Setze auf Admin als Fallback
-          });
-
-          // 22. EmploymentContracts
-          await tx.employmentContract.updateMany({
-            where: { generatedBy: user.id },
-            data: { generatedBy: 1 } // Setze auf Admin als Fallback
-          });
-
-          // 23. PasswordResetTokens (falls Tabelle existiert)
+        // Hilfsfunktion für sichere Operationen
+        const safeOperation = async (operation: () => Promise<any>, name: string) => {
           try {
-            await tx.passwordResetToken.deleteMany({
-              where: { userId: user.id }
-            });
+            await operation();
           } catch (error: any) {
-            // Tabelle existiert möglicherweise nicht - ignorieren
-            if (!error.message?.includes('does not exist')) {
-              throw error;
+            if (error.message?.includes('does not exist')) {
+              // Tabelle existiert nicht - ignorieren
+              return;
             }
+            throw error;
           }
+        };
 
-          // 24. OnboardingEvents
-          await tx.onboardingEvent.deleteMany({
-            where: { userId: user.id }
-          });
+        // Führe alle Operationen ohne Transaktion aus (robuster bei fehlenden Tabellen)
+        // 1. Organisation-bezogene Abhängigkeiten
+        await prisma.organizationJoinRequest.deleteMany({
+          where: { requesterId: user.id }
+        });
+        // processedBy wird automatisch auf NULL gesetzt (ON DELETE SET NULL)
 
-          // 25. WhatsAppConversations
-          await tx.whatsAppConversation.deleteMany({
-            where: { userId: user.id }
-          });
+        await prisma.organizationInvitation.deleteMany({
+          where: { invitedBy: user.id }
+        });
+        // acceptedBy wird automatisch auf NULL gesetzt (ON DELETE SET NULL)
 
-          // 26. Tours (wo User Ersteller ist)
-          await tx.tour.updateMany({
-            where: { createdById: user.id },
-            data: { createdById: null }
-          });
+        // 2. Rollen und Branches
+        await prisma.userRole.deleteMany({
+          where: { userId: user.id }
+        });
 
-          // 27. TourBookings
-          await tx.tourBooking.deleteMany({
-            where: { bookedById: user.id }
-          });
+        await prisma.usersBranches.deleteMany({
+          where: { userId: user.id }
+        });
 
-          // 28. PasswordEntries (wo User Ersteller ist)
-          await tx.passwordEntry.updateMany({
-            where: { createdById: user.id },
-            data: { createdById: 1 } // Setze auf Admin als Fallback
-          });
+        // 3. Einstellungen und Benachrichtigungen
+        await safeOperation(() => prisma.settings.deleteMany({ where: { userId: user.id } }), 'Settings');
+        await prisma.notification.deleteMany({ where: { userId: user.id } });
+        await prisma.userNotificationSettings.deleteMany({ where: { userId: user.id } });
 
-          // 29. PasswordEntryUserPermissions
-          await tx.passwordEntryUserPermission.deleteMany({
-            where: { userId: user.id }
-          });
+        // 4. Filter und Tabelleneinstellungen
+        await prisma.savedFilter.deleteMany({ where: { userId: user.id } });
+        await prisma.filterGroup.deleteMany({ where: { userId: user.id } });
+        await prisma.userTableSettings.deleteMany({ where: { userId: user.id } });
 
-          // 30. PasswordEntryAuditLogs
-          await tx.passwordEntryAuditLog.deleteMany({
-            where: { userId: user.id }
-          });
+        // 5. Tasks (wo User verantwortlich/ersteller ist)
+        await prisma.task.updateMany({
+          where: { responsibleId: user.id },
+          data: { responsibleId: null }
+        });
+        await prisma.task.updateMany({
+          where: { createdById: user.id },
+          data: { createdById: null }
+        });
+        await prisma.task.updateMany({
+          where: { deletedById: user.id },
+          data: { deletedById: null }
+        });
+        await prisma.task.updateMany({
+          where: { qualityControlId: user.id },
+          data: { qualityControlId: 1 }
+        });
 
-          // 31. PricingRules
-          await tx.pricingRule.updateMany({
-            where: { createdBy: user.id },
-            data: { createdBy: 1 } // Setze auf Admin als Fallback
-          });
+        // 6. Requests
+        await prisma.request.updateMany({
+          where: { requesterId: user.id },
+          data: { requesterId: 1 }
+        });
+        await prisma.request.updateMany({
+          where: { responsibleId: user.id },
+          data: { responsibleId: 1 }
+        });
+        await prisma.request.updateMany({
+          where: { deletedById: user.id },
+          data: { deletedById: null }
+        });
 
-          // 32. WhatsAppConversations (bereits oben gelöscht, entferne doppelte Zeile)
+        // 7. WorkTimes
+        await prisma.workTime.deleteMany({ where: { userId: user.id } });
 
-          // 33. Lösche den Benutzer selbst
-          await tx.user.delete({
-            where: { id: user.id }
-          });
+        // 8. Shifts
+        await prisma.shift.updateMany({
+          where: { userId: user.id },
+          data: { userId: null }
+        });
+        await prisma.shift.updateMany({
+          where: { createdBy: user.id },
+          data: { createdBy: 1 }
+        });
+        await prisma.shift.updateMany({
+          where: { confirmedBy: user.id },
+          data: { confirmedBy: null }
+        });
+
+        // 9. ShiftSwapRequests
+        await prisma.shiftSwapRequest.deleteMany({ where: { requestedBy: user.id } });
+        await prisma.shiftSwapRequest.deleteMany({ where: { requestedFrom: user.id } });
+
+        // 10. UserAvailability
+        await prisma.userAvailability.deleteMany({ where: { userId: user.id } });
+
+        // 11. Cerebro
+        await prisma.cerebroCarticle.updateMany({
+          where: { createdById: user.id },
+          data: { createdById: 1 }
+        });
+        await prisma.cerebroCarticle.updateMany({
+          where: { updatedById: user.id },
+          data: { updatedById: null }
+        });
+        await prisma.cerebroExternalLink.deleteMany({ where: { createdById: user.id } });
+        await prisma.cerebroMedia.deleteMany({ where: { createdById: user.id } });
+
+        // 12-22. Weitere Abhängigkeiten
+        await safeOperation(() => prisma.consultationInvoice.deleteMany({ where: { userId: user.id } }), 'ConsultationInvoices');
+        await safeOperation(() => prisma.monthlyConsultationReport.deleteMany({ where: { userId: user.id } }), 'MonthlyReports');
+        await safeOperation(() => prisma.employeePayroll.deleteMany({ where: { userId: user.id } }), 'Payrolls');
+        await safeOperation(() => prisma.identificationDocument.deleteMany({ where: { userId: user.id } }), 'IdentificationDocuments');
+        await safeOperation(() => prisma.invoiceSettings.deleteMany({ where: { userId: user.id } }), 'InvoiceSettings');
+        await prisma.requestStatusHistory.deleteMany({ where: { userId: user.id } });
+        await prisma.taskStatusHistory.deleteMany({ where: { userId: user.id } });
+        await safeOperation(() => prisma.employeeLifecycle.deleteMany({ where: { userId: user.id } }), 'EmployeeLifecycle');
+        await safeOperation(() => prisma.lifecycleEvent.updateMany({
+          where: { triggeredBy: user.id },
+          data: { triggeredBy: 1 }
+        }), 'LifecycleEvents');
+        await safeOperation(() => prisma.employmentCertificate.updateMany({
+          where: { generatedBy: user.id },
+          data: { generatedBy: 1 }
+        }), 'EmploymentCertificates');
+        await safeOperation(() => prisma.employmentContract.updateMany({
+          where: { generatedBy: user.id },
+          data: { generatedBy: 1 }
+        }), 'EmploymentContracts');
+
+        // 23-25. Optionale Tabellen
+        await safeOperation(() => prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }), 'PasswordResetTokens');
+        await safeOperation(() => prisma.onboardingEvent.deleteMany({ where: { userId: user.id } }), 'OnboardingEvents');
+        await safeOperation(() => prisma.whatsAppConversation.deleteMany({ where: { userId: user.id } }), 'WhatsAppConversations');
+
+        // 26-31. Weitere Abhängigkeiten
+        await prisma.tour.updateMany({
+          where: { createdById: user.id },
+          data: { createdById: null }
+        });
+        await prisma.tourBooking.deleteMany({ where: { bookedById: user.id } });
+        await prisma.passwordEntry.updateMany({
+          where: { createdById: user.id },
+          data: { createdById: 1 }
+        });
+        await prisma.passwordEntryUserPermission.deleteMany({ where: { userId: user.id } });
+        await prisma.passwordEntryAuditLog.deleteMany({ where: { userId: user.id } });
+        await prisma.pricingRule.updateMany({
+          where: { createdBy: user.id },
+          data: { createdBy: 1 }
+        });
+
+        // 33. Lösche den Benutzer selbst
+        await prisma.user.delete({
+          where: { id: user.id }
         });
 
         deletedCount++;
