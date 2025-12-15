@@ -1056,14 +1056,15 @@ const UserManagementTab = (): JSX.Element => {
                           </div>
 
                           {/* 6. Dokument-Typ */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {t('profile.identificationType')}
-                            </label>
-                            <input
-                              type="text"
-                              value={
-                                latestDoc.documentType
+                          {latestDoc && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                {t('profile.identificationType')}
+                              </label>
+                              <input
+                                type="text"
+                                value={
+                                  latestDoc.documentType
                                   ? (() => {
                                       const typeMap: Record<string, string> = {
                                         passport: t('identificationDocuments.types.passport'),
@@ -1115,7 +1116,7 @@ const UserManagementTab = (): JSX.Element => {
                           )}
 
                           {/* 9. Ablaufdatum */}
-                          {latestDoc.expiryDate && (
+                          {latestDoc?.expiryDate && (
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 {t('profile.identificationExpiryDate')}
@@ -1123,6 +1124,38 @@ const UserManagementTab = (): JSX.Element => {
                               <input
                                 type="text"
                                 value={new Date(latestDoc.expiryDate).toISOString().split('T')[0]}
+                                disabled
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                                readOnly
+                              />
+                            </div>
+                          )}
+
+                          {/* 10. Ausstellungsland */}
+                          {latestDoc?.issuingCountry && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                {t('profile.issuingCountry') || 'Ausstellungsland'}
+                              </label>
+                              <input
+                                type="text"
+                                value={latestDoc.issuingCountry}
+                                disabled
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                                readOnly
+                              />
+                            </div>
+                          )}
+
+                          {/* 11. Ausstellungsbehörde */}
+                          {latestDoc?.issuingAuthority && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                {t('profile.issuingAuthority') || 'Ausstellungsbehörde'}
+                              </label>
+                              <input
+                                type="text"
+                                value={latestDoc.issuingAuthority}
                                 disabled
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
                                 readOnly

@@ -133,13 +133,13 @@ const FilterRow: React.FC<FilterRowProps> = ({
           setUsers(response.data);
         } catch (error: any) {
           if (error.name !== 'AbortError') {
-            if (process.env.NODE_ENV === 'development') {
+          if (process.env.NODE_ENV === 'development') {
               console.error('Error loading users:', error);
             }
           }
         } finally {
           if (!abortController.signal.aborted) {
-            setLoadingUsers(false);
+          setLoadingUsers(false);
           }
         }
         
@@ -160,13 +160,13 @@ const FilterRow: React.FC<FilterRowProps> = ({
             setRoles(response.data);
           } catch (error: any) {
             if (error.name !== 'AbortError') {
-              if (process.env.NODE_ENV === 'development') {
+            if (process.env.NODE_ENV === 'development') {
                 console.error('Error loading roles:', error);
               }
             }
           } finally {
             if (!abortController.signal.aborted) {
-              setLoadingRoles(false);
+            setLoadingRoles(false);
             }
           }
         }
@@ -182,13 +182,13 @@ const FilterRow: React.FC<FilterRowProps> = ({
           setBranches(response.data);
         } catch (error: any) {
           if (error.name !== 'AbortError') {
-            if (process.env.NODE_ENV === 'development') {
+          if (process.env.NODE_ENV === 'development') {
               console.error('Error loading branches:', error);
             }
           }
         } finally {
           if (!abortController.signal.aborted) {
-            setLoadingBranches(false);
+          setLoadingBranches(false);
           }
         }
       }
@@ -222,13 +222,13 @@ const FilterRow: React.FC<FilterRowProps> = ({
           setRoomNumbers(uniqueRoomNames);
         } catch (error: any) {
           if (error.name !== 'AbortError') {
-            if (process.env.NODE_ENV === 'development') {
+          if (process.env.NODE_ENV === 'development') {
               console.error('Error loading room numbers:', error);
             }
           }
         } finally {
           if (!abortController.signal.aborted) {
-            setLoadingRoomNumbers(false);
+          setLoadingRoomNumbers(false);
           }
         }
       }

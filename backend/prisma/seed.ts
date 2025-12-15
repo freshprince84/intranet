@@ -1150,22 +1150,22 @@ async function main() {
       console.log(`⏭️ Rebeca Benitez existiert als inaktiver Benutzer - wird übersprungen`);
       rebecaUser = existingRebeca;
     } else {
-      const rebecaPassword = await bcrypt.hash('admin123', 10);
+    const rebecaPassword = await bcrypt.hash('admin123', 10);
       rebecaUser = await prisma.user.upsert({
-        where: { username: 'rebeca-benitez' },
+      where: { username: 'rebeca-benitez' },
         update: {
           // Stelle sicher, dass active nicht auf false gesetzt wird, wenn Benutzer bereits aktiv ist
           active: existingRebeca?.active ?? true
         },
-        create: {
-          username: 'rebeca-benitez',
-          email: 'rebeca.benitez@mosaik.ch',
-          password: rebecaPassword,
-          firstName: 'Rebeca',
+      create: {
+        username: 'rebeca-benitez',
+        email: 'rebeca.benitez@mosaik.ch',
+        password: rebecaPassword,
+        firstName: 'Rebeca',
           lastName: 'Benitez',
           active: true
-        }
-      });
+      }
+    });
     }
     
     // Stelle sicher, dass Rebeca NUR Org 2 Rollen hat
@@ -1253,29 +1253,29 @@ async function main() {
       console.log(`⏭️ Christina Di Biaso existiert als inaktiver Benutzer - wird übersprungen`);
       christinaUser = existingChristina;
     } else {
-      const christinaPassword = await bcrypt.hash('admin123', 10);
+    const christinaPassword = await bcrypt.hash('admin123', 10);
       christinaUser = await prisma.user.upsert({
-        where: { username: 'christina-di-biaso' },
+      where: { username: 'christina-di-biaso' },
         update: {
           // Stelle sicher, dass active nicht auf false gesetzt wird, wenn Benutzer bereits aktiv ist
           active: existingChristina?.active ?? true
         },
-        create: {
-          username: 'christina-di-biaso',
-          email: 'christina.dibiaso@mosaik.ch',
-          password: christinaPassword,
-          firstName: 'Christina',
-          lastName: 'Di Biaso',
+      create: {
+        username: 'christina-di-biaso',
+        email: 'christina.dibiaso@mosaik.ch',
+        password: christinaPassword,
+        firstName: 'Christina',
+        lastName: 'Di Biaso',
           active: true,
-          roles: {
-            create: {
-              roleId: org2UserRole.id,
-              lastUsed: true
-            }
+        roles: {
+          create: {
+            roleId: org2UserRole.id,
+            lastUsed: true
           }
         }
-      });
-      console.log(`✅ Christina Di Biaso-Benutzer: ${christinaUser.username}`);
+      }
+    });
+    console.log(`✅ Christina Di Biaso-Benutzer: ${christinaUser.username}`);
     }
 
     // ========================================
@@ -2237,13 +2237,13 @@ async function main() {
                   operators = ['AND'];
                 }
 
-              // Finde die höchste order-Nummer in der Gruppe
-              const maxOrder = await prisma.savedFilter.findFirst({
-                where: { groupId: rolesGroup.id },
-                orderBy: { order: 'desc' },
-                select: { order: true }
-              });
-              const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+                // Finde die höchste order-Nummer in der Gruppe
+                const maxOrder = await prisma.savedFilter.findFirst({
+                  where: { groupId: rolesGroup.id },
+                  orderBy: { order: 'desc' },
+                  select: { order: true }
+                });
+                const newOrder = maxOrder ? maxOrder.order + 1 : 0;
 
               // ✅ FIX: upsert verwenden, damit bestehende Filter aktualisiert werden
               await prisma.savedFilter.upsert({
@@ -2261,15 +2261,15 @@ async function main() {
                   order: newOrder
                 },
                 create: {
-                  userId,
-                  tableId: table.id,
-                  name: filterName,
-                  conditions: JSON.stringify(conditions),
-                  operators: JSON.stringify(operators),
-                  groupId: rolesGroup.id,
-                  order: newOrder
-                }
-              });
+                    userId,
+                    tableId: table.id,
+                    name: filterName,
+                    conditions: JSON.stringify(conditions),
+                    operators: JSON.stringify(operators),
+                    groupId: rolesGroup.id,
+                    order: newOrder
+                  }
+                });
               console.log(`    ✅ Filter "${filterName}" (Rolle) für ${table.name} erstellt/aktualisiert`);
             }
           }
@@ -2281,26 +2281,26 @@ async function main() {
             const filterName = `${user.firstName} ${user.lastName}`.trim() || user.username;
             
             // Prüfe ob Filter bereits existiert
-            let conditions: any[] = [];
-            let operators: string[] = [];
+              let conditions: any[] = [];
+              let operators: string[] = [];
 
-            if (table.id === 'requests-table') {
-              // Requests: (requestedBy AND status != approved AND status != denied) OR (responsible AND status != approved AND status != denied)
-              conditions = [
-                { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
-                { column: 'status', operator: 'notEquals', value: 'approved' },
-                { column: 'status', operator: 'notEquals', value: 'denied' },
-                { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
-                { column: 'status', operator: 'notEquals', value: 'approved' },
-                { column: 'status', operator: 'notEquals', value: 'denied' }
-              ];
-              operators = ['AND', 'AND', 'OR', 'AND', 'AND'];
-            } else if (table.id === 'worktracker-todos') {
-              // ToDos: qualityControl = user ODER responsible = user UND status != done
-              conditions = [
-                { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` },
-                { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
-                { column: 'status', operator: 'notEquals', value: 'done' }
+              if (table.id === 'requests-table') {
+                // Requests: (requestedBy AND status != approved AND status != denied) OR (responsible AND status != approved AND status != denied)
+                conditions = [
+                  { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'status', operator: 'notEquals', value: 'approved' },
+                  { column: 'status', operator: 'notEquals', value: 'denied' },
+                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'status', operator: 'notEquals', value: 'approved' },
+                  { column: 'status', operator: 'notEquals', value: 'denied' }
+                ];
+                operators = ['AND', 'AND', 'OR', 'AND', 'AND'];
+              } else if (table.id === 'worktracker-todos') {
+                // ToDos: qualityControl = user ODER responsible = user UND status != done
+                conditions = [
+                  { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'status', operator: 'notEquals', value: 'done' }
               ];
               operators = ['OR', 'AND'];
               } else if (table.id === 'todo-analytics-table') {
@@ -2321,13 +2321,13 @@ async function main() {
                 operators = ['OR', 'AND'];
               }
 
-            // Finde die höchste order-Nummer in der Gruppe
-            const maxOrder = await prisma.savedFilter.findFirst({
-              where: { groupId: usersGroup.id },
-              orderBy: { order: 'desc' },
-              select: { order: true }
-            });
-            const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+              // Finde die höchste order-Nummer in der Gruppe
+              const maxOrder = await prisma.savedFilter.findFirst({
+                where: { groupId: usersGroup.id },
+                orderBy: { order: 'desc' },
+                select: { order: true }
+              });
+              const newOrder = maxOrder ? maxOrder.order + 1 : 0;
 
             // ✅ FIX: upsert verwenden, damit bestehende Filter aktualisiert werden
             await prisma.savedFilter.upsert({
@@ -2345,15 +2345,15 @@ async function main() {
                 order: newOrder
               },
               create: {
-                userId,
-                tableId: table.id,
-                name: filterName,
-                conditions: JSON.stringify(conditions),
-                operators: JSON.stringify(operators),
-                groupId: usersGroup.id,
-                order: newOrder
-              }
-            });
+                  userId,
+                  tableId: table.id,
+                  name: filterName,
+                  conditions: JSON.stringify(conditions),
+                  operators: JSON.stringify(operators),
+                  groupId: usersGroup.id,
+                  order: newOrder
+                }
+              });
             console.log(`    ✅ Filter "${filterName}" (Benutzer) für ${table.name} erstellt/aktualisiert`);
           }
         }

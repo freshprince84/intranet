@@ -221,16 +221,16 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       } catch (error: any) {
         if (error.name !== 'AbortError') {
           console.error('Error loading todos:', error);
-          setError(t('analytics.todo.loadError'));
+        setError(t('analytics.todo.loadError'));
         }
       } finally {
         if (!abortController.signal.aborted) {
-          setLoading(false);
+        setLoading(false);
         }
       }
     };
 
-    fetchTodos();
+      fetchTodos();
     
     // ✅ PHASE 8: Memory Leak Prevention - Cleanup
     return () => {
@@ -260,11 +260,11 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       } catch (error: any) {
         if (error.name !== 'AbortError') {
           console.error('Error loading frequency analysis:', error);
-          // Kein setError hier, da nicht kritisch
+        // Kein setError hier, da nicht kritisch
         }
       } finally {
         if (!abortController.signal.aborted) {
-          setLoadingFrequency(false);
+        setLoadingFrequency(false);
         }
       }
     };
@@ -299,11 +299,11 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       } catch (error: any) {
         if (error.name !== 'AbortError') {
           console.error('Error loading shift analysis:', error);
-          // Kein setError hier, da nicht kritisch
+        // Kein setError hier, da nicht kritisch
         }
       } finally {
         if (!abortController.signal.aborted) {
-          setLoadingShifts(false);
+        setLoadingShifts(false);
         }
       }
     };
@@ -367,7 +367,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
     };
     
     if (user) {
-      initialize();
+    initialize();
     }
   }, [loadFilters, handleFilterChange, user]);
 
