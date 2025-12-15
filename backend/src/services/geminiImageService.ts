@@ -484,7 +484,10 @@ export class GeminiImageService {
       const left = imageWidth - logoSize - padding;
       const top = padding;
 
-      // Composite Logo auf Bild
+      // WICHTIG: Verwende temporäre Datei, da sharp nicht die gleiche Datei als Input und Output verwenden kann
+      const tempPath = imagePath + '.tmp';
+      
+      // Composite Logo auf Bild und schreibe in temporäre Datei
       await image
         .composite([
           {
@@ -493,11 +496,23 @@ export class GeminiImageService {
             top: Math.round(top)
           }
         ])
-        .toFile(imagePath);
+        .toFile(tempPath);
+
+      // Ersetze Original-Datei durch temporäre Datei
+      fs.renameSync(tempPath, imagePath);
 
       logger.log(`[GeminiImageService] Logo hinzugefügt zu ${imagePath}`);
     } catch (error: any) {
       logger.warn(`[GeminiImageService] Fehler beim Hinzufügen des Logos zu ${imagePath}:`, error.message);
+      // Lösche temporäre Datei falls vorhanden
+      const tempPath = imagePath + '.tmp';
+      if (fs.existsSync(tempPath)) {
+        try {
+          fs.unlinkSync(tempPath);
+        } catch (unlinkError) {
+          // Ignoriere Fehler beim Löschen der temporären Datei
+        }
+      }
       // Fehler ist nicht kritisch, Bild bleibt ohne Logo
     }
   }

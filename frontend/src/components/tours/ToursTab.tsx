@@ -75,9 +75,11 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     
     // Fehlerbehandlung mit Fallback
     const errorContext = useError();
-    const handleErrorContext = errorContext?.handleError || ((err: any, context?: Record<string, any>) => {
+    const handleErrorContext = errorContext?.handleError || ((err: unknown, context?: Record<string, unknown>) => {
         console.error('Fehler:', err, context);
-        const errorMessage = err?.response?.data?.message || err?.message || 'Ein Fehler ist aufgetreten';
+        const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
+                             (err as { message?: string })?.message || 
+                             'Ein Fehler ist aufgetreten';
         showMessage(errorMessage, 'error');
     });
     
@@ -189,7 +191,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                 setToursError(null);
             }
             
-            const params: any = {};
+            const params: Record<string, unknown> = {};
             if (filterId) {
                 params.filterId = filterId;
             } else if (filterConditions && filterConditions.length > 0) {
@@ -260,11 +262,13 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                     );
                 }
             } else {
-                throw new Error(response.data.message || 'Fehler beim Starten der Bildgenerierung');
+                throw new Error(response.data.message || t('tours.imageGenerationFailed', { defaultValue: 'Fehler beim Starten der Bildgenerierung' }));
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Fehler beim Starten der Bildgenerierung:', err);
-            const errorMessage = err.response?.data?.message || err.message || t('tours.imageGenerationFailed', { defaultValue: 'Fehler bei Bildgenerierung' });
+            const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
+                                 (err as { message?: string })?.message || 
+                                 t('tours.imageGenerationFailed', { defaultValue: 'Fehler bei Bildgenerierung' });
             showMessage(errorMessage, 'error');
             setGeneratingImages(prev => ({ ...prev, [tourId]: false }));
         }
@@ -356,10 +360,10 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                         }
                         // 'waiting' oder 'active': Weiter pollen
                     }
-                } catch (err: any) {
+                } catch (err: unknown) {
                     console.error('Fehler beim Polling:', err);
                     // Fehler beim Polling: Wenn Job nicht gefunden, stoppe Polling
-                    if (err.response?.status === 404) {
+                    if ((err as { response?: { status?: number } })?.response?.status === 404) {
                         clearInterval(pollingIntervalsRef.current[tourId]);
                         delete pollingIntervalsRef.current[tourId];
                         delete pollCountRef.current[tourId];
@@ -568,7 +572,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
 
         // Erweiterte Filterbedingungen anwenden
         if (tourFilterConditions.length > 0) {
-            const columnEvaluators: any = {
+            const columnEvaluators: Record<string, (tour: Tour, cond: FilterCondition) => boolean | null> = {
                 'title': (tour: Tour, cond: FilterCondition) => {
                     if (!tour || !tour.title) return false;
                     const value = (cond.value as string || '').toLowerCase();
@@ -629,7 +633,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                 }
             };
 
-            const getFieldValue = (tour: Tour | null, columnId: string): any => {
+            const getFieldValue = (tour: Tour | null, columnId: string): string | number | boolean | null => {
                 if (!tour) return '';
                 switch (columnId) {
                     case 'title': return tour.title || '';
@@ -654,7 +658,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
         }
         
         // Hilfsfunktion zum Extrahieren von Werten für Sortierung
-        const getTourSortValue = (tour: Tour | null, columnId: string): any => {
+        const getTourSortValue = (tour: Tour | null, columnId: string): string | number | boolean | null => {
             if (!tour) return '';
             switch (columnId) {
                 case 'title':
@@ -1187,10 +1191,10 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                                         'success'
                                                     );
                                                     await loadTours();
-                                                } catch (err: any) {
+                                                } catch (err: unknown) {
                                                     console.error('Fehler beim Toggle der Tour:', err);
                                                     showMessage(
-                                                        err.response?.data?.message || t('errors.unknownError'),
+                                                        (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('errors.unknownError'),
                                                         'error'
                                                     );
                                                 }

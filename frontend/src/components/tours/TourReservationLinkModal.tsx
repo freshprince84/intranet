@@ -6,6 +6,7 @@ import axiosInstance from '../../config/axios.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { TourBooking, TourReservation } from '../../types/tour.ts';
+import { Reservation } from '../../types/reservation.ts';
 
 interface TourReservationLinkModalProps {
     isOpen: boolean;
@@ -18,7 +19,7 @@ const TourReservationLinkModal = ({ isOpen, onClose, booking, onLinked }: TourRe
     const { t } = useTranslation();
     const { showMessage } = useMessage();
     
-    const [reservations, setReservations] = useState<any[]>([]);
+    const [reservations, setReservations] = useState<Reservation[]>([]);
     const [selectedReservationId, setSelectedReservationId] = useState<number | ''>('');
     const [tourPrice, setTourPrice] = useState<number | ''>('');
     const [accommodationPrice, setAccommodationPrice] = useState<number | ''>('');
@@ -45,7 +46,7 @@ const TourReservationLinkModal = ({ isOpen, onClose, booking, onLinked }: TourRe
                 const data = response.data.success ? response.data.data : response.data;
                 setReservations(Array.isArray(data) ? data : []);
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Fehler beim Laden der Reservations:', err);
             showMessage(t('errors.loadError'), 'error');
         } finally {
@@ -90,9 +91,10 @@ const TourReservationLinkModal = ({ isOpen, onClose, booking, onLinked }: TourRe
             } else {
                 showMessage(response.data.message || t('errors.saveError'), 'error');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Fehler beim Erstellen der Verknüpfung:', err);
-            showMessage(err.response?.data?.message || t('errors.saveError'), 'error');
+            const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('errors.saveError');
+            showMessage(errorMessage, 'error');
         } finally {
             setLoading(false);
         }
@@ -112,9 +114,10 @@ const TourReservationLinkModal = ({ isOpen, onClose, booking, onLinked }: TourRe
             } else {
                 showMessage(response.data.message || t('errors.deleteError'), 'error');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Fehler beim Löschen der Verknüpfung:', err);
-            showMessage(err.response?.data?.message || t('errors.deleteError'), 'error');
+            const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('errors.deleteError');
+            showMessage(errorMessage, 'error');
         }
     };
 

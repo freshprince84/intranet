@@ -38,9 +38,9 @@ const TourBookingsModal = ({ isOpen, onClose, tourId }: TourBookingsModalProps) 
             } else {
                 setError(response.data.message || t('errors.loadError'));
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Fehler beim Laden der Buchungen:', err);
-            const errorMessage = err.response?.data?.message || t('errors.loadError');
+            const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('errors.loadError');
             setError(errorMessage);
             showMessage(errorMessage, 'error');
         } finally {

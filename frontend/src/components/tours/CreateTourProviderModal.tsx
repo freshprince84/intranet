@@ -48,7 +48,7 @@ const CreateTourProviderModal = ({ isOpen, onClose, onProviderCreated }: CreateT
                 setLoadingData(true);
                 const branchesRes = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
                 setBranches(branchesRes.data?.data || branchesRes.data || []);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('Fehler beim Laden der Daten:', err);
                 showMessage(t('errors.loadError'), 'error');
             } finally {
@@ -131,7 +131,7 @@ const CreateTourProviderModal = ({ isOpen, onClose, onProviderCreated }: CreateT
                 onProviderCreated(response.data.data);
                 handleClose();
             } else {
-                throw new Error(response.data?.message || 'Fehler beim Erstellen des Providers');
+                throw new Error(response.data?.message || t('tours.providers.createError', { defaultValue: 'Fehler beim Erstellen des Providers' }));
             }
         } catch (err: unknown) {
             console.error('Error creating provider:', err);

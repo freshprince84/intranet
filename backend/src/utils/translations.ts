@@ -1405,3 +1405,310 @@ export function getPriceAnalysisErrorText(
   const lang = language in priceAnalysisErrorTexts ? language : 'de';
   return priceAnalysisErrorTexts[lang][errorType];
 }
+
+/**
+ * Typ für Tour-Fehlermeldungen
+ */
+type TourErrorTranslations = {
+  tourNotFound: string;
+  invalidTourId: string;
+  loadError: string;
+  loadTourError: string;
+  noPermissionCreate: string;
+  noPermissionEdit: string;
+  titleMinLength: string;
+  organizationRequired: string;
+  maxParticipantsMin: string;
+  availableFromTo: string;
+  externalProviderRequired: string;
+  createError: string;
+  noFileUploaded: string;
+  imageUploadError: string;
+  galleryUploadError: string;
+  imageNotFound: string;
+  imageFileNotFound: string;
+  loadImageError: string;
+  invalidTourIdOrImageIndex: string;
+  galleryNotFound: string;
+  imageIndexOutOfRange: string;
+  loadGalleryImageError: string;
+  invalidParameters: string;
+  onlyImageFilesAllowed: string;
+  imageGenerationStarted: string;
+  jobNotFound: string;
+};
+
+/**
+ * Übersetzungen für Tour-Fehlermeldungen
+ */
+const tourErrorTexts: Record<string, TourErrorTranslations> = {
+  de: {
+    tourNotFound: 'Tour nicht gefunden',
+    invalidTourId: 'Ungültige Tour-ID',
+    loadError: 'Fehler beim Laden der Touren',
+    loadTourError: 'Fehler beim Laden der Tour',
+    noPermissionCreate: 'Keine Berechtigung zum Erstellen von Touren',
+    noPermissionEdit: 'Keine Berechtigung zum Bearbeiten von Touren',
+    titleMinLength: 'Titel muss mindestens 3 Zeichen lang sein',
+    organizationRequired: 'Organisation ist erforderlich',
+    maxParticipantsMin: 'Maximale Teilnehmeranzahl muss >= minimale Teilnehmeranzahl sein',
+    availableFromTo: 'Verfügbar ab muss <= verfügbar bis sein',
+    externalProviderRequired: 'Externer Anbieter ist bei externen Touren erforderlich',
+    createError: 'Fehler beim Erstellen der Tour',
+    noFileUploaded: 'Keine Datei hochgeladen',
+    imageUploadError: 'Fehler beim Hochladen des Bildes',
+    galleryUploadError: 'Fehler beim Hochladen des Galerie-Bildes',
+    imageNotFound: 'Bild nicht gefunden',
+    imageFileNotFound: 'Bilddatei nicht gefunden',
+    loadImageError: 'Fehler beim Laden des Bildes',
+    invalidTourIdOrImageIndex: 'Ungültige Tour-ID oder Bild-Index',
+    galleryNotFound: 'Galerie nicht gefunden',
+    imageIndexOutOfRange: 'Bild-Index außerhalb des gültigen Bereichs',
+    loadGalleryImageError: 'Fehler beim Laden des Galerie-Bildes',
+    invalidParameters: 'Ungültige Parameter',
+    onlyImageFilesAllowed: 'Nur Bilddateien (JPEG, PNG, GIF, WEBP) sind erlaubt',
+    imageGenerationStarted: 'Bildgenerierung gestartet',
+    jobNotFound: 'Job nicht gefunden'
+  },
+  en: {
+    tourNotFound: 'Tour not found',
+    invalidTourId: 'Invalid tour ID',
+    loadError: 'Error loading tours',
+    loadTourError: 'Error loading tour',
+    noPermissionCreate: 'No permission to create tours',
+    noPermissionEdit: 'No permission to edit tours',
+    titleMinLength: 'Title must be at least 3 characters long',
+    organizationRequired: 'Organization is required',
+    maxParticipantsMin: 'Maximum participants must be >= minimum participants',
+    availableFromTo: 'Available from must be <= available to',
+    externalProviderRequired: 'External provider is required for external tours',
+    createError: 'Error creating tour',
+    noFileUploaded: 'No file uploaded',
+    imageUploadError: 'Error uploading image',
+    galleryUploadError: 'Error uploading gallery image',
+    imageNotFound: 'Image not found',
+    imageFileNotFound: 'Image file not found',
+    loadImageError: 'Error loading image',
+    invalidTourIdOrImageIndex: 'Invalid tour ID or image index',
+    galleryNotFound: 'Gallery not found',
+    imageIndexOutOfRange: 'Image index out of range',
+    loadGalleryImageError: 'Error loading gallery image',
+    invalidParameters: 'Invalid parameters',
+    onlyImageFilesAllowed: 'Only image files (JPEG, PNG, GIF, WEBP) are allowed',
+    imageGenerationStarted: 'Image generation started',
+    jobNotFound: 'Job not found'
+  },
+  es: {
+    tourNotFound: 'Tour no encontrado',
+    invalidTourId: 'ID de tour inválido',
+    loadError: 'Error al cargar tours',
+    loadTourError: 'Error al cargar tour',
+    noPermissionCreate: 'Sin permiso para crear tours',
+    noPermissionEdit: 'Sin permiso para editar tours',
+    titleMinLength: 'El título debe tener al menos 3 caracteres',
+    organizationRequired: 'La organización es requerida',
+    maxParticipantsMin: 'El máximo de participantes debe ser >= mínimo de participantes',
+    availableFromTo: 'Disponible desde debe ser <= disponible hasta',
+    externalProviderRequired: 'El proveedor externo es requerido para tours externos',
+    createError: 'Error al crear tour',
+    noFileUploaded: 'No se subió ningún archivo',
+    imageUploadError: 'Error al subir imagen',
+    galleryUploadError: 'Error al subir imagen de galería',
+    imageNotFound: 'Imagen no encontrada',
+    imageFileNotFound: 'Archivo de imagen no encontrado',
+    loadImageError: 'Error al cargar imagen',
+    invalidTourIdOrImageIndex: 'ID de tour o índice de imagen inválido',
+    galleryNotFound: 'Galería no encontrada',
+    imageIndexOutOfRange: 'Índice de imagen fuera de rango',
+    loadGalleryImageError: 'Error al cargar imagen de galería',
+    invalidParameters: 'Parámetros inválidos',
+    onlyImageFilesAllowed: 'Solo se permiten archivos de imagen (JPEG, PNG, GIF, WEBP)',
+    imageGenerationStarted: 'Generación de imagen iniciada',
+    jobNotFound: 'Trabajo no encontrado'
+  }
+};
+
+/**
+ * Gibt die übersetzte Fehlermeldung für Tour-Fehler zurück
+ */
+export function getTourErrorText(
+  language: string,
+  errorType: keyof TourErrorTranslations
+): string {
+  const lang = language in tourErrorTexts ? language : 'de';
+  return tourErrorTexts[lang][errorType];
+}
+
+/**
+ * Typ für Tour-Provider-Fehlermeldungen
+ */
+type TourProviderErrorTranslations = {
+  providerNotFound: string;
+  invalidProviderId: string;
+  loadError: string;
+  loadProviderError: string;
+  noPermissionCreate: string;
+  noPermissionEdit: string;
+  noPermissionDelete: string;
+  nameMinLength: string;
+  organizationRequired: string;
+  createError: string;
+  updateError: string;
+  deleteError: string;
+  providerDeleted: string;
+};
+
+/**
+ * Übersetzungen für Tour-Provider-Fehlermeldungen
+ */
+const tourProviderErrorTexts: Record<string, TourProviderErrorTranslations> = {
+  de: {
+    providerNotFound: 'Anbieter nicht gefunden',
+    invalidProviderId: 'Ungültige Anbieter-ID',
+    loadError: 'Fehler beim Laden der Anbieter',
+    loadProviderError: 'Fehler beim Laden des Anbieters',
+    noPermissionCreate: 'Keine Berechtigung zum Erstellen von Anbietern',
+    noPermissionEdit: 'Keine Berechtigung zum Bearbeiten von Anbietern',
+    noPermissionDelete: 'Keine Berechtigung zum Löschen von Anbietern',
+    nameMinLength: 'Name muss mindestens 2 Zeichen lang sein',
+    organizationRequired: 'Organisation ist erforderlich',
+    createError: 'Fehler beim Erstellen des Anbieters',
+    updateError: 'Fehler beim Aktualisieren des Anbieters',
+    deleteError: 'Fehler beim Löschen des Anbieters',
+    providerDeleted: 'Anbieter gelöscht'
+  },
+  en: {
+    providerNotFound: 'Provider not found',
+    invalidProviderId: 'Invalid provider ID',
+    loadError: 'Error loading providers',
+    loadProviderError: 'Error loading provider',
+    noPermissionCreate: 'No permission to create providers',
+    noPermissionEdit: 'No permission to edit providers',
+    noPermissionDelete: 'No permission to delete providers',
+    nameMinLength: 'Name must be at least 2 characters long',
+    organizationRequired: 'Organization is required',
+    createError: 'Error creating provider',
+    updateError: 'Error updating provider',
+    deleteError: 'Error deleting provider',
+    providerDeleted: 'Provider deleted'
+  },
+  es: {
+    providerNotFound: 'Proveedor no encontrado',
+    invalidProviderId: 'ID de proveedor inválido',
+    loadError: 'Error al cargar proveedores',
+    loadProviderError: 'Error al cargar proveedor',
+    noPermissionCreate: 'Sin permiso para crear proveedores',
+    noPermissionEdit: 'Sin permiso para editar proveedores',
+    noPermissionDelete: 'Sin permiso para eliminar proveedores',
+    nameMinLength: 'El nombre debe tener al menos 2 caracteres',
+    organizationRequired: 'La organización es requerida',
+    createError: 'Error al crear proveedor',
+    updateError: 'Error al actualizar proveedor',
+    deleteError: 'Error al eliminar proveedor',
+    providerDeleted: 'Proveedor eliminado'
+  }
+};
+
+/**
+ * Gibt die übersetzte Fehlermeldung für Tour-Provider-Fehler zurück
+ */
+export function getTourProviderErrorText(
+  language: string,
+  errorType: keyof TourProviderErrorTranslations
+): string {
+  const lang = language in tourProviderErrorTexts ? language : 'de';
+  return tourProviderErrorTexts[lang][errorType];
+}
+
+/**
+ * Typ für Tour-Booking-Fehlermeldungen
+ */
+type TourBookingErrorTranslations = {
+  bookingNotFound: string;
+  invalidBookingId: string;
+  loadError: string;
+  loadBookingError: string;
+  noPermissionCreate: string;
+  noPermissionEdit: string;
+  tourIdRequired: string;
+  tourDateRequired: string;
+  tourDateFuture: string;
+  participantsMin: string;
+  customerNameMinLength: string;
+  contactRequired: string;
+  tourNotFound: string;
+  tourNotActive: string;
+  createError: string;
+  updateError: string;
+};
+
+/**
+ * Übersetzungen für Tour-Booking-Fehlermeldungen
+ */
+const tourBookingErrorTexts: Record<string, TourBookingErrorTranslations> = {
+  de: {
+    bookingNotFound: 'Buchung nicht gefunden',
+    invalidBookingId: 'Ungültige Buchungs-ID',
+    loadError: 'Fehler beim Laden der Buchungen',
+    loadBookingError: 'Fehler beim Laden der Buchung',
+    noPermissionCreate: 'Keine Berechtigung zum Erstellen von Buchungen',
+    noPermissionEdit: 'Keine Berechtigung zum Bearbeiten von Buchungen',
+    tourIdRequired: 'Tour-ID ist erforderlich',
+    tourDateRequired: 'Tour-Datum ist erforderlich',
+    tourDateFuture: 'Tour-Datum muss in der Zukunft sein',
+    participantsMin: 'Anzahl Teilnehmer muss >= 1 sein',
+    customerNameMinLength: 'Kundenname muss mindestens 2 Zeichen lang sein',
+    contactRequired: 'Mindestens eine Kontaktinformation (Telefon oder E-Mail) ist erforderlich',
+    tourNotFound: 'Tour nicht gefunden',
+    tourNotActive: 'Tour ist nicht aktiv',
+    createError: 'Fehler beim Erstellen der Buchung',
+    updateError: 'Fehler beim Aktualisieren der Buchung'
+  },
+  en: {
+    bookingNotFound: 'Booking not found',
+    invalidBookingId: 'Invalid booking ID',
+    loadError: 'Error loading bookings',
+    loadBookingError: 'Error loading booking',
+    noPermissionCreate: 'No permission to create bookings',
+    noPermissionEdit: 'No permission to edit bookings',
+    tourIdRequired: 'Tour ID is required',
+    tourDateRequired: 'Tour date is required',
+    tourDateFuture: 'Tour date must be in the future',
+    participantsMin: 'Number of participants must be >= 1',
+    customerNameMinLength: 'Customer name must be at least 2 characters long',
+    contactRequired: 'At least one contact information (phone or email) is required',
+    tourNotFound: 'Tour not found',
+    tourNotActive: 'Tour is not active',
+    createError: 'Error creating booking',
+    updateError: 'Error updating booking'
+  },
+  es: {
+    bookingNotFound: 'Reserva no encontrada',
+    invalidBookingId: 'ID de reserva inválido',
+    loadError: 'Error al cargar reservas',
+    loadBookingError: 'Error al cargar reserva',
+    noPermissionCreate: 'Sin permiso para crear reservas',
+    noPermissionEdit: 'Sin permiso para editar reservas',
+    tourIdRequired: 'ID de tour es requerido',
+    tourDateRequired: 'Fecha de tour es requerida',
+    tourDateFuture: 'La fecha de tour debe ser en el futuro',
+    participantsMin: 'El número de participantes debe ser >= 1',
+    customerNameMinLength: 'El nombre del cliente debe tener al menos 2 caracteres',
+    contactRequired: 'Se requiere al menos una información de contacto (teléfono o correo electrónico)',
+    tourNotFound: 'Tour no encontrado',
+    tourNotActive: 'El tour no está activo',
+    createError: 'Error al crear reserva',
+    updateError: 'Error al actualizar reserva'
+  }
+};
+
+/**
+ * Gibt die übersetzte Fehlermeldung für Tour-Booking-Fehler zurück
+ */
+export function getTourBookingErrorText(
+  language: string,
+  errorType: keyof TourBookingErrorTranslations
+): string {
+  const lang = language in tourBookingErrorTexts ? language : 'de';
+  return tourBookingErrorTexts[lang][errorType];
+}

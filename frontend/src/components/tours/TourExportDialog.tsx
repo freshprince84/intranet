@@ -5,6 +5,7 @@ import { XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../../config/axios.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import useMessage from '../../hooks/useMessage.ts';
+import { Tour } from '../../types/tour.ts';
 
 interface TourExportDialogProps {
     isOpen: boolean;
@@ -104,7 +105,7 @@ const TourExportDialog = ({ isOpen, onClose, tourCount }: TourExportDialogProps)
                 });
 
                 // CSV-Rows
-                const rows = tours.map((tour: any) => {
+                const rows = tours.map((tour: Tour) => {
                     return selectedFields.map(fieldId => {
                         let value = tour[fieldId];
                         if (value === null || value === undefined) return '';
@@ -138,7 +139,7 @@ const TourExportDialog = ({ isOpen, onClose, tourCount }: TourExportDialogProps)
 
             showMessage(t('tours.export.success', 'Export erfolgreich'), 'success');
             onClose();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Fehler beim Exportieren:', err);
             showMessage(err.response?.data?.message || t('tours.export.error', 'Fehler beim Exportieren'), 'error');
         } finally {

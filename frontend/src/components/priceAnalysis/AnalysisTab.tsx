@@ -34,7 +34,8 @@ const AnalysisTab: React.FC = () => {
     const { hasPermission } = usePermissions();
     const { showMessage } = useMessage();
     const errorContext = useError();
-    const { currentBranch } = useBranch();
+    const { branches, selectedBranch } = useBranch();
+    const currentBranch = branches.find(b => b.id === selectedBranch) || null;
     
     const handleError = errorContext?.handleError || ((err: any) => {
         console.error(t('common.error', 'Fehler'), err);

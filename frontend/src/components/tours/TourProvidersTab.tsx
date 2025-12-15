@@ -96,9 +96,11 @@ const TourProvidersTab: React.FC<TourProvidersTabProps> = () => {
     
     // Fehlerbehandlung mit Fallback
     const errorContext = useError();
-    const handleErrorContext = errorContext?.handleError || ((err: any, context?: Record<string, any>) => {
+    const handleErrorContext = errorContext?.handleError || ((err: unknown, context?: Record<string, unknown>) => {
         console.error('Fehler:', err, context);
-        const errorMessage = err?.response?.data?.message || err?.message || 'Ein Fehler ist aufgetreten';
+        const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
+                             (err as { message?: string })?.message || 
+                             t('errors.unknownError', { defaultValue: 'Ein Fehler ist aufgetreten' });
         showMessage(errorMessage, 'error');
     });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -121,7 +123,7 @@ const TourProvidersTab: React.FC<TourProvidersTabProps> = () => {
             const response = await axiosInstance.get(API_ENDPOINTS.TOUR_PROVIDERS.BASE);
             const data = response.data?.data || response.data || [];
             setProviders(Array.isArray(data) ? data : []);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Fehler beim Laden der Tour-Provider:', error);
             handleErrorContext(error);
             const errorMessage = error.response?.data?.message || t('tours.providers.loadError', { defaultValue: 'Fehler beim Laden der Provider' });
