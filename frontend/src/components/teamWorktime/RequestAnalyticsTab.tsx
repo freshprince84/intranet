@@ -190,16 +190,16 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
       } catch (error: any) {
         if (error.name !== 'AbortError') {
           console.error('Error loading requests:', error);
-          setError(t('analytics.request.loadError'));
+        setError(t('analytics.request.loadError'));
         }
       } finally {
         if (!abortController.signal.aborted) {
-          setLoading(false);
+        setLoading(false);
         }
       }
     };
 
-    fetchRequests();
+      fetchRequests();
     
     // ✅ PHASE 8: Memory Leak Prevention - Cleanup
     return () => {
@@ -258,7 +258,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
     };
     
     if (user) {
-      initialize();
+    initialize();
     }
   }, [loadFilters, handleFilterChange, user]);
 
@@ -500,17 +500,17 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                   return (
                     <React.Fragment key={request.id}>
                       <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                        {columnOrder.filter(id => visibleColumnIds.includes(id)).map((columnId) => {
-                          switch (columnId) {
-                            case 'time':
-                              return (
-                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  {format(new Date(request.createdAt), 'HH:mm')}
-                                </td>
-                              );
-                            case 'title':
-                              return (
-                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                    {columnOrder.filter(id => visibleColumnIds.includes(id)).map((columnId) => {
+                      switch (columnId) {
+                        case 'time':
+                          return (
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              {format(new Date(request.createdAt), 'HH:mm')}
+                            </td>
+                          );
+                        case 'title':
+                          return (
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                                   <div className="flex items-center gap-2">
                                     {hasStatusHistory && (
                                       <div className="relative group">
@@ -531,34 +531,34 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                                     )}
                                     <span>{request.title}</span>
                                   </div>
-                                </td>
-                              );
-                            case 'status':
-                              return (
-                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(request.status)}`}>
-                                    {getStatusLabel(request.status)}
-                                  </span>
-                                </td>
-                              );
-                            case 'requester':
-                              return (
-                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  {request.requester.firstName} {request.requester.lastName}
-                                </td>
-                              );
-                            case 'responsible':
-                              return (
-                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  {request.responsible.firstName} {request.responsible.lastName}
-                                </td>
-                              );
-                            case 'branch':
-                              return (
-                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  {request.branch.name}
-                                </td>
-                              );
+                            </td>
+                          );
+                        case 'status':
+                          return (
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(request.status)}`}>
+                                {getStatusLabel(request.status)}
+                              </span>
+                            </td>
+                          );
+                        case 'requester':
+                          return (
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              {request.requester.firstName} {request.requester.lastName}
+                            </td>
+                          );
+                        case 'responsible':
+                          return (
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              {request.responsible.firstName} {request.responsible.lastName}
+                            </td>
+                          );
+                        case 'branch':
+                          return (
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              {request.branch.name}
+                            </td>
+                          );
                             case 'deletedAt':
                               return (
                                 <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -577,11 +577,11 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                                   )}
                                 </td>
                               );
-                            default:
-                              return null;
-                          }
-                        })}
-                      </tr>
+                        default:
+                          return null;
+                      }
+                    })}
+                  </tr>
                       {/* Status-Historie Zeile */}
                       {isExpanded && hasStatusHistory && (
                         <tr className="bg-gray-50 dark:bg-gray-800/50">

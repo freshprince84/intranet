@@ -579,21 +579,21 @@ function convertDateCondition(value: any, operator: string, fieldName: string = 
     }
 
     // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__, __WEEK_START__, __WEEK_END__, __MONTH_START__, __MONTH_END__, __YEAR_START__, __YEAR_END__ dynamic dates
-    let dateValue: Date;
-    if (value === '__TODAY__') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      dateValue = today;
-    } else if (value === '__TOMORROW__') {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      dateValue = tomorrow;
-    } else if (value === '__YESTERDAY__') {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
-      dateValue = yesterday;
+  let dateValue: Date;
+  if (value === '__TODAY__') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dateValue = today;
+  } else if (value === '__TOMORROW__') {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    dateValue = tomorrow;
+  } else if (value === '__YESTERDAY__') {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    dateValue = yesterday;
     } else if (value === '__WEEK_START__') {
       const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
       weekStart.setHours(0, 0, 0, 0);
@@ -618,27 +618,27 @@ function convertDateCondition(value: any, operator: string, fieldName: string = 
       const yearEnd = endOfYear(new Date());
       yearEnd.setHours(23, 59, 59, 999);
       dateValue = yearEnd;
-    } else {
-      dateValue = new Date(value);
-      if (isNaN(dateValue.getTime())) {
-        return {};
-      }
+  } else {
+    dateValue = new Date(value);
+    if (isNaN(dateValue.getTime())) {
+      return {};
     }
+  }
 
-    if (operator === 'equals') {
-      const startOfDay = new Date(dateValue);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(dateValue);
-      endOfDay.setHours(23, 59, 59, 999);
-      return { [fieldName]: { gte: startOfDay, lte: endOfDay } };
-    } else if (operator === 'before') {
+  if (operator === 'equals') {
+    const startOfDay = new Date(dateValue);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(dateValue);
+    endOfDay.setHours(23, 59, 59, 999);
+    return { [fieldName]: { gte: startOfDay, lte: endOfDay } };
+  } else if (operator === 'before') {
       // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende lte statt lt
       // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
       const isPlaceholder = typeof value === 'string' && (
         value.startsWith('__') && value.endsWith('__')
       );
       return { [fieldName]: isPlaceholder ? { lte: dateValue } : { lt: dateValue } };
-    } else if (operator === 'after') {
+  } else if (operator === 'after') {
       // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende gte statt gt
       // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
       const isPlaceholder = typeof value === 'string' && (
@@ -649,9 +649,9 @@ function convertDateCondition(value: any, operator: string, fieldName: string = 
       return { [fieldName]: { gte: dateValue } };
     } else if (operator === 'lte' || operator === 'lessThanOrEqual') {
       return { [fieldName]: { lte: dateValue } };
-    }
+  }
 
-    return {};
+  return {};
   } catch (error) {
     // ✅ PHASE 2: Error Handling für ungültige Platzhalter-Werte
     logger.error(`[convertDateCondition] Error with placeholder ${value}:`, error);

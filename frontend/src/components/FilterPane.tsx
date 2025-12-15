@@ -72,7 +72,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
         setExistingFilters(response.data.map((filter: any) => ({ id: filter.id, name: filter.name })));
       } catch (err: any) {
         if (err.name !== 'AbortError') {
-          console.error(t('filter.loadError'), err);
+        console.error(t('filter.loadError'), err);
         }
       }
     };
