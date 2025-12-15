@@ -313,7 +313,7 @@ export class OTADiscoveryService {
       'a[href*="/hotel/"]'
     ];
     
-    let hotelElements: cheerio.Cheerio<cheerio.Element> | null = null;
+    let hotelElements: cheerio.Cheerio<any> | null = null;
     let foundSelector: string | null = null;
     
     for (const selector of testSelectors) {
@@ -458,7 +458,7 @@ export class OTADiscoveryService {
       'a[href*="/hostels/"]'
     ];
     
-    let hostelElements: cheerio.Cheerio<cheerio.Element> | null = null;
+    let hostelElements: cheerio.Cheerio<any> | null = null;
     let foundSelector: string | null = null;
     
     for (const selector of testSelectors) {
