@@ -218,6 +218,8 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
           logger.log('[WhatsApp Webhook] Antwort generiert:', response.substring(0, 100) + '...');
           logger.log('[WhatsApp Webhook] Vollständige Antwort:', response);
+          logger.log('[WhatsApp Webhook] Antwort-Länge:', response.length);
+          logger.log('[WhatsApp Webhook] User-Nachricht:', messageText);
 
           // 4. Sende Antwort
           logger.log('[WhatsApp Webhook] Erstelle WhatsApp Service für Branch', branchId);
@@ -228,6 +230,8 @@ export const handleWebhook = async (req: Request, res: Response) => {
           // Extrahiere Bildreferenzen aus AI-Antwort (Markdown-Format: ![alt](url))
           const imageMatches = Array.from(response.matchAll(/!\[(.*?)\]\((.*?)\)/g));
           
+          logger.log(`[WhatsApp Webhook] Bildreferenzen gefunden: ${imageMatches.length}`, imageMatches.map(m => ({ alt: m[1], url: m[2] })));
+          
           if (imageMatches.length > 0) {
             logger.log(`[WhatsApp Webhook] ${imageMatches.length} Bildreferenzen gefunden, sende nur Bilder + Standard-Text`);
             
@@ -235,13 +239,20 @@ export const handleWebhook = async (req: Request, res: Response) => {
             const baseUrl = process.env.SERVER_URL || process.env.API_URL || 'https://65.109.228.106.nip.io';
             
             // Sprache erkennen: Priorität 1 = User-Nachricht, Priorität 2 = Telefonnummer
-            const detectedLanguage = messageText 
+            // WICHTIG: Prüfe auch die AI-Antwort, falls User-Nachricht nicht eindeutig ist
+            let detectedLanguage = messageText 
               ? WhatsAppAiService.detectLanguageFromMessage(messageText)
               : null;
+            
+            // Fallback: Wenn keine Sprache aus User-Nachricht erkannt, prüfe AI-Antwort
+            if (!detectedLanguage && response) {
+              detectedLanguage = WhatsAppAiService.detectLanguageFromMessage(response);
+            }
+            
             const phoneLanguage = LanguageDetectionService.detectLanguageFromPhoneNumber(fromNumber);
             const language = detectedLanguage || phoneLanguage;
             
-            logger.log(`[WhatsApp Webhook] Sprache erkannt: ${language} (aus Nachricht: ${detectedLanguage || 'keine'}, aus Telefonnummer: ${phoneLanguage})`);
+            logger.log(`[WhatsApp Webhook] Sprache erkannt: ${language} (aus User-Nachricht: ${messageText ? WhatsAppAiService.detectLanguageFromMessage(messageText) : 'keine'}, aus AI-Antwort: ${response ? WhatsAppAiService.detectLanguageFromMessage(response) : 'keine'}, aus Telefonnummer: ${phoneLanguage})`);
             
             // Sende ALLE Bilder zuerst SEQUENZIELL (ohne Caption, um Text zu vermeiden)
             // WICHTIG: Sequenziell senden, damit sie in der richtigen Reihenfolge ankommen
@@ -273,15 +284,20 @@ export const handleWebhook = async (req: Request, res: Response) => {
                 logger.log(`[WhatsApp Webhook] Sende Bild ${imageMatches.indexOf(match) + 1}/${imageMatches.length}: ${publicImageUrl}`);
                 // KEINE Caption, um Text zu vermeiden
                 await whatsappService.sendImage(fromNumber, publicImageUrl);
-                // Kurze Pause zwischen Bildern, damit WhatsApp sie in der richtigen Reihenfolge verarbeitet
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Längere Pause zwischen Bildern, damit WhatsApp sie in der richtigen Reihenfolge verarbeitet
+                // WICHTIG: Mindestens 1 Sekunde, damit WhatsApp die Nachrichten in der richtigen Reihenfolge anzeigt
+                await new Promise(resolve => setTimeout(resolve, 1000));
               } catch (imageError: any) {
                 logger.error(`[WhatsApp Webhook] Fehler beim Senden des Bildes:`, imageError);
                 // Weiter mit nächstem Bild
               }
             }
             
-            logger.log(`[WhatsApp Webhook] Alle ${imageMatches.length} Bilder gesendet, sende jetzt Text`);
+            // Zusätzliche Pause nach ALLEN Bildern, bevor Text gesendet wird
+            // WICHTIG: Sicherstellen, dass alle Bilder verarbeitet sind
+            // Längere Pause (2 Sekunden), damit WhatsApp alle Bilder verarbeitet hat
+            logger.log(`[WhatsApp Webhook] Alle ${imageMatches.length} Bilder gesendet, warte 2 Sekunden, dann sende Text`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
             // Nach ALLEN Bildern: Sende IMMER nur den Standard-Text (ignoriere AI-Text komplett)
             const standardTexts: Record<string, string> = {
@@ -291,11 +307,15 @@ export const handleWebhook = async (req: Request, res: Response) => {
             };
             const finalTextMessage = standardTexts[language] || standardTexts['es'];
             
+            logger.log(`[WhatsApp Webhook] Sende Text-Nachricht (${language}): ${finalTextMessage}`);
+            
             if (isGroupMessage && groupId) {
               await whatsappService.sendMessage(fromNumber, finalTextMessage, undefined, groupId);
             } else {
               await whatsappService.sendMessage(fromNumber, finalTextMessage);
             }
+            
+            logger.log(`[WhatsApp Webhook] ✅ Text-Nachricht gesendet`);
           } else {
             // Keine Bilder, sende nur Text
             if (isGroupMessage && groupId) {

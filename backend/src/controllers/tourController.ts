@@ -52,7 +52,7 @@ const tourImageFileFilter = (req: Request, file: Express.Multer.File, cb: multer
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Nur Bilddateien (JPEG, PNG, GIF, WEBP) sind erlaubt'));
+    cb(new Error('Only image files (JPEG, PNG, GIF, WEBP) are allowed'));
   }
 };
 
@@ -196,7 +196,7 @@ export const getAllTours = async (req: Request, res: Response) => {
     }
     res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : 'Fehler beim Laden der Touren'
+      message: error instanceof Error ? error.message : getTourErrorText('de', 'loadError')
     });
   }
 };
@@ -204,13 +204,15 @@ export const getAllTours = async (req: Request, res: Response) => {
 // GET /api/tours/:id - Einzelne Tour
 export const getTourById = async (req: Request, res: Response) => {
   try {
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     const { id } = req.params;
     const tourId = parseInt(id, 10);
 
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 

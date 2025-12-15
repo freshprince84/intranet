@@ -995,9 +995,37 @@ export class LobbyPmsService {
     
     // Gastdaten aus holder-Objekt extrahieren (falls vorhanden)
     const holder = lobbyReservation.holder || {};
-    const guestName = (holder.name && holder.surname) 
-      ? `${holder.name} ${holder.surname}${holder.second_surname ? ' ' + holder.second_surname : ''}`.trim()
-      : (lobbyReservation.guest_name || 'Unbekannt');
+    
+    // Hole existierende Reservation um vorhandenen Namen zu schützen
+    const existingReservation = await prisma.reservation.findUnique({
+      where: { lobbyReservationId: bookingId }
+    });
+    
+    // Mehrstufiger Fallback für guestName:
+    // 1. Versuche Name aus holder.name + holder.surname zu extrahieren (Standard)
+    // 2. Fallback: Prüfe holder_name direkt in der Response (falls LobbyPMS es so zurückgibt)
+    // 3. Fallback: Prüfe guest_name in der Response
+    // 4. Fallback: Behalte vorhandenen Namen aus lokaler DB (wenn vorhanden und nicht "Unbekannt")
+    // 5. Letzter Fallback: "Unbekannt"
+    let guestName: string;
+    if (holder.name && holder.surname) {
+      guestName = `${holder.name} ${holder.surname}${holder.second_surname ? ' ' + holder.second_surname : ''}`.trim();
+    } else if ((lobbyReservation as any).holder_name) {
+      // Fallback: Prüfe holder_name direkt in der Response
+      guestName = (lobbyReservation as any).holder_name.trim();
+    } else if (lobbyReservation.guest_name) {
+      // Fallback: Prüfe guest_name in der Response
+      guestName = lobbyReservation.guest_name.trim();
+    } else if (existingReservation?.guestName && existingReservation.guestName !== 'Unbekannt') {
+      // Fallback: Behalte vorhandenen Namen aus lokaler DB (wenn vorhanden und nicht "Unbekannt")
+      guestName = existingReservation.guestName;
+      logger.log(`[syncReservation] Name aus lokaler DB übernommen: ${guestName} (booking_id=${bookingId})`);
+    } else {
+      // Letzter Fallback: "Unbekannt"
+      guestName = 'Unbekannt';
+      logger.warn(`[syncReservation] Kein Name gefunden für booking_id=${bookingId}, verwende "Unbekannt"`);
+    }
+    
     const guestEmail = holder.email || lobbyReservation.guest_email || null;
     const guestPhone = holder.phone || lobbyReservation.guest_phone || null;
     // Land aus holder.country extrahieren (für Sprache-basierte WhatsApp-Nachrichten)
@@ -1093,10 +1121,8 @@ export class LobbyPmsService {
     }
     const branchId: number = this.branchId;
 
-    // Hole existierende Reservation um checkInDataUploaded-Status zu prüfen
-    const existingReservation = await prisma.reservation.findUnique({
-      where: { lobbyReservationId: bookingId }
-    });
+    // WICHTIG: existingReservation wurde bereits oben geholt (für guestName Fallback)
+    // Verwende die bereits geladene Reservation für checkInDataUploaded-Status
 
     // Prüfe ob checkInDataUploaded bereits gesetzt war
     const wasAlreadyUploaded = existingReservation?.checkInDataUploaded || false;

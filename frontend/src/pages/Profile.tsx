@@ -126,7 +126,7 @@ const Profile: React.FC = () => {
           ...response.data,
           birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null,
           normalWorkingHours: response.data.normalWorkingHours || 7.6,
-          country: response.data.country || 'CO',
+          country: response.data.country || null,
           language: response.data.language || 'es',
           gender: response.data.gender || null,
           phoneNumber: response.data.phoneNumber || null,
@@ -443,13 +443,17 @@ const Profile: React.FC = () => {
                             fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:435',message:'onDocumentSaved called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
                             // #endregion
                             setShowDocumentUpload(false);
+                            // Warte kurz, damit Backend-Daten gespeichert sind
+                            await new Promise(resolve => setTimeout(resolve, 1000));
                             await fetchUserProfile(); // Aktualisiere Profil nach Upload (WARTEN auf Abschluss!)
                             // #region agent log
-                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:437',message:'fetchUserProfile completed',data:{hasDocumentListRef:!!documentListRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:447',message:'fetchUserProfile completed',data:{hasDocumentListRef:!!documentListRef.current,userBirthday:user?.birthday,userCountry:user?.country},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
                             // #endregion
+                            // Warte nochmal kurz, damit Dokument in DB ist
+                            await new Promise(resolve => setTimeout(resolve, 500));
                             documentListRef.current?.loadDocuments(); // Dokument-Liste aktualisieren
                             // #region agent log
-                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:438',message:'loadDocuments called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:451',message:'loadDocuments called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
                             // #endregion
                             setIsEditing(false); // Edit-Modus nach Upload zurücksetzen
                             showMessage('Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.', 'success');

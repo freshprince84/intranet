@@ -140,7 +140,7 @@ const EditTourProviderModal = ({ isOpen, onClose, provider, onProviderUpdated }:
                 onProviderUpdated(response.data.data);
                 handleClose();
             } else {
-                throw new Error(response.data?.message || 'Fehler beim Aktualisieren des Providers');
+                throw new Error(response.data?.message || t('tours.providers.updateError', { defaultValue: 'Fehler beim Aktualisieren des Providers' }));
             }
         } catch (err: unknown) {
             console.error('Error updating provider:', err);

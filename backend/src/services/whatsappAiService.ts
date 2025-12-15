@@ -1236,8 +1236,9 @@ export class WhatsAppAiService {
     
     // Englische Wörter
     const englishIndicators = [
-      /\b(hello|hi|thanks|thank you|please|yes|no|how|where|when|why|goodbye|bye|see you)\b/i,
-      /\b(the|a|an|of|in|on|at|for|with|is|are|was|were)\b/i
+      /\b(hello|hi|thanks|thank you|please|yes|no|how|where|when|why|what|which|goodbye|bye|see you)\b/i,
+      /\b(the|a|an|of|in|on|at|for|with|is|are|was|were|do|does|did|have|has|had|you|your|tours|tour|available)\b/i,
+      /\b(can|could|would|should|will|want|need|show|tell|give|get|see|book|reserve|reservation)\b/i
     ];
     
     // Französische Wörter/Zeichen
@@ -1281,10 +1282,12 @@ export class WhatsAppAiService {
     
     // Wenn höchster Score > 0, verwende diese Sprache
     if (scores[0].score > 0) {
+      logger.log(`[detectLanguageFromMessage] Sprache erkannt: ${scores[0].lang} (Score: ${scores[0].score}, alle Scores: es=${spanishScore}, de=${germanScore}, en=${englishScore}, fr=${frenchScore})`);
       return scores[0].lang;
     }
     
     // Keine Sprache erkannt
+    logger.log(`[detectLanguageFromMessage] Keine Sprache erkannt für: "${message.substring(0, 50)}"`);
     return null;
   }
 

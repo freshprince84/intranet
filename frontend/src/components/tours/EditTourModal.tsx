@@ -75,7 +75,7 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
                 
                 setBranches(branchesRes.data?.data || branchesRes.data || []);
                 setTourProviders(providersRes.data?.data || providersRes.data || []);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('Fehler beim Laden der Daten:', err);
                 showMessage(t('errors.loadError'), 'error');
             } finally {
@@ -177,12 +177,13 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
         
         try {
             await axiosInstance.delete(API_ENDPOINTS.TOURS.DELETE_IMAGE(tour.id));
-            // Lade Tour neu
+            // Sofort lokale States aktualisieren (UI-Update)
+            setImagePreview(null);
+            setImageFile(null);
+            // Lade Tour neu für Datenbank-Sync
             const response = await axiosInstance.get(API_ENDPOINTS.TOURS.BY_ID(tour.id));
             if (response.data.success) {
                 onTourUpdated(response.data.data);
-                setImagePreview(null);
-                setImageFile(null);
                 showMessage(t('tours.imageDeleted', 'Hauptbild erfolgreich gelöscht'), 'success');
             }
         } catch (err: unknown) {
@@ -198,10 +199,13 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
         if (index < currentGallery.length) {
             try {
                 await axiosInstance.delete(API_ENDPOINTS.TOURS.DELETE_GALLERY_IMAGE(tour.id, index));
-                // Lade Tour neu
+                // Sofort lokale States aktualisieren (UI-Update)
+                setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+                // Lade Tour neu für Datenbank-Sync
                 const response = await axiosInstance.get(API_ENDPOINTS.TOURS.BY_ID(tour.id));
                 if (response.data.success) {
                     onTourUpdated(response.data.data);
+                    showMessage(t('tours.galleryImageDeleted', 'Galerie-Bild erfolgreich gelöscht'), 'success');
                 }
             } catch (err: unknown) {
                 console.error('Error deleting gallery image:', err);
@@ -252,7 +256,10 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
         setLoading(true);
 
         try {
-            const tourData: any = {
+            const tourData: Partial<Tour> & {
+                imageFile?: File | null;
+                galleryFiles?: File[];
+            } = {
                 title,
                 description: description || null,
                 type,
@@ -309,7 +316,7 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
                                 headers: { 'Content-Type': 'multipart/form-data' }
                             });
                         }
-                    } catch (galleryErr: any) {
+                    } catch (galleryErr: unknown) {
                         console.error('Fehler beim Hochladen der Galerie-Bilder:', galleryErr);
                         showMessage(t('tours.galleryUploadError', 'Tour aktualisiert, aber Fehler beim Hochladen der Galerie-Bilder'), 'warning');
                     } finally {
