@@ -3102,7 +3102,9 @@
     "imageGenerationQueued": "Bildgenerierung in Warteschlange",
     "imageGenerationTimeout": "Bildgenerierung hat zu lange gedauert",
     "imageGenerationNoQueue": "Queue-System nicht verfügbar, verwende synchronen Modus",
-    "imageGenerationRedisError": "Redis-Verbindungsfehler, verwende synchronen Modus"
+    "imageGenerationRedisError": "Redis-Verbindungsfehler, verwende synchronen Modus",
+    "imageDeleted": "Hauptbild erfolgreich gelöscht",
+    "galleryImageDeleted": "Galerie-Bild erfolgreich gelöscht"
   },
   "tourBookings": {
     "title": "Tour-Buchungen",

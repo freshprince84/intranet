@@ -194,6 +194,7 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
     };
     
     const removeGalleryImage = async (index: number) => {
+        if (!tour) return;
         // Wenn es ein existierendes Bild ist (aus tour.galleryUrls), lösche es vom Server
         const currentGallery = tour.galleryUrls || [];
         if (index < currentGallery.length) {
@@ -294,7 +295,7 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
                         setUploadingImage(true);
                         const formData = new FormData();
                         formData.append('image', imageFile);
-                        await axiosInstance.post(API_ENDPOINTS.TOURS.UPLOAD_IMAGE(tour.id), formData, {
+                        await axiosInstance.post(API_ENDPOINTS.TOURS.UPLOAD_IMAGE(tourId), formData, {
                             headers: { 'Content-Type': 'multipart/form-data' }
                         });
                     } catch (imgErr: unknown) {
@@ -312,7 +313,7 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
                         for (const file of galleryFiles) {
                             const formData = new FormData();
                             formData.append('image', file);
-                            await axiosInstance.post(API_ENDPOINTS.TOURS.UPLOAD_GALLERY(tour.id), formData, {
+                            await axiosInstance.post(API_ENDPOINTS.TOURS.UPLOAD_GALLERY(tourId), formData, {
                                 headers: { 'Content-Type': 'multipart/form-data' }
                             });
                         }
@@ -326,7 +327,7 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
                 
                 showMessage(t('tours.updateSuccess', 'Tour erfolgreich aktualisiert'), 'success');
                 // Lade Tour neu, um aktualisierte Bilder zu erhalten
-                const updatedResponse = await axiosInstance.get(API_ENDPOINTS.TOURS.BY_ID(tour.id));
+                const updatedResponse = await axiosInstance.get(API_ENDPOINTS.TOURS.BY_ID(tourId));
                 onTourUpdated(updatedResponse.data.data);
                 handleClose();
             } else {
