@@ -12,6 +12,7 @@ import { getImageGenerationQueue, checkQueueHealth } from '../services/queueServ
 import { GeminiImageService } from '../services/geminiImageService';
 import { TourImageUploadService } from '../services/tourImageUploadService';
 import { OrganizationBrandingService } from '../services/organizationBrandingService';
+import { getUserLanguage, getTourErrorText } from '../utils/translations';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
