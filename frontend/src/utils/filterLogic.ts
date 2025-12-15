@@ -8,7 +8,7 @@
  * Nur die Code-Duplikation wurde entfernt, keine Funktionalitätsänderung!
  */
 
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 export interface FilterCondition {
   column: string;
@@ -258,7 +258,7 @@ export const evaluateDateCondition = (
   // Erstelle lokales Date-Objekt aus den UTC-Werten (ohne Zeitzone)
   const normalizedDate = new Date(dateYear, dateMonth, dateDay);
 
-  // Handle __TODAY__, __WEEK_START__, __WEEK_END__ dynamic dates
+  // Handle __TODAY__, __WEEK_START__, __WEEK_END__, __MONTH_START__, __MONTH_END__, __YEAR_START__, __YEAR_END__ dynamic dates
   let conditionDate: Date;
   if (condition.value === '__TODAY__') {
     // Get today's date in local timezone (set to midnight)
@@ -273,6 +273,22 @@ export const evaluateDateCondition = (
     const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
     weekEnd.setHours(23, 59, 59, 999);
     conditionDate = weekEnd;
+  } else if (condition.value === '__MONTH_START__') {
+    const monthStart = startOfMonth(new Date());
+    monthStart.setHours(0, 0, 0, 0);
+    conditionDate = monthStart;
+  } else if (condition.value === '__MONTH_END__') {
+    const monthEnd = endOfMonth(new Date());
+    monthEnd.setHours(23, 59, 59, 999);
+    conditionDate = monthEnd;
+  } else if (condition.value === '__YEAR_START__') {
+    const yearStart = startOfYear(new Date());
+    yearStart.setHours(0, 0, 0, 0);
+    conditionDate = yearStart;
+  } else if (condition.value === '__YEAR_END__') {
+    const yearEnd = endOfYear(new Date());
+    yearEnd.setHours(23, 59, 59, 999);
+    conditionDate = yearEnd;
   } else {
     const conditionDateRaw = new Date(condition.value as string);
     if (isNaN(conditionDateRaw.getTime())) {

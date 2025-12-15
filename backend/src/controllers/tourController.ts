@@ -251,7 +251,7 @@ export const getTourById = async (req: Request, res: Response) => {
     if (!tour) {
       return res.status(404).json({
         success: false,
-        message: 'Tour nicht gefunden'
+        message: getTourErrorText(language, 'tourNotFound')
       });
     }
 
@@ -261,9 +261,11 @@ export const getTourById = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('[getTourById] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden der Tour'
+      message: getTourErrorText(language, 'loadTourError')
     });
   }
 };
@@ -271,9 +273,11 @@ export const getTourById = async (req: Request, res: Response) => {
 // POST /api/tours - Neue Tour erstellen
 export const createTour = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_create',
       'write',
@@ -282,7 +286,7 @@ export const createTour = async (req: AuthenticatedRequest, res: Response) => {
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Erstellen von Touren'
+        message: getTourErrorText(language, 'noPermissionCreate')
       });
     }
 
@@ -320,14 +324,14 @@ export const createTour = async (req: AuthenticatedRequest, res: Response) => {
     if (!title || title.trim().length < 3) {
       return res.status(400).json({
         success: false,
-        message: 'Titel muss mindestens 3 Zeichen lang sein'
+        message: getTourErrorText(language, 'titleMinLength')
       });
     }
 
     if (!organizationId) {
       return res.status(400).json({
         success: false,
-        message: 'Organisation ist erforderlich'
+        message: getTourErrorText(language, 'organizationRequired')
       });
     }
 
@@ -335,7 +339,7 @@ export const createTour = async (req: AuthenticatedRequest, res: Response) => {
     if (maxParticipants && minParticipants && maxParticipants < minParticipants) {
       return res.status(400).json({
         success: false,
-        message: 'Maximale Teilnehmeranzahl muss >= minimale Teilnehmeranzahl sein'
+        message: getTourErrorText(language, 'maxParticipantsMin')
       });
     }
 
@@ -343,7 +347,7 @@ export const createTour = async (req: AuthenticatedRequest, res: Response) => {
     if (availableFrom && availableTo && new Date(availableFrom) > new Date(availableTo)) {
       return res.status(400).json({
         success: false,
-        message: 'Verfügbar ab muss <= verfügbar bis sein'
+        message: getTourErrorText(language, 'availableFromTo')
       });
     }
 
@@ -351,7 +355,7 @@ export const createTour = async (req: AuthenticatedRequest, res: Response) => {
     if (type === 'external' && !externalProviderId) {
       return res.status(400).json({
         success: false,
-        message: 'Externer Anbieter ist bei externen Touren erforderlich'
+        message: getTourErrorText(language, 'externalProviderRequired')
       });
     }
 
@@ -403,9 +407,11 @@ export const createTour = async (req: AuthenticatedRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('[createTour] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Erstellen der Tour'
+      message: getTourErrorText(language, 'createError')
     });
   }
 };
@@ -413,19 +419,21 @@ export const createTour = async (req: AuthenticatedRequest, res: Response) => {
 // POST /api/tours/:id/image - Hauptbild hochladen
 export const uploadTourImage = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     const { id } = req.params;
     const tourId = parseInt(id, 10);
 
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_edit',
       'write',
@@ -434,14 +442,14 @@ export const uploadTourImage = async (req: AuthenticatedRequest, res: Response) 
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Bearbeiten von Touren'
+        message: getTourErrorText(language, 'noPermissionEdit')
       });
     }
 
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'Keine Datei hochgeladen'
+        message: getTourErrorText(language, 'noFileUploaded')
       });
     }
 
@@ -477,9 +485,11 @@ export const uploadTourImage = async (req: AuthenticatedRequest, res: Response) 
     });
   } catch (error) {
     logger.error('[uploadTourImage] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Hochladen des Bildes'
+      message: getTourErrorText(language, 'imageUploadError')
     });
   }
 };
@@ -487,19 +497,21 @@ export const uploadTourImage = async (req: AuthenticatedRequest, res: Response) 
 // POST /api/tours/:id/gallery - Galerie-Bild hinzufügen
 export const uploadTourGalleryImage = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     const { id } = req.params;
     const tourId = parseInt(id, 10);
 
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_edit',
       'write',
@@ -508,14 +520,14 @@ export const uploadTourGalleryImage = async (req: AuthenticatedRequest, res: Res
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Bearbeiten von Touren'
+        message: getTourErrorText(language, 'noPermissionEdit')
       });
     }
 
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'Keine Datei hochgeladen'
+        message: getTourErrorText(language, 'noFileUploaded')
       });
     }
 
@@ -545,9 +557,11 @@ export const uploadTourGalleryImage = async (req: AuthenticatedRequest, res: Res
     });
   } catch (error) {
     logger.error('[uploadTourGalleryImage] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Hochladen des Galerie-Bildes'
+      message: getTourErrorText(language, 'galleryUploadError')
     });
   }
 };
@@ -555,13 +569,15 @@ export const uploadTourGalleryImage = async (req: AuthenticatedRequest, res: Res
 // GET /api/tours/:id/image - Hauptbild abrufen
 export const getTourImage = async (req: Request, res: Response) => {
   try {
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     const { id } = req.params;
     const tourId = parseInt(id, 10);
 
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 
@@ -573,7 +589,7 @@ export const getTourImage = async (req: Request, res: Response) => {
     if (!tour || !tour.imageUrl) {
       return res.status(404).json({
         success: false,
-        message: 'Bild nicht gefunden'
+        message: getTourErrorText(language, 'imageNotFound')
       });
     }
 
@@ -585,7 +601,7 @@ export const getTourImage = async (req: Request, res: Response) => {
     if (!fs.existsSync(imagePath)) {
       return res.status(404).json({
         success: false,
-        message: 'Bilddatei nicht gefunden'
+        message: getTourErrorText(language, 'imageFileNotFound')
       });
     }
 
@@ -605,9 +621,11 @@ export const getTourImage = async (req: Request, res: Response) => {
     res.sendFile(imagePath);
   } catch (error) {
     logger.error('[getTourImage] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden des Bildes'
+      message: getTourErrorText(language, 'loadImageError')
     });
   }
 };
@@ -615,6 +633,8 @@ export const getTourImage = async (req: Request, res: Response) => {
 // GET /api/tours/:id/gallery/:index - Galerie-Bild abrufen
 export const getTourGalleryImage = async (req: Request, res: Response) => {
   try {
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     const { id, index } = req.params;
     const tourId = parseInt(id, 10);
     const imageIndex = parseInt(index, 10);
@@ -622,7 +642,7 @@ export const getTourGalleryImage = async (req: Request, res: Response) => {
     if (isNaN(tourId) || isNaN(imageIndex)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID oder Bild-Index'
+        message: getTourErrorText(language, 'invalidTourIdOrImageIndex')
       });
     }
 
@@ -634,7 +654,7 @@ export const getTourGalleryImage = async (req: Request, res: Response) => {
     if (!tour || !tour.galleryUrls) {
       return res.status(404).json({
         success: false,
-        message: 'Galerie nicht gefunden'
+        message: getTourErrorText(language, 'galleryNotFound')
       });
     }
 
@@ -642,7 +662,7 @@ export const getTourGalleryImage = async (req: Request, res: Response) => {
     if (imageIndex < 0 || imageIndex >= galleryUrls.length) {
       return res.status(404).json({
         success: false,
-        message: 'Bild-Index außerhalb des gültigen Bereichs'
+        message: getTourErrorText(language, 'imageIndexOutOfRange')
       });
     }
 
@@ -654,7 +674,7 @@ export const getTourGalleryImage = async (req: Request, res: Response) => {
     if (!fs.existsSync(imagePath)) {
       return res.status(404).json({
         success: false,
-        message: 'Bilddatei nicht gefunden'
+        message: getTourErrorText(language, 'imageFileNotFound')
       });
     }
 
@@ -674,9 +694,11 @@ export const getTourGalleryImage = async (req: Request, res: Response) => {
     res.sendFile(imagePath);
   } catch (error) {
     logger.error('[getTourGalleryImage] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden des Galerie-Bildes'
+      message: getTourErrorText(language, 'loadGalleryImageError')
     });
   }
 };
@@ -684,6 +706,8 @@ export const getTourGalleryImage = async (req: Request, res: Response) => {
 // DELETE /api/tours/:id/gallery/:imageIndex - Galerie-Bild löschen
 export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     const { id, imageIndex } = req.params;
     const tourId = parseInt(id, 10);
     const index = parseInt(imageIndex, 10);
@@ -691,13 +715,13 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
     if (isNaN(tourId) || isNaN(index)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Parameter'
+        message: getTourErrorText(language, 'invalidParameters')
       });
     }
 
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_edit',
       'write',
@@ -706,7 +730,7 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Bearbeiten von Touren'
+        message: getTourErrorText(language, 'noPermissionEdit')
       });
     }
 
@@ -722,7 +746,7 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
     if (!tour) {
       return res.status(404).json({
         success: false,
-        message: 'Tour nicht gefunden'
+        message: getTourErrorText(language, 'tourNotFound')
       });
     }
 
@@ -730,7 +754,7 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
     if (tour.organizationId !== organizationId) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung für diese Tour'
+        message: getTourErrorText(language, 'noPermissionEdit')
       });
     }
 
@@ -738,7 +762,7 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
     if (index < 0 || index >= currentGallery.length) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültiger Bild-Index'
+        message: getTourErrorText(language, 'imageIndexOutOfRange')
       });
     }
 
@@ -768,9 +792,11 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
     });
   } catch (error) {
     logger.error('[deleteTourGalleryImage] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Löschen des Galerie-Bildes'
+      message: getTourErrorText(language, 'deleteError')
     });
   }
 };
@@ -778,19 +804,21 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
 // DELETE /api/tours/:id/image - Hauptbild löschen
 export const deleteTourImage = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     const { id } = req.params;
     const tourId = parseInt(id, 10);
 
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_edit',
       'write',
@@ -799,7 +827,7 @@ export const deleteTourImage = async (req: AuthenticatedRequest, res: Response) 
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Bearbeiten von Touren'
+        message: getTourErrorText(language, 'noPermissionEdit')
       });
     }
 
@@ -812,7 +840,7 @@ export const deleteTourImage = async (req: AuthenticatedRequest, res: Response) 
     if (!tour) {
       return res.status(404).json({
         success: false,
-        message: 'Tour nicht gefunden'
+        message: getTourErrorText(language, 'tourNotFound')
       });
     }
 
@@ -821,7 +849,7 @@ export const deleteTourImage = async (req: AuthenticatedRequest, res: Response) 
     if (tour.organizationId !== organizationId) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung für diese Tour'
+        message: getTourErrorText(language, 'noPermissionForTour')
       });
     }
 
@@ -844,13 +872,15 @@ export const deleteTourImage = async (req: AuthenticatedRequest, res: Response) 
 
     res.json({
       success: true,
-      message: 'Hauptbild erfolgreich gelöscht'
+      message: getTourErrorText(language, 'imageDeleted')
     });
   } catch (error) {
     logger.error('[deleteTourImage] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Löschen des Hauptbildes'
+      message: getTourErrorText(language, 'deleteError')
     });
   }
 };
@@ -858,9 +888,11 @@ export const deleteTourImage = async (req: AuthenticatedRequest, res: Response) 
 // PUT /api/tours/:id - Tour aktualisieren
 export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_edit',
       'write',
@@ -869,7 +901,7 @@ export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Bearbeiten von Touren'
+        message: getTourErrorText(language, 'noPermissionEdit')
       });
     }
 
@@ -879,7 +911,7 @@ export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 
@@ -891,7 +923,7 @@ export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
     if (!existingTour) {
       return res.status(404).json({
         success: false,
-        message: 'Tour nicht gefunden'
+        message: getTourErrorText(language, 'tourNotFound')
       });
     }
 
@@ -925,7 +957,7 @@ export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
     if (maxParticipants !== undefined && minParticipants !== undefined && maxParticipants < minParticipants) {
       return res.status(400).json({
         success: false,
-        message: 'Maximale Teilnehmeranzahl muss >= minimale Teilnehmeranzahl sein'
+        message: getTourErrorText(language, 'maxParticipantsMin')
       });
     }
 
@@ -933,7 +965,7 @@ export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
     if (availableFrom && availableTo && new Date(availableFrom) > new Date(availableTo)) {
       return res.status(400).json({
         success: false,
-        message: 'Verfügbar ab muss <= verfügbar bis sein'
+        message: getTourErrorText(language, 'availableFromTo')
       });
     }
 
@@ -982,9 +1014,11 @@ export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
     });
   } catch (error) {
     logger.error('[updateTour] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Aktualisieren der Tour'
+      message: getTourErrorText(language, 'updateError')
     });
   }
 };
@@ -992,9 +1026,11 @@ export const updateTour = async (req: AuthenticatedRequest, res: Response) => {
 // PUT /api/tours/:id/toggle-active - Tour aktiv/inaktiv setzen (Soft Delete)
 export const toggleTourActive = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_delete',
       'write',
@@ -1003,7 +1039,7 @@ export const toggleTourActive = async (req: AuthenticatedRequest, res: Response)
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Löschen von Touren'
+        message: getTourErrorText(language, 'noPermissionDelete')
       });
     }
 
@@ -1014,14 +1050,14 @@ export const toggleTourActive = async (req: AuthenticatedRequest, res: Response)
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 
     if (typeof isActive !== 'boolean') {
       return res.status(400).json({
         success: false,
-        message: 'isActive muss ein Boolean sein'
+        message: getTourErrorText(language, 'isActiveMustBeBoolean')
       });
     }
 
@@ -1045,9 +1081,11 @@ export const toggleTourActive = async (req: AuthenticatedRequest, res: Response)
     });
   } catch (error) {
     logger.error('[toggleTourActive] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Aktualisieren der Tour'
+      message: getTourErrorText(language, 'updateError')
     });
   }
 };
@@ -1055,13 +1093,15 @@ export const toggleTourActive = async (req: AuthenticatedRequest, res: Response)
 // GET /api/tours/:id/bookings - Buchungen einer Tour
 export const getTourBookings = async (req: Request, res: Response) => {
   try {
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     const { id } = req.params;
     const tourId = parseInt(id, 10);
 
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 
@@ -1109,9 +1149,11 @@ export const getTourBookings = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('[getTourBookings] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden der Buchungen'
+      message: getTourBookingErrorText(language, 'loadError')
     });
   }
 };
@@ -1198,9 +1240,11 @@ export const exportTours = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('[exportTours] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Exportieren der Touren'
+      message: getTourErrorText(language, 'loadError')
     });
   }
 };
@@ -1208,19 +1252,21 @@ export const exportTours = async (req: Request, res: Response) => {
 // POST /api/tours/:id/generate-images - Startet Bildgenerierung
 export const generateTourImages = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     const { id } = req.params;
     const tourId = parseInt(id, 10);
 
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_edit',
       'write',
@@ -1229,7 +1275,7 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Generieren von Tour-Bildern'
+        message: getTourErrorText(language, 'noPermissionEdit')
       });
     }
 
@@ -1257,14 +1303,14 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
     if (!tour) {
       return res.status(404).json({
         success: false,
-        message: 'Tour nicht gefunden'
+        message: getTourErrorText(language, 'tourNotFound')
       });
     }
 
     if (tour.organizationId !== organizationId) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung für diese Tour'
+        message: getTourErrorText(language, 'noPermissionForTour')
       });
     }
 
@@ -1325,13 +1371,13 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
         return res.json({
           success: true,
           mode: 'synchronous',
-          message: 'Bilder erfolgreich generiert (synchroner Modus)'
+          message: getTourErrorText(language, 'imagesGeneratedSuccess')
         });
       } catch (error: any) {
         logger.error(`[generateTourImages] Fehler im synchronen Modus:`, error);
         return res.status(500).json({
           success: false,
-          message: error.message || 'Fehler bei Bildgenerierung'
+          message: error.message || getTourErrorText(language, 'imageGenerationError')
         });
       }
     }
@@ -1356,13 +1402,13 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
       success: true,
       mode: 'asynchronous',
       jobId: job.id,
-      message: 'Bildgenerierung gestartet'
+      message: getTourErrorText(language, 'imageGenerationStarted')
     });
   } catch (error: any) {
     logger.error('[generateTourImages] Fehler:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Fehler beim Starten der Bildgenerierung'
+      message: error.message || getTourErrorText(language, 'imageGenerationError')
     });
   }
 };
@@ -1376,7 +1422,7 @@ export const getTourImageGenerationStatus = async (req: Request, res: Response) 
     if (isNaN(tourId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Tour-ID'
+        message: getTourErrorText(language, 'invalidTourId')
       });
     }
 
@@ -1384,7 +1430,7 @@ export const getTourImageGenerationStatus = async (req: Request, res: Response) 
     if (!jobId) {
       return res.status(400).json({
         success: false,
-        message: 'Job-ID erforderlich'
+        message: getTourErrorText(language, 'jobIdRequired')
       });
     }
 
@@ -1394,7 +1440,7 @@ export const getTourImageGenerationStatus = async (req: Request, res: Response) 
     if (!job) {
       return res.status(404).json({
         success: false,
-        message: 'Job nicht gefunden'
+        message: getTourErrorText(language, 'jobNotFound')
       });
     }
 
@@ -1420,7 +1466,7 @@ export const getTourImageGenerationStatus = async (req: Request, res: Response) 
     logger.error('[getTourImageGenerationStatus] Fehler:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Fehler beim Abrufen des Status'
+      message: error.message || getTourErrorText(language, 'statusError')
     });
   }
 };

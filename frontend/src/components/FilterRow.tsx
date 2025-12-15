@@ -23,6 +23,7 @@ interface FilterRowProps {
   columns: TableColumn[];
   isFirst: boolean;
   isLast: boolean;
+  onAddRangeConditions?: (startCondition: FilterCondition, endCondition: FilterCondition) => void;
 }
 
 // Neue Interfaces für Benutzer und Rollen
@@ -94,7 +95,8 @@ const FilterRow: React.FC<FilterRowProps> = ({
   onAdd,
   columns, 
   isFirst,
-  isLast
+  isLast,
+  onAddRangeConditions
 }) => {
   const { t } = useTranslation();
   const [operators, setOperators] = useState<{ value: string; label: string }[]>([]);
@@ -482,42 +484,114 @@ const FilterRow: React.FC<FilterRowProps> = ({
     
     // Für Datumsfelder ein Datumseingabefeld rendern
     if (columnId === 'dueDate' || columnId === 'startTime' || columnId === 'checkInDate' || columnId === 'checkOutDate' || columnId === 'arrivalTime' || columnId === 'time') {
-      // Prüfe ob der Wert eine Variable ist
-      const isVariable = value === '__TODAY__';
-      const isCustomDate = !isVariable && value;
+      // Prüfe ob der Wert ein Platzhalter ist
+      const isPlaceholder = value === '__TODAY__' || value === '__WEEK_START__' || value === '__WEEK_END__' || 
+                            value === '__MONTH_START__' || value === '__MONTH_END__' || 
+                            value === '__YEAR_START__' || value === '__YEAR_END__';
+      const isCustomDate = !isPlaceholder && value;
+      
+      // Bestimme den aktuellen Platzhalter-Typ
+      let placeholderType = 'custom';
+      if (value === '__TODAY__') placeholderType = 'today';
+      else if (value === '__WEEK_START__' || value === '__WEEK_END__') placeholderType = 'week';
+      else if (value === '__MONTH_START__' || value === '__MONTH_END__') placeholderType = 'month';
+      else if (value === '__YEAR_START__' || value === '__YEAR_END__') placeholderType = 'year';
       
       return (
         <div className="space-y-2">
-          {/* Auswahl zwischen Datum und Variable */}
+          {/* Auswahl zwischen Datum und Platzhaltern */}
           <select
             className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
-            value={isVariable ? 'variable' : 'date'}
+            value={placeholderType}
             onChange={(e) => {
-              if (e.target.value === 'variable') {
-                onChange('__TODAY__');
+              const selectedType = e.target.value;
+              
+              if (selectedType === 'today') {
+                onChange({ ...condition, value: '__TODAY__' });
+              } else if (selectedType === 'week') {
+                // Erstelle zwei Bedingungen für "Diese Woche"
+                if (onAddRangeConditions) {
+                  const startCondition: FilterCondition = {
+                    column: columnId,
+                    operator: 'after',
+                    value: '__WEEK_START__'
+                  };
+                  const endCondition: FilterCondition = {
+                    column: columnId,
+                    operator: 'before',
+                    value: '__WEEK_END__'
+                  };
+                  onAddRangeConditions(startCondition, endCondition);
+                } else {
+                  // Fallback: Setze nur Start-Wert
+                  onChange({ ...condition, value: '__WEEK_START__' });
+                }
+              } else if (selectedType === 'month') {
+                // Erstelle zwei Bedingungen für "Dieser Monat"
+                if (onAddRangeConditions) {
+                  const startCondition: FilterCondition = {
+                    column: columnId,
+                    operator: 'after',
+                    value: '__MONTH_START__'
+                  };
+                  const endCondition: FilterCondition = {
+                    column: columnId,
+                    operator: 'before',
+                    value: '__MONTH_END__'
+                  };
+                  onAddRangeConditions(startCondition, endCondition);
+                } else {
+                  // Fallback: Setze nur Start-Wert
+                  onChange({ ...condition, value: '__MONTH_START__' });
+                }
+              } else if (selectedType === 'year') {
+                // Erstelle zwei Bedingungen für "Dieses Jahr"
+                if (onAddRangeConditions) {
+                  const startCondition: FilterCondition = {
+                    column: columnId,
+                    operator: 'after',
+                    value: '__YEAR_START__'
+                  };
+                  const endCondition: FilterCondition = {
+                    column: columnId,
+                    operator: 'before',
+                    value: '__YEAR_END__'
+                  };
+                  onAddRangeConditions(startCondition, endCondition);
+                } else {
+                  // Fallback: Setze nur Start-Wert
+                  onChange({ ...condition, value: '__YEAR_START__' });
+                }
               } else {
-                onChange('');
+                // Benutzerdefiniert: Leere den Wert
+                onChange({ ...condition, value: '' });
               }
             }}
           >
-            <option value="date">{t('filter.row.selectDate')}</option>
-            <option value="variable">{t('filter.row.currentDay')}</option>
+            <option value="custom">{t('filter.row.placeholders.custom', { defaultValue: 'Benutzerdefiniert' })}</option>
+            <option value="today">{t('filter.row.placeholders.today', { defaultValue: 'Heute' })}</option>
+            <option value="week">{t('filter.row.placeholders.thisWeek', { defaultValue: 'Diese Woche' })}</option>
+            <option value="month">{t('filter.row.placeholders.thisMonth', { defaultValue: 'Dieser Monat' })}</option>
+            <option value="year">{t('filter.row.placeholders.thisYear', { defaultValue: 'Dieses Jahr' })}</option>
           </select>
           
-          {/* Datum-Input nur anzeigen wenn nicht Variable */}
-          {!isVariable && (
+          {/* Datum-Input nur anzeigen wenn nicht Platzhalter */}
+          {!isPlaceholder && (
             <input
               type="date"
               className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               value={value as string || ''}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={(e) => onChange({ ...condition, value: e.target.value })}
             />
           )}
           
-          {/* Variable-Anzeige */}
-          {isVariable && (
+          {/* Platzhalter-Anzeige */}
+          {isPlaceholder && (
             <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-blue-700 dark:text-blue-300 text-xs">
-              📅 {t('filter.row.dynamicDay')}
+              📅 {value === '__TODAY__' && t('filter.row.placeholders.today', { defaultValue: 'Heute' })}
+              {value === '__WEEK_START__' || value === '__WEEK_END__' ? t('filter.row.placeholders.thisWeek', { defaultValue: 'Diese Woche' }) : ''}
+              {value === '__MONTH_START__' || value === '__MONTH_END__' ? t('filter.row.placeholders.thisMonth', { defaultValue: 'Dieser Monat' }) : ''}
+              {value === '__YEAR_START__' || value === '__YEAR_END__' ? t('filter.row.placeholders.thisYear', { defaultValue: 'Dieses Jahr' }) : ''}
             </div>
           )}
         </div>

@@ -1436,6 +1436,18 @@ type TourErrorTranslations = {
   onlyImageFilesAllowed: string;
   imageGenerationStarted: string;
   jobNotFound: string;
+  updateError: string;
+  deleteError: string;
+  imageDeleted: string;
+  isActiveMustBeBoolean: string;
+  noPermissionDelete: string;
+  noPermissionForTour: string;
+  exportError: string;
+  noPermissionGenerateImages: string;
+  imagesGeneratedSuccess: string;
+  imageGenerationError: string;
+  jobIdRequired: string;
+  statusError: string;
 };
 
 /**
@@ -1468,7 +1480,19 @@ const tourErrorTexts: Record<string, TourErrorTranslations> = {
     invalidParameters: 'Ungültige Parameter',
     onlyImageFilesAllowed: 'Nur Bilddateien (JPEG, PNG, GIF, WEBP) sind erlaubt',
     imageGenerationStarted: 'Bildgenerierung gestartet',
-    jobNotFound: 'Job nicht gefunden'
+    jobNotFound: 'Job nicht gefunden',
+    updateError: 'Fehler beim Aktualisieren der Tour',
+    deleteError: 'Fehler beim Löschen der Tour',
+    imageDeleted: 'Hauptbild erfolgreich gelöscht',
+    isActiveMustBeBoolean: 'isActive muss ein Boolean sein',
+    noPermissionDelete: 'Keine Berechtigung zum Löschen von Touren',
+    noPermissionForTour: 'Keine Berechtigung für diese Tour',
+    exportError: 'Fehler beim Exportieren der Touren',
+    noPermissionGenerateImages: 'Keine Berechtigung zum Generieren von Tour-Bildern',
+    imagesGeneratedSuccess: 'Bilder erfolgreich generiert (synchroner Modus)',
+    imageGenerationError: 'Fehler bei Bildgenerierung',
+    jobIdRequired: 'Job-ID erforderlich',
+    statusError: 'Fehler beim Abrufen des Status'
   },
   en: {
     tourNotFound: 'Tour not found',
@@ -1496,7 +1520,19 @@ const tourErrorTexts: Record<string, TourErrorTranslations> = {
     invalidParameters: 'Invalid parameters',
     onlyImageFilesAllowed: 'Only image files (JPEG, PNG, GIF, WEBP) are allowed',
     imageGenerationStarted: 'Image generation started',
-    jobNotFound: 'Job not found'
+    jobNotFound: 'Job not found',
+    updateError: 'Error updating tour',
+    deleteError: 'Error deleting tour',
+    imageDeleted: 'Main image successfully deleted',
+    isActiveMustBeBoolean: 'isActive must be a boolean',
+    noPermissionDelete: 'No permission to delete tours',
+    noPermissionForTour: 'No permission for this tour',
+    exportError: 'Error exporting tours',
+    noPermissionGenerateImages: 'No permission to generate tour images',
+    imagesGeneratedSuccess: 'Images successfully generated (synchronous mode)',
+    imageGenerationError: 'Error generating images',
+    jobIdRequired: 'Job ID required',
+    statusError: 'Error retrieving status'
   },
   es: {
     tourNotFound: 'Tour no encontrado',
@@ -1524,7 +1560,19 @@ const tourErrorTexts: Record<string, TourErrorTranslations> = {
     invalidParameters: 'Parámetros inválidos',
     onlyImageFilesAllowed: 'Solo se permiten archivos de imagen (JPEG, PNG, GIF, WEBP)',
     imageGenerationStarted: 'Generación de imagen iniciada',
-    jobNotFound: 'Trabajo no encontrado'
+    jobNotFound: 'Trabajo no encontrado',
+    updateError: 'Error al actualizar tour',
+    deleteError: 'Error al eliminar tour',
+    imageDeleted: 'Imagen principal eliminada exitosamente',
+    isActiveMustBeBoolean: 'isActive debe ser un booleano',
+    noPermissionDelete: 'Sin permiso para eliminar tours',
+    noPermissionForTour: 'Sin permiso para este tour',
+    exportError: 'Error al exportar tours',
+    noPermissionGenerateImages: 'Sin permiso para generar imágenes de tour',
+    imagesGeneratedSuccess: 'Imágenes generadas exitosamente (modo sincrónico)',
+    imageGenerationError: 'Error al generar imágenes',
+    jobIdRequired: 'ID de trabajo requerido',
+    statusError: 'Error al recuperar el estado'
   }
 };
 
@@ -1556,6 +1604,7 @@ type TourProviderErrorTranslations = {
   updateError: string;
   deleteError: string;
   providerDeleted: string;
+  cannotDeleteWithTours: string;
 };
 
 /**
@@ -1575,7 +1624,8 @@ const tourProviderErrorTexts: Record<string, TourProviderErrorTranslations> = {
     createError: 'Fehler beim Erstellen des Anbieters',
     updateError: 'Fehler beim Aktualisieren des Anbieters',
     deleteError: 'Fehler beim Löschen des Anbieters',
-    providerDeleted: 'Anbieter gelöscht'
+    providerDeleted: 'Anbieter gelöscht',
+    cannotDeleteWithTours: 'Anbieter kann nicht gelöscht werden, da {count} Tour(s) verknüpft sind'
   },
   en: {
     providerNotFound: 'Provider not found',
@@ -1590,7 +1640,8 @@ const tourProviderErrorTexts: Record<string, TourProviderErrorTranslations> = {
     createError: 'Error creating provider',
     updateError: 'Error updating provider',
     deleteError: 'Error deleting provider',
-    providerDeleted: 'Provider deleted'
+    providerDeleted: 'Provider deleted',
+    cannotDeleteWithTours: 'Provider cannot be deleted because {count} tour(s) are linked'
   },
   es: {
     providerNotFound: 'Proveedor no encontrado',
@@ -1605,7 +1656,8 @@ const tourProviderErrorTexts: Record<string, TourProviderErrorTranslations> = {
     createError: 'Error al crear proveedor',
     updateError: 'Error al actualizar proveedor',
     deleteError: 'Error al eliminar proveedor',
-    providerDeleted: 'Proveedor eliminado'
+    providerDeleted: 'Proveedor eliminado',
+    cannotDeleteWithTours: 'El proveedor no puede ser eliminado porque {count} tour(s) están vinculados'
   }
 };
 
@@ -1640,6 +1692,15 @@ type TourBookingErrorTranslations = {
   tourNotActive: string;
   createError: string;
   updateError: string;
+  noPermissionDelete: string;
+  deleteError: string;
+  bookingDeleted: string;
+  cannotDeleteWithReservations: string;
+  cancelledByInvalid: string;
+  cancelError: string;
+  completeError: string;
+  invalidUserId: string;
+  loadCommissionsError: string;
 };
 
 /**
@@ -1662,7 +1723,16 @@ const tourBookingErrorTexts: Record<string, TourBookingErrorTranslations> = {
     tourNotFound: 'Tour nicht gefunden',
     tourNotActive: 'Tour ist nicht aktiv',
     createError: 'Fehler beim Erstellen der Buchung',
-    updateError: 'Fehler beim Aktualisieren der Buchung'
+    updateError: 'Fehler beim Aktualisieren der Buchung',
+    noPermissionDelete: 'Keine Berechtigung zum Löschen von Buchungen',
+    deleteError: 'Fehler beim Löschen der Buchung',
+    bookingDeleted: 'Buchung gelöscht',
+    cannotDeleteWithReservations: 'Buchung kann nicht gelöscht werden, da Reservations verknüpft sind',
+    cancelledByInvalid: 'cancelledBy muss "customer" oder "provider" sein',
+    cancelError: 'Fehler beim Stornieren der Buchung',
+    completeError: 'Fehler beim Markieren der Buchung als abgeschlossen',
+    invalidUserId: 'Ungültige User-ID',
+    loadCommissionsError: 'Fehler beim Laden der Kommissionen'
   },
   en: {
     bookingNotFound: 'Booking not found',
@@ -1698,7 +1768,16 @@ const tourBookingErrorTexts: Record<string, TourBookingErrorTranslations> = {
     tourNotFound: 'Tour no encontrado',
     tourNotActive: 'El tour no está activo',
     createError: 'Error al crear reserva',
-    updateError: 'Error al actualizar reserva'
+    updateError: 'Error al actualizar reserva',
+    noPermissionDelete: 'Sin permiso para eliminar reservas',
+    deleteError: 'Error al eliminar reserva',
+    bookingDeleted: 'Reserva eliminada',
+    cannotDeleteWithReservations: 'La reserva no puede ser eliminada porque hay reservaciones vinculadas',
+    cancelledByInvalid: 'cancelledBy debe ser "customer" o "provider"',
+    cancelError: 'Error al cancelar reserva',
+    completeError: 'Error al marcar reserva como completada',
+    invalidUserId: 'ID de usuario inválido',
+    loadCommissionsError: 'Error al cargar comisiones'
   }
 };
 

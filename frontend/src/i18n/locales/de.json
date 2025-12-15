@@ -940,6 +940,13 @@
       "selectDate": "Datum wählen",
       "currentDay": "Aktueller Tag",
       "dynamicDay": "Aktueller Tag (dynamisch)",
+      "placeholders": {
+        "custom": "Benutzerdefiniert",
+        "today": "Heute",
+        "thisWeek": "Diese Woche",
+        "thisMonth": "Dieser Monat",
+        "thisYear": "Dieses Jahr"
+      },
       "groups": {
         "users": "Benutzer",
         "roles": "Rollen"

@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { Request } from 'express';
 import { isAdminOrOwner } from '../middleware/organization';
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 /**
  * Filter-Bedingung (wie im Frontend verwendet)
@@ -515,7 +515,7 @@ function convertSingleCondition(
  * @param fieldName - Der Name des Feldes ('dueDate', 'checkInDate', 'checkOutDate', etc.)
  */
 function convertDateCondition(value: any, operator: string, fieldName: string = 'dueDate'): any {
-  // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__, __WEEK_START__, __WEEK_END__ dynamic dates
+  // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__, __WEEK_START__, __WEEK_END__, __MONTH_START__, __MONTH_END__, __YEAR_START__, __YEAR_END__ dynamic dates
   let dateValue: Date;
   if (value === '__TODAY__') {
     const today = new Date();
@@ -539,6 +539,22 @@ function convertDateCondition(value: any, operator: string, fieldName: string = 
     const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
     weekEnd.setHours(23, 59, 59, 999);
     dateValue = weekEnd;
+  } else if (value === '__MONTH_START__') {
+    const monthStart = startOfMonth(new Date());
+    monthStart.setHours(0, 0, 0, 0);
+    dateValue = monthStart;
+  } else if (value === '__MONTH_END__') {
+    const monthEnd = endOfMonth(new Date());
+    monthEnd.setHours(23, 59, 59, 999);
+    dateValue = monthEnd;
+  } else if (value === '__YEAR_START__') {
+    const yearStart = startOfYear(new Date());
+    yearStart.setHours(0, 0, 0, 0);
+    dateValue = yearStart;
+  } else if (value === '__YEAR_END__') {
+    const yearEnd = endOfYear(new Date());
+    yearEnd.setHours(23, 59, 59, 999);
+    dateValue = yearEnd;
   } else {
     dateValue = new Date(value);
     if (isNaN(dateValue.getTime())) {

@@ -8,6 +8,7 @@ import { filterCache } from '../services/filterCache';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import { isAdminOrOwner } from '../middleware/organization';
 import { logger } from '../utils/logger';
+import { getUserLanguage, getTourBookingErrorText } from '../utils/translations';
 // TourWhatsAppService wird dynamisch importiert wenn benötigt
 // NotificationService wird dynamisch importiert wenn benötigt
 
@@ -214,9 +215,11 @@ export const getAllTourBookings = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('[getAllTourBookings] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden der Buchungen'
+      message: getTourBookingErrorText(language, 'loadError')
     });
   }
 };
@@ -224,13 +227,15 @@ export const getAllTourBookings = async (req: Request, res: Response) => {
 // GET /api/tour-bookings/:id - Einzelne Buchung
 export const getTourBookingById = async (req: Request, res: Response) => {
   try {
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     const { id } = req.params;
     const bookingId = parseInt(id, 10);
 
     if (isNaN(bookingId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Buchungs-ID'
+        message: getTourBookingErrorText(language, 'invalidBookingId')
       });
     }
 
@@ -269,7 +274,7 @@ export const getTourBookingById = async (req: Request, res: Response) => {
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: 'Buchung nicht gefunden'
+        message: getTourBookingErrorText(language, 'bookingNotFound')
       });
     }
 
@@ -279,9 +284,11 @@ export const getTourBookingById = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('[getTourBookingById] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden der Buchung'
+      message: getTourBookingErrorText(language, 'loadBookingError')
     });
   }
 };
@@ -289,9 +296,11 @@ export const getTourBookingById = async (req: Request, res: Response) => {
 // POST /api/tour-bookings - Neue Buchung erstellen
 export const createTourBooking = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_booking_create',
       'write',
@@ -300,11 +309,9 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Erstellen von Buchungen'
+        message: getTourBookingErrorText(language, 'noPermissionCreate')
       });
     }
-
-    const userId = parseInt(req.userId, 10);
     const organizationId = (req as any).organizationId;
     const branchId = (req as any).branchId;
 
@@ -323,14 +330,14 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
     if (!tourId || isNaN(parseInt(tourId, 10))) {
       return res.status(400).json({
         success: false,
-        message: 'Tour-ID ist erforderlich'
+        message: getTourBookingErrorText(language, 'tourIdRequired')
       });
     }
 
     if (!tourDate) {
       return res.status(400).json({
         success: false,
-        message: 'Tour-Datum ist erforderlich'
+        message: getTourBookingErrorText(language, 'tourDateRequired')
       });
     }
 
@@ -338,28 +345,28 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
     if (tourDateObj < new Date()) {
       return res.status(400).json({
         success: false,
-        message: 'Tour-Datum muss in der Zukunft sein'
+        message: getTourBookingErrorText(language, 'tourDateFuture')
       });
     }
 
     if (!numberOfParticipants || numberOfParticipants < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Anzahl Teilnehmer muss >= 1 sein'
+        message: getTourBookingErrorText(language, 'participantsMin')
       });
     }
 
     if (!customerName || customerName.trim().length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Kundenname muss mindestens 2 Zeichen lang sein'
+        message: getTourBookingErrorText(language, 'customerNameMinLength')
       });
     }
 
     if (!customerPhone && !customerEmail) {
       return res.status(400).json({
         success: false,
-        message: 'Mindestens eine Kontaktinformation (Telefon oder E-Mail) ist erforderlich'
+        message: getTourBookingErrorText(language, 'contactRequired')
       });
     }
 
@@ -374,14 +381,14 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
     if (!tour) {
       return res.status(404).json({
         success: false,
-        message: 'Tour nicht gefunden'
+        message: getTourBookingErrorText(language, 'tourNotFound')
       });
     }
 
     if (!tour.isActive) {
       return res.status(400).json({
         success: false,
-        message: 'Tour ist nicht aktiv'
+        message: getTourBookingErrorText(language, 'tourNotActive')
       });
     }
 
@@ -533,9 +540,11 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
     });
   } catch (error) {
     logger.error('[createTourBooking] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Erstellen der Buchung'
+      message: getTourBookingErrorText(language, 'createError')
     });
   }
 };
@@ -543,9 +552,11 @@ export const createTourBooking = async (req: AuthenticatedRequest, res: Response
 // PUT /api/tour-bookings/:id - Buchung aktualisieren
 export const updateTourBooking = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_booking_edit',
       'write',
@@ -554,7 +565,7 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Bearbeiten von Buchungen'
+        message: getTourBookingErrorText(language, 'noPermissionEdit')
       });
     }
 
@@ -564,7 +575,7 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
     if (isNaN(bookingId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Buchungs-ID'
+        message: getTourBookingErrorText(language, 'invalidBookingId')
       });
     }
 
@@ -576,7 +587,7 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
     if (!existingBooking) {
       return res.status(404).json({
         success: false,
-        message: 'Buchung nicht gefunden'
+        message: getTourBookingErrorText(language, 'bookingNotFound')
       });
     }
 
@@ -596,7 +607,7 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
       if (tourDateObj < new Date()) {
         return res.status(400).json({
           success: false,
-          message: 'Tour-Datum muss in der Zukunft sein'
+          message: getTourBookingErrorText(language, 'tourDateFuture')
         });
       }
       updateData.tourDate = tourDateObj;
@@ -606,7 +617,7 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
       if (numberOfParticipants < 1) {
         return res.status(400).json({
           success: false,
-          message: 'Anzahl Teilnehmer muss >= 1 sein'
+          message: getTourBookingErrorText(language, 'participantsMin')
         });
       }
 
@@ -647,7 +658,7 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
       if (customerName.trim().length < 2) {
         return res.status(400).json({
           success: false,
-          message: 'Kundenname muss mindestens 2 Zeichen lang sein'
+          message: getTourBookingErrorText(language, 'customerNameMinLength')
         });
       }
       updateData.customerName = customerName.trim();
@@ -677,9 +688,11 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
     });
   } catch (error) {
     logger.error('[updateTourBooking] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Aktualisieren der Buchung'
+      message: getTourBookingErrorText(language, 'updateError')
     });
   }
 };
@@ -687,9 +700,11 @@ export const updateTourBooking = async (req: AuthenticatedRequest, res: Response
 // DELETE /api/tour-bookings/:id - Buchung löschen
 export const deleteTourBooking = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_booking_edit',
       'write',
@@ -698,7 +713,7 @@ export const deleteTourBooking = async (req: AuthenticatedRequest, res: Response
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Löschen von Buchungen'
+        message: getTourBookingErrorText(language, 'noPermissionDelete')
       });
     }
 
@@ -708,7 +723,7 @@ export const deleteTourBooking = async (req: AuthenticatedRequest, res: Response
     if (isNaN(bookingId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Buchungs-ID'
+        message: getTourBookingErrorText(language, 'invalidBookingId')
       });
     }
 
@@ -720,7 +735,7 @@ export const deleteTourBooking = async (req: AuthenticatedRequest, res: Response
     if (reservations.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Buchung kann nicht gelöscht werden, da Reservations verknüpft sind'
+        message: getTourBookingErrorText(language, 'cannotDeleteWithReservations')
       });
     }
 
@@ -730,13 +745,15 @@ export const deleteTourBooking = async (req: AuthenticatedRequest, res: Response
 
     res.json({
       success: true,
-      message: 'Buchung gelöscht'
+      message: getTourBookingErrorText(language, 'bookingDeleted')
     });
   } catch (error) {
     logger.error('[deleteTourBooking] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Löschen der Buchung'
+      message: getTourBookingErrorText(language, 'deleteError')
     });
   }
 };
@@ -744,6 +761,8 @@ export const deleteTourBooking = async (req: AuthenticatedRequest, res: Response
 // POST /api/tour-bookings/:id/cancel - Buchung stornieren
 export const cancelTourBooking = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     const { id } = req.params;
     const bookingId = parseInt(id, 10);
     const { reason, cancelledBy } = req.body;
@@ -751,14 +770,14 @@ export const cancelTourBooking = async (req: AuthenticatedRequest, res: Response
     if (isNaN(bookingId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Buchungs-ID'
+        message: getTourBookingErrorText(language, 'invalidBookingId')
       });
     }
 
     if (!cancelledBy || !['customer', 'provider'].includes(cancelledBy)) {
       return res.status(400).json({
         success: false,
-        message: 'cancelledBy muss "customer" oder "provider" sein'
+        message: getTourBookingErrorText(language, 'cancelledByInvalid')
       });
     }
 
@@ -840,9 +859,11 @@ export const cancelTourBooking = async (req: AuthenticatedRequest, res: Response
     });
   } catch (error) {
     logger.error('[cancelTourBooking] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Stornieren der Buchung'
+      message: getTourBookingErrorText(language, 'cancelError')
     });
   }
 };
@@ -850,13 +871,15 @@ export const cancelTourBooking = async (req: AuthenticatedRequest, res: Response
 // POST /api/tour-bookings/:id/complete - Buchung als abgeschlossen markieren
 export const completeTourBooking = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     const { id } = req.params;
     const bookingId = parseInt(id, 10);
 
     if (isNaN(bookingId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Buchungs-ID'
+        message: getTourBookingErrorText(language, 'invalidBookingId')
       });
     }
 
@@ -881,9 +904,11 @@ export const completeTourBooking = async (req: AuthenticatedRequest, res: Respon
     });
   } catch (error) {
     logger.error('[completeTourBooking] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Markieren der Buchung als abgeschlossen'
+      message: getTourBookingErrorText(language, 'completeError')
     });
   }
 };
@@ -891,6 +916,8 @@ export const completeTourBooking = async (req: AuthenticatedRequest, res: Respon
 // GET /api/tour-bookings/user/:userId - Buchungen eines Mitarbeiters
 export const getUserTourBookings = async (req: Request, res: Response) => {
   try {
+    const requestUserId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = requestUserId > 0 ? await getUserLanguage(requestUserId) : 'de';
     const { userId } = req.params;
     const userIdNum = parseInt(userId, 10);
     const startDate = req.query.startDate 
@@ -904,7 +931,7 @@ export const getUserTourBookings = async (req: Request, res: Response) => {
     if (isNaN(userIdNum)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige User-ID'
+        message: getTourBookingErrorText(language, 'invalidUserId')
       });
     }
 
@@ -944,9 +971,11 @@ export const getUserTourBookings = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('[getUserTourBookings] Fehler:', error);
+    const requestUserId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = requestUserId > 0 ? await getUserLanguage(requestUserId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden der Buchungen'
+      message: getTourBookingErrorText(language, 'loadError')
     });
   }
 };
@@ -954,6 +983,8 @@ export const getUserTourBookings = async (req: Request, res: Response) => {
 // GET /api/tour-bookings/user/:userId/commissions - Kommissionen eines Mitarbeiters
 export const getUserCommissions = async (req: Request, res: Response) => {
   try {
+    const requestUserId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = requestUserId > 0 ? await getUserLanguage(requestUserId) : 'de';
     const { userId } = req.params;
     const userIdNum = parseInt(userId, 10);
     const startDate = req.query.startDate 
@@ -966,7 +997,7 @@ export const getUserCommissions = async (req: Request, res: Response) => {
     if (isNaN(userIdNum)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige User-ID'
+        message: getTourBookingErrorText(language, 'invalidUserId')
       });
     }
 
@@ -979,9 +1010,11 @@ export const getUserCommissions = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('[getUserCommissions] Fehler:', error);
+    const requestUserId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = requestUserId > 0 ? await getUserLanguage(requestUserId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden der Kommissionen'
+      message: getTourBookingErrorText(language, 'loadCommissionsError')
     });
   }
 };

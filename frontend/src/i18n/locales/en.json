@@ -1026,6 +1026,13 @@
       "selectDate": "Select date",
       "currentDay": "Current day",
       "dynamicDay": "Current day (dynamic)",
+      "placeholders": {
+        "custom": "Custom",
+        "today": "Today",
+        "thisWeek": "This week",
+        "thisMonth": "This month",
+        "thisYear": "This year"
+      },
       "groups": {
         "users": "Users",
         "roles": "Roles"
