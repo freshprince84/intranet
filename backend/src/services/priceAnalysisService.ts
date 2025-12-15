@@ -124,21 +124,35 @@ export class PriceAnalysisService {
    * Ruft Konkurrenzpreise ab
    * 
    * @param branchId - Branch-ID
-   * @param categoryId - Kategorie-ID
+   * @param roomType - Zimmertyp ('compartida' | 'privada') - LobbyPMS Format
    * @param date - Datum
    * @returns Durchschnittspreis der Konkurrenz oder null
    */
   private static async getCompetitorAvgPrice(
     branchId: number,
-    categoryId: number,
+    roomType: 'compartida' | 'privada',
     date: Date
   ): Promise<number | null> {
     try {
-      // Hole OTA-Listings für diese Kategorie
+      // Hole Branch mit Adress-Informationen
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { city: true, country: true }
+      });
+
+      if (!branch?.city) {
+        return null;
+      }
+
+      // Konvertiere LobbyPMS roomType zu OTA roomType
+      const otaRoomType = roomType === 'compartida' ? 'dorm' : 'private';
+
+      // Hole OTA-Listings für diese Stadt und Zimmertyp
       const listings = await prisma.oTAListing.findMany({
         where: {
-          branchId,
-          categoryId,
+          city: branch.city,
+          country: branch.country || undefined,
+          roomType: otaRoomType,
           isActive: true
         }
       });
@@ -269,7 +283,7 @@ export class PriceAnalysisService {
         }
 
         // 5. Hole Konkurrenzpreise
-        const competitorAvgPrice = await this.getCompetitorAvgPrice(branchId, entry.categoryId, analysisDate);
+        const competitorAvgPrice = await this.getCompetitorAvgPrice(branchId, entry.roomType, analysisDate);
 
         // 6. Bestimme Preisposition
         const pricePosition = this.getPricePosition(entry.pricePerNight, competitorAvgPrice);

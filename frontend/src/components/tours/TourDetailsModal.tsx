@@ -44,7 +44,7 @@ const TourDetailsModal = ({ isOpen, onClose, tourId, onTourUpdated }: TourDetail
                 setError(response.data.message || t('errors.loadError'));
             }
         } catch (err: unknown) {
-            console.error('Fehler beim Laden der Tour:', err);
+            console.error('Error loading tour:', err);
             const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('errors.loadError');
             setError(errorMessage);
             showMessage(errorMessage, 'error');

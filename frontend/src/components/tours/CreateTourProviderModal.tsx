@@ -49,7 +49,7 @@ const CreateTourProviderModal = ({ isOpen, onClose, onProviderCreated }: CreateT
                 const branchesRes = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
                 setBranches(branchesRes.data?.data || branchesRes.data || []);
             } catch (err: unknown) {
-                console.error('Fehler beim Laden der Daten:', err);
+                console.error('Error loading data:', err);
                 showMessage(t('errors.loadError'), 'error');
             } finally {
                 setLoadingData(false);

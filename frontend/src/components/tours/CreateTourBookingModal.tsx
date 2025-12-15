@@ -45,7 +45,7 @@ const CreateTourBookingModal = ({ isOpen, onClose, onBookingCreated, tour: prese
                 const toursData = response.data?.data || response.data || [];
                 setTours(Array.isArray(toursData) ? toursData : []);
             } catch (err: unknown) {
-                console.error('Fehler beim Laden der Touren:', err);
+                console.error('Error loading tours:', err);
                 showMessage(t('errors.loadError'), 'error');
             } finally {
                 setLoadingData(false);
@@ -171,7 +171,7 @@ const CreateTourBookingModal = ({ isOpen, onClose, onBookingCreated, tour: prese
                 throw new Error(response.data?.message || t('tours.bookings.createError', { defaultValue: 'Fehler beim Erstellen der Buchung' }));
             }
         } catch (err: unknown) {
-            console.error('Fehler beim Erstellen der Buchung:', err);
+            console.error('Error creating booking:', err);
             const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
                                  (err as { message?: string })?.message || 
                                  t('errors.unknownError');

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Prisma, TourType } from '@prisma/client';
+import { Prisma, TourType, TourBookingStatus, PaymentStatus } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { convertFilterConditionsToPrismaWhere, validateFilterAgainstIsolation } from '../utils/filterToPrisma';
 import { filterCache } from '../services/filterCache';
@@ -12,7 +12,7 @@ import { getImageGenerationQueue, checkQueueHealth } from '../services/queueServ
 import { GeminiImageService } from '../services/geminiImageService';
 import { TourImageUploadService } from '../services/tourImageUploadService';
 import { OrganizationBrandingService } from '../services/organizationBrandingService';
-import { getUserLanguage, getTourErrorText } from '../utils/translations';
+import { getUserLanguage, getTourErrorText, getTourBookingErrorText } from '../utils/translations';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -1334,8 +1334,8 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
               hasFonts: !!branding.fonts,
               hasStyle: !!branding.style
             });
-          } catch (error: any) {
-            logger.warn(`[generateTourImages] Fehler bei Branding-Extraktion, verwende Standard:`, error.message);
+          } catch (error: unknown) {
+            logger.warn(`[generateTourImages] Fehler bei Branding-Extraktion, verwende Standard:`, error instanceof Error ? error.message : String(error));
             // Fehler ist nicht kritisch, verwende Standard-Branding (undefined)
           }
         } else {
@@ -1373,11 +1373,11 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
           mode: 'synchronous',
           message: getTourErrorText(language, 'imagesGeneratedSuccess')
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error(`[generateTourImages] Fehler im synchronen Modus:`, error);
         return res.status(500).json({
           success: false,
-          message: error.message || getTourErrorText(language, 'imageGenerationError')
+          message: (error instanceof Error ? error.message : undefined) || getTourErrorText(language, 'imageGenerationError')
         });
       }
     }
@@ -1462,11 +1462,11 @@ export const getTourImageGenerationStatus = async (req: Request, res: Response) 
       progress,
       jobId: job.id
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[getTourImageGenerationStatus] Fehler:', error);
     res.status(500).json({
       success: false,
-      message: error.message || getTourErrorText(language, 'statusError')
+      message: (error instanceof Error ? error.message : undefined) || getTourErrorText(language, 'statusError')
     });
   }
 };
@@ -1485,7 +1485,7 @@ function cleanupTemporaryFiles(images: { flyer: string; galleryImages: string[] 
 
     // Flyer wird NICHT gelöscht, da er bereits als imageUrl hochgeladen wurde
     // Die Datei bleibt im uploads-Verzeichnis und wird von der Tour referenziert
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[cleanupTemporaryFiles] Fehler:', error);
   }
 }

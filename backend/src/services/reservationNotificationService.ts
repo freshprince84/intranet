@@ -1634,11 +1634,13 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             : '';
           
           // Ersetze Variablen im Template
+          // WICHTIG: Ersetze auch {{doorAppName}} durch leeren String (falls in Datenbank-Template vorhanden)
           messageText = this.replaceTemplateVariables(template.emailContent, {
             guestName: reservation.guestName,
             roomDisplay: roomDisplay,
             roomDescription: formattedRoomDescription,
-            doorPin: doorPin || 'N/A'
+            doorPin: doorPin || 'N/A',
+            doorAppName: '' // Entferne {{doorAppName}} komplett
           });
         } else {
           // Fallback auf alte hardcodierte Nachricht (sollte nicht passieren)
@@ -1802,7 +1804,15 @@ ${contentText}
               contentText = `¡Tu check-in se ha completado exitosamente!\n\nInformación de tu habitación:\n${roomInfo}\n\nAcceso:\n- PIN de la puerta: ${doorPin}`;
             }
             
-            const templateParams = [greeting, contentText];
+            // WICHTIG: Ersetze Platzhalter im contentText, falls das WhatsApp-Template diese enthält
+            const contentTextWithReplacements = contentText
+              .replace(/\{\{roomNumber\}\}/g, roomDisplay)
+              .replace(/\{\{roomDisplay\}\}/g, roomDisplay)
+              .replace(/\{\{roomDescription\}\}/g, roomDescription && roomDescription !== 'N/A' ? roomDescription : '')
+              .replace(/\{\{doorPin\}\}/g, doorPin || 'N/A')
+              .replace(/\{\{guestName\}\}/g, reservation.guestName);
+            
+            const templateParams = [greeting, contentTextWithReplacements];
             
             logger.log(`[ReservationNotification] Versuche Session Message (24h-Fenster) mit customMessage, bei Fehler: Template Message`);
             logger.log(`[ReservationNotification] Template Name: ${templateName}`);
@@ -1875,19 +1885,28 @@ ${contentText}
               'reservation_checkin_completed';
             
             // Template-Parameter: Ersetze Platzhalter in Template-Parametern durch tatsächliche Werte
+            // WICHTIG: Ersetze auch Platzhalter im contentText selbst, falls das WhatsApp-Template diese enthält
+            const contentTextWithReplacements = contentText
+              .replace(/\{\{roomNumber\}\}/g, roomDisplay)
+              .replace(/\{\{roomDisplay\}\}/g, roomDisplay)
+              .replace(/\{\{roomDescription\}\}/g, roomDescription && roomDescription !== 'N/A' ? roomDescription : '')
+              .replace(/\{\{doorPin\}\}/g, doorPin || 'N/A')
+              .replace(/\{\{guestName\}\}/g, reservation.guestName);
+            
             const templateParams = whatsappTemplate?.whatsappTemplateParams?.length > 0
               ? whatsappTemplate.whatsappTemplateParams.map((param: string) => {
                   return param
                     .replace(/\{\{1\}\}/g, greeting)
-                    .replace(/\{\{2\}\}/g, contentText)
+                    .replace(/\{\{2\}\}/g, contentTextWithReplacements)
                     .replace(/\{\{guestName\}\}/g, reservation.guestName)
                     .replace(/\{\{roomDisplay\}\}/g, roomDisplay)
+                    .replace(/\{\{roomNumber\}\}/g, roomDisplay)
                     .replace(/\{\{roomDescription\}\}/g, roomDescription && roomDescription !== 'N/A' ? roomDescription : '')
                     .replace(/\{\{doorPin\}\}/g, doorPin || 'N/A');
                 })
-              : [greeting, contentText];
+              : [greeting, contentTextWithReplacements];
             
-            const messageText = `${greeting}\n\n${contentText}\n\n${languageCode === 'en' ? 'We wish you a pleasant stay!' : '¡Te deseamos una estancia agradable!'}`;
+            const messageText = `${greeting}\n\n${contentTextWithReplacements}\n\n${languageCode === 'en' ? 'We wish you a pleasant stay!' : '¡Te deseamos una estancia agradable!'}`;
             
             whatsappSuccess = await whatsappService.sendMessageWithFallback(
               finalGuestPhone,
@@ -2358,14 +2377,41 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       : '';
     
     // Ersetze Variablen im Template
-    const emailContent = template 
+    // WICHTIG: Ersetze auch {{doorAppName}} durch leeren String (falls in Datenbank-Template vorhanden)
+    let emailContent = template 
       ? this.replaceTemplateVariables(template.emailContent, {
           guestName: reservation.guestName,
           roomDisplay: roomDisplay,
           roomDescription: formattedRoomDescription,
-          doorPin: doorPin || 'N/A'
+          doorPin: doorPin || 'N/A',
+          doorAppName: '' // Entferne {{doorAppName}} komplett
         })
-      : `Hola ${reservation.guestName},
+      : null;
+    
+    // Falls Template kein {{roomDescription}} enthält, füge es hinzu
+    if (emailContent && formattedRoomDescription && !emailContent.includes(formattedRoomDescription)) {
+      // Suche nach roomDisplay-Zeile und füge roomDescription danach ein
+      if (languageCode === 'en') {
+        emailContent = emailContent.replace(
+          /(- Room: [^\n]+)/g,
+          `$1\n${formattedRoomDescription}`
+        );
+      } else if (languageCode === 'es') {
+        emailContent = emailContent.replace(
+          /(- Habitación: [^\n]+)/g,
+          `$1\n${formattedRoomDescription}`
+        );
+      } else {
+        emailContent = emailContent.replace(
+          /(- Zimmer: [^\n]+)/g,
+          `$1\n${formattedRoomDescription}`
+        );
+      }
+    }
+    
+    // Finale Ersetzung: Falls emailContent noch null ist, verwende Fallback
+    if (!emailContent) {
+      emailContent = `Hola ${reservation.guestName},
 
 ¡Tu check-in se ha completado exitosamente!
 

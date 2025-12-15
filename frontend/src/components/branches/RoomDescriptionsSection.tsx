@@ -113,7 +113,7 @@ const RoomDescriptionsSection: React.FC<RoomDescriptionsSectionProps> = ({ branc
       
       await axiosInstance.put(
         API_ENDPOINTS.BRANCHES.ROOM_DESCRIPTIONS(branchId),
-        updatedDescriptions
+        { roomDescriptions: updatedDescriptions }
       );
       
       setRoomDescriptions(updatedDescriptions);

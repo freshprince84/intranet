@@ -76,7 +76,7 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
                 setBranches(branchesRes.data?.data || branchesRes.data || []);
                 setTourProviders(providersRes.data?.data || providersRes.data || []);
             } catch (err: unknown) {
-                console.error('Fehler beim Laden der Daten:', err);
+                console.error('Error loading data:', err);
                 showMessage(t('errors.loadError'), 'error');
             } finally {
                 setLoadingData(false);
@@ -318,7 +318,7 @@ const EditTourModal = ({ isOpen, onClose, onTourUpdated, tour }: EditTourModalPr
                             });
                         }
                     } catch (galleryErr: unknown) {
-                        console.error('Fehler beim Hochladen der Galerie-Bilder:', galleryErr);
+                        console.error('Error uploading gallery images:', galleryErr);
                         showMessage(t('tours.galleryUploadError', 'Tour aktualisiert, aber Fehler beim Hochladen der Galerie-Bilder'), 'warning');
                     } finally {
                         setUploadingImage(false);

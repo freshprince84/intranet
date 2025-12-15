@@ -76,7 +76,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
     // Fehlerbehandlung mit Fallback
     const errorContext = useError();
     const handleErrorContext = errorContext?.handleError || ((err: unknown, context?: Record<string, unknown>) => {
-        console.error('Fehler:', err, context);
+        console.error('Error:', err, context);
         const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
                              (err as { message?: string })?.message || 
                              'Ein Fehler ist aufgetreten';
@@ -265,7 +265,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                 throw new Error(response.data.message || t('tours.imageGenerationFailed', { defaultValue: 'Fehler beim Starten der Bildgenerierung' }));
             }
         } catch (err: unknown) {
-            console.error('Fehler beim Starten der Bildgenerierung:', err);
+            console.error('Error starting image generation:', err);
             const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
                                  (err as { message?: string })?.message || 
                                  t('tours.imageGenerationFailed', { defaultValue: 'Fehler bei Bildgenerierung' });
@@ -361,7 +361,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                         // 'waiting' oder 'active': Weiter pollen
                     }
                 } catch (err: unknown) {
-                    console.error('Fehler beim Polling:', err);
+                    console.error('Error during polling:', err);
                     // Fehler beim Polling: Wenn Job nicht gefunden, stoppe Polling
                     if ((err as { response?: { status?: number } })?.response?.status === 404) {
                         clearInterval(pollingIntervalsRef.current[tourId]);
@@ -481,7 +481,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                 // ✅ PERFORMANCE: Bei Fehler Ref zurücksetzen, damit Retry möglich ist
                 initialLoadAttemptedRef.current = false;
                 if (process.env.NODE_ENV === 'development') {
-                    console.error('[ToursTab] Fehler beim Initialisieren:', error);
+                    console.error('[ToursTab] Error during initialization:', error);
                 }
             }
         };
@@ -1197,7 +1197,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                                     );
                                                     await loadTours();
                                                 } catch (err: unknown) {
-                                                    console.error('Fehler beim Toggle der Tour:', err);
+                                                    console.error('Error toggling tour:', err);
                                                     showMessage(
                                                         (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('errors.unknownError'),
                                                         'error'
