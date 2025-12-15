@@ -7,8 +7,8 @@ import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, Shie
 import useMessage from '../hooks/useMessage.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import IdentificationDocumentList from './IdentificationDocumentList.tsx';
-import IdentificationDocumentForm from './IdentificationDocumentForm.tsx';
 import LifecycleView from './LifecycleView.tsx';
+import { handleDirectDocumentUpload } from '../utils/documentUploadHandler.ts';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import { useError } from '../contexts/ErrorContext.tsx';
 import { logger } from '../utils/logger.ts';
@@ -98,7 +98,6 @@ const UserManagementTab = (): JSX.Element => {
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 640);
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const { openSidepane, closeSidepane } = useSidepane();
-  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [newUserFormData, setNewUserFormData] = useState({
     email: '',
     password: '',
@@ -924,45 +923,37 @@ const UserManagementTab = (): JSX.Element => {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">
-                            {t('profile.identificationDocument') || 'Identifikationsdokument'}
+                            {t('profile.identificationDocument', { defaultValue: 'Identifikationsdokument' })}
                           </h3>
                           <p className="text-xs text-blue-700 dark:text-blue-300">
-                            {t('profile.uploadDocumentHint') || 'Bitte laden Sie das Identifikationsdokument (Cédula oder Pasaporte) hoch. Die Felder werden automatisch ausgefüllt.'}
+                            {t('profile.uploadDocumentHint', { defaultValue: 'Bitte laden Sie das Identifikationsdokument (Cédula oder Pasaporte) hoch. Die Felder werden automatisch ausgefüllt.' })}
                           </p>
                         </div>
-                        {!showDocumentUpload && (
-                          <button
-                            type="button"
-                            onClick={() => setShowDocumentUpload(true)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                          >
-                            <DocumentTextIcon className="h-5 w-5 inline mr-2" />
-                            {t('profile.uploadDocument') || 'Dokument hochladen'}
-                          </button>
-                        )}
+                        <input
+                          type="file"
+                          id="documentUploadUserManagement"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleDirectDocumentUploadWrapper}
+                          disabled={isUploading}
+                        />
+                        <label
+                          htmlFor="documentUploadUserManagement"
+                          className={`p-2 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={t('profile.uploadDocument', { defaultValue: 'Dokument hochladen' })}
+                        >
+                          <DocumentTextIcon className="h-5 w-5" />
+                        </label>
                       </div>
-                      {showDocumentUpload && (
-                        <div className="mt-4">
-                          <IdentificationDocumentForm
-                            userId={selectedUser.id}
-                            onDocumentSaved={async () => {
-                              setShowDocumentUpload(false);
-                              await fetchUserDetails(selectedUser.id); // Aktualisiere Profil nach Upload
-                              showMessage('Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.', 'success');
-                            }}
-                            onCancel={() => setShowDocumentUpload(false)}
-                          />
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
 
                 {/* 4. ID-Dokument-Daten (readonly, alle Felder - korrekte Reihenfolge) */}
-                {selectedUser.identificationDocuments && selectedUser.identificationDocuments.length > 0 && (
+                {((selectedUser.identificationDocuments && selectedUser.identificationDocuments.length > 0) || selectedUser.firstName || selectedUser.lastName || selectedUser.birthday) && (
                   <>
                     {(() => {
-                      const latestDoc = selectedUser.identificationDocuments[0];
+                      const latestDoc = selectedUser.identificationDocuments && selectedUser.identificationDocuments.length > 0 ? selectedUser.identificationDocuments[0] : null;
                       return (
                         <>
                           {/* 1. Vorname */}

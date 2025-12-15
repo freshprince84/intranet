@@ -7,8 +7,8 @@ import { UserCircleIcon, DocumentTextIcon, XMarkIcon, CheckIcon, BuildingOfficeI
 import { API_URL } from '../config/api.ts';
 import useMessage from '../hooks/useMessage.ts';
 import IdentificationDocumentList from '../components/IdentificationDocumentList.tsx';
-import IdentificationDocumentForm from '../components/IdentificationDocumentForm.tsx';
 import LifecycleTab from '../components/LifecycleTab.tsx';
+import { handleDirectDocumentUpload } from '../utils/documentUploadHandler.ts';
 import MyDocumentsTab from '../components/MyDocumentsTab.tsx';
 import { useOnboarding } from '../contexts/OnboardingContext.tsx';
 
@@ -65,7 +65,7 @@ const Profile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
   const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'lifecycle' | 'myDocuments'>('profile');
-  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const documentListRef = useRef<{ loadDocuments: () => void }>(null);
 
   // Länder für die Auswahl (dynamisch aus Übersetzungen)
@@ -416,60 +416,29 @@ const Profile: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">
-                          {t('profile.identificationDocument') || 'Identifikationsdokument'}
+                          {t('profile.identificationDocument', { defaultValue: 'Identifikationsdokument' })}
                         </h3>
                         <p className="text-xs text-blue-700 dark:text-blue-300">
-                          {t('profile.uploadDocumentHint') || 'Bitte laden Sie Ihr Identifikationsdokument (Cédula oder Pasaporte) hoch. Die Felder werden automatisch ausgefüllt.'}
+                          {t('profile.uploadDocumentHint', { defaultValue: 'Bitte laden Sie Ihr Identifikationsdokument (Cédula oder Pasaporte) hoch. Die Felder werden automatisch ausgefüllt.' })}
                         </p>
                       </div>
-                      {!showDocumentUpload && (
-                        <button
-                          data-onboarding="upload-document-button"
-                          type="button"
-                          onClick={() => setShowDocumentUpload(true)}
-                          className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                          title={t('profile.uploadDocument') || 'Dokument hochladen'}
-                        >
-                          <DocumentTextIcon className="h-5 w-5" />
-                        </button>
-                      )}
+                      <input
+                        type="file"
+                        id="documentUpload"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleDirectDocumentUploadWrapper}
+                        disabled={isUploading}
+                      />
+                      <label
+                        htmlFor="documentUpload"
+                        data-onboarding="upload-document-button"
+                        className={`p-2 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        title={t('profile.uploadDocument', { defaultValue: 'Dokument hochladen' })}
+                      >
+                        <DocumentTextIcon className="h-5 w-5" />
+                      </label>
                     </div>
-                    {showDocumentUpload && (
-                      <div className="mt-4">
-                        <IdentificationDocumentForm
-                          userId={user.id}
-                          onDocumentSaved={async () => {
-                            // #region agent log
-                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:435',message:'onDocumentSaved called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                            // #endregion
-                            setShowDocumentUpload(false);
-                            // Warte kurz, damit Backend-Daten gespeichert sind
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                            await fetchUserProfile(); // Aktualisiere Profil nach Upload (WARTEN auf Abschluss!)
-                            // #region agent log
-                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:447',message:'fetchUserProfile completed',data:{hasDocumentListRef:!!documentListRef.current,userBirthday:user?.birthday,userCountry:user?.country},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                            // #endregion
-                            // Warte nochmal kurz, damit Dokument in DB ist
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                            documentListRef.current?.loadDocuments(); // Dokument-Liste aktualisieren
-                            // #region agent log
-                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Profile.tsx:451',message:'loadDocuments called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                            // #endregion
-                            setIsEditing(false); // Edit-Modus nach Upload zurücksetzen
-                            showMessage('Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.', 'success');
-                            
-                            // Schließe Onboarding-Schritt ab, wenn aktiv
-                            try {
-                              await completeStep('upload_identification_document', t('onboarding.steps.upload_identification_document.title') || 'Dokument hochladen');
-                            } catch (error) {
-                              // Fehler beim Abschließen blockiert nicht den Upload
-                              console.error('Fehler beim Abschließen des upload_identification_document Schritts:', error);
-                            }
-                          }}
-                          onCancel={() => setShowDocumentUpload(false)}
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
               )}

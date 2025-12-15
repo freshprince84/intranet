@@ -255,7 +255,9 @@
     "documentsTab": "Documents",
     "identificationDocument": "Identification Document",
     "uploadDocument": "Upload Document",
-    "uploadDocumentHint": "Please upload your identification document (Cédula or Passport). The fields will be automatically filled."
+    "uploadDocumentHint": "Please upload your identification document (Cédula or Passport). The fields will be automatically filled.",
+    "documentUploadSuccess": "Document successfully uploaded. Fields will be automatically filled.",
+    "documentUploadError": "Error uploading document."
   },
   "organization": {
     "title": "Organization",
