@@ -25,6 +25,10 @@ const EditTourProviderModal = ({ isOpen, onClose, provider, onProviderUpdated }:
     const { t } = useTranslation();
     const { user } = useAuth();
     const { showMessage } = useMessage();
+    const { openSidepane, closeSidepane } = useSidepane();
+    
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+    const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
     
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
@@ -138,9 +142,11 @@ const EditTourProviderModal = ({ isOpen, onClose, provider, onProviderUpdated }:
             } else {
                 throw new Error(response.data?.message || 'Fehler beim Aktualisieren des Providers');
             }
-        } catch (err: any) {
-            console.error('Fehler beim Aktualisieren des Providers:', err);
-            const errorMessage = err.response?.data?.message || err.message || t('errors.unknownError');
+        } catch (err: unknown) {
+            console.error('Error updating provider:', err);
+            const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
+                                 (err as { message?: string })?.message || 
+                                 t('errors.unknownError');
             setError(errorMessage);
             showMessage(errorMessage, 'error');
         } finally {
@@ -148,26 +154,32 @@ const EditTourProviderModal = ({ isOpen, onClose, provider, onProviderUpdated }:
         }
     };
 
+    const handleClose = () => {
+        onClose();
+    };
+
     if (!provider) return null;
 
-    return (
-        <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-                <Dialog.Panel className="mx-auto max-w-lg w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-                    <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                        <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {t('tours.providers.edit', { defaultValue: 'Tour-Provider bearbeiten' })}
-                        </Dialog.Title>
-                        <button
-                            onClick={handleClose}
-                            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                        >
-                            <XMarkIcon className="h-6 w-6" />
-                        </button>
-                    </div>
+    // Für Mobile (unter 640px) - klassisches Modal
+    if (isMobile) {
+        return (
+            <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
+                <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <Dialog.Panel className="mx-auto max-w-lg w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+                        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                            <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {t('tours.providers.edit', { defaultValue: 'Tour-Provider bearbeiten' })}
+                            </Dialog.Title>
+                            <button
+                                onClick={handleClose}
+                                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                            >
+                                <XMarkIcon className="h-6 w-6" />
+                            </button>
+                        </div>
 
-                    <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                        <form onSubmit={handleSubmit} className="p-4 space-y-4">
                         {error && (
                             <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-3">
                                 <p className="text-sm text-red-800 dark:text-red-200">{error}</p>

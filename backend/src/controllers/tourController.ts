@@ -796,8 +796,8 @@ export const deleteTourImage = async (req: AuthenticatedRequest, res: Response) 
     }
 
     // Prüfe Organization-Isolation
-    const userOrgId = parseInt(req.headers['x-organization-id'] as string);
-    if (tour.organizationId !== userOrgId) {
+    const organizationId = (req as any).organizationId;
+    if (tour.organizationId !== organizationId) {
       return res.status(403).json({
         success: false,
         message: 'Keine Berechtigung für diese Tour'
