@@ -1760,10 +1760,6 @@ const tourBookingErrorTexts: Record<string, TourBookingErrorTranslations> = {
     completeError: 'Error marking booking as completed',
     invalidUserId: 'Invalid user ID',
     loadCommissionsError: 'Error loading commissions'
-    tourNotFound: 'Tour not found',
-    tourNotActive: 'Tour is not active',
-    createError: 'Error creating booking',
-    updateError: 'Error updating booking'
   },
   es: {
     bookingNotFound: 'Reserva no encontrada',
