@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PencilIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, InformationCircleIcon, Squares2X2Icon, TableCellsIcon, ArrowDownTrayIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS, getTourImageUrl, getTourGalleryImageUrl } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
+import CardGrid from '../shared/CardGrid.tsx';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
 import useMessage from '../../hooks/useMessage.ts';
@@ -1124,17 +1125,17 @@ const ToursTab: React.FC<ToursTabProps> = () => {
 
             {/* Card View */}
             {viewMode === 'cards' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <CardGrid>
                     {toursLoading ? (
-                        <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                             {t('common.loading')}
                         </div>
                     ) : toursError ? (
-                        <div className="col-span-full text-center py-8 text-red-500 dark:text-red-400">
+                        <div className="text-center py-8 text-red-500 dark:text-red-400">
                             {toursError}
                         </div>
                     ) : filteredAndSortedTours.length === 0 ? (
-                        <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                             {t('tours.noTours')}
                         </div>
                     ) : (
@@ -1272,7 +1273,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                             </div>
                         ))
                     )}
-                </div>
+                </CardGrid>
             )}
 
             {/* "Mehr anzeigen" Button */}

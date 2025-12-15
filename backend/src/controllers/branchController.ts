@@ -42,6 +42,9 @@ export const getAllBranches = async (req: Request, res: Response) => {
             queryOptions.select = {
                 id: true,
                 name: true,
+                address: true,
+                city: true,
+                country: true,
                 whatsappSettings: true,
                 lobbyPmsSettings: true,
                 boldPaymentSettings: true,
@@ -58,6 +61,9 @@ export const getAllBranches = async (req: Request, res: Response) => {
             queryOptions.select = {
                 id: true,
                 name: true,
+                address: true,
+                city: true,
+                country: true,
                 whatsappSettings: true,
                 lobbyPmsSettings: true,
                 boldPaymentSettings: true,
@@ -446,6 +452,10 @@ export const updateBranch = async (req: Request, res: Response) => {
             where: {
                 id: branchId,
                 ...branchFilter
+            },
+            select: {
+                id: true,
+                lobbyPmsSettings: true
             }
         });
 
@@ -481,8 +491,31 @@ export const updateBranch = async (req: Request, res: Response) => {
         }
         
         let encryptedLobbyPmsSettings = lobbyPmsSettings;
-        if (lobbyPmsSettings) {
+        if (lobbyPmsSettings !== undefined) {
             try {
+                // WICHTIG: Behalte bestehende roomDescriptions, falls vorhanden
+                if (existingBranch.lobbyPmsSettings) {
+                    try {
+                        const { decryptBranchApiSettings } = await import('../utils/encryption');
+                        const existingDecrypted = decryptBranchApiSettings(existingBranch.lobbyPmsSettings as any);
+                        const existingLobbyPms = existingDecrypted?.lobbyPms || existingDecrypted;
+                        const existingRoomDescriptions = existingLobbyPms?.roomDescriptions;
+                        
+                        // Wenn roomDescriptions vorhanden sind, füge sie zu den neuen Settings hinzu
+                        if (existingRoomDescriptions) {
+                            if (lobbyPmsSettings?.lobbyPms) {
+                                // Struktur ist { lobbyPms: { ... } }
+                                lobbyPmsSettings.lobbyPms.roomDescriptions = existingRoomDescriptions;
+                            } else {
+                                // Struktur ist direkt { ... }
+                                lobbyPmsSettings.roomDescriptions = existingRoomDescriptions;
+                            }
+                        }
+                    } catch (error) {
+                        logger.warn('[Branch Controller] Fehler beim Laden bestehender roomDescriptions:', error);
+                    }
+                }
+                
                 encryptedLobbyPmsSettings = encryptBranchApiSettings(lobbyPmsSettings);
                 logger.log('[Branch Controller] LobbyPMS Settings verschlüsselt');
             } catch (error) {
@@ -574,6 +607,9 @@ export const updateBranch = async (req: Request, res: Response) => {
             select: {
                 id: true,
                 name: true,
+                address: true,
+                city: true,
+                country: true,
                 whatsappSettings: true,
                 lobbyPmsSettings: true,
                 boldPaymentSettings: true,
@@ -818,24 +854,12 @@ export const updateRoomDescriptions = async (req: Request, res: Response) => {
             }
         }
 
-        // Stelle sicher, dass die Struktur korrekt ist
-        let lobbyPmsSettings: any = decryptedSettings?.lobbyPms || decryptedSettings || {};
-        if (decryptedSettings?.lobbyPms) {
-            // Struktur ist { lobbyPms: { ... } }
-            lobbyPmsSettings = decryptedSettings.lobbyPms;
-        } else {
-            // Struktur ist direkt { ... }
-            lobbyPmsSettings = decryptedSettings;
-        }
-
-        // Aktualisiere roomDescriptions
-        lobbyPmsSettings.roomDescriptions = roomDescriptions;
-
         // Verschlüssele und speichere - behalte die ursprüngliche Struktur bei
         const { encryptBranchApiSettings } = await import('../utils/encryption');
         let encryptedSettings: any;
+        
         if (decryptedSettings?.lobbyPms) {
-            // Struktur war { lobbyPms: { ... } }, behalte sie bei
+            // Struktur ist { lobbyPms: { ... } }, behalte sie bei
             const updatedDecryptedSettings = {
                 ...decryptedSettings,
                 lobbyPms: {
@@ -845,8 +869,12 @@ export const updateRoomDescriptions = async (req: Request, res: Response) => {
             };
             encryptedSettings = encryptBranchApiSettings(updatedDecryptedSettings);
         } else {
-            // Struktur war direkt { ... }
-            encryptedSettings = encryptBranchApiSettings(lobbyPmsSettings);
+            // Struktur ist direkt { ... } oder leer
+            const updatedSettings = {
+                ...decryptedSettings,
+                roomDescriptions
+            };
+            encryptedSettings = encryptBranchApiSettings(updatedSettings);
         }
 
         await prisma.branch.update({

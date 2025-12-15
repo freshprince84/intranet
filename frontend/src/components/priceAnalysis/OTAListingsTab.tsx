@@ -6,7 +6,7 @@ import { useError } from '../../contexts/ErrorContext.tsx';
 import { useBranch } from '../../contexts/BranchContext.tsx';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface OTAListing {
     id: number;
@@ -197,7 +197,7 @@ const OTAListingsTab: React.FC = () => {
                         className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={t('priceAnalysis.discovery.discover', 'Listings finden')}
                     >
-                        <ArrowPathIcon className={`h-5 w-5 ${discovering ? 'animate-spin' : ''}`} />
+                        <MagnifyingGlassIcon className={`h-5 w-5 ${discovering ? 'animate-pulse' : ''}`} />
                     </button>
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
                         {t('priceAnalysis.discovery.discover', 'Listings finden')}
