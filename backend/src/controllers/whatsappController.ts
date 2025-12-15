@@ -3,6 +3,7 @@ import { WhatsAppMessageParser, ParsedReservationMessage } from '../services/wha
 import { WhatsAppReservationService } from '../services/whatsappReservationService';
 import { WhatsAppMessageHandler } from '../services/whatsappMessageHandler';
 import { WhatsAppService } from '../services/whatsappService';
+import { WhatsAppAiService } from '../services/whatsappAiService';
 import { LanguageDetectionService } from '../services/languageDetectionService';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
@@ -233,7 +234,17 @@ export const handleWebhook = async (req: Request, res: Response) => {
             // Wenn Bilder vorhanden sind, ignoriere ALLEN Text von der AI und sende nur Bilder + Standard-Text
             const baseUrl = process.env.SERVER_URL || process.env.API_URL || 'https://65.109.228.106.nip.io';
             
-            // Sende ALLE Bilder zuerst (ohne Caption, um Text zu vermeiden)
+            // Sprache erkennen: Priorität 1 = User-Nachricht, Priorität 2 = Telefonnummer
+            const detectedLanguage = messageText 
+              ? WhatsAppAiService.detectLanguageFromMessage(messageText)
+              : null;
+            const phoneLanguage = LanguageDetectionService.detectLanguageFromPhoneNumber(fromNumber);
+            const language = detectedLanguage || phoneLanguage;
+            
+            logger.log(`[WhatsApp Webhook] Sprache erkannt: ${language} (aus Nachricht: ${detectedLanguage || 'keine'}, aus Telefonnummer: ${phoneLanguage})`);
+            
+            // Sende ALLE Bilder zuerst SEQUENZIELL (ohne Caption, um Text zu vermeiden)
+            // WICHTIG: Sequenziell senden, damit sie in der richtigen Reihenfolge ankommen
             for (const match of imageMatches) {
               const imageUrl = match[2]; // URL aus Markdown
               
@@ -259,17 +270,20 @@ export const handleWebhook = async (req: Request, res: Response) => {
               }
               
               try {
-                logger.log(`[WhatsApp Webhook] Sende Bild: ${publicImageUrl}`);
+                logger.log(`[WhatsApp Webhook] Sende Bild ${imageMatches.indexOf(match) + 1}/${imageMatches.length}: ${publicImageUrl}`);
                 // KEINE Caption, um Text zu vermeiden
                 await whatsappService.sendImage(fromNumber, publicImageUrl);
+                // Kurze Pause zwischen Bildern, damit WhatsApp sie in der richtigen Reihenfolge verarbeitet
+                await new Promise(resolve => setTimeout(resolve, 500));
               } catch (imageError: any) {
                 logger.error(`[WhatsApp Webhook] Fehler beim Senden des Bildes:`, imageError);
                 // Weiter mit nächstem Bild
               }
             }
             
+            logger.log(`[WhatsApp Webhook] Alle ${imageMatches.length} Bilder gesendet, sende jetzt Text`);
+            
             // Nach ALLEN Bildern: Sende IMMER nur den Standard-Text (ignoriere AI-Text komplett)
-            const language = LanguageDetectionService.detectLanguageFromPhoneNumber(fromNumber);
             const standardTexts: Record<string, string> = {
               es: 'Si estás interesado en alguna de estas tours, ¡házmelo saber!',
               de: 'Wenn du an einer dieser Touren interessiert bist, lass es mich bitte wissen!',

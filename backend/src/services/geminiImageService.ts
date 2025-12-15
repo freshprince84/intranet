@@ -170,19 +170,37 @@ export class GeminiImageService {
 
     // Flyer generieren (falls gewünscht)
     if (config.imageTypes.includes('flyer')) {
+      logger.log('[generateImages] Starte Flyer-Generierung', { 
+        title: config.title,
+        hasBranding: !!config.branding,
+        hasLogo: !!config.logoBase64
+      });
+      
       const flyerPrompt = this.buildFlyerPrompt(config.title, config.description, config.entityType, config.branding);
       const flyerPath = path.join(
         config.outputDir,
         config.filenamePattern.replace('{type}', 'flyer').replace('{timestamp}', timestamp.toString())
       );
+      
+      logger.log('[generateImages] Flyer-Prompt erstellt, starte Generierung', { 
+        promptLength: flyerPrompt.length,
+        outputPath: flyerPath
+      });
+      
       await this.generateImage(flyerPrompt, flyerPath, config.apiKey);
       
       // Logo hinzufügen (falls vorhanden)
       if (config.logoBase64) {
+        logger.log('[generateImages] Füge Logo zum Flyer hinzu');
         await this.addLogoToImage(flyerPath, config.logoBase64);
       }
       
       result.flyer = flyerPath;
+      logger.log('[generateImages] Flyer erfolgreich generiert', { flyerPath });
+    } else {
+      logger.warn('[generateImages] Flyer-Generierung übersprungen - nicht in imageTypes', { 
+        imageTypes: config.imageTypes 
+      });
     }
 
     return result;
@@ -516,9 +534,29 @@ export class GeminiImageService {
     const result = await this.generateImages(config);
 
     // Type-Safety: Stelle sicher, dass Flyer und Galerie-Bilder vorhanden sind
-    if (!result.flyer || result.galleryImages.length === 0) {
-      throw new Error('Nicht alle Bilder konnten generiert werden');
+    if (!result.flyer) {
+      logger.error('[generateTourImages] Flyer wurde nicht generiert', { 
+        imageTypes: config.imageTypes,
+        resultKeys: Object.keys(result),
+        hasFlyer: !!result.flyer,
+        galleryCount: result.galleryImages.length
+      });
+      throw new Error('Flyer konnte nicht generiert werden');
     }
+    
+    if (result.galleryImages.length === 0) {
+      logger.error('[generateTourImages] Keine Galerie-Bilder generiert', { 
+        imageTypes: config.imageTypes,
+        resultKeys: Object.keys(result)
+      });
+      throw new Error('Galerie-Bilder konnten nicht generiert werden');
+    }
+
+    logger.log('[generateTourImages] Bilder erfolgreich generiert', {
+      hasFlyer: !!result.flyer,
+      flyerPath: result.flyer,
+      galleryCount: result.galleryImages.length
+    });
 
     return {
       flyer: result.flyer,
