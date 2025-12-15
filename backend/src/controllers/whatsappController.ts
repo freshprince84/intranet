@@ -228,23 +228,14 @@ export const handleWebhook = async (req: Request, res: Response) => {
           const imageMatches = Array.from(response.matchAll(/!\[(.*?)\]\((.*?)\)/g));
           
           if (imageMatches.length > 0) {
-            logger.log(`[WhatsApp Webhook] ${imageMatches.length} Bildreferenzen gefunden, sende separat`);
+            logger.log(`[WhatsApp Webhook] ${imageMatches.length} Bildreferenzen gefunden, sende nur Bilder + Standard-Text`);
             
-            // Entferne Bildreferenzen aus Text-Nachricht
-            let textMessage = response;
-            imageMatches.forEach(match => {
-              textMessage = textMessage.replace(match[0], '').trim();
-            });
-            
-            // Entferne alle Leerzeilen und überflüssige Whitespace
-            textMessage = textMessage.replace(/\n{3,}/g, '\n\n').trim();
-            
-            // Sende Bilder separat
+            // Wenn Bilder vorhanden sind, ignoriere ALLEN Text von der AI und sende nur Bilder + Standard-Text
             const baseUrl = process.env.SERVER_URL || process.env.API_URL || 'https://65.109.228.106.nip.io';
             
+            // Sende ALLE Bilder zuerst (ohne Caption, um Text zu vermeiden)
             for (const match of imageMatches) {
               const imageUrl = match[2]; // URL aus Markdown
-              const caption = match[1] || undefined; // Alt-Text als Caption
               
               // Konvertiere relative URLs zu absoluten HTTPS-URLs
               let publicImageUrl = imageUrl;
@@ -269,26 +260,22 @@ export const handleWebhook = async (req: Request, res: Response) => {
               
               try {
                 logger.log(`[WhatsApp Webhook] Sende Bild: ${publicImageUrl}`);
-                await whatsappService.sendImage(fromNumber, publicImageUrl, caption);
+                // KEINE Caption, um Text zu vermeiden
+                await whatsappService.sendImage(fromNumber, publicImageUrl);
               } catch (imageError: any) {
                 logger.error(`[WhatsApp Webhook] Fehler beim Senden des Bildes:`, imageError);
                 // Weiter mit nächstem Bild
               }
             }
             
-            // Nach den Bildern: Sende Text-Nachricht (falls vorhanden) oder Standard-Text
-            let finalTextMessage = textMessage.trim();
-            
-            if (finalTextMessage.length === 0) {
-              // Standard-Text basierend auf Sprache
-              const language = LanguageDetectionService.detectLanguageFromPhoneNumber(fromNumber);
-              const standardTexts: Record<string, string> = {
-                es: 'Si estás interesado en alguna de estas tours, ¡házmelo saber!',
-                de: 'Wenn du an einer dieser Touren interessiert bist, lass es mich bitte wissen!',
-                en: 'If you are interested in any of these tours, please let me know!'
-              };
-              finalTextMessage = standardTexts[language] || standardTexts['es'];
-            }
+            // Nach ALLEN Bildern: Sende IMMER nur den Standard-Text (ignoriere AI-Text komplett)
+            const language = LanguageDetectionService.detectLanguageFromPhoneNumber(fromNumber);
+            const standardTexts: Record<string, string> = {
+              es: 'Si estás interesado en alguna de estas tours, ¡házmelo saber!',
+              de: 'Wenn du an einer dieser Touren interessiert bist, lass es mich bitte wissen!',
+              en: 'If you are interested in any of these tours, please let me know!'
+            };
+            const finalTextMessage = standardTexts[language] || standardTexts['es'];
             
             if (isGroupMessage && groupId) {
               await whatsappService.sendMessage(fromNumber, finalTextMessage, undefined, groupId);

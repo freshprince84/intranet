@@ -6,6 +6,8 @@ import { Reservation } from '../../types/reservation.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { CountryLanguageService } from '../../services/countryLanguageService.ts';
+import axiosInstance from '../../config/axios.ts';
+import { API_ENDPOINTS } from '../../config/api.ts';
 
 interface SendPasscodeSidepaneProps {
   isOpen: boolean;
@@ -33,6 +35,7 @@ const SendPasscodeSidepane: React.FC<SendPasscodeSidepaneProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewMessage, setPreviewMessage] = useState('');
+  const [formattedRoomDescription, setFormattedRoomDescription] = useState<string | null>(null);
 
   // Standard-Nachricht generieren (entspricht Meta Business Template: reservation_checkin_completed)
   // Template verwendet 2 Variablen: {{1}} = Begrüßung, {{2}} = Kompletter Text mit Zimmerinfo und PIN
@@ -80,6 +83,74 @@ Acceso:
 ¡Te deseamos una estancia agradable!`;
   };
 
+  // Lade formatierte roomDescription aus Branch-Settings (falls categoryId vorhanden)
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFormattedRoomDescription = async () => {
+      if (!reservation.categoryId || !reservation.branchId) {
+        if (isMounted) {
+          setFormattedRoomDescription(null);
+        }
+        return;
+      }
+
+      try {
+        // Lade roomDescription aus Branch-Settings
+        const response = await axiosInstance.get(
+          API_ENDPOINTS.BRANCHES.ROOM_DESCRIPTION(reservation.branchId!, reservation.categoryId)
+        );
+        
+        if (!isMounted) return;
+        
+        const roomDesc = response.data;
+        if (roomDesc) {
+          // Ermittle Sprache für Labels
+          const languageCode = CountryLanguageService.getLanguageForReservation({
+            guestNationality: reservation.guestNationality
+          });
+          
+          // Übersetzungen für Bild/Video Labels
+          const imageLabel = languageCode === 'en' ? 'Image' : languageCode === 'es' ? 'Imagen' : 'Bild';
+          const videoLabel = languageCode === 'en' ? 'Video' : languageCode === 'es' ? 'Video' : 'Video';
+          
+          // Formatiere Beschreibung: Text + Bild-Link + Video-Link
+          const parts: string[] = [];
+          if (roomDesc.text) {
+            parts.push(roomDesc.text);
+          }
+          if (roomDesc.imageUrl) {
+            parts.push(`${imageLabel}: ${roomDesc.imageUrl}`);
+          }
+          if (roomDesc.videoUrl) {
+            parts.push(`${videoLabel}: ${roomDesc.videoUrl}`);
+          }
+          
+          if (isMounted) {
+            setFormattedRoomDescription(parts.length > 0 ? parts.join('\n') : null);
+          }
+        } else {
+          if (isMounted) {
+            setFormattedRoomDescription(null);
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.warn('Fehler beim Laden der Zimmer-Beschreibung aus Branch-Settings:', error);
+          setFormattedRoomDescription(null);
+        }
+      }
+    };
+
+    if (isOpen) {
+      loadFormattedRoomDescription();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, reservation.categoryId, reservation.branchId, reservation.guestNationality]);
+
   // Initialisiere Standard-Nachricht beim Öffnen
   useEffect(() => {
     if (isOpen && !customMessage) {
@@ -93,9 +164,9 @@ Acceso:
       // Verwende bestehenden Passcode oder Platzhalter
       const passcode = reservation.doorPin || reservation.ttlLockPassword || '[Passcode wird generiert]';
       // roomNumber: Bei Dorms = Bettnummer, bei Privates = null
-      // roomDescription: Immer Zimmername
+      // roomDescription: Verwende formatierte roomDescription aus Branch-Settings, falls vorhanden, sonst reservation.roomDescription
       const roomNumber = reservation.roomNumber || '[Bettnummer]';
-      const roomDescription = reservation.roomDescription || '[Zimmername]';
+      const roomDescription = formattedRoomDescription || reservation.roomDescription || '[Zimmername]';
       const doorAppName = reservation.doorAppName || 'TTLock';
       
       // Ersetze Variablen in der Nachricht
@@ -108,7 +179,7 @@ Acceso:
         .replace(/\{\{doorAppName\}\}/g, doorAppName);
       setPreviewMessage(preview);
     }
-  }, [customMessage, reservation.guestName, reservation.doorPin, reservation.ttlLockPassword, reservation.roomNumber, reservation.roomDescription, reservation.doorAppName, reservation.guestNationality]);
+  }, [customMessage, reservation.guestName, reservation.doorPin, reservation.ttlLockPassword, reservation.roomNumber, reservation.roomDescription, reservation.doorAppName, reservation.guestNationality, formattedRoomDescription]);
 
   // Responsive-Verhalten
   useEffect(() => {
@@ -146,6 +217,7 @@ Acceso:
       setCustomMessage('');
       setError(null);
       setPreviewMessage('');
+      setFormattedRoomDescription(null);
     }
   }, [isOpen, reservation]);
 
