@@ -50,22 +50,9 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
   // Beim Laden der Komponente und wenn sich die userId ändert
   useEffect(() => {
     if (userId) {
-      loadDocuments();
+    loadDocuments();
     }
   }, [userId]);
-  
-  // Lade Dokumente auch wenn Komponente sichtbar wird (Tab-Wechsel)
-  // Diese Komponente wird nur gerendert wenn Tab aktiv ist, daher lädt sie beim Mount automatisch
-  // Zusätzlicher useEffect für explizites Neuladen beim Tab-Wechsel
-  useEffect(() => {
-    if (userId) {
-      // Kurze Verzögerung, damit Komponente vollständig gemountet ist
-      const timer = setTimeout(() => {
-        loadDocuments();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, []);
 
   // Exponiere loadDocuments über Ref
   useImperativeHandle(ref, () => ({
