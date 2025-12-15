@@ -58,6 +58,34 @@ const EditTourProviderModal = ({ isOpen, onClose, provider, onProviderUpdated }:
         }
     }, [isOpen, t, showMessage]);
 
+    // Responsive-Erkennung
+    useEffect(() => {
+        const checkScreenSize = () => {
+            setIsMobile(window.innerWidth < 640);
+            setIsLargeScreen(window.innerWidth > 1070);
+        };
+        
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+        
+        return () => {
+            window.removeEventListener('resize', checkScreenSize);
+        };
+    }, []);
+
+    // Sidepane-Status verwalten
+    useEffect(() => {
+        if (isOpen) {
+            openSidepane();
+        } else {
+            closeSidepane();
+        }
+        
+        return () => {
+            closeSidepane();
+        };
+    }, [isOpen, openSidepane, closeSidepane]);
+
     // Setze Form-Daten wenn Provider geladen wird
     useEffect(() => {
         if (provider) {
@@ -132,7 +160,7 @@ const EditTourProviderModal = ({ isOpen, onClose, provider, onProviderUpdated }:
                             {t('tours.providers.edit', { defaultValue: 'Tour-Provider bearbeiten' })}
                         </Dialog.Title>
                         <button
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
                         >
                             <XMarkIcon className="h-6 w-6" />
