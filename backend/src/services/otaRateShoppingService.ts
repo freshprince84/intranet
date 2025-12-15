@@ -271,32 +271,6 @@ export class OTARateShoppingService {
         }
       });
 
-      let totalPricesCollected = 0;
-      const errors: any[] = [];
-
-      // Für jedes Listing Preise sammeln
-      for (const listing of listings) {
-        try {
-          const pricesCollected = await this.scrapeOTA(
-            listing.id,
-            platform,
-            listing.listingUrl || '',
-            startDate,
-            endDate
-          );
-          totalPricesCollected += pricesCollected;
-        } catch (error: any) {
-          logger.error(`[Rate Shopping] Fehler beim Scraping für Listing ${listing.id}:`, error);
-          errors.push({
-            listingId: listing.id,
-            error: error.message || String(error)
-          });
-        }
-
-        // Rate-Limiting: Warte 2 Sekunden zwischen Listings
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-
       // Job-Status auf 'completed' setzen
       await prisma.rateShoppingJob.update({
         where: { id: jobId },
