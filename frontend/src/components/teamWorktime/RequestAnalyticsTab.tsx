@@ -153,6 +153,9 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
 
   // Lade Requests
   useEffect(() => {
+    // ✅ PHASE 8: Memory Leak Prevention - AbortController
+    const abortController = new AbortController();
+    
     const fetchRequests = async () => {
       try {
         setLoading(true);
@@ -179,19 +182,29 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
         }
         
         const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ANALYTICS.REQUESTS_CHRONOLOGICAL, {
-          params
+          params,
+          signal: abortController.signal
         });
         
         setRequests(response.data || []);
-      } catch (error) {
-        console.error('Fehler beim Laden der Requests:', error);
-        setError(t('analytics.request.loadError'));
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Error loading requests:', error);
+          setError(t('analytics.request.loadError'));
+        }
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchRequests();
+    
+    // ✅ PHASE 8: Memory Leak Prevention - Cleanup
+    return () => {
+      abortController.abort();
+    };
   }, [selectedDate, filterConditions, filterLogicalOperators, selectedFilterId]);
 
   // Filter-Handler

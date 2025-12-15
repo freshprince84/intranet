@@ -258,60 +258,130 @@ export const evaluateDateCondition = (
   // Erstelle lokales Date-Objekt aus den UTC-Werten (ohne Zeitzone)
   const normalizedDate = new Date(dateYear, dateMonth, dateDay);
 
-  // Handle __TODAY__, __WEEK_START__, __WEEK_END__, __MONTH_START__, __MONTH_END__, __YEAR_START__, __YEAR_END__ dynamic dates
-  let conditionDate: Date;
-  if (condition.value === '__TODAY__') {
-    // Get today's date in local timezone (set to midnight)
-    const localToday = new Date();
-    localToday.setHours(0, 0, 0, 0);
-    conditionDate = localToday;
-  } else if (condition.value === '__WEEK_START__') {
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-    weekStart.setHours(0, 0, 0, 0);
-    conditionDate = weekStart;
-  } else if (condition.value === '__WEEK_END__') {
-    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
-    weekEnd.setHours(23, 59, 59, 999);
-    conditionDate = weekEnd;
-  } else if (condition.value === '__MONTH_START__') {
-    const monthStart = startOfMonth(new Date());
-    monthStart.setHours(0, 0, 0, 0);
-    conditionDate = monthStart;
-  } else if (condition.value === '__MONTH_END__') {
-    const monthEnd = endOfMonth(new Date());
-    monthEnd.setHours(23, 59, 59, 999);
-    conditionDate = monthEnd;
-  } else if (condition.value === '__YEAR_START__') {
-    const yearStart = startOfYear(new Date());
-    yearStart.setHours(0, 0, 0, 0);
-    conditionDate = yearStart;
-  } else if (condition.value === '__YEAR_END__') {
-    const yearEnd = endOfYear(new Date());
-    yearEnd.setHours(23, 59, 59, 999);
-    conditionDate = yearEnd;
-  } else {
-    const conditionDateRaw = new Date(condition.value as string);
-    if (isNaN(conditionDateRaw.getTime())) {
+  // ✅ PHASE 5: Handle Zeitraum-Platzhalter (__THIS_WEEK__, __THIS_MONTH__, __THIS_YEAR__)
+  // Diese funktionieren analog zu __TODAY__, aber für Zeiträume
+  try {
+    if (condition.value === '__THIS_WEEK__') {
+      if (condition.operator === 'equals') {
+        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+        weekEnd.setHours(23, 59, 59, 999);
+        // Prüfe, ob normalizedDate innerhalb des Zeitraums liegt
+        return normalizedDate >= weekStart && normalizedDate <= weekEnd;
+      }
+      // Für andere Operatoren (before, after) verwende Woche als einzelnes Datum
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+      weekEnd.setHours(23, 59, 59, 999);
+      if (condition.operator === 'before') {
+        return normalizedDate < weekEnd;
+      } else if (condition.operator === 'after') {
+        return normalizedDate > weekStart;
+      }
+      return false;
+    } else if (condition.value === '__THIS_MONTH__') {
+      if (condition.operator === 'equals') {
+        const monthStart = startOfMonth(new Date());
+        monthStart.setHours(0, 0, 0, 0);
+        const monthEnd = endOfMonth(new Date());
+        monthEnd.setHours(23, 59, 59, 999);
+        // Prüfe, ob normalizedDate innerhalb des Zeitraums liegt
+        return normalizedDate >= monthStart && normalizedDate <= monthEnd;
+      }
+      // Für andere Operatoren (before, after) verwende Monat als einzelnes Datum
+      const monthStart = startOfMonth(new Date());
+      monthStart.setHours(0, 0, 0, 0);
+      const monthEnd = endOfMonth(new Date());
+      monthEnd.setHours(23, 59, 59, 999);
+      if (condition.operator === 'before') {
+        return normalizedDate < monthEnd;
+      } else if (condition.operator === 'after') {
+        return normalizedDate > monthStart;
+      }
+      return false;
+    } else if (condition.value === '__THIS_YEAR__') {
+      if (condition.operator === 'equals') {
+        const yearStart = startOfYear(new Date());
+        yearStart.setHours(0, 0, 0, 0);
+        const yearEnd = endOfYear(new Date());
+        yearEnd.setHours(23, 59, 59, 999);
+        // Prüfe, ob normalizedDate innerhalb des Zeitraums liegt
+        return normalizedDate >= yearStart && normalizedDate <= yearEnd;
+      }
+      // Für andere Operatoren (before, after) verwende Jahr als einzelnes Datum
+      const yearStart = startOfYear(new Date());
+      yearStart.setHours(0, 0, 0, 0);
+      const yearEnd = endOfYear(new Date());
+      yearEnd.setHours(23, 59, 59, 999);
+      if (condition.operator === 'before') {
+        return normalizedDate < yearEnd;
+      } else if (condition.operator === 'after') {
+        return normalizedDate > yearStart;
+      }
       return false;
     }
-    // Extrahiere nur den Datumsteil (Jahr, Monat, Tag) mit UTC-Methoden
-    // Dies verhindert Zeitzone-Konvertierung, die zu einem Tag-Versatz führt
-    const conditionYear = conditionDateRaw.getUTCFullYear();
-    const conditionMonth = conditionDateRaw.getUTCMonth();
-    const conditionDay = conditionDateRaw.getUTCDate();
-    // Erstelle lokales Date-Objekt aus den UTC-Werten (ohne Zeitzone)
-    conditionDate = new Date(conditionYear, conditionMonth, conditionDay);
-  }
 
-  switch (condition.operator) {
-    case 'equals':
-      return normalizedDate.getTime() === conditionDate.getTime();
-    case 'before':
-      return normalizedDate < conditionDate;
-    case 'after':
-      return normalizedDate > conditionDate;
-    default:
-      return true;
+    // Handle __TODAY__, __WEEK_START__, __WEEK_END__, __MONTH_START__, __MONTH_END__, __YEAR_START__, __YEAR_END__ dynamic dates
+    let conditionDate: Date;
+    if (condition.value === '__TODAY__') {
+      // Get today's date in local timezone (set to midnight)
+      const localToday = new Date();
+      localToday.setHours(0, 0, 0, 0);
+      conditionDate = localToday;
+    } else if (condition.value === '__WEEK_START__') {
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      weekStart.setHours(0, 0, 0, 0);
+      conditionDate = weekStart;
+    } else if (condition.value === '__WEEK_END__') {
+      const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+      weekEnd.setHours(23, 59, 59, 999);
+      conditionDate = weekEnd;
+    } else if (condition.value === '__MONTH_START__') {
+      const monthStart = startOfMonth(new Date());
+      monthStart.setHours(0, 0, 0, 0);
+      conditionDate = monthStart;
+    } else if (condition.value === '__MONTH_END__') {
+      const monthEnd = endOfMonth(new Date());
+      monthEnd.setHours(23, 59, 59, 999);
+      conditionDate = monthEnd;
+    } else if (condition.value === '__YEAR_START__') {
+      const yearStart = startOfYear(new Date());
+      yearStart.setHours(0, 0, 0, 0);
+      conditionDate = yearStart;
+    } else if (condition.value === '__YEAR_END__') {
+      const yearEnd = endOfYear(new Date());
+      yearEnd.setHours(23, 59, 59, 999);
+      conditionDate = yearEnd;
+    } else {
+      const conditionDateRaw = new Date(condition.value as string);
+      if (isNaN(conditionDateRaw.getTime())) {
+        return false;
+      }
+      // Extrahiere nur den Datumsteil (Jahr, Monat, Tag) mit UTC-Methoden
+      // Dies verhindert Zeitzone-Konvertierung, die zu einem Tag-Versatz führt
+      const conditionYear = conditionDateRaw.getUTCFullYear();
+      const conditionMonth = conditionDateRaw.getUTCMonth();
+      const conditionDay = conditionDateRaw.getUTCDate();
+      // Erstelle lokales Date-Objekt aus den UTC-Werten (ohne Zeitzone)
+      conditionDate = new Date(conditionYear, conditionMonth, conditionDay);
+    }
+
+    switch (condition.operator) {
+      case 'equals':
+        return normalizedDate.getTime() === conditionDate.getTime();
+      case 'before':
+        return normalizedDate < conditionDate;
+      case 'after':
+        return normalizedDate > conditionDate;
+      default:
+        return true;
+    }
+  } catch (error) {
+    // ✅ PHASE 5: Error Handling für ungültige Platzhalter-Werte
+    console.error(`[evaluateDateCondition] Error with placeholder ${condition.value}:`, error);
+    return false; // Fallback: Filter schließt Datensatz aus
   }
 };
 

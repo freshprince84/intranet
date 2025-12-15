@@ -916,7 +916,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   }
 
   return (
-    <div ref={containerRef} className="flex items-center gap-1.5 sm:gap-2 mb-3 mt-1 overflow-x-auto overflow-y-hidden">
+    <div ref={containerRef} className="flex items-center gap-1.5 sm:gap-2 mb-3 mt-1 overflow-x-auto">
       {/* Dynamische Anzahl Filter inline anzeigen mit optimistischer Anzeige */}
       <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 flex-nowrap">
         {/* Gruppen-Dropdowns */}

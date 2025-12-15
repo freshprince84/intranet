@@ -49,7 +49,9 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
 
   // Beim Laden der Komponente und wenn sich die userId ändert
   useEffect(() => {
-    loadDocuments();
+    if (userId) {
+      loadDocuments();
+    }
   }, [userId]);
 
   // Exponiere loadDocuments über Ref

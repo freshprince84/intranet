@@ -2229,14 +2229,12 @@ async function main() {
                 ];
                 operators = ['AND'];
                 } else if (table.id === 'todo-analytics-table') {
-                  // Todo Analytics: responsible = role AND time >= __WEEK_START__ AND time <= __WEEK_END__
-                  // ✅ FIX: Verwende 'after'/'before' (werden im Backend für Platzhalter zu gte/lte konvertiert)
+                  // ✅ PHASE 13: Todo Analytics: responsible = role AND time = __THIS_WEEK__
                   conditions = [
                     { column: 'responsible', operator: 'equals', value: `role-${role.id}` },
-                    { column: 'time', operator: 'after', value: '__WEEK_START__' },
-                    { column: 'time', operator: 'before', value: '__WEEK_END__' }
+                    { column: 'time', operator: 'equals', value: '__THIS_WEEK__' }
                   ];
-                  operators = ['AND', 'AND'];
+                  operators = ['AND'];
                 }
 
               // Finde die höchste order-Nummer in der Gruppe
@@ -2306,25 +2304,21 @@ async function main() {
               ];
               operators = ['OR', 'AND'];
               } else if (table.id === 'todo-analytics-table') {
-                // Todo Analytics: responsible = user ODER qualityControl = user AND time >= __WEEK_START__ AND time <= __WEEK_END__
-                // ✅ FIX: Verwende 'after'/'before' (werden im Backend für Platzhalter zu gte/lte konvertiert)
+                // ✅ PHASE 13: Todo Analytics: responsible = user ODER qualityControl = user AND time = __THIS_WEEK__
                 conditions = [
                   { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
                   { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` },
-                  { column: 'time', operator: 'after', value: '__WEEK_START__' },
-                  { column: 'time', operator: 'before', value: '__WEEK_END__' }
+                  { column: 'time', operator: 'equals', value: '__THIS_WEEK__' }
                 ];
-                operators = ['OR', 'AND', 'AND'];
+                operators = ['OR', 'AND'];
               } else if (table.id === 'request-analytics-table') {
-                // Request Analytics: requestedBy = user ODER responsible = user AND time >= __WEEK_START__ AND time <= __WEEK_END__
-                // ✅ FIX: Verwende 'after'/'before' (werden im Backend für Platzhalter zu gte/lte konvertiert)
+                // ✅ PHASE 13: Request Analytics: requestedBy = user ODER responsible = user AND time = __THIS_WEEK__
                 conditions = [
                   { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
                   { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
-                  { column: 'time', operator: 'after', value: '__WEEK_START__' },
-                  { column: 'time', operator: 'before', value: '__WEEK_END__' }
+                  { column: 'time', operator: 'equals', value: '__THIS_WEEK__' }
                 ];
-                operators = ['OR', 'AND', 'AND'];
+                operators = ['OR', 'AND'];
               }
 
             // Finde die höchste order-Nummer in der Gruppe

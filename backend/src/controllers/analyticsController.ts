@@ -293,6 +293,155 @@ export const getRequestsByUserForDate = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * ✅ PHASE 3: Extrahiert und konvertiert Zeitraum-Filter für Analytics-Tabellen
+ * 
+ * Für Analytics-Tabellen muss die Filter-Bedingung für "time" nicht nur auf `createdAt` filtern,
+ * sondern auch auf `deletedAt` und `statusHistory.changedAt`.
+ * 
+ * @param filterWhereClause - Die konvertierte Prisma Where-Klausel
+ * @returns Objekt mit timeFilter (OR-Bedingung) und remainingFilter (ohne createdAt-Bedingung)
+ */
+function extractAndConvertTimeFilterForAnalytics(filterWhereClause: any): {
+  timeFilter: any;
+  remainingFilter: any;
+} {
+  if (!filterWhereClause || typeof filterWhereClause !== 'object') {
+    return { timeFilter: null, remainingFilter: filterWhereClause || {} };
+  }
+
+  // Rekursive Funktion zum Extrahieren von createdAt-Bedingungen
+  const extractCreatedAtCondition = (clause: any): { gte?: Date; lte?: Date } | null => {
+    if (!clause || typeof clause !== 'object') {
+      return null;
+    }
+
+    // Direkte createdAt-Bedingung mit gte/lte
+    if (clause.createdAt && typeof clause.createdAt === 'object') {
+      const createdAt = clause.createdAt;
+      if (createdAt.gte || createdAt.lte) {
+        return {
+          gte: createdAt.gte,
+          lte: createdAt.lte
+        };
+      }
+    }
+
+    // Rekursiv in AND/OR-Arrays suchen
+    if (Array.isArray(clause.AND)) {
+      for (const item of clause.AND) {
+        const result = extractCreatedAtCondition(item);
+        if (result) {
+          return result;
+        }
+      }
+    }
+    if (Array.isArray(clause.OR)) {
+      for (const item of clause.OR) {
+        const result = extractCreatedAtCondition(item);
+        if (result) {
+          return result;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  // Rekursive Funktion zum Entfernen von createdAt-Bedingungen
+  const removeCreatedAtCondition = (clause: any): any => {
+    if (!clause || typeof clause !== 'object') {
+      return clause;
+    }
+
+    // Neues Objekt für bereinigte Klausel
+    const cleaned: any = {};
+
+    for (const [key, value] of Object.entries(clause)) {
+      // Ignoriere createdAt direkt
+      if (key === 'createdAt') {
+        continue;
+      }
+
+      // Handle AND/OR Arrays
+      if (key === 'AND' || key === 'OR') {
+        if (Array.isArray(value)) {
+          const cleanedArray = value
+            .map(item => removeCreatedAtCondition(item))
+            .filter(item => {
+              // Entferne leere Objekte
+              if (!item || typeof item !== 'object') {
+                return true;
+              }
+              return Object.keys(item).length > 0;
+            });
+          
+          if (cleanedArray.length > 0) {
+            cleaned[key] = cleanedArray.length === 1 ? cleanedArray[0] : cleanedArray;
+          }
+        } else {
+          cleaned[key] = removeCreatedAtCondition(value);
+        }
+        continue;
+      }
+
+      // Rekursiv für verschachtelte Objekte
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const cleanedValue = removeCreatedAtCondition(value);
+        if (cleanedValue && Object.keys(cleanedValue).length > 0) {
+          cleaned[key] = cleanedValue;
+        }
+      } else {
+        // Einfache Werte beibehalten
+        cleaned[key] = value;
+      }
+    }
+
+    return Object.keys(cleaned).length > 0 ? cleaned : {};
+  };
+
+  // Extrahiere createdAt-Bedingung
+  const createdAtCondition = extractCreatedAtCondition(filterWhereClause);
+
+  if (createdAtCondition && (createdAtCondition.gte || createdAtCondition.lte)) {
+    // Erstelle OR-Bedingung für Analytics
+    const timeFilter = {
+      OR: [
+        {
+          createdAt: {
+            ...(createdAtCondition.gte && { gte: createdAtCondition.gte }),
+            ...(createdAtCondition.lte && { lte: createdAtCondition.lte })
+          }
+        },
+        {
+          deletedAt: {
+            ...(createdAtCondition.gte && { gte: createdAtCondition.gte }),
+            ...(createdAtCondition.lte && { lte: createdAtCondition.lte })
+          }
+        },
+        {
+          statusHistory: {
+            some: {
+              changedAt: {
+                ...(createdAtCondition.gte && { gte: createdAtCondition.gte }),
+                ...(createdAtCondition.lte && { lte: createdAtCondition.lte })
+              }
+            }
+          }
+        }
+      ]
+    };
+
+    // Entferne createdAt aus filterWhereClause
+    const remainingFilter = removeCreatedAtCondition(filterWhereClause);
+
+    return { timeFilter, remainingFilter };
+  }
+
+  // Keine createdAt-Bedingung gefunden
+  return { timeFilter: null, remainingFilter: filterWhereClause };
+}
+
 // Alle To-Dos chronologisch für ein Datum oder Datumsbereich (Tab 2)
 export const getTodosChronological = async (req: Request, res: Response) => {
     try {
@@ -361,14 +510,18 @@ export const getTodosChronological = async (req: Request, res: Response) => {
             filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'task');
         }
 
+        // ✅ PHASE 4: Extrahiere und konvertiere Zeitraum-Filter für Analytics
+        const { timeFilter, remainingFilter } = extractAndConvertTimeFilterForAnalytics(filterWhereClause);
+
         // Kombiniere taskFilter mit Zeitfilter und Filter-Bedingungen
         // Zeige nur Tasks, die im Zeitraum erstellt, Status-Änderungen hatten oder gelöscht wurden
         // NICHT: Tasks, die nur andere Updates hatten (z.B. Titel geändert)
         const where: any = {
             AND: [
                 taskFilter,
-                filterWhereClause,
-                {
+                remainingFilter,
+                // Verwende timeFilter falls vorhanden, sonst Fallback auf period/date
+                timeFilter || {
                     OR: [
                         {
                             createdAt: {
@@ -544,14 +697,18 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
             filterWhereClause = validateFilterAgainstIsolation(filterWhereClause, req, 'request');
         }
 
+        // ✅ PHASE 4: Extrahiere und konvertiere Zeitraum-Filter für Analytics
+        const { timeFilter, remainingFilter } = extractAndConvertTimeFilterForAnalytics(filterWhereClause);
+
         // Kombiniere requestFilter mit Zeitfilter und Filter-Bedingungen
         // Zeige nur Requests, die im Zeitraum erstellt, Status-Änderungen hatten oder gelöscht wurden
         // NICHT: Requests, die nur andere Updates hatten (z.B. Titel geändert)
         const where: any = {
             AND: [
                 requestFilter,
-                filterWhereClause,
-                {
+                remainingFilter,
+                // Verwende timeFilter falls vorhanden, sonst Fallback auf period/date
+                timeFilter || {
                     OR: [
                         {
                             createdAt: {
