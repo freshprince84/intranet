@@ -723,59 +723,57 @@ if (!hasPermission) {
 
 **Standard:** Alle Texte müssen mit `t()` und `defaultValue` verwendet werden (siehe CODING_STANDARDS.md, Zeile 42-77).
 
-**Erforderliche Übersetzungen (müssen in ALLEN 3 Sprachen hinzugefügt werden):**
+**Status der Übersetzungen (geprüft am 2025-01-22):**
+
+**Frontend-Übersetzungen:**
+- ✅ `de.json`: Alle Keys vorhanden (generateImages, generatingImages, imagesGenerated, imageGenerationFailed, imageGenerationProgress, imageGenerationStarted, imageGenerationQueued, imageGenerationTimeout, imageGenerationNoQueue, imageGenerationRedisError, imageDeleted, galleryImageDeleted)
+- ❌ `en.json`: `galleryImageDeleted` FEHLT (alle anderen Keys vorhanden)
+- ❌ `es.json`: `galleryImageDeleted` FEHLT (alle anderen Keys vorhanden)
+
+**Backend-Übersetzungen (`backend/src/utils/translations.ts`):**
+- ✅ `imageDeleted`: Vorhanden in allen 3 Sprachen (de, en, es)
+- ❌ `galleryImageDeleted`: FEHLT komplett in allen 3 Sprachen
+
+**Erforderliche Übersetzungen (müssen noch hinzugefügt werden):**
 
 ```json
-// frontend/src/i18n/locales/de.json (nach Zeile 3016, innerhalb "tours")
+// frontend/src/i18n/locales/en.json (nach Zeile 3054, innerhalb "tours")
 {
   "tours": {
     // ... bestehende Keys ...
-    "generateImages": "Bilder generieren",
-    "generatingImages": "Bilder werden generiert...",
-    "imagesGenerated": "Bilder erfolgreich generiert",
-    "imageGenerationFailed": "Fehler bei Bildgenerierung",
-    "imageGenerationProgress": "Fortschritt: {progress}%",
-    "imageGenerationStarted": "Bildgenerierung gestartet",
-    "imageGenerationQueued": "Bildgenerierung in Warteschlange",
-    "imageGenerationTimeout": "Bildgenerierung hat zu lange gedauert",
-    "imageGenerationNoQueue": "Queue-System nicht verfügbar, verwende synchronen Modus",
-    "imageGenerationRedisError": "Redis-Verbindungsfehler, verwende synchronen Modus"
+    "galleryImageDeleted": "Gallery image successfully deleted"
   }
 }
 
-// frontend/src/i18n/locales/en.json (nach Zeile 2950, innerhalb "tours")
+// frontend/src/i18n/locales/es.json (nach Zeile 3055, innerhalb "tours")
 {
   "tours": {
     // ... bestehende Keys ...
-    "generateImages": "Generate images",
-    "generatingImages": "Generating images...",
-    "imagesGenerated": "Images generated successfully",
-    "imageGenerationFailed": "Image generation failed",
-    "imageGenerationProgress": "Progress: {progress}%",
-    "imageGenerationStarted": "Image generation started",
-    "imageGenerationQueued": "Image generation queued",
-    "imageGenerationTimeout": "Image generation took too long",
-    "imageGenerationNoQueue": "Queue system not available, using synchronous mode",
-    "imageGenerationRedisError": "Redis connection error, using synchronous mode"
+    "galleryImageDeleted": "Imagen de galería eliminada exitosamente"
   }
 }
 
-// frontend/src/i18n/locales/es.json (nach Zeile 2949, innerhalb "tours")
-{
-  "tours": {
-    // ... bestehende Keys ...
-    "generateImages": "Generar imágenes",
-    "generatingImages": "Generando imágenes...",
-    "imagesGenerated": "Imágenes generadas exitosamente",
-    "imageGenerationFailed": "Error al generar imágenes",
-    "imageGenerationProgress": "Progreso: {progress}%",
-    "imageGenerationStarted": "Generación de imágenes iniciada",
-    "imageGenerationQueued": "Generación de imágenes en cola",
-    "imageGenerationTimeout": "La generación de imágenes tardó demasiado",
-    "imageGenerationNoQueue": "Sistema de cola no disponible, usando modo sincrónico",
-    "imageGenerationRedisError": "Error de conexión Redis, usando modo sincrónico"
-  }
+// backend/src/utils/translations.ts (TourErrorTranslations Interface erweitern)
+interface TourErrorTranslations {
+  // ... bestehende Felder ...
+  galleryImageDeleted: string;
 }
+
+// backend/src/utils/translations.ts (tourErrorTexts erweitern)
+const tourErrorTexts: Record<string, TourErrorTranslations> = {
+  de: {
+    // ... bestehende Felder ...
+    galleryImageDeleted: 'Galerie-Bild erfolgreich gelöscht'
+  },
+  en: {
+    // ... bestehende Felder ...
+    galleryImageDeleted: 'Gallery image successfully deleted'
+  },
+  es: {
+    // ... bestehende Felder ...
+    galleryImageDeleted: 'Imagen de galería eliminada exitosamente'
+  }
+};
 ```
 
 **Verwendung in Komponenten:**
@@ -808,31 +806,37 @@ REDIS_PORT=6379
 ## 📋 CHECKLISTE
 
 ### Backend
-- [ ] `GeminiImageService` refactoren (generisch)
-- [ ] Queue für Bildgenerierung erstellen (`getImageGenerationQueue()`)
-- [ ] Worker für Bildgenerierung implementieren (`imageGenerationWorker.ts`)
-- [ ] Worker in `queues/index.ts` registrieren
-- [ ] Controller-Endpunkte: `POST /api/tours/:id/generate-images`
-- [ ] Controller-Endpunkte: `GET /api/tours/:id/generate-images/status`
-- [ ] Berechtigungsprüfung implementieren (`checkUserPermission`)
-- [ ] **FALLBACK:** Synchroner Modus wenn Queue nicht verfügbar
-- [ ] **CLEANUP:** Temporäre Dateien nach Upload/Fehler löschen
-- [ ] Error-Handling für alle Fehlerfälle (API-Key, Rate-Limits, etc.)
-- [ ] Logging für alle Operationen
+- [x] `GeminiImageService` refactoren (generisch) ✅ IMPLEMENTIERT
+- [x] Queue für Bildgenerierung erstellen (`getImageGenerationQueue()`) ✅ IMPLEMENTIERT
+- [x] Worker für Bildgenerierung implementieren (`imageGenerationWorker.ts`) ✅ IMPLEMENTIERT
+- [x] Worker in `queues/index.ts` registrieren ✅ IMPLEMENTIERT
+- [x] Controller-Endpunkte: `POST /api/tours/:id/generate-images` ✅ IMPLEMENTIERT
+- [x] Controller-Endpunkte: `GET /api/tours/:id/generate-images/status` ✅ IMPLEMENTIERT
+- [x] Berechtigungsprüfung implementieren (`checkUserPermission`) ✅ IMPLEMENTIERT
+- [x] **FALLBACK:** Synchroner Modus wenn Queue nicht verfügbar ✅ IMPLEMENTIERT
+- [x] **CLEANUP:** Temporäre Dateien nach Upload/Fehler löschen ✅ IMPLEMENTIERT
+- [x] Error-Handling für alle Fehlerfälle (API-Key, Rate-Limits, etc.) ✅ IMPLEMENTIERT
+- [x] Logging für alle Operationen ✅ IMPLEMENTIERT
+- [ ] **FEHLT:** `clearGalleryImages()` Methode in `TourImageUploadService` implementieren
+- [ ] **FEHLT:** Worker ruft `clearGalleryImages()` auf VOR neuem Upload
+- [ ] **FEHLT:** Controller ruft `clearGalleryImages()` auf VOR neuem Upload (synchroner Fallback)
 
 ### Frontend
-- [ ] API-Endpunkte in `api.ts` hinzufügen
-- [ ] Button in Card-Ansicht hinzufügen
-- [ ] Button in Table-Ansicht hinzufügen
-- [ ] Handler-Funktion `handleGenerateImages()`
-- [ ] Loading-State während Generierung
-- [ ] Status-Polling implementieren
-- [ ] **MEMORY LEAK PREVENTION:** Polling-Intervalle in `useEffect` Cleanup aufräumen
-- [ ] Bild-Anzeige in Card hinzufügen
-- [ ] Übersetzungen hinzufügen (de, en, es) - **ALLE Keys mit defaultValue**
-- [ ] Error-Handling und User-Feedback
-- [ ] Timeout-Handling (max. 60 Sekunden Polling)
-- [ ] Fallback-Meldung wenn Queue nicht verfügbar
+- [x] API-Endpunkte in `api.ts` hinzufügen ✅ IMPLEMENTIERT
+- [x] Button in Card-Ansicht hinzufügen ✅ IMPLEMENTIERT
+- [x] Button in Table-Ansicht hinzufügen ✅ IMPLEMENTIERT
+- [x] Handler-Funktion `handleGenerateImages()` ✅ IMPLEMENTIERT
+- [x] Loading-State während Generierung ✅ IMPLEMENTIERT
+- [x] Status-Polling implementieren ✅ IMPLEMENTIERT
+- [x] **MEMORY LEAK PREVENTION:** Polling-Intervalle in `useEffect` Cleanup aufräumen ✅ IMPLEMENTIERT
+- [x] Bild-Anzeige in Card hinzufügen ✅ IMPLEMENTIERT
+- [x] Lightbox für Vollbild-Anzeige ✅ IMPLEMENTIERT
+- [x] Übersetzungen hinzufügen (de, en, es) - **ALLE Keys mit defaultValue** ✅ IMPLEMENTIERT (außer `galleryImageDeleted` in en/es)
+- [x] Error-Handling und User-Feedback ✅ IMPLEMENTIERT
+- [x] Timeout-Handling (max. 60 Sekunden Polling) ✅ IMPLEMENTIERT
+- [x] Fallback-Meldung wenn Queue nicht verfügbar ✅ IMPLEMENTIERT
+- [ ] **FEHLT:** `galleryImageDeleted` in `en.json` hinzufügen
+- [ ] **FEHLT:** `galleryImageDeleted` in `es.json` hinzufügen
 
 ### Testing
 - [ ] Backend-Tests
@@ -938,6 +942,45 @@ if (!queueAvailable || process.env.QUEUE_ENABLED !== 'true') {
 - Timeout im Frontend (60 Sekunden max)
 - Fallback: Frontend zeigt "Status unbekannt, bitte neu versuchen"
 
+### Risiko 10: Galerie-Bilder-Akkumulation
+**Risiko:** Bei erneuter Bildgenerierung werden neue Galerie-Bilder zu bestehenden hinzugefügt, statt sie zu ersetzen
+**Auswirkung:** Galerie wächst kontinuierlich, alte Bilder bleiben erhalten, Disk-Space wird unnötig belegt
+**Aktueller Status:** ❌ **NICHT BEHOBEN** - `clearGalleryImages()` existiert nicht in `TourImageUploadService`
+**Mitigation:**
+- **MUSS:** `clearGalleryImages(tourId: number)` Methode in `TourImageUploadService` implementieren
+- **MUSS:** Methode löscht alle bestehenden Galerie-Bild-Dateien aus `uploads/tours/`
+- **MUSS:** Methode setzt `galleryUrls` Array in DB auf `[]`
+- **MUSS:** Worker ruft `clearGalleryImages()` auf VOR dem Upload neuer Galerie-Bilder
+- **MUSS:** Controller ruft `clearGalleryImages()` auf VOR dem Upload neuer Galerie-Bilder (synchroner Fallback)
+- **Implementierung:**
+```typescript
+// backend/src/services/tourImageUploadService.ts
+static async clearGalleryImages(tourId: number): Promise<void> {
+  const tour = await prisma.tour.findUnique({
+    where: { id: tourId },
+    select: { galleryUrls: true }
+  });
+  
+  if (tour?.galleryUrls) {
+    const urls = (tour.galleryUrls as string[]) || [];
+    // Lösche alle Dateien
+    urls.forEach(url => {
+      const filename = path.basename(url);
+      const filePath = path.join(__dirname, '../../uploads/tours', filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    });
+  }
+  
+  // Setze galleryUrls auf leeres Array
+  await prisma.tour.update({
+    where: { id: tourId },
+    data: { galleryUrls: [] }
+  });
+}
+```
+
 ---
 
 ## 🔄 ERWEITERUNGSMÖGLICHKEITEN
@@ -1017,10 +1060,13 @@ if (!queueAvailable || process.env.QUEUE_ENABLED !== 'true') {
 - [ ] Fallback-Meldung wenn Queue nicht verfügbar
 
 ### Phase 5: Übersetzungen (I18N)
-- [ ] Alle Keys in `de.json` hinzufügen (mit defaultValue)
-- [ ] Alle Keys in `en.json` hinzufügen (mit defaultValue)
-- [ ] Alle Keys in `es.json` hinzufügen (mit defaultValue)
-- [ ] `t()` Funktionen in Komponenten verwenden (keine Hardcoded-Texte)
+- [x] Alle Keys in `de.json` hinzufügen (mit defaultValue) ✅ IMPLEMENTIERT
+- [x] Alle Keys in `en.json` hinzufügen (mit defaultValue) ⚠️ `galleryImageDeleted` FEHLT
+- [x] Alle Keys in `es.json` hinzufügen (mit defaultValue) ⚠️ `galleryImageDeleted` FEHLT
+- [x] `t()` Funktionen in Komponenten verwenden (keine Hardcoded-Texte) ✅ IMPLEMENTIERT
+- [ ] **FEHLT:** `galleryImageDeleted` in `en.json` hinzufügen
+- [ ] **FEHLT:** `galleryImageDeleted` in `es.json` hinzufügen
+- [ ] **FEHLT:** `galleryImageDeleted` in `backend/src/utils/translations.ts` hinzufügen (alle 3 Sprachen)
 
 ### Phase 6: Testing
 - [ ] Backend: Service-Test (Bildgenerierung)
@@ -1035,13 +1081,60 @@ if (!queueAvailable || process.env.QUEUE_ENABLED !== 'true') {
 
 ---
 
+## 🔍 PRÜFUNG DURCHGEFÜHRT (2025-01-22)
+
+### ✅ Standards eingehalten:
+- ✅ Image URL-Generierung: `getTourImageUrl()` und `getTourGalleryImageUrl()` verwendet (wie bei Tasks/Requests)
+- ✅ Memory Leak Prevention: Cleanup-Funktion für Polling-Intervalle vorhanden (`ToursTab.tsx` Zeile 387-389)
+- ✅ Polling: Cleanup vorhanden, Timeout-Handling implementiert
+- ✅ Übersetzungen: `t()` mit `defaultValue` verwendet (außer fehlende Keys)
+- ✅ Berechtigungen: `hasPermission()` im Frontend, `checkUserPermission()` im Backend
+- ✅ Notifications: Bewusst nicht implementiert (wie dokumentiert)
+
+### ❌ Fehlende Implementierungen:
+
+#### 1. Übersetzungen (I18N):
+**Frontend:**
+- ❌ `galleryImageDeleted` fehlt in `frontend/src/i18n/locales/en.json` (Zeile ~3055)
+- ❌ `galleryImageDeleted` fehlt in `frontend/src/i18n/locales/es.json` (Zeile ~3056)
+
+**Backend:**
+- ❌ `galleryImageDeleted` fehlt in `backend/src/utils/translations.ts` (Interface `TourErrorTranslations` und `tourErrorTexts`)
+
+#### 2. Galerie-Bilder-Akkumulation:
+**Problem:** Bei erneuter Bildgenerierung werden neue Galerie-Bilder zu bestehenden hinzugefügt, statt sie zu ersetzen.
+
+**Fehlende Implementierung:**
+- ❌ `clearGalleryImages(tourId: number)` Methode fehlt in `TourImageUploadService`
+- ❌ Worker (`imageGenerationWorker.ts` Zeile ~107) ruft `clearGalleryImages()` nicht auf vor neuem Upload
+- ❌ Controller (`tourController.ts` Zeile ~1359) ruft `clearGalleryImages()` nicht auf vor neuem Upload (synchroner Fallback)
+
+**Auswirkung:**
+- Galerie wächst kontinuierlich bei jeder erneuten Generierung
+- Alte Bilder bleiben erhalten und belegen Disk-Space
+- Performance-Beeinträchtigung durch unnötige Dateien
+
+### ⚠️ Risiken identifiziert:
+- **Risiko 10:** Galerie-Bilder-Akkumulation (siehe Risiken-Sektion, Zeile ~940)
+
+### 📊 Performance-Status:
+- ✅ Queue-System implementiert (asynchron, keine Blockierung)
+- ✅ Polling mit Cleanup (verhindert Memory Leaks)
+- ✅ Lazy-Loading für Bilder
+- ⚠️ Galerie-Bilder-Akkumulation könnte Performance beeinträchtigen (siehe Risiko 10)
+
+### 🔒 Sicherheit-Status:
+- ✅ Berechtigungen: Frontend und Backend prüfen korrekt
+- ✅ API-Key: In `.env`, nicht im Frontend
+- ✅ Organization-Isolation: Implementiert
+
 **Nächste Schritte:**
 1. ✅ Planungsdokument erstellt und vollständig geprüft
-2. ⏳ Warten auf Freigabe zur Implementierung
-3. ⏳ Phase 1: Service-Refactoring
-4. ⏳ Phase 2: Queue-Integration
-5. ⏳ Phase 3: Backend API-Endpunkte
-6. ⏳ Phase 4: Frontend-Integration
-7. ⏳ Phase 5: Übersetzungen
-8. ⏳ Phase 6: Testing
+2. ✅ Phase 1: Service-Refactoring ✅ IMPLEMENTIERT
+3. ✅ Phase 2: Queue-Integration ✅ IMPLEMENTIERT
+4. ✅ Phase 3: Backend API-Endpunkte ✅ IMPLEMENTIERT
+5. ✅ Phase 4: Frontend-Integration ✅ IMPLEMENTIERT
+6. ⚠️ Phase 5: Übersetzungen - **FEHLT:** `galleryImageDeleted` in en/es (Frontend + Backend)
+7. ⚠️ Phase 6: Galerie-Bilder-Akkumulation beheben - **FEHLT:** `clearGalleryImages()` Implementierung
+8. ⏳ Phase 7: Testing
 

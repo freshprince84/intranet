@@ -1093,22 +1093,17 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                                                                         : t('tours.generateImages', { defaultValue: 'Bilder generieren' })}
                                                                                 </div>
                                                                             </div>
-                                                                            <div className="relative group">
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        setSelectedTour(tour);
-                                                                                        setIsEditTourModalOpen(true);
-                                                                                    }}
-                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                    title={t('tours.edit', { defaultValue: 'Bearbeiten' })}
-                                                                                >
-                                                                                    <PencilIcon className="h-4 w-4" />
-                                                                                </button>
-                                                                                <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                    {t('tours.edit', 'Bearbeiten')}
-                                                                                </div>
-                                                                            </div>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setSelectedTour(tour);
+                                                                                    setIsEditTourModalOpen(true);
+                                                                                }}
+                                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                title={t('tours.edit', { defaultValue: 'Bearbeiten' })}
+                                                                            >
+                                                                                <PencilIcon className="h-4 w-4" />
+                                                                            </button>
                                                                         </>
                                                                     )}
                                                                 </div>
@@ -1267,9 +1262,10 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                                 setSelectedTour(tour);
                                                 setIsEditTourModalOpen(true);
                                             }}
-                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+                                            className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                            title={t('tours.edit', { defaultValue: 'Bearbeiten' })}
                                         >
-                                            {t('tours.edit', 'Bearbeiten')}
+                                            <PencilIcon className="h-4 w-4" />
                                         </button>
                                     </div>
                                 )}

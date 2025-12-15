@@ -2218,29 +2218,19 @@ async function main() {
             for (const role of roles) {
               const filterName = role.name;
               
-              // Prüfe ob Filter bereits existiert
-              const existingFilter = await prisma.savedFilter.findFirst({
-                where: {
-                  userId,
-                  tableId: table.id,
-                  name: filterName,
-                  groupId: rolesGroup.id
-                }
-              });
-
-              if (!existingFilter) {
-                let conditions: any[] = [];
-                let operators: string[] = [];
-                
-                if (table.id === 'worktracker-todos') {
-                  // ToDos: responsible = role UND status != done
-                  conditions = [
-                    { column: 'responsible', operator: 'equals', value: `role-${role.id}` },
-                    { column: 'status', operator: 'notEquals', value: 'done' }
-                  ];
-                  operators = ['AND'];
+              let conditions: any[] = [];
+              let operators: string[] = [];
+              
+              if (table.id === 'worktracker-todos') {
+                // ToDos: responsible = role UND status != done
+                conditions = [
+                  { column: 'responsible', operator: 'equals', value: `role-${role.id}` },
+                  { column: 'status', operator: 'notEquals', value: 'done' }
+                ];
+                operators = ['AND'];
                 } else if (table.id === 'todo-analytics-table') {
                   // Todo Analytics: responsible = role AND time >= __WEEK_START__ AND time <= __WEEK_END__
+                  // ✅ FIX: Verwende 'after'/'before' (werden im Backend für Platzhalter zu gte/lte konvertiert)
                   conditions = [
                     { column: 'responsible', operator: 'equals', value: `role-${role.id}` },
                     { column: 'time', operator: 'after', value: '__WEEK_START__' },
@@ -2249,27 +2239,40 @@ async function main() {
                   operators = ['AND', 'AND'];
                 }
 
-                // Finde die höchste order-Nummer in der Gruppe
-                const maxOrder = await prisma.savedFilter.findFirst({
-                  where: { groupId: rolesGroup.id },
-                  orderBy: { order: 'desc' },
-                  select: { order: true }
-                });
-                const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+              // Finde die höchste order-Nummer in der Gruppe
+              const maxOrder = await prisma.savedFilter.findFirst({
+                where: { groupId: rolesGroup.id },
+                orderBy: { order: 'desc' },
+                select: { order: true }
+              });
+              const newOrder = maxOrder ? maxOrder.order + 1 : 0;
 
-                await prisma.savedFilter.create({
-                  data: {
+              // ✅ FIX: upsert verwenden, damit bestehende Filter aktualisiert werden
+              await prisma.savedFilter.upsert({
+                where: {
+                  userId_tableId_name: {
                     userId,
                     tableId: table.id,
-                    name: filterName,
-                    conditions: JSON.stringify(conditions),
-                    operators: JSON.stringify(operators),
-                    groupId: rolesGroup.id,
-                    order: newOrder
+                    name: filterName
                   }
-                });
-                console.log(`    ✅ Filter "${filterName}" (Rolle) für ${table.name} erstellt`);
-              }
+                },
+                update: {
+                  conditions: JSON.stringify(conditions),
+                  operators: JSON.stringify(operators),
+                  groupId: rolesGroup.id,
+                  order: newOrder
+                },
+                create: {
+                  userId,
+                  tableId: table.id,
+                  name: filterName,
+                  conditions: JSON.stringify(conditions),
+                  operators: JSON.stringify(operators),
+                  groupId: rolesGroup.id,
+                  order: newOrder
+                }
+              });
+              console.log(`    ✅ Filter "${filterName}" (Rolle) für ${table.name} erstellt/aktualisiert`);
             }
           }
           // Requests: KEINE Rollen-Filter (Requests unterstützen keine Rollen)
@@ -2280,40 +2283,31 @@ async function main() {
             const filterName = `${user.firstName} ${user.lastName}`.trim() || user.username;
             
             // Prüfe ob Filter bereits existiert
-            const existingFilter = await prisma.savedFilter.findFirst({
-              where: {
-                userId,
-                tableId: table.id,
-                name: filterName,
-                groupId: usersGroup.id
-              }
-            });
+            let conditions: any[] = [];
+            let operators: string[] = [];
 
-            if (!existingFilter) {
-              let conditions: any[] = [];
-              let operators: string[] = [];
-
-              if (table.id === 'requests-table') {
-                // Requests: (requestedBy AND status != approved AND status != denied) OR (responsible AND status != approved AND status != denied)
-                conditions = [
-                  { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
-                  { column: 'status', operator: 'notEquals', value: 'approved' },
-                  { column: 'status', operator: 'notEquals', value: 'denied' },
-                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
-                  { column: 'status', operator: 'notEquals', value: 'approved' },
-                  { column: 'status', operator: 'notEquals', value: 'denied' }
-                ];
-                operators = ['AND', 'AND', 'OR', 'AND', 'AND'];
-              } else if (table.id === 'worktracker-todos') {
-                // ToDos: qualityControl = user ODER responsible = user UND status != done
-                conditions = [
-                  { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` },
-                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
-                  { column: 'status', operator: 'notEquals', value: 'done' }
-                ];
-                operators = ['OR', 'AND'];
+            if (table.id === 'requests-table') {
+              // Requests: (requestedBy AND status != approved AND status != denied) OR (responsible AND status != approved AND status != denied)
+              conditions = [
+                { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
+                { column: 'status', operator: 'notEquals', value: 'approved' },
+                { column: 'status', operator: 'notEquals', value: 'denied' },
+                { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
+                { column: 'status', operator: 'notEquals', value: 'approved' },
+                { column: 'status', operator: 'notEquals', value: 'denied' }
+              ];
+              operators = ['AND', 'AND', 'OR', 'AND', 'AND'];
+            } else if (table.id === 'worktracker-todos') {
+              // ToDos: qualityControl = user ODER responsible = user UND status != done
+              conditions = [
+                { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` },
+                { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
+                { column: 'status', operator: 'notEquals', value: 'done' }
+              ];
+              operators = ['OR', 'AND'];
               } else if (table.id === 'todo-analytics-table') {
                 // Todo Analytics: responsible = user ODER qualityControl = user AND time >= __WEEK_START__ AND time <= __WEEK_END__
+                // ✅ FIX: Verwende 'after'/'before' (werden im Backend für Platzhalter zu gte/lte konvertiert)
                 conditions = [
                   { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
                   { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` },
@@ -2323,6 +2317,7 @@ async function main() {
                 operators = ['OR', 'AND', 'AND'];
               } else if (table.id === 'request-analytics-table') {
                 // Request Analytics: requestedBy = user ODER responsible = user AND time >= __WEEK_START__ AND time <= __WEEK_END__
+                // ✅ FIX: Verwende 'after'/'before' (werden im Backend für Platzhalter zu gte/lte konvertiert)
                 conditions = [
                   { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
                   { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
@@ -2332,27 +2327,40 @@ async function main() {
                 operators = ['OR', 'AND', 'AND'];
               }
 
-              // Finde die höchste order-Nummer in der Gruppe
-              const maxOrder = await prisma.savedFilter.findFirst({
-                where: { groupId: usersGroup.id },
-                orderBy: { order: 'desc' },
-                select: { order: true }
-              });
-              const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+            // Finde die höchste order-Nummer in der Gruppe
+            const maxOrder = await prisma.savedFilter.findFirst({
+              where: { groupId: usersGroup.id },
+              orderBy: { order: 'desc' },
+              select: { order: true }
+            });
+            const newOrder = maxOrder ? maxOrder.order + 1 : 0;
 
-              await prisma.savedFilter.create({
-                data: {
+            // ✅ FIX: upsert verwenden, damit bestehende Filter aktualisiert werden
+            await prisma.savedFilter.upsert({
+              where: {
+                userId_tableId_name: {
                   userId,
                   tableId: table.id,
-                  name: filterName,
-                  conditions: JSON.stringify(conditions),
-                  operators: JSON.stringify(operators),
-                  groupId: usersGroup.id,
-                  order: newOrder
+                  name: filterName
                 }
-              });
-              console.log(`    ✅ Filter "${filterName}" (Benutzer) für ${table.name} erstellt`);
-            }
+              },
+              update: {
+                conditions: JSON.stringify(conditions),
+                operators: JSON.stringify(operators),
+                groupId: usersGroup.id,
+                order: newOrder
+              },
+              create: {
+                userId,
+                tableId: table.id,
+                name: filterName,
+                conditions: JSON.stringify(conditions),
+                operators: JSON.stringify(operators),
+                groupId: usersGroup.id,
+                order: newOrder
+              }
+            });
+            console.log(`    ✅ Filter "${filterName}" (Benutzer) für ${table.name} erstellt/aktualisiert`);
           }
         }
       } catch (error) {
