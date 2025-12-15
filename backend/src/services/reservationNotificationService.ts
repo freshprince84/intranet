@@ -252,7 +252,8 @@ export class ReservationNotificationService {
     let roomDescription: string = reservation.roomDescription || 'N/A';
     
     // Prüfe ob categoryId und branchId vorhanden
-    if (!(reservation as any).categoryId || !reservation.branchId) {
+    const categoryId = (reservation as any).categoryId;
+    if (categoryId == null || !reservation.branchId) {
       return roomDescription;
     }
 
@@ -267,7 +268,7 @@ export class ReservationNotificationService {
         const { decryptBranchApiSettings } = require('../utils/encryption');
         const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
         const lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings;
-        const roomDesc = lobbyPmsSettings?.roomDescriptions?.[(reservation as any).categoryId];
+        const roomDesc = lobbyPmsSettings?.roomDescriptions?.[categoryId];
         
         if (roomDesc) {
           // Übersetzungen für Bild/Video Labels
@@ -1637,22 +1638,22 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         } else {
           // Fallback auf alte hardcodierte Nachricht (sollte nicht passieren)
           logger.warn(`[ReservationNotification] Kein Template gefunden für sendPasscodeNotification, verwende Fallback`);
-        if (languageCode === 'en') {
-          const greeting = `Hello ${reservation.guestName},`;
-          const contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomDisplay} Access: - Door PIN: ${doorPin || 'N/A'}`;
-          
-          messageText = `Welcome,
+          if (languageCode === 'en') {
+            const greeting = `Hello ${reservation.guestName},`;
+            const contentText = `Your check-in has been completed successfully! Your room information: - Room: ${roomDisplay} Access: - Door PIN: ${doorPin || 'N/A'}`;
+            
+            messageText = `Welcome,
 
 ${greeting}
 
 ${contentText}
 
 We wish you a pleasant stay!`;
-        } else {
-          const greeting = `Hola ${reservation.guestName},`;
-          const contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomDisplay} Acceso: - PIN de la puerta: ${doorPin || 'N/A'}`;
-          
-          messageText = `Bienvenido,
+          } else {
+            const greeting = `Hola ${reservation.guestName},`;
+            const contentText = `¡Tu check-in se ha completado exitosamente! Información de tu habitación: - Habitación: ${roomDisplay} Acceso: - PIN de la puerta: ${doorPin || 'N/A'}`;
+            
+            messageText = `Bienvenido,
 
 ${greeting}
 

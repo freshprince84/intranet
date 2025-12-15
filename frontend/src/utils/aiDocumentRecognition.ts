@@ -47,9 +47,8 @@ export const recognizeDocumentWithAI = async (imageData: string): Promise<Partia
       credentials: 'include', // Cookies und Auth-Daten senden
       mode: 'cors', // Explizit CORS-Modus aktivieren
       body: JSON.stringify({ 
-        image: imageData,
-        // Optional weitere Parameter wie Dokumenttyp
-        documentType: 'id_card' 
+        image: imageData
+        // documentType wird nicht gesendet, damit AI den Typ automatisch erkennt
       })
     });
     

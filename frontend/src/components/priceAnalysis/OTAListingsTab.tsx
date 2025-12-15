@@ -85,25 +85,43 @@ const OTAListingsTab: React.FC = () => {
     }, [currentBranch, loadListings]);
 
     const handleRunRateShopping = useCallback(async () => {
-        if (!currentBranch) return;
+        console.log('[OTAListingsTab] 🔘 handleRunRateShopping aufgerufen');
+        console.log('[OTAListingsTab] currentBranch:', currentBranch);
+        console.log('[OTAListingsTab] hasPermission:', hasPermission('price_analysis_run_rate_shopping', 'write', 'button'));
+        
+        if (!currentBranch) {
+            console.warn('[OTAListingsTab] ❌ Kein currentBranch');
+            return;
+        }
 
         if (!hasPermission('price_analysis_run_rate_shopping', 'write', 'button')) {
+            console.warn('[OTAListingsTab] ❌ Keine Permission');
             showMessage(t('common.noPermission'), 'error');
             return;
         }
 
+        console.log('[OTAListingsTab] ✅ Permission OK, starte Rate Shopping...');
         setRateShoppingLoading(true);
         try {
             const startDate = new Date();
             const endDate = new Date();
             endDate.setMonth(endDate.getMonth() + 3);
 
-            const response = await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.OTA.RATE_SHOPPING, {
+            const requestData = {
                 branchId: currentBranch.id,
                 platform: selectedPlatform,
                 startDate: startDate.toISOString().split('T')[0],
                 endDate: endDate.toISOString().split('T')[0]
+            };
+            
+            console.log('[OTAListingsTab] 📤 Sende Request:', {
+                url: API_ENDPOINTS.PRICE_ANALYSIS.OTA.RATE_SHOPPING,
+                data: requestData
             });
+
+            const response = await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.OTA.RATE_SHOPPING, requestData);
+            
+            console.log('[OTAListingsTab] ✅ Response erhalten:', response);
 
             if (response.data?.success) {
                 showMessage(t('priceAnalysis.rateShopping.started', 'Rate Shopping gestartet'), 'success');
@@ -119,6 +137,13 @@ const OTAListingsTab: React.FC = () => {
                 loadListings();
             }, 2000);
         } catch (error: any) {
+            console.error('[OTAListingsTab] ❌ Fehler beim Rate Shopping:', error);
+            console.error('[OTAListingsTab] Error Details:', {
+                message: error?.message,
+                response: error?.response,
+                status: error?.response?.status,
+                data: error?.response?.data
+            });
             handleError(error);
         } finally {
             setRateShoppingLoading(false);
@@ -146,7 +171,11 @@ const OTAListingsTab: React.FC = () => {
                 </select>
                 <div className="relative group">
                     <button
-                        onClick={handleRunRateShopping}
+                        onClick={(e) => {
+                            console.log('[OTAListingsTab] 🔘 Button onClick Event:', e);
+                            console.log('[OTAListingsTab] Button disabled?', rateShoppingLoading || !hasPermission('price_analysis_run_rate_shopping', 'write', 'button'));
+                            handleRunRateShopping();
+                        }}
                         disabled={rateShoppingLoading || !hasPermission('price_analysis_run_rate_shopping', 'write', 'button')}
                         className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title={t('priceAnalysis.rateShopping.run', 'Rate Shopping starten')}

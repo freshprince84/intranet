@@ -46,30 +46,146 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
   
   const { showMessage } = useMessage();
   
-  // Liste der Dokumenttypen - dynamisch aus Übersetzungen
+  // Liste der Dokumenttypen - nur Passport und National ID erlaubt
   const documentTypes = [
     { value: 'passport', label: t('identificationDocuments.types.passport') },
     { value: 'national_id', label: t('identificationDocuments.types.national_id') },
-    { value: 'driving_license', label: t('identificationDocuments.types.driving_license') },
-    { value: 'residence_permit', label: t('identificationDocuments.types.residence_permit') },
-    { value: 'work_permit', label: t('identificationDocuments.types.work_permit') },
-    { value: 'tax_id', label: t('identificationDocuments.types.tax_id') },
-    { value: 'social_security', label: t('identificationDocuments.types.social_security') },
   ];
   
-  // Behandle Änderungen der Datei
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Behandle Änderungen der Datei - automatische Erkennung starten
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
       setImageData(null); // Zurücksetzen des Kamerabilds, wenn eine Datei ausgewählt wird
+      
+      // Automatische Erkennung starten
+      try {
+        setIsRecognizing(true);
+        setRecognitionError(null);
+        
+        // Konvertiere Datei zu base64
+        const documentImage = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(selectedFile);
+        });
+        
+        // KI-basierte Dokumentenerkennung starten
+        const recognizedData = await recognizeDocumentWithAI(documentImage);
+        
+        // Formularfelder mit erkannten Daten befüllen
+        if (recognizedData.documentType) {
+          // Mappe erkannten Typ auf erlaubte Typen
+          const mappedType = recognizedData.documentType === 'passport' || recognizedData.documentType === 'pass' ? 'passport' : 
+                            recognizedData.documentType === 'national_id' || recognizedData.documentType === 'id' || recognizedData.documentType === 'cedula_colombia' ? 'national_id' : 
+                            recognizedData.documentType;
+          setDocumentType(mappedType);
+        }
+        
+        if (recognizedData.documentNumber) {
+          setDocumentNumber(recognizedData.documentNumber);
+        }
+        
+        if (recognizedData.issueDate) {
+          setIssueDate(recognizedData.issueDate);
+        }
+        
+        if (recognizedData.expiryDate) {
+          setExpiryDate(recognizedData.expiryDate);
+        }
+        
+        if (recognizedData.issuingCountry) {
+          setIssuingCountry(recognizedData.issuingCountry);
+        }
+        
+        if (recognizedData.issuingAuthority) {
+          setIssuingAuthority(recognizedData.issuingAuthority);
+        }
+        
+        // User-Daten aus erkannten Daten extrahieren
+        const userData = {
+          firstName: recognizedData.firstName,
+          lastName: recognizedData.lastName,
+          birthday: recognizedData.birthday,
+          gender: recognizedData.gender,
+          country: recognizedData.issuingCountry || recognizedData.country
+        };
+        
+        setRecognizedUserData(userData);
+        showMessage(t('identificationDocuments.form.recognitionSuccess'), 'success');
+      } catch (error) {
+        console.error("Fehler bei der automatischen Erkennung:", error);
+        setRecognitionError((error as Error).message);
+        // Fehler nicht anzeigen, da automatisch
+      } finally {
+        setIsRecognizing(false);
+      }
     }
   };
   
-  // Behandle Kameraaufnahme
-  const handleCameraCapture = (capturedImageData: string) => {
+  // Behandle Kameraaufnahme - automatische Erkennung starten
+  const handleCameraCapture = async (capturedImageData: string) => {
     setImageData(capturedImageData);
     setShowCamera(false);
     setFile(null); // Zurücksetzen der Datei, wenn ein Bild aufgenommen wird
+    
+    // Automatische Erkennung starten
+    try {
+      setIsRecognizing(true);
+      setRecognitionError(null);
+      
+      // KI-basierte Dokumentenerkennung starten
+      const recognizedData = await recognizeDocumentWithAI(capturedImageData);
+      
+      // Formularfelder mit erkannten Daten befüllen
+      if (recognizedData.documentType) {
+        // Mappe erkannten Typ auf erlaubte Typen
+        const mappedType = recognizedData.documentType === 'passport' || recognizedData.documentType === 'pass' ? 'passport' : 
+                          recognizedData.documentType === 'national_id' || recognizedData.documentType === 'id' || recognizedData.documentType === 'cedula_colombia' ? 'national_id' : 
+                          recognizedData.documentType;
+        setDocumentType(mappedType);
+      }
+      
+      if (recognizedData.documentNumber) {
+        setDocumentNumber(recognizedData.documentNumber);
+      }
+      
+      if (recognizedData.issueDate) {
+        setIssueDate(recognizedData.issueDate);
+      }
+      
+      if (recognizedData.expiryDate) {
+        setExpiryDate(recognizedData.expiryDate);
+      }
+      
+      if (recognizedData.issuingCountry) {
+        setIssuingCountry(recognizedData.issuingCountry);
+      }
+      
+      if (recognizedData.issuingAuthority) {
+        setIssuingAuthority(recognizedData.issuingAuthority);
+      }
+      
+      // User-Daten aus erkannten Daten extrahieren
+      const userData = {
+        firstName: recognizedData.firstName,
+        lastName: recognizedData.lastName,
+        birthday: recognizedData.birthday,
+        gender: recognizedData.gender,
+        country: recognizedData.issuingCountry || recognizedData.country
+      };
+      
+      setRecognizedUserData(userData);
+      showMessage(t('identificationDocuments.form.recognitionSuccess'), 'success');
+    } catch (error) {
+      console.error("Fehler bei der automatischen Erkennung:", error);
+      setRecognitionError((error as Error).message);
+      // Fehler nicht anzeigen, da automatisch
+    } finally {
+      setIsRecognizing(false);
+    }
   };
   
   // Abbrechen der Kameraaufnahme
@@ -114,7 +230,11 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
       
       // Formularfelder mit erkannten Daten befüllen
       if (recognizedData.documentType) {
-        setDocumentType(recognizedData.documentType);
+        // Mappe erkannten Typ auf erlaubte Typen
+        const mappedType = recognizedData.documentType === 'passport' || recognizedData.documentType === 'pass' ? 'passport' : 
+                          recognizedData.documentType === 'national_id' || recognizedData.documentType === 'id' || recognizedData.documentType === 'cedula_colombia' ? 'national_id' : 
+                          recognizedData.documentType;
+        setDocumentType(mappedType);
       }
       
       if (recognizedData.documentNumber) {

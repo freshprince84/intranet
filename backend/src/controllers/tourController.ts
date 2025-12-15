@@ -707,13 +707,31 @@ export const deleteTourGalleryImage = async (req: AuthenticatedRequest, res: Res
       });
     }
 
+    // Prüfe Organization-Isolation
+    const organizationId = (req as any).organizationId;
+    
     // Aktuelle Galerie laden
     const tour = await prisma.tour.findUnique({
       where: { id: tourId },
-      select: { galleryUrls: true }
+      select: { galleryUrls: true, organizationId: true }
     });
 
-    const currentGallery = (tour?.galleryUrls as string[]) || [];
+    if (!tour) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tour nicht gefunden'
+      });
+    }
+
+    // Prüfe Organization-Isolation
+    if (tour.organizationId !== organizationId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Keine Berechtigung für diese Tour'
+      });
+    }
+
+    const currentGallery = (tour.galleryUrls as string[]) || [];
     if (index < 0 || index >= currentGallery.length) {
       return res.status(400).json({
         success: false,

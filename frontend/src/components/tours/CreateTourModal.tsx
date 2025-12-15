@@ -24,6 +24,10 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
     const { t } = useTranslation();
     const { user } = useAuth();
     const { showMessage } = useMessage();
+    const { openSidepane, closeSidepane } = useSidepane();
+    
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+    const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
     
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');

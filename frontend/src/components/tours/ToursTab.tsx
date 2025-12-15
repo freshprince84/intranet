@@ -1298,10 +1298,10 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                         setIsEditTourModalOpen(false);
                         setSelectedTour(null);
                     }}
-                    onTourUpdated={async () => {
+                    onTourUpdated={async (updatedTour) => {
                         await loadTours();
-                        setIsEditTourModalOpen(false);
-                        setSelectedTour(null);
+                        // Modal wird nur beim Speichern geschlossen, nicht beim Löschen von Bildern
+                        // setSelectedTour wird hier nicht auf null gesetzt, damit das Modal offen bleibt
                     }}
                     tour={selectedTour}
                 />
