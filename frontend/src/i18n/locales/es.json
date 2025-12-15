@@ -255,7 +255,9 @@
     "documentsTab": "Documentos",
     "identificationDocument": "Documento de identificación",
     "uploadDocument": "Subir documento",
-    "uploadDocumentHint": "Por favor, suba su documento de identificación (Cédula o Pasaporte). Los campos se completarán automáticamente."
+    "uploadDocumentHint": "Por favor, suba su documento de identificación (Cédula o Pasaporte). Los campos se completarán automáticamente.",
+    "documentUploadSuccess": "Documento subido exitosamente. Los campos se completarán automáticamente.",
+    "documentUploadError": "Error al subir el documento."
   },
   "organization": {
     "title": "Organización",

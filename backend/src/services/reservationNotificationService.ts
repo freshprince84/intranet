@@ -2423,6 +2423,7 @@ ${doorPin ? `Acceso:
 ` : ''}
 
 ¡Te deseamos una estancia agradable!`;
+    }
 
     const subject = template?.emailSubject || 'Ihr Check-in ist abgeschlossen - Zimmerinformationen';
 
