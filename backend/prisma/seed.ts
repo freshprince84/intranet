@@ -1955,46 +1955,6 @@ async function main() {
             }
           });
           
-          // "Eigene Aufgaben - Diese Woche" Filter
-          await prisma.savedFilter.upsert({
-            where: {
-              userId_tableId_name: {
-                userId,
-                tableId: todoAnalyticsTableId,
-                name: 'Eigene Aufgaben - Diese Woche'
-              }
-            },
-            update: {
-              conditions: JSON.stringify([
-                { column: 'responsible', operator: 'equals', value: `user-${userId}` },
-                { column: 'qualityControl', operator: 'equals', value: `user-${userId}` },
-                { column: 'createdAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'createdAt', operator: 'before', value: '__WEEK_END__' },
-                { column: 'updatedAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'updatedAt', operator: 'before', value: '__WEEK_END__' },
-                { column: 'deletedAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'deletedAt', operator: 'before', value: '__WEEK_END__' }
-              ]),
-              operators: JSON.stringify(['OR', 'AND', 'AND', 'OR', 'AND', 'OR', 'AND'])
-            },
-            create: {
-              userId,
-              tableId: todoAnalyticsTableId,
-              name: 'Eigene Aufgaben - Diese Woche',
-              conditions: JSON.stringify([
-                { column: 'responsible', operator: 'equals', value: `user-${userId}` },
-                { column: 'qualityControl', operator: 'equals', value: `user-${userId}` },
-                { column: 'createdAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'createdAt', operator: 'before', value: '__WEEK_END__' },
-                { column: 'updatedAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'updatedAt', operator: 'before', value: '__WEEK_END__' },
-                { column: 'deletedAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'deletedAt', operator: 'before', value: '__WEEK_END__' }
-              ]),
-              operators: JSON.stringify(['OR', 'AND', 'AND', 'OR', 'AND', 'OR', 'AND'])
-            }
-          });
-          
           // Standard-Filter für Request Analytics (request-analytics-table)
           const requestAnalyticsTableId = 'request-analytics-table';
           
@@ -2017,46 +1977,6 @@ async function main() {
               name: 'Alle',
               conditions: JSON.stringify([]),
               operators: JSON.stringify([])
-            }
-          });
-          
-          // "Eigene Requests - Diese Woche" Filter
-          await prisma.savedFilter.upsert({
-            where: {
-              userId_tableId_name: {
-                userId,
-                tableId: requestAnalyticsTableId,
-                name: 'Eigene Requests - Diese Woche'
-              }
-            },
-            update: {
-              conditions: JSON.stringify([
-                { column: 'requestedBy', operator: 'equals', value: `user-${userId}` },
-                { column: 'responsible', operator: 'equals', value: `user-${userId}` },
-                { column: 'createdAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'createdAt', operator: 'before', value: '__WEEK_END__' },
-                { column: 'updatedAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'updatedAt', operator: 'before', value: '__WEEK_END__' },
-                { column: 'deletedAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'deletedAt', operator: 'before', value: '__WEEK_END__' }
-              ]),
-              operators: JSON.stringify(['OR', 'AND', 'AND', 'OR', 'AND', 'OR', 'AND'])
-            },
-            create: {
-              userId,
-              tableId: requestAnalyticsTableId,
-              name: 'Eigene Requests - Diese Woche',
-              conditions: JSON.stringify([
-                { column: 'requestedBy', operator: 'equals', value: `user-${userId}` },
-                { column: 'responsible', operator: 'equals', value: `user-${userId}` },
-                { column: 'createdAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'createdAt', operator: 'before', value: '__WEEK_END__' },
-                { column: 'updatedAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'updatedAt', operator: 'before', value: '__WEEK_END__' },
-                { column: 'deletedAt', operator: 'after', value: '__WEEK_START__' },
-                { column: 'deletedAt', operator: 'before', value: '__WEEK_END__' }
-              ]),
-              operators: JSON.stringify(['OR', 'AND', 'AND', 'OR', 'AND', 'OR', 'AND'])
             }
           });
           

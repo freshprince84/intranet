@@ -278,10 +278,21 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
         }
         
         showMessage(t('identificationDocuments.form.createSuccess'), 'success');
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IdentificationDocumentForm.tsx:280',message:'Before calling onDocumentSaved',data:{hasOnDocumentSaved:!!onDocumentSaved},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+        // #endregion
+        
+        onDocumentSaved();
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IdentificationDocumentForm.tsx:283',message:'After calling onDocumentSaved',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+        // #endregion
       }
-      
-      onDocumentSaved();
     } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IdentificationDocumentForm.tsx:274',message:'Error in handleSubmit',data:{error:error?.message||'unknown',hasResponse:!!error?.response},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
       showMessage(t('identificationDocuments.form.error', { error: error.response?.data?.error || t('common.error') }), 'error');
     } finally {
       setIsLoading(false);

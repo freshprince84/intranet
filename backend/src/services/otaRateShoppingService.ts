@@ -29,10 +29,10 @@ export class OTARateShoppingService {
     startDate: Date,
     endDate: Date
   ): Promise<number> {
-    logger.log(`[OTARateShoppingService] runRateShopping aufgerufen: Branch ${branchId}, Platform ${platform}, Start: ${startDate.toISOString()}, End: ${endDate.toISOString()}`);
+    logger.warn(`[OTARateShoppingService] ⚡ runRateShopping aufgerufen: Branch ${branchId}, Platform ${platform}, Start: ${startDate.toISOString()}, End: ${endDate.toISOString()}`);
     try {
       // Job erstellen
-      logger.log(`[OTARateShoppingService] Erstelle Rate Shopping Job in DB...`);
+      logger.warn(`[OTARateShoppingService] 📝 Erstelle Rate Shopping Job in DB...`);
       const job = await prisma.rateShoppingJob.create({
         data: {
           branchId,
@@ -43,16 +43,16 @@ export class OTARateShoppingService {
         }
       });
 
-      logger.log(`[OTARateShoppingService] ✅ Rate Shopping Job erstellt: ID ${job.id}, Platform: ${platform}, Branch: ${branchId}`);
+      logger.warn(`[OTARateShoppingService] ✅ Rate Shopping Job erstellt: ID ${job.id}, Platform: ${platform}, Branch: ${branchId}`);
 
       // Asynchron ausführen (nicht blockieren)
-      logger.log(`[OTARateShoppingService] Starte asynchrones executeRateShopping für Job ${job.id}...`);
+      logger.warn(`[OTARateShoppingService] 🚀 Starte asynchrones executeRateShopping für Job ${job.id}...`);
       this.executeRateShopping(job.id, branchId, platform, startDate, endDate).catch(error => {
         logger.error(`[OTARateShoppingService] ❌ Fehler beim Ausführen des Rate Shopping Jobs ${job.id}:`, error);
         logger.error(`[OTARateShoppingService] Error Stack:`, error instanceof Error ? error.stack : 'Kein Stack verfügbar');
       });
 
-      logger.log(`[OTARateShoppingService] executeRateShopping wurde aufgerufen (asynchron), gebe Job ID ${job.id} zurück`);
+      logger.warn(`[OTARateShoppingService] ✅ executeRateShopping wurde aufgerufen (asynchron), gebe Job ID ${job.id} zurück`);
       return job.id;
     } catch (error) {
       logger.error('Fehler beim Erstellen des Rate Shopping Jobs:', error);
@@ -76,10 +76,10 @@ export class OTARateShoppingService {
     startDate: Date,
     endDate: Date
   ): Promise<void> {
-    logger.log(`[OTARateShoppingService] ⚡ executeRateShopping START für Job ${jobId}, Branch ${branchId}, Platform ${platform}`);
+    logger.warn(`[OTARateShoppingService] ⚡ executeRateShopping START für Job ${jobId}, Branch ${branchId}, Platform ${platform}`);
     try {
       // Job-Status auf 'running' setzen
-      logger.log(`[OTARateShoppingService] Setze Job ${jobId} Status auf 'running'...`);
+      logger.warn(`[OTARateShoppingService] 🔄 Setze Job ${jobId} Status auf 'running'...`);
       await prisma.rateShoppingJob.update({
         where: { id: jobId },
         data: {
@@ -87,9 +87,9 @@ export class OTARateShoppingService {
           startedAt: new Date()
         }
       });
-      logger.log(`[OTARateShoppingService] ✅ Job ${jobId} Status auf 'running' gesetzt`);
+      logger.warn(`[OTARateShoppingService] ✅ Job ${jobId} Status auf 'running' gesetzt`);
 
-      logger.log(`[OTARateShoppingService] Starte Job ${jobId} für ${platform}, Branch ${branchId}`);
+      logger.warn(`[OTARateShoppingService] 🚀 Starte Job ${jobId} für ${platform}, Branch ${branchId}`);
 
       // Hole alle aktiven Listings für diese Plattform
       const listings = await prisma.oTAListing.findMany({
@@ -152,7 +152,7 @@ export class OTARateShoppingService {
         }
       });
 
-      logger.log(`[Rate Shopping] Job ${jobId} abgeschlossen: ${totalPricesCollected} Preise gesammelt`);
+      logger.warn(`[Rate Shopping] ✅ Job ${jobId} abgeschlossen: ${totalPricesCollected} Preise gesammelt`);
     } catch (error) {
       logger.error(`[Rate Shopping] Fehler beim Ausführen des Jobs ${jobId}:`, error);
       await prisma.rateShoppingJob.update({
@@ -215,7 +215,7 @@ export class OTARateShoppingService {
   ): Promise<number> {
     // TODO: Implementierung mit Web Scraping (Cheerio) oder API
     // Für jetzt: Placeholder-Implementierung
-    logger.log(`[Booking.com] Scraping für Listing ${listingId} von ${startDate.toISOString()} bis ${endDate.toISOString()}`);
+    logger.warn(`[Booking.com] 🔍 Scraping für Listing ${listingId} von ${startDate.toISOString()} bis ${endDate.toISOString()}`);
     
     // Simuliere Preise (später durch echtes Scraping ersetzen)
     const pricesCollected = 0;
@@ -245,7 +245,7 @@ export class OTARateShoppingService {
     endDate: Date
   ): Promise<number> {
     try {
-      logger.log(`[Hostelworld] Starte Scraping für Listing ${listingId} von ${startDate.toISOString()} bis ${endDate.toISOString()}`);
+      logger.warn(`[Hostelworld] 🔍 Starte Scraping für Listing ${listingId} von ${startDate.toISOString()} bis ${endDate.toISOString()}`);
       
       let pricesCollected = 0;
       
@@ -409,7 +409,7 @@ export class OTARateShoppingService {
               'rate_shopper'
             );
             pricesCollected++;
-            logger.log(`[Hostelworld] Preis für ${checkInDate}: ${price} COP, verfügbar: ${available}`);
+            logger.warn(`[Hostelworld] 💰 Preis für ${checkInDate}: ${price} COP, verfügbar: ${available}`);
           } else {
             logger.warn(`[Hostelworld] Kein Preis gefunden für ${checkInDate}`);
           }
@@ -426,7 +426,7 @@ export class OTARateShoppingService {
         }
       }
       
-      logger.log(`[Hostelworld] Scraping abgeschlossen für Listing ${listingId}: ${pricesCollected} Preise gesammelt`);
+      logger.warn(`[Hostelworld] ✅ Scraping abgeschlossen für Listing ${listingId}: ${pricesCollected} Preise gesammelt`);
       return pricesCollected;
     } catch (error: any) {
       logger.error(`[Hostelworld] Fehler beim Scraping für Listing ${listingId}:`, error);

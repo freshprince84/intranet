@@ -158,13 +158,22 @@ const PasswordManagerTab: React.FC = () => {
     }
   };
 
-  // Passwort anzeigen
+  // Passwort anzeigen/ausblenden (Toggle)
   const handleShowPassword = async (entry: PasswordEntry) => {
     try {
+      // Wenn Passwort bereits angezeigt wird, ausblenden
+      if (viewingPassword === entry.id) {
+        setViewingPassword(null);
+        return;
+      }
+      
+      // Passwort laden falls noch nicht geladen
       if (!viewedPasswords[entry.id]) {
         const passwordData = await passwordManagerApi.getPassword(entry.id);
         setViewedPasswords(prev => ({ ...prev, [entry.id]: passwordData.password }));
       }
+      
+      // Passwort anzeigen
       setViewingPassword(entry.id);
     } catch (error: any) {
       console.error('Error showing password:', error);

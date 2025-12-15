@@ -10,11 +10,13 @@
 
 Systematische Prüfung aller Tour-bezogenen Komponenten ergab:
 
+- ❌ **KRITISCH - Modals/Sidepanes:** 4 Modals sollten Sidepanes sein (CreateTourModal, EditTourModal, CreateTourProviderModal, EditTourProviderModal) - verwenden noch zentriertes Modal-Pattern
 - ❌ **TypeScript:** 20+ `any` Types in Frontend-Komponenten
 - ❌ **Übersetzungen:** Hardcoded deutsche Texte in Frontend (15+ Vorkommen)
 - ❌ **Übersetzungen:** Hardcoded deutsche Texte in Backend-Controllern (20+ Vorkommen)
 - ❌ **Backend-Übersetzungen:** Keine Übersetzungsfunktionen für Tour-Fehlermeldungen
-- ❌ **Notifications:** Nicht geprüft (muss noch geprüft werden)
+- ⚠️ **Weitere Modals:** CreateTourBookingModal, EditTourBookingModal, etc. müssen geprüft werden
+- ❌ **Notifications:** Nicht vollständig geprüft (muss noch geprüft werden)
 - ✅ **Berechtigungen:** Verwendet (usePermissions Hook vorhanden)
 - ⚠️ **Buttons:** Teilweise korrekt (Icon-only), aber nicht alle geprüft
 - ⚠️ **Memory Leaks:** Cleanup-Funktionen vorhanden, aber nicht alle geprüft
@@ -23,7 +25,75 @@ Systematische Prüfung aller Tour-bezogenen Komponenten ergab:
 
 ## 🔴 KRITISCHE STANDARDVERSTÖSSE
 
-### 1. TypeScript `any` Types in Frontend-Komponenten
+### 1. Modals sollten Sidepanes sein (DESIGN-STANDARDVERSTOSS)
+
+**Problem:** Tour-Modals verwenden noch das alte zentrierte Modal-Pattern statt Sidepane-Pattern.
+
+**Betroffene Dateien:**
+1. `frontend/src/components/tours/CreateTourModal.tsx` - Zeile 273-276: Zentriertes Modal
+2. `frontend/src/components/tours/EditTourModal.tsx` - Zeile 306-309: Zentriertes Modal
+3. `frontend/src/components/tours/CreateTourProviderModal.tsx` - Zeile 114-117: Zentriertes Modal
+4. `frontend/src/components/tours/EditTourProviderModal.tsx` - Zeile 125-128: Zentriertes Modal
+
+**Konkrete Vorkommen:**
+
+#### `CreateTourModal.tsx`:
+- Zeile 273: `<Dialog open={isOpen} onClose={onClose} className="relative z-50">`
+- Zeile 275: `<div className="fixed inset-0 flex items-center justify-center p-4">` ❌ ZENTRIERTES MODAL
+- Zeile 276: `<Dialog.Panel className="mx-auto max-w-4xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">` ❌ ZENTRIERTES MODAL
+
+#### `EditTourModal.tsx`:
+- Zeile 306: `<Dialog open={isOpen} onClose={onClose} className="relative z-50">`
+- Zeile 308: `<div className="fixed inset-0 flex items-center justify-center p-4">` ❌ ZENTRIERTES MODAL
+- Zeile 309: `<Dialog.Panel className="mx-auto max-w-4xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">` ❌ ZENTRIERTES MODAL
+
+#### `CreateTourProviderModal.tsx`:
+- Zeile 114: `<Dialog open={isOpen} onClose={onClose} className="relative z-50">`
+- Zeile 116: `<div className="fixed inset-0 flex items-center justify-center p-4">` ❌ ZENTRIERTES MODAL
+- Zeile 117: `<Dialog.Panel className="mx-auto max-w-lg w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">` ❌ ZENTRIERTES MODAL
+
+#### `EditTourProviderModal.tsx`:
+- Zeile 125: `<Dialog open={isOpen} onClose={onClose} className="relative z-50">`
+- Zeile 127: `<div className="fixed inset-0 flex items-center justify-center p-4">` ❌ ZENTRIERTES MODAL
+- Zeile 128: `<Dialog.Panel className="mx-auto max-w-lg w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">` ❌ ZENTRIERTES MODAL
+
+**Standardverstoß:**
+- DESIGN_STANDARDS.md: "Modals und Sidepanes" - Create/Edit-Modals MÜSSEN Sidepanes sein
+- DESIGN_STANDARDS.md Zeile 2596-2599: "CreateTourModal.tsx - Standard Sidepane Pattern (**⚠️ UMGESTELLT 2025-01-27: War fälschlicherweise als zentriertes Modal implementiert**)" - **ABER: NOCH IMMER ZENTRIERTES MODAL!**
+
+**Lösung:**
+- `useSidepane()` Hook importieren und verwenden
+- Responsive-Erkennung implementieren (isMobile, isLargeScreen)
+- Mobile (<640px): Modal (zentriert)
+- Desktop (≥640px, ≤1070px): Sidepane MIT Overlay (von rechts)
+- Large Desktop (>1070px): Sidepane OHNE Overlay (von rechts)
+- Pattern wie in `CreateTaskModal.tsx` verwenden
+
+**Referenz-Implementierung:**
+- `frontend/src/components/CreateTaskModal.tsx` - Korrektes Sidepane-Pattern
+
+---
+
+### 2. Weitere Modals - Prüfung notwendig
+
+**Status:** ⚠️ Muss noch geprüft werden
+
+**Betroffene Dateien:**
+- `CreateTourBookingModal.tsx` - Zeile 186: Zentriertes Modal (`max-w-lg`)
+- `EditTourBookingModal.tsx` - Zeile 175: Zentriertes Modal (`max-w-lg`)
+- `TourReservationLinkModal.tsx` - Muss geprüft werden
+- `TourBookingsModal.tsx` - Muss geprüft werden
+- `TourDetailsModal.tsx` - Zeile 62: Zentriertes Modal (`max-w-4xl`)
+- `TourExportDialog.tsx` - Zeile 155: Zentriertes Modal (`max-w-2xl`)
+
+**Frage:** Sollen diese auch Sidepanes sein oder sind zentrierte Modals hier korrekt?
+- Details-Modals (TourDetailsModal, TourBookingsModal) → Könnten zentriert bleiben
+- Export-Dialog → Könnte zentriert bleiben
+- Create/Edit-Booking-Modals → Sollten Sidepanes sein?
+
+---
+
+### 3. TypeScript `any` Types in Frontend-Komponenten
 
 **Problem:** Frontend-Komponenten verwenden `any` Types statt konkreter Typen.
 
@@ -260,10 +330,12 @@ Systematische Prüfung aller Tour-bezogenen Komponenten ergab:
 ## 📊 ZUSAMMENFASSUNG
 
 **Gefundene Probleme:**
+- ❌ **KRITISCH:** 4 Modals sollten Sidepanes sein (CreateTourModal, EditTourModal, CreateTourProviderModal, EditTourProviderModal)
 - ❌ 20+ `any` Types in Frontend-Komponenten
 - ❌ 15+ hardcoded deutsche Texte in Frontend-Komponenten
 - ❌ 20+ hardcoded deutsche Texte in Backend-Controllern
 - ❌ Fehlende Backend-Übersetzungsfunktionen
+- ⚠️ Weitere Modals müssen geprüft werden (CreateTourBookingModal, EditTourBookingModal, etc.)
 - ⚠️ Notifications nicht vollständig geprüft
 - ⚠️ Buttons nicht vollständig geprüft
 - ⚠️ Memory Leaks nicht vollständig geprüft
@@ -277,7 +349,30 @@ Systematische Prüfung aller Tour-bezogenen Komponenten ergab:
 
 ## 📋 UMSETZUNGSPLAN (NUR FÜR INFORMATION - NICHT UMSETZEN!)
 
-### Phase 1: TypeScript-Typen definieren
+### Phase 1: Modals zu Sidepanes umstellen (KRITISCH)
+
+**Aufgabe:** Create/Edit-Modals von zentrierten Modals zu Sidepanes umstellen.
+
+**Dateien:**
+- `frontend/src/components/tours/CreateTourModal.tsx`
+- `frontend/src/components/tours/EditTourModal.tsx`
+- `frontend/src/components/tours/CreateTourProviderModal.tsx`
+- `frontend/src/components/tours/EditTourProviderModal.tsx`
+
+**Schritte:**
+1. `useSidepane()` Hook importieren
+2. Responsive-Erkennung implementieren (isMobile, isLargeScreen)
+3. Sidepane-Struktur implementieren (von rechts, mit/ohne Overlay)
+4. Mobile-Fallback als zentriertes Modal
+5. Pattern wie in `CreateTaskModal.tsx` verwenden
+
+**Referenz:**
+- `frontend/src/components/CreateTaskModal.tsx` - Zeile 10: `import { useSidepane } from '../contexts/SidepaneContext.tsx';`
+- `frontend/src/components/CreateTaskModal.tsx` - Zeile 1000+: Sidepane-Implementierung
+
+---
+
+### Phase 2: TypeScript-Typen definieren
 
 **Aufgabe:** `any` Types durch konkrete Typen ersetzen.
 
@@ -291,7 +386,7 @@ Systematische Prüfung aller Tour-bezogenen Komponenten ergab:
 
 ---
 
-### Phase 2: Frontend-Übersetzungen
+### Phase 3: Frontend-Übersetzungen
 
 **Aufgabe:** Hardcoded deutsche Texte in Frontend-Komponenten durch Übersetzungen ersetzen.
 
@@ -304,7 +399,7 @@ Systematische Prüfung aller Tour-bezogenen Komponenten ergab:
 
 ---
 
-### Phase 3: Backend-Übersetzungen
+### Phase 4: Backend-Übersetzungen
 
 **Aufgabe:** Hardcoded deutsche Texte in Backend-Controllern durch Übersetzungen ersetzen.
 
@@ -321,7 +416,7 @@ Systematische Prüfung aller Tour-bezogenen Komponenten ergab:
 
 ---
 
-### Phase 4: Notifications prüfen und korrigieren
+### Phase 5: Notifications prüfen und korrigieren
 
 **Aufgabe:** Notifications prüfen und fehlende hinzufügen.
 
@@ -332,7 +427,7 @@ Systematische Prüfung aller Tour-bezogenen Komponenten ergab:
 
 ---
 
-### Phase 5: Buttons prüfen und korrigieren
+### Phase 6: Buttons prüfen und korrigieren
 
 **Aufgabe:** Alle Buttons prüfen und korrigieren.
 
@@ -355,12 +450,13 @@ Systematische Prüfung aller Tour-bezogenen Komponenten ergab:
 
 ## 🎯 PRIORITÄTEN
 
-1. **🔴 HOCH:** Backend-Übersetzungen (Phase 3) - Standardverstoß, muss behoben werden
-2. **🔴 HOCH:** Frontend-Übersetzungen (Phase 2) - Standardverstoß, muss behoben werden
-3. **🟡 MITTEL:** TypeScript-Typen (Phase 1) - Code-Qualität, sollte behoben werden
-4. **🟡 MITTEL:** Notifications (Phase 4) - Standardverstoß, sollte behoben werden
-5. **🟢 NIEDRIG:** Buttons (Phase 5) - Design-Standard, kann behoben werden
-6. **🟢 NIEDRIG:** Memory Leaks (Phase 6) - Best Practice, kann behoben werden
+1. **🔴 KRITISCH:** Modals zu Sidepanes umstellen (Phase 1) - Design-Standardverstoß, muss behoben werden
+2. **🔴 HOCH:** Backend-Übersetzungen (Phase 4) - Standardverstoß, muss behoben werden
+3. **🔴 HOCH:** Frontend-Übersetzungen (Phase 3) - Standardverstoß, muss behoben werden
+4. **🟡 MITTEL:** TypeScript-Typen (Phase 2) - Code-Qualität, sollte behoben werden
+5. **🟡 MITTEL:** Notifications (Phase 5) - Standardverstoß, sollte behoben werden
+6. **🟢 NIEDRIG:** Buttons (Phase 6) - Design-Standard, kann behoben werden
+7. **🟢 NIEDRIG:** Memory Leaks (Phase 7) - Best Practice, kann behoben werden
 
 ---
 

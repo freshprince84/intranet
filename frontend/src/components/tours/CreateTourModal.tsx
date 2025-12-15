@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from '../../config/api.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
 import { Tour, TourType, TourProvider } from '../../types/tour.ts';
 import useMessage from '../../hooks/useMessage.ts';
+import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 
 interface Branch {
     id: number;
@@ -69,8 +70,8 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
                 
                 setBranches(branchesRes.data?.data || branchesRes.data || []);
                 setTourProviders(providersRes.data?.data || providersRes.data || []);
-            } catch (err: any) {
-                console.error('Fehler beim Laden der Daten:', err);
+            } catch (err: unknown) {
+                console.error('Error loading data:', err);
                 showMessage(t('errors.loadError'), 'error');
             } finally {
                 setLoadingData(false);
@@ -81,6 +82,34 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
             loadData();
         }
     }, [isOpen, t, showMessage]);
+
+    // Responsive-Erkennung
+    useEffect(() => {
+        const checkScreenSize = () => {
+            setIsMobile(window.innerWidth < 640);
+            setIsLargeScreen(window.innerWidth > 1070);
+        };
+        
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+        
+        return () => {
+            window.removeEventListener('resize', checkScreenSize);
+        };
+    }, []);
+
+    // Sidepane-Status verwalten
+    useEffect(() => {
+        if (isOpen) {
+            openSidepane();
+        } else {
+            closeSidepane();
+        }
+        
+        return () => {
+            closeSidepane();
+        };
+    }, [isOpen, openSidepane, closeSidepane]);
 
     // Reset form when modal opens/closes
     useEffect(() => {
@@ -184,7 +213,29 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
         setLoading(true);
 
         try {
-            const tourData: any = {
+            const tourData: {
+                title: string;
+                description: string | null;
+                type: TourType;
+                isActive: boolean;
+                duration: number | null;
+                maxParticipants: number | null;
+                minParticipants: number | null;
+                price: number | null;
+                currency: string;
+                location: string | null;
+                meetingPoint: string | null;
+                includes: string | null;
+                excludes: string | null;
+                requirements: string | null;
+                totalCommission: number | null;
+                totalCommissionPercent: number | null;
+                sellerCommissionPercent: number | null;
+                sellerCommissionFixed: number | null;
+                externalProviderId: number | null;
+                externalBookingUrl: string | null;
+                branchId: number | null;
+            } = {
                 title,
                 description: description || null,
                 type,
@@ -222,8 +273,8 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
                         await axiosInstance.post(API_ENDPOINTS.TOURS.UPLOAD_IMAGE(createdTour.id), formData, {
                             headers: { 'Content-Type': 'multipart/form-data' }
                         });
-                    } catch (imgErr: any) {
-                        console.error('Fehler beim Hochladen des Hauptbildes:', imgErr);
+                    } catch (imgErr: unknown) {
+                        console.error('Error uploading main image:', imgErr);
                         showMessage(t('tours.imageUploadError', 'Tour erstellt, aber Fehler beim Hochladen des Bildes'), 'warning');
                     } finally {
                         setUploadingImage(false);
@@ -241,8 +292,8 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
                                 headers: { 'Content-Type': 'multipart/form-data' }
                             });
                         }
-                    } catch (galleryErr: any) {
-                        console.error('Fehler beim Hochladen der Galerie-Bilder:', galleryErr);
+                    } catch (galleryErr: unknown) {
+                        console.error('Error uploading gallery images:', galleryErr);
                         showMessage(t('tours.galleryUploadError', 'Tour erstellt, aber Fehler beim Hochladen der Galerie-Bilder'), 'warning');
                     } finally {
                         setUploadingImage(false);
@@ -253,13 +304,15 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
                 // Lade Tour neu, um Bilder zu erhalten
                 const updatedResponse = await axiosInstance.get(API_ENDPOINTS.TOURS.BY_ID(createdTour.id));
                 onTourCreated(updatedResponse.data.data);
-                onClose();
+                handleClose();
             } else {
                 setError(response.data.message || t('errors.saveError'));
             }
-        } catch (err: any) {
-            console.error('Fehler beim Erstellen der Tour:', err);
-            const errorMessage = err.response?.data?.message || t('errors.saveError');
+        } catch (err: unknown) {
+            console.error('Error creating tour:', err);
+            const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
+                                 (err as { message?: string })?.message || 
+                                 t('errors.saveError');
             setError(errorMessage);
             showMessage(errorMessage, 'error');
         } finally {
@@ -267,26 +320,57 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
         }
     };
 
-    if (!isOpen) return null;
+    const handleClose = () => {
+        setTitle('');
+        setDescription('');
+        setType(TourType.OWN);
+        setIsActive(true);
+        setDuration('');
+        setMaxParticipants('');
+        setMinParticipants('');
+        setPrice('');
+        setCurrency('COP');
+        setLocation('');
+        setMeetingPoint('');
+        setIncludes('');
+        setExcludes('');
+        setRequirements('');
+        setTotalCommission('');
+        setTotalCommissionPercent('');
+        setSellerCommissionPercent('');
+        setSellerCommissionFixed('');
+        setExternalProviderId('');
+        setExternalBookingUrl('');
+        setBranchId('');
+        setImageFile(null);
+        setImagePreview(null);
+        setGalleryFiles([]);
+        setGalleryPreviews([]);
+        setError(null);
+        onClose();
+    };
 
-    return (
-        <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-                <Dialog.Panel className="mx-auto max-w-4xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
-                    <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                        <Dialog.Title className="text-xl font-semibold text-gray-900 dark:text-white">
-                            {t('tours.create', 'Neue Tour erstellen')}
-                        </Dialog.Title>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                        >
-                            <XMarkIcon className="h-6 w-6" />
-                        </button>
-                    </div>
+    // Für Mobile (unter 640px) - klassisches Modal
+    if (isMobile) {
+        return (
+            <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
+                <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+                
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <Dialog.Panel className="mx-auto max-w-4xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                            <Dialog.Title className="text-xl font-semibold text-gray-900 dark:text-white">
+                                {t('tours.create', 'Neue Tour erstellen')}
+                            </Dialog.Title>
+                            <button
+                                onClick={handleClose}
+                                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                            >
+                                <XMarkIcon className="h-6 w-6" />
+                            </button>
+                        </div>
 
-                    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                        <form onSubmit={handleSubmit} className="p-6 space-y-6">
                         {error && (
                             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded">
                                 {error}
@@ -619,10 +703,471 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
                             </div>
                         </div>
 
+                            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <button
+                                    type="button"
+                                    onClick={handleClose}
+                                    className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                                    title={t('common.cancel', 'Abbrechen')}
+                                >
+                                    <XMarkIcon className="h-5 w-5" />
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={loading || loadingData}
+                                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-500 dark:hover:bg-blue-600"
+                                    title={loading ? t('common.saving', 'Speichere...') : t('common.save', 'Speichern')}
+                                >
+                                    <CheckIcon className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </form>
+                    </Dialog.Panel>
+                </div>
+            </Dialog>
+        );
+    }
+    
+    // Für Desktop (ab 640px) - Sidepane
+    return (
+        <>
+            {/* Backdrop - nur wenn offen und <= 1070px */}
+            {isOpen && !isLargeScreen && (
+                <div 
+                    className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" 
+                    aria-hidden="true" 
+                    style={{
+                        opacity: isOpen ? 1 : 0,
+                        transition: 'opacity 300ms ease-out'
+                    }}
+                />
+            )}
+            
+            {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
+            <div 
+                className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                style={{
+                    transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    pointerEvents: isOpen ? 'auto' : 'none'
+                }}
+                aria-hidden={!isOpen}
+                role="dialog"
+                aria-modal={isOpen}
+            >
+                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+                    <h2 className="text-lg font-semibold dark:text-white">
+                        {t('tours.create', 'Neue Tour erstellen')}
+                    </h2>
+                    <button
+                        onClick={handleClose}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                    >
+                        <XMarkIcon className="h-6 w-6" />
+                    </button>
+                </div>
+
+                <div className="p-4 overflow-y-auto flex-1 min-h-0">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {error && (
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded">
+                                {error}
+                            </div>
+                        )}
+
+                        {/* Grundinformationen */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                                {t('tours.basicInfo', 'Grundinformationen')}
+                            </h3>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.name', 'Titel')} *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    required
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.description', 'Beschreibung')}
+                                </label>
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    rows={4}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.type', 'Typ')} *
+                                    </label>
+                                    <select
+                                        value={type}
+                                        onChange={(e) => setType(e.target.value as TourType)}
+                                        required
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        <option value={TourType.OWN}>{t('tours.typeOwn', 'Eigene Tour')}</option>
+                                        <option value={TourType.EXTERNAL}>{t('tours.typeExternal', 'Externe Tour')}</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.status', 'Status')}
+                                    </label>
+                                    <select
+                                        value={isActive ? 'true' : 'false'}
+                                        onChange={(e) => setIsActive(e.target.value === 'true')}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        <option value="true">{t('tours.statusActive', 'Aktiv')}</option>
+                                        <option value="false">{t('tours.statusInactive', 'Inaktiv')}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.branch', 'Niederlassung')}
+                                </label>
+                                <select
+                                    value={branchId}
+                                    onChange={(e) => setBranchId(e.target.value ? Number(e.target.value) : '')}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                >
+                                    <option value="">{t('common.all', 'Alle')}</option>
+                                    {branches.map(branch => (
+                                        <option key={branch.id} value={branch.id}>{branch.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Tour-Details */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                                {t('tours.details', 'Tour-Details')}
+                            </h3>
+                            
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.duration', 'Dauer (Stunden)')}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={duration}
+                                        onChange={(e) => setDuration(e.target.value ? Number(e.target.value) : '')}
+                                        min="0"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.minParticipants', 'Min. Teilnehmer')}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={minParticipants}
+                                        onChange={(e) => setMinParticipants(e.target.value ? Number(e.target.value) : '')}
+                                        min="0"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.maxParticipants', 'Max. Teilnehmer')}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={maxParticipants}
+                                        onChange={(e) => setMaxParticipants(e.target.value ? Number(e.target.value) : '')}
+                                        min="0"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.price', 'Preis')}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={price}
+                                        onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : '')}
+                                        min="0"
+                                        step="0.01"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.currency', 'Währung')}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={currency}
+                                        onChange={(e) => setCurrency(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.location', 'Ort')}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={location}
+                                    onChange={(e) => setLocation(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.meetingPoint', 'Treffpunkt')}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={meetingPoint}
+                                    onChange={(e) => setMeetingPoint(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Externe Tour-Informationen */}
+                        {type === TourType.EXTERNAL && (
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                                    {t('tours.externalInfo', 'Externe Tour-Informationen')}
+                                </h3>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.externalProvider', 'Externer Anbieter')}
+                                    </label>
+                                    <select
+                                        value={externalProviderId}
+                                        onChange={(e) => setExternalProviderId(e.target.value ? Number(e.target.value) : '')}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        <option value="">{t('common.select', 'Auswählen')}</option>
+                                        {tourProviders.map(provider => (
+                                            <option key={provider.id} value={provider.id}>{provider.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.externalBookingUrl', 'Externe Buchungs-URL')}
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={externalBookingUrl}
+                                        onChange={(e) => setExternalBookingUrl(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Kommissionen */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                                {t('tours.commissions', 'Kommissionen')}
+                            </h3>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.totalCommission', 'Gesamtkommission')}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={totalCommission}
+                                        onChange={(e) => setTotalCommission(e.target.value ? Number(e.target.value) : '')}
+                                        min="0"
+                                        step="0.01"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.totalCommissionPercent', 'Gesamtkommission (%)')}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={totalCommissionPercent}
+                                        onChange={(e) => setTotalCommissionPercent(e.target.value ? Number(e.target.value) : '')}
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.sellerCommissionPercent', 'Verkäufer-Kommission (%)')}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={sellerCommissionPercent}
+                                        onChange={(e) => setSellerCommissionPercent(e.target.value ? Number(e.target.value) : '')}
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        {t('tours.sellerCommissionFixed', 'Verkäufer-Kommission (Fix)')}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={sellerCommissionFixed}
+                                        onChange={(e) => setSellerCommissionFixed(e.target.value ? Number(e.target.value) : '')}
+                                        min="0"
+                                        step="0.01"
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Zusätzliche Informationen */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                                {t('tours.additionalInfo', 'Zusätzliche Informationen')}
+                            </h3>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.includes', 'Enthält')}
+                                </label>
+                                <textarea
+                                    value={includes}
+                                    onChange={(e) => setIncludes(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.excludes', 'Nicht enthalten')}
+                                </label>
+                                <textarea
+                                    value={excludes}
+                                    onChange={(e) => setExcludes(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.requirements', 'Anforderungen')}
+                                </label>
+                                <textarea
+                                    value={requirements}
+                                    onChange={(e) => setRequirements(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Bilder */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                                {t('tours.images', 'Bilder')}
+                            </h3>
+                            
+                            {/* Hauptbild */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.mainImage', 'Hauptbild')}
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                                {imagePreview && (
+                                    <div className="mt-2 relative inline-block">
+                                        <img
+                                            src={imagePreview}
+                                            alt="Vorschau"
+                                            className="max-w-xs h-48 object-cover rounded-md border border-gray-300 dark:border-gray-600"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Galerie */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {t('tours.gallery', 'Galerie')}
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleGalleryChange}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                                {galleryPreviews.length > 0 && (
+                                    <div className="mt-2 grid grid-cols-3 gap-2">
+                                        {galleryPreviews.map((preview, index) => (
+                                            <div key={index} className="relative">
+                                                <img
+                                                    src={preview}
+                                                    alt={`Galerie ${index + 1}`}
+                                                    className="w-full h-24 object-cover rounded-md border border-gray-300 dark:border-gray-600"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeGalleryImage(index)}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-10 shadow-lg"
+                                                    title={t('tours.deleteImage', 'Bild löschen')}
+                                                >
+                                                    <XMarkIcon className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={handleClose}
                                 className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
                                 title={t('common.cancel', 'Abbrechen')}
                             >
@@ -638,9 +1183,9 @@ const CreateTourModal = ({ isOpen, onClose, onTourCreated }: CreateTourModalProp
                             </button>
                         </div>
                     </form>
-                </Dialog.Panel>
+                </div>
             </div>
-        </Dialog>
+        </>
     );
 };
 

@@ -416,14 +416,18 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
             boldPaymentSettings: {
                 // Wenn Entschlüsselung fehlgeschlagen ist, sind die Werte verschlüsselt (Format: "iv:authTag:encrypted")
                 // Diese sollten NICHT im Frontend angezeigt werden (Sicherheit)
-                // Daher: Wenn Wert verschlüsselt ist (enthält ':'), zeige leer
+                // ABER: Wir speichern einen Flag, dass verschlüsselte Werte vorhanden sind
+                // Die verschlüsselten Werte bleiben in der DB, damit Payment-Links weiter funktionieren
                 apiKey: (existingBoldPayment.apiKey && !existingBoldPayment.apiKey.includes(':')) 
                     ? existingBoldPayment.apiKey 
                     : '',
                 merchantId: (existingBoldPayment.merchantId && !existingBoldPayment.merchantId.includes(':')) 
                     ? existingBoldPayment.merchantId 
                     : '',
-                environment: existingBoldPayment.environment || 'sandbox'
+                environment: existingBoldPayment.environment || 'sandbox',
+                // Flag: Gibt an, ob verschlüsselte Werte vorhanden sind (aber nicht entschlüsselbar)
+                _hasEncryptedValues: (existingBoldPayment.apiKey && existingBoldPayment.apiKey.includes(':')) ||
+                                     (existingBoldPayment.merchantId && existingBoldPayment.merchantId.includes(':'))
             },
             doorSystemSettings: {
                 clientId: existingDoorSystem.clientId || '',
@@ -491,7 +495,11 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                     name: formData.name.trim(),
                     whatsappSettings: formData.whatsappSettings,
                     lobbyPmsSettings: formData.lobbyPmsSettings,
-                    boldPaymentSettings: formData.boldPaymentSettings,
+                    boldPaymentSettings: {
+                        apiKey: formData.boldPaymentSettings.apiKey,
+                        merchantId: formData.boldPaymentSettings.merchantId,
+                        environment: formData.boldPaymentSettings.environment
+                    },
                     doorSystemSettings: formData.doorSystemSettings,
                     emailSettings: formData.emailSettings,
                     messageTemplates: formData.messageTemplates,
@@ -1266,6 +1274,14 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
                                                                 Bold Payment Settings
                                                             </h4>
+                                                            {formData.boldPaymentSettings._hasEncryptedValues && (
+                                                                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                                                                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                                                        <strong>Hinweis:</strong> Es sind verschlüsselte Werte vorhanden, die mit einem alten Schlüssel verschlüsselt wurden und nicht mehr entschlüsselt werden können. 
+                                                                        Die Payment-Links funktionieren weiterhin. Um die Werte zu ändern, geben Sie sie neu ein.
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                             <div className="space-y-4">
                                                                 <div>
                                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1276,7 +1292,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                         value={formData.boldPaymentSettings.apiKey}
                                                                         onChange={(e) => setFormData({
                                                                             ...formData,
-                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, apiKey: e.target.value }
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, apiKey: e.target.value, _hasEncryptedValues: false }
                                                                         })}
                                                                         placeholder="API Key"
                                                                         className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
@@ -1291,7 +1307,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                         value={formData.boldPaymentSettings.merchantId}
                                                                         onChange={(e) => setFormData({
                                                                             ...formData,
-                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, merchantId: e.target.value }
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, merchantId: e.target.value, _hasEncryptedValues: false }
                                                                         })}
                                                                         placeholder="Merchant ID"
                                                                         className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
@@ -2158,6 +2174,14 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
                                                                 Bold Payment Settings
                                                             </h4>
+                                                            {formData.boldPaymentSettings._hasEncryptedValues && (
+                                                                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                                                                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                                                        <strong>Hinweis:</strong> Es sind verschlüsselte Werte vorhanden, die mit einem alten Schlüssel verschlüsselt wurden und nicht mehr entschlüsselt werden können. 
+                                                                        Die Payment-Links funktionieren weiterhin. Um die Werte zu ändern, geben Sie sie neu ein.
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                             <div className="space-y-4">
                                                                 <div>
                                                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -2168,7 +2192,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                         value={formData.boldPaymentSettings.apiKey}
                                                                         onChange={(e) => setFormData({
                                                                             ...formData,
-                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, apiKey: e.target.value }
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, apiKey: e.target.value, _hasEncryptedValues: false }
                                                                         })}
                                                                         placeholder="API Key"
                                                                         className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
@@ -2183,7 +2207,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                         value={formData.boldPaymentSettings.merchantId}
                                                                         onChange={(e) => setFormData({
                                                                             ...formData,
-                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, merchantId: e.target.value }
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, merchantId: e.target.value, _hasEncryptedValues: false }
                                                                         })}
                                                                         placeholder="Merchant ID"
                                                                         className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"

@@ -115,15 +115,15 @@ router.post(
   authenticate,
   (req: any, res: any, next: any) => {
     const logger = require('../utils/logger').logger;
-    logger.log('[Price Analysis Routes] POST /ota/rate-shopping Route erreicht');
-    logger.log('[Price Analysis Routes] Request Body:', req.body);
-    logger.log('[Price Analysis Routes] UserId:', req.userId, 'RoleId:', req.roleId);
+    logger.warn('[Price Analysis Routes] ⚡ POST /ota/rate-shopping Route erreicht');
+    logger.warn('[Price Analysis Routes] 📋 Request Body:', JSON.stringify(req.body));
+    logger.warn('[Price Analysis Routes] 👤 UserId:', req.userId, 'RoleId:', req.roleId);
     next();
   },
   checkPermission('price_analysis_run_rate_shopping', 'write', 'button'),
   (req: any, res: any, next: any) => {
     const logger = require('../utils/logger').logger;
-    logger.log('[Price Analysis Routes] ✅ Permission Check bestanden, rufe Controller auf...');
+    logger.warn('[Price Analysis Routes] ✅ Permission Check bestanden, rufe Controller auf...');
     next();
   },
   otaController.runRateShopping

@@ -24,6 +24,7 @@ import { FilterCondition } from '../FilterRow.tsx';
 import DataCard, { MetadataItem } from '../shared/DataCard.tsx';
 import CardGrid from '../shared/CardGrid.tsx';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
+import { useAuth } from '../../hooks/useAuth.tsx';
 
 interface TodoAnalyticsTabProps {
   selectedDate?: string; // Optional für Rückwärtskompatibilität
@@ -88,6 +89,7 @@ const defaultColumnOrder = ['time', 'title', 'status', 'responsible', 'qualityCo
 
 const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -301,12 +303,16 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
   
   useEffect(() => {
     const initialize = async () => {
+      if (!user) return; // Warten auf User
+      
       // 1. Filter laden (wartet auf State-Update)
       const filters = await loadFilters(TODO_ANALYTICS_TABLE_ID);
       
-      // 2. Default-Filter anwenden (IMMER vorhanden!)
-      // Versuche zuerst "Eigene Aufgaben - Diese Woche", dann Fallback auf "Alle"
-      const defaultFilter = filters.find(f => f.name === 'Eigene Aufgaben - Diese Woche') || filters.find(f => f.name === 'Alle');
+      // 2. Default-Filter anwenden: Filter für aktuellen Benutzer
+      // Filter-Name = `${user.firstName} ${user.lastName}` oder `user.username`
+      const userFilterName = `${user.firstName} ${user.lastName}`.trim() || user.username;
+      const defaultFilter = filters.find(f => f.name === userFilterName) || filters.find(f => f.name === 'Alle');
+      
       if (defaultFilter) {
         await handleFilterChange(
           defaultFilter.name,
@@ -321,8 +327,10 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       // fetchTodos wird automatisch durch filterConditions-Änderung aufgerufen
     };
     
-    initialize();
-  }, [loadFilters, handleFilterChange]);
+    if (user) {
+      initialize();
+    }
+  }, [loadFilters, handleFilterChange, user]);
 
   const getActiveFilterCount = useCallback(() => {
     return filterConditions.filter(c => c.column !== '' && c.value !== null).length;
