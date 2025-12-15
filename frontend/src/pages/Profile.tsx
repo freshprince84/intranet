@@ -466,11 +466,11 @@ const Profile: React.FC = () => {
                       />
                       <label
                         htmlFor="documentUpload"
-                        data-onboarding="upload-document-button"
+                          data-onboarding="upload-document-button"
                         className={`p-2 text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md cursor-pointer ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         title={t('profile.uploadDocument', { defaultValue: 'Dokument hochladen' })}
-                      >
-                        <DocumentTextIcon className="h-5 w-5" />
+                        >
+                          <DocumentTextIcon className="h-5 w-5" />
                       </label>
                     </div>
                   </div>
@@ -561,49 +561,49 @@ const Profile: React.FC = () => {
 
                         {/* 6. Dokument-Typ */}
                         {latestDoc && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {t('profile.identificationType')}
-                            </label>
-                            <input
-                              type="text"
-                              value={
-                                latestDoc.documentType
-                                  ? (() => {
-                                      const typeMap: Record<string, string> = {
-                                        passport: t('identificationDocuments.types.passport'),
-                                        national_id: t('identificationDocuments.types.national_id'),
-                                        driving_license: t('identificationDocuments.types.driving_license'),
-                                        residence_permit: t('identificationDocuments.types.residence_permit'),
-                                        work_permit: t('identificationDocuments.types.work_permit'),
-                                        tax_id: t('identificationDocuments.types.tax_id'),
-                                        social_security: t('identificationDocuments.types.social_security'),
-                                      };
-                                      return typeMap[latestDoc.documentType] || latestDoc.documentType;
-                                    })()
-                                  : ''
-                              }
-                              disabled
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
-                              readOnly
-                            />
-                          </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.identificationType')}
+                          </label>
+                          <input
+                            type="text"
+                            value={
+                              latestDoc.documentType
+                                ? (() => {
+                                    const typeMap: Record<string, string> = {
+                                      passport: t('identificationDocuments.types.passport'),
+                                      national_id: t('identificationDocuments.types.national_id'),
+                                      driving_license: t('identificationDocuments.types.driving_license'),
+                                      residence_permit: t('identificationDocuments.types.residence_permit'),
+                                      work_permit: t('identificationDocuments.types.work_permit'),
+                                      tax_id: t('identificationDocuments.types.tax_id'),
+                                      social_security: t('identificationDocuments.types.social_security'),
+                                    };
+                                    return typeMap[latestDoc.documentType] || latestDoc.documentType;
+                                  })()
+                                : ''
+                            }
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                            readOnly
+                          />
+                        </div>
                         )}
 
                         {/* 7. Dokument-Nummer */}
                         {(user.identificationNumber || latestDoc?.documentNumber) && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {t('profile.identificationNumber')}
-                            </label>
-                            <input
-                              type="text"
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.identificationNumber')}
+                          </label>
+                          <input
+                            type="text"
                               value={user.identificationNumber || latestDoc?.documentNumber || ''}
-                              disabled
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
-                              readOnly
-                            />
-                          </div>
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                            readOnly
+                          />
+                        </div>
                         )}
 
                         {/* 8. Ausstellungsdatum */}
@@ -631,38 +631,6 @@ const Profile: React.FC = () => {
                             <input
                               type="text"
                               value={new Date(latestDoc.expiryDate).toISOString().split('T')[0]}
-                              disabled
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
-                              readOnly
-                            />
-                          </div>
-                        )}
-
-                        {/* 10. Ausstellungsland */}
-                        {latestDoc?.issuingCountry && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {t('profile.issuingCountry') || 'Ausstellungsland'}
-                            </label>
-                            <input
-                              type="text"
-                              value={latestDoc.issuingCountry}
-                              disabled
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
-                              readOnly
-                            />
-                          </div>
-                        )}
-
-                        {/* 11. Ausstellungsbehörde */}
-                        {latestDoc?.issuingAuthority && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {t('profile.issuingAuthority') || 'Ausstellungsbehörde'}
-                            </label>
-                            <input
-                              type="text"
-                              value={latestDoc.issuingAuthority}
                               disabled
                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
                               readOnly

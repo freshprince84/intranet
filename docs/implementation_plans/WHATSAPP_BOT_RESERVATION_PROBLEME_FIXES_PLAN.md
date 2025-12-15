@@ -57,7 +57,7 @@ return bookingResult.message || 'Reservierung erfolgreich erstellt!';
 - Wenn `checkBookingContext.shouldBook = true`, wird `create_room_reservation` aufgerufen
 - Die technische Message aus `create_room_reservation` (Zeile 2089) wird zurückgegeben
 - Diese technische Message ist für interne Logs gedacht, nicht für den User
-- Die KI sollte stattdessen eine benutzerfreundliche Nachricht generieren
+- Die KI muss stattdessen eine benutzerfreundliche Nachricht generieren
 
 **Zusätzlich:**
 - Die KI wird auch noch aufgerufen (Zeile 259-278), was zu einer zweiten Nachricht führt
@@ -120,7 +120,7 @@ return bookingResult.message || 'Reservierung erfolgreich erstellt!';
    - Problem: Wenn die Nachricht "ist Patrick Ammann" ist, wird "ist" als Teil des Namens erkannt
 
 **Zusätzlich:**
-- Die KI extrahiert den Namen möglicherweise falsch und verwendet "ist Patrick Ammann" als vollständigen Namen
+- Die KI extrahiert den Namen möglicherweise falsch (ZU PRÜFEN: KI-Logs analysieren)
 - In `create_room_reservation` wird `args.guestName.trim()` verwendet (Zeile 1920), aber keine Bereinigung von "ist" oder "mit"
 - Name wird direkt an LobbyPMS gesendet (Zeile 1920): `args.guestName.trim()` ohne Bereinigung
 
@@ -235,8 +235,8 @@ return bookingResult.message || 'Reservierung erfolgreich erstellt!';
 
 2. **Preisberechnung prüfen:**
    - Prüfe ob `nights` korrekt berechnet wird (Zeile 1933): `Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))`
-   - Für 1 Nacht (heute bis morgen): sollte `nights = 1` sein
-   - Prüfe ob `room.pricePerNight` korrekt ist (sollte 55.000 sein)
+   - Für 1 Nacht (heute bis morgen): erwartet `nights = 1` (ZU PRÜFEN: Logging zeigt tatsächlichen Wert)
+   - Erwartet `room.pricePerNight = 55000` (ZU PRÜFEN: Logging zeigt tatsächlichen Wert)
 
 3. **LobbyPMS Preis prüfen:**
    - Nach LobbyPMS-Buchung (Zeile 1904): Hole Reservierungsdetails via `fetchReservationById`
@@ -317,18 +317,22 @@ return bookingResult.message || 'Reservierung erfolgreich erstellt!';
 - **FAKT:** Wenn Reservation direkt erstellt wird (nicht via Sync), bleiben `roomNumber` und `roomDescription` leer
 
 ### Lösung
-1. **roomNumber und roomDescription setzen:**
-   - In `create_room_reservation`: Setze `roomNumber` und `roomDescription` basierend auf `roomName` und `categoryId`
-   - Für Dorms: `roomNumber = "Zimmername (Bettnummer)"`, `roomDescription = "Zimmername"`
-   - Für Privates: `roomNumber = null`, `roomDescription = "Zimmername"`
+1. **roomNumber und roomDescription setzen in create_room_reservation:**
+   - Nach LobbyPMS-Buchung (Zeile 1904 oder 1925): Hole Reservierungsdetails via `fetchReservationById`
+   - Extrahiere Zimmername und Bettnummer aus LobbyPMS Response (analog zu syncReservation Zeile 1067-1088)
+   - Setze `roomNumber` und `roomDescription` in DB-Update (Zeile 1974-1988 oder 1991-2010)
+   - Code-Stelle: Nach Zeile 1904/1925, vor Zeile 1972
 
-2. **ReservationCard anpassen:**
-   - Zeige `roomDescription` wenn vorhanden
-   - Zeige `roomNumber` wenn vorhanden (für Dorms)
+2. **Alternative: Daten aus Verfügbarkeit setzen:**
+   - Wenn LobbyPMS-Details nicht verfügbar: Verwende `roomName` aus Args (Zeile 1716)
+   - Für Dorms: `roomNumber = roomName`, `roomDescription = roomName`
+   - Für Privates: `roomNumber = null`, `roomDescription = roomName`
+   - Code-Stelle: Nach Zeile 2052-2065 (wo roomName bereits geholt wird)
 
-3. **Daten aus LobbyPMS holen:**
-   - Nach Erstellung der LobbyPMS-Buchung: Hole die Reservierungsdetails
-   - Extrahiere Zimmername und Bettnummer aus LobbyPMS Response
+3. **ReservationCard prüfen:**
+   - ReservationCard zeigt bereits `roomNumber` und `roomDescription` (Zeile 124-155)
+   - Problem: Diese Felder sind leer, weil sie nicht gesetzt werden
+   - **FAKT:** ReservationCard-Code ist korrekt, Problem ist dass Daten fehlen
 
 ---
 
@@ -339,10 +343,12 @@ return bookingResult.message || 'Reservierung erfolgreich erstellt!';
 - Bot bestätigt nicht explizit das konkrete Datum
 - Doppelte Nachrichten
 
-### Ursache
-- System Prompt Verbesserungen wurden implementiert, funktionieren aber nicht wie erwartet
-- Die KI interpretiert die Anweisungen möglicherweise nicht korrekt
-- Oder: Die Anweisungen sind nicht spezifisch genug
+### Ursache (Code-Analyse)
+- System Prompt Verbesserungen wurden implementiert (whatsappAiService.ts Zeile 1159, 1144, 1070)
+- Die KI interpretiert die Anweisungen möglicherweise nicht korrekt (ZU PRÜFEN: KI-Logs analysieren)
+- Oder: Die Anweisungen sind nicht spezifisch genug (ZU PRÜFEN: System Prompt prüfen)
+- **FAKT:** System Prompt enthält bereits Anweisungen für Namensabfrage (Zeile 1159) und Datumsbestätigung (Zeile 1144)
+- **FAKT:** Context wird nach Buchung gelöscht (whatsappMessageHandler.ts Zeile 245-250)
 
 ### Lösung
 1. **System Prompt präzisieren:**
@@ -362,53 +368,219 @@ return bookingResult.message || 'Reservierung erfolgreich erstellt!';
 
 ### Phase 1: Kritische Fixes (sofort)
 
-1. **Doppelte Nachrichten beheben**
-   - `whatsappMessageHandler.ts` Zeile 252: Statt technische Message, KI aufrufen
-   - Verhindere doppelte Ausführung
+#### Fix 1.1: Doppelte Nachrichten beheben
+**Datei:** `backend/src/services/whatsappMessageHandler.ts`
 
-2. **Name-Bereinigung**
-   - `whatsappMessageHandler.ts` Zeile 1690-1718: Pattern erweitern + Name bereinigen
-   - "ist" und "mit" entfernen
+**Änderung Zeile 252:**
+- Statt: `return bookingResult.message || 'Reservierung erfolgreich erstellt!';`
+- Stattdessen: KI mit `bookingResult` aufrufen, benutzerfreundliche Nachricht generieren
+- Nach KI-Aufruf: `return` hinzufügen, damit Zeile 259-278 nicht ausgeführt wird
 
-3. **Doppelte Reservierungen verhindern**
-   - Duplikat-Prüfung vor Erstellung
-   - Transaction/Lock verwenden
+**Code:**
+```typescript
+if (bookingContext.shouldBook) {
+  // ... create_room_reservation ...
+  
+  // KI aufrufen statt technische Message
+  const conversationContext: any = {
+    userId: user?.id,
+    roleId: roleId,
+    userName: userWithRoles ? `${userWithRoles.firstName} ${userWithRoles.lastName}` : null,
+    conversationState: conversation.state,
+    groupId: groupId,
+    bookingResult: bookingResult // Füge bookingResult hinzu
+  };
+  
+  const aiResponse = await WhatsAppAiService.generateResponse(
+    `Reservierung erfolgreich erstellt.`,
+    branchId,
+    normalizedPhone,
+    conversationContext,
+    conversation.id
+  );
+  
+  return aiResponse.message; // WICHTIG: return hier, damit Zeile 259-278 nicht ausgeführt wird
+}
+```
+
+**Zusätzlich:**
+- Technische Message aus `create_room_reservation` Zeile 2089 entfernen oder ändern
+
+#### Fix 1.2: Name-Bereinigung
+**Datei:** `backend/src/services/whatsappMessageHandler.ts`
+
+**Änderung Zeile 1692:**
+- Pattern erweitern: `(?:a nombre de|name|nombre|für|para|ist|mit)`
+
+**Änderung Zeile 1698:**
+- Pattern erweitern: `(?:für|para|,|ist|mit)`
+
+**Neue Funktion nach Zeile 1718:**
+```typescript
+function cleanGuestName(name: string): string {
+  if (!name) return name;
+  // Entferne führende Wörter
+  return name.replace(/^(ist|mit|für|para|a nombre de|name|nombre)\s+/i, '').trim();
+}
+```
+
+**Anwendung:**
+- Nach Zeile 1695: `guestName = cleanGuestName(guestName);`
+- Nach Zeile 1701: `guestName = cleanGuestName(guestName);`
+- Nach Zeile 1714: `guestName = cleanGuestName(guestName);`
+
+**Zusätzlich in create_room_reservation:**
+- Zeile 1920: `cleanGuestName(args.guestName.trim())` verwenden
+
+#### Fix 1.3: Doppelte Reservierungen verhindern
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts`
+
+**Änderung vor Zeile 1874:**
+- Duplikat-Prüfung für confirmed Reservierungen hinzufügen:
+```typescript
+// Prüfe auf bestehende confirmed Reservation
+const existingConfirmedReservation = searchPhone ? await prisma.reservation.findFirst({
+  where: {
+    guestPhone: searchPhone,
+    branchId: branchId,
+    status: ReservationStatus.confirmed,
+    checkInDate: checkInDate,
+    checkOutDate: checkOutDate
+  },
+  orderBy: { createdAt: 'desc' }
+}) : null;
+
+if (existingConfirmedReservation) {
+  logger.warn(`[create_room_reservation] Bestehende confirmed Reservation gefunden: ${existingConfirmedReservation.id}`);
+  throw new Error('Eine Reservierung mit diesen Daten existiert bereits.');
+}
+```
+
+**Zusätzlich:**
+- Transaction für Zeile 1972-2011 verwenden, um Race Conditions zu vermeiden
 
 ### Phase 2: Preis- und Daten-Fixes
 
-4. **Preisberechnung prüfen**
-   - Logging erweitern
-   - 5% Aufschlag prüfen
-   - LobbyPMS Preis prüfen
+#### Fix 2.1: Preisberechnung - Logging erweitern
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts`
 
-5. **Check-in Link anzeigen**
-   - ReservationCard erweitern
-   - Check-in Link generieren und speichern
+**Logging hinzufügen:**
+- Zeile 1933: Logge `nights` Berechnung
+- Zeile 1948: Logge `room.pricePerNight`, `nights`, `estimatedAmount`
+- Zeile 1982, 2000: Logge `estimatedAmount` vor DB-Speicherung
+- Zeile 2018: Logge `estimatedAmount` vor Payment-Link-Erstellung
 
-6. **Zimmername/Bettnr anzeigen**
-   - `create_room_reservation`: roomNumber und roomDescription setzen
-   - ReservationCard anpassen
+**Zusätzlich in boldPaymentService.ts:**
+- Zeile 331: Logge `baseAmount`, `surcharge`, `totalAmount`
+
+#### Fix 2.2: Check-in Link in DB speichern
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts`
+
+**Änderung nach Zeile 2049:**
+```typescript
+if (checkInLink) {
+  await prisma.reservation.update({
+    where: { id: reservation.id },
+    data: { checkInLink }
+  });
+  logger.log(`[create_room_reservation] Check-in Link in DB gespeichert: ${checkInLink}`);
+}
+```
+
+#### Fix 2.3: Check-in Link in ReservationCard anzeigen
+**Datei:** `frontend/src/components/reservations/ReservationCard.tsx`
+
+**Änderung nach Zeile 171:**
+```typescript
+{/* Check-in Link */}
+{reservation.checkInLink && (
+  <div className="flex items-center text-gray-600 dark:text-gray-400">
+    <LinkIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+    <a 
+      href={reservation.checkInLink} 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="text-blue-600 dark:text-blue-400 hover:underline"
+    >
+      {t('reservations.checkInLink', 'Check-in Link')}
+    </a>
+  </div>
+)}
+```
+
+**Übersetzungen hinzufügen:**
+- `frontend/src/i18n/locales/de.json`: `"reservations.checkInLink": "Check-in Link"`
+- `frontend/src/i18n/locales/en.json`: `"reservations.checkInLink": "Check-in Link"`
+- `frontend/src/i18n/locales/es.json`: `"reservations.checkInLink": "Enlace de Check-in"`
+
+#### Fix 2.4: roomNumber und roomDescription setzen
+**Datei:** `backend/src/services/whatsappFunctionHandlers.ts`
+
+**Änderung nach Zeile 1925 (nach LobbyPMS-Buchung):**
+```typescript
+// Hole Reservierungsdetails aus LobbyPMS
+let roomNumber: string | null = null;
+let roomDescription: string | null = null;
+
+try {
+  const lobbyReservation = await lobbyPmsService.fetchReservationById(lobbyReservationId);
+  const assignedRoom = lobbyReservation.assigned_room;
+  const isDorm = assignedRoom?.type === 'compartida';
+  
+  if (isDorm) {
+    const dormName = lobbyReservation.category?.name || null;
+    const bedNumber = assignedRoom?.name || null;
+    roomNumber = dormName && bedNumber ? `${dormName} (${bedNumber})` : bedNumber || dormName || null;
+    roomDescription = dormName;
+  } else {
+    roomNumber = null;
+    roomDescription = assignedRoom?.name || lobbyReservation.room_number || null;
+  }
+} catch (error) {
+  logger.error('[create_room_reservation] Fehler beim Abrufen der Zimmer-Details:', error);
+  // Fallback: Verwende roomName aus Args
+  if (args.roomName) {
+    roomDescription = args.roomName;
+    roomNumber = args.roomType === 'compartida' ? args.roomName : null;
+  }
+}
+```
+
+**Änderung in DB-Update:**
+- Zeile 1974-1988: Füge `roomNumber` und `roomDescription` hinzu
+- Zeile 1991-2010: Füge `roomNumber` und `roomDescription` hinzu
 
 ### Phase 3: Kommunikations-Verbesserungen
 
-7. **System Prompt optimieren**
-   - Präzisere Anweisungen
-   - Bessere Context-Nutzung
+#### Fix 3.1: System Prompt präzisieren
+**Datei:** `backend/src/services/whatsappAiService.ts`
 
-8. **Context-Verarbeitung verbessern**
-   - Name und Datum korrekt speichern
-   - Context nach Buchung korrekt löschen
+**Änderung Zeile 1159:**
+- Präzisere Anweisung: "Wenn User 'ist Patrick Ammann' sagt, extrahiere IMMER nur 'Patrick Ammann' als Name. Entferne IMMER führende Wörter wie 'ist', 'mit', 'für', 'para' vor dem Namen."
+
+**Änderung Zeile 1144:**
+- Präzisere Anweisung: "Wenn User 'heute' sagt, bestätige IMMER das konkrete Datum explizit in deiner Antwort. Beispiel: 'Gerne, für den 15. Dezember 2025. Welche Art von Zimmer suchen Sie?'"
+
+#### Fix 3.2: Context-Verarbeitung verbessern
+**Datei:** `backend/src/services/whatsappMessageHandler.ts`
+
+**Änderung Zeile 1915-1927:**
+- Stelle sicher, dass Name korrekt im Context gespeichert wird (mit cleanGuestName)
+- Stelle sicher, dass Datum korrekt im Context gespeichert wird
 
 ---
 
 ## Dateien die geändert werden müssen
 
-1. `backend/src/services/whatsappMessageHandler.ts` - Doppelte Nachrichten, Name-Bereinigung
-2. `backend/src/services/whatsappFunctionHandlers.ts` - Preisberechnung, roomNumber/roomDescription
+1. `backend/src/services/whatsappMessageHandler.ts` - Doppelte Nachrichten, Name-Bereinigung, Context-Verarbeitung
+2. `backend/src/services/whatsappFunctionHandlers.ts` - Duplikat-Prüfung, roomNumber/roomDescription, checkInLink speichern, Logging
 3. `backend/src/services/whatsappAiService.ts` - System Prompt Verbesserungen
-4. `frontend/src/components/reservations/ReservationCard.tsx` - Check-in Link, Zimmername/Bettnr
-5. `backend/src/services/boldPaymentService.ts` - Preisberechnung prüfen (falls nötig)
-6. `backend/src/services/lobbyPmsService.ts` - Preis aus LobbyPMS prüfen (falls nötig)
+4. `frontend/src/components/reservations/ReservationCard.tsx` - Check-in Link anzeigen
+5. `frontend/src/i18n/locales/de.json` - Übersetzung für Check-in Link
+6. `frontend/src/i18n/locales/en.json` - Übersetzung für Check-in Link
+7. `frontend/src/i18n/locales/es.json` - Übersetzung für Check-in Link
+8. `backend/src/services/boldPaymentService.ts` - Logging erweitern (falls nötig)
+9. `backend/src/services/lobbyPmsService.ts` - Logging erweitern (falls nötig)
 
 ---
 
@@ -435,5 +607,119 @@ return bookingResult.message || 'Reservierung erfolgreich erstellt!';
 
 ---
 
+## Performance-Risiken
+
+### Risiko 1: Zusätzliche DB-Abfragen
+- Duplikat-Prüfung fügt eine zusätzliche DB-Abfrage hinzu (vor Zeile 1874)
+- LobbyPMS `fetchReservationById` fügt zusätzlichen API-Call hinzu (für roomNumber/roomDescription)
+- **Auswirkung:** +2 DB-Abfragen, +1 API-Call pro Reservierung
+- **Mitigation:** Abfragen sind notwendig für Korrektheit, Performance-Impact ist minimal (< 100ms)
+
+### Risiko 2: Verfügbarkeitsprüfung wird zweimal gemacht
+- Zeile 1940: Verfügbarkeitsprüfung für Preisberechnung
+- Zeile 2056: Verfügbarkeitsprüfung für roomName
+- **Auswirkung:** Doppelte API-Calls zu LobbyPMS
+- **Mitigation:** Cache-Ergebnis der ersten Prüfung, verwende für zweite Prüfung
+
+### Risiko 3: Transaction-Overhead
+- Transaction für Zeile 1972-2011 hat minimalen Performance-Impact (< 10ms)
+- **Auswirkung:** Minimal, Transaction ist notwendig für Konsistenz
+- **Mitigation:** Transaction nur wenn nötig (bei neuen Reservierungen, nicht bei Updates)
+
+---
+
+## Memory Leak Risiken
+
+### Risiko 1: Zusätzliche API-Calls
+- `fetchReservationById` fügt zusätzlichen API-Call hinzu
+- **Auswirkung:** Minimal, Response wird nicht gecacht
+- **Mitigation:** Response ist klein (< 10 KB), kein Memory Leak Risiko
+
+### Risiko 2: Zusätzliche DB-Abfragen
+- Duplikat-Prüfung fügt DB-Abfrage hinzu
+- **Auswirkung:** Minimal, Prisma managed Connections automatisch
+- **Mitigation:** Kein Memory Leak Risiko, Prisma gibt Connections zurück
+
+### Risiko 3: Keine Timer oder Observer
+- Keine `setTimeout`/`setInterval` in betroffenen Dateien
+- Keine `IntersectionObserver` in betroffenen Dateien
+- **Auswirkung:** Kein Memory Leak Risiko
+- **Mitigation:** Nicht relevant
+
+---
+
+## Übersetzungen
+
+### Fehlende Übersetzungen identifiziert
+- `reservations.checkInLink` fehlt in allen 3 Sprachen
+- ReservationCard verwendet bereits `t()` für alle anderen Texte (FAKT)
+
+### Übersetzungen hinzufügen
+**Dateien:**
+- `frontend/src/i18n/locales/de.json`
+- `frontend/src/i18n/locales/en.json`
+- `frontend/src/i18n/locales/es.json`
+
+**Keys:**
+```json
+{
+  "reservations": {
+    "checkInLink": "Check-in Link" // de: "Check-in Link", es: "Enlace de Check-in"
+  }
+}
+```
+
+---
+
+## Notifications
+
+### Status
+- Keine Notifications in `create_room_reservation` (FAKT)
+- Tour-Bookings haben Notifications (tourBookingController.ts Zeile 516-520)
+- Reservierungen haben keine Notifications bei Erstellung
+
+### Entscheidung erforderlich
+- Sollen Notifications für Reservierungen erstellt werden?
+- Wenn ja: Welche User sollen benachrichtigt werden?
+- **Empfehlung:** Nicht in diesem Fix implementieren, separate Feature-Request
+
+---
+
+## Berechtigungen
+
+### Status
+- `create_room_reservation` hat keine Berechtigungsprüfung (FAKT)
+- Andere Functions haben Berechtigungsprüfung (whatsappFunctionHandlers.ts Zeile 194-208)
+- `create_room_reservation` ist für Gäste verfügbar (nicht nur Mitarbeiter)
+
+### Entscheidung erforderlich
+- Soll `create_room_reservation` Berechtigungsprüfung haben?
+- Aktuell: Gäste können Reservierungen erstellen (gewollt?)
+- **Empfehlung:** Nicht in diesem Fix ändern, aktuelles Verhalten beibehalten
+
+---
+
+## Offene Fragen / Zu prüfen
+
+1. **Preis 110.000 statt 55.000:**
+   - Was gibt LobbyPMS in `total_to_pay` zurück?
+   - Werden zwei Reservierungen erstellt oder eine mit 110.000?
+   - **Aktion:** Logging erweitern, dann prüfen
+
+2. **Doppelte Reservierungen:**
+   - Werden beide Reservierungen durch automatische Buchung erstellt?
+   - Oder: Eine durch automatische Buchung, eine durch KI?
+   - **Aktion:** Logging erweitern, dann prüfen
+
+3. **Notifications:**
+   - Sollen Notifications für Reservierungen erstellt werden?
+   - **Aktion:** User fragen
+
+4. **Berechtigungen:**
+   - Soll `create_room_reservation` Berechtigungsprüfung haben?
+   - **Aktion:** User fragen
+
+---
+
 **Erstellt:** 2025-12-15  
-**Status:** Plan erstellt, bereit für Implementierung
+**Status:** Plan erstellt, alle Fakten dokumentiert, bereit für Implementierung

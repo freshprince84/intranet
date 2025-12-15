@@ -108,9 +108,43 @@ export class OTADiscoveryService {
         });
 
         const $ = cheerio.load(response.data);
+        
+        // DEBUG: Log HTML-Struktur für Analyse
+        if (page === 1) {
+          const bodyHtml = $('body').html() || '';
+          const bodyLength = bodyHtml.length;
+          logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${bodyLength} Zeichen`);
+          
+          // Prüfe verschiedene mögliche Selektoren
+          const testSelectors = [
+            '.sr_item',
+            '.c-sr_item',
+            '[data-hotel-id]',
+            '[data-testid*="propertycard"]',
+            '[data-testid*="hotelcard"]',
+            '.propertycard',
+            '.hotelcard',
+            'article[data-testid]',
+            '[class*="sr_item"]',
+            '[class*="property"]'
+          ];
+          
+          for (const selector of testSelectors) {
+            const count = $(selector).length;
+            if (count > 0) {
+              logger.warn(`[OTADiscoveryService] 🔍 Selektor "${selector}": ${count} Elemente gefunden`);
+            }
+          }
+          
+          // Log erste 2000 Zeichen des HTML für manuelle Analyse
+          const htmlSample = bodyHtml.substring(0, 2000);
+          logger.warn(`[OTADiscoveryService] 📋 HTML-Sample (erste 2000 Zeichen):\n${htmlSample}`);
+        }
+        
         const pageListings = this.extractBookingComListings($, roomType, city, country);
 
         if (pageListings.length === 0) {
+          logger.warn(`[OTADiscoveryService] ⚠️ Seite ${page}: Keine Listings gefunden`);
           hasMorePages = false;
         } else {
           listings.push(...pageListings);
@@ -191,9 +225,44 @@ export class OTADiscoveryService {
         });
 
         const $ = cheerio.load(response.data);
+        
+        // DEBUG: Log HTML-Struktur für Analyse
+        if (page === 1) {
+          const bodyHtml = $('body').html() || '';
+          const bodyLength = bodyHtml.length;
+          logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${bodyLength} Zeichen`);
+          
+          // Prüfe verschiedene mögliche Selektoren
+          const testSelectors = [
+            '.property-card',
+            '.hostel-card',
+            '[data-property-id]',
+            '.pwa-property-card',
+            '.property',
+            '.hostel',
+            '[class*="property"]',
+            '[class*="hostel"]',
+            'article',
+            '[data-testid*="property"]',
+            '[data-testid*="hostel"]'
+          ];
+          
+          for (const selector of testSelectors) {
+            const count = $(selector).length;
+            if (count > 0) {
+              logger.warn(`[OTADiscoveryService] 🔍 Selektor "${selector}": ${count} Elemente gefunden`);
+            }
+          }
+          
+          // Log erste 2000 Zeichen des HTML für manuelle Analyse
+          const htmlSample = bodyHtml.substring(0, 2000);
+          logger.warn(`[OTADiscoveryService] 📋 HTML-Sample (erste 2000 Zeichen):\n${htmlSample}`);
+        }
+        
         const pageListings = this.extractHostelworldListings($, roomType, city, country);
 
         if (pageListings.length === 0) {
+          logger.warn(`[OTADiscoveryService] ⚠️ Seite ${page}: Keine Listings gefunden`);
           hasMorePages = false;
         } else {
           listings.push(...pageListings);
@@ -229,8 +298,41 @@ export class OTADiscoveryService {
     const listings: DiscoveredListing[] = [];
 
     // Booking.com Struktur: Suche nach Hotel-Listings
-    // Mögliche Selektoren: .sr_item, .c-sr_item, [data-hotel-id]
-    const hotelElements = $('.sr_item, .c-sr_item, [data-hotel-id]');
+    // DEBUG: Teste verschiedene Selektoren und logge Ergebnisse
+    const testSelectors = [
+      '.sr_item',
+      '.c-sr_item',
+      '[data-hotel-id]',
+      '[data-testid*="propertycard"]',
+      '[data-testid*="hotelcard"]',
+      '.propertycard',
+      '.hotelcard',
+      'article[data-testid]',
+      '[class*="sr_item"]',
+      '[class*="property"]',
+      'a[href*="/hotel/"]'
+    ];
+    
+    let hotelElements: cheerio.Cheerio<cheerio.Element> | null = null;
+    let foundSelector: string | null = null;
+    
+    for (const selector of testSelectors) {
+      const elements = $(selector);
+      if (elements.length > 0) {
+        logger.warn(`[OTADiscoveryService] ✅ Booking.com Selektor "${selector}": ${elements.length} Elemente gefunden`);
+        hotelElements = elements;
+        foundSelector = selector;
+        break;
+      }
+    }
+    
+    if (!hotelElements || hotelElements.length === 0) {
+      logger.warn(`[OTADiscoveryService] ⚠️ Booking.com: Keine Hotel-Elemente gefunden mit allen getesteten Selektoren`);
+      logger.warn(`[OTADiscoveryService] 🔍 Getestete Selektoren: ${testSelectors.join(', ')}`);
+      return [];
+    }
+    
+    logger.warn(`[OTADiscoveryService] ✅ Verwende Selektor "${foundSelector}" mit ${hotelElements.length} Elementen`);
 
     hotelElements.each((index, element) => {
       try {
@@ -340,8 +442,42 @@ export class OTADiscoveryService {
     const listings: DiscoveredListing[] = [];
 
     // Hostelworld Struktur: Suche nach Hostel-Listings
-    // Mögliche Selektoren: .property-card, .hostel-card, [data-property-id]
-    const hostelElements = $('.property-card, .hostel-card, [data-property-id], .pwa-property-card');
+    // DEBUG: Teste verschiedene Selektoren und logge Ergebnisse
+    const testSelectors = [
+      '.property-card',
+      '.hostel-card',
+      '[data-property-id]',
+      '.pwa-property-card',
+      '.property',
+      '.hostel',
+      '[class*="property"]',
+      '[class*="hostel"]',
+      'article',
+      '[data-testid*="property"]',
+      '[data-testid*="hostel"]',
+      'a[href*="/hostels/"]'
+    ];
+    
+    let hostelElements: cheerio.Cheerio<cheerio.Element> | null = null;
+    let foundSelector: string | null = null;
+    
+    for (const selector of testSelectors) {
+      const elements = $(selector);
+      if (elements.length > 0) {
+        logger.warn(`[OTADiscoveryService] ✅ Hostelworld Selektor "${selector}": ${elements.length} Elemente gefunden`);
+        hostelElements = elements;
+        foundSelector = selector;
+        break;
+      }
+    }
+    
+    if (!hostelElements || hostelElements.length === 0) {
+      logger.warn(`[OTADiscoveryService] ⚠️ Hostelworld: Keine Listings-Elemente gefunden mit allen getesteten Selektoren`);
+      logger.warn(`[OTADiscoveryService] 🔍 Getestete Selektoren: ${testSelectors.join(', ')}`);
+      return [];
+    }
+    
+    logger.warn(`[OTADiscoveryService] ✅ Verwende Selektor "${foundSelector}" mit ${hostelElements.length} Elementen`);
 
     hostelElements.each((index, element) => {
       try {
