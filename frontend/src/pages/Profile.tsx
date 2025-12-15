@@ -471,10 +471,11 @@ const Profile: React.FC = () => {
               )}
 
               {/* 4. ID-Dokument-Daten (readonly, alle Felder - korrekte Reihenfolge) */}
-              {user.identificationDocuments && user.identificationDocuments.length > 0 && (
+              {/* Zeige Felder an, wenn Dokument vorhanden ODER User-Daten vorhanden sind */}
+              {((user.identificationDocuments && user.identificationDocuments.length > 0) || user.firstName || user.lastName || user.birthday) && (
                 <>
                   {(() => {
-                    const latestDoc = user.identificationDocuments[0];
+                    const latestDoc = user.identificationDocuments && user.identificationDocuments.length > 0 ? user.identificationDocuments[0] : null;
                     return (
                       <>
                         {/* 1. Vorname */}
@@ -552,50 +553,54 @@ const Profile: React.FC = () => {
                         </div>
 
                         {/* 6. Dokument-Typ */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {t('profile.identificationType')}
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              latestDoc.documentType
-                                ? (() => {
-                                    const typeMap: Record<string, string> = {
-                                      passport: t('identificationDocuments.types.passport'),
-                                      national_id: t('identificationDocuments.types.national_id'),
-                                      driving_license: t('identificationDocuments.types.driving_license'),
-                                      residence_permit: t('identificationDocuments.types.residence_permit'),
-                                      work_permit: t('identificationDocuments.types.work_permit'),
-                                      tax_id: t('identificationDocuments.types.tax_id'),
-                                      social_security: t('identificationDocuments.types.social_security'),
-                                    };
-                                    return typeMap[latestDoc.documentType] || latestDoc.documentType;
-                                  })()
-                                : ''
-                            }
-                            disabled
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
-                            readOnly
-                          />
-                        </div>
+                        {latestDoc && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('profile.identificationType')}
+                            </label>
+                            <input
+                              type="text"
+                              value={
+                                latestDoc.documentType
+                                  ? (() => {
+                                      const typeMap: Record<string, string> = {
+                                        passport: t('identificationDocuments.types.passport'),
+                                        national_id: t('identificationDocuments.types.national_id'),
+                                        driving_license: t('identificationDocuments.types.driving_license'),
+                                        residence_permit: t('identificationDocuments.types.residence_permit'),
+                                        work_permit: t('identificationDocuments.types.work_permit'),
+                                        tax_id: t('identificationDocuments.types.tax_id'),
+                                        social_security: t('identificationDocuments.types.social_security'),
+                                      };
+                                      return typeMap[latestDoc.documentType] || latestDoc.documentType;
+                                    })()
+                                  : ''
+                              }
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+                        )}
 
                         {/* 7. Dokument-Nummer */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {t('profile.identificationNumber')}
-                          </label>
-                          <input
-                            type="text"
-                            value={user.identificationNumber || latestDoc.documentNumber || ''}
-                            disabled
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
-                            readOnly
-                          />
-                        </div>
+                        {(user.identificationNumber || latestDoc?.documentNumber) && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('profile.identificationNumber')}
+                            </label>
+                            <input
+                              type="text"
+                              value={user.identificationNumber || latestDoc?.documentNumber || ''}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+                        )}
 
                         {/* 8. Ausstellungsdatum */}
-                        {latestDoc.issueDate && (
+                        {latestDoc?.issueDate && (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                               {t('profile.identificationIssueDate') || 'Ausstellungsdatum'}
@@ -611,7 +616,7 @@ const Profile: React.FC = () => {
                         )}
 
                         {/* 9. Ablaufdatum */}
-                        {latestDoc.expiryDate && (
+                        {latestDoc?.expiryDate && (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                               {t('profile.identificationExpiryDate')}

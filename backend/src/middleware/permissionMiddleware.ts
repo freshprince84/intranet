@@ -29,7 +29,10 @@ interface AuthenticatedRequest extends Request {
 export const checkPermission = (entity: string, requiredAccess: 'read' | 'write', entityType: 'page' | 'table' | 'cerebro' | 'button' = 'page') => {
     return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
-            logger.log(`[checkPermission] 🔍 Prüfe Permission: Entity=${entity}, EntityType=${entityType}, RequiredAccess=${requiredAccess}, Path=${req.path}`);
+            // Nur für Rate Shopping Route loggen (um Log-Spam zu vermeiden)
+            if (req.path.includes('rate-shopping')) {
+                logger.warn(`[checkPermission] 🔍 Prüfe Permission: Entity=${entity}, EntityType=${entityType}, RequiredAccess=${requiredAccess}, Path=${req.path}`);
+            }
             const userId = parseInt(req.userId, 10);
             const roleId = parseInt(req.roleId, 10);
 
@@ -38,7 +41,9 @@ export const checkPermission = (entity: string, requiredAccess: 'read' | 'write'
                 return res.status(401).json({ message: 'Nicht authentifiziert' });
             }
 
-            logger.log(`[checkPermission] ✅ Authentifiziert: UserId=${userId}, RoleId=${roleId}`);
+            if (req.path.includes('rate-shopping')) {
+                logger.warn(`[checkPermission] ✅ Authentifiziert: UserId=${userId}, RoleId=${roleId}`);
+            }
 
             // Prüfe, ob der Benutzer die erforderliche Berechtigung hat
             const hasAccess = await checkUserPermission(userId, roleId, entity, requiredAccess, entityType);
@@ -51,7 +56,9 @@ export const checkPermission = (entity: string, requiredAccess: 'read' | 'write'
                 });
             }
 
-            logger.log(`[checkPermission] ✅ Permission erteilt für Entity=${entity}, EntityType=${entityType}`);
+            if (req.path.includes('rate-shopping')) {
+                logger.warn(`[checkPermission] ✅ Permission erteilt für Entity=${entity}, EntityType=${entityType}`);
+            }
             next();
         } catch (error) {
             logger.error('[checkPermission] ❌ Fehler bei der Berechtigungsprüfung:', error);

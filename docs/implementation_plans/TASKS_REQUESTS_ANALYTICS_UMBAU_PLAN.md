@@ -1436,6 +1436,35 @@ export const getUserTasksActivity = async (req: Request, res: Response) => {
 - `frontend/src/components/teamWorktime/TasksActivityTab.tsx` - FilterPane integrieren
 - `frontend/src/components/teamWorktime/RequestsActivityTab.tsx` - FilterPane integrieren
 
+### 8.1. Standard-Filter-Verhalten
+
+**Verhalten beim Laden der Analytics-Tabs:**
+
+Beim Laden der `TodoAnalyticsTab` und `RequestAnalyticsTab` wird automatisch der Filter für den aktuellen Benutzer angewendet:
+
+1. **Filter-Name:** Der Filter wird nach dem Namen des aktuellen Benutzers gesucht:
+   - Format: `${user.firstName} ${user.lastName}` (z.B. "Patrick Ammann")
+   - Fallback: `user.username` falls Name leer ist
+
+2. **Filter-Erstellung:** 
+   - Filter werden im Seed für jeden Benutzer erstellt (Gruppe "Benutzer")
+   - Für `todo-analytics-table`: Filter mit `responsible = user-{id} OR qualityControl = user-{id}`
+   - Für `request-analytics-table`: Filter mit `requestedBy = user-{id} OR responsible = user-{id}`
+
+3. **Fallback:**
+   - Falls kein Benutzer-Filter gefunden wird, wird der Filter "Alle" angewendet
+   - "Alle" Filter ist immer vorhanden (wird im Seed erstellt)
+
+4. **Entfernte Filter:**
+   - Die Filter "Eigene Aufgaben - Diese Woche" und "Eigene Requests - Diese Woche" wurden entfernt
+   - Diese enthielten komplexe Datums-Bedingungen mit `__WEEK_START__` und `__WEEK_END__` Platzhaltern
+   - Stattdessen wird der einfache Benutzer-Filter verwendet (ohne Datumsbeschränkung)
+
+**Implementierung:**
+- `TodoAnalyticsTab.tsx`: Verwendet `useAuth()` Hook, sucht Filter nach Benutzer-Name
+- `RequestAnalyticsTab.tsx`: Verwendet `useAuth()` Hook, sucht Filter nach Benutzer-Name
+- `backend/prisma/seed.ts`: Erstellt Benutzer-Filter in Gruppe "Benutzer" (nicht mehr "Eigene Aufgaben/Requests - Diese Woche")
+
 ### 9. Table Settings Integration
 
 **Problem:** Neue Analytics-Tabs müssen Table Settings unterstützen.

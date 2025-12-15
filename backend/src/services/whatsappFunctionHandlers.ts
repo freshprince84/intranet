@@ -1800,19 +1800,26 @@ export class WhatsAppFunctionHandlers {
               categoryId = nameMatch.categoryId;
               logger.log(`[create_room_reservation] categoryId aus Zimmer-Namen gefunden: ${categoryId} (${nameMatch.roomName})`);
             } else {
-              // Keine exakte Übereinstimmung, aber mehrere Zimmer → Fehler
-              throw new Error(`Mehrere ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} verfügbar. Bitte wählen Sie ein spezifisches Zimmer aus der Verfügbarkeitsliste.`);
+              // Keine exakte Übereinstimmung, aber mehrere Zimmer → Fehler mit Alternativen
+              const availableRoomNames = matchingRooms.map(r => r.roomName).join(', ');
+              throw new Error(`Das Zimmer "${args.roomName}" ist nicht verfügbar oder wurde nicht gefunden. Verfügbare ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'}: ${availableRoomNames}. Bitte wählen Sie eines dieser Zimmer aus.`);
             }
           } else if (matchingRooms.length === 1) {
             // Nur ein Zimmer dieser Art verfügbar → verwende es
             categoryId = matchingRooms[0].categoryId;
             logger.log(`[create_room_reservation] categoryId aus Verfügbarkeit gefunden: ${categoryId} (${matchingRooms[0].roomName})`);
           } else if (matchingRooms.length > 1) {
-            // Mehrere Zimmer verfügbar → kann nicht automatisch bestimmt werden
-            throw new Error(`Mehrere ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} verfügbar. Bitte wählen Sie ein spezifisches Zimmer aus der Verfügbarkeitsliste.`);
+            // Mehrere Zimmer verfügbar → kann nicht automatisch bestimmt werden, zeige Alternativen
+            const availableRoomNames = matchingRooms.map(r => r.roomName).join(', ');
+            throw new Error(`Mehrere ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} verfügbar: ${availableRoomNames}. Bitte wählen Sie ein spezifisches Zimmer aus.`);
           } else {
-            // Kein Zimmer dieser Art verfügbar
-            throw new Error(`Keine ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} für diese Daten verfügbar.`);
+            // Kein Zimmer dieser Art verfügbar → prüfe ob andere Zimmerarten verfügbar sind
+            const allAvailableRooms = availability.map(item => `${item.roomName} (${item.roomType === 'compartida' ? 'Dorm' : 'Privat'})`).join(', ');
+            if (allAvailableRooms) {
+              throw new Error(`Keine ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} für diese Daten verfügbar. Verfügbare Zimmer: ${allAvailableRooms}. Bitte wählen Sie ein anderes Zimmer.`);
+            } else {
+              throw new Error(`Keine Zimmer für diese Daten verfügbar. Bitte versuchen Sie es mit anderen Daten.`);
+            }
           }
         } catch (error: any) {
           // Wenn automatische Suche fehlschlägt, werfe Fehler
@@ -2041,9 +2048,26 @@ export class WhatsAppFunctionHandlers {
         }
       }
 
-      // 11. Return Ergebnis
+      // 11. Finde roomName aus Verfügbarkeit (falls nicht bereits vorhanden)
+      let roomName = args.roomName;
+      if (!roomName && categoryId) {
+        try {
+          const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+          const availability = await lobbyPmsService.checkAvailability(checkInDate, checkOutDate);
+          const matchingRoom = availability.find(item => item.categoryId === categoryId);
+          if (matchingRoom) {
+            roomName = matchingRoom.roomName;
+          }
+        } catch (error) {
+          logger.error('[create_room_reservation] Fehler beim Abrufen des Zimmer-Namens:', error);
+          // Nicht kritisch, weiter ohne roomName
+        }
+      }
+
+      // 12. Return Ergebnis
       // WICHTIG: Die AI generiert die Nachricht mit paymentLink und checkInLink
       // sendReservationInvitation wird NICHT aufgerufen - die AI sendet die Nachricht
+      // WICHTIG: Alle Informationen müssen enthalten sein, damit die AI eine vollständige Nachricht generieren kann
       return {
         success: true,
         reservationId: reservation.id,
@@ -2054,6 +2078,7 @@ export class WhatsAppFunctionHandlers {
         checkInDate: checkInDate.toISOString().split('T')[0],
         checkOutDate: checkOutDate.toISOString().split('T')[0],
         roomType: args.roomType,
+        roomName: roomName || undefined, // Zimmer-Name für vollständige Nachricht
         categoryId: categoryId, // Verwende gefundene oder übergebene categoryId
         amount: estimatedAmount,
         currency: 'COP',

@@ -51,7 +51,7 @@ export const addDocument = async (req: Request, res: Response) => {
       const { documentType, documentNumber, issueDate, expiryDate, issuingCountry, issuingAuthority, imageData, firstName, lastName, birthday, gender, country } = req.body;
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:51',message:'Request body received',data:{hasFirstName:!!firstName,hasLastName:!!lastName,hasBirthday:!!birthday,hasGender:!!gender,hasCountry:!!country,isFormData:req.headers['content-type']?.includes('multipart/form-data')||false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      logger.log('[DEBUG] Request body received', { hasFirstName: !!firstName, hasLastName: !!lastName, hasBirthday: !!birthday, hasGender: !!gender, hasCountry: !!country, isFormData: req.headers['content-type']?.includes('multipart/form-data') || false });
       // #endregion
       
       // Validierung
@@ -140,6 +140,10 @@ export const addDocument = async (req: Request, res: Response) => {
       const document = await prisma.identificationDocument.create({
         data: documentData
       });
+      
+      // #region agent log
+      logger.log('[DEBUG] Document created in DB', { documentId: document.id, userId, documentType: document.documentType });
+      // #endregion
 
       // Automatische Extraktion und User-Update (nur wenn imageData vorhanden)
       if (imageData || req.file) {
@@ -356,6 +360,10 @@ export const addDocument = async (req: Request, res: Response) => {
         // Fehler blockiert nicht die Dokumentenerstellung
       }
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'identificationDocumentController.ts:359',message:'Sending document response',data:{documentId:document.id,userId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+      // #endregion
+      
       res.status(201).json(document);
     });
   } catch (error) {

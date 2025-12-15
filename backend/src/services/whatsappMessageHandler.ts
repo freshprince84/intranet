@@ -1687,11 +1687,34 @@ export class WhatsAppMessageHandler {
         checkOutDate = checkOutMatch[1].trim();
       }
       
-      // Parse Namen (einfache Heuristik: Wörter die wie Namen aussehen)
-      const namePattern = /(?:a nombre de|name|nombre|für)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
-      const nameMatch = currentMessage.match(namePattern);
-      if (nameMatch) {
-        guestName = nameMatch[1].trim();
+      // Parse Namen (erweiterte Heuristik: Wörter die wie Namen aussehen)
+      // 1. Explizite Marker (z.B. "für Patrick Ammann", "a nombre de Juan Pérez")
+      const explicitNamePattern = /(?:a nombre de|name|nombre|für|para)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
+      const explicitNameMatch = currentMessage.match(explicitNamePattern);
+      if (explicitNameMatch) {
+        guestName = explicitNameMatch[1].trim();
+      } else {
+        // 2. Namen nach Zimmer-Namen oder Kommas (z.B. "primo aventurero für Patrick Ammann" oder "dorm, Patrick Ammann")
+        const nameAfterRoomPattern = /(?:primo|abuelo|tia|dorm|zimmer|habitación|apartamento|doble|básica|deluxe|estándar|singular|apartaestudio|deportista|aventurero|artista|viajero|bromista)\s+(?:für|para|,)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i;
+        const nameAfterRoomMatch = currentMessage.match(nameAfterRoomPattern);
+        if (nameAfterRoomMatch) {
+          guestName = nameAfterRoomMatch[1].trim();
+        } else {
+          // 3. Namen am Ende der Nachricht (wenn Nachricht mit Großbuchstaben beginnt und 2+ Wörter hat)
+          // Nur wenn keine anderen Buchungsinformationen erkannt wurden
+          const words = currentMessage.trim().split(/\s+/);
+          if (words.length >= 2 && words.length <= 4 && 
+              words[0][0] === words[0][0].toUpperCase() && 
+              words[1][0] === words[1][0].toUpperCase() &&
+              !checkInDate && !checkOutDate && !roomType) {
+            // Potentieller Name (z.B. "Patrick Ammann")
+            const potentialName = words.join(' ');
+            // Prüfe ob es wie ein Name aussieht (mindestens 2 Wörter, beide mit Großbuchstaben)
+            if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+$/.test(potentialName)) {
+              guestName = potentialName;
+            }
+          }
+        }
       }
       
       // Parse Zimmer-Art

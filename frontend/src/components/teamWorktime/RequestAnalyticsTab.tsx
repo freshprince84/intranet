@@ -23,6 +23,7 @@ import { FilterCondition } from '../FilterRow.tsx';
 import DataCard, { MetadataItem } from '../shared/DataCard.tsx';
 import CardGrid from '../shared/CardGrid.tsx';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
+import { useAuth } from '../../hooks/useAuth.tsx';
 
 interface RequestAnalyticsTabProps {
   selectedDate?: string; // Optional für Rückwärtskompatibilität
@@ -81,6 +82,7 @@ const defaultColumnOrder = ['time', 'title', 'status', 'requester', 'responsible
 
 const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -218,12 +220,16 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
   
   useEffect(() => {
     const initialize = async () => {
+      if (!user) return; // Warten auf User
+      
       // 1. Filter laden (wartet auf State-Update)
       const filters = await loadFilters(REQUEST_ANALYTICS_TABLE_ID);
       
-      // 2. Default-Filter anwenden (IMMER vorhanden!)
-      // Versuche zuerst "Eigene Requests - Diese Woche", dann Fallback auf "Alle"
-      const defaultFilter = filters.find(f => f.name === 'Eigene Requests - Diese Woche') || filters.find(f => f.name === 'Alle');
+      // 2. Default-Filter anwenden: Filter für aktuellen Benutzer
+      // Filter-Name = `${user.firstName} ${user.lastName}` oder `user.username`
+      const userFilterName = `${user.firstName} ${user.lastName}`.trim() || user.username;
+      const defaultFilter = filters.find(f => f.name === userFilterName) || filters.find(f => f.name === 'Alle');
+      
       if (defaultFilter) {
         await handleFilterChange(
           defaultFilter.name,
@@ -238,8 +244,10 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
       // fetchRequests wird automatisch durch filterConditions-Änderung aufgerufen
     };
     
-    initialize();
-  }, [loadFilters, handleFilterChange]);
+    if (user) {
+      initialize();
+    }
+  }, [loadFilters, handleFilterChange, user]);
 
   const getActiveFilterCount = useCallback(() => {
     return filterConditions.filter(c => c.column !== '' && c.value !== null).length;
