@@ -34,6 +34,7 @@ const ProviderCard: React.FC<{
                             <button
                                 onClick={() => onEdit(provider)}
                                 className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
+                                title={t('common.edit', { defaultValue: 'Bearbeiten' })}
                             >
                                 <PencilIcon className="h-5 w-5" />
                             </button>
@@ -48,6 +49,7 @@ const ProviderCard: React.FC<{
                             <button
                                 onClick={() => onDelete(provider.id)}
                                 className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1"
+                                title={t('common.delete', { defaultValue: 'Löschen' })}
                             >
                                 <TrashIcon className="h-5 w-5" />
                             </button>

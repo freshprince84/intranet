@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import { logger } from '../utils/logger';
+import { getUserLanguage, getTourProviderErrorText } from '../utils/translations';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -68,9 +69,11 @@ export const getAllTourProviders = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('[getAllTourProviders] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden der Anbieter'
+      message: getTourProviderErrorText(language, 'loadError')
     });
   }
 };
@@ -78,13 +81,15 @@ export const getAllTourProviders = async (req: Request, res: Response) => {
 // GET /api/tour-providers/:id - Einzelner Anbieter
 export const getTourProviderById = async (req: Request, res: Response) => {
   try {
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     const { id } = req.params;
     const providerId = parseInt(id, 10);
 
     if (isNaN(providerId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Anbieter-ID'
+        message: getTourProviderErrorText(language, 'invalidProviderId')
       });
     }
 
@@ -120,7 +125,7 @@ export const getTourProviderById = async (req: Request, res: Response) => {
     if (!provider) {
       return res.status(404).json({
         success: false,
-        message: 'Anbieter nicht gefunden'
+        message: getTourProviderErrorText(language, 'providerNotFound')
       });
     }
 
@@ -130,9 +135,11 @@ export const getTourProviderById = async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('[getTourProviderById] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId || '0', 10);
+    const language = userId > 0 ? await getUserLanguage(userId) : 'de';
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Laden des Anbieters'
+      message: getTourProviderErrorText(language, 'loadProviderError')
     });
   }
 };
@@ -140,9 +147,11 @@ export const getTourProviderById = async (req: Request, res: Response) => {
 // POST /api/tour-providers - Neuen Anbieter erstellen
 export const createTourProvider = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_provider_create',
       'write',
@@ -151,7 +160,7 @@ export const createTourProvider = async (req: AuthenticatedRequest, res: Respons
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Erstellen von Anbietern'
+        message: getTourProviderErrorText(language, 'noPermissionCreate')
       });
     }
 
@@ -170,14 +179,14 @@ export const createTourProvider = async (req: AuthenticatedRequest, res: Respons
     if (!name || name.trim().length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Name muss mindestens 2 Zeichen lang sein'
+        message: getTourProviderErrorText(language, 'nameMinLength')
       });
     }
 
     if (!organizationId) {
       return res.status(400).json({
         success: false,
-        message: 'Organisation ist erforderlich'
+        message: getTourProviderErrorText(language, 'organizationRequired')
       });
     }
 
@@ -214,9 +223,11 @@ export const createTourProvider = async (req: AuthenticatedRequest, res: Respons
     });
   } catch (error) {
     logger.error('[createTourProvider] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Erstellen des Anbieters'
+      message: getTourProviderErrorText(language, 'createError')
     });
   }
 };
@@ -224,9 +235,11 @@ export const createTourProvider = async (req: AuthenticatedRequest, res: Respons
 // PUT /api/tour-providers/:id - Anbieter aktualisieren
 export const updateTourProvider = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_provider_edit',
       'write',
@@ -235,7 +248,7 @@ export const updateTourProvider = async (req: AuthenticatedRequest, res: Respons
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Bearbeiten von Anbietern'
+        message: getTourProviderErrorText(language, 'noPermissionEdit')
       });
     }
 
@@ -245,7 +258,7 @@ export const updateTourProvider = async (req: AuthenticatedRequest, res: Respons
     if (isNaN(providerId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Anbieter-ID'
+        message: getTourProviderErrorText(language, 'invalidProviderId')
       });
     }
 
@@ -256,7 +269,7 @@ export const updateTourProvider = async (req: AuthenticatedRequest, res: Respons
     if (!existing) {
       return res.status(404).json({
         success: false,
-        message: 'Anbieter nicht gefunden'
+        message: getTourProviderErrorText(language, 'providerNotFound')
       });
     }
 
@@ -273,7 +286,7 @@ export const updateTourProvider = async (req: AuthenticatedRequest, res: Respons
       if (name.trim().length < 2) {
         return res.status(400).json({
           success: false,
-          message: 'Name muss mindestens 2 Zeichen lang sein'
+          message: getTourProviderErrorText(language, 'nameMinLength')
         });
       }
       updateData.name = name.trim();
@@ -309,9 +322,11 @@ export const updateTourProvider = async (req: AuthenticatedRequest, res: Respons
     });
   } catch (error) {
     logger.error('[updateTourProvider] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Aktualisieren des Anbieters'
+      message: getTourProviderErrorText(language, 'updateError')
     });
   }
 };
@@ -319,9 +334,11 @@ export const updateTourProvider = async (req: AuthenticatedRequest, res: Respons
 // DELETE /api/tour-providers/:id - Anbieter löschen
 export const deleteTourProvider = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     // Berechtigung prüfen
     const hasPermission = await checkUserPermission(
-      parseInt(req.userId),
+      userId,
       parseInt(req.roleId),
       'tour_provider_delete',
       'write',
@@ -330,7 +347,7 @@ export const deleteTourProvider = async (req: AuthenticatedRequest, res: Respons
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'Keine Berechtigung zum Löschen von Anbietern'
+        message: getTourProviderErrorText(language, 'noPermissionDelete')
       });
     }
 
@@ -340,7 +357,7 @@ export const deleteTourProvider = async (req: AuthenticatedRequest, res: Respons
     if (isNaN(providerId)) {
       return res.status(400).json({
         success: false,
-        message: 'Ungültige Anbieter-ID'
+        message: getTourProviderErrorText(language, 'invalidProviderId')
       });
     }
 
@@ -350,9 +367,10 @@ export const deleteTourProvider = async (req: AuthenticatedRequest, res: Respons
     });
 
     if (tours.length > 0) {
+      const errorText = getTourProviderErrorText(language, 'cannotDeleteWithTours');
       return res.status(400).json({
         success: false,
-        message: `Anbieter kann nicht gelöscht werden, da ${tours.length} Tour(s) verknüpft sind`
+        message: errorText.replace('{count}', tours.length.toString())
       });
     }
 
@@ -362,13 +380,15 @@ export const deleteTourProvider = async (req: AuthenticatedRequest, res: Respons
 
     res.json({
       success: true,
-      message: 'Anbieter gelöscht'
+      message: getTourProviderErrorText(language, 'providerDeleted')
     });
   } catch (error) {
     logger.error('[deleteTourProvider] Fehler:', error);
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: 'Fehler beim Löschen des Anbieters'
+      message: getTourProviderErrorText(language, 'deleteError')
     });
   }
 };

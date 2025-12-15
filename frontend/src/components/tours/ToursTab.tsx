@@ -1059,6 +1059,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                                                                 setIsTourDetailsModalOpen(true);
                                                                             }}
                                                                             className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                            title={t('common.viewDetails', { defaultValue: 'Details anzeigen' })}
                                                                         >
                                                                             <InformationCircleIcon className="h-4 w-4" />
                                                                         </button>
@@ -1080,6 +1081,9 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                                                                             ? 'text-gray-400 cursor-not-allowed'
                                                                                             : 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300'
                                                                                     }`}
+                                                                                    title={generatingImages[tour.id]
+                                                                                        ? t('tours.generatingImages', { defaultValue: 'Bilder werden generiert...' })
+                                                                                        : t('tours.generateImages', { defaultValue: 'Bilder generieren' })}
                                                                                 >
                                                                                     <PhotoIcon className="h-4 w-4" />
                                                                                 </button>
@@ -1097,6 +1101,7 @@ const ToursTab: React.FC<ToursTabProps> = () => {
                                                                                         setIsEditTourModalOpen(true);
                                                                                     }}
                                                                                     className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                    title={t('tours.edit', { defaultValue: 'Bearbeiten' })}
                                                                                 >
                                                                                     <PencilIcon className="h-4 w-4" />
                                                                                 </button>

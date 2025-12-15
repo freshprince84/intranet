@@ -141,6 +141,25 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     }
   };
   
+  const handleAddRangeConditions = (startCondition: FilterCondition, endCondition: FilterCondition) => {
+    // Ersetze die aktuelle Bedingung durch die Start-Bedingung
+    const currentIndex = conditions.length - 1;
+    const newConditions = [...conditions];
+    newConditions[currentIndex] = startCondition;
+    
+    // Füge die End-Bedingung hinzu
+    newConditions.push(endCondition);
+    setConditions(newConditions);
+    
+    // Füge AND-Operatoren hinzu
+    const newOperators = [...logicalOperators];
+    if (currentIndex > 0) {
+      newOperators[currentIndex - 1] = 'AND';
+    }
+    newOperators.push('AND');
+    setLogicalOperators(newOperators);
+  };
+  
   const handleDeleteCondition = (index: number) => {
     // Entferne die Bedingung
     const newConditions = [...conditions];
@@ -245,6 +264,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
               columns={columns}
               isFirst={index === 0}
               isLast={index === conditions.length - 1}
+              onAddRangeConditions={handleAddRangeConditions}
             />
             
             {/* Operator zwischen Bedingungen einfügen (aber nicht nach der letzten) */}

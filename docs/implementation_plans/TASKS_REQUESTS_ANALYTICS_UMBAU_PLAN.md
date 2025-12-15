@@ -1,5 +1,8 @@
 # Tasks & Requests Analytics Umbau - Detaillierter Implementierungsplan
 
+**Aktualisiert:** 2025-02-02  
+**Status:** Implementiert - Platzhalter-System für Datumsfilter hinzugefügt
+
 ## Ziel
 
 Zwei spezifische Analysen ermöglichen:
@@ -1446,19 +1449,20 @@ Beim Laden der `TodoAnalyticsTab` und `RequestAnalyticsTab` wird automatisch der
    - Format: `${user.firstName} ${user.lastName}` (z.B. "Patrick Ammann")
    - Fallback: `user.username` falls Name leer ist
 
-2. **Filter-Erstellung:** 
+2. **Filter-Erstellung:**
    - Filter werden im Seed für jeden Benutzer erstellt (Gruppe "Benutzer")
-   - Für `todo-analytics-table`: Filter mit `responsible = user-{id} OR qualityControl = user-{id}`
-   - Für `request-analytics-table`: Filter mit `requestedBy = user-{id} OR responsible = user-{id}`
+   - Für `todo-analytics-table`: Filter mit `responsible = user-{id} OR qualityControl = user-{id} AND time >= __WEEK_START__ AND time <= __WEEK_END__`
+   - Für `request-analytics-table`: Filter mit `requestedBy = user-{id} OR responsible = user-{id} AND time >= __WEEK_START__ AND time <= __WEEK_END__`
+   - Rollen-Filter für `todo-analytics-table`: `responsible = role-{id} AND time >= __WEEK_START__ AND time <= __WEEK_END__`
 
 3. **Fallback:**
    - Falls kein Benutzer-Filter gefunden wird, wird der Filter "Alle" angewendet
    - "Alle" Filter ist immer vorhanden (wird im Seed erstellt)
 
-4. **Entfernte Filter:**
-   - Die Filter "Eigene Aufgaben - Diese Woche" und "Eigene Requests - Diese Woche" wurden entfernt
-   - Diese enthielten komplexe Datums-Bedingungen mit `__WEEK_START__` und `__WEEK_END__` Platzhaltern
-   - Stattdessen wird der einfache Benutzer-Filter verwendet (ohne Datumsbeschränkung)
+4. **Datumsfilterung:**
+   - Benutzer- und Rollen-Filter enthalten automatisch die Datumsfilterung "Diese Woche" (`time >= __WEEK_START__ AND time <= __WEEK_END__`)
+   - Die Platzhalter `__WEEK_START__` und `__WEEK_END__` werden dynamisch aufgelöst (aktueller Wochenanfang/-ende)
+   - Benutzer können die Datumsfilterung im FilterPane anpassen (Platzhalter-Dropdown: Heute, Diese Woche, Dieser Monat, Dieses Jahr, Benutzerdefiniert)
 
 **Implementierung:**
 - `TodoAnalyticsTab.tsx`: Verwendet `useAuth()` Hook, sucht Filter nach Benutzer-Name
