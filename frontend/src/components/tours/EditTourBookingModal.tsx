@@ -43,7 +43,7 @@ const EditTourBookingModal = ({ isOpen, onClose, booking, onBookingUpdated }: Ed
                         setSelectedTour(response.data.data);
                     }
                 } catch (err: unknown) {
-                    console.error('Fehler beim Laden der Tour:', err);
+                    console.error('Error loading tour:', err);
                 } finally {
                     setLoadingData(false);
                 }
@@ -158,7 +158,7 @@ const EditTourBookingModal = ({ isOpen, onClose, booking, onBookingUpdated }: Ed
                 throw new Error(response.data?.message || t('tours.bookings.updateError', { defaultValue: 'Fehler beim Aktualisieren der Buchung' }));
             }
         } catch (err: unknown) {
-            console.error('Fehler beim Aktualisieren der Buchung:', err);
+            console.error('Error updating booking:', err);
             const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
                                  (err as { message?: string })?.message || 
                                  t('errors.unknownError');

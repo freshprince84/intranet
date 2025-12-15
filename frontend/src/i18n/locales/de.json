@@ -480,6 +480,12 @@
     "create": "Neue Niederlassung",
     "edit": "Niederlassung bearbeiten",
     "name": "Name",
+    "address": "Adresse",
+    "addressPlaceholder": "Straße und Hausnummer",
+    "city": "Stadt",
+    "cityPlaceholder": "z.B. Medellín",
+    "country": "Land",
+    "countryPlaceholder": "z.B. Kolumbien",
     "noBranches": "Keine Niederlassungen vorhanden",
     "deleteConfirm": "Möchten Sie diese Niederlassung wirklich löschen?",
     "loadError": "Fehler beim Laden der Niederlassungen",
@@ -3198,6 +3204,17 @@
       "run": "Rate Shopping starten",
       "started": "Rate Shopping gestartet"
     },
+    "discovery": {
+      "title": "Konkurrenz-Listings finden",
+      "discover": "Listings finden",
+      "discovering": "Suche Listings...",
+      "completed": "{{count}} Listings gefunden",
+      "error": "Fehler beim Finden von Listings",
+      "noCity": "Bitte Stadt in Branch-Einstellungen konfigurieren"
+    },
+    "competitorListings": "Konkurrenz-Listings",
+    "dorm": "Dorm",
+    "private": "Privatzimmer",
     "analysis": {
       "title": "Preisanalysen",
       "run": "Preisanalyse starten",

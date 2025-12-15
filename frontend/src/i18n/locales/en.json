@@ -1369,6 +1369,12 @@
     "create": "New Branch",
     "edit": "Edit Branch",
     "name": "Name",
+    "address": "Address",
+    "addressPlaceholder": "Street and house number",
+    "city": "City",
+    "cityPlaceholder": "e.g. Medellín",
+    "country": "Country",
+    "countryPlaceholder": "e.g. Colombia",
     "noBranches": "No branches available",
     "deleteConfirm": "Do you really want to delete this branch?",
     "loadError": "Error loading branches",
@@ -3128,6 +3134,17 @@
       "run": "Start Rate Shopping",
       "started": "Rate Shopping started"
     },
+    "discovery": {
+      "title": "Find Competitor Listings",
+      "discover": "Find Listings",
+      "discovering": "Searching listings...",
+      "completed": "Found {{count}} listings",
+      "error": "Error finding listings",
+      "noCity": "Please configure city in branch settings"
+    },
+    "competitorListings": "Competitor Listings",
+    "dorm": "Dorm",
+    "private": "Private Room",
     "analysis": {
       "title": "Price Analyses",
       "run": "Start Price Analysis",

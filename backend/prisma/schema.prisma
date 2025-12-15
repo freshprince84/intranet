@@ -220,6 +220,9 @@ model Branch {
   emailSettings                 Json? // NEU: Email-Konfiguration pro Branch (SMTP + IMAP)
   messageTemplates              Json? // NEU: Konfigurierbare Mitteilungsvorlagen (Check-in-Einladung, Check-in-Bestätigung)
   autoSendReservationInvitation Boolean?                     @default(false) // NEU: Automatisches Versenden von Check-in-Einladungen aktivieren/deaktivieren
+  address                       String? // NEU: Straße und Hausnummer (z.B. "Cl 11A #43d-86")
+  city                          String? // NEU: Stadt (z.B. "Medellín")
+  country                       String? // NEU: Land (z.B. "Kolumbien")
   requests                      Request[]
   tasks                         Task[]
   users                         UsersBranches[]
@@ -1788,22 +1791,27 @@ model PasswordEntryAuditLog {
 // ============================================
 
 model OTAListing {
-  id       Int    @id @default(autoincrement())
-  branchId Int
-  branch   Branch @relation(fields: [branchId], references: [id])
+  id Int @id @default(autoincrement())
 
-  // OTA-Informationen
+  // Konkurrenz-Informationen
   platform   String // 'booking.com', 'hostelworld.com', etc.
   listingId  String // Eindeutige ID des Inserats auf der OTA-Plattform
   listingUrl String? // URL zum Inserat
 
-  // Zimmerkategorie
-  categoryId Int? // LobbyPMS category_id
-  roomType   String // 'private' | 'dorm'
-  roomName   String? // Name des Zimmers/Kategorie
+  // Ort und Zimmertyp (für Discovery und Vergleich)
+  city     String // Stadt (z.B. "Medellín") - Hauptfilter für Discovery
+  country  String? // Land (z.B. "Kolumbien") - Optional für genauere Filterung
+  roomType String // 'private' | 'dorm' (entspricht 'privada' | 'compartida' aus LobbyPMS)
+  roomName String? // Name des Zimmers auf OTA (z.B. "Private Room", "Dorm Bed")
+
+  // Optional: Branch-Zuordnung (für Filterung, nicht für Verknüpfung)
+  branchId Int? // Optional: Welcher Branch soll diese Konkurrenz sehen?
+  branch   Branch? @relation(fields: [branchId], references: [id])
 
   // Status
-  isActive Boolean @default(true)
+  isActive      Boolean   @default(true)
+  discoveredAt  DateTime  @default(now()) // Wann wurde das Listing gefunden?
+  lastScrapedAt DateTime? // Letztes Scraping-Datum
 
   // Metadaten
   createdAt DateTime @default(now())
@@ -1812,11 +1820,12 @@ model OTAListing {
   // Relations
   priceData OTAPriceData[]
 
-  @@unique([branchId, platform, listingId])
+  @@unique([platform, listingId, city]) // Eindeutig pro Plattform, Listing und Stadt
+  @@index([city])
+  @@index([country])
+  @@index([roomType])
   @@index([branchId])
   @@index([platform])
-  @@index([categoryId])
-  @@index([roomType])
 }
 
 model OTAPriceData {

@@ -140,7 +140,7 @@ const TourExportDialog = ({ isOpen, onClose, tourCount }: TourExportDialogProps)
             showMessage(t('tours.export.success', 'Export erfolgreich'), 'success');
             onClose();
         } catch (err: unknown) {
-            console.error('Fehler beim Exportieren:', err);
+            console.error('Error exporting:', err);
             showMessage(err.response?.data?.message || t('tours.export.error', 'Fehler beim Exportieren'), 'error');
         } finally {
             setExporting(false);

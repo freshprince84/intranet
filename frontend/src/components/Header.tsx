@@ -240,6 +240,10 @@ const Header: React.FC = () => {
         isBranchAvailableForRole(branch, currentRole?.role.id || null)
     ) || [];
 
+    // Aktueller Standort (Branch) ermitteln
+    const currentBranch = branches?.find(branch => branch.id === selectedBranch);
+    const branchName = currentBranch?.name || null;
+
     return (
         <header className="bg-white dark:bg-gray-800">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -316,17 +320,20 @@ const Header: React.FC = () => {
                                             {user?.firstName} {user?.lastName}
                                         </span>
                                     </div>
-                                    {/* Anzeige der aktiven Rolle unter dem Benutzernamen */}
+                                    {/* Anzeige der aktiven Rolle und des Standorts unter dem Benutzernamen */}
                                     {user && (
                                         <div className="w-full text-right -mt-1">
-                                            <div className="flex flex-col items-end pr-1">
+                                            <div className="flex flex-row items-center justify-end gap-1.5 pr-1">
                                                 <span className="text-xs text-gray-500 dark:text-gray-400">
                                                     {roleName}
                                                 </span>
-                                                {organizationName && (
-                                                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                                        {organizationName}
-                                                    </span>
+                                                {branchName && (
+                                                    <>
+                                                        <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                            {branchName}
+                                                        </span>
+                                                    </>
                                                 )}
                                             </div>
                                         </div>

@@ -47,7 +47,7 @@ const TourReservationLinkModal = ({ isOpen, onClose, booking, onLinked }: TourRe
                 setReservations(Array.isArray(data) ? data : []);
             }
         } catch (err: unknown) {
-            console.error('Fehler beim Laden der Reservations:', err);
+            console.error('Error loading reservations:', err);
             showMessage(t('errors.loadError'), 'error');
         } finally {
             setLoadingReservations(false);
@@ -92,7 +92,7 @@ const TourReservationLinkModal = ({ isOpen, onClose, booking, onLinked }: TourRe
                 showMessage(response.data.message || t('errors.saveError'), 'error');
             }
         } catch (err: unknown) {
-            console.error('Fehler beim Erstellen der Verknüpfung:', err);
+            console.error('Error creating link:', err);
             const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('errors.saveError');
             showMessage(errorMessage, 'error');
         } finally {
@@ -115,7 +115,7 @@ const TourReservationLinkModal = ({ isOpen, onClose, booking, onLinked }: TourRe
                 showMessage(response.data.message || t('errors.deleteError'), 'error');
             }
         } catch (err: unknown) {
-            console.error('Fehler beim Löschen der Verknüpfung:', err);
+            console.error('Error deleting link:', err);
             const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || t('errors.deleteError');
             showMessage(errorMessage, 'error');
         }

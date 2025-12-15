@@ -373,7 +373,8 @@ export const API_ENDPOINTS = {
         },
         OTA: {
             LISTINGS: '/price-analysis/ota/listings',
-            RATE_SHOPPING: '/price-analysis/ota/rate-shopping'
+            RATE_SHOPPING: '/price-analysis/ota/rate-shopping',
+            DISCOVER: '/price-analysis/ota/discover'
         }
     }
 };

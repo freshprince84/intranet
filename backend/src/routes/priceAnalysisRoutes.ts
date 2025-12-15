@@ -129,5 +129,12 @@ router.post(
   otaController.runRateShopping
 );
 
+router.post(
+  '/ota/discover',
+  authenticate,
+  checkPermission('price_analysis_run_rate_shopping', 'write', 'button'),
+  otaController.discoverListings
+);
+
 export default router;
 

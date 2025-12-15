@@ -10,14 +10,17 @@ import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 interface OTAListing {
     id: number;
-    branchId: number;
+    branchId: number | null;
     platform: string;
     listingId: string;
     listingUrl: string | null;
-    categoryId: number | null;
+    city: string;
+    country: string | null;
     roomType: string;
     roomName: string | null;
     isActive: boolean;
+    discoveredAt: string;
+    lastScrapedAt: string | null;
     createdAt: string;
     updatedAt: string;
     priceData: OTAPriceData[];
@@ -52,6 +55,7 @@ const OTAListingsTab: React.FC = () => {
     const [listings, setListings] = useState<OTAListing[]>([]);
     const [loading, setLoading] = useState(false);
     const [rateShoppingLoading, setRateShoppingLoading] = useState(false);
+    const [discovering, setDiscovering] = useState(false);
     const [selectedPlatform, setSelectedPlatform] = useState<string>('booking.com');
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -130,6 +134,43 @@ const OTAListingsTab: React.FC = () => {
         }
     }, [currentBranch, selectedPlatform, hasPermission, showMessage, t, handleError, loadListings]);
 
+    const handleDiscoverListings = useCallback(async () => {
+        if (!currentBranch) {
+            return;
+        }
+
+        if (!hasPermission('price_analysis_run_rate_shopping', 'write', 'button')) {
+            showMessage(t('common.noPermission'), 'error');
+            return;
+        }
+
+        setDiscovering(true);
+        try {
+            const response = await axiosInstance.post(API_ENDPOINTS.PRICE_ANALYSIS.OTA.DISCOVER, {
+                branchId: currentBranch.id,
+                platform: selectedPlatform
+            });
+
+            if (response.data?.success) {
+                showMessage(
+                    t('priceAnalysis.discovery.completed', { 
+                        count: response.data.listingsFound || 0,
+                        defaultValue: `${response.data.listingsFound || 0} Listings gefunden` 
+                    }), 
+                    'success'
+                );
+                // Lade Listings neu
+                await loadListings();
+            } else {
+                showMessage(response.data?.message || t('priceAnalysis.discovery.error'), 'error');
+            }
+        } catch (error: any) {
+            handleError(error);
+        } finally {
+            setDiscovering(false);
+        }
+    }, [currentBranch, selectedPlatform, hasPermission, showMessage, t, handleError, loadListings]);
+
     if (loading) {
         return (
             <div className="text-center py-4">
@@ -149,6 +190,19 @@ const OTAListingsTab: React.FC = () => {
                     <option value="booking.com">Booking.com</option>
                     <option value="hostelworld.com">Hostelworld</option>
                 </select>
+                <div className="relative group">
+                    <button
+                        onClick={handleDiscoverListings}
+                        disabled={discovering || !hasPermission('price_analysis_run_rate_shopping', 'write', 'button')}
+                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={t('priceAnalysis.discovery.discover', 'Listings finden')}
+                    >
+                        <ArrowPathIcon className={`h-5 w-5 ${discovering ? 'animate-spin' : ''}`} />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('priceAnalysis.discovery.discover', 'Listings finden')}
+                    </div>
+                </div>
                 <div className="relative group">
                     <button
                         onClick={handleRunRateShopping}
@@ -177,6 +231,9 @@ const OTAListingsTab: React.FC = () => {
                                     {t('priceAnalysis.platform')}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                    {t('branches.city')}
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
                                     {t('priceAnalysis.roomType')}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
@@ -200,7 +257,10 @@ const OTAListingsTab: React.FC = () => {
                                         {listing.platform}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                        {listing.roomType}
+                                        {listing.city}{listing.country ? `, ${listing.country}` : ''}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                        {listing.roomType === 'dorm' ? t('priceAnalysis.dorm', 'Dorm') : t('priceAnalysis.private', 'Privatzimmer')}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                         {listing.roomName || '-'}
@@ -227,7 +287,9 @@ const OTAListingsTab: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                        {listing.priceData.length > 0
+                                        {listing.lastScrapedAt
+                                            ? new Date(listing.lastScrapedAt).toLocaleDateString()
+                                            : listing.priceData.length > 0
                                             ? new Date(listing.priceData[0].scrapedAt).toLocaleDateString()
                                             : '-'}
                                     </td>

@@ -664,6 +664,12 @@
     "create": "Nueva Sucursal",
     "edit": "Editar Sucursal",
     "name": "Nombre",
+    "address": "Dirección",
+    "addressPlaceholder": "Calle y número",
+    "city": "Ciudad",
+    "cityPlaceholder": "ej. Medellín",
+    "country": "País",
+    "countryPlaceholder": "ej. Colombia",
     "noBranches": "No hay sucursales disponibles",
     "deleteConfirm": "¿Realmente desea eliminar esta sucursal?",
     "loadError": "Error al cargar las sucursales",
@@ -3129,6 +3135,17 @@
       "run": "Iniciar Rate Shopping",
       "started": "Rate Shopping iniciado"
     },
+    "discovery": {
+      "title": "Encontrar Listados de Competidores",
+      "discover": "Buscar Listados",
+      "discovering": "Buscando listados...",
+      "completed": "Se encontraron {{count}} listados",
+      "error": "Error al buscar listados",
+      "noCity": "Por favor configure la ciudad en la configuración de la sucursal"
+    },
+    "competitorListings": "Listados de Competidores",
+    "dorm": "Dormitorio",
+    "private": "Habitación Privada",
     "analysis": {
       "title": "Análisis de Precios",
       "run": "Iniciar Análisis de Precios",

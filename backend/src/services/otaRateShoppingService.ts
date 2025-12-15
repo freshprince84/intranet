@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { LobbyPmsService } from './lobbyPmsService';
+import { OTADiscoveryService } from './otaDiscoveryService';
 
 const prisma = new PrismaClient();
 
@@ -91,28 +93,183 @@ export class OTARateShoppingService {
 
       logger.warn(`[OTARateShoppingService] 🚀 Starte Job ${jobId} für ${platform}, Branch ${branchId}`);
 
-      // Hole alle aktiven Listings für diese Plattform
-      const listings = await prisma.oTAListing.findMany({
-        where: {
-          branchId,
-          platform,
-          isActive: true
+      // 1. Hole Adress-Informationen vom Branch
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { 
+          city: true, 
+          country: true, 
+          name: true,
+          organizationId: true // Für Kontext
         }
       });
 
-      if (listings.length === 0) {
-        logger.warn(`[Rate Shopping] Keine aktiven Listings gefunden für ${platform}, Branch ${branchId}`);
+      if (!branch) {
+        throw new Error(`Branch ${branchId} nicht gefunden`);
+      }
+
+      if (!branch.city) {
+        logger.warn(`[Rate Shopping] Branch ${branchId} hat keine Stadt konfiguriert`);
         await prisma.rateShoppingJob.update({
           where: { id: jobId },
           data: {
-            status: 'completed',
+            status: 'failed',
             completedAt: new Date(),
-            listingsFound: 0,
-            pricesCollected: 0
+            errors: [{ error: 'Branch hat keine Stadt konfiguriert. Bitte Adress-Informationen in Branch-Einstellungen hinzufügen.' }]
           }
         });
         return;
       }
+
+      // 2. Hole eigene Zimmer-Typen aus LobbyPMS
+      const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+      const ownRooms = await lobbyPmsService.checkAvailability(startDate, endDate);
+      const ownRoomTypes = [...new Set(ownRooms.map(r => {
+        // Konvertiere 'compartida' -> 'dorm', 'privada' -> 'private'
+        return r.roomType === 'compartida' ? 'dorm' : 'private';
+      }))]; // ['private', 'dorm']
+
+      if (ownRoomTypes.length === 0) {
+        logger.warn(`[Rate Shopping] Keine eigenen Zimmer-Typen gefunden für Branch ${branchId}`);
+        await prisma.rateShoppingJob.update({
+          where: { id: jobId },
+          data: {
+            status: 'failed',
+            completedAt: new Date(),
+            errors: [{ error: 'Keine eigenen Zimmer-Typen gefunden. Bitte zuerst Reservierungen aus LobbyPMS importieren.' }]
+          }
+        });
+        return;
+      }
+
+      logger.warn(`[Rate Shopping] Gefundene eigene Zimmertypen: ${ownRoomTypes.join(', ')}`);
+
+      // 3. Für jeden eigenen Zimmertyp: Finde Konkurrenz-Listings
+      let totalListingsFound = 0;
+      let totalPricesCollected = 0;
+      const errors: any[] = [];
+
+      for (const roomType of ownRoomTypes) {
+        logger.warn(`[Rate Shopping] Verarbeite Zimmertyp: ${roomType}`);
+
+        // Prüfe ob Listings vorhanden sind oder älter als 7 Tage
+        const existingListings = await prisma.oTAListing.findMany({
+          where: {
+            city: branch.city,
+            country: branch.country || undefined,
+            platform,
+            roomType,
+            isActive: true
+          }
+        });
+
+        // Falls keine Listings vorhanden oder älter als 7 Tage: Neu discoveren
+        const needsDiscovery = existingListings.length === 0 || 
+          existingListings.some(l => !l.lastScrapedAt || 
+            new Date(l.lastScrapedAt).getTime() < Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+        if (needsDiscovery) {
+          logger.warn(`[Rate Shopping] Starte Discovery für ${platform}, ${branch.city}, ${roomType}`);
+          try {
+            const discovered = await OTADiscoveryService.discoverListings(
+              branch.city,
+              branch.country,
+              roomType as 'private' | 'dorm',
+              platform
+            );
+
+            // Speichere/aktualisiere Listings
+            for (const listing of discovered) {
+              try {
+                await prisma.oTAListing.upsert({
+                  where: {
+                    platform_listingId_city: {
+                      platform: listing.platform,
+                      listingId: listing.listingId,
+                      city: listing.city
+                    }
+                  },
+                  update: {
+                    listingUrl: listing.listingUrl,
+                    roomName: listing.roomName,
+                    lastScrapedAt: new Date(),
+                    isActive: true
+                  },
+                  create: {
+                    platform: listing.platform,
+                    listingId: listing.listingId,
+                    listingUrl: listing.listingUrl,
+                    city: listing.city,
+                    country: listing.country,
+                    roomType: listing.roomType,
+                    roomName: listing.roomName,
+                    branchId: branchId, // Optional: Für Filterung
+                    isActive: true,
+                    discoveredAt: new Date()
+                  }
+                });
+                totalListingsFound++;
+              } catch (error: any) {
+                logger.error(`[Rate Shopping] Fehler beim Speichern eines Listings:`, error.message);
+                errors.push({ error: `Fehler beim Speichern: ${error.message}` });
+              }
+            }
+          } catch (error: any) {
+            logger.error(`[Rate Shopping] Fehler beim Discovery:`, error.message);
+            errors.push({ error: `Discovery-Fehler: ${error.message}` });
+          }
+        } else {
+          logger.warn(`[Rate Shopping] Verwende vorhandene Listings (${existingListings.length}) für ${roomType}`);
+          totalListingsFound += existingListings.length;
+        }
+
+        // 4. Scrape Preise für alle Konkurrenz-Listings
+        const listings = await prisma.oTAListing.findMany({
+          where: {
+            city: branch.city,
+            country: branch.country || undefined,
+            platform,
+            roomType,
+            isActive: true
+          }
+        });
+
+        logger.warn(`[Rate Shopping] Scrape Preise für ${listings.length} Listings (${roomType})`);
+
+        for (const listing of listings) {
+          try {
+            if (listing.listingUrl) {
+              const pricesCollected = await this.scrapeOTA(
+                listing.id,
+                platform,
+                listing.listingUrl,
+                startDate,
+                endDate
+              );
+              totalPricesCollected += pricesCollected;
+            }
+          } catch (error: any) {
+            logger.error(`[Rate Shopping] Fehler beim Scraping für Listing ${listing.id}:`, error.message);
+            errors.push({
+              listingId: listing.id,
+              error: error.message || String(error)
+            });
+          }
+
+          // Rate-Limiting: Warte 2 Sekunden zwischen Listings
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Hole alle Listings für Status-Update
+      const allListings = await prisma.oTAListing.findMany({
+        where: {
+          city: branch.city,
+          country: branch.country || undefined,
+          platform,
+          isActive: true
+        }
+      });
 
       let totalPricesCollected = 0;
       const errors: any[] = [];
@@ -146,13 +303,13 @@ export class OTARateShoppingService {
         data: {
           status: 'completed',
           completedAt: new Date(),
-          listingsFound: listings.length,
+          listingsFound: allListings.length,
           pricesCollected: totalPricesCollected,
           errors: errors.length > 0 ? errors : null
         }
       });
 
-      logger.warn(`[Rate Shopping] ✅ Job ${jobId} abgeschlossen: ${totalPricesCollected} Preise gesammelt`);
+      logger.warn(`[Rate Shopping] ✅ Job ${jobId} abgeschlossen: ${allListings.length} Listings, ${totalPricesCollected} Preise gesammelt`);
     } catch (error) {
       logger.error(`[Rate Shopping] Fehler beim Ausführen des Jobs ${jobId}:`, error);
       await prisma.rateShoppingJob.update({
@@ -439,27 +596,36 @@ export class OTARateShoppingService {
    * 
    * @param branchId - Branch-ID
    * @param date - Datum
-   * @param categoryId - Kategorie-ID (optional)
+   * @param roomType - Zimmertyp ('compartida' | 'privada') - LobbyPMS Format
    * @returns Durchschnittspreis der Konkurrenz
    */
   static async getCompetitorPrices(
     branchId: number,
     date: Date,
-    categoryId?: number
+    roomType: 'compartida' | 'privada'
   ): Promise<number | null> {
     try {
-      // Hole alle OTA-Listings für diesen Branch
-      const where: any = {
-        branchId,
-        isActive: true
-      };
+      // Hole Branch mit Adress-Informationen
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { city: true, country: true }
+      });
 
-      if (categoryId) {
-        where.categoryId = categoryId;
+      if (!branch?.city) {
+        return null;
       }
 
+      // Konvertiere LobbyPMS roomType zu OTA roomType
+      const otaRoomType = roomType === 'compartida' ? 'dorm' : 'private';
+
+      // Hole alle OTA-Listings für diese Stadt und Zimmertyp
       const listings = await prisma.oTAListing.findMany({
-        where,
+        where: {
+          city: branch.city,
+          country: branch.country || undefined,
+          roomType: otaRoomType,
+          isActive: true
+        },
         include: {
           priceData: {
             where: {
@@ -504,10 +670,24 @@ export class OTARateShoppingService {
    */
   static async getListings(branchId: number) {
     try {
+      // Hole Branch mit Adress-Informationen
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { city: true, country: true }
+      });
+
+      if (!branch?.city) {
+        return [];
+      }
+
+      // Hole alle Listings für diese Stadt (optional: gefiltert nach branchId)
       const listings = await prisma.oTAListing.findMany({
         where: {
-          branchId,
-          isActive: true
+          city: branch.city,
+          country: branch.country || undefined,
+          isActive: true,
+          // Optional: Nur Listings für diesen Branch anzeigen
+          // branchId: branchId
         },
         include: {
           priceData: {
@@ -532,19 +712,21 @@ export class OTARateShoppingService {
   /**
    * Erstellt oder aktualisiert ein OTA-Listing
    * 
-   * @param branchId - Branch-ID
+   * @param branchId - Branch-ID (optional)
    * @param platform - OTA-Plattform
    * @param listingId - Listing-ID auf der OTA-Plattform
+   * @param city - Stadt
    * @param data - Listing-Daten
    * @returns Listing
    */
   static async upsertListing(
-    branchId: number,
+    branchId: number | null,
     platform: string,
     listingId: string,
+    city: string,
     data: {
       listingUrl?: string;
-      categoryId?: number;
+      country?: string | null;
       roomType: 'private' | 'dorm';
       roomName?: string;
       isActive?: boolean;
@@ -553,20 +735,22 @@ export class OTARateShoppingService {
     try {
       const listing = await prisma.oTAListing.upsert({
         where: {
-          branchId_platform_listingId: {
-            branchId,
+          platform_listingId_city: {
             platform,
-            listingId
+            listingId,
+            city
           }
         },
         update: {
           ...data,
+          branchId: branchId || undefined,
           updatedAt: new Date()
         },
         create: {
-          branchId,
+          branchId: branchId || null,
           platform,
           listingId,
+          city,
           ...data
         }
       });

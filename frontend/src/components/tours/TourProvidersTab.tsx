@@ -99,7 +99,7 @@ const TourProvidersTab: React.FC<TourProvidersTabProps> = () => {
     // Fehlerbehandlung mit Fallback
     const errorContext = useError();
     const handleErrorContext = errorContext?.handleError || ((err: unknown, context?: Record<string, unknown>) => {
-        console.error('Fehler:', err, context);
+        console.error('Error:', err, context);
         const errorMessage = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message || 
                              (err as { message?: string })?.message || 
                              t('errors.unknownError', { defaultValue: 'Ein Fehler ist aufgetreten' });
@@ -126,7 +126,7 @@ const TourProvidersTab: React.FC<TourProvidersTabProps> = () => {
             const data = response.data?.data || response.data || [];
             setProviders(Array.isArray(data) ? data : []);
         } catch (error: unknown) {
-            console.error('Fehler beim Laden der Tour-Provider:', error);
+            console.error('Error loading tour providers:', error);
             handleErrorContext(error);
             const errorMessage = error.response?.data?.message || t('tours.providers.loadError', { defaultValue: 'Fehler beim Laden der Provider' });
             showMessage(errorMessage, 'error');
@@ -177,7 +177,7 @@ const TourProvidersTab: React.FC<TourProvidersTabProps> = () => {
             );
             fetchProviders();
         } catch (error: any) {
-            console.error('Fehler beim Löschen des Providers:', error);
+            console.error('Error deleting provider:', error);
             handleErrorContext(error);
             const errorMessage = error.response?.data?.message || t('errors.unknownError');
             showMessage(errorMessage, 'error');
