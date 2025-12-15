@@ -942,45 +942,6 @@ if (!queueAvailable || process.env.QUEUE_ENABLED !== 'true') {
 - Timeout im Frontend (60 Sekunden max)
 - Fallback: Frontend zeigt "Status unbekannt, bitte neu versuchen"
 
-### Risiko 10: Galerie-Bilder-Akkumulation
-**Risiko:** Bei erneuter Bildgenerierung werden neue Galerie-Bilder zu bestehenden hinzugefügt, statt sie zu ersetzen
-**Auswirkung:** Galerie wächst kontinuierlich, alte Bilder bleiben erhalten, Disk-Space wird unnötig belegt
-**Aktueller Status:** ❌ **NICHT BEHOBEN** - `clearGalleryImages()` existiert nicht in `TourImageUploadService`
-**Mitigation:**
-- **MUSS:** `clearGalleryImages(tourId: number)` Methode in `TourImageUploadService` implementieren
-- **MUSS:** Methode löscht alle bestehenden Galerie-Bild-Dateien aus `uploads/tours/`
-- **MUSS:** Methode setzt `galleryUrls` Array in DB auf `[]`
-- **MUSS:** Worker ruft `clearGalleryImages()` auf VOR dem Upload neuer Galerie-Bilder
-- **MUSS:** Controller ruft `clearGalleryImages()` auf VOR dem Upload neuer Galerie-Bilder (synchroner Fallback)
-- **Implementierung:**
-```typescript
-// backend/src/services/tourImageUploadService.ts
-static async clearGalleryImages(tourId: number): Promise<void> {
-  const tour = await prisma.tour.findUnique({
-    where: { id: tourId },
-    select: { galleryUrls: true }
-  });
-  
-  if (tour?.galleryUrls) {
-    const urls = (tour.galleryUrls as string[]) || [];
-    // Lösche alle Dateien
-    urls.forEach(url => {
-      const filename = path.basename(url);
-      const filePath = path.join(__dirname, '../../uploads/tours', filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    });
-  }
-  
-  // Setze galleryUrls auf leeres Array
-  await prisma.tour.update({
-    where: { id: tourId },
-    data: { galleryUrls: [] }
-  });
-}
-```
-
 ---
 
 ## 🔄 ERWEITERUNGSMÖGLICHKEITEN
@@ -1101,27 +1062,11 @@ static async clearGalleryImages(tourId: number): Promise<void> {
 **Backend:**
 - ❌ `galleryImageDeleted` fehlt in `backend/src/utils/translations.ts` (Interface `TourErrorTranslations` und `tourErrorTexts`)
 
-#### 2. Galerie-Bilder-Akkumulation:
-**Problem:** Bei erneuter Bildgenerierung werden neue Galerie-Bilder zu bestehenden hinzugefügt, statt sie zu ersetzen.
-
-**Fehlende Implementierung:**
-- ❌ `clearGalleryImages(tourId: number)` Methode fehlt in `TourImageUploadService`
-- ❌ Worker (`imageGenerationWorker.ts` Zeile ~107) ruft `clearGalleryImages()` nicht auf vor neuem Upload
-- ❌ Controller (`tourController.ts` Zeile ~1359) ruft `clearGalleryImages()` nicht auf vor neuem Upload (synchroner Fallback)
-
-**Auswirkung:**
-- Galerie wächst kontinuierlich bei jeder erneuten Generierung
-- Alte Bilder bleiben erhalten und belegen Disk-Space
-- Performance-Beeinträchtigung durch unnötige Dateien
-
-### ⚠️ Risiken identifiziert:
-- **Risiko 10:** Galerie-Bilder-Akkumulation (siehe Risiken-Sektion, Zeile ~940)
 
 ### 📊 Performance-Status:
 - ✅ Queue-System implementiert (asynchron, keine Blockierung)
 - ✅ Polling mit Cleanup (verhindert Memory Leaks)
 - ✅ Lazy-Loading für Bilder
-- ⚠️ Galerie-Bilder-Akkumulation könnte Performance beeinträchtigen (siehe Risiko 10)
 
 ### 🔒 Sicherheit-Status:
 - ✅ Berechtigungen: Frontend und Backend prüfen korrekt

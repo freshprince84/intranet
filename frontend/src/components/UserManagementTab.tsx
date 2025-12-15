@@ -93,6 +93,9 @@ const UserManagementTab = (): JSX.Element => {
   // State für Active/Inactive Filter
   const [userFilterTab, setUserFilterTab] = useState<'active' | 'inactive'>('active');
   
+  // State für Dokument-Upload
+  const [isUploading, setIsUploading] = useState(false);
+  
   // State für Benutzererstellung
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 640);
