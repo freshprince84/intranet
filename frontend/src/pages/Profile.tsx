@@ -120,7 +120,10 @@ const Profile: React.FC = () => {
       user.id,
       async () => {
         await fetchUserProfile();
-        documentListRef.current?.loadDocuments();
+        // Lade Dokumente neu, wenn die Komponente gemountet ist
+        if (documentListRef.current) {
+          documentListRef.current.loadDocuments();
+        }
         showMessage(t('profile.documentUploadSuccess', { defaultValue: 'Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.' }), 'success');
         
         // Schließe Onboarding-Schritt ab, wenn aktiv

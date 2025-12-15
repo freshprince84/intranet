@@ -53,6 +53,9 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   const [existingFilters, setExistingFilters] = useState<{ id: number, name: string }[]>([]);
   
   useEffect(() => {
+    // ✅ PHASE 8: Memory Leak Prevention - AbortController
+    const abortController = new AbortController();
+    
     const fetchExistingFilters = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -62,16 +65,24 @@ const FilterPane: React.FC<FilterPaneProps> = ({
         }
         
         const response = await axiosInstance.get(
-          API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)
+          API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId),
+          { signal: abortController.signal }
         );
         
         setExistingFilters(response.data.map((filter: any) => ({ id: filter.id, name: filter.name })));
-      } catch (err) {
-        console.error(t('filter.loadError'), err);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error(t('filter.loadError'), err);
+        }
       }
     };
     
     fetchExistingFilters();
+    
+    // ✅ PHASE 8: Memory Leak Prevention - Cleanup
+    return () => {
+      abortController.abort();
+    };
   }, [tableId]);
   
   // Initialisiere Bedingungen und Operatoren nur wenn sich die Props von außen ändern
@@ -139,25 +150,6 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     if (conditions.length > 0) {
       setLogicalOperators([...logicalOperators, 'AND']);
     }
-  };
-  
-  const handleAddRangeConditions = (startCondition: FilterCondition, endCondition: FilterCondition) => {
-    // Ersetze die aktuelle Bedingung durch die Start-Bedingung
-    const currentIndex = conditions.length - 1;
-    const newConditions = [...conditions];
-    newConditions[currentIndex] = startCondition;
-    
-    // Füge die End-Bedingung hinzu
-    newConditions.push(endCondition);
-    setConditions(newConditions);
-    
-    // Füge AND-Operatoren hinzu
-    const newOperators = [...logicalOperators];
-    if (currentIndex > 0) {
-      newOperators[currentIndex - 1] = 'AND';
-    }
-    newOperators.push('AND');
-    setLogicalOperators(newOperators);
   };
   
   const handleDeleteCondition = (index: number) => {
@@ -264,7 +256,6 @@ const FilterPane: React.FC<FilterPaneProps> = ({
               columns={columns}
               isFirst={index === 0}
               isLast={index === conditions.length - 1}
-              onAddRangeConditions={handleAddRangeConditions}
             />
             
             {/* Operator zwischen Bedingungen einfügen (aber nicht nach der letzten) */}

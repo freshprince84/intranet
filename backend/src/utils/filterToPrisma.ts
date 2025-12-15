@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { Request } from 'express';
 import { isAdminOrOwner } from '../middleware/organization';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { logger } from './logger';
 
 /**
  * Filter-Bedingung (wie im Frontend verwendet)
@@ -510,85 +511,152 @@ function convertSingleCondition(
 
 /**
  * Konvertiert Datum-Bedingungen
- * @param value - Der Datumswert (Date, string oder '__TODAY__')
+ * @param value - Der Datumswert (Date, string oder '__TODAY__', '__THIS_WEEK__', etc.)
  * @param operator - Der Operator ('equals', 'before', 'after')
  * @param fieldName - Der Name des Feldes ('dueDate', 'checkInDate', 'checkOutDate', etc.)
  */
 function convertDateCondition(value: any, operator: string, fieldName: string = 'dueDate'): any {
-  // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__, __WEEK_START__, __WEEK_END__, __MONTH_START__, __MONTH_END__, __YEAR_START__, __YEAR_END__ dynamic dates
-  let dateValue: Date;
-  if (value === '__TODAY__') {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    dateValue = today;
-  } else if (value === '__TOMORROW__') {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    dateValue = tomorrow;
-  } else if (value === '__YESTERDAY__') {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-    dateValue = yesterday;
-  } else if (value === '__WEEK_START__') {
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-    weekStart.setHours(0, 0, 0, 0);
-    dateValue = weekStart;
-  } else if (value === '__WEEK_END__') {
-    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
-    weekEnd.setHours(23, 59, 59, 999);
-    dateValue = weekEnd;
-  } else if (value === '__MONTH_START__') {
-    const monthStart = startOfMonth(new Date());
-    monthStart.setHours(0, 0, 0, 0);
-    dateValue = monthStart;
-  } else if (value === '__MONTH_END__') {
-    const monthEnd = endOfMonth(new Date());
-    monthEnd.setHours(23, 59, 59, 999);
-    dateValue = monthEnd;
-  } else if (value === '__YEAR_START__') {
-    const yearStart = startOfYear(new Date());
-    yearStart.setHours(0, 0, 0, 0);
-    dateValue = yearStart;
-  } else if (value === '__YEAR_END__') {
-    const yearEnd = endOfYear(new Date());
-    yearEnd.setHours(23, 59, 59, 999);
-    dateValue = yearEnd;
-  } else {
-    dateValue = new Date(value);
-    if (isNaN(dateValue.getTime())) {
+  try {
+    // ✅ PHASE 1: Handle Zeitraum-Platzhalter (__THIS_WEEK__, __THIS_MONTH__, __THIS_YEAR__)
+    // Diese funktionieren analog zu __TODAY__, aber für Zeiträume
+    if (value === '__THIS_WEEK__') {
+      if (operator === 'equals') {
+        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+        weekEnd.setHours(23, 59, 59, 999);
+        return { [fieldName]: { gte: weekStart, lte: weekEnd } };
+      }
+      // Für andere Operatoren (before, after) verwende Woche als einzelnes Datum
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+      weekEnd.setHours(23, 59, 59, 999);
+      if (operator === 'before') {
+        return { [fieldName]: { lte: weekEnd } };
+      } else if (operator === 'after') {
+        return { [fieldName]: { gte: weekStart } };
+      }
+      return {};
+    } else if (value === '__THIS_MONTH__') {
+      if (operator === 'equals') {
+        const monthStart = startOfMonth(new Date());
+        monthStart.setHours(0, 0, 0, 0);
+        const monthEnd = endOfMonth(new Date());
+        monthEnd.setHours(23, 59, 59, 999);
+        return { [fieldName]: { gte: monthStart, lte: monthEnd } };
+      }
+      // Für andere Operatoren (before, after) verwende Monat als einzelnes Datum
+      const monthStart = startOfMonth(new Date());
+      monthStart.setHours(0, 0, 0, 0);
+      const monthEnd = endOfMonth(new Date());
+      monthEnd.setHours(23, 59, 59, 999);
+      if (operator === 'before') {
+        return { [fieldName]: { lte: monthEnd } };
+      } else if (operator === 'after') {
+        return { [fieldName]: { gte: monthStart } };
+      }
+      return {};
+    } else if (value === '__THIS_YEAR__') {
+      if (operator === 'equals') {
+        const yearStart = startOfYear(new Date());
+        yearStart.setHours(0, 0, 0, 0);
+        const yearEnd = endOfYear(new Date());
+        yearEnd.setHours(23, 59, 59, 999);
+        return { [fieldName]: { gte: yearStart, lte: yearEnd } };
+      }
+      // Für andere Operatoren (before, after) verwende Jahr als einzelnes Datum
+      const yearStart = startOfYear(new Date());
+      yearStart.setHours(0, 0, 0, 0);
+      const yearEnd = endOfYear(new Date());
+      yearEnd.setHours(23, 59, 59, 999);
+      if (operator === 'before') {
+        return { [fieldName]: { lte: yearEnd } };
+      } else if (operator === 'after') {
+        return { [fieldName]: { gte: yearStart } };
+      }
       return {};
     }
-  }
 
-  if (operator === 'equals') {
-    const startOfDay = new Date(dateValue);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(dateValue);
-    endOfDay.setHours(23, 59, 59, 999);
-    return { [fieldName]: { gte: startOfDay, lte: endOfDay } };
-  } else if (operator === 'before') {
-    // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende lte statt lt
-    // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
-    const isPlaceholder = typeof value === 'string' && (
-      value.startsWith('__') && value.endsWith('__')
-    );
-    return { [fieldName]: isPlaceholder ? { lte: dateValue } : { lt: dateValue } };
-  } else if (operator === 'after') {
-    // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende gte statt gt
-    // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
-    const isPlaceholder = typeof value === 'string' && (
-      value.startsWith('__') && value.endsWith('__')
-    );
-    return { [fieldName]: isPlaceholder ? { gte: dateValue } : { gt: dateValue } };
-  } else if (operator === 'gte' || operator === 'greaterThanOrEqual') {
-    return { [fieldName]: { gte: dateValue } };
-  } else if (operator === 'lte' || operator === 'lessThanOrEqual') {
-    return { [fieldName]: { lte: dateValue } };
-  }
+    // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__, __WEEK_START__, __WEEK_END__, __MONTH_START__, __MONTH_END__, __YEAR_START__, __YEAR_END__ dynamic dates
+    let dateValue: Date;
+    if (value === '__TODAY__') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      dateValue = today;
+    } else if (value === '__TOMORROW__') {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      dateValue = tomorrow;
+    } else if (value === '__YESTERDAY__') {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      dateValue = yesterday;
+    } else if (value === '__WEEK_START__') {
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      weekStart.setHours(0, 0, 0, 0);
+      dateValue = weekStart;
+    } else if (value === '__WEEK_END__') {
+      const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+      weekEnd.setHours(23, 59, 59, 999);
+      dateValue = weekEnd;
+    } else if (value === '__MONTH_START__') {
+      const monthStart = startOfMonth(new Date());
+      monthStart.setHours(0, 0, 0, 0);
+      dateValue = monthStart;
+    } else if (value === '__MONTH_END__') {
+      const monthEnd = endOfMonth(new Date());
+      monthEnd.setHours(23, 59, 59, 999);
+      dateValue = monthEnd;
+    } else if (value === '__YEAR_START__') {
+      const yearStart = startOfYear(new Date());
+      yearStart.setHours(0, 0, 0, 0);
+      dateValue = yearStart;
+    } else if (value === '__YEAR_END__') {
+      const yearEnd = endOfYear(new Date());
+      yearEnd.setHours(23, 59, 59, 999);
+      dateValue = yearEnd;
+    } else {
+      dateValue = new Date(value);
+      if (isNaN(dateValue.getTime())) {
+        return {};
+      }
+    }
 
-  return {};
+    if (operator === 'equals') {
+      const startOfDay = new Date(dateValue);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(dateValue);
+      endOfDay.setHours(23, 59, 59, 999);
+      return { [fieldName]: { gte: startOfDay, lte: endOfDay } };
+    } else if (operator === 'before') {
+      // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende lte statt lt
+      // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
+      const isPlaceholder = typeof value === 'string' && (
+        value.startsWith('__') && value.endsWith('__')
+      );
+      return { [fieldName]: isPlaceholder ? { lte: dateValue } : { lt: dateValue } };
+    } else if (operator === 'after') {
+      // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende gte statt gt
+      // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
+      const isPlaceholder = typeof value === 'string' && (
+        value.startsWith('__') && value.endsWith('__')
+      );
+      return { [fieldName]: isPlaceholder ? { gte: dateValue } : { gt: dateValue } };
+    } else if (operator === 'gte' || operator === 'greaterThanOrEqual') {
+      return { [fieldName]: { gte: dateValue } };
+    } else if (operator === 'lte' || operator === 'lessThanOrEqual') {
+      return { [fieldName]: { lte: dateValue } };
+    }
+
+    return {};
+  } catch (error) {
+    // ✅ PHASE 2: Error Handling für ungültige Platzhalter-Werte
+    logger.error(`[convertDateCondition] Error with placeholder ${value}:`, error);
+    return {}; // Fallback: Leere Bedingung
+  }
 }
 
 /**

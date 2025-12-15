@@ -23,7 +23,6 @@ interface FilterRowProps {
   columns: TableColumn[];
   isFirst: boolean;
   isLast: boolean;
-  onAddRangeConditions?: (startCondition: FilterCondition, endCondition: FilterCondition) => void;
 }
 
 // Neue Interfaces für Benutzer und Rollen
@@ -95,8 +94,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
   onAdd,
   columns, 
   isFirst,
-  isLast,
-  onAddRangeConditions
+  isLast
 }) => {
   const { t } = useTranslation();
   const [operators, setOperators] = useState<{ value: string; label: string }[]>([]);
@@ -117,6 +115,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
   
   // Laden der Benutzer, Rollen und Branches, wenn benötigt
   useEffect(() => {
+    // ✅ PHASE 8: Memory Leak Prevention - AbortController
+    const abortController = new AbortController();
+    
     const loadUsersAndRoles = async () => {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -126,14 +127,20 @@ const FilterRow: React.FC<FilterRowProps> = ({
         // Benutzer laden (nur aktive Benutzer)
         setLoadingUsers(true);
         try {
-          const response = await axiosInstance.get('/users/dropdown');
+          const response = await axiosInstance.get('/users/dropdown', {
+            signal: abortController.signal
+          });
           setUsers(response.data);
-        } catch (error) {
-          if (process.env.NODE_ENV === 'development') {
-          console.error('Fehler beim Laden der Benutzer:', error);
+        } catch (error: any) {
+          if (error.name !== 'AbortError') {
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error loading users:', error);
+            }
           }
         } finally {
-          setLoadingUsers(false);
+          if (!abortController.signal.aborted) {
+            setLoadingUsers(false);
+          }
         }
         
         // Tabellen-Typ erkennen (wie bei Status-Dropdown)
@@ -147,14 +154,20 @@ const FilterRow: React.FC<FilterRowProps> = ({
         if ((condition.column === 'responsible' || condition.column === 'responsibleAndQualityControl') && isTaskTable) {
           setLoadingRoles(true);
           try {
-            const response = await axiosInstance.get('/roles');
+            const response = await axiosInstance.get('/roles', {
+              signal: abortController.signal
+            });
             setRoles(response.data);
-          } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
-            console.error('Fehler beim Laden der Rollen:', error);
+          } catch (error: any) {
+            if (error.name !== 'AbortError') {
+              if (process.env.NODE_ENV === 'development') {
+                console.error('Error loading roles:', error);
+              }
             }
           } finally {
-            setLoadingRoles(false);
+            if (!abortController.signal.aborted) {
+              setLoadingRoles(false);
+            }
           }
         }
       }
@@ -163,14 +176,20 @@ const FilterRow: React.FC<FilterRowProps> = ({
       if (condition.column === 'branch') {
         setLoadingBranches(true);
         try {
-          const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
+          const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE, {
+            signal: abortController.signal
+          });
           setBranches(response.data);
-        } catch (error) {
-          if (process.env.NODE_ENV === 'development') {
-          console.error('Fehler beim Laden der Branches:', error);
+        } catch (error: any) {
+          if (error.name !== 'AbortError') {
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error loading branches:', error);
+            }
           }
         } finally {
-          setLoadingBranches(false);
+          if (!abortController.signal.aborted) {
+            setLoadingBranches(false);
+          }
         }
       }
       
@@ -181,7 +200,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
           // Hole alle Reservations und extrahiere eindeutige Zimmernamen
           // Dorms: roomDescription = Zimmername, roomNumber = Bettnummer
           // Privates: roomNumber = Zimmername, roomDescription = optional
-          const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE);
+          const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE, {
+            signal: abortController.signal
+          });
           const reservations = response.data?.data || response.data || [];
           
           // Kombiniere roomDescription (Dorms) und roomNumber (Privates) zu Zimmernamen
@@ -199,17 +220,26 @@ const FilterRow: React.FC<FilterRowProps> = ({
           
           const uniqueRoomNames = Array.from(roomNames).sort();
           setRoomNumbers(uniqueRoomNames);
-        } catch (error) {
-          if (process.env.NODE_ENV === 'development') {
-          console.error('Fehler beim Laden der Zimmernamen:', error);
+        } catch (error: any) {
+          if (error.name !== 'AbortError') {
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error loading room numbers:', error);
+            }
           }
         } finally {
-          setLoadingRoomNumbers(false);
+          if (!abortController.signal.aborted) {
+            setLoadingRoomNumbers(false);
+          }
         }
       }
     };
     
     loadUsersAndRoles();
+    
+    // ✅ PHASE 8: Memory Leak Prevention - Cleanup
+    return () => {
+      abortController.abort();
+    };
   }, [condition.column]);
   
   // Rendert das Eingabefeld basierend auf Spalte und Operator
@@ -484,8 +514,10 @@ const FilterRow: React.FC<FilterRowProps> = ({
     
     // Für Datumsfelder ein Datumseingabefeld rendern
     if (columnId === 'dueDate' || columnId === 'startTime' || columnId === 'checkInDate' || columnId === 'checkOutDate' || columnId === 'arrivalTime' || columnId === 'time') {
-      // Prüfe ob der Wert ein Platzhalter ist
-      const isPlaceholder = value === '__TODAY__' || value === '__WEEK_START__' || value === '__WEEK_END__' || 
+      // ✅ PHASE 6: Prüfe ob der Wert ein Platzhalter ist (inkl. neue Zeitraum-Platzhalter)
+      const isPlaceholder = value === '__TODAY__' || 
+                            value === '__THIS_WEEK__' || value === '__THIS_MONTH__' || value === '__THIS_YEAR__' ||
+                            value === '__WEEK_START__' || value === '__WEEK_END__' || 
                             value === '__MONTH_START__' || value === '__MONTH_END__' || 
                             value === '__YEAR_START__' || value === '__YEAR_END__';
       const isCustomDate = !isPlaceholder && value;
@@ -493,9 +525,13 @@ const FilterRow: React.FC<FilterRowProps> = ({
       // Bestimme den aktuellen Platzhalter-Typ
       let placeholderType = 'custom';
       if (value === '__TODAY__') placeholderType = 'today';
-      else if (value === '__WEEK_START__' || value === '__WEEK_END__') placeholderType = 'week';
-      else if (value === '__MONTH_START__' || value === '__MONTH_END__') placeholderType = 'month';
-      else if (value === '__YEAR_START__' || value === '__YEAR_END__') placeholderType = 'year';
+      else if (value === '__THIS_WEEK__') placeholderType = 'thisWeek';
+      else if (value === '__THIS_MONTH__') placeholderType = 'thisMonth';
+      else if (value === '__THIS_YEAR__') placeholderType = 'thisYear';
+      // Fallback für alte Platzhalter (für Rückwärtskompatibilität)
+      else if (value === '__WEEK_START__' || value === '__WEEK_END__') placeholderType = 'thisWeek';
+      else if (value === '__MONTH_START__' || value === '__MONTH_END__') placeholderType = 'thisMonth';
+      else if (value === '__YEAR_START__' || value === '__YEAR_END__') placeholderType = 'thisYear';
       
       return (
         <div className="space-y-2">
@@ -507,61 +543,16 @@ const FilterRow: React.FC<FilterRowProps> = ({
               const selectedType = e.target.value;
               
               if (selectedType === 'today') {
-                onChange({ ...condition, value: '__TODAY__' });
-              } else if (selectedType === 'week') {
-                // Erstelle zwei Bedingungen für "Diese Woche"
-                if (onAddRangeConditions) {
-                  const startCondition: FilterCondition = {
-                    column: columnId,
-                    operator: 'after',
-                    value: '__WEEK_START__'
-                  };
-                  const endCondition: FilterCondition = {
-                    column: columnId,
-                    operator: 'before',
-                    value: '__WEEK_END__'
-                  };
-                  onAddRangeConditions(startCondition, endCondition);
-                } else {
-                  // Fallback: Setze nur Start-Wert
-                  onChange({ ...condition, value: '__WEEK_START__' });
-                }
-              } else if (selectedType === 'month') {
-                // Erstelle zwei Bedingungen für "Dieser Monat"
-                if (onAddRangeConditions) {
-                  const startCondition: FilterCondition = {
-                    column: columnId,
-                    operator: 'after',
-                    value: '__MONTH_START__'
-                  };
-                  const endCondition: FilterCondition = {
-                    column: columnId,
-                    operator: 'before',
-                    value: '__MONTH_END__'
-                  };
-                  onAddRangeConditions(startCondition, endCondition);
-                } else {
-                  // Fallback: Setze nur Start-Wert
-                  onChange({ ...condition, value: '__MONTH_START__' });
-                }
-              } else if (selectedType === 'year') {
-                // Erstelle zwei Bedingungen für "Dieses Jahr"
-                if (onAddRangeConditions) {
-                  const startCondition: FilterCondition = {
-                    column: columnId,
-                    operator: 'after',
-                    value: '__YEAR_START__'
-                  };
-                  const endCondition: FilterCondition = {
-                    column: columnId,
-                    operator: 'before',
-                    value: '__YEAR_END__'
-                  };
-                  onAddRangeConditions(startCondition, endCondition);
-                } else {
-                  // Fallback: Setze nur Start-Wert
-                  onChange({ ...condition, value: '__YEAR_START__' });
-                }
+                onChange({ ...condition, value: '__TODAY__', operator: 'equals' });
+              } else if (selectedType === 'thisWeek') {
+                // ✅ PHASE 6: Eine einzige Bedingung mit __THIS_WEEK__
+                onChange({ ...condition, value: '__THIS_WEEK__', operator: 'equals' });
+              } else if (selectedType === 'thisMonth') {
+                // ✅ PHASE 6: Eine einzige Bedingung mit __THIS_MONTH__
+                onChange({ ...condition, value: '__THIS_MONTH__', operator: 'equals' });
+              } else if (selectedType === 'thisYear') {
+                // ✅ PHASE 6: Eine einzige Bedingung mit __THIS_YEAR__
+                onChange({ ...condition, value: '__THIS_YEAR__', operator: 'equals' });
               } else {
                 // Benutzerdefiniert: Leere den Wert
                 onChange({ ...condition, value: '' });
@@ -570,9 +561,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
           >
             <option value="custom">{t('filter.row.placeholders.custom', { defaultValue: 'Benutzerdefiniert' })}</option>
             <option value="today">{t('filter.row.placeholders.today', { defaultValue: 'Heute' })}</option>
-            <option value="week">{t('filter.row.placeholders.thisWeek', { defaultValue: 'Diese Woche' })}</option>
-            <option value="month">{t('filter.row.placeholders.thisMonth', { defaultValue: 'Dieser Monat' })}</option>
-            <option value="year">{t('filter.row.placeholders.thisYear', { defaultValue: 'Dieses Jahr' })}</option>
+            <option value="thisWeek">{t('filter.row.placeholders.thisWeek', { defaultValue: 'Diese Woche' })}</option>
+            <option value="thisMonth">{t('filter.row.placeholders.thisMonth', { defaultValue: 'Dieser Monat' })}</option>
+            <option value="thisYear">{t('filter.row.placeholders.thisYear', { defaultValue: 'Dieses Jahr' })}</option>
           </select>
           
           {/* Datum-Input nur anzeigen wenn nicht Platzhalter */}

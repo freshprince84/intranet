@@ -449,7 +449,7 @@ Genau wie `__TODAY__` funktioniert, sollen auch Zeiträume als **eine einzige Fi
 - Keine Caching nötig (Date-Berechnungen sind trivial)
 - `useMemo` für gefilterte Daten bereits vorhanden (TodoAnalyticsTab.tsx Zeile 369)
 
-## Code-Standards (VIBES.md)
+## Code-Standards (VIBES.md, CODING_STANDARDS.md)
 
 ### DRY (Don't Repeat Yourself)
 
@@ -484,7 +484,7 @@ Genau wie `__TODAY__` funktioniert, sollen auch Zeiträume als **eine einzige Fi
        }
        // ... other placeholders ...
      } catch (error) {
-       logger.error(`[convertDateCondition] Fehler bei Platzhalter ${value}:`, error);
+       logger.error(`[convertDateCondition] Error with placeholder ${value}:`, error);
        return {}; // Fallback: Leere Bedingung
      }
    }
@@ -498,6 +498,110 @@ Genau wie `__TODAY__` funktioniert, sollen auch Zeiträume als **eine einzige Fi
 - Alle neuen Platzhalter sind String-Literale
 - Funktionen sind vollständig typisiert
 - Keine `any` Types (außer für Prisma Where-Klauseln, wie bereits vorhanden)
+
+### Import-Pfade
+
+**Status:** ✅ Prüfen und korrigieren
+
+**Regeln:**
+- **Frontend:** Import-Pfade MÜSSEN `.ts`/`.tsx` Endung haben
+- **Backend:** Import-Pfade DÜRFEN KEINE `.ts` Endung haben
+
+**Dateien zu prüfen:**
+- `frontend/src/components/FilterRow.tsx` - Alle Imports prüfen
+- `frontend/src/components/FilterPane.tsx` - Alle Imports prüfen
+- `frontend/src/components/teamWorktime/TodoAnalyticsTab.tsx` - Alle Imports prüfen
+- `frontend/src/components/teamWorktime/RequestAnalyticsTab.tsx` - Alle Imports prüfen
+- `frontend/src/utils/filterLogic.ts` - Alle Imports prüfen
+
+**Beispiel:**
+```typescript
+// ✅ RICHTIG (Frontend)
+import FilterPane from '../FilterPane.tsx';
+import { FilterCondition } from '../FilterRow.tsx';
+import { applyFilters } from '../utils/filterLogic.ts';
+
+// ❌ FALSCH (Frontend)
+import FilterPane from '../FilterPane';
+import { FilterCondition } from '../FilterRow';
+import { applyFilters } from '../utils/filterLogic';
+```
+
+### Console-Logging
+
+**Status:** ❌ Korrektur erforderlich
+
+**Regel:** Alle `console.log`, `console.error`, `console.warn` MÜSSEN Englisch sein (nicht Deutsch!)
+
+**Dateien zu korrigieren:**
+- `frontend/src/components/teamWorktime/TodoAnalyticsTab.tsx`:
+  - Zeile 218: `console.error('Fehler beim Laden der To-Dos:', error);` → `console.error('Error loading todos:', error);`
+  - Zeile 244: `console.error('Fehler beim Laden der Häufigkeitsanalyse:', error);` → `console.error('Error loading frequency analysis:', error);`
+  - Zeile 270: `console.error('Fehler beim Laden der Schicht-Analyse:', error);` → `console.error('Error loading shift analysis:', error);`
+- `frontend/src/components/teamWorktime/RequestAnalyticsTab.tsx`:
+  - Zeile 187: `console.error('Fehler beim Laden der Requests:', error);` → `console.error('Error loading requests:', error);`
+
+**Begründung:** Entwickler-Logging sollte immer Englisch sein für bessere Lesbarkeit und Konsistenz.
+
+### Button-Design
+
+**Status:** ✅ Prüfen
+
+**Regel:** Alle Buttons MÜSSEN Icon-only sein (OHNE sichtbaren Text). Text gehört NUR ins `title` Attribut für Tooltips.
+
+**Dateien zu prüfen:**
+- `frontend/src/components/FilterRow.tsx` - Alle Buttons prüfen
+- `frontend/src/components/FilterPane.tsx` - Alle Buttons prüfen
+- `frontend/src/components/teamWorktime/TodoAnalyticsTab.tsx` - Alle Buttons prüfen
+- `frontend/src/components/teamWorktime/RequestAnalyticsTab.tsx` - Alle Buttons prüfen
+
+**Standard-Button-Style:**
+```tsx
+// ✅ RICHTIG: Icon-only Button
+<button
+  onClick={handleAction}
+  className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+  title={t('action.description', { defaultValue: 'Beschreibung' })}
+>
+  <CheckIcon className="h-4 w-4" />
+</button>
+
+// ❌ FALSCH: Button mit Text
+<button onClick={handleAction} className="px-2 py-1 bg-blue-600 text-white rounded">
+  {t('action.description')}
+</button>
+```
+
+### Container-Strukturen
+
+**Status:** ✅ Prüfen
+
+**Regel:** Alle Seiten müssen der Standard-Seitenstruktur entsprechen (siehe `docs/claude/docs/container-structures.md`).
+
+**Standard-Seitenstruktur:**
+```tsx
+<div className="min-h-screen dark:bg-gray-900">
+  <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
+    {/* Seiteninhalt */}
+  </div>
+</div>
+```
+
+**Standard-Box-Struktur:**
+```tsx
+<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+  {/* Box-Inhalt */}
+</div>
+```
+
+**Dateien zu prüfen:**
+- `frontend/src/pages/TeamWorktimeControl.tsx` - Container-Struktur prüfen
+- `frontend/src/components/teamWorktime/TodoAnalyticsTab.tsx` - Box-Struktur prüfen (falls vorhanden)
+- `frontend/src/components/teamWorktime/RequestAnalyticsTab.tsx` - Box-Struktur prüfen (falls vorhanden)
+
+**Wichtig:**
+- Seitenhintergründe sind IMMER einfarbig (`bg-white dark:bg-gray-900`), KEINE Gradienten!
+- Boxen haben IMMER `border border-gray-300 dark:border-gray-700`, KEIN `shadow`!
 
 ## Zusätzliche Änderungen
 
@@ -528,6 +632,68 @@ Genau wie `__TODAY__` funktioniert, sollen auch Zeiträume als **eine einzige Fi
    - Try/Catch Block für Platzhalter-Evaluierung
    - Fallback: `false` bei Fehlern (Filter schließt Datensatz aus)
 
+### Phase 11: Frontend - Console-Logging korrigieren
+
+**Dateien:**
+- `frontend/src/components/teamWorktime/TodoAnalyticsTab.tsx`
+- `frontend/src/components/teamWorktime/RequestAnalyticsTab.tsx`
+
+1. **Deutsche Console-Messages → Englisch:**
+   - `console.error('Fehler beim Laden der To-Dos:', error);` → `console.error('Error loading todos:', error);`
+   - `console.error('Fehler beim Laden der Häufigkeitsanalyse:', error);` → `console.error('Error loading frequency analysis:', error);`
+   - `console.error('Fehler beim Laden der Schicht-Analyse:', error);` → `console.error('Error loading shift analysis:', error);`
+   - `console.error('Fehler beim Laden der Requests:', error);` → `console.error('Error loading requests:', error);`
+
+**Begründung:** Entwickler-Logging muss immer Englisch sein (CODING_STANDARDS.md).
+
+### Phase 12: Frontend - Import-Pfade prüfen und korrigieren
+
+**Dateien:**
+- `frontend/src/components/FilterRow.tsx`
+- `frontend/src/components/FilterPane.tsx`
+- `frontend/src/components/teamWorktime/TodoAnalyticsTab.tsx`
+- `frontend/src/components/teamWorktime/RequestAnalyticsTab.tsx`
+- `frontend/src/utils/filterLogic.ts`
+
+1. **Alle Imports prüfen:**
+   - Frontend-Imports MÜSSEN `.ts`/`.tsx` Endung haben
+   - Beispiel: `import FilterPane from '../FilterPane.tsx';` (nicht `'../FilterPane'`)
+
+**Begründung:** Frontend-Import-Standard (CODING_STANDARDS.md).
+
+### Phase 13: Frontend - Button-Design prüfen
+
+**Dateien:**
+- `frontend/src/components/FilterRow.tsx`
+- `frontend/src/components/FilterPane.tsx`
+- `frontend/src/components/teamWorktime/TodoAnalyticsTab.tsx`
+- `frontend/src/components/teamWorktime/RequestAnalyticsTab.tsx`
+
+1. **Alle Buttons prüfen:**
+   - Buttons MÜSSEN Icon-only sein (kein sichtbarer Text)
+   - Text gehört NUR ins `title` Attribut für Tooltips
+   - Passende Icons verwenden (CheckIcon, XMarkIcon, TrashIcon, etc.)
+
+**Begründung:** Button-Design-Standard (CODING_STANDARDS.md, DESIGN_STANDARDS.md).
+
+### Phase 14: Frontend - Container-Strukturen prüfen
+
+**Dateien:**
+- `frontend/src/pages/TeamWorktimeControl.tsx`
+- `frontend/src/components/teamWorktime/TodoAnalyticsTab.tsx` (falls Box-Struktur vorhanden)
+- `frontend/src/components/teamWorktime/RequestAnalyticsTab.tsx` (falls Box-Struktur vorhanden)
+
+1. **Seitenstruktur prüfen:**
+   - Äußerer Wrapper: `min-h-screen dark:bg-gray-900`
+   - Container: `max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6`
+   - Hintergrund IMMER einfarbig (keine Gradienten!)
+
+2. **Box-Struktur prüfen:**
+   - Boxen: `bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6`
+   - KEIN `shadow` auf Boxen (nur `border`!)
+
+**Begründung:** Container-Struktur-Standard (container-structures.md, DESIGN_STANDARDS.md).
+
 ## Implementierungsreihenfolge (aktualisiert)
 
 1. **Backend:** Neue Platzhalter in `convertDateCondition` (`__THIS_WEEK__`, `__THIS_MONTH__`, `__THIS_YEAR__`)
@@ -538,9 +704,13 @@ Genau wie `__TODAY__` funktioniert, sollen auch Zeiträume als **eine einzige Fi
 6. **Frontend:** `FilterRow.tsx` anpassen (Dropdown, entfernen von `onAddRangeConditions`)
 7. **Frontend:** `FilterPane.tsx` anpassen (entfernen von `handleAddRangeConditions`)
 8. **Frontend:** Memory Leak Prevention (AbortController in allen useEffect Hooks)
-9. **Seed:** Filter ändern (von zwei Bedingungen zu einer Bedingung)
-10. **Übersetzungen:** Neue Schlüssel hinzufügen
-11. **Dokumentation:** Aktualisieren
+9. **Frontend:** Console-Logging korrigieren (Deutsch → Englisch)
+10. **Frontend:** Import-Pfade prüfen und korrigieren (Frontend: mit .ts/.tsx)
+11. **Frontend:** Button-Design prüfen (Icon-only, kein Text)
+12. **Frontend:** Container-Strukturen prüfen (Standard-Seitenstruktur)
+13. **Seed:** Filter ändern (von zwei Bedingungen zu einer Bedingung)
+14. **Übersetzungen:** Neue Schlüssel hinzufügen
+15. **Dokumentation:** Aktualisieren
 
 ## Testing (erweitert)
 
@@ -551,11 +721,16 @@ Genau wie `__TODAY__` funktioniert, sollen auch Zeiträume als **eine einzige Fi
 5. **Frontend:** Filter-Logik funktioniert mit allen Platzhaltern
 6. **Frontend:** Error Handling funktioniert bei ungültigen Platzhaltern
 7. **Frontend:** Memory Leaks verhindert (AbortController funktioniert)
-8. **Seed:** Filter enthalten eine einzige Bedingung mit `__THIS_WEEK__`
-9. **Analytics-Tabs:** Resultate werden korrekt angezeigt (auch für gelöschte Tasks/Requests und Status-Änderungen)
-10. **Rückwärtskompatibilität:** Bestehende Filter mit `__TODAY__` funktionieren weiterhin
-11. **Performance:** Keine Performance-Beeinträchtigung (gemessen)
-12. **Berechtigungen:** Analytics-Endpoints sind geschützt (getestet)
+8. **Frontend:** Console-Logging ist Englisch (keine deutschen Messages)
+9. **Frontend:** Import-Pfade korrekt (Frontend: mit .ts/.tsx, Backend: ohne)
+10. **Frontend:** Buttons sind Icon-only (kein sichtbarer Text)
+11. **Frontend:** Container-Strukturen entsprechen Standards
+12. **Seed:** Filter enthalten eine einzige Bedingung mit `__THIS_WEEK__`
+13. **Analytics-Tabs:** Resultate werden korrekt angezeigt (auch für gelöschte Tasks/Requests und Status-Änderungen)
+14. **Rückwärtskompatibilität:** Bestehende Filter mit `__TODAY__` funktionieren weiterhin
+15. **Performance:** Keine Performance-Beeinträchtigung (gemessen)
+16. **Berechtigungen:** Analytics-Endpoints sind geschützt (getestet)
+17. **Übersetzungen:** Alle neuen Texte sind in de.json, en.json, es.json vorhanden
 
 ## Offene Fragen
 

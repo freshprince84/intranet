@@ -184,6 +184,9 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
 
   // Lade To-Dos
   useEffect(() => {
+    // ✅ PHASE 8: Memory Leak Prevention - AbortController
+    const abortController = new AbortController();
+    
     const fetchTodos = async () => {
       try {
         setLoading(true);
@@ -210,23 +213,36 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         }
         
         const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ANALYTICS.TODOS_CHRONOLOGICAL, {
-          params
+          params,
+          signal: abortController.signal
         });
         
         setTodos(response.data || []);
-      } catch (error) {
-        console.error('Fehler beim Laden der To-Dos:', error);
-        setError(t('analytics.todo.loadError'));
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Error loading todos:', error);
+          setError(t('analytics.todo.loadError'));
+        }
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchTodos();
+    
+    // ✅ PHASE 8: Memory Leak Prevention - Cleanup
+    return () => {
+      abortController.abort();
+    };
   }, [selectedDate, filterConditions, filterLogicalOperators, selectedFilterId]);
 
   // Lade Häufigkeitsanalyse
   useEffect(() => {
+    // ✅ PHASE 8: Memory Leak Prevention - AbortController
+    const abortController = new AbortController();
+    
     const fetchFrequencyAnalysis = async () => {
       if (!selectedDate || !showFrequencyAnalysis) return;
       
@@ -236,23 +252,36 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ANALYTICS.TODOS_FREQUENCY, {
           params: {
             date: selectedDate
-          }
+          },
+          signal: abortController.signal
         });
         
         setFrequencyData(response.data);
-      } catch (error) {
-        console.error('Fehler beim Laden der Häufigkeitsanalyse:', error);
-        // Kein setError hier, da nicht kritisch
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Error loading frequency analysis:', error);
+          // Kein setError hier, da nicht kritisch
+        }
       } finally {
-        setLoadingFrequency(false);
+        if (!abortController.signal.aborted) {
+          setLoadingFrequency(false);
+        }
       }
     };
 
     fetchFrequencyAnalysis();
+    
+    // ✅ PHASE 8: Memory Leak Prevention - Cleanup
+    return () => {
+      abortController.abort();
+    };
   }, [selectedDate, showFrequencyAnalysis]);
 
   // Lade Schicht-Analyse
   useEffect(() => {
+    // ✅ PHASE 8: Memory Leak Prevention - AbortController
+    const abortController = new AbortController();
+    
     const fetchShiftAnalysis = async () => {
       if (!selectedDate || !showShiftAnalysis) return;
       
@@ -262,19 +291,29 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ANALYTICS.TODOS_SHIFTS, {
           params: {
             date: selectedDate
-          }
+          },
+          signal: abortController.signal
         });
         
         setShiftData(response.data);
-      } catch (error) {
-        console.error('Fehler beim Laden der Schicht-Analyse:', error);
-        // Kein setError hier, da nicht kritisch
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('Error loading shift analysis:', error);
+          // Kein setError hier, da nicht kritisch
+        }
       } finally {
-        setLoadingShifts(false);
+        if (!abortController.signal.aborted) {
+          setLoadingShifts(false);
+        }
       }
     };
 
     fetchShiftAnalysis();
+    
+    // ✅ PHASE 8: Memory Leak Prevention - Cleanup
+    return () => {
+      abortController.abort();
+    };
   }, [selectedDate, showShiftAnalysis]);
 
   // Filter-Handler
