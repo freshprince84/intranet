@@ -109,6 +109,37 @@ const Profile: React.FC = () => {
     }
   }, [authUser]);
 
+  const handleDirectDocumentUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    if (!user) return;
+    
+    setIsUploading(true);
+    
+    const result = await handleDirectDocumentUpload(
+      e.target.files[0],
+      user.id,
+      async () => {
+        await fetchUserProfile();
+        documentListRef.current?.loadDocuments();
+        showMessage(t('profile.documentUploadSuccess', { defaultValue: 'Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.' }), 'success');
+        
+        // Schließe Onboarding-Schritt ab, wenn aktiv
+        try {
+          await completeStep('upload_identification_document', t('onboarding.steps.upload_identification_document.title') || 'Dokument hochladen');
+        } catch (error) {
+          // Fehler beim Abschließen blockiert nicht den Upload
+          console.error('Fehler beim Abschließen des upload_identification_document Schritts:', error);
+        }
+      },
+      (error) => {
+        showMessage(error, 'error');
+      }
+    );
+    
+    setIsUploading(false);
+    e.target.value = '';
+  };
+
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('token');

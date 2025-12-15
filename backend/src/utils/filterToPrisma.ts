@@ -569,9 +569,23 @@ function convertDateCondition(value: any, operator: string, fieldName: string = 
     endOfDay.setHours(23, 59, 59, 999);
     return { [fieldName]: { gte: startOfDay, lte: endOfDay } };
   } else if (operator === 'before') {
-    return { [fieldName]: { lt: dateValue } };
+    // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende lte statt lt
+    // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
+    const isPlaceholder = typeof value === 'string' && (
+      value.startsWith('__') && value.endsWith('__')
+    );
+    return { [fieldName]: isPlaceholder ? { lte: dateValue } : { lt: dateValue } };
   } else if (operator === 'after') {
-    return { [fieldName]: { gt: dateValue } };
+    // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende gte statt gt
+    // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
+    const isPlaceholder = typeof value === 'string' && (
+      value.startsWith('__') && value.endsWith('__')
+    );
+    return { [fieldName]: isPlaceholder ? { gte: dateValue } : { gt: dateValue } };
+  } else if (operator === 'gte' || operator === 'greaterThanOrEqual') {
+    return { [fieldName]: { gte: dateValue } };
+  } else if (operator === 'lte' || operator === 'lessThanOrEqual') {
+    return { [fieldName]: { lte: dateValue } };
   }
 
   return {};

@@ -116,7 +116,9 @@ const RoomDescriptionsSection: React.FC<RoomDescriptionsSectionProps> = ({ branc
         { roomDescriptions: updatedDescriptions }
       );
       
-      setRoomDescriptions(updatedDescriptions);
+      // Lade Daten neu vom Backend, um sicherzustellen, dass sie korrekt gespeichert wurden
+      await loadRoomDescriptions();
+      
       setEditingCategoryId(null);
       setEditForm({ text: '', imageUrl: '', videoUrl: '' });
     } catch (error: any) {

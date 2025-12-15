@@ -428,7 +428,7 @@ export const createBranch = async (req: Request, res: Response) => {
 export const updateBranch = async (req: Request, res: Response) => {
     try {
         const branchId = parseInt(req.params.id, 10);
-        const { name, whatsappSettings, lobbyPmsSettings, boldPaymentSettings, doorSystemSettings, emailSettings, messageTemplates, autoSendReservationInvitation } = req.body;
+        const { name, address, city, country, whatsappSettings, lobbyPmsSettings, boldPaymentSettings, doorSystemSettings, emailSettings, messageTemplates, autoSendReservationInvitation } = req.body;
 
         if (isNaN(branchId)) {
             return res.status(400).json({ message: 'Ungültige Niederlassungs-ID' });
@@ -534,6 +534,17 @@ export const updateBranch = async (req: Request, res: Response) => {
         const updateData: any = {
             name: name.trim()
         };
+
+        // Adress-Felder
+        if (address !== undefined) {
+            updateData.address = address && address.trim() ? address.trim() : null;
+        }
+        if (city !== undefined) {
+            updateData.city = city && city.trim() ? city.trim() : null;
+        }
+        if (country !== undefined) {
+            updateData.country = country && country.trim() ? country.trim() : null;
+        }
 
         if (whatsappSettings !== undefined) {
             updateData.whatsappSettings = encryptedWhatsAppSettings;
@@ -796,24 +807,47 @@ export const updateRoomDescriptions = async (req: Request, res: Response) => {
         }
 
         // Lade bestehende lobbyPmsSettings
-        let lobbyPmsSettings: any = {};
+        let decryptedSettings: any = {};
         if (branch.lobbyPmsSettings) {
             try {
                 const { decryptBranchApiSettings } = await import('../utils/encryption');
-                const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
-                lobbyPmsSettings = decryptedSettings?.lobbyPms || decryptedSettings || {};
+                decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
             } catch (error) {
                 logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
-                lobbyPmsSettings = {};
+                decryptedSettings = {};
             }
+        }
+
+        // Stelle sicher, dass die Struktur korrekt ist
+        let lobbyPmsSettings: any = decryptedSettings?.lobbyPms || decryptedSettings || {};
+        if (decryptedSettings?.lobbyPms) {
+            // Struktur ist { lobbyPms: { ... } }
+            lobbyPmsSettings = decryptedSettings.lobbyPms;
+        } else {
+            // Struktur ist direkt { ... }
+            lobbyPmsSettings = decryptedSettings;
         }
 
         // Aktualisiere roomDescriptions
         lobbyPmsSettings.roomDescriptions = roomDescriptions;
 
-        // Verschlüssele und speichere
+        // Verschlüssele und speichere - behalte die ursprüngliche Struktur bei
         const { encryptBranchApiSettings } = await import('../utils/encryption');
-        const encryptedSettings = encryptBranchApiSettings(lobbyPmsSettings);
+        let encryptedSettings: any;
+        if (decryptedSettings?.lobbyPms) {
+            // Struktur war { lobbyPms: { ... } }, behalte sie bei
+            const updatedDecryptedSettings = {
+                ...decryptedSettings,
+                lobbyPms: {
+                    ...decryptedSettings.lobbyPms,
+                    roomDescriptions
+                }
+            };
+            encryptedSettings = encryptBranchApiSettings(updatedDecryptedSettings);
+        } else {
+            // Struktur war direkt { ... }
+            encryptedSettings = encryptBranchApiSettings(lobbyPmsSettings);
+        }
 
         await prisma.branch.update({
             where: { id: branchId },

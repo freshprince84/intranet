@@ -235,6 +235,28 @@ const UserManagementTab = (): JSX.Element => {
     }
   };
 
+  const handleDirectDocumentUploadWrapper = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    if (!selectedUser) return;
+    
+    setIsUploading(true);
+    
+    const result = await handleDirectDocumentUpload(
+      e.target.files[0],
+      selectedUser.id,
+      async () => {
+        await fetchUserDetails(selectedUser.id);
+        showMessage(t('profile.documentUploadSuccess', { defaultValue: 'Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.' }), 'success');
+      },
+      (error) => {
+        showMessage(error, 'error');
+      }
+    );
+    
+    setIsUploading(false);
+    e.target.value = '';
+  };
+
   // Detaillierte Benutzerdaten laden
   const fetchUserDetails = async (userId: number) => {
     try {

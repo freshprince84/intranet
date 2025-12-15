@@ -111,6 +111,17 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   // Gruppen-Dropdown States (pro Gruppe)
   const [openGroupDropdowns, setOpenGroupDropdowns] = useState<Set<number>>(new Set());
   
+  // Refs für Gruppen-Dropdowns (für Click-Outside Detection)
+  const groupDropdownRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  const setGroupDropdownRef = (groupId: number, element: HTMLDivElement | null) => {
+    if (element) {
+      groupDropdownRefs.current.set(groupId, element);
+    } else {
+      groupDropdownRefs.current.delete(groupId);
+    }
+  };
+  
   // Gruppen-Umbenennung States
   const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
   const [editingGroupName, setEditingGroupName] = useState<string>('');
@@ -231,6 +242,33 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isDropdownOpen]);
+
+  // Click-Outside Handler für Gruppen-Dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Prüfe alle offenen Gruppen-Dropdowns
+      const clickedOutsideAll = Array.from(openGroupDropdowns).every(groupId => {
+        const dropdownElement = groupDropdownRefs.current.get(groupId);
+        if (!dropdownElement) return true;
+        
+        // Prüfe ob Klick innerhalb des Dropdown-Containers oder des Buttons
+        const buttonElement = (event.target as Element).closest(`[data-group-id="${groupId}"]`);
+        return !dropdownElement.contains(event.target as Node) && !buttonElement;
+      });
+
+      if (clickedOutsideAll && openGroupDropdowns.size > 0) {
+        setOpenGroupDropdowns(new Set());
+      }
+    };
+
+    if (openGroupDropdowns.size > 0) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openGroupDropdowns]);
   
   // Wähle einen gespeicherten Filter aus
   const handleSelectFilter = (filter: SavedFilter) => {
@@ -894,6 +932,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           <div key={group.id} className="relative flex-shrink-0">
             <div className="relative group">
               <button
+                data-group-id={group.id}
                 onClick={() => toggleGroupDropdown(group.id)}
                 onDragOver={(e) => handleDragOver(e, group.id, 'group')}
                 onDrop={(e) => handleDrop(e, group.id, 'group')}
@@ -913,7 +952,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             
             {/* Gruppen-Dropdown */}
             {openGroupDropdowns.has(group.id) && (
-              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 min-w-[200px]">
+              <div 
+                ref={(el) => setGroupDropdownRef(group.id, el)}
+                className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-[100] min-w-[200px]"
+              >
                 {group.filters.map(filter => (
                   <div
                     key={filter.id}
