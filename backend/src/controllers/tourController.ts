@@ -289,8 +289,6 @@ export const createTour = async (req: AuthenticatedRequest, res: Response) => {
         message: getTourErrorText(language, 'noPermissionCreate')
       });
     }
-
-    const userId = parseInt(req.userId, 10);
     const organizationId = (req as any).organizationId;
     const branchId = (req as any).branchId;
 
@@ -1404,18 +1402,23 @@ export const generateTourImages = async (req: AuthenticatedRequest, res: Respons
       jobId: job.id,
       message: getTourErrorText(language, 'imageGenerationStarted')
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[generateTourImages] Fehler:', error);
+    // Language im catch-Block holen, falls nicht im try-Block definiert
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
-      message: error.message || getTourErrorText(language, 'imageGenerationError')
+      message: (error instanceof Error ? error.message : undefined) || getTourErrorText(language, 'imageGenerationError')
     });
   }
 };
 
 // GET /api/tours/:id/generate-images/status - Prüft Status der Bildgenerierung
-export const getTourImageGenerationStatus = async (req: Request, res: Response) => {
+export const getTourImageGenerationStatus = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = parseInt(req.userId, 10);
+    const language = await getUserLanguage(userId);
     const { id } = req.params;
     const tourId = parseInt(id, 10);
 
@@ -1464,6 +1467,9 @@ export const getTourImageGenerationStatus = async (req: Request, res: Response) 
     });
   } catch (error: unknown) {
     logger.error('[getTourImageGenerationStatus] Fehler:', error);
+    // Language im catch-Block holen, falls nicht im try-Block definiert
+    const userId = parseInt((req as AuthenticatedRequest).userId, 10);
+    const language = await getUserLanguage(userId);
     res.status(500).json({
       success: false,
       message: (error instanceof Error ? error.message : undefined) || getTourErrorText(language, 'statusError')

@@ -1750,6 +1750,19 @@ const tourBookingErrorTexts: Record<string, TourBookingErrorTranslations> = {
     tourNotFound: 'Tour not found',
     tourNotActive: 'Tour is not active',
     createError: 'Error creating booking',
+    updateError: 'Error updating booking',
+    noPermissionDelete: 'No permission to delete bookings',
+    deleteError: 'Error deleting booking',
+    bookingDeleted: 'Booking deleted',
+    cannotDeleteWithReservations: 'Booking cannot be deleted because reservations are linked',
+    cancelledByInvalid: 'cancelledBy must be "customer" or "provider"',
+    cancelError: 'Error cancelling booking',
+    completeError: 'Error marking booking as completed',
+    invalidUserId: 'Invalid user ID',
+    loadCommissionsError: 'Error loading commissions'
+    tourNotFound: 'Tour not found',
+    tourNotActive: 'Tour is not active',
+    createError: 'Error creating booking',
     updateError: 'Error updating booking'
   },
   es: {
