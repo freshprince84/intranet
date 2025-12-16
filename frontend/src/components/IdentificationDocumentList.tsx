@@ -54,6 +54,14 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
     }
   }, [userId]);
 
+  // Zusätzlich: Lade auch beim Mount (wenn Komponente sichtbar wird)
+  useEffect(() => {
+    if (userId) {
+      loadDocuments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Leeres Dependency-Array = nur beim Mount
+
   // Exponiere loadDocuments über Ref
   useImperativeHandle(ref, () => ({
     loadDocuments

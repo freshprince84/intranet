@@ -3,6 +3,7 @@ import axios from 'axios';
 import { decryptBranchApiSettings } from '../utils/encryption';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { BrandingInfo } from './organizationBrandingService';
 
 // SMTP-Konfiguration aus Umgebungsvariablen, Branch-Settings oder Organisation-Settings
 const createTransporter = async (organizationId?: number, branchId?: number) => {
