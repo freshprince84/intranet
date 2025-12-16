@@ -3,6 +3,8 @@ import { logger } from '../utils/logger';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteerExtra from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
 const prisma = new PrismaClient();
 
@@ -92,9 +94,12 @@ export class OTADiscoveryService {
 
       logger.warn(`[OTADiscoveryService] 📡 Starte Browser für Booking.com: ${url}`);
 
-      // Starte Browser mit Puppeteer (mit Fehlerbehandlung)
+      // Starte Browser mit Puppeteer + Stealth-Plugin (für Bot-Schutz-Umgehung)
       try {
-        browser = await puppeteer.launch({
+        // Verwende puppeteer-extra mit Stealth-Plugin für Booking.com
+        puppeteerExtra.use(StealthPlugin());
+        
+        browser = await puppeteerExtra.launch({
           headless: true,
           args: [
             '--no-sandbox',
@@ -102,7 +107,9 @@ export class OTADiscoveryService {
             '--disable-dev-shm-usage',
             '--disable-accelerated-2d-canvas',
             '--disable-gpu',
-            '--window-size=1920,1080'
+            '--window-size=1920,1080',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-features=IsolateOrigins,site-per-process'
           ]
         });
       } catch (puppeteerError: any) {
@@ -130,6 +137,13 @@ export class OTADiscoveryService {
         'DNT': '1'
       });
 
+      // Entferne Automation-Flags (Stealth-Plugin macht das auch, aber sicherheitshalber)
+      await page.evaluateOnNewDocument(() => {
+        Object.defineProperty(navigator, 'webdriver', {
+          get: () => false,
+        });
+      });
+
       // Navigiere zur Seite und warte auf Content
       logger.warn(`[OTADiscoveryService] 🌐 Navigiere zu Booking.com...`);
       await page.goto(url, {
@@ -137,8 +151,15 @@ export class OTADiscoveryService {
         timeout: 60000
       });
 
-      // Warte zusätzlich 2 Sekunden für JavaScript-Execution
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simuliere menschliches Verhalten: Warte zufällig 2-4 Sekunden
+      const waitTime = 2000 + Math.random() * 2000;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      
+      // Simuliere Scrollen (menschliches Verhalten)
+      await page.evaluate(() => {
+        window.scrollTo(0, Math.floor(Math.random() * 500));
+      });
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Prüfe ob Bot-Schutz aktiv ist
       const pageContent = await page.content();
@@ -375,9 +396,9 @@ export class OTADiscoveryService {
         try {
           await page.waitForFunction(
             () => {
-              const loadingContainer = document.querySelector('.search-loading-container');
+              const loadingContainer = document.querySelector('.search-loading-container') as HTMLElement | null;
               const hasListings = document.querySelectorAll('a[href*="/hostels/"]').length > 0;
-              return (!loadingContainer || loadingContainer.style.display === 'none') && hasListings;
+              return (!loadingContainer || (loadingContainer.style && loadingContainer.style.display === 'none')) && hasListings;
             },
             { timeout: 15000 }
           );

@@ -52,6 +52,8 @@
     "pdfkit": "^0.16.0",
     "pg": "^8.11.3",
     "puppeteer": "^24.33.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "qrcode": "^1.5.4",
     "sharp": "^0.33.5",
     "slugify": "^1.6.6",
