@@ -370,32 +370,57 @@ export class OTADiscoveryService {
           timeout: 60000
         });
 
-        // Warte auf Listings (verschiedene mögliche Selektoren)
+        // Warte auf Listings - verschiedene Strategien
+        // 1. Warte auf Loading-Container zu verschwinden UND auf Listings zu erscheinen
+        try {
+          await page.waitForFunction(
+            () => {
+              const loadingContainer = document.querySelector('.search-loading-container');
+              const hasListings = document.querySelectorAll('a[href*="/hostels/"]').length > 0;
+              return (!loadingContainer || loadingContainer.style.display === 'none') && hasListings;
+            },
+            { timeout: 15000 }
+          );
+          logger.warn(`[OTADiscoveryService] ✅ Loading-Container verschwunden und Listings geladen`);
+        } catch (e) {
+          logger.warn(`[OTADiscoveryService] ⚠️ Timeout beim Warten auf Loading-Container/Listings, warte zusätzlich...`);
+          // Warte zusätzlich 5 Sekunden
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+
+        // 2. Warte explizit auf tatsächliche Listings-Links
         const selectors = [
-          '.property-card',
-          '.hostel-card',
-          '[data-property-id]',
-          '.pwa-property-card',
-          'article[data-property-id]',
-          '[class*="property-card"]'
+          'a[href*="/hostels/"]', // Direkte Links zu Hostels (PRIORITÄT)
+          '.property-card a[href*="/hostels/"]',
+          '.hostel-card a[href*="/hostels/"]',
+          '[data-property-id] a[href*="/hostels/"]',
+          'article a[href*="/hostels/"]',
+          '[class*="property-card"] a[href*="/hostels/"]'
         ];
 
         let listingsFound = false;
         for (const selector of selectors) {
           try {
             await page.waitForSelector(selector, { timeout: 5000 });
-            listingsFound = true;
-            logger.warn(`[OTADiscoveryService] ✅ Hostelworld Selektor "${selector}" gefunden`);
-            break;
+            const count = await page.$$eval(selector, elements => elements.length);
+            if (count > 0) {
+              listingsFound = true;
+              logger.warn(`[OTADiscoveryService] ✅ Hostelworld Selektor "${selector}" gefunden: ${count} Links`);
+              break;
+            }
           } catch (e) {
             // Selektor nicht gefunden, versuche nächsten
           }
         }
 
         if (!listingsFound) {
-          // Warte zusätzlich 3 Sekunden für JavaScript-Execution
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          logger.warn(`[OTADiscoveryService] ⚠️ Keine Listings-Selektoren gefunden, warte auf JavaScript...`);
+          // Warte zusätzlich 5 Sekunden für JavaScript-Execution
+          logger.warn(`[OTADiscoveryService] ⚠️ Keine Listings-Selektoren gefunden, warte 5 Sekunden auf JavaScript...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          // Prüfe nochmal, ob jetzt Links vorhanden sind
+          const linkCount = await page.$$eval('a[href*="/hostels/"]', elements => elements.length);
+          logger.warn(`[OTADiscoveryService] 🔍 Nach Wartezeit: ${linkCount} Hostel-Links gefunden`);
         }
 
         // Extrahiere HTML nach JavaScript-Rendering
@@ -673,21 +698,81 @@ export class OTADiscoveryService {
   ): DiscoveredListing[] {
     const listings: DiscoveredListing[] = [];
 
-    // Hostelworld Struktur: Suche nach Hostel-Listings
-    // DEBUG: Teste verschiedene Selektoren und logge Ergebnisse
+    // PRIORITÄT 1: Suche direkt nach Links zu Hostels (schnellste Methode)
+    const hostelLinks = $('a[href*="/hostels/"]');
+    if (hostelLinks.length > 0) {
+      logger.warn(`[OTADiscoveryService] ✅ Hostelworld: ${hostelLinks.length} direkte Hostel-Links gefunden`);
+      
+      const seenUrls = new Set<string>();
+      
+      hostelLinks.each((index, element) => {
+        try {
+          const $link = $(element);
+          const relativeUrl = $link.attr('href');
+          
+          if (!relativeUrl || !relativeUrl.includes('/hostels/')) {
+            return;
+          }
+          
+          const listingUrl = relativeUrl.startsWith('http') 
+            ? relativeUrl 
+            : `https://www.hostelworld.com${relativeUrl.startsWith('/') ? relativeUrl : '/' + relativeUrl}`;
+          
+          // Vermeide Duplikate
+          if (seenUrls.has(listingUrl)) {
+            return;
+          }
+          seenUrls.add(listingUrl);
+          
+          // Extrahiere Property-ID aus URL
+          const match = listingUrl.match(/\/hostels\/[^\/]+-(\d+)/);
+          const propertyId = match && match[1] ? match[1] : `hostel-${seenUrls.size}`;
+          
+          // Versuche Zimmernamen aus Link-Text oder umgebenden Elementen zu extrahieren
+          let roomName = $link.text().trim() || null;
+          if (!roomName || roomName.length < 3) {
+            // Suche in umgebenden Elementen
+            const parent = $link.closest('.property-card, .hostel-card, article, [class*="property"], [class*="hostel"]');
+            roomName = parent.find('h2, h3, .property-name, .hostel-name, .title').first().text().trim() || null;
+          }
+          
+          listings.push({
+            platform: 'hostelworld.com',
+            listingId: propertyId,
+            listingUrl,
+            city,
+            country,
+            roomType, // Wird später beim Scraping der Detailseite genauer bestimmt
+            roomName: roomName || (roomType === 'dorm' ? 'Dorm Bed' : 'Private Room')
+          });
+          
+          logger.warn(`[OTADiscoveryService] ✅ Hostelworld Listing ${listings.length}: ID=${propertyId}, URL=${listingUrl.substring(0, 80)}...`);
+        } catch (error: any) {
+          logger.warn(`[OTADiscoveryService] ⚠️ Fehler beim Verarbeiten von Link ${index}: ${error.message}`);
+        }
+      });
+      
+      if (listings.length > 0) {
+        logger.warn(`[OTADiscoveryService] ✅ Hostelworld: ${listings.length} Listings aus direkten Links extrahiert`);
+        return listings;
+      }
+    }
+
+    // PRIORITÄT 2: Suche nach Container-Elementen (Fallback)
     const testSelectors = [
       '.property-card',
       '.hostel-card',
       '[data-property-id]',
       '.pwa-property-card',
+      '[class*="property-card"]',
+      '[class*="hostel-card"]',
       '.property',
       '.hostel',
       '[class*="property"]',
       '[class*="hostel"]',
       'article',
       '[data-testid*="property"]',
-      '[data-testid*="hostel"]',
-      'a[href*="/hostels/"]'
+      '[data-testid*="hostel"]'
     ];
     
     let hostelElements: cheerio.Cheerio<any> | null = null;

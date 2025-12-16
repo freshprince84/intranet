@@ -516,38 +516,45 @@ export const getTodosChronological = async (req: Request, res: Response) => {
         // Kombiniere taskFilter mit Zeitfilter und Filter-Bedingungen
         // Zeige nur Tasks, die im Zeitraum erstellt, Status-Änderungen hatten oder gelöscht wurden
         // NICHT: Tasks, die nur andere Updates hatten (z.B. Titel geändert)
-        const where: any = {
-            AND: [
-                taskFilter,
-                remainingFilter,
-                // Verwende timeFilter falls vorhanden, sonst Fallback auf period/date
-                timeFilter || {
-                    OR: [
-                        {
-                            createdAt: {
-                                gte: start,
-                                lte: end
-                            }
-                        },
-                        {
-                            deletedAt: {
-                                gte: start,
-                                lte: end
-                            }
-                        },
-                        {
-                            statusHistory: {
-                                some: {
-                                    changedAt: {
-                                        gte: start,
-                                        lte: end
-                                    }
+        const whereArray: any[] = [taskFilter];
+        
+        // ✅ FIX: Nur remainingFilter hinzufügen, wenn es nicht leer ist (Object.keys().length > 0)
+        if (remainingFilter && typeof remainingFilter === 'object' && Object.keys(remainingFilter).length > 0) {
+            whereArray.push(remainingFilter);
+        }
+        
+        // Verwende timeFilter falls vorhanden, sonst Fallback auf period/date
+        whereArray.push(
+            timeFilter || {
+                OR: [
+                    {
+                        createdAt: {
+                            gte: start,
+                            lte: end
+                        }
+                    },
+                    {
+                        deletedAt: {
+                            gte: start,
+                            lte: end
+                        }
+                    },
+                    {
+                        statusHistory: {
+                            some: {
+                                changedAt: {
+                                    gte: start,
+                                    lte: end
                                 }
                             }
                         }
-                    ]
-                }
-            ].filter(Boolean) // Entferne leere Objekte
+                    }
+                ]
+            }
+        );
+        
+        const where: any = {
+            AND: whereArray.filter(Boolean) // Entferne null/undefined Werte
         };
 
         const tasks = await prisma.task.findMany({
@@ -703,38 +710,45 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
         // Kombiniere requestFilter mit Zeitfilter und Filter-Bedingungen
         // Zeige nur Requests, die im Zeitraum erstellt, Status-Änderungen hatten oder gelöscht wurden
         // NICHT: Requests, die nur andere Updates hatten (z.B. Titel geändert)
-        const where: any = {
-            AND: [
-                requestFilter,
-                remainingFilter,
-                // Verwende timeFilter falls vorhanden, sonst Fallback auf period/date
-                timeFilter || {
-                    OR: [
-                        {
-                            createdAt: {
-                                gte: start,
-                                lte: end
-                            }
-                        },
-                        {
-                            deletedAt: {
-                                gte: start,
-                                lte: end
-                            }
-                        },
-                        {
-                            statusHistory: {
-                                some: {
-                                    changedAt: {
-                                        gte: start,
-                                        lte: end
-                                    }
+        const whereArray: any[] = [requestFilter];
+        
+        // ✅ FIX: Nur remainingFilter hinzufügen, wenn es nicht leer ist (Object.keys().length > 0)
+        if (remainingFilter && typeof remainingFilter === 'object' && Object.keys(remainingFilter).length > 0) {
+            whereArray.push(remainingFilter);
+        }
+        
+        // Verwende timeFilter falls vorhanden, sonst Fallback auf period/date
+        whereArray.push(
+            timeFilter || {
+                OR: [
+                    {
+                        createdAt: {
+                            gte: start,
+                            lte: end
+                        }
+                    },
+                    {
+                        deletedAt: {
+                            gte: start,
+                            lte: end
+                        }
+                    },
+                    {
+                        statusHistory: {
+                            some: {
+                                changedAt: {
+                                    gte: start,
+                                    lte: end
                                 }
                             }
                         }
-                    ]
-                }
-            ].filter(Boolean) // Entferne leere Objekte
+                    }
+                ]
+            }
+        );
+        
+        const where: any = {
+            AND: whereArray.filter(Boolean) // Entferne null/undefined Werte
         };
 
         const requests = await prisma.request.findMany({

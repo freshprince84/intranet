@@ -182,6 +182,10 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
     { id: 'deletedAt', label: t('analytics.todo.columns.deletedAt', { defaultValue: 'Gelöscht am' }) }
   ], [t]);
 
+  // ✅ PERFORMANCE: Stabilisiere Array-Dependencies (verhindert unnötige Re-Runs durch neue Array-Referenzen)
+  const filterConditionsKey = useMemo(() => JSON.stringify(filterConditions), [filterConditions]);
+  const filterOperatorsKey = useMemo(() => JSON.stringify(filterLogicalOperators), [filterLogicalOperators]);
+
   // Lade To-Dos
   useEffect(() => {
     // ✅ PHASE 8: Memory Leak Prevention - AbortController
@@ -236,7 +240,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
     return () => {
       abortController.abort();
     };
-  }, [selectedDate, filterConditions, filterLogicalOperators, selectedFilterId, t]);
+  }, [selectedDate, filterConditionsKey, filterOperatorsKey, selectedFilterId, t]);
 
   // Lade Häufigkeitsanalyse
   useEffect(() => {
