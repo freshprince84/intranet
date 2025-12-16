@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { XMarkIcon, ChevronDownIcon, PencilIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { FilterCondition } from './FilterRow.tsx';
@@ -113,6 +114,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Refs für Gruppen-Dropdowns (für Click-Outside Detection)
   const groupDropdownRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  // Refs für Buttons (für Position-Berechnung bei Portal)
+  const groupButtonRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+  // Positionen für Portal-Dropdowns
+  const [dropdownPositions, setDropdownPositions] = useState<Map<number, { top: number; left: number }>>(new Map());
 
   const setGroupDropdownRef = (groupId: number, element: HTMLDivElement | null) => {
     if (element) {
@@ -121,6 +126,43 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       groupDropdownRefs.current.delete(groupId);
     }
   };
+
+  const setGroupButtonRef = (groupId: number, element: HTMLButtonElement | null) => {
+    if (element) {
+      groupButtonRefs.current.set(groupId, element);
+    } else {
+      groupButtonRefs.current.delete(groupId);
+    }
+  };
+
+  // Berechne Position für Portal-Dropdowns
+  useEffect(() => {
+    const updatePositions = () => {
+      const newPositions = new Map<number, { top: number; left: number }>();
+      openGroupDropdowns.forEach(groupId => {
+        const button = groupButtonRefs.current.get(groupId);
+        if (button) {
+          const rect = button.getBoundingClientRect();
+          newPositions.set(groupId, {
+            top: rect.bottom + window.scrollY + 4, // 4px = mt-1
+            left: rect.left + window.scrollX
+          });
+        }
+      });
+      setDropdownPositions(newPositions);
+    };
+
+    if (openGroupDropdowns.size > 0) {
+      updatePositions();
+      window.addEventListener('scroll', updatePositions, true);
+      window.addEventListener('resize', updatePositions);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', updatePositions, true);
+      window.removeEventListener('resize', updatePositions);
+    };
+  }, [openGroupDropdowns]);
   
   // Gruppen-Umbenennung States
   const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
@@ -932,6 +974,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           <div key={group.id} className="relative flex-shrink-0">
             <div className="relative group">
               <button
+                ref={(el) => setGroupButtonRef(group.id, el)}
                 data-group-id={group.id}
                 onClick={() => toggleGroupDropdown(group.id)}
                 onDragOver={(e) => handleDragOver(e, group.id, 'group')}
@@ -950,11 +993,17 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               </div>
             </div>
             
-            {/* Gruppen-Dropdown */}
-            {openGroupDropdowns.has(group.id) && (
+            {/* Gruppen-Dropdown via Portal (außerhalb overflow-Container) */}
+            {openGroupDropdowns.has(group.id) && dropdownPositions.has(group.id) && createPortal(
               <div 
                 ref={(el) => setGroupDropdownRef(group.id, el)}
-                className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-[100] min-w-[200px]"
+                style={{
+                  position: 'fixed',
+                  top: `${dropdownPositions.get(group.id)!.top}px`,
+                  left: `${dropdownPositions.get(group.id)!.left}px`,
+                  zIndex: 100
+                }}
+                className="bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[200px]"
               >
                 {group.filters.map(filter => (
                   <div
@@ -1054,7 +1103,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                     </>
                   )}
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
           );

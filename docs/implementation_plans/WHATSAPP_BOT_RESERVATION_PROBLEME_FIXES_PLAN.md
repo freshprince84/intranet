@@ -723,3 +723,4 @@ try {
 
 **Erstellt:** 2025-12-15  
 **Status:** Plan erstellt, alle Fakten dokumentiert, bereit für Implementierung
+
