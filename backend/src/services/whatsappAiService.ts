@@ -4,6 +4,7 @@ import { LanguageDetectionService } from './languageDetectionService';
 import { prisma } from '../utils/prisma';
 import { WhatsAppFunctionHandlers } from './whatsappFunctionHandlers';
 import { logger } from '../utils/logger';
+import { PromptBuilder } from './chatbot/PromptBuilder';
 
 export interface AIResponse {
   message: string;
@@ -147,8 +148,8 @@ export class WhatsAppAiService {
       finalLanguage: language
     });
 
-    // 3. Baue System Prompt
-    const systemPrompt = this.buildSystemPrompt(aiConfig, language, conversationContext);
+    // 3. Baue System Prompt (modularer PromptBuilder)
+    const systemPrompt = PromptBuilder.buildPrompt(language, conversationContext, 'whatsapp', aiConfig);
 
     // 4. Prüfe ob Function Calling aktiviert werden soll
     // WICHTIG: check_room_availability sollte auch für Gäste verfügbar sein!

@@ -7,6 +7,7 @@ import IdentificationDocumentForm from './IdentificationDocumentForm.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
+import { EyeIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface IdentificationDocumentListProps {
   userId: number;
@@ -25,6 +26,7 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
   const [isDownloading, setIsDownloading] = useState<number | null>(null);
   const [previewUrls, setPreviewUrls] = useState<Record<number, string>>({});
   const [loadingPreviews, setLoadingPreviews] = useState<Record<number, boolean>>({});
+  const [previewContentTypes, setPreviewContentTypes] = useState<Record<number, string>>({});
   const previewUrlsRef = useRef<Record<number, string>>({});
   const { showMessage } = useMessage();
   const { user: currentUser } = useAuth();
@@ -102,6 +104,7 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
       const previewUrl = window.URL.createObjectURL(blob);
       
       setPreviewUrls(prev => ({ ...prev, [docId]: previewUrl }));
+      setPreviewContentTypes(prev => ({ ...prev, [docId]: contentType }));
     } catch (err: any) {
       console.error('Fehler beim Laden der Dokument-Vorschau:', err);
       showMessage(t('identificationDocuments.previewError', { defaultValue: 'Vorschau konnte nicht geladen werden' }), 'error');
@@ -267,6 +270,8 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
     const doc = documents.find(d => d.id === viewingDocument);
     const previewUrl = previewUrls[viewingDocument];
     const isLoading = loadingPreviews[viewingDocument];
+    const contentType = previewContentTypes[viewingDocument] || 'application/pdf';
+    const isImage = contentType.startsWith('image/');
 
     return (
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
@@ -294,6 +299,11 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
                       delete newUrls[viewingDocument];
                       return newUrls;
                     });
+                    setPreviewContentTypes(prev => {
+                      const newTypes = { ...prev };
+                      delete newTypes[viewingDocument];
+                      return newTypes;
+                    });
                   }
                 }, 1000);
               }}
@@ -309,12 +319,22 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : previewUrl ? (
-            <iframe 
-              src={previewUrl}
-              className="w-full rounded border dark:border-gray-600"
-              style={{ height: '600px' }}
-              title={doc ? formatDocumentType(doc.documentType) : 'Dokument'}
-            />
+            isImage ? (
+              <div className="flex justify-center items-center" style={{ maxHeight: '80vh' }}>
+                <img
+                  src={previewUrl}
+                  alt={doc ? formatDocumentType(doc.documentType) : 'Dokument'}
+                  className="max-h-[80vh] w-full object-contain"
+                />
+              </div>
+            ) : (
+              <iframe 
+                src={`${previewUrl}#view=FitH`}
+                className="w-full rounded border dark:border-gray-600"
+                style={{ height: '80vh' }}
+                title={doc ? formatDocumentType(doc.documentType) : 'Dokument'}
+              />
+            )
           ) : (
             <div className="flex justify-center items-center text-gray-500 dark:text-gray-400" style={{ height: '400px' }}>
               <p>{t('identificationDocuments.previewError', { defaultValue: 'Vorschau konnte nicht geladen werden' })}</p>
@@ -405,38 +425,50 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
                     )}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-1">
                       <button
                         onClick={() => handleViewDocument(doc.id)}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                        className="p-2 rounded-md text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                         disabled={loadingPreviews[doc.id]}
+                        title={t('identificationDocuments.actions.view')}
                       >
-                        {loadingPreviews[doc.id] ? t('identificationDocuments.actions.loading', { defaultValue: 'Lädt...' }) : t('identificationDocuments.actions.view')}
+                        {loadingPreviews[doc.id] ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        ) : (
+                          <EyeIcon className="h-5 w-5" />
+                        )}
                       </button>
                       <button
                         onClick={() => handleDownloadDocument(doc.id)}
-                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                        className="p-2 rounded-md text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
                         disabled={isDownloading === doc.id}
                         title={t('identificationDocuments.actions.download', { defaultValue: 'Herunterladen' })}
                       >
-                        {isDownloading === doc.id ? t('identificationDocuments.actions.downloading') : '↓'}
+                        {isDownloading === doc.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                        ) : (
+                          <ArrowDownTrayIcon className="h-5 w-5" />
+                        )}
                       </button>
                       <button
                         onClick={() => setEditingDocument(doc)}
-                        className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                        className="p-2 rounded-md text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                        title={t('identificationDocuments.actions.edit')}
                       >
-                        {t('identificationDocuments.actions.edit')}
+                        <PencilIcon className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => handleDeleteDocument(doc.id)}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        className="p-2 rounded-md text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title={t('identificationDocuments.actions.delete')}
                       >
-                        {t('identificationDocuments.actions.delete')}
+                        <TrashIcon className="h-5 w-5" />
                       </button>
                       {isAdmin && !doc.isVerified && (
                         <button
                           onClick={() => handleVerifyDocument(doc.id)}
-                          className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                          className="p-2 rounded-md text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          title={t('identificationDocuments.actions.verify')}
                         >
                           {t('identificationDocuments.actions.verify')}
                         </button>

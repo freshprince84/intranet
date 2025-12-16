@@ -1,7 +1,7 @@
 # Chatbot-Architektur Refactoring - Status
 
 **Datum:** 2025-12-16  
-**Status:** Phase 1 ✅ abgeschlossen, Phase 2.1 ✅ abgeschlossen, Phase 2.2 in Arbeit
+**Status:** Phase 1 ✅ abgeschlossen, Phase 2 ✅ abgeschlossen, Phase 3 Vorbereitung
 
 ---
 
@@ -21,29 +21,24 @@
 
 ---
 
-## 🔄 In Arbeit
+## ✅ Phase 2 abgeschlossen
 
-### Phase 2.2: WhatsAppMessageHandler refactoren
+### Phase 2.1: WhatsAppMessageNormalizer ✅
+- **WhatsAppMessageNormalizer.ts** erstellt – WhatsApp-Nachrichten-Normalisierung
 
-**Status:** Vorbereitung
+### Phase 2.2: WhatsAppMessageHandler ✅
+- Core-Services integriert (Normalize → Parse → Context → Language → Conversation)
+- Normalisierte Nachricht wird genutzt
+- Kontext wird über `ContextService` aktualisiert und gespeichert
+- KI-Antwort läuft über neuen Core-Flow (`WhatsAppAiService` mit PromptBuilder)
 
-**Geplante Änderungen:**
-- Integration von MessageParserService
-- Integration von ContextService
-- Integration von LanguageService
-- Integration von ConversationService
-- Integration von WhatsAppMessageNormalizer
-- Code-Vereinfachung: Von 2008 Zeilen auf ~300 Zeilen
-
-**Komplexität:** Hoch (große Datei mit vielen Abhängigkeiten)
+### Phase 2.3: WhatsAppAiService ✅
+- PromptBuilder integriert (`buildPrompt` ersetzt altes `buildSystemPrompt`)
+- System-Prompt modularisiert im Einsatz
 
 ---
 
 ## 📋 Noch zu erledigen
-
-### Phase 2.3: WhatsAppAiService refactoren
-- Integration von PromptBuilder
-- Code-Vereinfachung: Von 1319 Zeilen auf ~400 Zeilen
 
 ### Phase 3: Testing & Validation
 - Unit-Tests für Core Services
@@ -52,4 +47,4 @@
 
 ---
 
-**Nächster Schritt:** Phase 2.2 - WhatsAppMessageHandler refactoren
+**Nächster Schritt:** Phase 3 - Testing & Validation

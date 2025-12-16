@@ -7,6 +7,11 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { MessageParserService } from './chatbot/MessageParserService';
+import { ContextService } from './chatbot/ContextService';
+import { LanguageService as CoreLanguageService } from './chatbot/LanguageService';
+import { ConversationService } from './chatbot/ConversationService';
+import { WhatsAppMessageNormalizer } from './whatsapp/WhatsAppMessageNormalizer';
 
 /**
  * WhatsApp Message Handler
@@ -121,6 +126,32 @@ export class WhatsAppMessageHandler {
       // 3. Lade/Erstelle Conversation State
       const conversation = await this.getOrCreateConversation(normalizedPhone, branchId, user?.id);
 
+      // 3.1 Normalisiere Nachricht & aktualisiere Kontext über Core Services
+      const normalizedMessage = WhatsAppMessageNormalizer.normalize(messageText);
+      const coreContext = await ContextService.getContext(conversation.id, 'WhatsAppConversation');
+      const parsedMessage = MessageParserService.parseMessage(
+        normalizedMessage,
+        coreContext,
+        coreContext.booking?.lastAvailabilityCheck?.rooms
+      );
+      const mergedContext = ContextService.mergeWithContext(parsedMessage, coreContext);
+      await ContextService.updateContext(conversation.id, mergedContext, 'WhatsAppConversation');
+      const detectedLanguage = CoreLanguageService.detectLanguage(
+        normalizedMessage,
+        normalizedPhone,
+        mergedContext
+      );
+      // ConversationState vorläufig berechnen (Integration in bestehende Flows folgt in Phase 2.2)
+      await ConversationService.processMessage(
+        normalizedMessage,
+        parsedMessage,
+        mergedContext,
+        detectedLanguage,
+        conversation.id,
+        'WhatsAppConversation',
+        branchId
+      );
+
       // 3.5. Tour-Buchungsantwort vom Anbieter erkennen (VOR Keyword-Erkennung)
       const tourProvider = await prisma.tourProvider.findFirst({
         where: {
@@ -175,8 +206,18 @@ export class WhatsAppMessageHandler {
         }
       }
 
+      // 4. KI-Antwort über neuen Core-Flow (Function Calling über WhatsAppAiService)
+      const aiResult = await WhatsAppAiService.generateResponse(
+        normalizedMessage,
+        branchId,
+        normalizedPhone,
+        mergedContext,
+        conversation.id
+      );
+      return aiResult.message;
+
       // 4. Prüfe Keywords
-      const normalizedText = messageText.toLowerCase().trim();
+      const normalizedText = normalizedMessage.toLowerCase().trim();
       
       // Keyword: "requests" - Liste aller Requests
       if (normalizedText === 'requests') {
