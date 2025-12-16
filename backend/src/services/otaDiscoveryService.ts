@@ -131,7 +131,7 @@ export class OTADiscoveryService {
       });
 
       // Warte zusätzlich 2 Sekunden für JavaScript-Execution
-      await page.waitForTimeout(2000);
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Prüfe ob Bot-Schutz aktiv ist
       const pageContent = await page.content();
