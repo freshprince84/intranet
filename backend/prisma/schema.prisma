@@ -1174,6 +1174,7 @@ model Reservation {
   amount                   Decimal?                     @db.Decimal(10, 2) // Preis der Reservierung
   currency                 String?                      @default("COP") // Währung (COP, USD, EUR, etc.)
   paymentLink              String? // Bold Payment Link
+  checkInLink              String? // Check-in-Link (für Online Check-in)
   paymentDeadline          DateTime? // Frist für Zahlung (wird bei Erstellung gesetzt, z.B. 1 Stunde)
   autoCancelEnabled        Boolean                      @default(true) // Automatische Stornierung aktiviert
   cancelledAt              DateTime? // Wann wurde storniert
