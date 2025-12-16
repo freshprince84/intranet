@@ -1958,6 +1958,18 @@ export class WhatsAppMessageHandler {
         updatedContext.roomType &&
         (updatedContext.categoryId || !updatedContext.roomName); // categoryId nur erforderlich wenn roomName vorhanden
       
+      // WICHTIG: Wenn Name gerade gegeben wurde und alle Daten vorhanden sind, setze isBookingRequest = true
+      // Dies löst das Problem, dass der Bot nicht bucht, wenn der User nur den Namen gibt
+      const nameWasJustProvided = guestName && !bookingContext.guestName;
+      const hasActiveBookingRequest = updatedContext.checkInDate || updatedContext.lastAvailabilityCheck;
+      
+      if (nameWasJustProvided && hasAllInfo && hasActiveBookingRequest) {
+        // Name wurde gerade gegeben, alle Daten vorhanden, aktive Buchungsanfrage vorhanden
+        // Setze isBookingRequest = true, damit gebucht wird
+        isBookingRequest = true;
+        logger.log(`[checkBookingContext] Name wurde gerade gegeben, alle Daten vorhanden, setze isBookingRequest = true`);
+      }
+      
       if (hasAllInfo && isBookingRequest) {
         // Wenn guestName fehlt, verwende Platzhalter (wird später nachgefragt)
         const finalGuestName = updatedContext.guestName || 'Gast';

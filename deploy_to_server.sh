@@ -44,29 +44,36 @@ npx prisma generate
 echo "✅ Prisma Client generiert"
 echo ""
 
-# 6. Seed ausführen
-echo "🌱 Schritt 6: Seed ausführen..."
+# 6. Filter-Cleanup (optional, vor dem Seed)
+echo "🧹 Schritt 6: Filter-Cleanup (löscht Filter für nicht-existierende User)..."
+cd /var/www/intranet/backend
+npx ts-node scripts/cleanupUserFilters.ts || echo "   ⚠️  Filter-Cleanup übersprungen (optional)"
+echo "✅ Filter-Cleanup abgeschlossen"
+echo ""
+
+# 7. Seed ausführen
+echo "🌱 Schritt 7: Seed ausführen..."
 cd /var/www/intranet/backend
 npx prisma db seed
 echo "✅ Seed abgeschlossen"
 echo ""
 
-# 7. Backend Build
-echo "🔨 Schritt 7: Backend Build..."
+# 8. Backend Build
+echo "🔨 Schritt 8: Backend Build..."
 cd /var/www/intranet/backend
 npm run build
 echo "✅ Backend Build abgeschlossen"
 echo ""
 
-# 8. Frontend Build
-echo "🔨 Schritt 8: Frontend Build..."
+# 9. Frontend Build
+echo "🔨 Schritt 9: Frontend Build..."
 cd /var/www/intranet/frontend
 npm run build
 echo "✅ Frontend Build abgeschlossen"
 echo ""
 
-# 9. Redis prüfen und starten (falls nicht läuft)
-echo "🔍 Schritt 9: Redis-Status prüfen..."
+# 10. Redis prüfen und starten (falls nicht läuft)
+echo "🔍 Schritt 10: Redis-Status prüfen..."
 if ! systemctl is-active --quiet redis-server; then
   echo "   ⚠️  Redis läuft nicht, starte Redis..."
   sudo systemctl start redis-server
@@ -77,8 +84,8 @@ else
 fi
 echo ""
 
-# 10. Queue-Einstellungen in .env prüfen
-echo "📝 Schritt 10: Queue-Einstellungen prüfen..."
+# 11. Queue-Einstellungen in .env prüfen
+echo "📝 Schritt 11: Queue-Einstellungen prüfen..."
 cd /var/www/intranet/backend
 if ! grep -q "QUEUE_ENABLED=true" .env 2>/dev/null; then
   echo "   ⚠️  QUEUE_ENABLED nicht in .env gefunden"

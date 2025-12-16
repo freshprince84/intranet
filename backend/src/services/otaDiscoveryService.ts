@@ -92,18 +92,25 @@ export class OTADiscoveryService {
 
       logger.warn(`[OTADiscoveryService] 📡 Starte Browser für Booking.com: ${url}`);
 
-      // Starte Browser mit Puppeteer
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gpu',
-          '--window-size=1920,1080'
-        ]
-      });
+      // Starte Browser mit Puppeteer (mit Fehlerbehandlung)
+      try {
+        browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+            '--window-size=1920,1080'
+          ]
+        });
+      } catch (puppeteerError: any) {
+        logger.error(`[OTADiscoveryService] ⚠️ Puppeteer kann nicht gestartet werden: ${puppeteerError.message}`);
+        logger.warn(`[OTADiscoveryService] 🔄 Fallback auf axios (ohne Browser-Automation)`);
+        // Fallback auf axios (wird weiter unten behandelt)
+        throw new Error('PUPPETEER_UNAVAILABLE');
+      }
 
       page = await browser.newPage();
 
@@ -201,6 +208,12 @@ export class OTADiscoveryService {
       logger.warn(`[OTADiscoveryService] ✅ Booking.com Discovery abgeschlossen: ${listings.length} Listings gefunden`);
 
     } catch (error: any) {
+      // Wenn Puppeteer nicht verfügbar ist, versuche Fallback auf axios
+      if (error.message === 'PUPPETEER_UNAVAILABLE' || error.message.includes('Failed to launch the browser process')) {
+        logger.warn(`[OTADiscoveryService] 🔄 Puppeteer nicht verfügbar, verwende Fallback auf axios`);
+        return await this.scrapeBookingComSearchFallback(city, country, roomType);
+      }
+      
       logger.error(`[OTADiscoveryService] ❌ Fehler beim Scraping von Booking.com:`, error.message);
       logger.error(`[OTADiscoveryService] Error Stack:`, error instanceof Error ? error.stack : 'Kein Stack verfügbar');
     } finally {
@@ -211,6 +224,73 @@ export class OTADiscoveryService {
       if (browser) {
         await browser.close().catch(() => {});
       }
+    }
+
+    return listings;
+  }
+
+  /**
+   * Fallback: Scraped Booking.com mit axios (wenn Puppeteer nicht verfügbar)
+   */
+  private static async scrapeBookingComSearchFallback(
+    city: string,
+    country: string | null,
+    roomType: 'private' | 'dorm'
+  ): Promise<DiscoveredListing[]> {
+    logger.warn(`[OTADiscoveryService] 🔍 Scrape Booking.com (Fallback axios) für ${city}, ${country || 'N/A'}, ${roomType}`);
+    
+    const listings: DiscoveredListing[] = [];
+    
+    try {
+      const searchString = country ? `${city}, ${country}` : city;
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const checkInDate = today.toISOString().split('T')[0];
+      const checkOutDate = tomorrow.toISOString().split('T')[0];
+      const encodedSearch = encodeURIComponent(searchString);
+      
+      const url = `https://www.booking.com/searchresults.de.html?ss=${encodedSearch}&dest_type=city&checkin=${checkInDate}&checkout=${checkOutDate}&group_adults=1&no_rooms=1&group_children=0&nflt=ht_id%3D203&offset=0`;
+
+      logger.warn(`[OTADiscoveryService] 📡 Request zu Booking.com (Fallback): ${url}`);
+
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0',
+        'Referer': 'https://www.booking.com/',
+        'DNT': '1'
+      };
+
+      const response = await axios.get(url, {
+        headers,
+        timeout: 30000,
+        maxRedirects: 5,
+        validateStatus: (status) => status < 500
+      });
+
+      const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+      if (responseText.includes('challenge-container') || responseText.includes('AwsWafIntegration')) {
+        logger.error(`[OTADiscoveryService] ⚠️ Booking.com Bot-Schutz aktiv (Fallback)!`);
+        return [];
+      }
+
+      const $ = cheerio.load(response.data);
+      const pageListings = this.extractBookingComListings($, roomType, city, country);
+      listings.push(...pageListings);
+      
+      logger.warn(`[OTADiscoveryService] ✅ Booking.com Fallback abgeschlossen: ${listings.length} Listings gefunden`);
+    } catch (error: any) {
+      logger.error(`[OTADiscoveryService] ❌ Fehler beim Fallback-Scraping von Booking.com:`, error.message);
     }
 
     return listings;
@@ -564,15 +644,45 @@ export class OTADiscoveryService {
       try {
         const $el = $(element);
         
-        // Extrahiere URL zuerst (wird für propertyId-Extraktion benötigt)
-        const linkElement = $el.find('a[href*="/hostels/"]').first();
-        const relativeUrl = linkElement.attr('href');
+        // DEBUG: Log HTML-Struktur des Elements
+        const elementHtml = $el.html() || '';
+        if (index < 2) {
+          logger.warn(`[OTADiscoveryService] 🔍 Hostelworld Element ${index} HTML (erste 500 Zeichen): ${elementHtml.substring(0, 500)}`);
+        }
+        
+        // Extrahiere URL - versuche verschiedene Selektoren
+        let linkElement = $el.find('a[href*="/hostels/"]').first();
+        if (linkElement.length === 0) {
+          // Versuche andere Selektoren
+          linkElement = $el.find('a[href*="hostel"]').first();
+        }
+        if (linkElement.length === 0) {
+          // Versuche direkt im Element
+          linkElement = $el.is('a') ? $el : $el.find('a').first();
+        }
+        
+        let relativeUrl = linkElement.attr('href');
+        
+        // Falls kein href, versuche data-href oder andere Attribute
+        if (!relativeUrl) {
+          relativeUrl = linkElement.attr('data-href') || 
+                       $el.attr('data-href') ||
+                       $el.attr('href');
+        }
+        
         const listingUrl = relativeUrl 
-          ? (relativeUrl.startsWith('http') ? relativeUrl : `https://www.hostelworld.com${relativeUrl}`)
+          ? (relativeUrl.startsWith('http') ? relativeUrl : `https://www.hostelworld.com${relativeUrl.startsWith('/') ? relativeUrl : '/' + relativeUrl}`)
           : null;
 
         if (!listingUrl) {
           logger.warn(`[OTADiscoveryService] ⚠️ Hostelworld: Keine URL gefunden für Element ${index}`);
+          logger.warn(`[OTADiscoveryService] 🔍 Element hat ${$el.find('a').length} Links gefunden`);
+          if ($el.find('a').length > 0) {
+            $el.find('a').each((i, a) => {
+              const href = $(a).attr('href');
+              logger.warn(`[OTADiscoveryService] 🔍 Link ${i}: ${href}`);
+            });
+          }
           return; // Skip wenn keine URL gefunden
         }
 

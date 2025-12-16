@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import axiosInstance from '../../config/axios.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
@@ -182,16 +182,38 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
     { id: 'deletedAt', label: t('analytics.todo.columns.deletedAt', { defaultValue: 'Gelöscht am' }) }
   ], [t]);
 
-  // ✅ PERFORMANCE: Stabilisiere Array-Dependencies mit useMemo (verhindert unnötige Re-Runs)
-  const filterConditionsKey = useMemo(() => 
-    JSON.stringify(filterConditions), [filterConditions]
-  );
-  const filterOperatorsKey = useMemo(() => 
-    JSON.stringify(filterLogicalOperators), [filterLogicalOperators]
-  );
+  // ✅ PERFORMANCE: Stabilisiere Array-Dependencies mit useRef (Standard-Pattern wie FilterPane.tsx)
+  const prevFilterConditionsRef = useRef<FilterCondition[] | null>(null);
+  const prevFilterOperatorsRef = useRef<('AND' | 'OR')[] | null>(null);
+  const prevSelectedDateRef = useRef<string | undefined | null>(null);
+  const prevSelectedFilterIdRef = useRef<number | null | 'initial'>(null);
+  const isInitialMountRef = useRef<boolean>(true);
 
   // Lade To-Dos
   useEffect(() => {
+    // ✅ PERFORMANCE: Prüfe ob sich Filter tatsächlich geändert haben (verhindert unnötige Re-Runs)
+    const conditionsChanged = prevFilterConditionsRef.current === null || 
+      JSON.stringify(prevFilterConditionsRef.current) !== JSON.stringify(filterConditions);
+    const operatorsChanged = prevFilterOperatorsRef.current === null || 
+      JSON.stringify(prevFilterOperatorsRef.current) !== JSON.stringify(filterLogicalOperators);
+    const dateChanged = prevSelectedDateRef.current === null || prevSelectedDateRef.current !== selectedDate;
+    const filterIdChanged = prevSelectedFilterIdRef.current === null || prevSelectedFilterIdRef.current !== selectedFilterId;
+    
+    // Update refs
+    prevFilterConditionsRef.current = filterConditions;
+    prevFilterOperatorsRef.current = filterLogicalOperators;
+    prevSelectedDateRef.current = selectedDate;
+    prevSelectedFilterIdRef.current = selectedFilterId;
+    
+    // Beim ersten Mount immer fetchen, danach nur bei Änderungen
+    const isInitialMount = isInitialMountRef.current;
+    isInitialMountRef.current = false;
+    
+    // Nur wenn sich etwas geändert hat ODER es der erste Mount ist, fetch ausführen
+    if (!isInitialMount && !conditionsChanged && !operatorsChanged && !dateChanged && !filterIdChanged) {
+      return; // Keine Änderung, skip fetch
+    }
+    
     // ✅ PHASE 8: Memory Leak Prevention - AbortController
     const abortController = new AbortController();
     
@@ -244,7 +266,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
     return () => {
       abortController.abort();
     };
-  }, [selectedDate, filterConditionsKey, filterOperatorsKey, selectedFilterId, t]);
+  }, [selectedDate, filterConditions, filterLogicalOperators, selectedFilterId]);
 
   // Lade Häufigkeitsanalyse
   useEffect(() => {
