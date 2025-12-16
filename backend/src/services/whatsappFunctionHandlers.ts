@@ -1905,6 +1905,9 @@ export class WhatsAppFunctionHandlers {
 
       let reservation;
       let lobbyReservationId: string | null = null;
+      // Definiere roomNumber und roomDescription außerhalb der if/else-Blöcke, damit sie überall verfügbar sind
+      let roomNumber: string | null = null;
+      let roomDescription: string | null = null;
 
       if (existingPotentialReservation) {
         // Bestätigung einer "potential" Reservation
@@ -1925,8 +1928,6 @@ export class WhatsAppFunctionHandlers {
           logger.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
           
           // Hole Reservierungsdetails aus LobbyPMS für roomNumber und roomDescription
-          let roomNumber: string | null = null;
-          let roomDescription: string | null = null;
           
           try {
             const lobbyReservation = await lobbyPmsService.fetchReservationById(lobbyReservationId);
@@ -1965,10 +1966,6 @@ export class WhatsAppFunctionHandlers {
         logger.log(`[create_room_reservation] Erstelle neue Reservation (keine "potential" Reservation gefunden)`);
         
         // 5.1. Erstelle Reservierung in LobbyPMS (WICHTIG: ZUERST in LobbyPMS, dann lokal!)
-        // Definiere roomNumber und roomDescription außerhalb des try-Blocks
-        let roomNumber: string | null = null;
-        let roomDescription: string | null = null;
-        
         try {
           const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
           lobbyReservationId = await lobbyPmsService.createBooking(
