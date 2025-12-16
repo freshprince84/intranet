@@ -1738,10 +1738,17 @@ div.fixed.top-16.bottom-0.right-0.sidepane-panel-container {
 @media (max-width: 640px) {
   /* Smooth scrolling auf iOS für horizontale Scroll-Container */
   nav.overflow-x-auto,
-  div.overflow-x-auto[class*="flex"][class*="gap"] {
+  div.overflow-x-auto[class*="flex"][class*="gap"]:not(.filter-tags-container) {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     overflow-y: hidden !important; /* Verhindere vertikales Scrollen */
+  }
+  
+  /* Filter-Tags-Container: Erlaube Dropdowns nach unten */
+  .filter-tags-container {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    overflow-y: visible !important; /* Erlaube Dropdowns */
   }
   
   /* Verhindere Layout-Shifts beim Scrollen */
