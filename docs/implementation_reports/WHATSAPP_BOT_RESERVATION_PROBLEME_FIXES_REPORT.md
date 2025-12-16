@@ -313,6 +313,57 @@ prompt += '  - WICHTIG: Wenn User "heute" sagt, bestätige IMMER das konkrete Da
 
 ---
 
+---
+
+## Fix 4: Bot bucht nicht nach Namensangabe
+
+**Datum:** 2025-12-16  
+**Status:** ✅ Behoben
+
+### Problem
+- Bot fragt nach Name: "Wie lautet Ihr vollständiger Name für die Buchung?"
+- User gibt Name: "Patrick Ammann"
+- Bot antwortet: "Hallo Patrick Ammann! Wie kann ich Ihnen heute helfen?" (statt zu buchen)
+
+### Ursache
+**Datei:** `backend/src/services/whatsappMessageHandler.ts` Zeile 1661-1662
+
+**Problem:**
+- `isBookingRequest` wird nur `true`, wenn:
+  1. Booking-Keywords in der aktuellen Nachricht vorhanden sind, ODER
+  2. Confirmation-Keywords vorhanden sind UND Context-Daten vorhanden sind
+- Wenn der User nur "Patrick Ammann" sagt (ohne Keywords), ist `isBookingRequest = false`
+- Zeile 1961: `if (hasAllInfo && isBookingRequest)` → `if (true && false)` → `false`
+- `shouldBook` wird `false` → Normale KI-Antwort wird generiert statt zu buchen
+
+### Lösung
+**Datei:** `backend/src/services/whatsappMessageHandler.ts` Zeile 1952-1965
+
+**Änderungen:**
+- Nach der Namens-Extraktion wird geprüft, ob:
+  1. `nameWasJustProvided` = `true` (Name wurde gerade extrahiert, war vorher nicht im Context)
+  2. `hasAllInfo` = `true` (alle Buchungsdaten vorhanden)
+  3. `hasActiveBookingRequest` = `true` (checkInDate oder lastAvailabilityCheck vorhanden)
+- Wenn alle Bedingungen erfüllt sind, wird `isBookingRequest = true` gesetzt
+- Dadurch wird `shouldBook = true` und die Buchung wird ausgeführt
+
+**Code-Änderung:**
+```typescript
+// WICHTIG: Wenn Name gerade gegeben wurde und alle Daten vorhanden sind, setze isBookingRequest = true
+const nameWasJustProvided = guestName && !bookingContext.guestName;
+const hasActiveBookingRequest = updatedContext.checkInDate || updatedContext.lastAvailabilityCheck;
+
+if (nameWasJustProvided && hasAllInfo && hasActiveBookingRequest) {
+  // Name wurde gerade gegeben, alle Daten vorhanden, aktive Buchungsanfrage vorhanden
+  // Setze isBookingRequest = true, damit gebucht wird
+  isBookingRequest = true;
+  logger.log(`[checkBookingContext] Name wurde gerade gegeben, alle Daten vorhanden, setze isBookingRequest = true`);
+}
+```
+
+---
+
 **Erstellt:** 2025-12-15  
+**Aktualisiert:** 2025-12-16  
 **Status:** ✅ Alle Fixes implementiert, bereit für Testing
 

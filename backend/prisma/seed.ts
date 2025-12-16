@@ -2276,6 +2276,74 @@ async function main() {
           // Requests: KEINE Rollen-Filter (Requests unterstützen keine Rollen)
           // Nur User-Filter werden erstellt (siehe Zeile 1705-1711)
 
+          // ✅ CLEANUP: Lösche Filter für nicht-existierende/inaktive User
+          if (usersGroup) {
+            const allUserFilters = await prisma.savedFilter.findMany({
+              where: {
+                groupId: usersGroup.id
+              }
+            });
+
+            if (allUserFilters.length > 0) {
+              // Extrahiere User-IDs aus Filter-Bedingungen
+              const userIdsInFilters: number[] = [];
+              for (const filter of allUserFilters) {
+                try {
+                  const conditions = JSON.parse(filter.conditions);
+                  if (Array.isArray(conditions)) {
+                    conditions.forEach((condition: any) => {
+                      if (condition.value && typeof condition.value === 'string' && condition.value.startsWith('user-')) {
+                        const userId = parseInt(condition.value.replace('user-', ''), 10);
+                        if (!isNaN(userId)) {
+                          userIdsInFilters.push(userId);
+                        }
+                      }
+                    });
+                  }
+                } catch (e) {
+                  // Ignoriere Fehler beim Parsen
+                }
+              }
+
+              // Prüfe welche User noch existieren und aktiv sind
+              if (userIdsInFilters.length > 0) {
+                const existingUsers = await prisma.user.findMany({
+                  where: {
+                    id: { in: userIdsInFilters },
+                    active: true
+                  },
+                  select: { id: true }
+                });
+                const existingUserIds = new Set(existingUsers.map(u => u.id));
+
+                // Lösche Filter für nicht-existierende/inaktive User
+                for (const filter of allUserFilters) {
+                  try {
+                    const conditions = JSON.parse(filter.conditions);
+                    if (Array.isArray(conditions)) {
+                      const hasValidUser = conditions.some((condition: any) => {
+                        if (condition.value && typeof condition.value === 'string' && condition.value.startsWith('user-')) {
+                          const userId = parseInt(condition.value.replace('user-', ''), 10);
+                          return !isNaN(userId) && existingUserIds.has(userId);
+                        }
+                        return false;
+                      });
+
+                      if (!hasValidUser) {
+                        await prisma.savedFilter.delete({
+                          where: { id: filter.id }
+                        });
+                        console.log(`    🗑️  Filter "${filter.name}" gelöscht (User existiert nicht mehr oder ist inaktiv)`);
+                      }
+                    }
+                  } catch (e) {
+                    // Ignoriere Fehler
+                  }
+                }
+              }
+            }
+          }
+
           // Erstelle Filter für jeden Benutzer
           for (const user of users) {
             const filterName = `${user.firstName} ${user.lastName}`.trim() || user.username;
