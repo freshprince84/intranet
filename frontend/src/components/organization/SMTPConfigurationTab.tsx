@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EnvelopeIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { EnvelopeIcon, CheckIcon, ArrowPathIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { organizationService } from '../../services/organizationService.ts';
 import { Organization } from '../../types/organization.ts';
 import useMessage from '../../hooks/useMessage.ts';
+import { API_ENDPOINTS, API_URL } from '../../config/api.ts';
+import axiosInstance from '../../config/axios.ts';
 
 interface Props {
   organization: Organization | null;
@@ -23,6 +25,7 @@ const SMTPConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
     smtpFromName: ''
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [extractingBranding, setExtractingBranding] = useState(false);
 
   useEffect(() => {
     if (organization?.settings) {
@@ -92,6 +95,36 @@ const SMTPConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
       smtpFromEmail: organization?.domain ? `noreply@${organization.domain}` : '',
       smtpFromName: organization?.displayName || ''
     });
+  };
+
+  const handleExtractBranding = async () => {
+    if (!organization?.logo || organization.logo.trim() === '') {
+      showMessage(t('organization.smtp.branding.noLogo'), 'error');
+      return;
+    }
+
+    try {
+      setExtractingBranding(true);
+      
+      const response = await axiosInstance.post(
+        `${API_URL}${API_ENDPOINTS.SETTINGS.BRANDING_EXTRACT}`
+      );
+
+      if (response.data.testEmailSent) {
+        showMessage(t('organization.smtp.branding.extractSuccess') + ' ' + t('organization.smtp.branding.testEmailSent'), 'success');
+      } else {
+        showMessage(t('organization.smtp.branding.extractSuccess'), 'success');
+      }
+
+      if (onSave) {
+        onSave();
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || t('organization.smtp.branding.extractError');
+      showMessage(errorMessage, 'error');
+    } finally {
+      setExtractingBranding(false);
+    }
   };
 
   return (
@@ -257,6 +290,39 @@ const SMTPConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
             <li>{t('organization.smtp.info2')}</li>
             <li>{t('organization.smtp.info3')}</li>
           </ul>
+        </div>
+
+        {/* Corporate Identity Section */}
+        <div className="border-t pt-6 mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <SparklesIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+              {t('organization.smtp.branding.title')}
+            </h4>
+          </div>
+          
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            {t('organization.smtp.branding.description')}
+          </p>
+
+          <button
+            type="button"
+            onClick={handleExtractBranding}
+            disabled={extractingBranding || !organization?.logo || organization.logo.trim() === ''}
+            className="w-full sm:w-auto px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:bg-purple-700 dark:hover:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {extractingBranding ? (
+              <>
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                <span>{t('organization.smtp.branding.extracting')}</span>
+              </>
+            ) : (
+              <>
+                <SparklesIcon className="h-5 w-5" />
+                <span>{t('organization.smtp.branding.extractButton')}</span>
+              </>
+            )}
+          </button>
         </div>
 
         <div className="flex justify-end gap-2 pt-4">

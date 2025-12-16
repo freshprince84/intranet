@@ -57,7 +57,8 @@ export const API_ENDPOINTS = {
     // Einstellungen
     SETTINGS: {
         BASE: '/settings',
-        BY_KEY: (key: string) => `/settings/${key}`
+        BY_KEY: (key: string) => `/settings/${key}`,
+        BRANDING_EXTRACT: '/settings/branding/extract-and-generate-template'
     },
     // Zeiterfassung
     WORKTIME: {

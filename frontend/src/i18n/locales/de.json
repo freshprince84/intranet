@@ -1265,7 +1265,17 @@
       "saveSuccess": "SMTP-Einstellungen erfolgreich gespeichert",
       "saveError": "Fehler beim Speichern der SMTP-Einstellungen",
       "requiredFields": "Bitte füllen Sie alle Pflichtfelder aus (Host, Port, Benutzer, Passwort)",
-      "clear": "Zurücksetzen"
+      "clear": "Zurücksetzen",
+      "branding": {
+        "title": "Corporate Identity",
+        "description": "Extrahieren Sie die Corporate Identity aus Ihrem Logo und generieren Sie ein E-Mail-Template zur Vorschau.",
+        "extractButton": "Corporate Identity extrahieren & E-Mail-Template testen",
+        "extracting": "Extrahiere Corporate Identity...",
+        "extractSuccess": "Corporate Identity erfolgreich extrahiert und Test-E-Mail versendet",
+        "extractError": "Fehler bei der Corporate Identity-Extraktion",
+        "noLogo": "Kein Logo vorhanden. Bitte laden Sie zuerst ein Logo hoch.",
+        "testEmailSent": "Test-E-Mail wurde an Ihre E-Mail-Adresse gesendet"
+      }
     },
     "api": {
       "title": "API-Konfigurationen",

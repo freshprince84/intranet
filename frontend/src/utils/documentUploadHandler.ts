@@ -1,5 +1,6 @@
 import { recognizeDocumentWithAI } from './aiDocumentRecognition.ts';
 import axiosInstance from '../config/axios.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 
 export interface DocumentUploadResult {
   success: boolean;
@@ -32,13 +33,14 @@ export const handleDirectDocumentUpload = async (
     if (recognizedData.issueDate) formData.append('issueDate', recognizedData.issueDate);
     if (recognizedData.expiryDate) formData.append('expiryDate', recognizedData.expiryDate);
     if (recognizedData.issuingCountry) formData.append('issuingCountry', recognizedData.issuingCountry);
+    if (recognizedData.issuingAuthority) formData.append('issuingAuthority', recognizedData.issuingAuthority);
     if (recognizedData.firstName) formData.append('firstName', recognizedData.firstName);
     if (recognizedData.lastName) formData.append('lastName', recognizedData.lastName);
     if (recognizedData.birthday) formData.append('birthday', recognizedData.birthday);
     if (recognizedData.gender) formData.append('gender', recognizedData.gender);
     if (recognizedData.country) formData.append('country', recognizedData.country);
     
-    await axiosInstance.post(`/identification-documents/${userId}`, formData, {
+    await axiosInstance.post(API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.BY_USER(userId), formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     

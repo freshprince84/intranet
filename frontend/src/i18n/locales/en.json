@@ -400,7 +400,17 @@
       "saveSuccess": "SMTP settings saved successfully",
       "saveError": "Error saving SMTP settings",
       "requiredFields": "Please fill in all required fields (Host, Port, User, Password)",
-      "clear": "Clear"
+      "clear": "Clear",
+      "branding": {
+        "title": "Corporate Identity",
+        "description": "Extract corporate identity from your logo and generate an email template for preview.",
+        "extractButton": "Extract Corporate Identity & Test Email Template",
+        "extracting": "Extracting corporate identity...",
+        "extractSuccess": "Corporate identity extracted successfully and test email sent",
+        "extractError": "Error extracting corporate identity",
+        "noLogo": "No logo available. Please upload a logo first.",
+        "testEmailSent": "Test email has been sent to your email address"
+      }
     },
     "edit": {
       "title": "Edit Organization"
