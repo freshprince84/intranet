@@ -327,7 +327,17 @@
       "saveSuccess": "Configuración SMTP guardada exitosamente",
       "saveError": "Error al guardar la configuración SMTP",
       "requiredFields": "Por favor complete todos los campos obligatorios (Host, Puerto, Usuario, Contraseña)",
-      "clear": "Limpiar"
+      "clear": "Limpiar",
+      "branding": {
+        "title": "Identidad Corporativa",
+        "description": "Extraiga la identidad corporativa de su logo y genere una plantilla de correo electrónico para vista previa.",
+        "extractButton": "Extraer Identidad Corporativa y Probar Plantilla de Correo",
+        "extracting": "Extrayendo identidad corporativa...",
+        "extractSuccess": "Identidad corporativa extraída exitosamente y correo de prueba enviado",
+        "extractError": "Error al extraer la identidad corporativa",
+        "noLogo": "No hay logo disponible. Por favor suba un logo primero.",
+        "testEmailSent": "El correo de prueba ha sido enviado a su dirección de correo electrónico"
+      }
     },
     "api": {
       "title": "Configuraciones API",

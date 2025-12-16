@@ -3,7 +3,7 @@ import { LobbyPmsService } from './lobbyPmsService';
 import { WhatsAppService } from './whatsappService';
 import { BoldPaymentService } from './boldPaymentService';
 import { TTLockService } from './ttlockService';
-import { sendEmail } from './emailService';
+import { sendEmail, getOrganizationBranding, generateEmailTemplate } from './emailService';
 import { TaskAutomationService } from './taskAutomationService';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 import { prisma } from '../utils/prisma';
@@ -887,71 +887,41 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           }
 
           // Konvertiere Plain-Text zu HTML (ähnlich wie sendCheckInInvitationEmail)
+          // Lade Logo + Branding (nutzt gespeichertes Branding, keine API-Calls)
+          const { logo, branding } = await getOrganizationBranding(
+            reservation.organizationId,
+            reservation.branchId || undefined
+          );
+
+          // Lade Organisationsname für Header
+          let organizationName = 'La Familia Hostel';
+          if (reservation.organizationId) {
+            const organization = await prisma.organization.findUnique({
+              where: { id: reservation.organizationId },
+              select: { displayName: true, name: true }
+            });
+            if (organization?.displayName) {
+              organizationName = organization.displayName;
+            } else if (organization?.name) {
+              organizationName = organization.name;
+            }
+          }
+
           // Ersetze Links im Text durch HTML-Links
+          const buttonColor = branding?.colors?.primary || '#007bff';
           let emailHtmlContent = emailMessage
             .replace(/\n/g, '<br>')
             .replace(new RegExp(checkInLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
-              `<a href="${checkInLink}" style="color: #007bff; text-decoration: none; font-weight: bold;">${checkInLink}</a>`)
+              `<a href="${checkInLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: bold;">${checkInLink}</a>`)
             .replace(new RegExp(paymentLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
-              `<a href="${paymentLink}" style="color: #007bff; text-decoration: none; font-weight: bold;">${paymentLink}</a>`);
+              `<a href="${paymentLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: bold;">${paymentLink}</a>`);
 
-          const emailHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="UTF-8">
-              <style>
-                body {
-                  font-family: Arial, sans-serif;
-                  line-height: 1.6;
-                  color: #333;
-                  max-width: 600px;
-                  margin: 0 auto;
-                  padding: 20px;
-                }
-                .container {
-                  background-color: #f9fafb;
-                  padding: 30px;
-                  border-radius: 8px;
-                  border: 1px solid #e5e7eb;
-                }
-                .button {
-                  display: inline-block;
-                  padding: 12px 24px;
-                  background-color: #007bff;
-                  color: white;
-                  text-decoration: none;
-                  border-radius: 4px;
-                  margin: 10px 5px;
-                }
-                .button:hover {
-                  background-color: #0056b3;
-                }
-                .button-container {
-                  text-align: center;
-                  margin: 20px 0;
-                }
-                .footer {
-                  text-align: center;
-                  margin-top: 30px;
-                  color: #6b7280;
-                  font-size: 12px;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                ${emailHtmlContent}
-                <div class="button-container">
-                  <a href="${checkInLink}" class="button">Online Check-in</a>
-                  <a href="${paymentLink}" class="button">Zahlung durchführen</a>
-                </div>
-              </div>
-              <div class="footer">
-                <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
-              </div>
-            </body>
-            </html>
+          // Füge Buttons hinzu
+          emailHtmlContent += `
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="${checkInLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Online Check-in</a>
+              <a href="${paymentLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Zahlung durchführen</a>
+            </div>
           `;
 
           // NEU: Lade Email-Betreff aus Template
@@ -969,6 +939,15 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           );
           
           const emailSubject = emailTemplate?.emailSubject || 'Tu reserva ha sido confirmada - La Familia Hostel';
+
+          // Generiere E-Mail mit Template
+          const emailHtml = generateEmailTemplate({
+            logo,
+            branding,
+            headerTitle: organizationName,
+            content: emailHtmlContent,
+            language: emailLanguageCode
+          });
 
           // Versende Email
           const emailSent = await sendEmail(
@@ -2171,57 +2150,51 @@ ${contentText}
     });
     const isEnglish = languageCode === 'en';
     
+    // Lade Logo + Branding (nutzt gespeichertes Branding, keine API-Calls)
+    const { logo, branding } = await getOrganizationBranding(
+      reservation.organizationId,
+      reservation.branchId || undefined
+    );
+
+    // Lade Organisationsname für Header
+    let organizationName = 'La Familia Hostel';
+    if (reservation.organizationId) {
+      const organization = await prisma.organization.findUnique({
+        where: { id: reservation.organizationId },
+        select: { displayName: true, name: true }
+      });
+      if (organization?.displayName) {
+        organizationName = organization.displayName;
+      } else if (organization?.name) {
+        organizationName = organization.name;
+      }
+    }
+
+    const buttonColor = branding?.colors?.primary || '#007bff';
     let subject: string;
-    let html: string;
+    let content: string;
     let text: string;
 
     if (isEnglish) {
       // Englische Version
       subject = 'Welcome to La Familia Hostel - Online Check-in';
-      html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            margin: 10px 5px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>Hello ${reservation.guestName},</h1>
-          <p>We are pleased to welcome you to La Familia Hostel! 🎊</p>
-          <p>In case that you arrive after 18:00 or before 09:00, our recepcion 🛎️ will be closed.</p>
-          <p>We would then kindly ask you to complete check-in & payment online in advance:</p>
-          <p><strong>Check-In:</strong></p>
-          <p><a href="${checkInLink}" class="button">Online Check-in</a></p>
-          <p><strong>Please make the payment in advance:</strong></p>
-          <p><a href="${paymentLink}" class="button">Make Payment</a></p>
-          <p>Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.</p>
-          <p>Thank you!</p>
-          <p>We look forward to seeing you soon!</p>
+      content = `
+        <p>Hello ${reservation.guestName},</p>
+        <p>We are pleased to welcome you to La Familia Hostel! 🎊</p>
+        <p>In case that you arrive after 18:00 or before 09:00, our recepcion 🛎️ will be closed.</p>
+        <p>We would then kindly ask you to complete check-in & payment online in advance:</p>
+        <p><strong>Check-In:</strong></p>
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${checkInLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Online Check-in</a>
         </div>
-      </body>
-      </html>
-    `;
+        <p><strong>Please make the payment in advance:</strong></p>
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${paymentLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Make Payment</a>
+        </div>
+        <p>Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.</p>
+        <p>Thank you!</p>
+        <p>We look forward to seeing you soon!</p>
+      `;
 
       text = `
 Hello ${reservation.guestName},
@@ -2245,54 +2218,27 @@ Please write us briefly once you have completed both the check-in and the paymen
 Thank you!
 
 We look forward to seeing you soon!
-    `;
+      `;
     } else {
       // Spanische Version
-      subject = 'Willkommen bei La Familia Hostel - Online Check-in';
-      html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            margin: 10px 5px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>Hola ${reservation.guestName},</h1>
-          <p>¡Nos complace darte la bienvenida a La Familia Hostel! 🎊</p>
-          <p>En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.</p>
-          <p>Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:</p>
-          <p><strong>Check-In:</strong></p>
-          <p><a href="${checkInLink}" class="button">Online Check-in</a></p>
-          <p><strong>Por favor, realiza el pago por adelantado:</strong></p>
-          <p><a href="${paymentLink}" class="button">Zahlung durchführen</a></p>
-          <p>Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.</p>
-          <p>¡Gracias!</p>
-          <p>¡Esperamos verte pronto!</p>
+      subject = 'Bienvenido a La Familia Hostel - Check-in en línea';
+      content = `
+        <p>Hola ${reservation.guestName},</p>
+        <p>¡Nos complace darte la bienvenida a La Familia Hostel! 🎊</p>
+        <p>En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.</p>
+        <p>Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:</p>
+        <p><strong>Check-In:</strong></p>
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${checkInLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Check-in en línea</a>
         </div>
-      </body>
-      </html>
-    `;
+        <p><strong>Por favor, realiza el pago por adelantado:</strong></p>
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${paymentLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Realizar pago</a>
+        </div>
+        <p>Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.</p>
+        <p>¡Gracias!</p>
+        <p>¡Esperamos verte pronto!</p>
+      `;
 
       text = `
 Hola ${reservation.guestName},
@@ -2316,8 +2262,16 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
 ¡Gracias!
 
 ¡Esperamos verte pronto!
-    `;
+      `;
     }
+
+    const html = generateEmailTemplate({
+      logo,
+      branding,
+      headerTitle: organizationName,
+      content,
+      language: languageCode as 'de' | 'en' | 'es'
+    });
 
     await sendEmail(
       reservation.guestEmail!,
@@ -2427,41 +2381,37 @@ ${doorPin ? `Acceso:
 
     const subject = template?.emailSubject || 'Ihr Check-in ist abgeschlossen - Zimmerinformationen';
 
+    // Lade Logo + Branding (nutzt gespeichertes Branding, keine API-Calls)
+    const { logo, branding } = await getOrganizationBranding(
+      reservation.organizationId,
+      reservation.branchId || undefined
+    );
+
+    // Lade Organisationsname für Header
+    let organizationName = 'La Familia Hostel';
+    if (reservation.organizationId) {
+      const organization = await prisma.organization.findUnique({
+        where: { id: reservation.organizationId },
+        select: { displayName: true, name: true }
+      });
+      if (organization?.displayName) {
+        organizationName = organization.displayName;
+      } else if (organization?.name) {
+        organizationName = organization.name;
+      }
+    }
+
     // Konvertiere Plain-Text zu HTML
     const emailHtmlContent = emailContent
       .replace(/\n/g, '<br>');
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .info-box {
-            background-color: #f5f5f5;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 15px 0;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          ${emailHtmlContent}
-        </div>
-      </body>
-      </html>
-    `;
+    const html = generateEmailTemplate({
+      logo,
+      branding,
+      headerTitle: organizationName,
+      content: emailHtmlContent,
+      language: languageCode
+    });
 
     await sendEmail(
       reservation.guestEmail!,

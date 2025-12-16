@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import puppeteer, { Browser, Page } from 'puppeteer';
 
 const prisma = new PrismaClient();
 
@@ -51,7 +52,7 @@ export class OTADiscoveryService {
   }
 
   /**
-   * Scraped Booking.com Suchseite
+   * Scraped Booking.com Suchseite mit Puppeteer (Browser-Automation)
    * 
    * @param city - Stadt (z.B. "Medellín")
    * @param country - Land (z.B. "Kolumbien")
@@ -63,128 +64,155 @@ export class OTADiscoveryService {
     country: string | null,
     roomType: 'private' | 'dorm'
   ): Promise<DiscoveredListing[]> {
-    logger.warn(`[OTADiscoveryService] 🔍 Scrape Booking.com für ${city}, ${country || 'N/A'}, ${roomType}`);
+    logger.warn(`[OTADiscoveryService] 🔍 Scrape Booking.com für ${city}, ${country || 'N/A'}, ${roomType} (mit Puppeteer)`);
     
     const listings: DiscoveredListing[] = [];
-    let page = 1;
-    let hasMorePages = true;
-    const maxPages = 10; // Limit für Testing
+    let browser: Browser | null = null;
+    let page: Page | null = null;
 
-    // Erstelle Suchstring: "Stadt, Region, Land" oder "Stadt, Land"
-    const searchString = country 
-      ? `${city}, ${country}` 
-      : city;
+    try {
+      // Erstelle Suchstring: "Stadt, Region, Land" oder "Stadt, Land"
+      const searchString = country 
+        ? `${city}, ${country}` 
+        : city;
 
-    // Basis-URL für Booking.com
-    // Beispiel: https://www.booking.com/searchresults.de.html?ss=Medell%C3%ADn%2C+Antioquia%2C+Kolumbien&dest_id=-592318&dest_type=city&checkin=2025-12-15&checkout=2025-12-16&group_adults=1&no_rooms=1&group_children=0&nflt=di%3D4137%3Bht_id%3D203%3Breview_score%3D80
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const checkInDate = today.toISOString().split('T')[0];
-    const checkOutDate = tomorrow.toISOString().split('T')[0];
+      // Basis-URL für Booking.com
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const checkInDate = today.toISOString().split('T')[0];
+      const checkOutDate = tomorrow.toISOString().split('T')[0];
 
-    while (hasMorePages && page <= maxPages) {
-      try {
-        // URL-encode Suchstring
-        const encodedSearch = encodeURIComponent(searchString);
-        
-        // Hostel-Filter: nflt=di%3D4137%3Bht_id%3D203 (Hostels)
-        const url = `https://www.booking.com/searchresults.de.html?ss=${encodedSearch}&dest_type=city&checkin=${checkInDate}&checkout=${checkOutDate}&group_adults=1&no_rooms=1&group_children=0&nflt=ht_id%3D203&offset=${(page - 1) * 25}`;
+      // URL-encode Suchstring
+      const encodedSearch = encodeURIComponent(searchString);
+      
+      // Hostel-Filter: nflt=ht_id%3D203 (Hostels)
+      const url = `https://www.booking.com/searchresults.de.html?ss=${encodedSearch}&dest_type=city&checkin=${checkInDate}&checkout=${checkOutDate}&group_adults=1&no_rooms=1&group_children=0&nflt=ht_id%3D203&offset=0`;
 
-        logger.warn(`[OTADiscoveryService] 📡 Request zu Booking.com, Seite ${page}: ${url}`);
+      logger.warn(`[OTADiscoveryService] 📡 Starte Browser für Booking.com: ${url}`);
 
-        // Erweiterte Headers für Bot-Schutz-Umgehung
-        const headers = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-          'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1',
-          'Cache-Control': 'max-age=0',
-          'Referer': 'https://www.booking.com/',
-          'DNT': '1'
-        };
+      // Starte Browser mit Puppeteer
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--disable-gpu',
+          '--window-size=1920,1080'
+        ]
+      });
 
-        const response = await axios.get(url, {
-          headers,
-          timeout: 30000,
-          maxRedirects: 5,
-          validateStatus: (status) => status < 500 // Akzeptiere auch 4xx für besseres Error-Handling
-        });
+      page = await browser.newPage();
 
-        // Prüfe ob Bot-Schutz aktiv ist
-        const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-        if (responseText.includes('challenge-container') || responseText.includes('AwsWafIntegration') || responseText.includes('verify that you\'re not a robot')) {
-          logger.error(`[OTADiscoveryService] ⚠️ Booking.com Bot-Schutz aktiv! Status: ${response.status}`);
-          logger.error(`[OTADiscoveryService] ⚠️ Response-Länge: ${responseText.length} Zeichen`);
-          logger.error(`[OTADiscoveryService] ⚠️ Response-Header:`, response.headers);
-          hasMorePages = false;
-          break; // Stoppe weitere Versuche
+      // Setze realistische Browser-Headers
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0',
+        'DNT': '1'
+      });
+
+      // Navigiere zur Seite und warte auf Content
+      logger.warn(`[OTADiscoveryService] 🌐 Navigiere zu Booking.com...`);
+      await page.goto(url, {
+        waitUntil: 'networkidle2',
+        timeout: 60000
+      });
+
+      // Warte zusätzlich 2 Sekunden für JavaScript-Execution
+      await page.waitForTimeout(2000);
+
+      // Prüfe ob Bot-Schutz aktiv ist
+      const pageContent = await page.content();
+      if (pageContent.includes('challenge-container') || pageContent.includes('AwsWafIntegration') || pageContent.includes('verify that you\'re not a robot')) {
+        logger.error(`[OTADiscoveryService] ⚠️ Booking.com Bot-Schutz aktiv!`);
+        logger.error(`[OTADiscoveryService] ⚠️ Response-Länge: ${pageContent.length} Zeichen`);
+        return [];
+      }
+
+      // Warte auf Hotel-Listings (verschiedene mögliche Selektoren)
+      const selectors = [
+        '.sr_item',
+        '.c-sr_item',
+        '[data-hotel-id]',
+        '[data-testid*="propertycard"]',
+        '[data-testid*="hotelcard"]',
+        'article[data-testid]'
+      ];
+
+      let listingsFound = false;
+      for (const selector of selectors) {
+        try {
+          await page.waitForSelector(selector, { timeout: 5000 });
+          listingsFound = true;
+          logger.warn(`[OTADiscoveryService] ✅ Selektor "${selector}" gefunden`);
+          break;
+        } catch (e) {
+          // Selektor nicht gefunden, versuche nächsten
         }
+      }
 
-        const $ = cheerio.load(response.data);
-        
-        // DEBUG: Log HTML-Struktur für Analyse
-        if (page === 1) {
-          const bodyHtml = $('body').html() || '';
-          const bodyLength = bodyHtml.length;
-          logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${bodyLength} Zeichen, Status: ${response.status}`);
-          
-          // Prüfe verschiedene mögliche Selektoren
-          const testSelectors = [
-            '.sr_item',
-            '.c-sr_item',
-            '[data-hotel-id]',
-            '[data-testid*="propertycard"]',
-            '[data-testid*="hotelcard"]',
-            '.propertycard',
-            '.hotelcard',
-            'article[data-testid]',
-            '[class*="sr_item"]',
-            '[class*="property"]'
-          ];
-          
-          for (const selector of testSelectors) {
-            const count = $(selector).length;
-            if (count > 0) {
-              logger.warn(`[OTADiscoveryService] 🔍 Selektor "${selector}": ${count} Elemente gefunden`);
-            }
-          }
-          
-          // Log erste 2000 Zeichen des HTML für manuelle Analyse
-          const htmlSample = bodyHtml.substring(0, 2000);
-          logger.warn(`[OTADiscoveryService] 📋 HTML-Sample (erste 2000 Zeichen):\n${htmlSample}`);
+      if (!listingsFound) {
+        logger.warn(`[OTADiscoveryService] ⚠️ Keine Hotel-Listings gefunden mit erwarteten Selektoren`);
+      }
+
+      // Extrahiere HTML und parse mit Cheerio
+      const html = await page.content();
+      const $ = cheerio.load(html);
+      
+      logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${html.length} Zeichen`);
+      
+      // DEBUG: Teste verschiedene Selektoren
+      const testSelectors = [
+        '.sr_item',
+        '.c-sr_item',
+        '[data-hotel-id]',
+        '[data-testid*="propertycard"]',
+        '[data-testid*="hotelcard"]',
+        '.propertycard',
+        '.hotelcard',
+        'article[data-testid]',
+        '[class*="sr_item"]',
+        '[class*="property"]'
+      ];
+      
+      for (const selector of testSelectors) {
+        const count = $(selector).length;
+        if (count > 0) {
+          logger.warn(`[OTADiscoveryService] 🔍 Selektor "${selector}": ${count} Elemente gefunden`);
         }
-        
-        const pageListings = this.extractBookingComListings($, roomType, city, country);
+      }
+      
+      // Extrahiere Listings
+      const pageListings = this.extractBookingComListings($, roomType, city, country);
+      listings.push(...pageListings);
+      
+      logger.warn(`[OTADiscoveryService] ✅ Booking.com Discovery abgeschlossen: ${listings.length} Listings gefunden`);
 
-        if (pageListings.length === 0) {
-          logger.warn(`[OTADiscoveryService] ⚠️ Seite ${page}: Keine Listings gefunden`);
-          hasMorePages = false;
-        } else {
-          listings.push(...pageListings);
-          logger.warn(`[OTADiscoveryService] ✅ Seite ${page}: ${pageListings.length} Listings gefunden (Gesamt: ${listings.length})`);
-        }
-
-        // Rate-Limiting: 2 Sekunden zwischen Requests
-        if (hasMorePages && page < maxPages) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-
-        page++;
-      } catch (error: any) {
-        logger.error(`[OTADiscoveryService] ❌ Fehler beim Scraping von Booking.com Seite ${page}:`, error.message);
-        hasMorePages = false;
+    } catch (error: any) {
+      logger.error(`[OTADiscoveryService] ❌ Fehler beim Scraping von Booking.com:`, error.message);
+      logger.error(`[OTADiscoveryService] Error Stack:`, error instanceof Error ? error.stack : 'Kein Stack verfügbar');
+    } finally {
+      // Schließe Browser
+      if (page) {
+        await page.close().catch(() => {});
+      }
+      if (browser) {
+        await browser.close().catch(() => {});
       }
     }
 
-    logger.warn(`[OTADiscoveryService] ✅ Booking.com Discovery abgeschlossen: ${listings.length} Listings gefunden`);
     return listings;
   }
 
@@ -536,29 +564,7 @@ export class OTADiscoveryService {
       try {
         const $el = $(element);
         
-        // Extrahiere Property-ID (Listing-ID)
-        const propertyId = $el.attr('data-property-id') || 
-                          $el.find('[data-property-id]').attr('data-property-id') ||
-                          $el.attr('data-id') ||
-                          null;
-
-        if (!propertyId) {
-          // Versuche aus URL zu extrahieren
-          const linkElement = $el.find('a[href*="/hostels/"]').first();
-          const href = linkElement.attr('href');
-          if (href) {
-            const match = href.match(/\/hostels\/[^\/]+-(\d+)/);
-            if (match && match[1]) {
-              // propertyId gefunden
-            } else {
-              return; // Skip wenn keine ID gefunden
-            }
-          } else {
-            return; // Skip wenn keine ID gefunden
-          }
-        }
-
-        // Extrahiere URL
+        // Extrahiere URL zuerst (wird für propertyId-Extraktion benötigt)
         const linkElement = $el.find('a[href*="/hostels/"]').first();
         const relativeUrl = linkElement.attr('href');
         const listingUrl = relativeUrl 
@@ -566,7 +572,37 @@ export class OTADiscoveryService {
           : null;
 
         if (!listingUrl) {
+          logger.warn(`[OTADiscoveryService] ⚠️ Hostelworld: Keine URL gefunden für Element ${index}`);
           return; // Skip wenn keine URL gefunden
+        }
+
+        // Extrahiere Property-ID (Listing-ID) - zuerst aus Attributen, dann aus URL
+        let propertyId = $el.attr('data-property-id') || 
+                         $el.find('[data-property-id]').attr('data-property-id') ||
+                         $el.attr('data-id') ||
+                         null;
+
+        // Falls nicht in Attributen, versuche aus URL zu extrahieren
+        if (!propertyId && listingUrl) {
+          const match = listingUrl.match(/\/hostels\/[^\/]+-(\d+)/);
+          if (match && match[1]) {
+            propertyId = match[1];
+          } else {
+            // Alternative: Versuche aus href direkt
+            const hrefMatch = relativeUrl?.match(/\/hostels\/[^\/]+-(\d+)/);
+            if (hrefMatch && hrefMatch[1]) {
+              propertyId = hrefMatch[1];
+            }
+          }
+        }
+
+        // Falls immer noch keine ID, verwende URL als Fallback-ID
+        if (!propertyId) {
+          // Extrahiere letzten Teil der URL als ID
+          const urlParts = listingUrl.split('/');
+          const lastPart = urlParts[urlParts.length - 1];
+          propertyId = lastPart || `hostel-${index}`;
+          logger.warn(`[OTADiscoveryService] ⚠️ Hostelworld: Keine Property-ID gefunden, verwende Fallback: ${propertyId}`);
         }
 
         // Extrahiere Zimmernamen und -typ
@@ -622,18 +658,10 @@ export class OTADiscoveryService {
           roomName = roomType === 'dorm' ? 'Dorm Bed' : 'Private Room';
         }
 
-        // Extrahiere Property-ID aus URL falls nicht vorhanden
-        let listingId = propertyId;
-        if (!listingId && listingUrl) {
-          const match = listingUrl.match(/\/hostels\/[^\/]+-(\d+)/);
-          if (match && match[1]) {
-            listingId = match[1];
-          }
-        }
+        // Verwende propertyId als listingId (falls nicht vorhanden, verwende Fallback)
+        const listingId = propertyId || `hostel-${index}`;
 
-        if (!listingId) {
-          return; // Skip wenn keine ID gefunden
-        }
+        logger.warn(`[OTADiscoveryService] 🔍 Hostelworld Listing ${index}: ID=${listingId}, URL=${listingUrl}, RoomName=${roomName}, isDorm=${isDorm}, isPrivate=${isPrivate}, roomType=${roomType}`);
 
         listings.push({
           platform: 'hostelworld.com',

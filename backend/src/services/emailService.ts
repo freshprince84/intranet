@@ -353,119 +353,68 @@ export const sendRegistrationEmail = async (
       return false;
     }
 
-    const mailOptions = {
-      from: process.env.SMTP_USER || 'noreply@intranet.local',
-      to: email,
-      subject: 'Willkommen im Intranet - Ihre Anmeldeinformationen',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background-color: #2563eb;
-              color: white;
-              padding: 20px;
-              text-align: center;
-              border-radius: 8px 8px 0 0;
-            }
-            .content {
-              background-color: #f9fafb;
-              padding: 30px;
-              border: 1px solid #e5e7eb;
-              border-top: none;
-              border-radius: 0 0 8px 8px;
-            }
-            .credentials {
-              background-color: white;
-              padding: 20px;
-              border-radius: 8px;
-              margin: 20px 0;
-              border-left: 4px solid #2563eb;
-            }
-            .credential-item {
-              margin: 10px 0;
-              padding: 10px;
-              background-color: #f3f4f6;
-              border-radius: 4px;
-            }
-            .credential-label {
-              font-weight: bold;
-              color: #374151;
-            }
-            .credential-value {
-              font-family: monospace;
-              color: #1f2937;
-              margin-left: 10px;
-            }
-            .warning {
-              background-color: #fef3c7;
-              border-left: 4px solid #f59e0b;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              color: #6b7280;
-              font-size: 12px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Willkommen im Intranet!</h1>
-          </div>
-          <div class="content">
-            <p>Hallo,</p>
-            <p>Ihr Benutzerkonto wurde erfolgreich erstellt. Hier sind Ihre Anmeldeinformationen:</p>
-            
-            <div class="credentials">
-              <div class="credential-item">
-                <span class="credential-label">Benutzername:</span>
-                <span class="credential-value">${username}</span>
-              </div>
-              <div class="credential-item">
-                <span class="credential-label">E-Mail:</span>
-                <span class="credential-value">${email}</span>
-              </div>
-              <div class="credential-item">
-                <span class="credential-label">Passwort:</span>
-                <span class="credential-value">${password}</span>
-              </div>
-            </div>
+    // Lade Logo + Branding (nutzt gespeichertes Branding, keine API-Calls)
+    const { logo, branding } = await getOrganizationBranding(organizationId);
 
-            <div class="warning">
-              <strong>⚠️ Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach dem ersten Login aus Sicherheitsgründen.
-            </div>
+    // Lade Organisationsname für Header
+    let organizationName = 'Intranet';
+    if (organizationId) {
+      const organization = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { displayName: true, name: true }
+      });
+      if (organization?.displayName) {
+        organizationName = organization.displayName;
+      } else if (organization?.name) {
+        organizationName = organization.name;
+      }
+    }
 
-            <p>Sie können sich jetzt mit diesen Anmeldeinformationen anmelden.</p>
-            
-            <p>Nach der Anmeldung können Sie:</p>
-            <ul>
-              <li>Einer bestehenden Organisation beitreten</li>
-              <li>Eine eigene Organisation erstellen</li>
-            </ul>
+    // Generiere Content mit Template
+    const primaryColor = branding?.colors?.primary || '#2563eb';
+    const content = `
+      <p>Hallo,</p>
+      <p>Ihr Benutzerkonto wurde erfolgreich erstellt. Hier sind Ihre Anmeldeinformationen:</p>
+      
+      <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${primaryColor};">
+        <div style="margin: 10px 0; padding: 10px; background-color: #f3f4f6; border-radius: 4px;">
+          <span style="font-weight: bold; color: #374151;">Benutzername:</span>
+          <span style="font-family: monospace; color: #1f2937; margin-left: 10px;">${username}</span>
+        </div>
+        <div style="margin: 10px 0; padding: 10px; background-color: #f3f4f6; border-radius: 4px;">
+          <span style="font-weight: bold; color: #374151;">E-Mail:</span>
+          <span style="font-family: monospace; color: #1f2937; margin-left: 10px;">${email}</span>
+        </div>
+        <div style="margin: 10px 0; padding: 10px; background-color: #f3f4f6; border-radius: 4px;">
+          <span style="font-weight: bold; color: #374151;">Passwort:</span>
+          <span style="font-family: monospace; color: #1f2937; margin-left: 10px;">${password}</span>
+        </div>
+      </div>
 
-            <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-          </div>
-          <div class="footer">
-            <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
-          </div>
-        </body>
-        </html>
-      `,
-      text: `
+      <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <strong>⚠️ Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach dem ersten Login aus Sicherheitsgründen.
+      </div>
+
+      <p>Sie können sich jetzt mit diesen Anmeldeinformationen anmelden.</p>
+      
+      <p>Nach der Anmeldung können Sie:</p>
+      <ul>
+        <li>Einer bestehenden Organisation beitreten</li>
+        <li>Eine eigene Organisation erstellen</li>
+      </ul>
+
+      <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+    `;
+
+    const html = generateEmailTemplate({
+      logo,
+      branding,
+      headerTitle: organizationName,
+      content,
+      language: 'de'
+    });
+
+    const text = `
 Willkommen im Intranet!
 
 Ihr Benutzerkonto wurde erfolgreich erstellt. Hier sind Ihre Anmeldeinformationen:
@@ -485,7 +434,14 @@ Nach der Anmeldung können Sie:
 Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 
 Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
-      `,
+    `;
+
+    const mailOptions = {
+      from: process.env.SMTP_USER || 'noreply@intranet.local',
+      to: email,
+      subject: 'Willkommen im Intranet - Ihre Anmeldeinformationen',
+      html: html,
+      text: text,
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -677,104 +633,45 @@ export const sendPasswordResetEmail = async (
     
     logger.log(`[EMAIL] 📧 Versende E-Mail von: ${fromString} an: ${email}`);
 
-    const mailOptions = {
-      from: fromString,
-      to: email,
-      subject: 'Passwort zurücksetzen - Intranet',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background-color: #2563eb;
-              color: white;
-              padding: 20px;
-              text-align: center;
-              border-radius: 8px 8px 0 0;
-            }
-            .content {
-              background-color: #f9fafb;
-              padding: 30px;
-              border: 1px solid #e5e7eb;
-              border-top: none;
-              border-radius: 0 0 8px 8px;
-            }
-            .button {
-              display: inline-block;
-              padding: 12px 24px;
-              background-color: #2563eb;
-              color: white;
-              text-decoration: none;
-              border-radius: 6px;
-              margin: 20px 0;
-            }
-            .button:hover {
-              background-color: #1d4ed8;
-            }
-            .warning {
-              background-color: #fef3c7;
-              border-left: 4px solid #f59e0b;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              color: #6b7280;
-              font-size: 12px;
-            }
-            .link-fallback {
-              word-break: break-all;
-              color: #2563eb;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Passwort zurücksetzen</h1>
-          </div>
-          <div class="content">
-            <p>Hallo ${username},</p>
-            <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
-            
-            <p>Klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
-            
-            <div style="text-align: center;">
-              <a href="${resetLink}" class="button">Passwort zurücksetzen</a>
-            </div>
-            
-            <p>Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:</p>
-            <p class="link-fallback">${resetLink}</p>
+    // Lade Logo + Branding (nutzt gespeichertes Branding, keine API-Calls)
+    const { logo, branding } = await getOrganizationBranding(organizationId);
 
-            <div class="warning">
-              <strong>⚠️ Wichtig:</strong>
-              <ul>
-                <li>Dieser Link ist nur 1 Stunde gültig</li>
-                <li>Der Link kann nur einmal verwendet werden</li>
-                <li>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail</li>
-              </ul>
-            </div>
+    // Generiere Content mit Template
+    const buttonColor = branding?.colors?.primary || '#2563eb';
+    const content = `
+      <p>Hallo ${username},</p>
+      <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
+      
+      <p>Klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
+      
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px;">Passwort zurücksetzen</a>
+      </div>
+      
+      <p>Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:</p>
+      <p style="word-break: break-all; color: ${buttonColor};">${resetLink}</p>
 
-            <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-          </div>
-          <div class="footer">
-            <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
-          </div>
-        </body>
-        </html>
-      `,
-      text: `
+      <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <strong>⚠️ Wichtig:</strong>
+        <ul>
+          <li>Dieser Link ist nur 1 Stunde gültig</li>
+          <li>Der Link kann nur einmal verwendet werden</li>
+          <li>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail</li>
+        </ul>
+      </div>
+
+      <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+    `;
+
+    const html = generateEmailTemplate({
+      logo,
+      branding,
+      headerTitle: fromName,
+      content,
+      language: 'de'
+    });
+
+    const text = `
 Passwort zurücksetzen - Intranet
 
 Hallo ${username},
@@ -793,7 +690,14 @@ WICHTIG:
 Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 
 Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
-      `,
+    `;
+
+    const mailOptions = {
+      from: fromString,
+      to: email,
+      subject: 'Passwort zurücksetzen - Intranet',
+      html: html,
+      text: text,
     };
 
     logger.log(`[EMAIL] Sende E-Mail über SMTP...`);
