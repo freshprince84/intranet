@@ -5,6 +5,8 @@ import * as idDocApi from '../api/identificationDocumentApi.ts';
 import useMessage from '../hooks/useMessage.ts';
 import IdentificationDocumentForm from './IdentificationDocumentForm.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
+import axiosInstance from '../config/axios.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 
 interface IdentificationDocumentListProps {
   userId: number;
@@ -100,9 +102,35 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
   const handleDownloadDocument = async (docId: number) => {
     setIsDownloading(docId);
     try {
-      const url = idDocApi.getDocumentDownloadUrl(docId);
-      // Öffnen des Links in einem neuen Tab
-      window.open(url, '_blank');
+      // Verwende axios mit responseType: 'blob' für authentifizierten Download
+      const response = await axiosInstance.get(
+        API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.DOWNLOAD(docId),
+        { responseType: 'blob' }
+      );
+      
+      // Erstelle Download-Link aus Blob
+      const blob = new Blob([response.data]);
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      
+      // Versuche Dateinamen aus Content-Disposition Header zu extrahieren
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = `document-${docId}`;
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      }
+      
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      
+      showMessage(t('identificationDocuments.downloadSuccess', { defaultValue: 'Dokument erfolgreich heruntergeladen' }), 'success');
     } catch (err: any) {
       showMessage(`${t('identificationDocuments.downloadError')}: ${err.message || 'Unbekannter Fehler'}`, 'error');
     } finally {

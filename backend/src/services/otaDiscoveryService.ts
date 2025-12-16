@@ -297,7 +297,7 @@ export class OTADiscoveryService {
   }
 
   /**
-   * Scraped Hostelworld Suchseite
+   * Scraped Hostelworld Suchseite (mit Puppeteer für JavaScript-Rendering)
    * 
    * @param city - Stadt (z.B. "Medellín")
    * @param country - Land (z.B. "Kolumbien")
@@ -312,45 +312,46 @@ export class OTADiscoveryService {
     logger.warn(`[OTADiscoveryService] 🔍 Scrape Hostelworld für ${city}, ${country || 'N/A'}, ${roomType}`);
     
     const listings: DiscoveredListing[] = [];
-    let page = 1;
-    let hasMorePages = true;
-    const maxPages = 10; // Limit für Testing
+    let browser: Browser | null = null;
+    let page: Page | null = null;
 
-    // Erstelle Suchstring: "Stadt, Land"
-    const searchString = country 
-      ? `${city}, ${country}` 
-      : city;
+    try {
+      // Erstelle Suchstring: "Stadt, Land"
+      const searchString = country 
+        ? `${city}, ${country}` 
+        : city;
 
-    // Basis-URL für Hostelworld
-    // Beispiel: https://www.german.hostelworld.com/pwa/s?q=Medell%C3%ADn,%20Kolumbien&country=Medell%C3%ADn&city=Medell%C3%ADn&type=city&id=661&from=2025-12-15&to=2025-12-16&guests=1&page=1
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const fromDate = today.toISOString().split('T')[0];
-    const toDate = tomorrow.toISOString().split('T')[0];
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const fromDate = today.toISOString().split('T')[0];
+      const toDate = tomorrow.toISOString().split('T')[0];
+      const encodedSearch = encodeURIComponent(searchString);
+      
+      const url = `https://www.hostelworld.com/search?search_keywords=${encodedSearch}&date_from=${fromDate}&date_to=${toDate}&number_of_guests=1`;
 
-    while (hasMorePages && page <= maxPages) {
+      logger.warn(`[OTADiscoveryService] 📡 Starte Browser für Hostelworld: ${url}`);
+
+      // Versuche Puppeteer zu starten
       try {
-        // URL-encode Suchstring
-        const encodedSearch = encodeURIComponent(searchString);
-        
-        // Hostelworld URL-Struktur - versuche Standard-Suchseite
-        // Format: /search?search_keywords=...&date_from=...&date_to=...
-        let url: string;
-        if (page === 1) {
-          url = `https://www.hostelworld.com/search?search_keywords=${encodedSearch}&date_from=${fromDate}&date_to=${toDate}&number_of_guests=1`;
-        } else {
-          url = `https://www.hostelworld.com/search?search_keywords=${encodedSearch}&date_from=${fromDate}&date_to=${toDate}&number_of_guests=1&page=${page}`;
-        }
+        browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+            '--window-size=1920,1080'
+          ]
+        });
 
-        logger.warn(`[OTADiscoveryService] 📡 Request zu Hostelworld, Seite ${page}: ${url}`);
-
-        // Erweiterte Headers für Bot-Schutz-Umgehung
-        const headers = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.setExtraHTTPHeaders({
           'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
           'Accept-Encoding': 'gzip, deflate, br',
           'Connection': 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
@@ -359,90 +360,160 @@ export class OTADiscoveryService {
           'Sec-Fetch-Site': 'none',
           'Sec-Fetch-User': '?1',
           'Cache-Control': 'max-age=0',
-          'Referer': 'https://www.hostelworld.com/',
           'DNT': '1'
-        };
-
-        const response = await axios.get(url, {
-          headers,
-          timeout: 30000,
-          maxRedirects: 5,
-          validateStatus: (status) => status < 500 // Akzeptiere auch 4xx für besseres Error-Handling
         });
 
-        // Prüfe Status-Code - aber auch wenn 404, wenn content-length > 0, dann wurde HTML geladen
-        const contentLength = parseInt(response.headers['content-length'] || '0', 10);
-        if (response.status === 404 && contentLength < 1000) {
-          // Echter 404 (kleine Fehlerseite)
-          logger.error(`[OTADiscoveryService] ⚠️ Hostelworld 404-Fehler! URL: ${url}`);
-          logger.error(`[OTADiscoveryService] ⚠️ Response-Header:`, response.headers);
-          hasMorePages = false;
-          break; // Stoppe weitere Versuche
-        }
+        // Navigiere zur Seite und warte auf JavaScript-Rendering
+        logger.warn(`[OTADiscoveryService] 🌐 Navigiere zu Hostelworld...`);
+        await page.goto(url, {
+          waitUntil: 'networkidle2',
+          timeout: 60000
+        });
 
-        // Wenn Status 404 aber große Response, dann wurde HTML geladen (möglicherweise Fehlerseite, aber versuchen zu parsen)
-        if (response.status === 404 && contentLength > 1000) {
-          logger.warn(`[OTADiscoveryService] ⚠️ Hostelworld Status 404, aber ${contentLength} Bytes HTML erhalten - versuche zu parsen`);
-        }
+        // Warte auf Listings (verschiedene mögliche Selektoren)
+        const selectors = [
+          '.property-card',
+          '.hostel-card',
+          '[data-property-id]',
+          '.pwa-property-card',
+          'article[data-property-id]',
+          '[class*="property-card"]'
+        ];
 
-        const $ = cheerio.load(response.data);
-        
-        // DEBUG: Log HTML-Struktur für Analyse
-        if (page === 1) {
-          const bodyHtml = $('body').html() || '';
-          const bodyLength = bodyHtml.length;
-          logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${bodyLength} Zeichen, Status: ${response.status}`);
-          
-          // Prüfe verschiedene mögliche Selektoren
-          const testSelectors = [
-            '.property-card',
-            '.hostel-card',
-            '[data-property-id]',
-            '.pwa-property-card',
-            '.property',
-            '.hostel',
-            '[class*="property"]',
-            '[class*="hostel"]',
-            'article',
-            '[data-testid*="property"]',
-            '[data-testid*="hostel"]'
-          ];
-          
-          for (const selector of testSelectors) {
-            const count = $(selector).length;
-            if (count > 0) {
-              logger.warn(`[OTADiscoveryService] 🔍 Selektor "${selector}": ${count} Elemente gefunden`);
-            }
+        let listingsFound = false;
+        for (const selector of selectors) {
+          try {
+            await page.waitForSelector(selector, { timeout: 5000 });
+            listingsFound = true;
+            logger.warn(`[OTADiscoveryService] ✅ Hostelworld Selektor "${selector}" gefunden`);
+            break;
+          } catch (e) {
+            // Selektor nicht gefunden, versuche nächsten
           }
-          
-          // Log erste 2000 Zeichen des HTML für manuelle Analyse
-          const htmlSample = bodyHtml.substring(0, 2000);
-          logger.warn(`[OTADiscoveryService] 📋 HTML-Sample (erste 2000 Zeichen):\n${htmlSample}`);
         }
+
+        if (!listingsFound) {
+          // Warte zusätzlich 3 Sekunden für JavaScript-Execution
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          logger.warn(`[OTADiscoveryService] ⚠️ Keine Listings-Selektoren gefunden, warte auf JavaScript...`);
+        }
+
+        // Extrahiere HTML nach JavaScript-Rendering
+        const html = await page.content();
+        const $ = cheerio.load(html);
         
+        logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${html.length} Zeichen`);
+        
+        // Extrahiere Listings
         const pageListings = this.extractHostelworldListings($, roomType, city, country);
+        listings.push(...pageListings);
+        
+        logger.warn(`[OTADiscoveryService] ✅ Hostelworld Discovery abgeschlossen: ${listings.length} Listings gefunden`);
 
-        if (pageListings.length === 0) {
-          logger.warn(`[OTADiscoveryService] ⚠️ Seite ${page}: Keine Listings gefunden`);
-          hasMorePages = false;
-        } else {
-          listings.push(...pageListings);
-          logger.warn(`[OTADiscoveryService] ✅ Seite ${page}: ${pageListings.length} Listings gefunden (Gesamt: ${listings.length})`);
-        }
+      } catch (puppeteerError: any) {
+        logger.error(`[OTADiscoveryService] ⚠️ Puppeteer kann nicht gestartet werden: ${puppeteerError.message}`);
+        logger.warn(`[OTADiscoveryService] 🔄 Fallback auf axios (ohne JavaScript-Rendering)`);
+        // Fallback auf axios
+        return await this.scrapeHostelworldSearchFallback(city, country, roomType);
+      }
 
-        // Rate-Limiting: 2 Sekunden zwischen Requests
-        if (hasMorePages && page < maxPages) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-
-        page++;
-      } catch (error: any) {
-        logger.error(`[OTADiscoveryService] ❌ Fehler beim Scraping von Hostelworld Seite ${page}:`, error.message);
-        hasMorePages = false;
+    } catch (error: any) {
+      logger.error(`[OTADiscoveryService] ❌ Fehler beim Scraping von Hostelworld:`, error.message);
+      // Versuche Fallback
+      return await this.scrapeHostelworldSearchFallback(city, country, roomType);
+    } finally {
+      if (page) {
+        await page.close().catch(() => {});
+      }
+      if (browser) {
+        await browser.close().catch(() => {});
       }
     }
 
-    logger.warn(`[OTADiscoveryService] ✅ Hostelworld Discovery abgeschlossen: ${listings.length} Listings gefunden`);
+    return listings;
+  }
+
+  /**
+   * Fallback: Scraped Hostelworld mit axios (wenn Puppeteer nicht verfügbar)
+   * Versucht JSON-Daten im HTML zu finden
+   */
+  private static async scrapeHostelworldSearchFallback(
+    city: string,
+    country: string | null,
+    roomType: 'private' | 'dorm'
+  ): Promise<DiscoveredListing[]> {
+    logger.warn(`[OTADiscoveryService] 🔍 Scrape Hostelworld (Fallback axios) für ${city}, ${country || 'N/A'}, ${roomType}`);
+    
+    const listings: DiscoveredListing[] = [];
+    
+    try {
+      const searchString = country ? `${city}, ${country}` : city;
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const fromDate = today.toISOString().split('T')[0];
+      const toDate = tomorrow.toISOString().split('T')[0];
+      const encodedSearch = encodeURIComponent(searchString);
+      
+      const url = `https://www.hostelworld.com/search?search_keywords=${encodedSearch}&date_from=${fromDate}&date_to=${toDate}&number_of_guests=1`;
+
+      logger.warn(`[OTADiscoveryService] 📡 Request zu Hostelworld (Fallback): ${url}`);
+
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0',
+        'Referer': 'https://www.hostelworld.com/',
+        'DNT': '1'
+      };
+
+      const response = await axios.get(url, {
+        headers,
+        timeout: 30000,
+        maxRedirects: 5,
+        validateStatus: (status) => status < 500
+      });
+
+      const $ = cheerio.load(response.data);
+      
+      // Versuche JSON-Daten in <script> Tags zu finden
+      const scripts = $('script').toArray();
+      for (const script of scripts) {
+        const scriptContent = $(script).html() || '';
+        // Suche nach JSON-Daten mit Property-Informationen
+        if (scriptContent.includes('properties') || scriptContent.includes('hostels') || scriptContent.includes('listings')) {
+          try {
+            // Versuche JSON zu extrahieren
+            const jsonMatch = scriptContent.match(/\{[\s\S]*"properties"[\s\S]*\}/);
+            if (jsonMatch) {
+              const jsonData = JSON.parse(jsonMatch[0]);
+              logger.warn(`[OTADiscoveryService] ✅ JSON-Daten in Script-Tag gefunden`);
+              // TODO: Parse JSON-Daten zu Listings
+            }
+          } catch (e) {
+            // JSON-Parsing fehlgeschlagen, ignoriere
+          }
+        }
+      }
+      
+      // Versuche trotzdem mit Cheerio zu extrahieren (falls doch etwas da ist)
+      const pageListings = this.extractHostelworldListings($, roomType, city, country);
+      listings.push(...pageListings);
+      
+      logger.warn(`[OTADiscoveryService] ✅ Hostelworld Fallback abgeschlossen: ${listings.length} Listings gefunden`);
+    } catch (error: any) {
+      logger.error(`[OTADiscoveryService] ❌ Fehler beim Fallback-Scraping von Hostelworld:`, error.message);
+    }
+
     return listings;
   }
 

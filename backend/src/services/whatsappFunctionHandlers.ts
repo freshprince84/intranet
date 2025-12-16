@@ -1527,20 +1527,22 @@ export class WhatsAppFunctionHandlers {
       const checkOutDateStr = args.checkOutDate.toLowerCase().trim();
       if (checkOutDateStr === 'today' || checkOutDateStr === 'heute' || checkOutDateStr === 'hoy') {
         checkOutDate = new Date();
-        checkOutDate.setHours(23, 59, 59, 999);
+        checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
       } else if (checkOutDateStr === 'tomorrow' || checkOutDateStr === 'morgen' || checkOutDateStr === 'mañana') {
         checkOutDate = new Date();
         checkOutDate.setDate(checkOutDate.getDate() + 1);
-        checkOutDate.setHours(23, 59, 59, 999);
+        checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
       } else if (checkOutDateStr === 'day after tomorrow' || checkOutDateStr === 'übermorgen' || checkOutDateStr === 'pasado mañana') {
         checkOutDate = new Date();
         checkOutDate.setDate(checkOutDate.getDate() + 2);
-        checkOutDate.setHours(23, 59, 59, 999);
+        checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
       } else {
         checkOutDate = this.parseDate(args.checkOutDate);
         if (isNaN(checkOutDate.getTime())) {
           throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
         }
+        // Setze Check-out-Zeit auf 11:00 Uhr (auch bei geparsten Daten)
+        checkOutDate.setHours(11, 0, 0, 0);
       }
 
       // 2. Validierung: Check-out muss mindestens 1 Tag nach Check-in liegen
@@ -1579,7 +1581,11 @@ export class WhatsAppFunctionHandlers {
       }
 
       // 5. Berechne Betrag aus Verfügbarkeitsprüfung
-      const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+      // WICHTIG: Berechne Nächte basierend auf Kalendertagen (nicht Stunden-Differenz)
+      // Beispiel: Check-in 16.12. 00:00, Check-out 17.12. 11:00 = 1 Nacht (nicht 2)
+      const checkInDay = new Date(checkInDate.getFullYear(), checkInDate.getMonth(), checkInDate.getDate());
+      const checkOutDay = new Date(checkOutDate.getFullYear(), checkOutDate.getMonth(), checkOutDate.getDate());
+      const nights = Math.max(1, Math.floor((checkOutDay.getTime() - checkInDay.getTime()) / (1000 * 60 * 60 * 24)));
       let estimatedAmount: number;
       
       try {
@@ -1749,21 +1755,23 @@ export class WhatsAppFunctionHandlers {
       const checkOutDateStr = args.checkOutDate.toLowerCase().trim();
       if (checkOutDateStr === 'today' || checkOutDateStr === 'heute' || checkOutDateStr === 'hoy') {
         checkOutDate = new Date();
-        checkOutDate.setHours(23, 59, 59, 999);
+        checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
       } else if (checkOutDateStr === 'tomorrow' || checkOutDateStr === 'morgen' || checkOutDateStr === 'mañana') {
         checkOutDate = new Date();
         checkOutDate.setDate(checkOutDate.getDate() + 1);
-        checkOutDate.setHours(23, 59, 59, 999);
+        checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
       } else if (checkOutDateStr === 'day after tomorrow' || checkOutDateStr === 'übermorgen' || checkOutDateStr === 'pasado mañana') {
         checkOutDate = new Date();
         checkOutDate.setDate(checkOutDate.getDate() + 2);
-        checkOutDate.setHours(23, 59, 59, 999);
+        checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
       } else {
         // Versuche verschiedene Datum-Formate zu parsen
         checkOutDate = this.parseDate(args.checkOutDate);
         if (isNaN(checkOutDate.getTime())) {
           throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
         }
+        // Setze Check-out-Zeit auf 11:00 Uhr (auch bei geparsten Daten)
+        checkOutDate.setHours(11, 0, 0, 0);
       }
 
       // 2. Validierung: Check-out muss mindestens 1 Tag nach Check-in liegen
@@ -2015,7 +2023,11 @@ export class WhatsAppFunctionHandlers {
       }
 
       // 6. Berechne Betrag aus Verfügbarkeitsprüfung (falls categoryId vorhanden)
-      const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+      // WICHTIG: Berechne Nächte basierend auf Kalendertagen (nicht Stunden-Differenz)
+      // Beispiel: Check-in 16.12. 00:00, Check-out 17.12. 11:00 = 1 Nacht (nicht 2)
+      const checkInDay = new Date(checkInDate.getFullYear(), checkInDate.getMonth(), checkInDate.getDate());
+      const checkOutDay = new Date(checkOutDate.getFullYear(), checkOutDate.getMonth(), checkOutDate.getDate());
+      const nights = Math.max(1, Math.floor((checkOutDay.getTime() - checkInDay.getTime()) / (1000 * 60 * 60 * 24)));
       logger.log(`[create_room_reservation] Nächte berechnet: ${nights} (checkIn: ${checkInDate.toISOString()}, checkOut: ${checkOutDate.toISOString()})`);
       let estimatedAmount: number;
       
