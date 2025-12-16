@@ -1045,3 +1045,209 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
   }
 };
 
+/**
+ * Lädt Organisationslogo und gespeichertes Branding aus Datenbank
+ * WICHTIG: Keine Branding-Extraktion hier - nur Laden aus Datenbank!
+ * @param organizationId - ID der Organisation
+ * @param branchId - Optional: ID des Branches (für Branch-spezifische Logos)
+ * @returns Logo (Base64-Data-URL) und gespeicherte Branding-Informationen
+ */
+export const getOrganizationBranding = async (
+  organizationId?: number,
+  branchId?: number
+): Promise<{ logo: string | null; branding: BrandingInfo | null }> => {
+  if (!organizationId) {
+    return { logo: null, branding: null };
+  }
+
+  try {
+    let logo: string | null = null;
+    let branding: BrandingInfo | null = null;
+
+    // Prüfe zuerst Branch (falls vorhanden)
+    if (branchId) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: {
+          organizationId: true,
+          organization: {
+            select: { 
+              logo: true,
+              settings: true
+            }
+          }
+        }
+      });
+
+      if (branch?.organization) {
+        logo = branch.organization.logo && branch.organization.logo.trim() !== '' 
+          ? branch.organization.logo 
+          : null;
+        
+        // Lade Branding aus Settings
+        if (branch.organization.settings && typeof branch.organization.settings === 'object') {
+          const settings = branch.organization.settings as any;
+          branding = settings.branding || null;
+        }
+      }
+    }
+
+    // Fallback: Lade Organisation direkt
+    if (!logo || !branding) {
+      const organization = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { 
+          logo: true,
+          settings: true
+        }
+      });
+
+      if (organization) {
+        logo = organization.logo && organization.logo.trim() !== '' 
+          ? organization.logo 
+          : null;
+        
+        // Lade Branding aus Settings
+        if (organization.settings && typeof organization.settings === 'object') {
+          const settings = organization.settings as any;
+          branding = settings.branding || null;
+        }
+      }
+    }
+
+    return { logo, branding };
+  } catch (error) {
+    logger.warn('⚠️ Fehler beim Laden des Organisationslogos/Brandings:', error);
+    return { logo: null, branding: null };
+  }
+};
+
+/**
+ * E-Mail-Template-Optionen
+ */
+export interface EmailTemplateOptions {
+  logo?: string | null;
+  branding?: BrandingInfo | null;
+  headerTitle?: string;
+  content: string;
+  footer?: string;
+  language?: 'de' | 'en' | 'es';
+}
+
+/**
+ * Generiert einheitliches E-Mail-Template mit Logo und Corporate Identity
+ * Nutzt Branding-Informationen für organisationsspezifische Farben
+ */
+export const generateEmailTemplate = (options: EmailTemplateOptions): string => {
+  const {
+    logo,
+    branding,
+    headerTitle = 'Intranet',
+    content,
+    footer,
+    language = 'de'
+  } = options;
+
+  const defaultFooter = {
+    de: 'Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.',
+    en: 'This email was automatically generated. Please do not reply to this email.',
+    es: 'Este correo electrónico fue generado automáticamente. Por favor, no responda a este correo electrónico.'
+  };
+
+  const footerText = footer || defaultFooter[language];
+
+  // Verwende Branding-Farbe oder Fallback
+  const headerColor = branding?.colors?.primary || '#2563eb';
+  const buttonColor = branding?.colors?.primary || '#007bff';
+  const secondaryColor = branding?.colors?.secondary || branding?.colors?.accent;
+
+  // Verwende Branding-Schriftart oder Fallback
+  const fontFamily = branding?.fonts?.primary 
+    ? `${branding.fonts.primary}, Arial, sans-serif`
+    : 'Arial, sans-serif';
+
+  // Logo-HTML (falls vorhanden)
+  const logoHtml = logo
+    ? `<img src="${logo}" alt="${headerTitle}" style="max-height: 60px; max-width: 200px; margin-bottom: 20px;" />`
+    : '';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: ${fontFamily};
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .email-wrapper {
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: ${headerColor};
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    .logo-container {
+      margin-bottom: 15px;
+    }
+    .content {
+      padding: 30px;
+      background-color: #ffffff;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: ${buttonColor};
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      margin: 10px 5px;
+    }
+    .button:hover {
+      opacity: 0.9;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      background-color: #f9fafb;
+      color: #6b7280;
+      font-size: 12px;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="header">
+      ${logoHtml ? `<div class="logo-container">${logoHtml}</div>` : ''}
+      ${headerTitle ? `<h1>${headerTitle}</h1>` : ''}
+    </div>
+    <div class="content">
+      ${content}
+    </div>
+    <div class="footer">
+      <p>${footerText}</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+};
+

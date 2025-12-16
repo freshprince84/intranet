@@ -227,9 +227,14 @@ export class OTADiscoveryService {
         // URL-encode Suchstring
         const encodedSearch = encodeURIComponent(searchString);
         
-        // Hostelworld URL-Struktur - verwende www.hostelworld.com (ohne "german.")
-        // Versuche die PWA-URL-Struktur, aber mit www.hostelworld.com
-        const url = `https://www.hostelworld.com/pwa/s?q=${encodedSearch}&country=${encodeURIComponent(city)}&city=${encodeURIComponent(city)}&type=city&from=${fromDate}&to=${toDate}&guests=1&page=${page}`;
+        // Hostelworld URL-Struktur - versuche Standard-Suchseite
+        // Format: /search?search_keywords=...&date_from=...&date_to=...
+        let url: string;
+        if (page === 1) {
+          url = `https://www.hostelworld.com/search?search_keywords=${encodedSearch}&date_from=${fromDate}&date_to=${toDate}&number_of_guests=1`;
+        } else {
+          url = `https://www.hostelworld.com/search?search_keywords=${encodedSearch}&date_from=${fromDate}&date_to=${toDate}&number_of_guests=1&page=${page}`;
+        }
 
         logger.warn(`[OTADiscoveryService] 📡 Request zu Hostelworld, Seite ${page}: ${url}`);
 
@@ -257,12 +262,19 @@ export class OTADiscoveryService {
           validateStatus: (status) => status < 500 // Akzeptiere auch 4xx für besseres Error-Handling
         });
 
-        // Prüfe Status-Code
-        if (response.status === 404) {
+        // Prüfe Status-Code - aber auch wenn 404, wenn content-length > 0, dann wurde HTML geladen
+        const contentLength = parseInt(response.headers['content-length'] || '0', 10);
+        if (response.status === 404 && contentLength < 1000) {
+          // Echter 404 (kleine Fehlerseite)
           logger.error(`[OTADiscoveryService] ⚠️ Hostelworld 404-Fehler! URL: ${url}`);
           logger.error(`[OTADiscoveryService] ⚠️ Response-Header:`, response.headers);
           hasMorePages = false;
           break; // Stoppe weitere Versuche
+        }
+
+        // Wenn Status 404 aber große Response, dann wurde HTML geladen (möglicherweise Fehlerseite, aber versuchen zu parsen)
+        if (response.status === 404 && contentLength > 1000) {
+          logger.warn(`[OTADiscoveryService] ⚠️ Hostelworld Status 404, aber ${contentLength} Bytes HTML erhalten - versuche zu parsen`);
         }
 
         const $ = cheerio.load(response.data);
