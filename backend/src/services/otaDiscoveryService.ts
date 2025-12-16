@@ -94,18 +94,39 @@ export class OTADiscoveryService {
 
         logger.warn(`[OTADiscoveryService] 📡 Request zu Booking.com, Seite ${page}: ${url}`);
 
+        // Erweiterte Headers für Bot-Schutz-Umgehung
+        const headers = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0',
+          'Referer': 'https://www.booking.com/',
+          'DNT': '1'
+        };
+
         const response = await axios.get(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-          },
+          headers,
           timeout: 30000,
-          maxRedirects: 5
+          maxRedirects: 5,
+          validateStatus: (status) => status < 500 // Akzeptiere auch 4xx für besseres Error-Handling
         });
+
+        // Prüfe ob Bot-Schutz aktiv ist
+        const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+        if (responseText.includes('challenge-container') || responseText.includes('AwsWafIntegration') || responseText.includes('verify that you\'re not a robot')) {
+          logger.error(`[OTADiscoveryService] ⚠️ Booking.com Bot-Schutz aktiv! Status: ${response.status}`);
+          logger.error(`[OTADiscoveryService] ⚠️ Response-Länge: ${responseText.length} Zeichen`);
+          logger.error(`[OTADiscoveryService] ⚠️ Response-Header:`, response.headers);
+          hasMorePages = false;
+          break; // Stoppe weitere Versuche
+        }
 
         const $ = cheerio.load(response.data);
         
@@ -113,7 +134,7 @@ export class OTADiscoveryService {
         if (page === 1) {
           const bodyHtml = $('body').html() || '';
           const bodyLength = bodyHtml.length;
-          logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${bodyLength} Zeichen`);
+          logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${bodyLength} Zeichen, Status: ${response.status}`);
           
           // Prüfe verschiedene mögliche Selektoren
           const testSelectors = [
@@ -206,23 +227,43 @@ export class OTADiscoveryService {
         // URL-encode Suchstring
         const encodedSearch = encodeURIComponent(searchString);
         
-        // Hostelworld URL-Struktur
-        const url = `https://www.german.hostelworld.com/pwa/s?q=${encodedSearch}&country=${encodeURIComponent(city)}&city=${encodeURIComponent(city)}&type=city&from=${fromDate}&to=${toDate}&guests=1&page=${page}`;
+        // Hostelworld URL-Struktur - verwende www.hostelworld.com (ohne "german.")
+        // Versuche die PWA-URL-Struktur, aber mit www.hostelworld.com
+        const url = `https://www.hostelworld.com/pwa/s?q=${encodedSearch}&country=${encodeURIComponent(city)}&city=${encodeURIComponent(city)}&type=city&from=${fromDate}&to=${toDate}&guests=1&page=${page}`;
 
         logger.warn(`[OTADiscoveryService] 📡 Request zu Hostelworld, Seite ${page}: ${url}`);
 
+        // Erweiterte Headers für Bot-Schutz-Umgehung
+        const headers = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0',
+          'Referer': 'https://www.hostelworld.com/',
+          'DNT': '1'
+        };
+
         const response = await axios.get(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-          },
+          headers,
           timeout: 30000,
-          maxRedirects: 5
+          maxRedirects: 5,
+          validateStatus: (status) => status < 500 // Akzeptiere auch 4xx für besseres Error-Handling
         });
+
+        // Prüfe Status-Code
+        if (response.status === 404) {
+          logger.error(`[OTADiscoveryService] ⚠️ Hostelworld 404-Fehler! URL: ${url}`);
+          logger.error(`[OTADiscoveryService] ⚠️ Response-Header:`, response.headers);
+          hasMorePages = false;
+          break; // Stoppe weitere Versuche
+        }
 
         const $ = cheerio.load(response.data);
         
@@ -230,7 +271,7 @@ export class OTADiscoveryService {
         if (page === 1) {
           const bodyHtml = $('body').html() || '';
           const bodyLength = bodyHtml.length;
-          logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${bodyLength} Zeichen`);
+          logger.warn(`[OTADiscoveryService] 📄 HTML-Response erhalten: ${bodyLength} Zeichen, Status: ${response.status}`);
           
           // Prüfe verschiedene mögliche Selektoren
           const testSelectors = [

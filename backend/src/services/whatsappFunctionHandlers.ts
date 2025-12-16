@@ -1864,12 +1864,33 @@ export class WhatsAppFunctionHandlers {
       if (!args.guestName || !args.guestName.trim()) {
         throw new Error('Der Name des Gastes ist erforderlich für die Reservierung. Bitte geben Sie Ihren vollständigen Namen an.');
       }
-      const guestName = args.guestName.trim();
+      // Bereinige Name von führenden Wörtern wie "ist", "mit", "für", "para"
+      let guestName = args.guestName.trim();
+      guestName = guestName.replace(/^(ist|mit|für|para|a nombre de|name|nombre)\s+/i, '').trim();
 
       // 5. Prüfe ob bereits eine "potential" Reservation existiert
       // WICHTIG: Normalisiere Telefonnummer für Suche
       const { LanguageDetectionService } = await import('./languageDetectionService');
       const searchPhone = guestPhone || (phoneNumber ? LanguageDetectionService.normalizePhoneNumber(phoneNumber) : null);
+      
+      // 5.1. Prüfe auf bestehende confirmed Reservation (Duplikat-Prüfung)
+      if (searchPhone) {
+        const existingConfirmedReservation = await prisma.reservation.findFirst({
+          where: {
+            guestPhone: searchPhone,
+            branchId: branchId,
+            status: ReservationStatus.confirmed,
+            checkInDate: checkInDate,
+            checkOutDate: checkOutDate
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+
+        if (existingConfirmedReservation) {
+          logger.warn(`[create_room_reservation] Bestehende confirmed Reservation gefunden: ${existingConfirmedReservation.id} für ${searchPhone}, ${checkInDate.toISOString()} - ${checkOutDate.toISOString()}`);
+          throw new Error('Eine Reservierung mit diesen Daten existiert bereits.');
+        }
+      }
       
       const existingPotentialReservation = searchPhone ? await prisma.reservation.findFirst({
         where: {
@@ -1902,6 +1923,39 @@ export class WhatsAppFunctionHandlers {
             1
           );
           logger.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
+          
+          // Hole Reservierungsdetails aus LobbyPMS für roomNumber und roomDescription
+          let roomNumber: string | null = null;
+          let roomDescription: string | null = null;
+          
+          try {
+            const lobbyReservation = await lobbyPmsService.fetchReservationById(lobbyReservationId);
+            const assignedRoom = lobbyReservation.assigned_room;
+            const isDorm = assignedRoom?.type === 'compartida';
+            
+            if (isDorm) {
+              // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
+              const dormName = lobbyReservation.category?.name || null;
+              const bedNumber = assignedRoom?.name || null;
+              roomNumber = dormName && bedNumber 
+                ? `${dormName} (${bedNumber})`  // z.B. "La tia artista (Cama 5)"
+                : bedNumber || dormName || null;
+              roomDescription = dormName;
+            } else {
+              // Für Privatzimmer: assigned_room.name = Zimmername
+              roomNumber = null;
+              roomDescription = assignedRoom?.name || lobbyReservation.room_number || null;
+            }
+            
+            logger.log(`[create_room_reservation] roomNumber=${roomNumber}, roomDescription=${roomDescription} aus LobbyPMS geholt`);
+          } catch (roomError: any) {
+            logger.error('[create_room_reservation] Fehler beim Abrufen der Zimmer-Details:', roomError);
+            // Fallback: Verwende roomName aus Args
+            if (args.roomName) {
+              roomDescription = args.roomName;
+              roomNumber = args.roomType === 'compartida' ? args.roomName : null;
+            }
+          }
         } catch (lobbyError: any) {
           logger.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
           throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
@@ -1923,6 +1977,39 @@ export class WhatsAppFunctionHandlers {
             1 // Anzahl Personen (default: 1, kann später erweitert werden)
           );
           logger.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
+          
+          // Hole Reservierungsdetails aus LobbyPMS für roomNumber und roomDescription
+          let roomNumber: string | null = null;
+          let roomDescription: string | null = null;
+          
+          try {
+            const lobbyReservation = await lobbyPmsService.fetchReservationById(lobbyReservationId);
+            const assignedRoom = lobbyReservation.assigned_room;
+            const isDorm = assignedRoom?.type === 'compartida';
+            
+            if (isDorm) {
+              // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
+              const dormName = lobbyReservation.category?.name || null;
+              const bedNumber = assignedRoom?.name || null;
+              roomNumber = dormName && bedNumber 
+                ? `${dormName} (${bedNumber})`  // z.B. "La tia artista (Cama 5)"
+                : bedNumber || dormName || null;
+              roomDescription = dormName;
+            } else {
+              // Für Privatzimmer: assigned_room.name = Zimmername
+              roomNumber = null;
+              roomDescription = assignedRoom?.name || lobbyReservation.room_number || null;
+            }
+            
+            logger.log(`[create_room_reservation] roomNumber=${roomNumber}, roomDescription=${roomDescription} aus LobbyPMS geholt`);
+          } catch (roomError: any) {
+            logger.error('[create_room_reservation] Fehler beim Abrufen der Zimmer-Details:', roomError);
+            // Fallback: Verwende roomName aus Args
+            if (args.roomName) {
+              roomDescription = args.roomName;
+              roomNumber = args.roomType === 'compartida' ? args.roomName : null;
+            }
+          }
         } catch (lobbyError: any) {
           logger.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
           throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
@@ -1931,6 +2018,7 @@ export class WhatsAppFunctionHandlers {
 
       // 6. Berechne Betrag aus Verfügbarkeitsprüfung (falls categoryId vorhanden)
       const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+      logger.log(`[create_room_reservation] Nächte berechnet: ${nights} (checkIn: ${checkInDate.toISOString()}, checkOut: ${checkOutDate.toISOString()})`);
       let estimatedAmount: number;
       
       if (args.categoryId || categoryId) {
@@ -1946,7 +2034,7 @@ export class WhatsAppFunctionHandlers {
             // Verwende Preis aus Verfügbarkeitsprüfung
             // TODO: Verschiedene Personenanzahl berücksichtigen (aktuell: 1 Person)
             estimatedAmount = nights * room.pricePerNight;
-            logger.log(`[create_room_reservation] Preis aus Verfügbarkeit: ${room.pricePerNight} COP/Nacht × ${nights} Nächte = ${estimatedAmount} COP`);
+            logger.log(`[create_room_reservation] Preis aus Verfügbarkeit: room.pricePerNight=${room.pricePerNight} COP/Nacht, nights=${nights}, estimatedAmount=${estimatedAmount} COP`);
           } else {
             // Fallback: Platzhalter wenn Zimmer nicht gefunden
             logger.warn(`[create_room_reservation] Zimmer mit categoryId ${args.categoryId || categoryId} nicht in Verfügbarkeit gefunden, verwende Platzhalter`);
@@ -1971,6 +2059,7 @@ export class WhatsAppFunctionHandlers {
       // 8. Erstelle oder aktualisiere Reservierung in DB
       if (existingPotentialReservation) {
         // Aktualisiere bestehende "potential" Reservation: Status "potential" → "confirmed"
+        logger.log(`[create_room_reservation] Aktualisiere Reservation ${existingPotentialReservation.id} mit amount=${estimatedAmount} COP`);
         reservation = await prisma.reservation.update({
           where: { id: existingPotentialReservation.id },
           data: {
@@ -1981,39 +2070,50 @@ export class WhatsAppFunctionHandlers {
             lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
             amount: estimatedAmount,
             currency: 'COP',
+            // Logge Preis vor DB-Speicherung
             paymentDeadline: paymentDeadline, // Frist für Zahlung (Standard: 1 Stunde)
-            autoCancelEnabled: true // Automatische Stornierung aktiviert
+            autoCancelEnabled: true, // Automatische Stornierung aktiviert
+            roomNumber: roomNumber, // Zimmername/Bettnummer für Dorms
+            roomDescription: roomDescription // Zimmername für Privates
           }
         });
         logger.log(`[create_room_reservation] Reservation ${reservation.id} von "potential" auf "confirmed" aktualisiert`);
       } else {
-        // Erstelle neue Reservation (Rückwärtskompatibilität)
-        reservation = await prisma.reservation.create({
-          data: {
-            guestName: guestName,
-            guestPhone: guestPhone, // Verwende validierte Telefonnummer
-            guestEmail: guestEmail, // Verwende validierte Email
-            checkInDate: checkInDate,
-            checkOutDate: checkOutDate,
-            status: ReservationStatus.confirmed,
-            paymentStatus: PaymentStatus.pending,
-            amount: estimatedAmount,
-            currency: 'COP',
-            organizationId: branch.organizationId,
-            branchId: branchId, // WICHTIG: Branch-spezifisch!
-            lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
-            paymentDeadline: paymentDeadline, // Frist für Zahlung (Standard: 1 Stunde)
-            autoCancelEnabled: true // Automatische Stornierung aktiviert
-            // HINWEIS: roomType und categoryId werden NICHT in der DB gespeichert, da sie nicht im Schema existieren.
-            // Diese Informationen sind in LobbyPMS über lobbyReservationId verfügbar.
-          }
-        });
+          // Erstelle neue Reservation (Rückwärtskompatibilität)
+          logger.log(`[create_room_reservation] Erstelle neue Reservation mit amount=${estimatedAmount} COP`);
+          reservation = await prisma.reservation.create({
+            data: {
+              guestName: guestName,
+              guestPhone: guestPhone, // Verwende validierte Telefonnummer
+              guestEmail: guestEmail, // Verwende validierte Email
+              checkInDate: checkInDate,
+              checkOutDate: checkOutDate,
+              status: ReservationStatus.confirmed,
+              paymentStatus: PaymentStatus.pending,
+              amount: estimatedAmount,
+              currency: 'COP',
+              organizationId: branch.organizationId,
+              branchId: branchId, // WICHTIG: Branch-spezifisch!
+              lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
+              paymentDeadline: paymentDeadline, // Frist für Zahlung (Standard: 1 Stunde)
+              autoCancelEnabled: true, // Automatische Stornierung aktiviert
+              roomNumber: roomNumber, // Zimmername/Bettnummer für Dorms
+              roomDescription: roomDescription // Zimmername für Privates
+              // HINWEIS: roomType und categoryId werden NICHT in der DB gespeichert, da sie nicht im Schema existieren.
+              // Diese Informationen sind in LobbyPMS über lobbyReservationId verfügbar.
+            }
+          });
+        } catch (lobbyError: any) {
+          logger.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
+          throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
+        }
       }
 
       // 9. Erstelle Payment Link (wenn Telefonnummer vorhanden)
       let paymentLink: string | null = null;
       if (args.guestPhone || reservation.guestPhone) {
         try {
+          logger.log(`[create_room_reservation] Erstelle Payment-Link mit estimatedAmount=${estimatedAmount} COP`);
           const boldPaymentService = await BoldPaymentService.createForBranch(branchId);
           paymentLink = await boldPaymentService.createPaymentLink(
             reservation,
@@ -2043,6 +2143,13 @@ export class WhatsAppFunctionHandlers {
             lobbyReservationId: reservation.lobbyReservationId,
             guestEmail: reservation.guestEmail
           });
+          
+          // Check-in Link in DB speichern
+          await prisma.reservation.update({
+            where: { id: reservation.id },
+            data: { checkInLink }
+          });
+          logger.log(`[create_room_reservation] Check-in Link in DB gespeichert: ${checkInLink}`);
         } catch (error) {
           logger.error('[create_room_reservation] Fehler beim Generieren des Check-in-Links:', error);
         }
@@ -2085,8 +2192,8 @@ export class WhatsAppFunctionHandlers {
         paymentLink: paymentLink,
         checkInLink: checkInLink, // Kann null sein, wenn keine Email vorhanden
         paymentDeadline: paymentDeadline.toISOString(),
-        linksSent: false, // WICHTIG: AI generiert die Nachricht, nicht sendReservationInvitation
-        message: `Reservierung erfolgreich erstellt. Die AI generiert die Nachricht mit Payment-Link und Check-in-Link.`
+        linksSent: false // WICHTIG: AI generiert die Nachricht, nicht sendReservationInvitation
+        // Technische Message entfernt - KI generiert benutzerfreundliche Nachricht
       };
     } catch (error: any) {
       logger.error('[WhatsApp Function Handlers] create_room_reservation Fehler:', error);

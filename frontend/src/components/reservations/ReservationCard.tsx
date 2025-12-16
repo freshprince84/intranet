@@ -10,7 +10,8 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
-  CreditCardIcon
+  CreditCardIcon,
+  LinkIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { de, es, enUS } from 'date-fns/locale';
@@ -167,6 +168,21 @@ const ReservationCard: React.FC<ReservationCardProps> = ({ reservation, onClick,
           <div className="flex items-center text-gray-600 dark:text-gray-400">
             <PhoneIcon className="h-4 w-4 mr-2 flex-shrink-0" />
             <span>{reservation.guestPhone}</span>
+          </div>
+        )}
+
+        {/* Check-in Link */}
+        {reservation.checkInLink && (
+          <div className="flex items-center text-gray-600 dark:text-gray-400">
+            <LinkIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+            <a 
+              href={reservation.checkInLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              {t('reservations.checkInLink', 'Check-in Link')}
+            </a>
           </div>
         )}
 
