@@ -151,38 +151,8 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
     { id: 'deletedAt', label: t('analytics.request.columns.deletedAt', { defaultValue: 'Gelöscht am' }) }
   ], [t]);
 
-  // ✅ PERFORMANCE: Stabilisiere Array-Dependencies mit useRef (Standard-Pattern wie FilterPane.tsx)
-  const prevFilterConditionsRef = useRef<FilterCondition[] | null>(null);
-  const prevFilterOperatorsRef = useRef<('AND' | 'OR')[] | null>(null);
-  const prevSelectedDateRef = useRef<string | undefined | null>(null);
-  const prevSelectedFilterIdRef = useRef<number | null | 'initial'>(null);
-  const isInitialMountRef = useRef<boolean>(true);
-
   // Lade Requests
   useEffect(() => {
-    // ✅ PERFORMANCE: Prüfe ob sich Filter tatsächlich geändert haben (verhindert unnötige Re-Runs)
-    const conditionsChanged = prevFilterConditionsRef.current === null || 
-      JSON.stringify(prevFilterConditionsRef.current) !== JSON.stringify(filterConditions);
-    const operatorsChanged = prevFilterOperatorsRef.current === null || 
-      JSON.stringify(prevFilterOperatorsRef.current) !== JSON.stringify(filterLogicalOperators);
-    const dateChanged = prevSelectedDateRef.current === null || prevSelectedDateRef.current !== selectedDate;
-    const filterIdChanged = prevSelectedFilterIdRef.current === null || prevSelectedFilterIdRef.current !== selectedFilterId;
-    
-    // Update refs
-    prevFilterConditionsRef.current = filterConditions;
-    prevFilterOperatorsRef.current = filterLogicalOperators;
-    prevSelectedDateRef.current = selectedDate;
-    prevSelectedFilterIdRef.current = selectedFilterId;
-    
-    // Beim ersten Mount immer fetchen, danach nur bei Änderungen
-    const isInitialMount = isInitialMountRef.current;
-    isInitialMountRef.current = false;
-    
-    // Nur wenn sich etwas geändert hat ODER es der erste Mount ist, fetch ausführen
-    if (!isInitialMount && !conditionsChanged && !operatorsChanged && !dateChanged && !filterIdChanged) {
-      return; // Keine Änderung, skip fetch
-    }
-    
     // ✅ PHASE 8: Memory Leak Prevention - AbortController
     const abortController = new AbortController();
     
@@ -220,22 +190,22 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
       } catch (error: any) {
         if (error.name !== 'AbortError') {
           console.error('Error loading requests:', error);
-        setError(t('analytics.request.loadError'));
+          setError(t('analytics.request.loadError'));
         }
       } finally {
         if (!abortController.signal.aborted) {
-        setLoading(false);
+          setLoading(false);
         }
       }
     };
 
-      fetchRequests();
+    fetchRequests();
     
     // ✅ PHASE 8: Memory Leak Prevention - Cleanup
     return () => {
       abortController.abort();
     };
-  }, [selectedDate, filterConditions, filterLogicalOperators, selectedFilterId]);
+  }, [selectedDate, filterConditions, filterLogicalOperators, selectedFilterId, t]);
 
   // Filter-Handler
   const applyFilterConditions = useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {

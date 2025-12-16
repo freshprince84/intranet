@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IdentificationDocument } from '../types/interfaces.ts';
 import * as idDocApi from '../api/identificationDocumentApi.ts';
@@ -21,7 +21,11 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingDocument, setEditingDocument] = useState<IdentificationDocument | null>(null);
+  const [viewingDocument, setViewingDocument] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState<number | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<Record<number, string>>({});
+  const [loadingPreviews, setLoadingPreviews] = useState<Record<number, boolean>>({});
+  const previewUrlsRef = useRef<Record<number, string>>({});
   const { showMessage } = useMessage();
   const { user: currentUser } = useAuth();
 
@@ -69,6 +73,43 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
     loadDocuments
   }));
 
+  // Cleanup: Revoke alle Preview URLs beim Unmount
+  useEffect(() => {
+    previewUrlsRef.current = previewUrls;
+  }, [previewUrls]);
+
+  useEffect(() => {
+    return () => {
+      // Revoke alle Preview URLs beim Unmount
+      Object.values(previewUrlsRef.current).forEach(url => {
+        window.URL.revokeObjectURL(url);
+      });
+    };
+  }, []);
+
+  // Dokument-Vorschau laden (für Anzeige im iframe)
+  const loadDocumentPreview = async (docId: number) => {
+    try {
+      setLoadingPreviews(prev => ({ ...prev, [docId]: true }));
+      const response = await axiosInstance.get(
+        `${API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.DOWNLOAD(docId)}?preview=true`,
+        { responseType: 'blob' }
+      );
+      
+      // Bestimme MIME-Typ aus Response
+      const contentType = response.headers['content-type'] || 'application/pdf';
+      const blob = new Blob([response.data], { type: contentType });
+      const previewUrl = window.URL.createObjectURL(blob);
+      
+      setPreviewUrls(prev => ({ ...prev, [docId]: previewUrl }));
+    } catch (err: any) {
+      console.error('Fehler beim Laden der Dokument-Vorschau:', err);
+      showMessage(t('identificationDocuments.previewError', { defaultValue: 'Vorschau konnte nicht geladen werden' }), 'error');
+    } finally {
+      setLoadingPreviews(prev => ({ ...prev, [docId]: false }));
+    }
+  };
+
   // Dokument löschen
   const handleDeleteDocument = async (docId: number) => {
     if (window.confirm(t('identificationDocuments.deleteConfirm'))) {
@@ -98,6 +139,19 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
     }
   };
 
+  // Dokument anzeigen (öffnet Vorschau)
+  const handleViewDocument = async (docId: number) => {
+    // Wenn Preview bereits geladen, zeige Modal
+    if (previewUrls[docId]) {
+      setViewingDocument(docId);
+      return;
+    }
+    
+    // Sonst lade Preview
+    await loadDocumentPreview(docId);
+    setViewingDocument(docId);
+  };
+
   // Dokument herunterladen
   const handleDownloadDocument = async (docId: number) => {
     setIsDownloading(docId);
@@ -109,7 +163,8 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
       );
       
       // Erstelle Download-Link aus Blob
-      const blob = new Blob([response.data]);
+      const contentType = response.headers['content-type'] || 'application/pdf';
+      const blob = new Blob([response.data], { type: contentType });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -120,7 +175,18 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/i);
         if (fileNameMatch) {
-          fileName = fileNameMatch[1];
+          fileName = decodeURIComponent(fileNameMatch[1]);
+        }
+      }
+      
+      // Bestimme Dateiendung basierend auf Content-Type
+      if (!fileName.includes('.')) {
+        if (contentType === 'application/pdf') {
+          fileName += '.pdf';
+        } else if (contentType.startsWith('image/jpeg')) {
+          fileName += '.jpg';
+        } else if (contentType.startsWith('image/png')) {
+          fileName += '.png';
         }
       }
       
@@ -192,6 +258,69 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
           }}
           onCancel={() => setEditingDocument(null)}
         />
+      </div>
+    );
+  }
+
+  // Dokument-Vorschau Modal
+  if (viewingDocument !== null) {
+    const doc = documents.find(d => d.id === viewingDocument);
+    const previewUrl = previewUrls[viewingDocument];
+    const isLoading = loadingPreviews[viewingDocument];
+
+    return (
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium">
+            {doc ? formatDocumentType(doc.documentType) : t('identificationDocuments.viewDocument', { defaultValue: 'Dokument anzeigen' })}
+          </h3>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => handleDownloadDocument(viewingDocument)}
+              className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700"
+              disabled={isDownloading === viewingDocument}
+            >
+              {isDownloading === viewingDocument ? t('identificationDocuments.actions.downloading') : t('identificationDocuments.actions.download', { defaultValue: 'Herunterladen' })}
+            </button>
+            <button
+              onClick={() => {
+                setViewingDocument(null);
+                // Cleanup: Revoke URL nach 1 Sekunde (wenn Modal geschlossen wird)
+                setTimeout(() => {
+                  if (previewUrls[viewingDocument]) {
+                    window.URL.revokeObjectURL(previewUrls[viewingDocument]);
+                    setPreviewUrls(prev => {
+                      const newUrls = { ...prev };
+                      delete newUrls[viewingDocument];
+                      return newUrls;
+                    });
+                  }
+                }, 1000);
+              }}
+              className="px-3 py-1 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700"
+            >
+              {t('common.close', { defaultValue: 'Schließen' })}
+            </button>
+          </div>
+        </div>
+        <div className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+          {isLoading ? (
+            <div className="flex justify-center items-center" style={{ height: '400px' }}>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : previewUrl ? (
+            <iframe 
+              src={previewUrl}
+              className="w-full rounded border dark:border-gray-600"
+              style={{ height: '600px' }}
+              title={doc ? formatDocumentType(doc.documentType) : 'Dokument'}
+            />
+          ) : (
+            <div className="flex justify-center items-center text-gray-500 dark:text-gray-400" style={{ height: '400px' }}>
+              <p>{t('identificationDocuments.previewError', { defaultValue: 'Vorschau konnte nicht geladen werden' })}</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -278,11 +407,19 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
                   <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => handleDownloadDocument(doc.id)}
+                        onClick={() => handleViewDocument(doc.id)}
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                        disabled={isDownloading === doc.id}
+                        disabled={loadingPreviews[doc.id]}
                       >
-                        {isDownloading === doc.id ? t('identificationDocuments.actions.downloading') : t('identificationDocuments.actions.view')}
+                        {loadingPreviews[doc.id] ? t('identificationDocuments.actions.loading', { defaultValue: 'Lädt...' }) : t('identificationDocuments.actions.view')}
+                      </button>
+                      <button
+                        onClick={() => handleDownloadDocument(doc.id)}
+                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                        disabled={isDownloading === doc.id}
+                        title={t('identificationDocuments.actions.download', { defaultValue: 'Herunterladen' })}
+                      >
+                        {isDownloading === doc.id ? t('identificationDocuments.actions.downloading') : '↓'}
                       </button>
                       <button
                         onClick={() => setEditingDocument(doc)}
