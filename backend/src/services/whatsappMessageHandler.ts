@@ -1658,7 +1658,7 @@ export class WhatsAppMessageHandler {
       const bookingKeywords = ['reservar', 'buchen', 'quiero reservar', 'quiero hacer una reserva', 'buche', 'reservame'];
       const confirmationKeywords = ['ja', 'sí', 'si', 'yes', 'ok', 'okay', 'genau', 'correcto', 'correct'];
       const hasConfirmation = confirmationKeywords.some(keyword => normalizedMessage.includes(keyword));
-      const isBookingRequest = bookingKeywords.some(keyword => normalizedMessage.includes(keyword)) || 
+      let isBookingRequest = bookingKeywords.some(keyword => normalizedMessage.includes(keyword)) || 
                                 (hasConfirmation && (bookingContext.checkInDate || bookingContext.lastAvailabilityCheck));
       
       if (!isBookingRequest && !bookingContext.checkInDate && !bookingContext.guestName) {
