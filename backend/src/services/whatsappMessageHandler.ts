@@ -249,7 +249,27 @@ export class WhatsAppMessageHandler {
             }
           });
           
-          return bookingResult.message || 'Reservierung erfolgreich erstellt!';
+          // KI aufrufen statt technische Message, um benutzerfreundliche Nachricht zu generieren
+          const { WhatsAppAiService } = await import('./whatsappAiService');
+          const conversationContext: any = {
+            userId: user?.id,
+            roleId: roleId,
+            userName: userWithRoles ? `${userWithRoles.firstName} ${userWithRoles.lastName}` : null,
+            conversationState: conversation.state,
+            groupId: groupId,
+            bookingResult: bookingResult // Füge bookingResult hinzu für KI-Kontext
+          };
+          
+          const aiResponse = await WhatsAppAiService.generateResponse(
+            `Reservierung erfolgreich erstellt für ${bookingResult.guestName || 'Gast'}.`,
+            branchId,
+            normalizedPhone,
+            conversationContext,
+            conversation.id
+          );
+          
+          // WICHTIG: return hier, damit Zeile 259-278 nicht ausgeführt wird
+          return aiResponse.message;
         } catch (bookingError: any) {
           logger.error('[WhatsApp Message Handler] Fehler bei automatischer Buchung:', bookingError);
           // Weiter mit normaler KI-Antwort
@@ -1688,17 +1708,19 @@ export class WhatsAppMessageHandler {
       }
       
       // Parse Namen (erweiterte Heuristik: Wörter die wie Namen aussehen)
-      // 1. Explizite Marker (z.B. "für Patrick Ammann", "a nombre de Juan Pérez")
-      const explicitNamePattern = /(?:a nombre de|name|nombre|für|para)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
+      // 1. Explizite Marker (z.B. "für Patrick Ammann", "a nombre de Juan Pérez", "ist Patrick Ammann", "mit Patrick Ammann")
+      const explicitNamePattern = /(?:a nombre de|name|nombre|für|para|ist|mit)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
       const explicitNameMatch = currentMessage.match(explicitNamePattern);
       if (explicitNameMatch) {
         guestName = explicitNameMatch[1].trim();
+        guestName = this.cleanGuestName(guestName);
       } else {
         // 2. Namen nach Zimmer-Namen oder Kommas (z.B. "primo aventurero für Patrick Ammann" oder "dorm, Patrick Ammann")
-        const nameAfterRoomPattern = /(?:primo|abuelo|tia|dorm|zimmer|habitación|apartamento|doble|básica|deluxe|estándar|singular|apartaestudio|deportista|aventurero|artista|viajero|bromista)\s+(?:für|para|,)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i;
+        const nameAfterRoomPattern = /(?:primo|abuelo|tia|dorm|zimmer|habitación|apartamento|doble|básica|deluxe|estándar|singular|apartaestudio|deportista|aventurero|artista|viajero|bromista)\s+(?:für|para|,|ist|mit)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i;
         const nameAfterRoomMatch = currentMessage.match(nameAfterRoomPattern);
         if (nameAfterRoomMatch) {
           guestName = nameAfterRoomMatch[1].trim();
+          guestName = this.cleanGuestName(guestName);
         } else {
           // 3. Namen am Ende der Nachricht (wenn Nachricht mit Großbuchstaben beginnt und 2+ Wörter hat)
           // Nur wenn keine anderen Buchungsinformationen erkannt wurden
@@ -1959,6 +1981,17 @@ export class WhatsAppMessageHandler {
       logger.error('[WhatsApp Message Handler] Fehler bei checkBookingContext:', error);
       return { shouldBook: false, context: {} };
     }
+  }
+
+  /**
+   * Bereinigt Gast-Namen von führenden Wörtern wie "ist", "mit", "für", "para"
+   * @param name - Roher Name
+   * @returns Bereinigter Name
+   */
+  private static cleanGuestName(name: string): string {
+    if (!name) return name;
+    // Entferne führende Wörter
+    return name.replace(/^(ist|mit|für|para|a nombre de|name|nombre)\s+/i, '').trim();
   }
 }
 
