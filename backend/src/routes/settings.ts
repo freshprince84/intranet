@@ -427,4 +427,127 @@ router.get('/notifications/user', getUserNotificationSettings);
 // Benutzer-spezifische Benachrichtigungseinstellungen aktualisieren
 router.put('/notifications/user', updateUserNotificationSettings);
 
+// POST /branding/extract-and-generate-template - Branding-Extraktion + E-Mail-Template-Generierung
+router.post('/branding/extract-and-generate-template', authenticateToken, async (req, res) => {
+  try {
+    const userId = parseInt(req.userId || '0', 10);
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht authentifiziert' });
+    }
+
+    // Lade Organisation des Users
+    const userRole = await prisma.userRole.findFirst({
+      where: { 
+        userId: userId,
+        lastUsed: true 
+      },
+      include: {
+        role: {
+          include: {
+            organization: true
+          }
+        },
+        user: {
+          select: { email: true }
+        }
+      }
+    });
+
+    if (!userRole?.role.organization) {
+      return res.status(404).json({ message: 'Keine Organisation gefunden' });
+    }
+
+    const organization = userRole.role.organization;
+    const userEmail = userRole.user.email;
+
+    if (!organization.logo || organization.logo.trim() === '') {
+      return res.status(400).json({ message: 'Kein Logo vorhanden. Bitte laden Sie zuerst ein Logo hoch.' });
+    }
+
+    // Schritt 1: Branding-Extraktion
+    logger.log('[Settings] Starte Branding-Extraktion für Organisation:', organization.id);
+    const { OrganizationBrandingService } = await import('../services/organizationBrandingService');
+    const branding = await OrganizationBrandingService.extractBrandingFromLogo(organization.logo);
+    
+    // Lade aktuelle Settings
+    const currentSettings = (organization.settings && typeof organization.settings === 'object') 
+      ? organization.settings as any 
+      : {};
+    
+    // Speichere Branding in Settings
+    await prisma.organization.update({
+      where: { id: organization.id },
+      data: {
+        settings: {
+          ...currentSettings,
+          branding: branding
+        }
+      }
+    });
+    
+    logger.log('[Settings] Branding erfolgreich extrahiert und gespeichert:', {
+      hasPrimaryColor: !!branding.colors.primary,
+      hasSecondaryColor: !!branding.colors.secondary,
+      hasAccentColor: !!branding.colors.accent
+    });
+
+    // Schritt 2: E-Mail-Template-Generierung (Test)
+    logger.log('[Settings] Generiere Test-E-Mail-Template');
+    
+    const { generateEmailTemplate } = await import('../services/emailService');
+    const { sendEmail } = await import('../services/emailService');
+    
+    const testContent = `
+      <p>Hallo,</p>
+      <p>Dies ist eine Test-E-Mail zur Überprüfung Ihrer Corporate Identity.</p>
+      <p>Die folgenden Informationen wurden aus Ihrem Logo extrahiert:</p>
+      <ul>
+        ${branding.colors.primary ? `<li><strong>Hauptfarbe:</strong> <span style="color: ${branding.colors.primary};">${branding.colors.primary}</span></li>` : ''}
+        ${branding.colors.secondary ? `<li><strong>Sekundärfarbe:</strong> <span style="color: ${branding.colors.secondary};">${branding.colors.secondary}</span></li>` : ''}
+        ${branding.colors.accent ? `<li><strong>Akzentfarbe:</strong> <span style="color: ${branding.colors.accent};">${branding.colors.accent}</span></li>` : ''}
+      </ul>
+      <p>Diese Farben werden nun in allen E-Mails Ihrer Organisation verwendet.</p>
+      <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+    `;
+
+    const testHtml = generateEmailTemplate({
+      logo: organization.logo,
+      branding: branding,
+      headerTitle: organization.displayName || organization.name,
+      content: testContent,
+      language: 'de'
+    });
+
+    // Sende Test-E-Mail
+    const emailSent = await sendEmail(
+      userEmail,
+      'Test: Corporate Identity für E-Mails',
+      testHtml,
+      'Dies ist eine Test-E-Mail zur Überprüfung Ihrer Corporate Identity.',
+      organization.id
+    );
+
+    if (!emailSent) {
+      logger.warn('[Settings] Test-E-Mail konnte nicht versendet werden');
+    }
+
+    res.status(200).json({ 
+      message: 'Branding erfolgreich extrahiert und Test-E-Mail versendet',
+      branding: {
+        hasPrimaryColor: !!branding.colors.primary,
+        hasSecondaryColor: !!branding.colors.secondary,
+        hasAccentColor: !!branding.colors.accent,
+        primaryColor: branding.colors.primary || null
+      },
+      testEmailSent: emailSent
+    });
+  } catch (error) {
+    logger.error('[Settings] Fehler bei Branding-Extraktion und Template-Generierung:', error);
+    res.status(500).json({ 
+      message: 'Fehler bei Branding-Extraktion',
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+    });
+  }
+});
+
 export default router; 
