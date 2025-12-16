@@ -44,14 +44,13 @@ npx prisma generate
 echo "✅ Prisma Client generiert"
 echo ""
 
-# 6. Filter-Cleanup (optional, vor dem Seed)
-echo "🧹 Schritt 6: Filter-Cleanup (löscht Filter für nicht-existierende User)..."
+# 6. Filter-Cleanup und Seed ausführen
+echo "🧹 Schritt 6: Filter-Cleanup..."
 cd /var/www/intranet/backend
-npx ts-node scripts/cleanupUserFilters.ts || echo "   ⚠️  Filter-Cleanup übersprungen (optional)"
+npx ts-node scripts/cleanupUserFilters.ts || true
 echo "✅ Filter-Cleanup abgeschlossen"
 echo ""
 
-# 7. Seed ausführen
 echo "🌱 Schritt 7: Seed ausführen..."
 cd /var/www/intranet/backend
 npx prisma db seed
