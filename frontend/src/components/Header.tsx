@@ -332,7 +332,7 @@ const Header: React.FC = () => {
                                                         <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
                                                         <span className="text-xs text-gray-500 dark:text-gray-400">
                                                             {branchName}
-                                                        </span>
+                                                    </span>
                                                     </>
                                                 )}
                                             </div>

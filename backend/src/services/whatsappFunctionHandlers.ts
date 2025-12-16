@@ -1965,13 +1965,17 @@ export class WhatsAppFunctionHandlers {
         logger.log(`[create_room_reservation] Erstelle neue Reservation (keine "potential" Reservation gefunden)`);
         
         // 5.1. Erstelle Reservierung in LobbyPMS (WICHTIG: ZUERST in LobbyPMS, dann lokal!)
+        // Definiere roomNumber und roomDescription außerhalb des try-Blocks
+        let roomNumber: string | null = null;
+        let roomDescription: string | null = null;
+        
         try {
           const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
           lobbyReservationId = await lobbyPmsService.createBooking(
             categoryId, // Verwende gefundene oder übergebene categoryId
             checkInDate,
             checkOutDate,
-            args.guestName.trim(),
+            guestName,
             guestEmail || undefined, // Verwende validierte Email
             guestPhone || undefined, // Verwende validierte Telefonnummer
             1 // Anzahl Personen (default: 1, kann später erweitert werden)
@@ -1979,9 +1983,6 @@ export class WhatsAppFunctionHandlers {
           logger.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
           
           // Hole Reservierungsdetails aus LobbyPMS für roomNumber und roomDescription
-          let roomNumber: string | null = null;
-          let roomDescription: string | null = null;
-          
           try {
             const lobbyReservation = await lobbyPmsService.fetchReservationById(lobbyReservationId);
             const assignedRoom = lobbyReservation.assigned_room;
@@ -2103,10 +2104,6 @@ export class WhatsAppFunctionHandlers {
               // Diese Informationen sind in LobbyPMS über lobbyReservationId verfügbar.
             }
           });
-        } catch (lobbyError: any) {
-          logger.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
-          throw new Error(`Fehler beim Erstellen der Reservierung in LobbyPMS: ${lobbyError.message}`);
-        }
       }
 
       // 9. Erstelle Payment Link (wenn Telefonnummer vorhanden)
