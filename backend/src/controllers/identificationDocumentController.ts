@@ -527,7 +527,7 @@ export const verifyDocument = async (req: Request, res: Response) => {
   }
 };
 
-// Dokument-Datei herunterladen
+// Dokument-Datei herunterladen oder anzeigen
 export const downloadDocument = async (req: Request, res: Response) => {
   try {
     const docId = parseInt(req.params.docId);
@@ -546,7 +546,35 @@ export const downloadDocument = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Datei nicht gefunden' });
     }
     
-    res.download(filePath);
+    // Dateiname aus Pfad extrahieren
+    const fileName = path.basename(filePath);
+    
+    // MIME-Typ basierend auf Dateiendung bestimmen
+    const ext = path.extname(filePath).toLowerCase();
+    let mimeType = 'application/octet-stream';
+    if (ext === '.pdf') {
+      mimeType = 'application/pdf';
+    } else if (['.jpg', '.jpeg'].includes(ext)) {
+      mimeType = 'image/jpeg';
+    } else if (ext === '.png') {
+      mimeType = 'image/png';
+    } else if (ext === '.gif') {
+      mimeType = 'image/gif';
+    }
+    
+    // Prüfe ob Preview-Modus (inline) oder Download-Modus
+    const isPreview = req.query.preview === 'true';
+    
+    if (isPreview || mimeType.startsWith('image/') || mimeType === 'application/pdf') {
+      // Datei inline anzeigen (für iframe-Vorschau)
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+      res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+      fs.createReadStream(filePath).pipe(res);
+    } else {
+      // Andere Dateien als Download anbieten
+      res.download(filePath, fileName);
+    }
   } catch (error) {
     logger.error('Fehler beim Herunterladen des Dokuments:', error);
     res.status(500).json({ error: 'Interner Serverfehler' });
