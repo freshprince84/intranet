@@ -3244,8 +3244,11 @@
       "headline": "Un intranet para hostales, hoteles, Airbnbs y equipos de consultoría",
       "subline": "Control horario, tareas, conocimiento, facturación y automatización con IA en una sola interfaz – móvil y en sitio.",
       "ctaRegister": "Registrarse",
+      "ctaRegisterLabel": "Registrarse",
       "ctaLogin": "Login",
+      "ctaLoginLabel": "Login",
       "ctaDemo": "Solicitar demo",
+      "ctaDemoLabel": "Solicitar demo",
       "ctaHint": "Haz clic en un icono para avanzar."
     },
     "stats": {
