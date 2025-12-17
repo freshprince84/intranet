@@ -731,20 +731,17 @@ const Profile: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'documents' && user && (
-          <IdentificationDocumentList userId={user.id} ref={documentListRef} />
-        )}
+          {activeTab === 'documents' && user && (
+            <IdentificationDocumentList userId={user.id} ref={documentListRef} />
+          )}
 
-        {activeTab === 'lifecycle' && user && (
-          <LifecycleTab userId={user.id} />
-        )}
+          {activeTab === 'lifecycle' && user && <LifecycleTab userId={user.id} />}
 
-        {activeTab === 'myDocuments' && user && (
-          <MyDocumentsTab userId={user.id} />
-        )}
+          {activeTab === 'myDocuments' && user && <MyDocumentsTab userId={user.id} />}
+          </div>
+        </div>
       </div>
     </div>
-  </div>
   );
 };
 
