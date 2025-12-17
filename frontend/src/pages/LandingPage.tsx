@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import { motion } from 'framer-motion';
-import DeviceFrame from '../components/DeviceFrame';
+import DeviceFrame from '../components/DeviceFrame.tsx';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
