@@ -32,12 +32,12 @@ type FAQItem = {
   answerKey: string;
 };
 
-const IMG_WORKTRACKER = '/landing/worktracker.webp';
-const IMG_CONSULTATIONS = '/landing/consultations.webp';
-const IMG_DOCUMENT = '/landing/document-recognition.webp';
-const IMG_TEAM = '/landing/team-worktime.webp';
-const IMG_CEREBRO = '/landing/cerebro.webp';
-const IMG_MOBILE = '/landing/mobile.webp';
+const IMG_WORKTRACKER = '/landing-assets/worktracker.svg';
+const IMG_CONSULTATIONS = '/landing-assets/consultations.svg';
+const IMG_DOCUMENT = '/landing-assets/document-recognition.svg';
+const IMG_TEAM = '/landing-assets/team-worktime.svg';
+const IMG_CEREBRO = '/landing-assets/cerebro.svg';
+const IMG_MOBILE = '/landing-assets/mobile.svg';
 
 const CTAIconButton: React.FC<{
   to: string;
