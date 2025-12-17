@@ -10,12 +10,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.pricingRuleController = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../utils/prisma");
 const notificationController_1 = require("./notificationController");
-const client_2 = require("@prisma/client");
+const client_1 = require("@prisma/client");
 const translations_1 = require("../utils/translations");
 const logger_1 = require("../utils/logger");
-const prisma = new client_1.PrismaClient();
 /**
  * Controller für Preisregeln
  */
@@ -39,7 +38,7 @@ exports.pricingRuleController = {
             if (isActive !== undefined) {
                 where.isActive = isActive;
             }
-            const rules = yield prisma.pricingRule.findMany({
+            const rules = yield prisma_1.prisma.pricingRule.findMany({
                 where,
                 orderBy: {
                     priority: 'desc'
@@ -58,9 +57,11 @@ exports.pricingRuleController = {
             res.json(rules);
         }
         catch (error) {
-            logger_1.logger.error('Fehler beim Abrufen der Preisregeln:', error);
+            logger_1.logger.error('Error fetching pricing rules:', error);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             res.status(500).json({
-                message: 'Fehler beim Abrufen der Preisregeln',
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'errorFetchingRules'),
                 error: error.message
             });
         }
@@ -72,12 +73,14 @@ exports.pricingRuleController = {
     getRuleById: (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         try {
             const ruleId = parseInt(req.params.id, 10);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             if (isNaN(ruleId)) {
                 return res.status(400).json({
-                    message: 'Ungültige Regel-ID'
+                    message: (0, translations_1.getPriceAnalysisErrorText)(language, 'invalidRuleId')
                 });
             }
-            const rule = yield prisma.pricingRule.findUnique({
+            const rule = yield prisma_1.prisma.pricingRule.findUnique({
                 where: {
                     id: ruleId
                 },
@@ -94,15 +97,17 @@ exports.pricingRuleController = {
             });
             if (!rule) {
                 return res.status(404).json({
-                    message: 'Preisregel nicht gefunden'
+                    message: (0, translations_1.getPriceAnalysisErrorText)(language, 'ruleNotFound')
                 });
             }
             res.json(rule);
         }
         catch (error) {
-            logger_1.logger.error('Fehler beim Abrufen der Preisregel:', error);
+            logger_1.logger.error('Error fetching pricing rule:', error);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             res.status(500).json({
-                message: 'Fehler beim Abrufen der Preisregel',
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'errorFetchingRule'),
                 error: error.message
             });
         }
@@ -115,12 +120,13 @@ exports.pricingRuleController = {
         try {
             const { branchId, name, description, conditions, action, roomTypes, categoryIds, priority, isActive } = req.body;
             const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             if (!branchId || !name || !conditions || !action) {
                 return res.status(400).json({
-                    message: 'branchId, name, conditions und action sind erforderlich'
+                    message: (0, translations_1.getPriceAnalysisErrorText)(language, 'requiredFieldsMissing')
                 });
             }
-            const rule = yield prisma.pricingRule.create({
+            const rule = yield prisma_1.prisma.pricingRule.create({
                 data: {
                     branchId,
                     name,
@@ -147,27 +153,28 @@ exports.pricingRuleController = {
             // Notification erstellen
             if (userId) {
                 try {
-                    const language = yield (0, translations_1.getUserLanguage)(userId);
                     const notificationText = (0, translations_1.getPriceAnalysisNotificationText)(language, 'ruleCreated', rule.name);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId,
                         title: notificationText.title,
                         message: notificationText.message,
-                        type: client_2.NotificationType.system,
+                        type: client_1.NotificationType.system,
                         relatedEntityId: rule.id,
                         relatedEntityType: 'created'
                     });
                 }
                 catch (error) {
-                    logger_1.logger.error('Fehler beim Erstellen der Notification:', error);
+                    logger_1.logger.error('Error creating notification:', error);
                 }
             }
             res.status(201).json(rule);
         }
         catch (error) {
-            logger_1.logger.error('Fehler beim Erstellen der Preisregel:', error);
+            logger_1.logger.error('Error creating pricing rule:', error);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             res.status(500).json({
-                message: 'Fehler beim Erstellen der Preisregel',
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'errorCreatingRule'),
                 error: error.message
             });
         }
@@ -180,12 +187,14 @@ exports.pricingRuleController = {
         try {
             const ruleId = parseInt(req.params.id, 10);
             const { name, description, conditions, action, roomTypes, categoryIds, priority, isActive } = req.body;
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             if (isNaN(ruleId)) {
                 return res.status(400).json({
-                    message: 'Ungültige Regel-ID'
+                    message: (0, translations_1.getPriceAnalysisErrorText)(language, 'invalidRuleId')
                 });
             }
-            const rule = yield prisma.pricingRule.update({
+            const rule = yield prisma_1.prisma.pricingRule.update({
                 where: {
                     id: ruleId
                 },
@@ -211,30 +220,30 @@ exports.pricingRuleController = {
                 }
             });
             // Notification erstellen
-            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
             if (userId) {
                 try {
-                    const language = yield (0, translations_1.getUserLanguage)(userId);
                     const notificationText = (0, translations_1.getPriceAnalysisNotificationText)(language, 'ruleUpdated', rule.name);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId,
                         title: notificationText.title,
                         message: notificationText.message,
-                        type: client_2.NotificationType.system,
+                        type: client_1.NotificationType.system,
                         relatedEntityId: rule.id,
                         relatedEntityType: 'updated'
                     });
                 }
                 catch (error) {
-                    logger_1.logger.error('Fehler beim Erstellen der Notification:', error);
+                    logger_1.logger.error('Error creating notification:', error);
                 }
             }
             res.json(rule);
         }
         catch (error) {
-            logger_1.logger.error('Fehler beim Aktualisieren der Preisregel:', error);
+            logger_1.logger.error('Error updating pricing rule:', error);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             res.status(500).json({
-                message: 'Fehler beim Aktualisieren der Preisregel',
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'errorUpdatingRule'),
                 error: error.message
             });
         }
@@ -246,50 +255,52 @@ exports.pricingRuleController = {
     deleteRule: (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         try {
             const ruleId = parseInt(req.params.id, 10);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             if (isNaN(ruleId)) {
                 return res.status(400).json({
-                    message: 'Ungültige Regel-ID'
+                    message: (0, translations_1.getPriceAnalysisErrorText)(language, 'invalidRuleId')
                 });
             }
             // Regel vor dem Löschen abrufen für Notification
-            const rule = yield prisma.pricingRule.findUnique({
+            const rule = yield prisma_1.prisma.pricingRule.findUnique({
                 where: {
                     id: ruleId
                 }
             });
-            yield prisma.pricingRule.delete({
+            yield prisma_1.prisma.pricingRule.delete({
                 where: {
                     id: ruleId
                 }
             });
             // Notification erstellen
-            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
             if (userId && rule) {
                 try {
-                    const language = yield (0, translations_1.getUserLanguage)(userId);
                     const notificationText = (0, translations_1.getPriceAnalysisNotificationText)(language, 'ruleDeleted', rule.name);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId,
                         title: notificationText.title,
                         message: notificationText.message,
-                        type: client_2.NotificationType.system,
+                        type: client_1.NotificationType.system,
                         relatedEntityId: ruleId,
                         relatedEntityType: 'deleted'
                     });
                 }
                 catch (error) {
-                    logger_1.logger.error('Fehler beim Erstellen der Notification:', error);
+                    logger_1.logger.error('Error creating notification:', error);
                 }
             }
             res.json({
                 success: true,
-                message: 'Preisregel wurde gelöscht'
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'ruleDeleted')
             });
         }
         catch (error) {
-            logger_1.logger.error('Fehler beim Löschen der Preisregel:', error);
+            logger_1.logger.error('Error deleting pricing rule:', error);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             res.status(500).json({
-                message: 'Fehler beim Löschen der Preisregel',
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'errorDeletingRule'),
                 error: error.message
             });
         }

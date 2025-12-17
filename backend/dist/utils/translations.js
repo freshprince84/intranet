@@ -19,6 +19,10 @@ exports.getRoleNotificationText = getRoleNotificationText;
 exports.getSystemNotificationText = getSystemNotificationText;
 exports.getPayrollPDFTranslations = getPayrollPDFTranslations;
 exports.getPriceAnalysisNotificationText = getPriceAnalysisNotificationText;
+exports.getPriceAnalysisErrorText = getPriceAnalysisErrorText;
+exports.getTourErrorText = getTourErrorText;
+exports.getTourProviderErrorText = getTourProviderErrorText;
+exports.getTourBookingErrorText = getTourBookingErrorText;
 const prisma_1 = require("./prisma");
 const userLanguageCache_1 = require("../services/userLanguageCache");
 const logger_1 = require("./logger");
@@ -960,6 +964,14 @@ const priceAnalysisNotifications = {
         rateShoppingFailed: (platform, error) => ({
             title: 'Rate Shopping fehlgeschlagen',
             message: `Rate Shopping für ${platform} ist fehlgeschlagen: ${error}`
+        }),
+        analysisCompleted: (analysisCount) => ({
+            title: 'Preisanalyse abgeschlossen',
+            message: `Preisanalyse für ${analysisCount} Kategorien abgeschlossen.`
+        }),
+        recommendationsGenerated: (recommendationCount) => ({
+            title: 'Preisvorschläge generiert',
+            message: `${recommendationCount} Preisvorschläge wurden generiert.`
         })
     },
     es: {
@@ -990,6 +1002,14 @@ const priceAnalysisNotifications = {
         rateShoppingFailed: (platform, error) => ({
             title: 'Comparación de precios fallida',
             message: `La comparación de precios para ${platform} ha fallado: ${error}`
+        }),
+        analysisCompleted: (analysisCount) => ({
+            title: 'Análisis de precios completado',
+            message: `Análisis de precios para ${analysisCount} categorías completado.`
+        }),
+        recommendationsGenerated: (recommendationCount) => ({
+            title: 'Recomendaciones de precio generadas',
+            message: `Se generaron ${recommendationCount} recomendaciones de precio.`
         })
     },
     en: {
@@ -1020,6 +1040,14 @@ const priceAnalysisNotifications = {
         rateShoppingFailed: (platform, error) => ({
             title: 'Rate shopping failed',
             message: `Rate shopping for ${platform} has failed: ${error}`
+        }),
+        analysisCompleted: (analysisCount) => ({
+            title: 'Price analysis completed',
+            message: `Price analysis for ${analysisCount} categories completed.`
+        }),
+        recommendationsGenerated: (recommendationCount) => ({
+            title: 'Price recommendations generated',
+            message: `${recommendationCount} price recommendations were generated.`
         })
     }
 };
@@ -1041,8 +1069,393 @@ function getPriceAnalysisNotificationText(language, type, ...args) {
             return translations.rateShoppingCompleted(args[0]);
         case 'rateShoppingFailed':
             return translations.rateShoppingFailed(args[0], args[1]);
+        case 'analysisCompleted':
+            return translations.analysisCompleted(args[0]);
+        case 'recommendationsGenerated':
+            return translations.recommendationsGenerated(args[0]);
         default:
             return translations.recommendationCreated(args[0], args[1]);
     }
+}
+const priceAnalysisErrorTexts = {
+    de: {
+        branchIdRequired: 'branchId ist erforderlich',
+        invalidRecommendationId: 'Ungültige Empfehlungs-ID',
+        invalidRuleId: 'Ungültige Regel-ID',
+        invalidAnalysisId: 'Ungültige Analyse-ID',
+        notAuthenticated: 'Nicht authentifiziert',
+        recommendationNotFound: 'Preisempfehlung nicht gefunden',
+        ruleNotFound: 'Preisregel nicht gefunden',
+        requiredFieldsMissing: 'branchId, name, conditions und action sind erforderlich',
+        requiredAnalysisFieldsMissing: 'branchId, startDate und endDate sind erforderlich',
+        errorFetchingRecommendations: 'Fehler beim Abrufen der Preisempfehlungen',
+        errorApplyingRecommendation: 'Fehler beim Anwenden der Preisempfehlung',
+        errorApprovingRecommendation: 'Fehler beim Genehmigen der Preisempfehlung',
+        errorRejectingRecommendation: 'Fehler beim Ablehnen der Preisempfehlung',
+        errorFetchingRules: 'Fehler beim Abrufen der Preisregeln',
+        errorFetchingRule: 'Fehler beim Abrufen der Preisregel',
+        errorCreatingRule: 'Fehler beim Erstellen der Preisregel',
+        errorUpdatingRule: 'Fehler beim Aktualisieren der Preisregel',
+        errorDeletingRule: 'Fehler beim Löschen der Preisregel',
+        errorAnalyzing: 'Fehler bei der Preisanalyse',
+        errorFetchingAnalyses: 'Fehler beim Abrufen der Preisanalysen',
+        errorFetchingAnalysis: 'Fehler beim Abrufen der Preisanalyse',
+        errorGeneratingRecommendations: 'Fehler bei der Generierung von Preisempfehlungen',
+        recommendationApplied: 'Preisempfehlung wurde angewendet',
+        recommendationApproved: 'Preisempfehlung wurde genehmigt',
+        recommendationRejected: 'Preisempfehlung wurde abgelehnt',
+        ruleCreated: 'Preisregel wurde erstellt',
+        ruleUpdated: 'Preisregel wurde aktualisiert',
+        ruleDeleted: 'Preisregel wurde gelöscht'
+    },
+    es: {
+        branchIdRequired: 'branchId es requerido',
+        invalidRecommendationId: 'ID de recomendación inválida',
+        invalidRuleId: 'ID de regla inválida',
+        invalidAnalysisId: 'ID de análisis inválida',
+        notAuthenticated: 'No autenticado',
+        recommendationNotFound: 'Recomendación de precio no encontrada',
+        ruleNotFound: 'Regla de precios no encontrada',
+        requiredFieldsMissing: 'branchId, name, conditions y action son requeridos',
+        requiredAnalysisFieldsMissing: 'branchId, startDate y endDate son requeridos',
+        errorFetchingRecommendations: 'Error al obtener las recomendaciones de precio',
+        errorApplyingRecommendation: 'Error al aplicar la recomendación de precio',
+        errorApprovingRecommendation: 'Error al aprobar la recomendación de precio',
+        errorRejectingRecommendation: 'Error al rechazar la recomendación de precio',
+        errorFetchingRules: 'Error al obtener las reglas de precio',
+        errorFetchingRule: 'Error al obtener la regla de precio',
+        errorCreatingRule: 'Error al crear la regla de precio',
+        errorUpdatingRule: 'Error al actualizar la regla de precio',
+        errorDeletingRule: 'Error al eliminar la regla de precio',
+        errorAnalyzing: 'Error en el análisis de precios',
+        errorFetchingAnalyses: 'Error al obtener los análisis de precio',
+        errorFetchingAnalysis: 'Error al obtener el análisis de precio',
+        errorGeneratingRecommendations: 'Error al generar recomendaciones de precio',
+        recommendationApplied: 'Recomendación de precio aplicada',
+        recommendationApproved: 'Recomendación de precio aprobada',
+        recommendationRejected: 'Recomendación de precio rechazada',
+        ruleCreated: 'Regla de precios creada',
+        ruleUpdated: 'Regla de precios actualizada',
+        ruleDeleted: 'Regla de precios eliminada'
+    },
+    en: {
+        branchIdRequired: 'branchId is required',
+        invalidRecommendationId: 'Invalid recommendation ID',
+        invalidRuleId: 'Invalid rule ID',
+        invalidAnalysisId: 'Invalid analysis ID',
+        notAuthenticated: 'Not authenticated',
+        recommendationNotFound: 'Price recommendation not found',
+        ruleNotFound: 'Pricing rule not found',
+        requiredFieldsMissing: 'branchId, name, conditions and action are required',
+        requiredAnalysisFieldsMissing: 'branchId, startDate and endDate are required',
+        errorFetchingRecommendations: 'Error fetching price recommendations',
+        errorApplyingRecommendation: 'Error applying price recommendation',
+        errorApprovingRecommendation: 'Error approving price recommendation',
+        errorRejectingRecommendation: 'Error rejecting price recommendation',
+        errorFetchingRules: 'Error fetching pricing rules',
+        errorFetchingRule: 'Error fetching pricing rule',
+        errorCreatingRule: 'Error creating pricing rule',
+        errorUpdatingRule: 'Error updating pricing rule',
+        errorDeletingRule: 'Error deleting pricing rule',
+        errorAnalyzing: 'Error analyzing prices',
+        errorFetchingAnalyses: 'Error fetching price analyses',
+        errorFetchingAnalysis: 'Error fetching price analysis',
+        errorGeneratingRecommendations: 'Error generating price recommendations',
+        recommendationApplied: 'Price recommendation applied',
+        recommendationApproved: 'Price recommendation approved',
+        recommendationRejected: 'Price recommendation rejected',
+        ruleCreated: 'Pricing rule created',
+        ruleUpdated: 'Pricing rule updated',
+        ruleDeleted: 'Pricing rule deleted'
+    }
+};
+function getPriceAnalysisErrorText(language, errorType) {
+    const lang = language in priceAnalysisErrorTexts ? language : 'de';
+    return priceAnalysisErrorTexts[lang][errorType];
+}
+/**
+ * Übersetzungen für Tour-Fehlermeldungen
+ */
+const tourErrorTexts = {
+    de: {
+        tourNotFound: 'Tour nicht gefunden',
+        invalidTourId: 'Ungültige Tour-ID',
+        loadError: 'Fehler beim Laden der Touren',
+        loadTourError: 'Fehler beim Laden der Tour',
+        noPermissionCreate: 'Keine Berechtigung zum Erstellen von Touren',
+        noPermissionEdit: 'Keine Berechtigung zum Bearbeiten von Touren',
+        titleMinLength: 'Titel muss mindestens 3 Zeichen lang sein',
+        organizationRequired: 'Organisation ist erforderlich',
+        maxParticipantsMin: 'Maximale Teilnehmeranzahl muss >= minimale Teilnehmeranzahl sein',
+        availableFromTo: 'Verfügbar ab muss <= verfügbar bis sein',
+        externalProviderRequired: 'Externer Anbieter ist bei externen Touren erforderlich',
+        createError: 'Fehler beim Erstellen der Tour',
+        noFileUploaded: 'Keine Datei hochgeladen',
+        imageUploadError: 'Fehler beim Hochladen des Bildes',
+        galleryUploadError: 'Fehler beim Hochladen des Galerie-Bildes',
+        imageNotFound: 'Bild nicht gefunden',
+        imageFileNotFound: 'Bilddatei nicht gefunden',
+        loadImageError: 'Fehler beim Laden des Bildes',
+        invalidTourIdOrImageIndex: 'Ungültige Tour-ID oder Bild-Index',
+        galleryNotFound: 'Galerie nicht gefunden',
+        imageIndexOutOfRange: 'Bild-Index außerhalb des gültigen Bereichs',
+        loadGalleryImageError: 'Fehler beim Laden des Galerie-Bildes',
+        invalidParameters: 'Ungültige Parameter',
+        onlyImageFilesAllowed: 'Nur Bilddateien (JPEG, PNG, GIF, WEBP) sind erlaubt',
+        imageGenerationStarted: 'Bildgenerierung gestartet',
+        jobNotFound: 'Job nicht gefunden',
+        updateError: 'Fehler beim Aktualisieren der Tour',
+        deleteError: 'Fehler beim Löschen der Tour',
+        imageDeleted: 'Hauptbild erfolgreich gelöscht',
+        isActiveMustBeBoolean: 'isActive muss ein Boolean sein',
+        noPermissionDelete: 'Keine Berechtigung zum Löschen von Touren',
+        noPermissionForTour: 'Keine Berechtigung für diese Tour',
+        exportError: 'Fehler beim Exportieren der Touren',
+        noPermissionGenerateImages: 'Keine Berechtigung zum Generieren von Tour-Bildern',
+        imagesGeneratedSuccess: 'Bilder erfolgreich generiert (synchroner Modus)',
+        imageGenerationError: 'Fehler bei Bildgenerierung',
+        jobIdRequired: 'Job-ID erforderlich',
+        statusError: 'Fehler beim Abrufen des Status'
+    },
+    en: {
+        tourNotFound: 'Tour not found',
+        invalidTourId: 'Invalid tour ID',
+        loadError: 'Error loading tours',
+        loadTourError: 'Error loading tour',
+        noPermissionCreate: 'No permission to create tours',
+        noPermissionEdit: 'No permission to edit tours',
+        titleMinLength: 'Title must be at least 3 characters long',
+        organizationRequired: 'Organization is required',
+        maxParticipantsMin: 'Maximum participants must be >= minimum participants',
+        availableFromTo: 'Available from must be <= available to',
+        externalProviderRequired: 'External provider is required for external tours',
+        createError: 'Error creating tour',
+        noFileUploaded: 'No file uploaded',
+        imageUploadError: 'Error uploading image',
+        galleryUploadError: 'Error uploading gallery image',
+        imageNotFound: 'Image not found',
+        imageFileNotFound: 'Image file not found',
+        loadImageError: 'Error loading image',
+        invalidTourIdOrImageIndex: 'Invalid tour ID or image index',
+        galleryNotFound: 'Gallery not found',
+        imageIndexOutOfRange: 'Image index out of range',
+        loadGalleryImageError: 'Error loading gallery image',
+        invalidParameters: 'Invalid parameters',
+        onlyImageFilesAllowed: 'Only image files (JPEG, PNG, GIF, WEBP) are allowed',
+        imageGenerationStarted: 'Image generation started',
+        jobNotFound: 'Job not found',
+        updateError: 'Error updating tour',
+        deleteError: 'Error deleting tour',
+        imageDeleted: 'Main image successfully deleted',
+        isActiveMustBeBoolean: 'isActive must be a boolean',
+        noPermissionDelete: 'No permission to delete tours',
+        noPermissionForTour: 'No permission for this tour',
+        exportError: 'Error exporting tours',
+        noPermissionGenerateImages: 'No permission to generate tour images',
+        imagesGeneratedSuccess: 'Images successfully generated (synchronous mode)',
+        imageGenerationError: 'Error generating images',
+        jobIdRequired: 'Job ID required',
+        statusError: 'Error retrieving status'
+    },
+    es: {
+        tourNotFound: 'Tour no encontrado',
+        invalidTourId: 'ID de tour inválido',
+        loadError: 'Error al cargar tours',
+        loadTourError: 'Error al cargar tour',
+        noPermissionCreate: 'Sin permiso para crear tours',
+        noPermissionEdit: 'Sin permiso para editar tours',
+        titleMinLength: 'El título debe tener al menos 3 caracteres',
+        organizationRequired: 'La organización es requerida',
+        maxParticipantsMin: 'El máximo de participantes debe ser >= mínimo de participantes',
+        availableFromTo: 'Disponible desde debe ser <= disponible hasta',
+        externalProviderRequired: 'El proveedor externo es requerido para tours externos',
+        createError: 'Error al crear tour',
+        noFileUploaded: 'No se subió ningún archivo',
+        imageUploadError: 'Error al subir imagen',
+        galleryUploadError: 'Error al subir imagen de galería',
+        imageNotFound: 'Imagen no encontrada',
+        imageFileNotFound: 'Archivo de imagen no encontrado',
+        loadImageError: 'Error al cargar imagen',
+        invalidTourIdOrImageIndex: 'ID de tour o índice de imagen inválido',
+        galleryNotFound: 'Galería no encontrada',
+        imageIndexOutOfRange: 'Índice de imagen fuera de rango',
+        loadGalleryImageError: 'Error al cargar imagen de galería',
+        invalidParameters: 'Parámetros inválidos',
+        onlyImageFilesAllowed: 'Solo se permiten archivos de imagen (JPEG, PNG, GIF, WEBP)',
+        imageGenerationStarted: 'Generación de imagen iniciada',
+        jobNotFound: 'Trabajo no encontrado',
+        updateError: 'Error al actualizar tour',
+        deleteError: 'Error al eliminar tour',
+        imageDeleted: 'Imagen principal eliminada exitosamente',
+        isActiveMustBeBoolean: 'isActive debe ser un booleano',
+        noPermissionDelete: 'Sin permiso para eliminar tours',
+        noPermissionForTour: 'Sin permiso para este tour',
+        exportError: 'Error al exportar tours',
+        noPermissionGenerateImages: 'Sin permiso para generar imágenes de tour',
+        imagesGeneratedSuccess: 'Imágenes generadas exitosamente (modo sincrónico)',
+        imageGenerationError: 'Error al generar imágenes',
+        jobIdRequired: 'ID de trabajo requerido',
+        statusError: 'Error al recuperar el estado'
+    }
+};
+/**
+ * Gibt die übersetzte Fehlermeldung für Tour-Fehler zurück
+ */
+function getTourErrorText(language, errorType) {
+    const lang = language in tourErrorTexts ? language : 'de';
+    return tourErrorTexts[lang][errorType];
+}
+/**
+ * Übersetzungen für Tour-Provider-Fehlermeldungen
+ */
+const tourProviderErrorTexts = {
+    de: {
+        providerNotFound: 'Anbieter nicht gefunden',
+        invalidProviderId: 'Ungültige Anbieter-ID',
+        loadError: 'Fehler beim Laden der Anbieter',
+        loadProviderError: 'Fehler beim Laden des Anbieters',
+        noPermissionCreate: 'Keine Berechtigung zum Erstellen von Anbietern',
+        noPermissionEdit: 'Keine Berechtigung zum Bearbeiten von Anbietern',
+        noPermissionDelete: 'Keine Berechtigung zum Löschen von Anbietern',
+        nameMinLength: 'Name muss mindestens 2 Zeichen lang sein',
+        organizationRequired: 'Organisation ist erforderlich',
+        createError: 'Fehler beim Erstellen des Anbieters',
+        updateError: 'Fehler beim Aktualisieren des Anbieters',
+        deleteError: 'Fehler beim Löschen des Anbieters',
+        providerDeleted: 'Anbieter gelöscht',
+        cannotDeleteWithTours: 'Anbieter kann nicht gelöscht werden, da {count} Tour(s) verknüpft sind'
+    },
+    en: {
+        providerNotFound: 'Provider not found',
+        invalidProviderId: 'Invalid provider ID',
+        loadError: 'Error loading providers',
+        loadProviderError: 'Error loading provider',
+        noPermissionCreate: 'No permission to create providers',
+        noPermissionEdit: 'No permission to edit providers',
+        noPermissionDelete: 'No permission to delete providers',
+        nameMinLength: 'Name must be at least 2 characters long',
+        organizationRequired: 'Organization is required',
+        createError: 'Error creating provider',
+        updateError: 'Error updating provider',
+        deleteError: 'Error deleting provider',
+        providerDeleted: 'Provider deleted',
+        cannotDeleteWithTours: 'Provider cannot be deleted because {count} tour(s) are linked'
+    },
+    es: {
+        providerNotFound: 'Proveedor no encontrado',
+        invalidProviderId: 'ID de proveedor inválido',
+        loadError: 'Error al cargar proveedores',
+        loadProviderError: 'Error al cargar proveedor',
+        noPermissionCreate: 'Sin permiso para crear proveedores',
+        noPermissionEdit: 'Sin permiso para editar proveedores',
+        noPermissionDelete: 'Sin permiso para eliminar proveedores',
+        nameMinLength: 'El nombre debe tener al menos 2 caracteres',
+        organizationRequired: 'La organización es requerida',
+        createError: 'Error al crear proveedor',
+        updateError: 'Error al actualizar proveedor',
+        deleteError: 'Error al eliminar proveedor',
+        providerDeleted: 'Proveedor eliminado',
+        cannotDeleteWithTours: 'El proveedor no puede ser eliminado porque {count} tour(s) están vinculados'
+    }
+};
+/**
+ * Gibt die übersetzte Fehlermeldung für Tour-Provider-Fehler zurück
+ */
+function getTourProviderErrorText(language, errorType) {
+    const lang = language in tourProviderErrorTexts ? language : 'de';
+    return tourProviderErrorTexts[lang][errorType];
+}
+/**
+ * Übersetzungen für Tour-Booking-Fehlermeldungen
+ */
+const tourBookingErrorTexts = {
+    de: {
+        bookingNotFound: 'Buchung nicht gefunden',
+        invalidBookingId: 'Ungültige Buchungs-ID',
+        loadError: 'Fehler beim Laden der Buchungen',
+        loadBookingError: 'Fehler beim Laden der Buchung',
+        noPermissionCreate: 'Keine Berechtigung zum Erstellen von Buchungen',
+        noPermissionEdit: 'Keine Berechtigung zum Bearbeiten von Buchungen',
+        tourIdRequired: 'Tour-ID ist erforderlich',
+        tourDateRequired: 'Tour-Datum ist erforderlich',
+        tourDateFuture: 'Tour-Datum muss in der Zukunft sein',
+        participantsMin: 'Anzahl Teilnehmer muss >= 1 sein',
+        customerNameMinLength: 'Kundenname muss mindestens 2 Zeichen lang sein',
+        contactRequired: 'Mindestens eine Kontaktinformation (Telefon oder E-Mail) ist erforderlich',
+        tourNotFound: 'Tour nicht gefunden',
+        tourNotActive: 'Tour ist nicht aktiv',
+        createError: 'Fehler beim Erstellen der Buchung',
+        updateError: 'Fehler beim Aktualisieren der Buchung',
+        noPermissionDelete: 'Keine Berechtigung zum Löschen von Buchungen',
+        deleteError: 'Fehler beim Löschen der Buchung',
+        bookingDeleted: 'Buchung gelöscht',
+        cannotDeleteWithReservations: 'Buchung kann nicht gelöscht werden, da Reservations verknüpft sind',
+        cancelledByInvalid: 'cancelledBy muss "customer" oder "provider" sein',
+        cancelError: 'Fehler beim Stornieren der Buchung',
+        completeError: 'Fehler beim Markieren der Buchung als abgeschlossen',
+        invalidUserId: 'Ungültige User-ID',
+        loadCommissionsError: 'Fehler beim Laden der Kommissionen'
+    },
+    en: {
+        bookingNotFound: 'Booking not found',
+        invalidBookingId: 'Invalid booking ID',
+        loadError: 'Error loading bookings',
+        loadBookingError: 'Error loading booking',
+        noPermissionCreate: 'No permission to create bookings',
+        noPermissionEdit: 'No permission to edit bookings',
+        tourIdRequired: 'Tour ID is required',
+        tourDateRequired: 'Tour date is required',
+        tourDateFuture: 'Tour date must be in the future',
+        participantsMin: 'Number of participants must be >= 1',
+        customerNameMinLength: 'Customer name must be at least 2 characters long',
+        contactRequired: 'At least one contact information (phone or email) is required',
+        tourNotFound: 'Tour not found',
+        tourNotActive: 'Tour is not active',
+        createError: 'Error creating booking',
+        updateError: 'Error updating booking',
+        noPermissionDelete: 'No permission to delete bookings',
+        deleteError: 'Error deleting booking',
+        bookingDeleted: 'Booking deleted',
+        cannotDeleteWithReservations: 'Booking cannot be deleted because reservations are linked',
+        cancelledByInvalid: 'cancelledBy must be "customer" or "provider"',
+        cancelError: 'Error cancelling booking',
+        completeError: 'Error marking booking as completed',
+        invalidUserId: 'Invalid user ID',
+        loadCommissionsError: 'Error loading commissions'
+    },
+    es: {
+        bookingNotFound: 'Reserva no encontrada',
+        invalidBookingId: 'ID de reserva inválido',
+        loadError: 'Error al cargar reservas',
+        loadBookingError: 'Error al cargar reserva',
+        noPermissionCreate: 'Sin permiso para crear reservas',
+        noPermissionEdit: 'Sin permiso para editar reservas',
+        tourIdRequired: 'ID de tour es requerido',
+        tourDateRequired: 'Fecha de tour es requerida',
+        tourDateFuture: 'La fecha de tour debe ser en el futuro',
+        participantsMin: 'El número de participantes debe ser >= 1',
+        customerNameMinLength: 'El nombre del cliente debe tener al menos 2 caracteres',
+        contactRequired: 'Se requiere al menos una información de contacto (teléfono o correo electrónico)',
+        tourNotFound: 'Tour no encontrado',
+        tourNotActive: 'El tour no está activo',
+        createError: 'Error al crear reserva',
+        updateError: 'Error al actualizar reserva',
+        noPermissionDelete: 'Sin permiso para eliminar reservas',
+        deleteError: 'Error al eliminar reserva',
+        bookingDeleted: 'Reserva eliminada',
+        cannotDeleteWithReservations: 'La reserva no puede ser eliminada porque hay reservaciones vinculadas',
+        cancelledByInvalid: 'cancelledBy debe ser "customer" o "provider"',
+        cancelError: 'Error al cancelar reserva',
+        completeError: 'Error al marcar reserva como completada',
+        invalidUserId: 'ID de usuario inválido',
+        loadCommissionsError: 'Error al cargar comisiones'
+    }
+};
+/**
+ * Gibt die übersetzte Fehlermeldung für Tour-Booking-Fehler zurück
+ */
+function getTourBookingErrorText(language, errorType) {
+    const lang = language in tourBookingErrorTexts ? language : 'de';
+    return tourBookingErrorTexts[lang][errorType];
 }
 //# sourceMappingURL=translations.js.map

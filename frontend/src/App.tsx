@@ -41,6 +41,7 @@ const Payroll = React.lazy(() => import('./pages/Payroll.tsx'));
 const Consultations = React.lazy(() => import('./pages/Consultations.tsx'));
 const ReservationDetails = React.lazy(() => import('./components/reservations/ReservationDetails.tsx'));
 const PriceAnalysis = React.lazy(() => import('./pages/PriceAnalysis.tsx'));
+const LandingPage = React.lazy(() => import('./pages/LandingPage.tsx'));
 
 const App: React.FC = () => {
     // Claude Console nur im Development-Modus initialisieren
@@ -105,6 +106,13 @@ const App: React.FC = () => {
                                                         </PublicRoute>
                                                     } />
                                                     
+                                                    {/* Öffentlich zugängliche Landingpage */}
+                                                    <Route path="/landing" element={
+                                                        <Suspense fallback={<LoadingScreen />}>
+                                                            <LandingPage />
+                                                        </Suspense>
+                                                    } />
+
                                                     {/* Mobile App Landing Page - öffentlich zugänglich */}
                                                     <Route path="/mobile-app" element={
                                                         <Suspense fallback={<LoadingScreen />}>

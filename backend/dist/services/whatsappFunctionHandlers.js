@@ -937,21 +937,32 @@ class WhatsAppFunctionHandlers {
                     orderBy: { title: 'asc' },
                     take: args.limit || 20
                 });
-                const formattedTours = tours.map(t => ({
-                    id: t.id,
-                    title: t.title,
-                    description: t.description || '',
-                    type: t.type,
-                    price: t.price ? Number(t.price) : null,
-                    currency: t.currency || 'COP',
-                    duration: t.duration,
-                    maxParticipants: t.maxParticipants,
-                    minParticipants: t.minParticipants,
-                    location: t.location,
-                    meetingPoint: t.meetingPoint,
-                    imageUrl: t.imageUrl,
-                    hasGallery: !!t.galleryUrls && Array.isArray(t.galleryUrls) && t.galleryUrls.length > 0
-                }));
+                const formattedTours = tours.map(t => {
+                    // Konvertiere relative imageUrl zu API-URL
+                    let imageUrl = t.imageUrl;
+                    if (imageUrl && imageUrl.startsWith('/uploads/tours/')) {
+                        // Konvertiere /uploads/tours/tour-1-main-xxx.png zu /api/tours/1/image
+                        imageUrl = `/api/tours/${t.id}/image`;
+                    }
+                    else if (!imageUrl) {
+                        imageUrl = null;
+                    }
+                    return {
+                        id: t.id,
+                        title: t.title,
+                        description: t.description || '',
+                        type: t.type,
+                        price: t.price ? Number(t.price) : null,
+                        currency: t.currency || 'COP',
+                        duration: t.duration,
+                        maxParticipants: t.maxParticipants,
+                        minParticipants: t.minParticipants,
+                        location: t.location,
+                        meetingPoint: t.meetingPoint,
+                        imageUrl: imageUrl, // API-URL statt relativer Pfad
+                        hasGallery: !!t.galleryUrls && Array.isArray(t.galleryUrls) && t.galleryUrls.length > 0
+                    };
+                });
                 // Speichere Context in Conversation (falls conversationId vorhanden)
                 if (conversationId) {
                     try {
@@ -1029,6 +1040,21 @@ class WhatsAppFunctionHandlers {
                         logger_1.logger.warn('[get_tour_details] Fehler beim Parsen von galleryUrls:', e);
                     }
                 }
+                // Konvertiere relative imageUrl zu API-URL
+                let imageUrl = tour.imageUrl;
+                if (imageUrl && imageUrl.startsWith('/uploads/tours/')) {
+                    imageUrl = `/api/tours/${tour.id}/image`;
+                }
+                else if (!imageUrl) {
+                    imageUrl = null;
+                }
+                // Konvertiere galleryUrls zu API-URLs
+                const galleryApiUrls = galleryUrls.map((url, index) => {
+                    if (url && url.startsWith('/uploads/tours/')) {
+                        return `/api/tours/${tour.id}/gallery/${index}`;
+                    }
+                    return url;
+                });
                 return {
                     id: tour.id,
                     title: tour.title,
@@ -1044,8 +1070,8 @@ class WhatsAppFunctionHandlers {
                     includes: tour.includes,
                     excludes: tour.excludes,
                     requirements: tour.requirements,
-                    imageUrl: tour.imageUrl,
-                    galleryUrls: galleryUrls,
+                    imageUrl: imageUrl, // API-URL statt relativer Pfad
+                    galleryUrls: galleryApiUrls, // API-URLs statt relative Pfade
                     availableFrom: ((_a = tour.availableFrom) === null || _a === void 0 ? void 0 : _a.toISOString()) || null,
                     availableTo: ((_b = tour.availableTo) === null || _b === void 0 ? void 0 : _b.toISOString()) || null,
                     branch: tour.branch ? { id: tour.branch.id, name: tour.branch.name } : null,
@@ -1348,23 +1374,25 @@ class WhatsAppFunctionHandlers {
                 const checkOutDateStr = args.checkOutDate.toLowerCase().trim();
                 if (checkOutDateStr === 'today' || checkOutDateStr === 'heute' || checkOutDateStr === 'hoy') {
                     checkOutDate = new Date();
-                    checkOutDate.setHours(23, 59, 59, 999);
+                    checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
                 }
                 else if (checkOutDateStr === 'tomorrow' || checkOutDateStr === 'morgen' || checkOutDateStr === 'mañana') {
                     checkOutDate = new Date();
                     checkOutDate.setDate(checkOutDate.getDate() + 1);
-                    checkOutDate.setHours(23, 59, 59, 999);
+                    checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
                 }
                 else if (checkOutDateStr === 'day after tomorrow' || checkOutDateStr === 'übermorgen' || checkOutDateStr === 'pasado mañana') {
                     checkOutDate = new Date();
                     checkOutDate.setDate(checkOutDate.getDate() + 2);
-                    checkOutDate.setHours(23, 59, 59, 999);
+                    checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
                 }
                 else {
                     checkOutDate = this.parseDate(args.checkOutDate);
                     if (isNaN(checkOutDate.getTime())) {
                         throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
                     }
+                    // Setze Check-out-Zeit auf 11:00 Uhr (auch bei geparsten Daten)
+                    checkOutDate.setHours(11, 0, 0, 0);
                 }
                 // 2. Validierung: Check-out muss mindestens 1 Tag nach Check-in liegen
                 const daysDiff = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -1396,7 +1424,11 @@ class WhatsAppFunctionHandlers {
                     throw new Error(`Branch ${branchId} nicht gefunden`);
                 }
                 // 5. Berechne Betrag aus Verfügbarkeitsprüfung
-                const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+                // WICHTIG: Berechne Nächte basierend auf Kalendertagen (nicht Stunden-Differenz)
+                // Beispiel: Check-in 16.12. 00:00, Check-out 17.12. 11:00 = 1 Nacht (nicht 2)
+                const checkInDay = new Date(checkInDate.getFullYear(), checkInDate.getMonth(), checkInDate.getDate());
+                const checkOutDay = new Date(checkOutDate.getFullYear(), checkOutDate.getMonth(), checkOutDate.getDate());
+                const nights = Math.max(1, Math.floor((checkOutDay.getTime() - checkInDay.getTime()) / (1000 * 60 * 60 * 24)));
                 let estimatedAmount;
                 try {
                     const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
@@ -1523,7 +1555,7 @@ class WhatsAppFunctionHandlers {
     phoneNumber // Optional: WhatsApp-Telefonnummer (wird automatisch aus Context übergeben)
     ) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a, _b, _c, _d;
             try {
                 // 1. Parse Datum (unterstützt "today"/"heute"/"hoy"/"tomorrow"/"morgen"/"mañana")
                 let checkInDate;
@@ -1553,17 +1585,17 @@ class WhatsAppFunctionHandlers {
                 const checkOutDateStr = args.checkOutDate.toLowerCase().trim();
                 if (checkOutDateStr === 'today' || checkOutDateStr === 'heute' || checkOutDateStr === 'hoy') {
                     checkOutDate = new Date();
-                    checkOutDate.setHours(23, 59, 59, 999);
+                    checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
                 }
                 else if (checkOutDateStr === 'tomorrow' || checkOutDateStr === 'morgen' || checkOutDateStr === 'mañana') {
                     checkOutDate = new Date();
                     checkOutDate.setDate(checkOutDate.getDate() + 1);
-                    checkOutDate.setHours(23, 59, 59, 999);
+                    checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
                 }
                 else if (checkOutDateStr === 'day after tomorrow' || checkOutDateStr === 'übermorgen' || checkOutDateStr === 'pasado mañana') {
                     checkOutDate = new Date();
                     checkOutDate.setDate(checkOutDate.getDate() + 2);
-                    checkOutDate.setHours(23, 59, 59, 999);
+                    checkOutDate.setHours(11, 0, 0, 0); // Check-out um 11:00 Uhr
                 }
                 else {
                     // Versuche verschiedene Datum-Formate zu parsen
@@ -1571,6 +1603,8 @@ class WhatsAppFunctionHandlers {
                     if (isNaN(checkOutDate.getTime())) {
                         throw new Error(`Ungültiges Check-out Datum: ${args.checkOutDate}. Format: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, "today"/"heute"/"hoy" oder "tomorrow"/"morgen"/"mañana"`);
                     }
+                    // Setze Check-out-Zeit auf 11:00 Uhr (auch bei geparsten Daten)
+                    checkOutDate.setHours(11, 0, 0, 0);
                 }
                 // 2. Validierung: Check-out muss mindestens 1 Tag nach Check-in liegen
                 // WICHTIG: "heute bis heute" gibt es nicht! Check-out muss mindestens 1 Tag später sein
@@ -1603,8 +1637,9 @@ class WhatsAppFunctionHandlers {
                                 logger_1.logger.log(`[create_room_reservation] categoryId aus Zimmer-Namen gefunden: ${categoryId} (${nameMatch.roomName})`);
                             }
                             else {
-                                // Keine exakte Übereinstimmung, aber mehrere Zimmer → Fehler
-                                throw new Error(`Mehrere ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} verfügbar. Bitte wählen Sie ein spezifisches Zimmer aus der Verfügbarkeitsliste.`);
+                                // Keine exakte Übereinstimmung, aber mehrere Zimmer → Fehler mit Alternativen
+                                const availableRoomNames = matchingRooms.map(r => r.roomName).join(', ');
+                                throw new Error(`Das Zimmer "${args.roomName}" ist nicht verfügbar oder wurde nicht gefunden. Verfügbare ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'}: ${availableRoomNames}. Bitte wählen Sie eines dieser Zimmer aus.`);
                             }
                         }
                         else if (matchingRooms.length === 1) {
@@ -1613,12 +1648,19 @@ class WhatsAppFunctionHandlers {
                             logger_1.logger.log(`[create_room_reservation] categoryId aus Verfügbarkeit gefunden: ${categoryId} (${matchingRooms[0].roomName})`);
                         }
                         else if (matchingRooms.length > 1) {
-                            // Mehrere Zimmer verfügbar → kann nicht automatisch bestimmt werden
-                            throw new Error(`Mehrere ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} verfügbar. Bitte wählen Sie ein spezifisches Zimmer aus der Verfügbarkeitsliste.`);
+                            // Mehrere Zimmer verfügbar → kann nicht automatisch bestimmt werden, zeige Alternativen
+                            const availableRoomNames = matchingRooms.map(r => r.roomName).join(', ');
+                            throw new Error(`Mehrere ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} verfügbar: ${availableRoomNames}. Bitte wählen Sie ein spezifisches Zimmer aus.`);
                         }
                         else {
-                            // Kein Zimmer dieser Art verfügbar
-                            throw new Error(`Keine ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} für diese Daten verfügbar.`);
+                            // Kein Zimmer dieser Art verfügbar → prüfe ob andere Zimmerarten verfügbar sind
+                            const allAvailableRooms = availability.map(item => `${item.roomName} (${item.roomType === 'compartida' ? 'Dorm' : 'Privat'})`).join(', ');
+                            if (allAvailableRooms) {
+                                throw new Error(`Keine ${args.roomType === 'compartida' ? 'Dorm-Zimmer' : 'private Zimmer'} für diese Daten verfügbar. Verfügbare Zimmer: ${allAvailableRooms}. Bitte wählen Sie ein anderes Zimmer.`);
+                            }
+                            else {
+                                throw new Error(`Keine Zimmer für diese Daten verfügbar. Bitte versuchen Sie es mit anderen Daten.`);
+                            }
                         }
                     }
                     catch (error) {
@@ -1658,11 +1700,30 @@ class WhatsAppFunctionHandlers {
                 if (!args.guestName || !args.guestName.trim()) {
                     throw new Error('Der Name des Gastes ist erforderlich für die Reservierung. Bitte geben Sie Ihren vollständigen Namen an.');
                 }
-                const guestName = args.guestName.trim();
+                // Bereinige Name von führenden Wörtern wie "ist", "mit", "für", "para"
+                let guestName = args.guestName.trim();
+                guestName = guestName.replace(/^(ist|mit|für|para|a nombre de|name|nombre)\s+/i, '').trim();
                 // 5. Prüfe ob bereits eine "potential" Reservation existiert
                 // WICHTIG: Normalisiere Telefonnummer für Suche
                 const { LanguageDetectionService } = yield Promise.resolve().then(() => __importStar(require('./languageDetectionService')));
                 const searchPhone = guestPhone || (phoneNumber ? LanguageDetectionService.normalizePhoneNumber(phoneNumber) : null);
+                // 5.1. Prüfe auf bestehende confirmed Reservation (Duplikat-Prüfung)
+                if (searchPhone) {
+                    const existingConfirmedReservation = yield prisma_1.prisma.reservation.findFirst({
+                        where: {
+                            guestPhone: searchPhone,
+                            branchId: branchId,
+                            status: client_1.ReservationStatus.confirmed,
+                            checkInDate: checkInDate,
+                            checkOutDate: checkOutDate
+                        },
+                        orderBy: { createdAt: 'desc' }
+                    });
+                    if (existingConfirmedReservation) {
+                        logger_1.logger.warn(`[create_room_reservation] Bestehende confirmed Reservation gefunden: ${existingConfirmedReservation.id} für ${searchPhone}, ${checkInDate.toISOString()} - ${checkOutDate.toISOString()}`);
+                        throw new Error('Eine Reservierung mit diesen Daten existiert bereits.');
+                    }
+                }
                 const existingPotentialReservation = searchPhone ? yield prisma_1.prisma.reservation.findFirst({
                     where: {
                         guestPhone: searchPhone,
@@ -1675,6 +1736,9 @@ class WhatsAppFunctionHandlers {
                 }) : null;
                 let reservation;
                 let lobbyReservationId = null;
+                // Definiere roomNumber und roomDescription außerhalb der if/else-Blöcke, damit sie überall verfügbar sind
+                let roomNumber = null;
+                let roomDescription = null;
                 if (existingPotentialReservation) {
                     // Bestätigung einer "potential" Reservation
                     logger_1.logger.log(`[create_room_reservation] Bestätige "potential" Reservation ${existingPotentialReservation.id}`);
@@ -1683,6 +1747,35 @@ class WhatsAppFunctionHandlers {
                         const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
                         lobbyReservationId = yield lobbyPmsService.createBooking(categoryId, checkInDate, checkOutDate, guestName, guestEmail || undefined, guestPhone || undefined, 1);
                         logger_1.logger.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
+                        // Hole Reservierungsdetails aus LobbyPMS für roomNumber und roomDescription
+                        try {
+                            const lobbyReservation = yield lobbyPmsService.fetchReservationById(lobbyReservationId);
+                            const assignedRoom = lobbyReservation.assigned_room;
+                            const isDorm = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.type) === 'compartida';
+                            if (isDorm) {
+                                // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
+                                const dormName = ((_c = lobbyReservation.category) === null || _c === void 0 ? void 0 : _c.name) || null;
+                                const bedNumber = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.name) || null;
+                                roomNumber = dormName && bedNumber
+                                    ? `${dormName} (${bedNumber})` // z.B. "La tia artista (Cama 5)"
+                                    : bedNumber || dormName || null;
+                                roomDescription = dormName;
+                            }
+                            else {
+                                // Für Privatzimmer: assigned_room.name = Zimmername
+                                roomNumber = null;
+                                roomDescription = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.name) || lobbyReservation.room_number || null;
+                            }
+                            logger_1.logger.log(`[create_room_reservation] roomNumber=${roomNumber}, roomDescription=${roomDescription} aus LobbyPMS geholt`);
+                        }
+                        catch (roomError) {
+                            logger_1.logger.error('[create_room_reservation] Fehler beim Abrufen der Zimmer-Details:', roomError);
+                            // Fallback: Verwende roomName aus Args
+                            if (args.roomName) {
+                                roomDescription = args.roomName;
+                                roomNumber = args.roomType === 'compartida' ? args.roomName : null;
+                            }
+                        }
                     }
                     catch (lobbyError) {
                         logger_1.logger.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
@@ -1696,11 +1789,40 @@ class WhatsAppFunctionHandlers {
                     try {
                         const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
                         lobbyReservationId = yield lobbyPmsService.createBooking(categoryId, // Verwende gefundene oder übergebene categoryId
-                        checkInDate, checkOutDate, args.guestName.trim(), guestEmail || undefined, // Verwende validierte Email
+                        checkInDate, checkOutDate, guestName, guestEmail || undefined, // Verwende validierte Email
                         guestPhone || undefined, // Verwende validierte Telefonnummer
                         1 // Anzahl Personen (default: 1, kann später erweitert werden)
                         );
                         logger_1.logger.log(`[create_room_reservation] LobbyPMS Reservierung erstellt: booking_id=${lobbyReservationId}`);
+                        // Hole Reservierungsdetails aus LobbyPMS für roomNumber und roomDescription
+                        try {
+                            const lobbyReservation = yield lobbyPmsService.fetchReservationById(lobbyReservationId);
+                            const assignedRoom = lobbyReservation.assigned_room;
+                            const isDorm = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.type) === 'compartida';
+                            if (isDorm) {
+                                // Für Dorms: category.name = Zimmername, assigned_room.name = Bettnummer
+                                const dormName = ((_d = lobbyReservation.category) === null || _d === void 0 ? void 0 : _d.name) || null;
+                                const bedNumber = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.name) || null;
+                                roomNumber = dormName && bedNumber
+                                    ? `${dormName} (${bedNumber})` // z.B. "La tia artista (Cama 5)"
+                                    : bedNumber || dormName || null;
+                                roomDescription = dormName;
+                            }
+                            else {
+                                // Für Privatzimmer: assigned_room.name = Zimmername
+                                roomNumber = null;
+                                roomDescription = (assignedRoom === null || assignedRoom === void 0 ? void 0 : assignedRoom.name) || lobbyReservation.room_number || null;
+                            }
+                            logger_1.logger.log(`[create_room_reservation] roomNumber=${roomNumber}, roomDescription=${roomDescription} aus LobbyPMS geholt`);
+                        }
+                        catch (roomError) {
+                            logger_1.logger.error('[create_room_reservation] Fehler beim Abrufen der Zimmer-Details:', roomError);
+                            // Fallback: Verwende roomName aus Args
+                            if (args.roomName) {
+                                roomDescription = args.roomName;
+                                roomNumber = args.roomType === 'compartida' ? args.roomName : null;
+                            }
+                        }
                     }
                     catch (lobbyError) {
                         logger_1.logger.error('[create_room_reservation] Fehler beim Erstellen der LobbyPMS Reservierung:', lobbyError);
@@ -1708,7 +1830,12 @@ class WhatsAppFunctionHandlers {
                     }
                 }
                 // 6. Berechne Betrag aus Verfügbarkeitsprüfung (falls categoryId vorhanden)
-                const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+                // WICHTIG: Berechne Nächte basierend auf Kalendertagen (nicht Stunden-Differenz)
+                // Beispiel: Check-in 16.12. 00:00, Check-out 17.12. 11:00 = 1 Nacht (nicht 2)
+                const checkInDay = new Date(checkInDate.getFullYear(), checkInDate.getMonth(), checkInDate.getDate());
+                const checkOutDay = new Date(checkOutDate.getFullYear(), checkOutDate.getMonth(), checkOutDate.getDate());
+                const nights = Math.max(1, Math.floor((checkOutDay.getTime() - checkInDay.getTime()) / (1000 * 60 * 60 * 24)));
+                logger_1.logger.log(`[create_room_reservation] Nächte berechnet: ${nights} (checkIn: ${checkInDate.toISOString()}, checkOut: ${checkOutDate.toISOString()})`);
                 let estimatedAmount;
                 if (args.categoryId || categoryId) {
                     try {
@@ -1721,7 +1848,7 @@ class WhatsAppFunctionHandlers {
                             // Verwende Preis aus Verfügbarkeitsprüfung
                             // TODO: Verschiedene Personenanzahl berücksichtigen (aktuell: 1 Person)
                             estimatedAmount = nights * room.pricePerNight;
-                            logger_1.logger.log(`[create_room_reservation] Preis aus Verfügbarkeit: ${room.pricePerNight} COP/Nacht × ${nights} Nächte = ${estimatedAmount} COP`);
+                            logger_1.logger.log(`[create_room_reservation] Preis aus Verfügbarkeit: room.pricePerNight=${room.pricePerNight} COP/Nacht, nights=${nights}, estimatedAmount=${estimatedAmount} COP`);
                         }
                         else {
                             // Fallback: Platzhalter wenn Zimmer nicht gefunden
@@ -1747,6 +1874,7 @@ class WhatsAppFunctionHandlers {
                 // 8. Erstelle oder aktualisiere Reservierung in DB
                 if (existingPotentialReservation) {
                     // Aktualisiere bestehende "potential" Reservation: Status "potential" → "confirmed"
+                    logger_1.logger.log(`[create_room_reservation] Aktualisiere Reservation ${existingPotentialReservation.id} mit amount=${estimatedAmount} COP`);
                     reservation = yield prisma_1.prisma.reservation.update({
                         where: { id: existingPotentialReservation.id },
                         data: {
@@ -1757,14 +1885,18 @@ class WhatsAppFunctionHandlers {
                             lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
                             amount: estimatedAmount,
                             currency: 'COP',
+                            // Logge Preis vor DB-Speicherung
                             paymentDeadline: paymentDeadline, // Frist für Zahlung (Standard: 1 Stunde)
-                            autoCancelEnabled: true // Automatische Stornierung aktiviert
+                            autoCancelEnabled: true, // Automatische Stornierung aktiviert
+                            roomNumber: roomNumber, // Zimmername/Bettnummer für Dorms
+                            roomDescription: roomDescription // Zimmername für Privates
                         }
                     });
                     logger_1.logger.log(`[create_room_reservation] Reservation ${reservation.id} von "potential" auf "confirmed" aktualisiert`);
                 }
                 else {
                     // Erstelle neue Reservation (Rückwärtskompatibilität)
+                    logger_1.logger.log(`[create_room_reservation] Erstelle neue Reservation mit amount=${estimatedAmount} COP`);
                     reservation = yield prisma_1.prisma.reservation.create({
                         data: {
                             guestName: guestName,
@@ -1780,7 +1912,9 @@ class WhatsAppFunctionHandlers {
                             branchId: branchId, // WICHTIG: Branch-spezifisch!
                             lobbyReservationId: lobbyReservationId, // WICHTIG: LobbyPMS Booking ID!
                             paymentDeadline: paymentDeadline, // Frist für Zahlung (Standard: 1 Stunde)
-                            autoCancelEnabled: true // Automatische Stornierung aktiviert
+                            autoCancelEnabled: true, // Automatische Stornierung aktiviert
+                            roomNumber: roomNumber, // Zimmername/Bettnummer für Dorms
+                            roomDescription: roomDescription // Zimmername für Privates
                             // HINWEIS: roomType und categoryId werden NICHT in der DB gespeichert, da sie nicht im Schema existieren.
                             // Diese Informationen sind in LobbyPMS über lobbyReservationId verfügbar.
                         }
@@ -1790,6 +1924,7 @@ class WhatsAppFunctionHandlers {
                 let paymentLink = null;
                 if (args.guestPhone || reservation.guestPhone) {
                     try {
+                        logger_1.logger.log(`[create_room_reservation] Erstelle Payment-Link mit estimatedAmount=${estimatedAmount} COP`);
                         const boldPaymentService = yield boldPaymentService_1.BoldPaymentService.createForBranch(branchId);
                         paymentLink = yield boldPaymentService.createPaymentLink(reservation, estimatedAmount, 'COP', `Zahlung für Reservierung ${reservation.guestName}`);
                         // Aktualisiere Reservierung mit Payment Link
@@ -1813,14 +1948,37 @@ class WhatsAppFunctionHandlers {
                             lobbyReservationId: reservation.lobbyReservationId,
                             guestEmail: reservation.guestEmail
                         });
+                        // Check-in Link in DB speichern
+                        yield prisma_1.prisma.reservation.update({
+                            where: { id: reservation.id },
+                            data: { checkInLink }
+                        });
+                        logger_1.logger.log(`[create_room_reservation] Check-in Link in DB gespeichert: ${checkInLink}`);
                     }
                     catch (error) {
                         logger_1.logger.error('[create_room_reservation] Fehler beim Generieren des Check-in-Links:', error);
                     }
                 }
-                // 11. Return Ergebnis
+                // 11. Finde roomName aus Verfügbarkeit (falls nicht bereits vorhanden)
+                let roomName = args.roomName;
+                if (!roomName && categoryId) {
+                    try {
+                        const lobbyPmsService = yield lobbyPmsService_1.LobbyPmsService.createForBranch(branchId);
+                        const availability = yield lobbyPmsService.checkAvailability(checkInDate, checkOutDate);
+                        const matchingRoom = availability.find(item => item.categoryId === categoryId);
+                        if (matchingRoom) {
+                            roomName = matchingRoom.roomName;
+                        }
+                    }
+                    catch (error) {
+                        logger_1.logger.error('[create_room_reservation] Fehler beim Abrufen des Zimmer-Namens:', error);
+                        // Nicht kritisch, weiter ohne roomName
+                    }
+                }
+                // 12. Return Ergebnis
                 // WICHTIG: Die AI generiert die Nachricht mit paymentLink und checkInLink
                 // sendReservationInvitation wird NICHT aufgerufen - die AI sendet die Nachricht
+                // WICHTIG: Alle Informationen müssen enthalten sein, damit die AI eine vollständige Nachricht generieren kann
                 return {
                     success: true,
                     reservationId: reservation.id,
@@ -1831,14 +1989,15 @@ class WhatsAppFunctionHandlers {
                     checkInDate: checkInDate.toISOString().split('T')[0],
                     checkOutDate: checkOutDate.toISOString().split('T')[0],
                     roomType: args.roomType,
+                    roomName: roomName || undefined, // Zimmer-Name für vollständige Nachricht
                     categoryId: categoryId, // Verwende gefundene oder übergebene categoryId
                     amount: estimatedAmount,
                     currency: 'COP',
                     paymentLink: paymentLink,
                     checkInLink: checkInLink, // Kann null sein, wenn keine Email vorhanden
                     paymentDeadline: paymentDeadline.toISOString(),
-                    linksSent: false, // WICHTIG: AI generiert die Nachricht, nicht sendReservationInvitation
-                    message: `Reservierung erfolgreich erstellt. Die AI generiert die Nachricht mit Payment-Link und Check-in-Link.`
+                    linksSent: false // WICHTIG: AI generiert die Nachricht, nicht sendReservationInvitation
+                    // Technische Message entfernt - KI generiert benutzerfreundliche Nachricht
                 };
             }
             catch (error) {

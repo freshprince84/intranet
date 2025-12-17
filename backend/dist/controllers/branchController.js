@@ -73,6 +73,9 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
             queryOptions.select = {
                 id: true,
                 name: true,
+                address: true,
+                city: true,
+                country: true,
                 whatsappSettings: true,
                 lobbyPmsSettings: true,
                 boldPaymentSettings: true,
@@ -90,6 +93,9 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
             queryOptions.select = {
                 id: true,
                 name: true,
+                address: true,
+                city: true,
+                country: true,
                 whatsappSettings: true,
                 lobbyPmsSettings: true,
                 boldPaymentSettings: true,
@@ -129,10 +135,29 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
             // Entschlüssele Bold Payment Settings
             if (branch.boldPaymentSettings) {
                 try {
-                    branch.boldPaymentSettings = decryptBranchApiSettings(branch.boldPaymentSettings);
+                    const decrypted = decryptBranchApiSettings(branch.boldPaymentSettings);
+                    // Stelle sicher, dass das Objekt nicht null/undefined wird, auch wenn Entschlüsselung fehlschlägt
+                    if (decrypted && typeof decrypted === 'object') {
+                        branch.boldPaymentSettings = decrypted;
+                        // Log für Debugging: Prüfe ob Werte vorhanden sind (auch verschlüsselt)
+                        // Wenn Entschlüsselung fehlgeschlagen ist, bleiben verschlüsselte Werte erhalten (mit ':')
+                        const hasApiKey = decrypted.apiKey && typeof decrypted.apiKey === 'string';
+                        const hasMerchantId = decrypted.merchantId && typeof decrypted.merchantId === 'string';
+                        if (!hasApiKey && !hasMerchantId) {
+                            logger_1.logger.warn(`[Branch Controller] Bold Payment Settings für Branch ${branch.id} hat keine apiKey/merchantId Werte (auch nicht verschlüsselt)`);
+                        }
+                        else if ((hasApiKey && decrypted.apiKey.includes(':')) || (hasMerchantId && decrypted.merchantId.includes(':'))) {
+                            logger_1.logger.info(`[Branch Controller] Bold Payment Settings für Branch ${branch.id} enthält verschlüsselte Werte (Entschlüsselung fehlgeschlagen)`);
+                        }
+                    }
+                    else {
+                        // Falls Entschlüsselung komplett fehlschlägt, behalte Original
+                        logger_1.logger.warn(`[Branch Controller] Entschlüsselung von Bold Payment Settings für Branch ${branch.id} fehlgeschlagen, behalte Original`);
+                    }
                 }
                 catch (error) {
                     logger_1.logger.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
+                    // Bei Fehler: behalte Original-Settings (verschlüsselt)
                 }
             }
             // Entschlüssele Door System Settings
@@ -414,7 +439,7 @@ exports.createBranch = createBranch;
 const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const branchId = parseInt(req.params.id, 10);
-        const { name, whatsappSettings, lobbyPmsSettings, boldPaymentSettings, doorSystemSettings, emailSettings, messageTemplates, autoSendReservationInvitation } = req.body;
+        const { name, address, city, country, whatsappSettings, lobbyPmsSettings, boldPaymentSettings, doorSystemSettings, emailSettings, messageTemplates, autoSendReservationInvitation } = req.body;
         if (isNaN(branchId)) {
             return res.status(400).json({ message: 'Ungültige Niederlassungs-ID' });
         }
@@ -426,7 +451,11 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Prüfe ob Branch zur Organisation gehört
         const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
         const existingBranch = yield prisma_1.prisma.branch.findFirst({
-            where: Object.assign({ id: branchId }, branchFilter)
+            where: Object.assign({ id: branchId }, branchFilter),
+            select: {
+                id: true,
+                lobbyPmsSettings: true
+            }
         });
         if (!existingBranch) {
             return res.status(404).json({ message: 'Niederlassung nicht gefunden' });
@@ -456,8 +485,31 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             }
         }
         let encryptedLobbyPmsSettings = lobbyPmsSettings;
-        if (lobbyPmsSettings) {
+        if (lobbyPmsSettings !== undefined) {
             try {
+                // WICHTIG: Behalte bestehende roomDescriptions, falls vorhanden
+                if (existingBranch.lobbyPmsSettings) {
+                    try {
+                        const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                        const existingDecrypted = decryptBranchApiSettings(existingBranch.lobbyPmsSettings);
+                        const existingLobbyPms = (existingDecrypted === null || existingDecrypted === void 0 ? void 0 : existingDecrypted.lobbyPms) || existingDecrypted;
+                        const existingRoomDescriptions = existingLobbyPms === null || existingLobbyPms === void 0 ? void 0 : existingLobbyPms.roomDescriptions;
+                        // Wenn roomDescriptions vorhanden sind, füge sie zu den neuen Settings hinzu
+                        if (existingRoomDescriptions) {
+                            if (lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.lobbyPms) {
+                                // Struktur ist { lobbyPms: { ... } }
+                                lobbyPmsSettings.lobbyPms.roomDescriptions = existingRoomDescriptions;
+                            }
+                            else {
+                                // Struktur ist direkt { ... }
+                                lobbyPmsSettings.roomDescriptions = existingRoomDescriptions;
+                            }
+                        }
+                    }
+                    catch (error) {
+                        logger_1.logger.warn('[Branch Controller] Fehler beim Laden bestehender roomDescriptions:', error);
+                    }
+                }
                 encryptedLobbyPmsSettings = encryptBranchApiSettings(lobbyPmsSettings);
                 logger_1.logger.log('[Branch Controller] LobbyPMS Settings verschlüsselt');
             }
@@ -509,6 +561,16 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         const updateData = {
             name: name.trim()
         };
+        // Adress-Felder
+        if (address !== undefined) {
+            updateData.address = address && address.trim() ? address.trim() : null;
+        }
+        if (city !== undefined) {
+            updateData.city = city && city.trim() ? city.trim() : null;
+        }
+        if (country !== undefined) {
+            updateData.country = country && country.trim() ? country.trim() : null;
+        }
         if (whatsappSettings !== undefined) {
             updateData.whatsappSettings = encryptedWhatsAppSettings;
         }
@@ -536,6 +598,9 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             select: {
                 id: true,
                 name: true,
+                address: true,
+                city: true,
+                country: true,
                 whatsappSettings: true,
                 lobbyPmsSettings: true,
                 boldPaymentSettings: true,
@@ -746,23 +811,30 @@ const updateRoomDescriptions = (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(404).json({ message: 'Branch nicht gefunden' });
         }
         // Lade bestehende lobbyPmsSettings
-        let lobbyPmsSettings = {};
+        let decryptedSettings = {};
         if (branch.lobbyPmsSettings) {
             try {
                 const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
-                const decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
-                lobbyPmsSettings = (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) || decryptedSettings || {};
+                decryptedSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
             }
             catch (error) {
                 logger_1.logger.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
-                lobbyPmsSettings = {};
+                decryptedSettings = {};
             }
         }
-        // Aktualisiere roomDescriptions
-        lobbyPmsSettings.roomDescriptions = roomDescriptions;
-        // Verschlüssele und speichere
+        // Verschlüssele und speichere - behalte die ursprüngliche Struktur bei
         const { encryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
-        const encryptedSettings = encryptBranchApiSettings(lobbyPmsSettings);
+        let encryptedSettings;
+        if (decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) {
+            // Struktur ist { lobbyPms: { ... } }, behalte sie bei
+            const updatedDecryptedSettings = Object.assign(Object.assign({}, decryptedSettings), { lobbyPms: Object.assign(Object.assign({}, decryptedSettings.lobbyPms), { roomDescriptions }) });
+            encryptedSettings = encryptBranchApiSettings(updatedDecryptedSettings);
+        }
+        else {
+            // Struktur ist direkt { ... } oder leer
+            const updatedSettings = Object.assign(Object.assign({}, decryptedSettings), { roomDescriptions });
+            encryptedSettings = encryptBranchApiSettings(updatedSettings);
+        }
         yield prisma_1.prisma.branch.update({
             where: { id: branchId },
             data: {

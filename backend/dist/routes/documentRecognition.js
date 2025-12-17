@@ -60,7 +60,7 @@ router.post('/', [
                 messages: [
                     {
                         role: "system",
-                        content: "Du bist ein Experte für Dokumentenerkennung. Extrahiere alle relevanten Informationen aus dem Ausweisdokument und gib die Daten in einem strukturierten JSON-Format zurück. Beachte folgende Felder: documentType (mögliche Werte: passport, national_id, driving_license, residence_permit, cedula_colombia), documentNumber, issueDate (ISO-Format YYYY-MM-DD), expiryDate (ISO-Format YYYY-MM-DD), issuingCountry, issuingAuthority, firstName, lastName, birthday (ISO-Format YYYY-MM-DD), gender (mögliche Werte: male, female, other oder null falls nicht erkennbar). Für kolumbianische Dokumente (Cédula): Extrahiere auch firstName, lastName, birthday und gender falls möglich."
+                        content: "Du bist ein Experte für Dokumentenerkennung. Extrahiere alle relevanten Informationen aus dem Ausweisdokument und gib die Daten in einem strukturierten JSON-Format zurück. Beachte folgende Felder: documentType (mögliche Werte: passport für Reisepass, national_id für Personalausweis/ID-Karte - erkenne automatisch ob es ein Reisepass oder Personalausweis ist), documentNumber, issueDate (ISO-Format YYYY-MM-DD), expiryDate (ISO-Format YYYY-MM-DD), issuingCountry, issuingAuthority, firstName, lastName, birthday (ISO-Format YYYY-MM-DD - WICHTIG: Extrahiere das Geburtsdatum genau und vollständig, z.B. 1990-05-15), gender (mögliche Werte: male, female, other oder null falls nicht erkennbar). Für kolumbianische Dokumente (Cédula): Extrahiere auch firstName, lastName, birthday und gender falls möglich."
                     },
                     {
                         role: "user",
@@ -88,27 +88,45 @@ router.post('/', [
             logger_1.logger.log('OpenAI-Antwort erhalten');
             // Extrahiere den JSON-Teil aus der Antwort
             const aiResponse = openaiResponse.data.choices[0].message.content;
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'documentRecognition.ts:85', message: 'OpenAI Response received', data: { responseLength: (aiResponse === null || aiResponse === void 0 ? void 0 : aiResponse.length) || 0, responseStart: (aiResponse === null || aiResponse === void 0 ? void 0 : aiResponse.substring(0, 200)) || 'null', startsWithBrace: (aiResponse === null || aiResponse === void 0 ? void 0 : aiResponse.trim().startsWith('{')) || false }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+            // #endregion
             // Versuche, JSON aus der Antwort zu extrahieren (falls die Antwort Text enthält)
             let documentData;
             try {
                 // Wenn die Antwort direkt ein JSON-Objekt ist
                 if (aiResponse.trim().startsWith('{')) {
                     documentData = JSON.parse(aiResponse);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'documentRecognition.ts:92', message: 'JSON parsed directly', data: { hasFirstName: !!documentData.firstName, hasLastName: !!documentData.lastName, hasBirthday: !!documentData.birthday }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                    // #endregion
                 }
                 else {
                     // Suche nach JSON-Code-Block in der Antwort
                     const jsonMatch = aiResponse.match(/\`\`\`json\n([\s\S]*?)\n\`\`\`/) ||
                         aiResponse.match(/\`\`\`\n([\s\S]*?)\n\`\`\`/) ||
                         aiResponse.match(/\{[\s\S]*\}/);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'documentRecognition.ts:96', message: 'JSON match attempt', data: { hasMatch: !!jsonMatch, matchType: jsonMatch ? 0 : (aiResponse.match(/\`\`\`json\n([\s\S]*?)\n\`\`\`/) ? 'json' : (aiResponse.match(/\`\`\`\n([\s\S]*?)\n\`\`\`/) ? 'code' : (aiResponse.match(/\{[\s\S]*\}/) ? 'brace' : 'none'))) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                    // #endregion
                     if (jsonMatch) {
                         documentData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'documentRecognition.ts:100', message: 'JSON parsed from match', data: { hasFirstName: !!documentData.firstName, hasLastName: !!documentData.lastName, hasBirthday: !!documentData.birthday }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                        // #endregion
                     }
                     else {
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'documentRecognition.ts:102', message: 'No JSON match found', data: { responsePreview: aiResponse.substring(0, 500) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                        // #endregion
                         throw new Error('Konnte kein JSON in der KI-Antwort finden');
                     }
                 }
             }
             catch (parseError) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'documentRecognition.ts:105', message: 'JSON parse error', data: { error: parseError instanceof Error ? parseError.message : 'unknown', responsePreview: aiResponse === null || aiResponse === void 0 ? void 0 : aiResponse.substring(0, 500) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                // #endregion
                 logger_1.logger.error('Fehler beim Parsen der KI-Antwort:', parseError);
                 return res.status(500).json({
                     error: 'Fehler bei der Verarbeitung der KI-Antwort',
@@ -116,8 +134,8 @@ router.post('/', [
                 });
             }
             logger_1.logger.log('Dokumentdaten erfolgreich extrahiert:', documentData);
-            // Sende die Dokumentdaten zurück
-            return res.json(documentData);
+            // Sende die Dokumentdaten zurück (inkl. User-Daten)
+            return res.json(Object.assign(Object.assign({}, documentData), { firstName: documentData.firstName, lastName: documentData.lastName, birthday: documentData.birthday, gender: documentData.gender, country: documentData.issuingCountry || documentData.country }));
         }
         catch (openaiError) {
             logger_1.logger.error('Fehler bei der Anfrage an OpenAI:', openaiError.message);

@@ -312,6 +312,7 @@ class BoldPaymentService {
                 // 5% Aufschlag für Kartenzahlung hinzufügen
                 const CARD_PAYMENT_SURCHARGE_PERCENT = 0.05; // 5%
                 const baseAmount = amount;
+                logger_1.logger.log(`[BoldPaymentService] createPaymentLink: baseAmount=${baseAmount} ${currency}, CARD_PAYMENT_SURCHARGE_PERCENT=${CARD_PAYMENT_SURCHARGE_PERCENT}`);
                 // Für COP: Auf ganze Zahlen runden (keine Dezimalstellen)
                 // Für andere Währungen (USD, EUR): Auf 2 Dezimalstellen runden
                 let totalAmount;
@@ -319,6 +320,7 @@ class BoldPaymentService {
                     // COP: Aufschlag auf ganze Zahl runden, dann zum Basisbetrag addieren
                     const surcharge = Math.round(baseAmount * CARD_PAYMENT_SURCHARGE_PERCENT);
                     totalAmount = Math.round(baseAmount) + surcharge;
+                    logger_1.logger.log(`[BoldPaymentService] createPaymentLink: surcharge=${surcharge} COP, totalAmount=${totalAmount} COP`);
                 }
                 else {
                     // USD, EUR, etc.: Auf 2 Dezimalstellen runden

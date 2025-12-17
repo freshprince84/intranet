@@ -29,6 +29,17 @@ router.put('/rules/:id', auth_1.default, (0, permissionMiddleware_1.checkPermiss
 router.delete('/rules/:id', auth_1.default, (0, permissionMiddleware_1.checkPermission)('price_analysis_delete_rule', 'write', 'button'), pricingRuleController_1.pricingRuleController.deleteRule);
 // OTA Routes
 router.get('/ota/listings', auth_1.default, (0, permissionMiddleware_1.checkPermission)('price_analysis', 'read', 'page'), otaController_1.otaController.getListings);
-router.post('/ota/rate-shopping', auth_1.default, (0, permissionMiddleware_1.checkPermission)('price_analysis_run_rate_shopping', 'write', 'button'), otaController_1.otaController.runRateShopping);
+router.post('/ota/rate-shopping', auth_1.default, (req, res, next) => {
+    const logger = require('../utils/logger').logger;
+    logger.warn('[Price Analysis Routes] ⚡ POST /ota/rate-shopping Route erreicht');
+    logger.warn('[Price Analysis Routes] 📋 Request Body:', JSON.stringify(req.body));
+    logger.warn('[Price Analysis Routes] 👤 UserId:', req.userId, 'RoleId:', req.roleId);
+    next();
+}, (0, permissionMiddleware_1.checkPermission)('price_analysis_run_rate_shopping', 'write', 'button'), (req, res, next) => {
+    const logger = require('../utils/logger').logger;
+    logger.warn('[Price Analysis Routes] ✅ Permission Check bestanden, rufe Controller auf...');
+    next();
+}, otaController_1.otaController.runRateShopping);
+router.post('/ota/discover', auth_1.default, (0, permissionMiddleware_1.checkPermission)('price_analysis_run_rate_shopping', 'write', 'button'), otaController_1.otaController.discoverListings);
 exports.default = router;
 //# sourceMappingURL=priceAnalysisRoutes.js.map

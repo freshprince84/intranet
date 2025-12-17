@@ -20,6 +20,9 @@ const axios_1 = __importDefault(require("axios"));
 const taskAutomationService_1 = require("../services/taskAutomationService");
 const prisma_1 = require("../utils/prisma");
 const logger_1 = require("../utils/logger");
+const notificationController_1 = require("./notificationController");
+const client_1 = require("@prisma/client");
+const translations_1 = require("../utils/translations");
 // Konfiguration für Datei-Upload
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -52,12 +55,15 @@ const upload = (0, multer_1.default)({
 const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         upload.single('documentFile')(req, res, (err) => __awaiter(void 0, void 0, void 0, function* () {
-            var _a;
+            var _a, _b;
             if (err) {
                 return res.status(400).json({ error: err.message });
             }
             const userId = parseInt(req.params.userId);
-            const { documentType, documentNumber, issueDate, expiryDate, issuingCountry, issuingAuthority, imageData } = req.body;
+            const { documentType, documentNumber, issueDate, expiryDate, issuingCountry, issuingAuthority, imageData, firstName, lastName, birthday, gender, country } = req.body;
+            // #region agent log
+            logger_1.logger.log('[DEBUG] Request body received', { hasFirstName: !!firstName, hasLastName: !!lastName, hasBirthday: !!birthday, hasGender: !!gender, hasCountry: !!country, isFormData: ((_a = req.headers['content-type']) === null || _a === void 0 ? void 0 : _a.includes('multipart/form-data')) || false });
+            // #endregion
             // Validierung
             if (!documentType || !documentNumber || !issuingCountry) {
                 return res.status(400).json({ error: 'Dokumenttyp, Dokumentnummer und ausstellendes Land sind erforderlich' });
@@ -92,6 +98,37 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                     return res.status(500).json({ error: 'Fehler beim Speichern des Bildes' });
                 }
             }
+            // User-Daten aus Request übernehmen (auch ohne Bild, VOR AI-Erkennung)
+            const userUpdateDataFromRequest = {};
+            if (firstName)
+                userUpdateDataFromRequest.firstName = firstName;
+            if (lastName)
+                userUpdateDataFromRequest.lastName = lastName;
+            if (birthday)
+                userUpdateDataFromRequest.birthday = new Date(birthday);
+            if (gender && ['male', 'female', 'other'].includes(gender)) {
+                userUpdateDataFromRequest.gender = gender;
+            }
+            if (country) {
+                // Validiere Country-Code
+                if (['CO', 'CH', 'DE', 'AT'].includes(country)) {
+                    userUpdateDataFromRequest.country = country;
+                }
+            }
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:106', message: 'User update data prepared', data: { updateDataKeys: Object.keys(userUpdateDataFromRequest), updateDataCount: Object.keys(userUpdateDataFromRequest).length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
+            // #endregion
+            // Update User, falls Daten vorhanden (VOR AI-Erkennung)
+            if (Object.keys(userUpdateDataFromRequest).length > 0) {
+                yield prisma_1.prisma.user.update({
+                    where: { id: userId },
+                    data: userUpdateDataFromRequest
+                });
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:113', message: 'User updated with request data', data: { userId, updatedFields: Object.keys(userUpdateDataFromRequest) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
+                // #endregion
+                logger_1.logger.log(`[addDocument] User ${userId} aktualisiert mit User-Daten aus Request:`, userUpdateDataFromRequest);
+            }
             const documentData = {
                 userId,
                 documentType,
@@ -106,6 +143,9 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             const document = yield prisma_1.prisma.identificationDocument.create({
                 data: documentData
             });
+            // #region agent log
+            logger_1.logger.log('[DEBUG] Document created in DB', { documentId: document.id, userId, documentType: document.documentType });
+            // #endregion
             // Automatische Extraktion und User-Update (nur wenn imageData vorhanden)
             if (imageData || req.file) {
                 try {
@@ -129,7 +169,7 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                                     messages: [
                                         {
                                             role: "system",
-                                            content: "Du bist ein Experte für Dokumentenerkennung. Extrahiere alle relevanten Informationen aus dem Ausweisdokument und gib die Daten in einem strukturierten JSON-Format zurück. Beachte folgende Felder: documentType (mögliche Werte: passport, national_id, driving_license, residence_permit, cedula_colombia), documentNumber, issueDate (ISO-Format YYYY-MM-DD), expiryDate (ISO-Format YYYY-MM-DD), issuingCountry, issuingAuthority, firstName, lastName, birthday (ISO-Format YYYY-MM-DD), gender (mögliche Werte: male, female, other oder null falls nicht erkennbar). Für kolumbianische Dokumente (Cédula): Extrahiere auch firstName, lastName, birthday und gender falls möglich."
+                                            content: "Du bist ein Experte für Dokumentenerkennung. Extrahiere alle relevanten Informationen aus dem Ausweisdokument und gib die Daten in einem strukturierten JSON-Format zurück. Beachte folgende Felder: documentType (mögliche Werte: passport für Reisepass, national_id für Personalausweis/ID-Karte - erkenne automatisch ob es ein Reisepass oder Personalausweis ist), documentNumber, issueDate (ISO-Format YYYY-MM-DD), expiryDate (ISO-Format YYYY-MM-DD), issuingCountry, issuingAuthority, firstName, lastName, birthday (ISO-Format YYYY-MM-DD - WICHTIG: Extrahiere das Geburtsdatum genau und vollständig, z.B. 1990-05-15), gender (mögliche Werte: male, female, other oder null falls nicht erkennbar). Für kolumbianische Dokumente (Cédula): Extrahiere auch firstName, lastName, birthday und gender falls möglich."
                                         },
                                         {
                                             role: "user",
@@ -154,20 +194,35 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                                 });
                                 const aiResponse = recognitionResponse.data.choices[0].message.content;
                                 let recognizedData = {};
+                                // #region agent log
+                                fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:191', message: 'Backend AI response received', data: { responseLength: (aiResponse === null || aiResponse === void 0 ? void 0 : aiResponse.length) || 0, responseStart: (aiResponse === null || aiResponse === void 0 ? void 0 : aiResponse.substring(0, 200)) || 'null', startsWithBrace: (aiResponse === null || aiResponse === void 0 ? void 0 : aiResponse.trim().startsWith('{')) || false }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                                // #endregion
                                 try {
                                     if (aiResponse.trim().startsWith('{')) {
                                         recognizedData = JSON.parse(aiResponse);
+                                        // #region agent log
+                                        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:196', message: 'Backend JSON parsed directly', data: { hasFirstName: !!recognizedData.firstName, hasLastName: !!recognizedData.lastName, hasBirthday: !!recognizedData.birthday }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                                        // #endregion
                                     }
                                     else {
                                         const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/) ||
                                             aiResponse.match(/```\n([\s\S]*?)\n```/) ||
                                             aiResponse.match(/\{[\s\S]*\}/);
+                                        // #region agent log
+                                        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:198', message: 'Backend JSON match attempt', data: { hasMatch: !!jsonMatch }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                                        // #endregion
                                         if (jsonMatch) {
                                             recognizedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                                            // #region agent log
+                                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:201', message: 'Backend JSON parsed from match', data: { hasFirstName: !!recognizedData.firstName, hasLastName: !!recognizedData.lastName, hasBirthday: !!recognizedData.birthday }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                                            // #endregion
                                         }
                                     }
                                 }
                                 catch (parseError) {
+                                    // #region agent log
+                                    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:204', message: 'Backend JSON parse error', data: { error: parseError instanceof Error ? parseError.message : 'unknown' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                                    // #endregion
                                     logger_1.logger.error('Fehler beim Parsen der KI-Antwort:', parseError);
                                 }
                                 // Update User-Felder mit erkannten Daten
@@ -210,11 +265,17 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                                     }
                                 }
                                 // Update User, falls Daten erkannt wurden
+                                // #region agent log
+                                fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:238', message: 'Backend user update data prepared from AI', data: { updateDataKeys: Object.keys(userUpdateData), updateDataCount: Object.keys(userUpdateData).length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                                // #endregion
                                 if (Object.keys(userUpdateData).length > 0) {
                                     yield prisma_1.prisma.user.update({
                                         where: { id: userId },
                                         data: userUpdateData
                                     });
+                                    // #region agent log
+                                    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:241', message: 'Backend user updated with AI data', data: { userId, updatedFields: Object.keys(userUpdateData) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                                    // #endregion
                                     logger_1.logger.log(`[addDocument] User ${userId} aktualisiert mit erkannten Daten:`, userUpdateData);
                                 }
                                 // Prüfe Organisation und erstelle Admin-Task für Kolumbien
@@ -235,7 +296,7 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                                     }
                                 });
                                 // Finde Organisation des Users (erste Rolle mit Organisation)
-                                const userOrganization = (_a = user === null || user === void 0 ? void 0 : user.roles.find(r => r.role.organization)) === null || _a === void 0 ? void 0 : _a.role.organization;
+                                const userOrganization = (_b = user === null || user === void 0 ? void 0 : user.roles.find(r => r.role.organization)) === null || _b === void 0 ? void 0 : _b.role.organization;
                                 if (userOrganization && userOrganization.country === 'CO') {
                                     // Erstelle Admin-Onboarding-Task
                                     yield taskAutomationService_1.TaskAutomationService.createAdminOnboardingTask(userId, userOrganization.id);
@@ -278,6 +339,26 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                     // Fehler blockiert nicht die Dokumentenerstellung
                 }
             }
+            // Notification für User-Update erstellen
+            try {
+                const language = yield (0, translations_1.getUserLanguage)(userId);
+                const notificationText = (0, translations_1.getUserNotificationText)(language, 'updated', true);
+                yield (0, notificationController_1.createNotificationIfEnabled)({
+                    userId: userId,
+                    title: notificationText.title,
+                    message: notificationText.message,
+                    type: client_1.NotificationType.user,
+                    relatedEntityId: userId,
+                    relatedEntityType: 'update'
+                });
+            }
+            catch (notificationError) {
+                logger_1.logger.error('[addDocument] Fehler beim Erstellen der Notification:', notificationError);
+                // Fehler blockiert nicht die Dokumentenerstellung
+            }
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'identificationDocumentController.ts:359', message: 'Sending document response', data: { documentId: document.id, userId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'G' }) }).catch(() => { });
+            // #endregion
             res.status(201).json(document);
         }));
     }
@@ -291,9 +372,16 @@ exports.addDocument = addDocument;
 const getUserDocuments = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.params.userId);
+        // #region agent log
+        logger_1.logger.log('[DEBUG] getUserDocuments called', { userId });
+        // #endregion
         const documents = yield prisma_1.prisma.identificationDocument.findMany({
-            where: { userId }
+            where: { userId },
+            orderBy: { createdAt: 'desc' }
         });
+        // #region agent log
+        logger_1.logger.log('[DEBUG] getUserDocuments result', { userId, docCount: documents.length, docIds: documents.map(d => d.id) });
+        // #endregion
         res.json(documents);
     }
     catch (error) {
@@ -421,7 +509,7 @@ const verifyDocument = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.verifyDocument = verifyDocument;
-// Dokument-Datei herunterladen
+// Dokument-Datei herunterladen oder anzeigen
 const downloadDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const docId = parseInt(req.params.docId);
@@ -435,7 +523,36 @@ const downloadDocument = (req, res) => __awaiter(void 0, void 0, void 0, functio
         if (!fs_1.default.existsSync(filePath)) {
             return res.status(404).json({ error: 'Datei nicht gefunden' });
         }
-        res.download(filePath);
+        // Dateiname aus Pfad extrahieren
+        const fileName = path_1.default.basename(filePath);
+        // MIME-Typ basierend auf Dateiendung bestimmen
+        const ext = path_1.default.extname(filePath).toLowerCase();
+        let mimeType = 'application/octet-stream';
+        if (ext === '.pdf') {
+            mimeType = 'application/pdf';
+        }
+        else if (['.jpg', '.jpeg'].includes(ext)) {
+            mimeType = 'image/jpeg';
+        }
+        else if (ext === '.png') {
+            mimeType = 'image/png';
+        }
+        else if (ext === '.gif') {
+            mimeType = 'image/gif';
+        }
+        // Prüfe ob Preview-Modus (inline) oder Download-Modus
+        const isPreview = req.query.preview === 'true';
+        if (isPreview || mimeType.startsWith('image/') || mimeType === 'application/pdf') {
+            // Datei inline anzeigen (für iframe-Vorschau)
+            res.setHeader('Content-Type', mimeType);
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+            res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+            fs_1.default.createReadStream(filePath).pipe(res);
+        }
+        else {
+            // Andere Dateien als Download anbieten
+            res.download(filePath, fileName);
+        }
     }
     catch (error) {
         logger_1.logger.error('Fehler beim Herunterladen des Dokuments:', error);

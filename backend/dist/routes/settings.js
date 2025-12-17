@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -364,5 +397,104 @@ router.put('/notifications', (0, roleCheck_1.checkRole)(['admin']), settingsCont
 router.get('/notifications/user', settingsController_1.getUserNotificationSettings);
 // Benutzer-spezifische Benachrichtigungseinstellungen aktualisieren
 router.put('/notifications/user', settingsController_1.updateUserNotificationSettings);
+// POST /branding/extract-and-generate-template - Branding-Extraktion + E-Mail-Template-Generierung
+router.post('/branding/extract-and-generate-template', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId || '0', 10);
+        if (!userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        // Lade Organisation des Users
+        const userRole = yield prisma_1.prisma.userRole.findFirst({
+            where: {
+                userId: userId,
+                lastUsed: true
+            },
+            include: {
+                role: {
+                    include: {
+                        organization: true
+                    }
+                },
+                user: {
+                    select: { email: true }
+                }
+            }
+        });
+        if (!(userRole === null || userRole === void 0 ? void 0 : userRole.role.organization)) {
+            return res.status(404).json({ message: 'Keine Organisation gefunden' });
+        }
+        const organization = userRole.role.organization;
+        const userEmail = userRole.user.email;
+        if (!organization.logo || organization.logo.trim() === '') {
+            return res.status(400).json({ message: 'Kein Logo vorhanden. Bitte laden Sie zuerst ein Logo hoch.' });
+        }
+        // Schritt 1: Branding-Extraktion
+        logger_1.logger.log('[Settings] Starte Branding-Extraktion für Organisation:', organization.id);
+        const { OrganizationBrandingService } = yield Promise.resolve().then(() => __importStar(require('../services/organizationBrandingService')));
+        const branding = yield OrganizationBrandingService.extractBrandingFromLogo(organization.logo);
+        // Lade aktuelle Settings
+        const currentSettings = (organization.settings && typeof organization.settings === 'object')
+            ? organization.settings
+            : {};
+        // Speichere Branding in Settings
+        yield prisma_1.prisma.organization.update({
+            where: { id: organization.id },
+            data: {
+                settings: Object.assign(Object.assign({}, currentSettings), { branding: branding })
+            }
+        });
+        logger_1.logger.log('[Settings] Branding erfolgreich extrahiert und gespeichert:', {
+            hasPrimaryColor: !!branding.colors.primary,
+            hasSecondaryColor: !!branding.colors.secondary,
+            hasAccentColor: !!branding.colors.accent
+        });
+        // Schritt 2: E-Mail-Template-Generierung (Test)
+        logger_1.logger.log('[Settings] Generiere Test-E-Mail-Template');
+        const { generateEmailTemplate } = yield Promise.resolve().then(() => __importStar(require('../services/emailService')));
+        const { sendEmail } = yield Promise.resolve().then(() => __importStar(require('../services/emailService')));
+        const testContent = `
+      <p>Hallo,</p>
+      <p>Dies ist eine Test-E-Mail zur Überprüfung Ihrer Corporate Identity.</p>
+      <p>Die folgenden Informationen wurden aus Ihrem Logo extrahiert:</p>
+      <ul>
+        ${branding.colors.primary ? `<li><strong>Hauptfarbe:</strong> <span style="color: ${branding.colors.primary};">${branding.colors.primary}</span></li>` : ''}
+        ${branding.colors.secondary ? `<li><strong>Sekundärfarbe:</strong> <span style="color: ${branding.colors.secondary};">${branding.colors.secondary}</span></li>` : ''}
+        ${branding.colors.accent ? `<li><strong>Akzentfarbe:</strong> <span style="color: ${branding.colors.accent};">${branding.colors.accent}</span></li>` : ''}
+      </ul>
+      <p>Diese Farben werden nun in allen E-Mails Ihrer Organisation verwendet.</p>
+      <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+    `;
+        const testHtml = generateEmailTemplate({
+            logo: organization.logo,
+            branding: branding,
+            headerTitle: organization.displayName || organization.name,
+            content: testContent,
+            language: 'de'
+        });
+        // Sende Test-E-Mail
+        const emailSent = yield sendEmail(userEmail, 'Test: Corporate Identity für E-Mails', testHtml, 'Dies ist eine Test-E-Mail zur Überprüfung Ihrer Corporate Identity.', organization.id);
+        if (!emailSent) {
+            logger_1.logger.warn('[Settings] Test-E-Mail konnte nicht versendet werden');
+        }
+        res.status(200).json({
+            message: 'Branding erfolgreich extrahiert und Test-E-Mail versendet',
+            branding: {
+                hasPrimaryColor: !!branding.colors.primary,
+                hasSecondaryColor: !!branding.colors.secondary,
+                hasAccentColor: !!branding.colors.accent,
+                primaryColor: branding.colors.primary || null
+            },
+            testEmailSent: emailSent
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('[Settings] Fehler bei Branding-Extraktion und Template-Generierung:', error);
+        res.status(500).json({
+            message: 'Fehler bei Branding-Extraktion',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+}));
 exports.default = router;
 //# sourceMappingURL=settings.js.map

@@ -71,7 +71,7 @@ router.get('/:id/password', (0, permissionMiddleware_1.checkPermission)('passwor
 // Passwort kopiert - Audit-Log erstellen
 router.post('/:id/copy-password', (0, permissionMiddleware_1.checkPermission)('password_manager', 'read', 'page'), passwordManagerController.logPasswordCopy);
 // Neuen Eintrag erstellen
-router.post('/', (0, permissionMiddleware_1.checkPermission)('password_entry_create', 'write', 'page'), passwordManagerController.createPasswordEntry);
+router.post('/', (0, permissionMiddleware_1.checkPermission)('password_entry_create', 'write', 'button'), passwordManagerController.createPasswordEntry);
 // Eintrag aktualisieren
 router.put('/:id', (0, permissionMiddleware_1.checkPermission)('password_manager', 'write', 'page'), passwordManagerController.updatePasswordEntry);
 // Eintrag löschen

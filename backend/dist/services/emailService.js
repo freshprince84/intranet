@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendPasswordResetEmail = exports.sendEmail = exports.sendRegistrationEmail = void 0;
+exports.generateEmailTemplate = exports.getOrganizationBranding = exports.sendPasswordResetEmail = exports.sendEmail = exports.sendRegistrationEmail = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const axios_1 = __importDefault(require("axios"));
 const encryption_1 = require("../utils/encryption");
@@ -329,6 +329,7 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
 const sendRegistrationEmail = (email, username, password, // Das Original-Passwort (wird nur in der E-Mail angezeigt)
 organizationId // Optional: für org-spezifische SMTP-Einstellungen
 ) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     // Versuche zuerst Mailtrap API (falls konfiguriert)
     const apiSuccess = yield sendViaMailtrapAPI(email, username, password);
     if (apiSuccess) {
@@ -341,119 +342,65 @@ organizationId // Optional: für org-spezifische SMTP-Einstellungen
             logger_1.logger.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
             return false;
         }
-        const mailOptions = {
-            from: process.env.SMTP_USER || 'noreply@intranet.local',
-            to: email,
-            subject: 'Willkommen im Intranet - Ihre Anmeldeinformationen',
-            html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
+        // Lade Logo + Branding (nutzt gespeichertes Branding, keine API-Calls)
+        const { logo, branding } = yield (0, exports.getOrganizationBranding)(organizationId);
+        // Lade Organisationsname für Header
+        let organizationName = 'Intranet';
+        if (organizationId) {
+            const organization = yield prisma_1.prisma.organization.findUnique({
+                where: { id: organizationId },
+                select: { displayName: true, name: true }
+            });
+            if (organization === null || organization === void 0 ? void 0 : organization.displayName) {
+                organizationName = organization.displayName;
             }
-            .header {
-              background-color: #2563eb;
-              color: white;
-              padding: 20px;
-              text-align: center;
-              border-radius: 8px 8px 0 0;
+            else if (organization === null || organization === void 0 ? void 0 : organization.name) {
+                organizationName = organization.name;
             }
-            .content {
-              background-color: #f9fafb;
-              padding: 30px;
-              border: 1px solid #e5e7eb;
-              border-top: none;
-              border-radius: 0 0 8px 8px;
-            }
-            .credentials {
-              background-color: white;
-              padding: 20px;
-              border-radius: 8px;
-              margin: 20px 0;
-              border-left: 4px solid #2563eb;
-            }
-            .credential-item {
-              margin: 10px 0;
-              padding: 10px;
-              background-color: #f3f4f6;
-              border-radius: 4px;
-            }
-            .credential-label {
-              font-weight: bold;
-              color: #374151;
-            }
-            .credential-value {
-              font-family: monospace;
-              color: #1f2937;
-              margin-left: 10px;
-            }
-            .warning {
-              background-color: #fef3c7;
-              border-left: 4px solid #f59e0b;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              color: #6b7280;
-              font-size: 12px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Willkommen im Intranet!</h1>
-          </div>
-          <div class="content">
-            <p>Hallo,</p>
-            <p>Ihr Benutzerkonto wurde erfolgreich erstellt. Hier sind Ihre Anmeldeinformationen:</p>
-            
-            <div class="credentials">
-              <div class="credential-item">
-                <span class="credential-label">Benutzername:</span>
-                <span class="credential-value">${username}</span>
-              </div>
-              <div class="credential-item">
-                <span class="credential-label">E-Mail:</span>
-                <span class="credential-value">${email}</span>
-              </div>
-              <div class="credential-item">
-                <span class="credential-label">Passwort:</span>
-                <span class="credential-value">${password}</span>
-              </div>
-            </div>
+        }
+        // Generiere Content mit Template
+        const primaryColor = ((_a = branding === null || branding === void 0 ? void 0 : branding.colors) === null || _a === void 0 ? void 0 : _a.primary) || '#2563eb';
+        const content = `
+      <p>Hallo,</p>
+      <p>Ihr Benutzerkonto wurde erfolgreich erstellt. Hier sind Ihre Anmeldeinformationen:</p>
+      
+      <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${primaryColor};">
+        <div style="margin: 10px 0; padding: 10px; background-color: #f3f4f6; border-radius: 4px;">
+          <span style="font-weight: bold; color: #374151;">Benutzername:</span>
+          <span style="font-family: monospace; color: #1f2937; margin-left: 10px;">${username}</span>
+        </div>
+        <div style="margin: 10px 0; padding: 10px; background-color: #f3f4f6; border-radius: 4px;">
+          <span style="font-weight: bold; color: #374151;">E-Mail:</span>
+          <span style="font-family: monospace; color: #1f2937; margin-left: 10px;">${email}</span>
+        </div>
+        <div style="margin: 10px 0; padding: 10px; background-color: #f3f4f6; border-radius: 4px;">
+          <span style="font-weight: bold; color: #374151;">Passwort:</span>
+          <span style="font-family: monospace; color: #1f2937; margin-left: 10px;">${password}</span>
+        </div>
+      </div>
 
-            <div class="warning">
-              <strong>⚠️ Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach dem ersten Login aus Sicherheitsgründen.
-            </div>
+      <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <strong>⚠️ Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach dem ersten Login aus Sicherheitsgründen.
+      </div>
 
-            <p>Sie können sich jetzt mit diesen Anmeldeinformationen anmelden.</p>
-            
-            <p>Nach der Anmeldung können Sie:</p>
-            <ul>
-              <li>Einer bestehenden Organisation beitreten</li>
-              <li>Eine eigene Organisation erstellen</li>
-            </ul>
+      <p>Sie können sich jetzt mit diesen Anmeldeinformationen anmelden.</p>
+      
+      <p>Nach der Anmeldung können Sie:</p>
+      <ul>
+        <li>Einer bestehenden Organisation beitreten</li>
+        <li>Eine eigene Organisation erstellen</li>
+      </ul>
 
-            <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-          </div>
-          <div class="footer">
-            <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
-          </div>
-        </body>
-        </html>
-      `,
-            text: `
+      <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+    `;
+        const html = (0, exports.generateEmailTemplate)({
+            logo,
+            branding,
+            headerTitle: organizationName,
+            content,
+            language: 'de'
+        });
+        const text = `
 Willkommen im Intranet!
 
 Ihr Benutzerkonto wurde erfolgreich erstellt. Hier sind Ihre Anmeldeinformationen:
@@ -473,7 +420,13 @@ Nach der Anmeldung können Sie:
 Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 
 Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
-      `,
+    `;
+        const mailOptions = {
+            from: process.env.SMTP_USER || 'noreply@intranet.local',
+            to: email,
+            subject: 'Willkommen im Intranet - Ihre Anmeldeinformationen',
+            html: html,
+            text: text,
         };
         const info = yield transporter.sendMail(mailOptions);
         logger_1.logger.log('✅ Registrierungs-E-Mail versendet:', info.messageId);
@@ -597,6 +550,7 @@ const sendEmail = (email, subject, html, text, organizationId, branchId) => __aw
 });
 exports.sendEmail = sendEmail;
 const sendPasswordResetEmail = (email, username, resetLink, organizationId) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     logger_1.logger.log(`[EMAIL] Starte Versand der Passwort-Reset-E-Mail für: ${username} (${email})`);
     if (organizationId) {
         logger_1.logger.log(`[EMAIL] Verwende Organisation-ID: ${organizationId}`);
@@ -644,104 +598,42 @@ const sendPasswordResetEmail = (email, username, resetLink, organizationId) => _
         // Formatiere From-String für nodemailer
         const fromString = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
         logger_1.logger.log(`[EMAIL] 📧 Versende E-Mail von: ${fromString} an: ${email}`);
-        const mailOptions = {
-            from: fromString,
-            to: email,
-            subject: 'Passwort zurücksetzen - Intranet',
-            html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background-color: #2563eb;
-              color: white;
-              padding: 20px;
-              text-align: center;
-              border-radius: 8px 8px 0 0;
-            }
-            .content {
-              background-color: #f9fafb;
-              padding: 30px;
-              border: 1px solid #e5e7eb;
-              border-top: none;
-              border-radius: 0 0 8px 8px;
-            }
-            .button {
-              display: inline-block;
-              padding: 12px 24px;
-              background-color: #2563eb;
-              color: white;
-              text-decoration: none;
-              border-radius: 6px;
-              margin: 20px 0;
-            }
-            .button:hover {
-              background-color: #1d4ed8;
-            }
-            .warning {
-              background-color: #fef3c7;
-              border-left: 4px solid #f59e0b;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              color: #6b7280;
-              font-size: 12px;
-            }
-            .link-fallback {
-              word-break: break-all;
-              color: #2563eb;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Passwort zurücksetzen</h1>
-          </div>
-          <div class="content">
-            <p>Hallo ${username},</p>
-            <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
-            
-            <p>Klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
-            
-            <div style="text-align: center;">
-              <a href="${resetLink}" class="button">Passwort zurücksetzen</a>
-            </div>
-            
-            <p>Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:</p>
-            <p class="link-fallback">${resetLink}</p>
+        // Lade Logo + Branding (nutzt gespeichertes Branding, keine API-Calls)
+        const { logo, branding } = yield (0, exports.getOrganizationBranding)(organizationId);
+        // Generiere Content mit Template
+        const buttonColor = ((_a = branding === null || branding === void 0 ? void 0 : branding.colors) === null || _a === void 0 ? void 0 : _a.primary) || '#2563eb';
+        const content = `
+      <p>Hallo ${username},</p>
+      <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
+      
+      <p>Klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
+      
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px;">Passwort zurücksetzen</a>
+      </div>
+      
+      <p>Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:</p>
+      <p style="word-break: break-all; color: ${buttonColor};">${resetLink}</p>
 
-            <div class="warning">
-              <strong>⚠️ Wichtig:</strong>
-              <ul>
-                <li>Dieser Link ist nur 1 Stunde gültig</li>
-                <li>Der Link kann nur einmal verwendet werden</li>
-                <li>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail</li>
-              </ul>
-            </div>
+      <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <strong>⚠️ Wichtig:</strong>
+        <ul>
+          <li>Dieser Link ist nur 1 Stunde gültig</li>
+          <li>Der Link kann nur einmal verwendet werden</li>
+          <li>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail</li>
+        </ul>
+      </div>
 
-            <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-          </div>
-          <div class="footer">
-            <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
-          </div>
-        </body>
-        </html>
-      `,
-            text: `
+      <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+    `;
+        const html = (0, exports.generateEmailTemplate)({
+            logo,
+            branding,
+            headerTitle: fromName,
+            content,
+            language: 'de'
+        });
+        const text = `
 Passwort zurücksetzen - Intranet
 
 Hallo ${username},
@@ -760,7 +652,13 @@ WICHTIG:
 Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 
 Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
-      `,
+    `;
+        const mailOptions = {
+            from: fromString,
+            to: email,
+            subject: 'Passwort zurücksetzen - Intranet',
+            html: html,
+            text: text,
         };
         logger_1.logger.log(`[EMAIL] Sende E-Mail über SMTP...`);
         const info = yield transporter.sendMail(mailOptions);
@@ -993,4 +891,183 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
         return false;
     }
 });
+/**
+ * Lädt Organisationslogo und gespeichertes Branding aus Datenbank
+ * WICHTIG: Keine Branding-Extraktion hier - nur Laden aus Datenbank!
+ * @param organizationId - ID der Organisation
+ * @param branchId - Optional: ID des Branches (für Branch-spezifische Logos)
+ * @returns Logo (Base64-Data-URL) und gespeicherte Branding-Informationen
+ */
+const getOrganizationBranding = (organizationId, branchId) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!organizationId) {
+        return { logo: null, branding: null };
+    }
+    try {
+        let logo = null;
+        let branding = null;
+        // Prüfe zuerst Branch (falls vorhanden)
+        if (branchId) {
+            const branch = yield prisma_1.prisma.branch.findUnique({
+                where: { id: branchId },
+                select: {
+                    organizationId: true,
+                    organization: {
+                        select: {
+                            logo: true,
+                            settings: true
+                        }
+                    }
+                }
+            });
+            if (branch === null || branch === void 0 ? void 0 : branch.organization) {
+                logo = branch.organization.logo && branch.organization.logo.trim() !== ''
+                    ? branch.organization.logo
+                    : null;
+                // Lade Branding aus Settings
+                if (branch.organization.settings && typeof branch.organization.settings === 'object') {
+                    const settings = branch.organization.settings;
+                    branding = settings.branding || null;
+                }
+            }
+        }
+        // Fallback: Lade Organisation direkt
+        if (!logo || !branding) {
+            const organization = yield prisma_1.prisma.organization.findUnique({
+                where: { id: organizationId },
+                select: {
+                    logo: true,
+                    settings: true
+                }
+            });
+            if (organization) {
+                logo = organization.logo && organization.logo.trim() !== ''
+                    ? organization.logo
+                    : null;
+                // Lade Branding aus Settings
+                if (organization.settings && typeof organization.settings === 'object') {
+                    const settings = organization.settings;
+                    branding = settings.branding || null;
+                }
+            }
+        }
+        return { logo, branding };
+    }
+    catch (error) {
+        logger_1.logger.warn('⚠️ Fehler beim Laden des Organisationslogos/Brandings:', error);
+        return { logo: null, branding: null };
+    }
+});
+exports.getOrganizationBranding = getOrganizationBranding;
+/**
+ * Generiert einheitliches E-Mail-Template mit Logo und Corporate Identity
+ * Nutzt Branding-Informationen für organisationsspezifische Farben
+ */
+const generateEmailTemplate = (options) => {
+    var _a, _b, _c, _d;
+    const { logo, branding, headerTitle = 'Intranet', content, footer, language = 'de' } = options;
+    const defaultFooter = {
+        de: 'Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.',
+        en: 'This email was automatically generated. Please do not reply to this email.',
+        es: 'Este correo electrónico fue generado automáticamente. Por favor, no responda a este correo electrónico.'
+    };
+    const footerText = footer || defaultFooter[language];
+    // Verwende Branding-Farben oder Fallbacks
+    const primaryColor = ((_a = branding === null || branding === void 0 ? void 0 : branding.colors) === null || _a === void 0 ? void 0 : _a.primary) || '#2563eb';
+    const secondaryColor = ((_b = branding === null || branding === void 0 ? void 0 : branding.colors) === null || _b === void 0 ? void 0 : _b.secondary) || ((_c = branding === null || branding === void 0 ? void 0 : branding.colors) === null || _c === void 0 ? void 0 : _c.accent);
+    const buttonColor = primaryColor || '#007bff';
+    // Verwende Branding-Schriftart oder Fallback
+    const fontFamily = ((_d = branding === null || branding === void 0 ? void 0 : branding.fonts) === null || _d === void 0 ? void 0 : _d.primary)
+        ? `${branding.fonts.primary}, Arial, sans-serif`
+        : 'Arial, sans-serif';
+    // Logo-HTML (falls vorhanden)
+    const logoHtml = logo
+        ? `<img src="${logo}" alt="${headerTitle}" style="max-height: 60px; max-width: 200px; margin-bottom: 20px;" />`
+        : '';
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: ${fontFamily};
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .email-wrapper {
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px;
+      background-color: transparent;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: ${primaryColor};
+    }
+    .logo-container img {
+      max-height: 48px;
+      width: auto;
+      display: block;
+      object-fit: contain;
+    }
+    .content {
+      padding: 30px;
+      background-color: #ffffff;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: ${buttonColor};
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      margin: 10px 5px;
+    }
+    .button:hover {
+      opacity: 0.9;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      background-color: #f9fafb;
+      color: #6b7280;
+      font-size: 12px;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="header">
+      ${logoHtml ? `<div class="logo-container">${logoHtml}</div>` : ''}
+      ${headerTitle ? `<h1>${headerTitle}</h1>` : ''}
+    </div>
+    <div class="content">
+      ${content}
+    </div>
+    <div class="footer">
+      <p>${footerText}</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+};
+exports.generateEmailTemplate = generateEmailTemplate;
 //# sourceMappingURL=emailService.js.map

@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.convertFilterConditionsToPrismaWhere = convertFilterConditionsToPrismaWhere;
 exports.validateFilterAgainstIsolation = validateFilterAgainstIsolation;
 const organization_1 = require("../middleware/organization");
+const date_fns_1 = require("date-fns");
+const logger_1 = require("./logger");
 /**
  * Konvertiert Filter-Bedingungen in Prisma Where-Klauseln
  *
@@ -286,6 +288,10 @@ function convertSingleCondition(condition, entityType, req) {
         case 'checkInDate':
         case 'checkOutDate':
             return convertDateCondition(resolvedValue, operator, column);
+        case 'time':
+            // ✅ FIX: "time" Spalte filtert auf createdAt (Erstellungszeit)
+            // Bei Todos wird updatedAt angezeigt, aber für Filter verwenden wir createdAt
+            return convertDateCondition(resolvedValue, operator, 'createdAt');
         case 'Deadline':
         case 'deadline':
             // ✅ FIX: Deadline → paymentDeadline (korrekter Feldname im Schema)
@@ -461,50 +467,164 @@ function convertSingleCondition(condition, entityType, req) {
 }
 /**
  * Konvertiert Datum-Bedingungen
- * @param value - Der Datumswert (Date, string oder '__TODAY__')
+ * @param value - Der Datumswert (Date, string oder '__TODAY__', '__THIS_WEEK__', etc.)
  * @param operator - Der Operator ('equals', 'before', 'after')
  * @param fieldName - Der Name des Feldes ('dueDate', 'checkInDate', 'checkOutDate', etc.)
  */
 function convertDateCondition(value, operator, fieldName = 'dueDate') {
-    // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__ dynamic dates
-    let dateValue;
-    if (value === '__TODAY__') {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        dateValue = today;
-    }
-    else if (value === '__TOMORROW__') {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(0, 0, 0, 0);
-        dateValue = tomorrow;
-    }
-    else if (value === '__YESTERDAY__') {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        yesterday.setHours(0, 0, 0, 0);
-        dateValue = yesterday;
-    }
-    else {
-        dateValue = new Date(value);
-        if (isNaN(dateValue.getTime())) {
+    try {
+        // ✅ PHASE 1: Handle Zeitraum-Platzhalter (__THIS_WEEK__, __THIS_MONTH__, __THIS_YEAR__)
+        // Diese funktionieren analog zu __TODAY__, aber für Zeiträume
+        if (value === '__THIS_WEEK__') {
+            if (operator === 'equals') {
+                const weekStart = (0, date_fns_1.startOfWeek)(new Date(), { weekStartsOn: 1 });
+                weekStart.setHours(0, 0, 0, 0);
+                const weekEnd = (0, date_fns_1.endOfWeek)(new Date(), { weekStartsOn: 1 });
+                weekEnd.setHours(23, 59, 59, 999);
+                return { [fieldName]: { gte: weekStart, lte: weekEnd } };
+            }
+            // Für andere Operatoren (before, after) verwende Woche als einzelnes Datum
+            const weekStart = (0, date_fns_1.startOfWeek)(new Date(), { weekStartsOn: 1 });
+            weekStart.setHours(0, 0, 0, 0);
+            const weekEnd = (0, date_fns_1.endOfWeek)(new Date(), { weekStartsOn: 1 });
+            weekEnd.setHours(23, 59, 59, 999);
+            if (operator === 'before') {
+                return { [fieldName]: { lte: weekEnd } };
+            }
+            else if (operator === 'after') {
+                return { [fieldName]: { gte: weekStart } };
+            }
             return {};
         }
+        else if (value === '__THIS_MONTH__') {
+            if (operator === 'equals') {
+                const monthStart = (0, date_fns_1.startOfMonth)(new Date());
+                monthStart.setHours(0, 0, 0, 0);
+                const monthEnd = (0, date_fns_1.endOfMonth)(new Date());
+                monthEnd.setHours(23, 59, 59, 999);
+                return { [fieldName]: { gte: monthStart, lte: monthEnd } };
+            }
+            // Für andere Operatoren (before, after) verwende Monat als einzelnes Datum
+            const monthStart = (0, date_fns_1.startOfMonth)(new Date());
+            monthStart.setHours(0, 0, 0, 0);
+            const monthEnd = (0, date_fns_1.endOfMonth)(new Date());
+            monthEnd.setHours(23, 59, 59, 999);
+            if (operator === 'before') {
+                return { [fieldName]: { lte: monthEnd } };
+            }
+            else if (operator === 'after') {
+                return { [fieldName]: { gte: monthStart } };
+            }
+            return {};
+        }
+        else if (value === '__THIS_YEAR__') {
+            if (operator === 'equals') {
+                const yearStart = (0, date_fns_1.startOfYear)(new Date());
+                yearStart.setHours(0, 0, 0, 0);
+                const yearEnd = (0, date_fns_1.endOfYear)(new Date());
+                yearEnd.setHours(23, 59, 59, 999);
+                return { [fieldName]: { gte: yearStart, lte: yearEnd } };
+            }
+            // Für andere Operatoren (before, after) verwende Jahr als einzelnes Datum
+            const yearStart = (0, date_fns_1.startOfYear)(new Date());
+            yearStart.setHours(0, 0, 0, 0);
+            const yearEnd = (0, date_fns_1.endOfYear)(new Date());
+            yearEnd.setHours(23, 59, 59, 999);
+            if (operator === 'before') {
+                return { [fieldName]: { lte: yearEnd } };
+            }
+            else if (operator === 'after') {
+                return { [fieldName]: { gte: yearStart } };
+            }
+            return {};
+        }
+        // ✅ PHASE 4: Handle __TODAY__, __TOMORROW__, __YESTERDAY__, __WEEK_START__, __WEEK_END__, __MONTH_START__, __MONTH_END__, __YEAR_START__, __YEAR_END__ dynamic dates
+        let dateValue;
+        if (value === '__TODAY__') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            dateValue = today;
+        }
+        else if (value === '__TOMORROW__') {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            dateValue = tomorrow;
+        }
+        else if (value === '__YESTERDAY__') {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            yesterday.setHours(0, 0, 0, 0);
+            dateValue = yesterday;
+        }
+        else if (value === '__WEEK_START__') {
+            const weekStart = (0, date_fns_1.startOfWeek)(new Date(), { weekStartsOn: 1 });
+            weekStart.setHours(0, 0, 0, 0);
+            dateValue = weekStart;
+        }
+        else if (value === '__WEEK_END__') {
+            const weekEnd = (0, date_fns_1.endOfWeek)(new Date(), { weekStartsOn: 1 });
+            weekEnd.setHours(23, 59, 59, 999);
+            dateValue = weekEnd;
+        }
+        else if (value === '__MONTH_START__') {
+            const monthStart = (0, date_fns_1.startOfMonth)(new Date());
+            monthStart.setHours(0, 0, 0, 0);
+            dateValue = monthStart;
+        }
+        else if (value === '__MONTH_END__') {
+            const monthEnd = (0, date_fns_1.endOfMonth)(new Date());
+            monthEnd.setHours(23, 59, 59, 999);
+            dateValue = monthEnd;
+        }
+        else if (value === '__YEAR_START__') {
+            const yearStart = (0, date_fns_1.startOfYear)(new Date());
+            yearStart.setHours(0, 0, 0, 0);
+            dateValue = yearStart;
+        }
+        else if (value === '__YEAR_END__') {
+            const yearEnd = (0, date_fns_1.endOfYear)(new Date());
+            yearEnd.setHours(23, 59, 59, 999);
+            dateValue = yearEnd;
+        }
+        else {
+            dateValue = new Date(value);
+            if (isNaN(dateValue.getTime())) {
+                return {};
+            }
+        }
+        if (operator === 'equals') {
+            const startOfDay = new Date(dateValue);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(dateValue);
+            endOfDay.setHours(23, 59, 59, 999);
+            return { [fieldName]: { gte: startOfDay, lte: endOfDay } };
+        }
+        else if (operator === 'before') {
+            // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende lte statt lt
+            // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
+            const isPlaceholder = typeof value === 'string' && (value.startsWith('__') && value.endsWith('__'));
+            return { [fieldName]: isPlaceholder ? { lte: dateValue } : { lt: dateValue } };
+        }
+        else if (operator === 'after') {
+            // ✅ FIX: Für Platzhalter (__WEEK_START__, __WEEK_END__, etc.) verwende gte statt gt
+            // Damit werden Grenzen eingeschlossen (konsistent mit OR-Bedingung in analyticsController)
+            const isPlaceholder = typeof value === 'string' && (value.startsWith('__') && value.endsWith('__'));
+            return { [fieldName]: isPlaceholder ? { gte: dateValue } : { gt: dateValue } };
+        }
+        else if (operator === 'gte' || operator === 'greaterThanOrEqual') {
+            return { [fieldName]: { gte: dateValue } };
+        }
+        else if (operator === 'lte' || operator === 'lessThanOrEqual') {
+            return { [fieldName]: { lte: dateValue } };
+        }
+        return {};
     }
-    if (operator === 'equals') {
-        const startOfDay = new Date(dateValue);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(dateValue);
-        endOfDay.setHours(23, 59, 59, 999);
-        return { [fieldName]: { gte: startOfDay, lte: endOfDay } };
+    catch (error) {
+        // ✅ PHASE 2: Error Handling für ungültige Platzhalter-Werte
+        logger_1.logger.error(`[convertDateCondition] Error with placeholder ${value}:`, error);
+        return {}; // Fallback: Leere Bedingung
     }
-    else if (operator === 'before') {
-        return { [fieldName]: { lt: dateValue } };
-    }
-    else if (operator === 'after') {
-        return { [fieldName]: { gt: dateValue } };
-    }
-    return {};
 }
 /**
  * Konvertiert User/Role-Bedingungen
