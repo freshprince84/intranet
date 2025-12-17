@@ -1060,10 +1060,10 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
 
   const footerText = footer || defaultFooter[language];
 
-  // Verwende Branding-Farbe oder Fallback
-  const headerColor = branding?.colors?.primary || '#2563eb';
-  const buttonColor = branding?.colors?.primary || '#007bff';
+  // Verwende Branding-Farben oder Fallbacks
+  const primaryColor = branding?.colors?.primary || '#2563eb';
   const secondaryColor = branding?.colors?.secondary || branding?.colors?.accent;
+  const buttonColor = primaryColor || '#007bff';
 
   // Verwende Branding-Schriftart oder Fallback
   const fontFamily = branding?.fonts?.primary 
@@ -1098,18 +1098,25 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .header {
-      background-color: ${headerColor};
-      color: white;
-      padding: 30px 20px;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px;
+      background-color: transparent;
+      border-bottom: 1px solid #e5e7eb;
     }
     .header h1 {
       margin: 0;
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 600;
+      color: ${primaryColor};
     }
-    .logo-container {
-      margin-bottom: 15px;
+    .logo-container img {
+      max-height: 48px;
+      width: auto;
+      display: block;
+      object-fit: contain;
     }
     .content {
       padding: 30px;
