@@ -406,17 +406,44 @@ export class MessageParserService {
         break;
       }
       
-      // 3. Fuzzy-Matching: Prüfe auf ähnliche Wörter (z.B. "abuel" vs "abuelo")
+      // 3. Fuzzy-Matching: Prüfe auf ähnliche Wörter (z.B. "abuel" vs "abuelo", "el abuel viajero" vs "el abuelo viajero")
       // Entferne letzte Buchstaben für Vergleich (z.B. "abuelo" -> "abuel", "viajero" -> "viajer")
       const fuzzyRoomName = roomNameWithoutArticle.replace(/(o|a|e|s)$/g, '');
       const fuzzyMessage = messageWithoutArticle.replace(/(o|a|e|s)$/g, '');
       
+      // Prüfe ob fuzzyRoomName in fuzzyMessage enthalten ist (auch als Teilstring)
+      // Oder ob beide ähnlich sind (mindestens 70% Übereinstimmung)
       if (fuzzyMessage.includes(fuzzyRoomName) || fuzzyRoomName.includes(fuzzyMessage)) {
         roomName = room.name;
         categoryId = room.categoryId;
         roomType = room.type;
         foundMatch = true;
         logger.log(`[MessageParserService] Zimmer gefunden (fuzzy): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+        break;
+      }
+      
+      // 3.5. Erweiterte Fuzzy-Suche: Prüfe einzelne Wörter (z.B. "abuel" in "abuelo viajero")
+      const fuzzyRoomWords = fuzzyRoomName.split(' ').filter(w => w.length > 3);
+      const fuzzyMessageWords = fuzzyMessage.split(' ').filter(w => w.length > 3);
+      
+      let fuzzyWordMatches = 0;
+      for (const roomWord of fuzzyRoomWords) {
+        for (const msgWord of fuzzyMessageWords) {
+          // Prüfe ob Wörter ähnlich sind (Teilübereinstimmung)
+          if (msgWord.includes(roomWord) || roomWord.includes(msgWord)) {
+            fuzzyWordMatches++;
+            break;
+          }
+        }
+      }
+      
+      // Wenn mindestens 2 Wörter übereinstimmen, ist es ein Match
+      if (fuzzyWordMatches >= 2) {
+        roomName = room.name;
+        categoryId = room.categoryId;
+        roomType = room.type;
+        foundMatch = true;
+        logger.log(`[MessageParserService] Zimmer gefunden (erweiterte fuzzy, ${fuzzyWordMatches} Wörter): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
         break;
       }
     }

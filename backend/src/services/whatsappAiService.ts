@@ -5,6 +5,7 @@ import { prisma } from '../utils/prisma';
 import { WhatsAppFunctionHandlers } from './whatsappFunctionHandlers';
 import { logger } from '../utils/logger';
 import { PromptBuilder } from './chatbot/PromptBuilder';
+import { LanguageService } from './chatbot/LanguageService';
 
 export interface AIResponse {
   message: string;
@@ -135,17 +136,28 @@ export class WhatsAppAiService {
       });
     }
 
-    // 2. Erkenne Sprache aus Nachricht (primär) oder Telefonnummer (Fallback)
-    const detectedLanguage = this.detectLanguageFromMessage(message);
-    const phoneLanguage = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
-    // Verwende erkannte Sprache aus Nachricht, falls vorhanden, sonst Telefonnummer
-    const language = detectedLanguage || phoneLanguage;
+    // 2. Erkenne Sprache und stelle Konsistenz sicher (über Core Service)
+    const detectedLanguage = LanguageService.detectLanguage(
+      message,
+      phoneNumber,
+      conversationContext
+    );
+    
+    // WICHTIG: Stelle Sprach-Konsistenz sicher (verwendet Context, falls vorhanden)
+    let language = detectedLanguage;
+    if (conversationId) {
+      language = await LanguageService.ensureLanguageConsistency(
+        conversationId,
+        detectedLanguage,
+        'WhatsAppConversation'
+      );
+    }
     
     logger.log('[WhatsApp AI Service] Spracherkennung:', {
       message: message.substring(0, 50),
-      detectedFromMessage: detectedLanguage,
-      detectedFromPhone: phoneLanguage,
-      finalLanguage: language
+      detectedLanguage: detectedLanguage,
+      finalLanguage: language,
+      fromContext: conversationContext?.language || 'kein Context'
     });
 
     // 3. Baue System Prompt (modularer PromptBuilder)
