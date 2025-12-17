@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#f3f4f6"/>
+  <rect x="80" y="120" width="1440" height="660" rx="24" fill="#ffffff" stroke="#d1d5db" stroke-width="4"/>
+  <text x="120" y="200" fill="#111827" font-size="48" font-family="Inter, sans-serif" font-weight="700">Worktracker</text>
+  <text x="120" y="260" fill="#6b7280" font-size="28" font-family="Inter, sans-serif">Board mit Statuslauf, Filtern und Verantwortlichen</text>
+  <rect x="120" y="320" width="280" height="80" rx="16" fill="#bfdbfe"/>
+  <text x="150" y="370" fill="#1d4ed8" font-size="32" font-family="Inter, sans-serif" font-weight="600">Open</text>
+  <rect x="440" y="320" width="280" height="80" rx="16" fill="#d1fae5"/>
+  <text x="470" y="370" fill="#059669" font-size="32" font-family="Inter, sans-serif" font-weight="600">In Progress</text>
+  <rect x="760" y="320" width="280" height="80" rx="16" fill="#fef3c7"/>
+  <text x="790" y="370" fill="#b45309" font-size="32" font-family="Inter, sans-serif" font-weight="600">QC</text>
+  <rect x="1080" y="320" width="280" height="80" rx="16" fill="#dcfce7"/>
+  <text x="1110" y="370" fill="#15803d" font-size="32" font-family="Inter, sans-serif" font-weight="600">Done</text>
+  <rect x="120" y="440" width="1240" height="40" rx="10" fill="#e5e7eb"/>
+  <rect x="120" y="500" width="1240" height="40" rx="10" fill="#e5e7eb"/>
+  <rect x="120" y="560" width="1240" height="40" rx="10" fill="#e5e7eb"/>
+  <text x="120" y="640" fill="#6b7280" font-size="26" font-family="Inter, sans-serif">Platzhalter-Bild (Worktracker)  bitte mit echtem Screenshot ersetzen.</text>
+</svg>
