@@ -907,6 +907,13 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             }
           }
 
+          // NEU: Lade Email-Sprache vor Link-Labels
+          const { CountryLanguageService: CLS } = require('./countryLanguageService');
+          const emailLanguageCode = CLS.getLanguageForReservation({
+            guestNationality: reservation.guestNationality,
+            guestPhone: reservation.guestPhone
+          }) as 'en' | 'es' | 'de';
+          
           // Ersetze Links im Text durch formattierte Linktexte
           const buttonColor = branding?.colors?.primary || '#007bff';
           const checkInLabel =
@@ -924,13 +931,6 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
               `<a href="${checkInLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: 600;">${checkInLabel}</a>`)
             .replace(new RegExp(paymentLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
               `<a href="${paymentLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: 600;">${paymentLabel}</a>`);
-
-          // NEU: Lade Email-Betreff aus Template
-          const { CountryLanguageService: CLS } = require('./countryLanguageService');
-          const emailLanguageCode = CLS.getLanguageForReservation({
-            guestNationality: reservation.guestNationality,
-            guestPhone: reservation.guestPhone
-          }) as 'en' | 'es' | 'de';
           
           const emailTemplate = await this.getMessageTemplate(
             reservation.branchId,
