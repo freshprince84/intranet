@@ -146,6 +146,21 @@ passcodeCleanupTimeout = setTimeout(async () => {
     // Rate Shopping Scheduler
     const { RateShoppingScheduler } = await import('./services/rateShoppingScheduler');
     RateShoppingScheduler.start();
+    
+    // Pricing Rule Scheduler (Preisregeln automatisch ausführen)
+    const { PricingRuleScheduler } = await import('./services/pricingRuleScheduler');
+    PricingRuleScheduler.start();
+    
+    // Occupancy Monitoring Scheduler (Occupancy-Änderungen überwachen)
+    const { OccupancyMonitoringService } = await import('./services/occupancyMonitoringService');
+    // Prüfe alle 12 Stunden auf Occupancy-Änderungen
+    setInterval(async () => {
+      await OccupancyMonitoringService.checkAllBranches();
+    }, 12 * 60 * 60 * 1000); // 12 Stunden
+    // Führe sofort einen Check aus
+    OccupancyMonitoringService.checkAllBranches().catch(err => {
+      logger.error('[OccupancyMonitoring] Fehler beim ersten Check:', err);
+    });
   } catch (error) {
     logger.error('[Timer] Fehler beim Starten des Passcode-Cleanup-Schedulers:', error);
   }
@@ -172,6 +187,14 @@ export const cleanupTimers = async () => {
     RateShoppingScheduler.stop();
   } catch (error) {
     logger.error('[Cleanup] Fehler beim Stoppen des Rate Shopping Schedulers:', error);
+  }
+  
+  // Pricing Rule Scheduler stoppen
+  try {
+    const { PricingRuleScheduler } = await import('./services/pricingRuleScheduler');
+    PricingRuleScheduler.stop();
+  } catch (error) {
+    logger.error('[Cleanup] Fehler beim Stoppen des Pricing Rule Schedulers:', error);
   }
 };
 

@@ -506,9 +506,9 @@ export class PriceRecommendationService {
         throw new Error(`Preisempfehlung kann nicht angewendet werden. Status: ${recommendation.status}`);
       }
 
-      // TODO: Preis ins LobbyPMS einspielen
-      // - LobbyPMSPriceUpdateService verwenden
-      // - Preis aktualisieren
+      // Preis ins LobbyPMS einspielen
+      const { LobbyPmsPriceUpdateService } = await import('./lobbyPmsPriceUpdateService');
+      await LobbyPmsPriceUpdateService.applyRecommendation(recommendationId);
 
       // Status aktualisieren
       await prisma.priceRecommendation.update({
