@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, Autoplay } from 'swiper/modules';
+import { motion } from 'framer-motion';
+import DeviceFrame from '../components/DeviceFrame';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 import {
   ArrowRightIcon,
   CheckCircleIcon,
@@ -214,18 +221,29 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <nav className="flex items-center gap-3">
-            <CTAIconButton to="/register" title={t('landing.hero.ctaRegister')} Icon={ArrowRightIcon} />
-            <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaRegisterLabel')}</span>
-            <CTAIconButton to="/login" title={t('landing.hero.ctaLogin')} Icon={CheckCircleIcon} />
-            <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaLoginLabel')}</span>
-            <CTAIconButton to="#contact" title={t('landing.hero.ctaDemo')} Icon={SparklesIcon} />
-            <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaDemoLabel')}</span>
+            <Link
+              to="/register"
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium text-sm"
+            >
+              {t('landing.hero.ctaRegister')}
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors text-sm"
+            >
+              {t('landing.hero.ctaLogin')}
+            </Link>
           </nav>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-        <section className="grid md:grid-cols-2 gap-10 items-center">
+        <motion.section
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="grid md:grid-cols-2 gap-10 items-center"
+        >
           <div className="space-y-6">
             <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold">{t('landing.hero.badge')}</p>
             <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight">{t('landing.hero.headline')}</h1>
@@ -263,20 +281,71 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="group relative rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
-            <img
-              src={IMG_WORKTRACKER}
-              alt={t('landing.assets.placeholderWorktracker')}
-              loading="lazy"
-              className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-              <p className="text-white font-semibold text-xl sm:text-2xl">{t('landing.features.labels.worktracker')}</p>
-            </div>
-          </div>
-        </section>
+          <Swiper
+            modules={[Navigation, Pagination, Autoplay]}
+            spaceBetween={30}
+            slidesPerView={1}
+            navigation
+            pagination={{ clickable: true }}
+            autoplay={{ delay: 5000, disableOnInteraction: false }}
+            className="w-full"
+          >
+            <SwiperSlide>
+              <DeviceFrame type="browser">
+                <div className="group relative">
+                  <img
+                    src={IMG_WORKTRACKER}
+                    alt={t('landing.assets.placeholderWorktracker')}
+                    loading="lazy"
+                    className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <p className="text-white font-semibold text-xl sm:text-2xl">{t('landing.features.labels.worktracker')}</p>
+                  </div>
+                </div>
+              </DeviceFrame>
+            </SwiperSlide>
+            <SwiperSlide>
+              <DeviceFrame type="browser">
+                <div className="group relative">
+                  <img
+                    src={IMG_CONSULTATIONS}
+                    alt={t('landing.assets.placeholderConsultations')}
+                    loading="lazy"
+                    className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <p className="text-white font-semibold text-xl sm:text-2xl">{t('landing.features.labels.consultations')}</p>
+                  </div>
+                </div>
+              </DeviceFrame>
+            </SwiperSlide>
+            <SwiperSlide>
+              <DeviceFrame type="browser">
+                <div className="group relative">
+                  <img
+                    src={IMG_DOCUMENT}
+                    alt={t('landing.assets.placeholderDocument')}
+                    loading="lazy"
+                    className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <p className="text-white font-semibold text-xl sm:text-2xl">{t('landing.features.labels.documentRecognition')}</p>
+                  </div>
+                </div>
+              </DeviceFrame>
+            </SwiperSlide>
+          </Swiper>
+        </motion.section>
 
-        <section className="grid md:grid-cols-2 gap-8" id="audiences">
+        <motion.section
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="grid md:grid-cols-2 gap-8"
+          id="audiences"
+        >
           {audiences.map((audience) => (
             <div key={audience.key} className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm animate-fade-in-up">
               <h2 className="text-2xl font-bold mb-4">{t(`landing.audience.${audience.key}.title`)}</h2>
@@ -290,10 +359,17 @@ const LandingPage: React.FC = () => {
                 ))}
               </ul>
             </div>
-          ))}
-        </section>
+            ))}
+        </motion.section>
 
-        <section className="space-y-6" id="features">
+        <motion.section
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="space-y-6"
+          id="features"
+        >
           <div className="flex items-center justify-between">
             <h2 className="text-3xl font-bold">{t('landing.features.title')}</h2>
             <CTAIconButton to="#contact" title={t('landing.hero.ctaDemo')} Icon={SparklesIcon} />
@@ -318,47 +394,70 @@ const LandingPage: React.FC = () => {
               </div>
             ))}
           </div>
-          <div className="grid gap-4 md:grid-cols-3 animate-fade-in-up">
-            <div className="group relative rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
-              <img
-                src={IMG_TEAM}
-                alt={t('landing.features.labels.teamControl')}
-                loading="lazy"
-                className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                <p className="text-white font-semibold text-lg">{t('landing.features.labels.teamControl')}</p>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">{t('landing.features.screenshots.teamControl')}</p>
+          <div className="grid gap-6 md:grid-cols-3 animate-fade-in-up">
+            {/* Großes Feature (2 Spalten) */}
+            <div className="md:col-span-2 space-y-2">
+              <DeviceFrame type="browser">
+                <div className="group relative">
+                  <img
+                    src={IMG_TEAM}
+                    alt={t('landing.features.labels.teamControl')}
+                    loading="lazy"
+                    className="w-full h-96 sm:h-[500px] md:h-[600px] object-contain transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <p className="text-white font-semibold text-lg">{t('landing.features.labels.teamControl')}</p>
+                  </div>
+                </div>
+              </DeviceFrame>
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">{t('landing.features.screenshots.teamControl')}</p>
             </div>
-            <div className="group relative rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
-              <img
-                src={IMG_CEREBRO}
-                alt={t('landing.features.labels.cerebro')}
-                loading="lazy"
-                className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                <p className="text-white font-semibold text-lg">{t('landing.features.labels.cerebro')}</p>
+            {/* Kleine Features (1 Spalte) */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <DeviceFrame type="browser">
+                  <div className="group relative">
+                    <img
+                      src={IMG_CEREBRO}
+                      alt={t('landing.features.labels.cerebro')}
+                      loading="lazy"
+                      className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                      <p className="text-white font-semibold text-sm">{t('landing.features.labels.cerebro')}</p>
+                    </div>
+                  </div>
+                </DeviceFrame>
+                <p className="text-xs text-gray-600 dark:text-gray-400 text-center">{t('landing.features.screenshots.cerebro')}</p>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">{t('landing.features.screenshots.cerebro')}</p>
-            </div>
-            <div className="group relative rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
-              <img
-                src={IMG_MOBILE}
-                alt={t('landing.features.labels.mobile')}
-                loading="lazy"
-                className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                <p className="text-white font-semibold text-lg">{t('landing.features.labels.mobile')}</p>
+              <div className="space-y-2">
+                <DeviceFrame type="phone">
+                  <div className="group relative">
+                    <img
+                      src={IMG_MOBILE}
+                      alt={t('landing.features.labels.mobile')}
+                      loading="lazy"
+                      className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                      <p className="text-white font-semibold text-sm">{t('landing.features.labels.mobile')}</p>
+                    </div>
+                  </div>
+                </DeviceFrame>
+                <p className="text-xs text-gray-600 dark:text-gray-400 text-center">{t('landing.features.screenshots.mobile')}</p>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">{t('landing.features.screenshots.mobile')}</p>
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="grid md:grid-cols-3 gap-6" id="proof">
+        <motion.section
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="grid md:grid-cols-3 gap-6"
+          id="proof"
+        >
           <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm">
             <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold mb-2">{t('landing.proof.badge')}</p>
             <p className="text-2xl font-bold mb-2">{t('landing.proof.title')}</p>
@@ -384,9 +483,16 @@ const LandingPage: React.FC = () => {
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-300">{t('landing.proof.review2')}</p>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="grid md:grid-cols-2 gap-8 items-center" id="contact">
+        <motion.section
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="grid md:grid-cols-2 gap-8 items-center"
+          id="contact"
+        >
           <div className="space-y-4">
             <h2 className="text-3xl font-bold">{t('landing.cta.title')}</h2>
             <p className="text-gray-600 dark:text-gray-300">{t('landing.cta.subtitle')}</p>
@@ -453,9 +559,16 @@ const LandingPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="space-y-4" id="faq">
+        <motion.section
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="space-y-4"
+          id="faq"
+        >
           <h2 className="text-3xl font-bold">{t('landing.faq.title')}</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {faqs.map((faq) => (
@@ -465,7 +578,7 @@ const LandingPage: React.FC = () => {
               </div>
             ))}
           </div>
-        </section>
+        </motion.section>
       </main>
 
       <footer className="border-t border-gray-200 dark:border-gray-800 py-8">

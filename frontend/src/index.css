@@ -1782,3 +1782,48 @@ div.fixed.top-16.bottom-0.right-0.sidepane-panel-container {
 .animate-fade-in-up {
   animation: fadeInUp 0.6s ease-out;
 }
+
+/* ============================================
+   SWIPER CUSTOM STYLES
+   ============================================ */
+
+.swiper-button-next,
+.swiper-button-prev {
+  color: #3B82F6 !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-radius: 50% !important;
+  width: 40px !important;
+  height: 40px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.swiper-button-next:after,
+.swiper-button-prev:after {
+  font-size: 16px !important;
+}
+
+.swiper-button-next:hover,
+.swiper-button-prev:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.swiper-pagination-bullet {
+  background: #3B82F6 !important;
+  opacity: 0.3 !important;
+}
+
+.swiper-pagination-bullet-active {
+  opacity: 1 !important;
+}
+
+.dark .swiper-button-next,
+.dark .swiper-button-prev {
+  background: rgba(31, 41, 55, 0.9) !important;
+  color: #60A5FA !important;
+}
+
+.dark .swiper-button-next:hover,
+.dark .swiper-button-prev:hover {
+  background: rgba(31, 41, 55, 1) !important;
+}
