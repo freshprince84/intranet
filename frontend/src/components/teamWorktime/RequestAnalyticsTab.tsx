@@ -200,12 +200,12 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
         setError(t('analytics.request.loadError'));
       } finally {
         if (!abortController.signal.aborted) {
-          setLoading(false);
+        setLoading(false);
         }
       }
     };
 
-    fetchRequests();
+      fetchRequests();
     
     // ✅ PHASE 8: Memory Leak Prevention - Cleanup
     return () => {
@@ -581,8 +581,8 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                                   ) : (
                                     '-'
                                   )}
-                                </td>
-                              );
+                            </td>
+                          );
                         default:
                           return null;
                       }

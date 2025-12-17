@@ -1243,9 +1243,9 @@ const Worktracker: React.FC = () => {
                     <button
                         key="back"
                         onClick={() => handleStatusChange(task.id, 'quality_control')}
-                        className="p-2 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
+                        className="p-1.5 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
                     >
-                        <ArrowLeftIcon className="h-6 w-6" />
+                        <ArrowLeftIcon className="h-5 w-5" />
                     </button>
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
                         {t('tasks.actions.backToQualityControl')}

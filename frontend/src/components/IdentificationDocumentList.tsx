@@ -379,28 +379,28 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <table className="min-w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-36">
                   {t('identificationDocuments.columns.type')}
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-44">
                   {t('identificationDocuments.columns.number')}
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-36">
                   {t('identificationDocuments.columns.country')}
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
                   {t('identificationDocuments.columns.validFrom')}
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
                   {t('identificationDocuments.columns.validTo')}
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
                   {t('identificationDocuments.columns.status')}
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-36">
                   {t('identificationDocuments.columns.actions')}
                 </th>
               </tr>
@@ -408,22 +408,22 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
             <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
               {documents.map((doc) => (
                 <tr key={doc.id}>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-200 truncate">
                     {formatDocumentType(doc.documentType)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-200 truncate">
                     {doc.documentNumber}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-200 truncate">
                     {doc.issuingCountry}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-200">
                     {formatDate(doc.issueDate)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-200">
                     {formatDate(doc.expiryDate)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm">
+                  <td className="px-3 py-2 text-sm">
                     {doc.isVerified ? (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100">
                         {t('identificationDocuments.status.verified')}
@@ -434,8 +434,8 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-1">
+                  <td className="px-3 py-2 text-sm font-medium">
+                    <div className="flex space-x-1 justify-end">
                       <button
                         onClick={() => handleViewDocument(doc.id)}
                         className="p-2 rounded-md text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"

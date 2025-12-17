@@ -231,12 +231,12 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         setError(t('analytics.todo.loadError'));
       } finally {
         if (!abortController.signal.aborted) {
-          setLoading(false);
+        setLoading(false);
         }
       }
     };
 
-    fetchTodos();
+      fetchTodos();
     
     // ✅ PHASE 8: Memory Leak Prevention - Cleanup
     return () => {
