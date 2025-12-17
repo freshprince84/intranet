@@ -146,12 +146,19 @@ export class OccupancyMonitoringService {
       if (alerts.length > 0) {
         logger.log(`[OccupancyMonitoring] Branch ${branchId}: ${alerts.length} kritische Occupancy-Änderungen erkannt`);
 
-        // Erstelle Notification für alle Rezeption-User der Organisation
+        // Erstelle Notification für alle User der Organisation mit Rezeption-relevanten Rollen
+        // Suche nach Rollen mit Namen wie "Admin", "Reception", "Manager" etc.
         const receptionUsers = await prisma.user.findMany({
           where: {
-            organizationId: branch.organizationId,
-            role: {
-              in: ['ADMIN', 'MANAGER', 'RECEPTION']
+            roles: {
+              some: {
+                role: {
+                  organizationId: branch.organizationId,
+                  name: {
+                    in: ['Admin', 'Reception', 'Manager', 'Owner']
+                  }
+                }
+              }
             }
           },
           select: {
@@ -165,19 +172,24 @@ export class OccupancyMonitoringService {
             `${new Date(a.date).toLocaleDateString()}: ${a.changePercent.toFixed(1)}% Änderung (${a.previousOccupancy.toFixed(1)}% → ${a.currentOccupancy.toFixed(1)}%)`
           ).join('\n');
 
-          await createNotificationIfEnabled(
-            user.id,
-            NotificationType.PRICE_ANALYSIS,
-            getPriceAnalysisNotificationText(
-              language,
-              'occupancyAlert',
-              {
-                branchName: branch.name,
-                alertCount: alerts.length,
-                details: alertText
-              }
-            )
+          const notificationText = getPriceAnalysisNotificationText(
+            language,
+            'occupancyAlert',
+            {
+              branchName: branch.name,
+              alertCount: alerts.length,
+              details: alertText
+            }
           );
+
+          await createNotificationIfEnabled({
+            userId: user.id,
+            type: NotificationType.system,
+            title: notificationText.title,
+            message: notificationText.message,
+            relatedEntityType: 'price_analysis',
+            relatedEntityId: branch.id
+          });
         }
 
         // Erstelle To-Do für kritischste Änderung
@@ -197,8 +209,8 @@ export class OccupancyMonitoringService {
                 title: `Occupancy-Alert: ${categoryInfo.roomName} - ${criticalAlert.changePercent.toFixed(1)}% Änderung`,
                 description: `Kategorie: ${categoryInfo.roomName}\nDatum: ${new Date(criticalAlert.date).toLocaleDateString()}\nÄnderung: ${criticalAlert.previousOccupancy.toFixed(1)}% → ${criticalAlert.currentOccupancy.toFixed(1)}%\n\nBitte Preise prüfen und ggf. anpassen.`,
                 status: 'open',
-                priority: criticalAlert.changePercent > 50 ? 'high' : 'medium',
-                assignedToId: firstUser.id,
+                responsibleId: firstUser.id,
+                qualityControlId: firstUser.id,
                 organizationId: branch.organizationId,
                 branchId: branch.id,
                 dueDate: new Date(criticalAlert.date)
