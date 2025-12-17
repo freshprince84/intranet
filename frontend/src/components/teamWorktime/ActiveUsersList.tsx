@@ -830,20 +830,22 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const { loadFilters } = filterContext;
 
   // Funktion zum Anwenden von Filterbedingungen
-  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  // ✅ FIX: Mit useCallback stabilisieren (verhindert Endlosschleife in useEffect)
+  const applyFilterConditions = React.useCallback((conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
-  };
+  }, []);
   
   // Funktion zum Zurücksetzen der Filter
-  const resetFilterConditions = () => {
+  const resetFilterConditions = React.useCallback(() => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
     setActiveFilterName('');
     setSelectedFilterId(null);
-  };
+  }, []);
   
   // Filter Change Handler (Controlled Mode)
+  // ✅ FIX: applyFilterConditions ist jetzt stabil, daher als Dependency möglich
   const handleFilterChange = React.useCallback(async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
@@ -1061,14 +1063,14 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       {/* Gespeicherte Filter als Tags anzeigen */}
       <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
         <SavedFilterTags
-        tableId={WORKCENTER_TABLE_ID}
-        onSelectFilter={(conditions, operators) => applyFilterConditions(conditions, operators)}
-        onReset={resetFilterConditions}
-        activeFilterName={activeFilterName}
-        selectedFilterId={selectedFilterId}
-        onFilterChange={handleFilterChange}
+          tableId={WORKCENTER_TABLE_ID}
+          onSelectFilter={applyFilterConditions}
+          onReset={resetFilterConditions}
+          activeFilterName={activeFilterName}
+          selectedFilterId={selectedFilterId}
+          onFilterChange={handleFilterChange}
           defaultFilterName="Aktive" // ✅ FIX: Hardcodiert (konsistent mit DB)
-      />
+        />
       </div>
       
       {/* Tabelle oder Cards */}
