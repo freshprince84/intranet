@@ -33,21 +33,12 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
 
   // Dokumente laden
   const loadDocuments = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IdentificationDocumentList.tsx:27',message:'loadDocuments called',data:{userId,timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     setLoading(true);
     try {
       const docs = await idDocApi.getUserDocuments(userId);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IdentificationDocumentList.tsx:30',message:'Documents loaded from API',data:{docCount:docs?.length||0,docIds:docs?.map(d=>d.id)||[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       setDocuments(docs);
       setError(null);
     } catch (err: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'IdentificationDocumentList.tsx:33',message:'Error loading documents',data:{error:err.message||'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       setError(err.message || t('identificationDocuments.loadError'));
       showMessage(t('identificationDocuments.loadError'), 'error');
     } finally {

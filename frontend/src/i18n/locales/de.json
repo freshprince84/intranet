@@ -3315,8 +3315,11 @@
       "headline": "Ein Intranet für Hostels, Hotels, Airbnbs & Beratungen",
       "subline": "Zeiterfassung, Aufgaben, Wissen, Abrechnung und KI-gestützte Automatisierung in einer Oberfläche – mobil und im Haus einsetzbar.",
       "ctaRegister": "Registrieren",
+      "ctaRegisterLabel": "Registrieren",
       "ctaLogin": "Login",
+      "ctaLoginLabel": "Login",
       "ctaDemo": "Demo anfragen",
+      "ctaDemoLabel": "Demo anfragen",
       "ctaHint": "Icon klicken, um loszulegen."
     },
     "stats": {

@@ -3242,8 +3242,11 @@
       "headline": "One intranet for hostels, hotels, Airbnbs & consulting teams",
       "subline": "Time tracking, tasks, knowledge, billing and AI automation in one surface – mobile and on-prem.",
       "ctaRegister": "Register",
+      "ctaRegisterLabel": "Register",
       "ctaLogin": "Login",
+      "ctaLoginLabel": "Login",
       "ctaDemo": "Request demo",
+      "ctaDemoLabel": "Request demo",
       "ctaHint": "Click an icon to proceed."
     },
     "stats": {
