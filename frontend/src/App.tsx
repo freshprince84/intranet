@@ -106,7 +106,12 @@ const App: React.FC = () => {
                                                         </PublicRoute>
                                                     } />
                                                     
-                                                    {/* Öffentlich zugängliche Landingpage */}
+                                                    {/* Öffentlich zugängliche Landingpage (Root + Alias) */}
+                                                    <Route path="/" element={
+                                                        <Suspense fallback={<LoadingScreen />}>
+                                                            <LandingPage />
+                                                        </Suspense>
+                                                    } />
                                                     <Route path="/landing" element={
                                                         <Suspense fallback={<LoadingScreen />}>
                                                             <LandingPage />
@@ -120,84 +125,107 @@ const App: React.FC = () => {
                                                         </Suspense>
                                                     } />
                                                     
-                                                    {/* Geschützte Routen */}
-                                                    <Route path="/" element={
+                                                    {/* Geschützte Routen unter /app */}
+                                                    <Route path="/app" element={
                                                         <ProtectedRoute>
                                                             <Layout />
                                                         </ProtectedRoute>
                                                     }>
-                                                        <Route index element={<Navigate to="/dashboard" replace />} />
-                                                        <Route path="/dashboard" element={
+                                                        <Route index element={<Navigate to="/app/dashboard" replace />} />
+                                                        <Route path="dashboard" element={
                                                             <Suspense fallback={<LoadingScreen />}>
                                                                 <Dashboard />
                                                             </Suspense>
                                                         } />
-                                                        <Route path="/worktracker" element={
+                                                        <Route path="worktracker" element={
                                                             <Suspense fallback={<LoadingScreen />}>
                                                                 <Worktracker />
                                                             </Suspense>
                                                         } />
-                                                        <Route path="/consultations" element={
+                                                        <Route path="consultations" element={
                                                             <ProtectedRoute>
                                                                 <Suspense fallback={<LoadingScreen />}>
                                                                     <Consultations />
                                                                 </Suspense>
                                                             </ProtectedRoute>
                                                         } />
-                                                        <Route path="/reservations/:id" element={
+                                                        <Route path="reservations/:id" element={
                                                             <ProtectedRoute>
                                                                 <Suspense fallback={<LoadingScreen />}>
                                                                     <ReservationDetails />
                                                                 </Suspense>
                                                             </ProtectedRoute>
                                                         } />
-                                                        <Route path="/team-worktime-control" element={
+                                                        <Route path="team-worktime-control" element={
                                                             <ProtectedRoute entity="team_worktime_control" accessLevel="read">
                                                                 <Suspense fallback={<LoadingScreen />}>
                                                                     <TeamWorktimeControl />
                                                                 </Suspense>
                                                             </ProtectedRoute>
                                                         } />
-                                                        <Route path="/organization" element={
+                                                        <Route path="organization" element={
                                                             <Suspense fallback={<LoadingScreen />}>
                                                                 <Organisation />
                                                             </Suspense>
                                                         } />
-                                                        <Route path="/settings" element={
+                                                        <Route path="settings" element={
                                                             <Suspense fallback={<LoadingScreen />}>
                                                                 <Settings />
                                                             </Suspense>
                                                         } />
-                                                        <Route path="/profile" element={
+                                                        <Route path="profile" element={
                                                             <Suspense fallback={<LoadingScreen />}>
                                                                 <Profile />
                                                             </Suspense>
                                                         } />
-                                                        <Route path="/notifications" element={
+                                                        <Route path="notifications" element={
                                                             <Suspense fallback={<LoadingScreen />}>
                                                                 <NotificationList />
                                                             </Suspense>
                                                         } />
-                                                        <Route path="/cerebro/*" element={
+                                                        <Route path="cerebro/*" element={
                                                             <Suspense fallback={<LoadingScreen />}>
                                                                 <Cerebro />
                                                             </Suspense>
                                                         } />
-                                                        <Route path="/payroll" element={
+                                                        <Route path="payroll" element={
                                                             <ProtectedRoute entity="payroll" accessLevel="read">
                                                                 <Suspense fallback={<LoadingScreen />}>
                                                                     <Payroll />
                                                                 </Suspense>
                                                             </ProtectedRoute>
                                                         } />
-                                                        <Route path="/price-analysis" element={
+                                                        <Route path="price-analysis" element={
                                                             <ProtectedRoute entity="price_analysis" accessLevel="read">
                                                                 <Suspense fallback={<LoadingScreen />}>
                                                                     <PriceAnalysis />
                                                                 </Suspense>
                                                             </ProtectedRoute>
                                                         } />
+                                                        {/* Fallback innerhalb /app */}
+                                                        <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
                                                     </Route>
+
+                                                    {/* Redirects alter Pfade auf /app/* */}
+                                                    <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+                                                    <Route path="/worktracker" element={<Navigate to="/app/worktracker" replace />} />
+                                                    <Route path="/consultations" element={<Navigate to="/app/consultations" replace />} />
+                                                    <Route path="/reservations/:id" element={<Navigate to="/app/reservations/:id" replace />} />
+                                                    <Route path="/team-worktime-control" element={<Navigate to="/app/team-worktime-control" replace />} />
+                                                    <Route path="/organization" element={<Navigate to="/app/organization" replace />} />
+                                                    <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
+                                                    <Route path="/profile" element={<Navigate to="/app/profile" replace />} />
+                                                    <Route path="/notifications" element={<Navigate to="/app/notifications" replace />} />
+                                                    <Route path="/cerebro/*" element={<Navigate to="/app/cerebro" replace />} />
+                                                    <Route path="/payroll" element={<Navigate to="/app/payroll" replace />} />
+                                                    <Route path="/price-analysis" element={<Navigate to="/app/price-analysis" replace />} />
+
+                                                    {/* Öffentlicher Fallback */}
+                                                    <Route path="*" element={
+                                                        <Suspense fallback={<LoadingScreen />}>
+                                                            <LandingPage />
+                                                        </Suspense>
+                                                    } />
                                                     </Routes>
                                                     <OnboardingTour />
                                                     </OnboardingProvider>
