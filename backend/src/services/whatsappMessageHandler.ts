@@ -136,17 +136,28 @@ export class WhatsAppMessageHandler {
       );
       const mergedContext = ContextService.mergeWithContext(parsedMessage, coreContext);
       await ContextService.updateContext(conversation.id, mergedContext, 'WhatsAppConversation');
+      // WICHTIG: Stelle Sprach-Konsistenz sicher (speichert Sprache im Context)
       const detectedLanguage = CoreLanguageService.detectLanguage(
         normalizedMessage,
         normalizedPhone,
         mergedContext
       );
-      // ConversationState vorläufig berechnen (Integration in bestehende Flows folgt in Phase 2.2)
+      const language = await CoreLanguageService.ensureLanguageConsistency(
+        conversation.id,
+        detectedLanguage,
+        'WhatsAppConversation'
+      );
+      
+      // Aktualisiere mergedContext mit konsistenter Sprache
+      mergedContext.language = language;
+      await ContextService.updateContext(conversation.id, { language }, 'WhatsAppConversation');
+      
+      // ConversationState berechnen
       await ConversationService.processMessage(
         normalizedMessage,
         parsedMessage,
         mergedContext,
-        detectedLanguage,
+        language,
         conversation.id,
         'WhatsAppConversation',
         branchId
