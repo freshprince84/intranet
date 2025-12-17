@@ -81,7 +81,8 @@ app.use((0, cors_1.default)({
         const allowedOrigins = [
             'http://localhost:3000', // Web-Frontend in Entwicklung
             'exp://', // Expo-Client während der Entwicklung
-            'https://65.109.228.106.nip.io', // Produktionsumgebung
+            'https://65.109.228.106.nip.io', // Produktionsumgebung (alte URL)
+            'https://newintranet.lafamilia-hostel.com', // Produktionsumgebung (neue URL)
             'app://' // React Native App (production)
         ];
         // IP-basierte Entwicklungsumgebungen für Mobile
@@ -91,7 +92,21 @@ app.use((0, cors_1.default)({
             origin.match(/^http:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+:\d+$/)) {
             return callback(null, true);
         }
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+        // ✅ FIX: Erlaube alle Zugriffe auf die Produktions-URLs, unabhängig von der Client-IP
+        // Dies stellt sicher, dass Login von allen Geräten funktioniert
+        if (origin === 'https://65.109.228.106.nip.io' ||
+            origin === 'https://newintranet.lafamilia-hostel.com') {
+            return callback(null, true);
+        }
+        // Prüfe ob Origin in der Liste der erlaubten Origins ist
+        const isAllowed = allowedOrigins.some(allowed => {
+            if (allowed.endsWith('://')) {
+                // Für Präfixe wie 'exp://' und 'app://'
+                return origin.startsWith(allowed);
+            }
+            return origin === allowed;
+        });
+        if (isAllowed || process.env.NODE_ENV === 'development') {
             callback(null, true);
         }
         else {

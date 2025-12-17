@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getTourImageGenerationStatus = exports.generateTourImages = exports.exportTours = exports.getTourBookings = exports.toggleTourActive = exports.updateTour = exports.deleteTourGalleryImage = exports.getTourGalleryImage = exports.getTourImage = exports.uploadTourGalleryImage = exports.uploadTourImage = exports.createTour = exports.getTourById = exports.getAllTours = exports.tourImageUpload = void 0;
+exports.getTourImageGenerationStatus = exports.generateTourImages = exports.exportTours = exports.getTourBookings = exports.toggleTourActive = exports.updateTour = exports.deleteTourImage = exports.deleteTourGalleryImage = exports.getTourGalleryImage = exports.getTourImage = exports.uploadTourGalleryImage = exports.uploadTourImage = exports.createTour = exports.getTourById = exports.getAllTours = exports.tourImageUpload = void 0;
 const prisma_1 = require("../utils/prisma");
 const filterToPrisma_1 = require("../utils/filterToPrisma");
 const filterCache_1 = require("../services/filterCache");
@@ -24,6 +24,8 @@ const logger_1 = require("../utils/logger");
 const queueService_1 = require("../services/queueService");
 const geminiImageService_1 = require("../services/geminiImageService");
 const tourImageUploadService_1 = require("../services/tourImageUploadService");
+const organizationBrandingService_1 = require("../services/organizationBrandingService");
+const translations_1 = require("../utils/translations");
 const userSelect = {
     id: true,
     username: true,
@@ -55,7 +57,7 @@ const tourImageFileFilter = (req, file, cb) => {
         cb(null, true);
     }
     else {
-        cb(new Error('Nur Bilddateien (JPEG, PNG, GIF, WEBP) sind erlaubt'));
+        cb(new Error('Only image files (JPEG, PNG, GIF, WEBP) are allowed'));
     }
 };
 exports.tourImageUpload = (0, multer_1.default)({
@@ -174,7 +176,7 @@ const getAllTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         res.status(500).json({
             success: false,
-            message: error instanceof Error ? error.message : 'Fehler beim Laden der Touren'
+            message: error instanceof Error ? error.message : (0, translations_1.getTourErrorText)('de', 'loadError')
         });
     }
 });
@@ -182,12 +184,14 @@ exports.getAllTours = getAllTours;
 // GET /api/tours/:id - Einzelne Tour
 const getTourById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         const { id } = req.params;
         const tourId = parseInt(id, 10);
         if (isNaN(tourId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
             });
         }
         const tour = yield prisma_1.prisma.tour.findUnique({
@@ -223,7 +227,7 @@ const getTourById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (!tour) {
             return res.status(404).json({
                 success: false,
-                message: 'Tour nicht gefunden'
+                message: (0, translations_1.getTourErrorText)(language, 'tourNotFound')
             });
         }
         res.json({
@@ -233,9 +237,11 @@ const getTourById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
     catch (error) {
         logger_1.logger.error('[getTourById] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden der Tour'
+            message: (0, translations_1.getTourErrorText)(language, 'loadTourError')
         });
     }
 });
@@ -243,15 +249,16 @@ exports.getTourById = getTourById;
 // POST /api/tours - Neue Tour erstellen
 const createTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_create', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_create', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Erstellen von Touren'
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionCreate')
             });
         }
-        const userId = parseInt(req.userId, 10);
         const organizationId = req.organizationId;
         const branchId = req.branchId;
         const { title, description, type = 'own', isActive = true, duration, maxParticipants, minParticipants, price, currency = 'COP', location, meetingPoint, includes, excludes, requirements, totalCommission, totalCommissionPercent, sellerCommissionPercent, sellerCommissionFixed, externalProviderId, externalBookingUrl, availableFrom, availableTo, recurringSchedule } = req.body;
@@ -259,34 +266,34 @@ const createTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (!title || title.trim().length < 3) {
             return res.status(400).json({
                 success: false,
-                message: 'Titel muss mindestens 3 Zeichen lang sein'
+                message: (0, translations_1.getTourErrorText)(language, 'titleMinLength')
             });
         }
         if (!organizationId) {
             return res.status(400).json({
                 success: false,
-                message: 'Organisation ist erforderlich'
+                message: (0, translations_1.getTourErrorText)(language, 'organizationRequired')
             });
         }
         // Validierung: maxParticipants >= minParticipants
         if (maxParticipants && minParticipants && maxParticipants < minParticipants) {
             return res.status(400).json({
                 success: false,
-                message: 'Maximale Teilnehmeranzahl muss >= minimale Teilnehmeranzahl sein'
+                message: (0, translations_1.getTourErrorText)(language, 'maxParticipantsMin')
             });
         }
         // Validierung: availableFrom <= availableTo
         if (availableFrom && availableTo && new Date(availableFrom) > new Date(availableTo)) {
             return res.status(400).json({
                 success: false,
-                message: 'Verfügbar ab muss <= verfügbar bis sein'
+                message: (0, translations_1.getTourErrorText)(language, 'availableFromTo')
             });
         }
         // Validierung: externalProviderId wenn type = external
         if (type === 'external' && !externalProviderId) {
             return res.status(400).json({
                 success: false,
-                message: 'Externer Anbieter ist bei externen Touren erforderlich'
+                message: (0, translations_1.getTourErrorText)(language, 'externalProviderRequired')
             });
         }
         const tour = yield prisma_1.prisma.tour.create({
@@ -336,9 +343,11 @@ const createTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
     catch (error) {
         logger_1.logger.error('[createTour] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Erstellen der Tour'
+            message: (0, translations_1.getTourErrorText)(language, 'createError')
         });
     }
 });
@@ -346,26 +355,28 @@ exports.createTour = createTour;
 // POST /api/tours/:id/image - Hauptbild hochladen
 const uploadTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         const { id } = req.params;
         const tourId = parseInt(id, 10);
         if (isNaN(tourId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
             });
         }
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_edit', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Bearbeiten von Touren'
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionEdit')
             });
         }
         if (!req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'Keine Datei hochgeladen'
+                message: (0, translations_1.getTourErrorText)(language, 'noFileUploaded')
             });
         }
         // Altes Bild löschen (falls vorhanden)
@@ -397,9 +408,11 @@ const uploadTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
     catch (error) {
         logger_1.logger.error('[uploadTourImage] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Hochladen des Bildes'
+            message: (0, translations_1.getTourErrorText)(language, 'imageUploadError')
         });
     }
 });
@@ -407,26 +420,28 @@ exports.uploadTourImage = uploadTourImage;
 // POST /api/tours/:id/gallery - Galerie-Bild hinzufügen
 const uploadTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         const { id } = req.params;
         const tourId = parseInt(id, 10);
         if (isNaN(tourId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
             });
         }
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_edit', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Bearbeiten von Touren'
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionEdit')
             });
         }
         if (!req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'Keine Datei hochgeladen'
+                message: (0, translations_1.getTourErrorText)(language, 'noFileUploaded')
             });
         }
         // Aktuelle Galerie laden
@@ -453,9 +468,11 @@ const uploadTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, f
     }
     catch (error) {
         logger_1.logger.error('[uploadTourGalleryImage] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Hochladen des Galerie-Bildes'
+            message: (0, translations_1.getTourErrorText)(language, 'galleryUploadError')
         });
     }
 });
@@ -463,12 +480,14 @@ exports.uploadTourGalleryImage = uploadTourGalleryImage;
 // GET /api/tours/:id/image - Hauptbild abrufen
 const getTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         const { id } = req.params;
         const tourId = parseInt(id, 10);
         if (isNaN(tourId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
             });
         }
         const tour = yield prisma_1.prisma.tour.findUnique({
@@ -478,7 +497,7 @@ const getTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (!tour || !tour.imageUrl) {
             return res.status(404).json({
                 success: false,
-                message: 'Bild nicht gefunden'
+                message: (0, translations_1.getTourErrorText)(language, 'imageNotFound')
             });
         }
         // Extrahiere Dateinamen aus URL (z.B. /uploads/tours/tour-123.jpg -> tour-123.jpg)
@@ -488,7 +507,7 @@ const getTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (!fs_1.default.existsSync(imagePath)) {
             return res.status(404).json({
                 success: false,
-                message: 'Bilddatei nicht gefunden'
+                message: (0, translations_1.getTourErrorText)(language, 'imageFileNotFound')
             });
         }
         // Setze Content-Type basierend auf Dateiendung
@@ -507,9 +526,11 @@ const getTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
     catch (error) {
         logger_1.logger.error('[getTourImage] Fehler:', error);
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden des Bildes'
+            message: (0, translations_1.getTourErrorText)(language, 'loadImageError')
         });
     }
 });
@@ -517,13 +538,15 @@ exports.getTourImage = getTourImage;
 // GET /api/tours/:id/gallery/:index - Galerie-Bild abrufen
 const getTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         const { id, index } = req.params;
         const tourId = parseInt(id, 10);
         const imageIndex = parseInt(index, 10);
         if (isNaN(tourId) || isNaN(imageIndex)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID oder Bild-Index'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourIdOrImageIndex')
             });
         }
         const tour = yield prisma_1.prisma.tour.findUnique({
@@ -533,14 +556,14 @@ const getTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!tour || !tour.galleryUrls) {
             return res.status(404).json({
                 success: false,
-                message: 'Galerie nicht gefunden'
+                message: (0, translations_1.getTourErrorText)(language, 'galleryNotFound')
             });
         }
         const galleryUrls = tour.galleryUrls;
         if (imageIndex < 0 || imageIndex >= galleryUrls.length) {
             return res.status(404).json({
                 success: false,
-                message: 'Bild-Index außerhalb des gültigen Bereichs'
+                message: (0, translations_1.getTourErrorText)(language, 'imageIndexOutOfRange')
             });
         }
         const imageUrl = galleryUrls[imageIndex];
@@ -550,7 +573,7 @@ const getTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!fs_1.default.existsSync(imagePath)) {
             return res.status(404).json({
                 success: false,
-                message: 'Bilddatei nicht gefunden'
+                message: (0, translations_1.getTourErrorText)(language, 'imageFileNotFound')
             });
         }
         // Setze Content-Type basierend auf Dateiendung
@@ -569,9 +592,11 @@ const getTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, func
     }
     catch (error) {
         logger_1.logger.error('[getTourGalleryImage] Fehler:', error);
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden des Galerie-Bildes'
+            message: (0, translations_1.getTourErrorText)(language, 'loadGalleryImageError')
         });
     }
 });
@@ -579,33 +604,50 @@ exports.getTourGalleryImage = getTourGalleryImage;
 // DELETE /api/tours/:id/gallery/:imageIndex - Galerie-Bild löschen
 const deleteTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         const { id, imageIndex } = req.params;
         const tourId = parseInt(id, 10);
         const index = parseInt(imageIndex, 10);
         if (isNaN(tourId) || isNaN(index)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Parameter'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidParameters')
             });
         }
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_edit', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Bearbeiten von Touren'
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionEdit')
             });
         }
+        // Prüfe Organization-Isolation
+        const organizationId = req.organizationId;
         // Aktuelle Galerie laden
         const tour = yield prisma_1.prisma.tour.findUnique({
             where: { id: tourId },
-            select: { galleryUrls: true }
+            select: { galleryUrls: true, organizationId: true }
         });
-        const currentGallery = (tour === null || tour === void 0 ? void 0 : tour.galleryUrls) || [];
+        if (!tour) {
+            return res.status(404).json({
+                success: false,
+                message: (0, translations_1.getTourErrorText)(language, 'tourNotFound')
+            });
+        }
+        // Prüfe Organization-Isolation
+        if (tour.organizationId !== organizationId) {
+            return res.status(403).json({
+                success: false,
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionEdit')
+            });
+        }
+        const currentGallery = tour.galleryUrls || [];
         if (index < 0 || index >= currentGallery.length) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültiger Bild-Index'
+                message: (0, translations_1.getTourErrorText)(language, 'imageIndexOutOfRange')
             });
         }
         // Bild löschen
@@ -632,22 +674,96 @@ const deleteTourGalleryImage = (req, res) => __awaiter(void 0, void 0, void 0, f
     }
     catch (error) {
         logger_1.logger.error('[deleteTourGalleryImage] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Löschen des Galerie-Bildes'
+            message: (0, translations_1.getTourErrorText)(language, 'deleteError')
         });
     }
 });
 exports.deleteTourGalleryImage = deleteTourGalleryImage;
-// PUT /api/tours/:id - Tour aktualisieren
-const updateTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+// DELETE /api/tours/:id/image - Hauptbild löschen
+const deleteTourImage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
+        const { id } = req.params;
+        const tourId = parseInt(id, 10);
+        if (isNaN(tourId)) {
+            return res.status(400).json({
+                success: false,
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
+            });
+        }
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_edit', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Bearbeiten von Touren'
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionEdit')
+            });
+        }
+        // Lade Tour mit imageUrl
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: { imageUrl: true, organizationId: true }
+        });
+        if (!tour) {
+            return res.status(404).json({
+                success: false,
+                message: (0, translations_1.getTourErrorText)(language, 'tourNotFound')
+            });
+        }
+        // Prüfe Organization-Isolation
+        const organizationId = req.organizationId;
+        if (tour.organizationId !== organizationId) {
+            return res.status(403).json({
+                success: false,
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionForTour')
+            });
+        }
+        // Lösche Bilddatei (falls vorhanden)
+        if (tour.imageUrl) {
+            const filename = path_1.default.basename(tour.imageUrl);
+            const imagePath = path_1.default.join(TOURS_UPLOAD_DIR, filename);
+            if (fs_1.default.existsSync(imagePath)) {
+                fs_1.default.unlinkSync(imagePath);
+                logger_1.logger.log(`[deleteTourImage] Bilddatei gelöscht: ${imagePath}`);
+            }
+        }
+        // Setze imageUrl auf null
+        yield prisma_1.prisma.tour.update({
+            where: { id: tourId },
+            data: { imageUrl: null }
+        });
+        res.json({
+            success: true,
+            message: (0, translations_1.getTourErrorText)(language, 'imageDeleted')
+        });
+    }
+    catch (error) {
+        logger_1.logger.error('[deleteTourImage] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
+        res.status(500).json({
+            success: false,
+            message: (0, translations_1.getTourErrorText)(language, 'deleteError')
+        });
+    }
+});
+exports.deleteTourImage = deleteTourImage;
+// PUT /api/tours/:id - Tour aktualisieren
+const updateTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
+        // Berechtigung prüfen
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        if (!hasPermission) {
+            return res.status(403).json({
+                success: false,
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionEdit')
             });
         }
         const { id } = req.params;
@@ -655,7 +771,7 @@ const updateTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (isNaN(tourId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
             });
         }
         // Prüfe ob Tour existiert
@@ -665,7 +781,7 @@ const updateTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (!existingTour) {
             return res.status(404).json({
                 success: false,
-                message: 'Tour nicht gefunden'
+                message: (0, translations_1.getTourErrorText)(language, 'tourNotFound')
             });
         }
         const { title, description, type, isActive, duration, maxParticipants, minParticipants, price, currency, location, meetingPoint, includes, excludes, requirements, totalCommission, totalCommissionPercent, sellerCommissionPercent, sellerCommissionFixed, externalProviderId, externalBookingUrl, availableFrom, availableTo, recurringSchedule } = req.body;
@@ -673,14 +789,14 @@ const updateTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (maxParticipants !== undefined && minParticipants !== undefined && maxParticipants < minParticipants) {
             return res.status(400).json({
                 success: false,
-                message: 'Maximale Teilnehmeranzahl muss >= minimale Teilnehmeranzahl sein'
+                message: (0, translations_1.getTourErrorText)(language, 'maxParticipantsMin')
             });
         }
         // Validierung: availableFrom <= availableTo
         if (availableFrom && availableTo && new Date(availableFrom) > new Date(availableTo)) {
             return res.status(400).json({
                 success: false,
-                message: 'Verfügbar ab muss <= verfügbar bis sein'
+                message: (0, translations_1.getTourErrorText)(language, 'availableFromTo')
             });
         }
         const updateData = {};
@@ -750,9 +866,11 @@ const updateTour = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
     catch (error) {
         logger_1.logger.error('[updateTour] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Aktualisieren der Tour'
+            message: (0, translations_1.getTourErrorText)(language, 'updateError')
         });
     }
 });
@@ -760,12 +878,14 @@ exports.updateTour = updateTour;
 // PUT /api/tours/:id/toggle-active - Tour aktiv/inaktiv setzen (Soft Delete)
 const toggleTourActive = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_delete', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_delete', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Löschen von Touren'
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionDelete')
             });
         }
         const { id } = req.params;
@@ -774,13 +894,13 @@ const toggleTourActive = (req, res) => __awaiter(void 0, void 0, void 0, functio
         if (isNaN(tourId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
             });
         }
         if (typeof isActive !== 'boolean') {
             return res.status(400).json({
                 success: false,
-                message: 'isActive muss ein Boolean sein'
+                message: (0, translations_1.getTourErrorText)(language, 'isActiveMustBeBoolean')
             });
         }
         const tour = yield prisma_1.prisma.tour.update({
@@ -803,9 +923,11 @@ const toggleTourActive = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
     catch (error) {
         logger_1.logger.error('[toggleTourActive] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Aktualisieren der Tour'
+            message: (0, translations_1.getTourErrorText)(language, 'updateError')
         });
     }
 });
@@ -813,12 +935,14 @@ exports.toggleTourActive = toggleTourActive;
 // GET /api/tours/:id/bookings - Buchungen einer Tour
 const getTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         const { id } = req.params;
         const tourId = parseInt(id, 10);
         if (isNaN(tourId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
             });
         }
         const status = req.query.status;
@@ -862,9 +986,11 @@ const getTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
     catch (error) {
         logger_1.logger.error('[getTourBookings] Fehler:', error);
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden der Buchungen'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'loadError')
         });
     }
 });
@@ -946,49 +1072,66 @@ const exportTours = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
     catch (error) {
         logger_1.logger.error('[exportTours] Fehler:', error);
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Exportieren der Touren'
+            message: (0, translations_1.getTourErrorText)(language, 'loadError')
         });
     }
 });
 exports.exportTours = exportTours;
 // POST /api/tours/:id/generate-images - Startet Bildgenerierung
 const generateTourImages = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c;
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         const { id } = req.params;
         const tourId = parseInt(id, 10);
         if (isNaN(tourId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
             });
         }
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_edit', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_edit', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Generieren von Tour-Bildern'
-            });
-        }
-        // Prüfe ob Tour existiert
-        const tour = yield prisma_1.prisma.tour.findUnique({
-            where: { id: tourId },
-            select: { id: true, title: true, description: true, organizationId: true }
-        });
-        if (!tour) {
-            return res.status(404).json({
-                success: false,
-                message: 'Tour nicht gefunden'
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionEdit')
             });
         }
         // Prüfe Organization-Isolation
         const organizationId = req.organizationId;
+        // Prüfe ob Tour existiert und lade Organisation mit Logo
+        const tour = yield prisma_1.prisma.tour.findUnique({
+            where: { id: tourId },
+            select: {
+                id: true,
+                title: true,
+                description: true,
+                organizationId: true,
+                organization: {
+                    select: {
+                        id: true,
+                        logo: true,
+                        displayName: true
+                    }
+                }
+            }
+        });
+        if (!tour) {
+            return res.status(404).json({
+                success: false,
+                message: (0, translations_1.getTourErrorText)(language, 'tourNotFound')
+            });
+        }
         if (tour.organizationId !== organizationId) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung für diese Tour'
+                message: (0, translations_1.getTourErrorText)(language, 'noPermissionForTour')
             });
         }
         // Prüfe ob Queue verfügbar ist
@@ -998,11 +1141,32 @@ const generateTourImages = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (!queueAvailable || !queueEnabled) {
             logger_1.logger.warn(`[generateTourImages] Queue nicht verfügbar, verwende synchronen Modus für Tour ${tourId}`);
             try {
+                // Extrahiere Branding aus Logo (falls vorhanden)
+                let branding = undefined;
+                if ((_a = tour.organization) === null || _a === void 0 ? void 0 : _a.logo) {
+                    try {
+                        logger_1.logger.log(`[generateTourImages] Extrahiere Branding aus Logo für Organisation ${tour.organization.displayName}`);
+                        branding = yield organizationBrandingService_1.OrganizationBrandingService.extractBrandingFromLogo(tour.organization.logo);
+                        logger_1.logger.log(`[generateTourImages] Branding extrahiert:`, {
+                            hasColors: !!branding.colors.primary,
+                            hasFonts: !!branding.fonts,
+                            hasStyle: !!branding.style
+                        });
+                    }
+                    catch (error) {
+                        logger_1.logger.warn(`[generateTourImages] Fehler bei Branding-Extraktion, verwende Standard:`, error instanceof Error ? error.message : String(error));
+                        // Fehler ist nicht kritisch, verwende Standard-Branding (undefined)
+                    }
+                }
+                else {
+                    logger_1.logger.log(`[generateTourImages] Kein Logo vorhanden für Organisation ${((_b = tour.organization) === null || _b === void 0 ? void 0 : _b.displayName) || organizationId}`);
+                }
                 // Synchroner Modus: Direkt generieren und hochladen
-                const generatedImages = yield geminiImageService_1.GeminiImageService.generateTourImages(tour.id, tour.title || '', tour.description || '', process.env.GEMINI_API_KEY);
-                // Lade Hauptbild hoch
-                if (generatedImages.mainImage && fs_1.default.existsSync(generatedImages.mainImage)) {
-                    yield tourImageUploadService_1.TourImageUploadService.uploadImageDirectly(tourId, generatedImages.mainImage);
+                const generatedImages = yield geminiImageService_1.GeminiImageService.generateTourImages(tour.id, tour.title || '', tour.description || '', process.env.GEMINI_API_KEY, branding, ((_c = tour.organization) === null || _c === void 0 ? void 0 : _c.logo) || undefined);
+                // Lade Flyer als Hauptbild hoch (der Flyer ist das Hauptbild)
+                if (generatedImages.flyer && fs_1.default.existsSync(generatedImages.flyer)) {
+                    yield tourImageUploadService_1.TourImageUploadService.uploadImageDirectly(tourId, generatedImages.flyer);
+                    logger_1.logger.log(`[generateTourImages] Flyer als Hauptbild hochgeladen: ${generatedImages.flyer}`);
                 }
                 // Lade Galerie-Bilder hoch
                 for (const galleryImage of generatedImages.galleryImages) {
@@ -1010,19 +1174,19 @@ const generateTourImages = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         yield tourImageUploadService_1.TourImageUploadService.uploadGalleryImageDirectly(tourId, galleryImage);
                     }
                 }
-                // Cleanup temporäre Dateien
+                // Cleanup temporäre Dateien (Galerie-Bilder, Flyer bleibt als imageUrl)
                 cleanupTemporaryFiles(generatedImages);
                 return res.json({
                     success: true,
                     mode: 'synchronous',
-                    message: 'Bilder erfolgreich generiert (synchroner Modus)'
+                    message: (0, translations_1.getTourErrorText)(language, 'imagesGeneratedSuccess')
                 });
             }
             catch (error) {
                 logger_1.logger.error(`[generateTourImages] Fehler im synchronen Modus:`, error);
                 return res.status(500).json({
                     success: false,
-                    message: error.message || 'Fehler bei Bildgenerierung'
+                    message: (error instanceof Error ? error.message : undefined) || (0, translations_1.getTourErrorText)(language, 'imageGenerationError')
                 });
             }
         }
@@ -1040,14 +1204,17 @@ const generateTourImages = (req, res) => __awaiter(void 0, void 0, void 0, funct
             success: true,
             mode: 'asynchronous',
             jobId: job.id,
-            message: 'Bildgenerierung gestartet'
+            message: (0, translations_1.getTourErrorText)(language, 'imageGenerationStarted')
         });
     }
     catch (error) {
         logger_1.logger.error('[generateTourImages] Fehler:', error);
+        // Language im catch-Block holen, falls nicht im try-Block definiert
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: error.message || 'Fehler beim Starten der Bildgenerierung'
+            message: (error instanceof Error ? error.message : undefined) || (0, translations_1.getTourErrorText)(language, 'imageGenerationError')
         });
     }
 });
@@ -1055,19 +1222,21 @@ exports.generateTourImages = generateTourImages;
 // GET /api/tours/:id/generate-images/status - Prüft Status der Bildgenerierung
 const getTourImageGenerationStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         const { id } = req.params;
         const tourId = parseInt(id, 10);
         if (isNaN(tourId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Tour-ID'
+                message: (0, translations_1.getTourErrorText)(language, 'invalidTourId')
             });
         }
         const jobId = req.query.jobId;
         if (!jobId) {
             return res.status(400).json({
                 success: false,
-                message: 'Job-ID erforderlich'
+                message: (0, translations_1.getTourErrorText)(language, 'jobIdRequired')
             });
         }
         const queue = (0, queueService_1.getImageGenerationQueue)();
@@ -1075,7 +1244,7 @@ const getTourImageGenerationStatus = (req, res) => __awaiter(void 0, void 0, voi
         if (!job) {
             return res.status(404).json({
                 success: false,
-                message: 'Job nicht gefunden'
+                message: (0, translations_1.getTourErrorText)(language, 'jobNotFound')
             });
         }
         const state = yield job.getState();
@@ -1099,9 +1268,12 @@ const getTourImageGenerationStatus = (req, res) => __awaiter(void 0, void 0, voi
     }
     catch (error) {
         logger_1.logger.error('[getTourImageGenerationStatus] Fehler:', error);
+        // Language im catch-Block holen, falls nicht im try-Block definiert
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: error.message || 'Fehler beim Abrufen des Status'
+            message: (error instanceof Error ? error.message : undefined) || (0, translations_1.getTourErrorText)(language, 'statusError')
         });
     }
 });
@@ -1109,17 +1281,15 @@ exports.getTourImageGenerationStatus = getTourImageGenerationStatus;
 // Hilfsfunktion: Bereinigt temporäre Dateien
 function cleanupTemporaryFiles(images) {
     try {
-        if (images.mainImage && fs_1.default.existsSync(images.mainImage)) {
-            fs_1.default.unlinkSync(images.mainImage);
-        }
+        // Lösche Galerie-Bilder (werden bereits hochgeladen)
         images.galleryImages.forEach((img) => {
             if (fs_1.default.existsSync(img)) {
                 fs_1.default.unlinkSync(img);
+                logger_1.logger.log(`[cleanupTemporaryFiles] Temporäre Datei gelöscht: ${img}`);
             }
         });
-        if (images.flyer && fs_1.default.existsSync(images.flyer)) {
-            fs_1.default.unlinkSync(images.flyer);
-        }
+        // Flyer wird NICHT gelöscht, da er bereits als imageUrl hochgeladen wurde
+        // Die Datei bleibt im uploads-Verzeichnis und wird von der Tour referenziert
     }
     catch (error) {
         logger_1.logger.error('[cleanupTemporaryFiles] Fehler:', error);

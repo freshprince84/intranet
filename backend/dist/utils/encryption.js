@@ -359,34 +359,15 @@ const decryptBranchApiSettings = (settings) => {
             }
             catch (error) {
                 logger_1.logger.error(`Error decrypting ${field}:`, error);
-                // Bei Fehler: Feld bleibt wie es ist
+                // Bei Fehler: Feld bleibt wie es ist (verschlüsselter String bleibt erhalten)
+                // WICHTIG: Der verschlüsselte Wert wird zurückgegeben, damit Frontend ihn anzeigen kann
             }
         }
     }
     // 2. NEU: Verschachtelte Settings entschlüsseln
-    // Bold Payment
-    if (decrypted.boldPayment && typeof decrypted.boldPayment === 'object') {
-        const boldPaymentUpdates = {};
-        if (decrypted.boldPayment.apiKey && typeof decrypted.boldPayment.apiKey === 'string' && decrypted.boldPayment.apiKey.includes(':')) {
-            try {
-                boldPaymentUpdates.apiKey = (0, exports.decryptSecret)(decrypted.boldPayment.apiKey);
-            }
-            catch (error) {
-                logger_1.logger.error('Error decrypting boldPayment.apiKey:', error);
-            }
-        }
-        if (decrypted.boldPayment.merchantId && typeof decrypted.boldPayment.merchantId === 'string' && decrypted.boldPayment.merchantId.includes(':')) {
-            try {
-                boldPaymentUpdates.merchantId = (0, exports.decryptSecret)(decrypted.boldPayment.merchantId);
-            }
-            catch (error) {
-                logger_1.logger.error('Error decrypting boldPayment.merchantId:', error);
-            }
-        }
-        if (Object.keys(boldPaymentUpdates).length > 0) {
-            decrypted.boldPayment = Object.assign(Object.assign({}, decrypted.boldPayment), boldPaymentUpdates);
-        }
-    }
+    // Bold Payment - direkt auf oberster Ebene (nicht verschachtelt in boldPayment)
+    // Die Felder sind direkt in decrypted: apiKey, merchantId, environment
+    // (keine verschachtelte Struktur wie bei anderen Settings)
     // LobbyPMS
     if (decrypted.lobbyPms && typeof decrypted.lobbyPms === 'object') {
         if (decrypted.lobbyPms.apiKey && typeof decrypted.lobbyPms.apiKey === 'string' && decrypted.lobbyPms.apiKey.includes(':')) {

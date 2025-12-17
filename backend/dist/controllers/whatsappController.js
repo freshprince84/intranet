@@ -14,6 +14,8 @@ const whatsappMessageParser_1 = require("../services/whatsappMessageParser");
 const whatsappReservationService_1 = require("../services/whatsappReservationService");
 const whatsappMessageHandler_1 = require("../services/whatsappMessageHandler");
 const whatsappService_1 = require("../services/whatsappService");
+const whatsappAiService_1 = require("../services/whatsappAiService");
+const languageDetectionService_1 = require("../services/languageDetectionService");
 const prisma_1 = require("../utils/prisma");
 const logger_1 = require("../utils/logger");
 /**
@@ -200,16 +202,100 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     const response = yield whatsappMessageHandler_1.WhatsAppMessageHandler.handleIncomingMessage(fromNumber, messageText, branchId, mediaUrl, groupId || undefined);
                     logger_1.logger.log('[WhatsApp Webhook] Antwort generiert:', response.substring(0, 100) + '...');
                     logger_1.logger.log('[WhatsApp Webhook] Vollständige Antwort:', response);
+                    logger_1.logger.log('[WhatsApp Webhook] Antwort-Länge:', response.length);
+                    logger_1.logger.log('[WhatsApp Webhook] User-Nachricht:', messageText);
                     // 4. Sende Antwort
                     logger_1.logger.log('[WhatsApp Webhook] Erstelle WhatsApp Service für Branch', branchId);
                     const whatsappService = yield whatsappService_1.WhatsAppService.getServiceForBranch(branchId);
                     logger_1.logger.log('[WhatsApp Webhook] Sende Antwort an', fromNumber, isGroupMessage ? `(Gruppe: ${groupId})` : '');
-                    // Für Gruppen: Sende mit group_id, für Einzel-Chats: normale Nachricht
-                    if (isGroupMessage && groupId) {
-                        yield whatsappService.sendMessage(fromNumber, response, undefined, groupId);
+                    // Extrahiere Bildreferenzen aus AI-Antwort (Markdown-Format: ![alt](url))
+                    const imageMatches = Array.from(response.matchAll(/!\[(.*?)\]\((.*?)\)/g));
+                    logger_1.logger.log(`[WhatsApp Webhook] Bildreferenzen gefunden: ${imageMatches.length}`, imageMatches.map(m => ({ alt: m[1], url: m[2] })));
+                    if (imageMatches.length > 0) {
+                        logger_1.logger.log(`[WhatsApp Webhook] ${imageMatches.length} Bildreferenzen gefunden, sende nur Bilder + Standard-Text`);
+                        // Wenn Bilder vorhanden sind, ignoriere ALLEN Text von der AI und sende nur Bilder + Standard-Text
+                        const baseUrl = process.env.SERVER_URL || process.env.API_URL || 'https://65.109.228.106.nip.io';
+                        // Sprache erkennen: Priorität 1 = User-Nachricht, Priorität 2 = Telefonnummer
+                        // WICHTIG: Prüfe auch die AI-Antwort, falls User-Nachricht nicht eindeutig ist
+                        let detectedLanguage = messageText
+                            ? whatsappAiService_1.WhatsAppAiService.detectLanguageFromMessage(messageText)
+                            : null;
+                        // Fallback: Wenn keine Sprache aus User-Nachricht erkannt, prüfe AI-Antwort
+                        if (!detectedLanguage && response) {
+                            detectedLanguage = whatsappAiService_1.WhatsAppAiService.detectLanguageFromMessage(response);
+                        }
+                        const phoneLanguage = languageDetectionService_1.LanguageDetectionService.detectLanguageFromPhoneNumber(fromNumber);
+                        const language = detectedLanguage || phoneLanguage;
+                        logger_1.logger.log(`[WhatsApp Webhook] Sprache erkannt: ${language} (aus User-Nachricht: ${messageText ? whatsappAiService_1.WhatsAppAiService.detectLanguageFromMessage(messageText) : 'keine'}, aus AI-Antwort: ${response ? whatsappAiService_1.WhatsAppAiService.detectLanguageFromMessage(response) : 'keine'}, aus Telefonnummer: ${phoneLanguage})`);
+                        // Sende ALLE Bilder zuerst SEQUENZIELL (ohne Caption, um Text zu vermeiden)
+                        // WICHTIG: Sequenziell senden, damit sie in der richtigen Reihenfolge ankommen
+                        for (const match of imageMatches) {
+                            const imageUrl = match[2]; // URL aus Markdown
+                            // Konvertiere relative URLs zu absoluten HTTPS-URLs
+                            let publicImageUrl = imageUrl;
+                            if (imageUrl.startsWith('/uploads/tours/')) {
+                                // Konvertiere /uploads/tours/tour-1-main-xxx.png zu /api/tours/{id}/image
+                                const filename = imageUrl.split('/').pop() || '';
+                                const tourIdMatch = filename.match(/tour-(\d+)-main-/);
+                                if (tourIdMatch) {
+                                    const tourId = tourIdMatch[1];
+                                    publicImageUrl = `${baseUrl}/api/tours/${tourId}/image`;
+                                }
+                                else {
+                                    // Fallback: direkte URL
+                                    publicImageUrl = `${baseUrl}${imageUrl}`;
+                                }
+                            }
+                            else if (imageUrl.startsWith('/api/tours/')) {
+                                // Bereits API-URL, füge nur Base-URL hinzu
+                                publicImageUrl = `${baseUrl}${imageUrl}`;
+                            }
+                            else if (!imageUrl.startsWith('http')) {
+                                // Relative URL ohne /uploads
+                                publicImageUrl = `${baseUrl}${imageUrl}`;
+                            }
+                            try {
+                                logger_1.logger.log(`[WhatsApp Webhook] Sende Bild ${imageMatches.indexOf(match) + 1}/${imageMatches.length}: ${publicImageUrl}`);
+                                // KEINE Caption, um Text zu vermeiden
+                                yield whatsappService.sendImage(fromNumber, publicImageUrl);
+                                // Längere Pause zwischen Bildern, damit WhatsApp sie in der richtigen Reihenfolge verarbeitet
+                                // WICHTIG: Mindestens 1 Sekunde, damit WhatsApp die Nachrichten in der richtigen Reihenfolge anzeigt
+                                yield new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                            catch (imageError) {
+                                logger_1.logger.error(`[WhatsApp Webhook] Fehler beim Senden des Bildes:`, imageError);
+                                // Weiter mit nächstem Bild
+                            }
+                        }
+                        // Zusätzliche Pause nach ALLEN Bildern, bevor Text gesendet wird
+                        // WICHTIG: Sicherstellen, dass alle Bilder verarbeitet sind
+                        // Längere Pause (2 Sekunden), damit WhatsApp alle Bilder verarbeitet hat
+                        logger_1.logger.log(`[WhatsApp Webhook] Alle ${imageMatches.length} Bilder gesendet, warte 2 Sekunden, dann sende Text`);
+                        yield new Promise(resolve => setTimeout(resolve, 2000));
+                        // Nach ALLEN Bildern: Sende IMMER nur den Standard-Text (ignoriere AI-Text komplett)
+                        const standardTexts = {
+                            es: 'Si estás interesado en alguna de estas tours, ¡házmelo saber!',
+                            de: 'Wenn du an einer dieser Touren interessiert bist, lass es mich bitte wissen!',
+                            en: 'If you are interested in any of these tours, please let me know!'
+                        };
+                        const finalTextMessage = standardTexts[language] || standardTexts['es'];
+                        logger_1.logger.log(`[WhatsApp Webhook] Sende Text-Nachricht (${language}): ${finalTextMessage}`);
+                        if (isGroupMessage && groupId) {
+                            yield whatsappService.sendMessage(fromNumber, finalTextMessage, undefined, groupId);
+                        }
+                        else {
+                            yield whatsappService.sendMessage(fromNumber, finalTextMessage);
+                        }
+                        logger_1.logger.log(`[WhatsApp Webhook] ✅ Text-Nachricht gesendet`);
                     }
                     else {
-                        yield whatsappService.sendMessage(fromNumber, response);
+                        // Keine Bilder, sende nur Text
+                        if (isGroupMessage && groupId) {
+                            yield whatsappService.sendMessage(fromNumber, response, undefined, groupId);
+                        }
+                        else {
+                            yield whatsappService.sendMessage(fromNumber, response);
+                        }
                     }
                     logger_1.logger.log('[WhatsApp Webhook] ✅ Antwort erfolgreich gesendet');
                     return res.status(200).json({ success: true, message: 'Nachricht verarbeitet und Antwort gesendet' });

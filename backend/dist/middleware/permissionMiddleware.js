@@ -23,27 +23,35 @@ const logger_1 = require("../utils/logger");
 const checkPermission = (entity, requiredAccess, entityType = 'page') => {
     return (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
         try {
+            // Nur für Rate Shopping Route loggen (um Log-Spam zu vermeiden)
+            if (req.path.includes('rate-shopping')) {
+                logger_1.logger.warn(`[checkPermission] 🔍 Prüfe Permission: Entity=${entity}, EntityType=${entityType}, RequiredAccess=${requiredAccess}, Path=${req.path}`);
+            }
             const userId = parseInt(req.userId, 10);
             const roleId = parseInt(req.roleId, 10);
             if (isNaN(userId) || isNaN(roleId)) {
                 logger_1.logger.error(`[checkPermission] ❌ Authentifizierung fehlgeschlagen: userId=${req.userId}, roleId=${req.roleId}`);
                 return res.status(401).json({ message: 'Nicht authentifiziert' });
             }
+            if (req.path.includes('rate-shopping')) {
+                logger_1.logger.warn(`[checkPermission] ✅ Authentifiziert: UserId=${userId}, RoleId=${roleId}`);
+            }
             // Prüfe, ob der Benutzer die erforderliche Berechtigung hat
             const hasAccess = yield (0, exports.checkUserPermission)(userId, roleId, entity, requiredAccess, entityType);
             if (!hasAccess) {
                 logger_1.logger.error(`[checkPermission] ❌ VERWEIGERT: Entity=${entity}, EntityType=${entityType}, UserId=${userId}, RoleId=${roleId}`);
-            }
-            if (!hasAccess) {
                 return res.status(403).json({
                     message: 'Zugriff verweigert',
                     details: `Keine ausreichenden Berechtigungen für ${entityType} ${entity}`
                 });
             }
+            if (req.path.includes('rate-shopping')) {
+                logger_1.logger.warn(`[checkPermission] ✅ Permission erteilt für Entity=${entity}, EntityType=${entityType}`);
+            }
             next();
         }
         catch (error) {
-            logger_1.logger.error('Fehler bei der Berechtigungsprüfung:', error);
+            logger_1.logger.error('[checkPermission] ❌ Fehler bei der Berechtigungsprüfung:', error);
             res.status(500).json({ message: 'Interner Server-Fehler' });
         }
     });

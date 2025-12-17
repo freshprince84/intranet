@@ -16,6 +16,8 @@ const date_fns_1 = require("date-fns");
 const prisma_1 = require("../utils/prisma");
 const logger_1 = require("../utils/logger");
 const dateHelpers_1 = require("../utils/dateHelpers");
+const filterToPrisma_1 = require("../utils/filterToPrisma");
+const filterCache_1 = require("../services/filterCache");
 // To-Dos pro User für ein bestimmtes Datum
 const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -281,78 +283,225 @@ const getRequestsByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0,
     }
 });
 exports.getRequestsByUserForDate = getRequestsByUserForDate;
-// Alle To-Dos chronologisch für ein Datum (Tab 2)
-const getTodosChronological = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { date, branchId, userId } = req.query;
-        const currentUserId = req.userId;
-        if (!date || typeof date !== 'string') {
-            return res.status(400).json({ error: 'Datum erforderlich' });
+/**
+ * ✅ PHASE 3: Extrahiert und konvertiert Zeitraum-Filter für Analytics-Tabellen
+ *
+ * Für Analytics-Tabellen muss die Filter-Bedingung für "time" nicht nur auf `createdAt` filtern,
+ * sondern auch auf `deletedAt` und `statusHistory.changedAt`.
+ *
+ * @param filterWhereClause - Die konvertierte Prisma Where-Klausel
+ * @returns Objekt mit timeFilter (OR-Bedingung) und remainingFilter (ohne createdAt-Bedingung)
+ */
+function extractAndConvertTimeFilterForAnalytics(filterWhereClause) {
+    if (!filterWhereClause || typeof filterWhereClause !== 'object') {
+        return { timeFilter: null, remainingFilter: filterWhereClause || {} };
+    }
+    // Rekursive Funktion zum Extrahieren von createdAt-Bedingungen
+    const extractCreatedAtCondition = (clause) => {
+        if (!clause || typeof clause !== 'object') {
+            return null;
         }
-        // Datenisolation
-        const taskFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
-        const selectedDate = (0, date_fns_1.parseISO)(date);
-        const start = (0, date_fns_1.startOfDay)(selectedDate);
-        const end = (0, date_fns_1.endOfDay)(selectedDate);
-        // Kombiniere taskFilter mit Zeitfilter
-        const where = {
-            AND: [
-                taskFilter,
-                {
-                    OR: [
-                        {
-                            updatedAt: {
-                                gte: start,
-                                lte: end
-                            }
-                        },
-                        {
-                            createdAt: {
-                                gte: start,
-                                lte: end
-                            }
+        // Direkte createdAt-Bedingung mit gte/lte
+        if (clause.createdAt && typeof clause.createdAt === 'object') {
+            const createdAt = clause.createdAt;
+            if (createdAt.gte || createdAt.lte) {
+                return {
+                    gte: createdAt.gte,
+                    lte: createdAt.lte
+                };
+            }
+        }
+        // Rekursiv in AND/OR-Arrays suchen
+        if (Array.isArray(clause.AND)) {
+            for (const item of clause.AND) {
+                const result = extractCreatedAtCondition(item);
+                if (result) {
+                    return result;
+                }
+            }
+        }
+        if (Array.isArray(clause.OR)) {
+            for (const item of clause.OR) {
+                const result = extractCreatedAtCondition(item);
+                if (result) {
+                    return result;
+                }
+            }
+        }
+        return null;
+    };
+    // Rekursive Funktion zum Entfernen von createdAt-Bedingungen
+    const removeCreatedAtCondition = (clause) => {
+        if (!clause || typeof clause !== 'object') {
+            return clause;
+        }
+        // Neues Objekt für bereinigte Klausel
+        const cleaned = {};
+        for (const [key, value] of Object.entries(clause)) {
+            // Ignoriere createdAt direkt
+            if (key === 'createdAt') {
+                continue;
+            }
+            // Handle AND/OR Arrays
+            if (key === 'AND' || key === 'OR') {
+                if (Array.isArray(value)) {
+                    const cleanedArray = value
+                        .map(item => removeCreatedAtCondition(item))
+                        .filter(item => {
+                        // Entferne leere Objekte
+                        if (!item || typeof item !== 'object') {
+                            return true;
                         }
-                    ]
+                        return Object.keys(item).length > 0;
+                    });
+                    if (cleanedArray.length > 0) {
+                        cleaned[key] = cleanedArray.length === 1 ? cleanedArray[0] : cleanedArray;
+                    }
+                }
+                else {
+                    cleaned[key] = removeCreatedAtCondition(value);
+                }
+                continue;
+            }
+            // Rekursiv für verschachtelte Objekte
+            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                const cleanedValue = removeCreatedAtCondition(value);
+                if (cleanedValue && Object.keys(cleanedValue).length > 0) {
+                    cleaned[key] = cleanedValue;
+                }
+            }
+            else {
+                // Einfache Werte beibehalten
+                cleaned[key] = value;
+            }
+        }
+        return Object.keys(cleaned).length > 0 ? cleaned : {};
+    };
+    // Extrahiere createdAt-Bedingung
+    const createdAtCondition = extractCreatedAtCondition(filterWhereClause);
+    if (createdAtCondition && (createdAtCondition.gte || createdAtCondition.lte)) {
+        // Erstelle OR-Bedingung für Analytics
+        const timeFilter = {
+            OR: [
+                {
+                    createdAt: Object.assign(Object.assign({}, (createdAtCondition.gte && { gte: createdAtCondition.gte })), (createdAtCondition.lte && { lte: createdAtCondition.lte }))
+                },
+                {
+                    deletedAt: Object.assign(Object.assign({}, (createdAtCondition.gte && { gte: createdAtCondition.gte })), (createdAtCondition.lte && { lte: createdAtCondition.lte }))
+                },
+                {
+                    statusHistory: {
+                        some: {
+                            changedAt: Object.assign(Object.assign({}, (createdAtCondition.gte && { gte: createdAtCondition.gte })), (createdAtCondition.lte && { lte: createdAtCondition.lte }))
+                        }
+                    }
                 }
             ]
         };
-        if (branchId) {
-            where.AND.push({
-                branchId: parseInt(branchId, 10)
-            });
+        // Entferne createdAt aus filterWhereClause
+        const remainingFilter = removeCreatedAtCondition(filterWhereClause);
+        return { timeFilter, remainingFilter };
+    }
+    // Keine createdAt-Bedingung gefunden
+    return { timeFilter: null, remainingFilter: filterWhereClause };
+}
+// Alle To-Dos chronologisch für ein Datum oder Datumsbereich (Tab 2)
+const getTodosChronological = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { date, period, startDate, endDate } = req.query;
+        // Filter-Parameter aus Query lesen
+        const filterId = req.query.filterId;
+        const filterConditions = req.query.filterConditions
+            ? JSON.parse(req.query.filterConditions)
+            : undefined;
+        // Datenisolation
+        const taskFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
+        // Unterstütze sowohl einzelnes Datum als auch Datumsbereich
+        let start;
+        let end;
+        if (period && (period === 'custom' || period === 'week' || period === 'month' || period === 'year' || period === 'today')) {
+            // Neues Format: Datumsbereich
+            const dateRange = (0, dateHelpers_1.getDateRange)(period, startDate, endDate);
+            start = dateRange.start;
+            end = dateRange.end;
         }
-        if (userId) {
-            // Wenn userId gefiltert wird, überschreibe taskFilter
-            where.AND = [
+        else if (date && typeof date === 'string') {
+            // Altes Format: Einzelnes Datum (Rückwärtskompatibilität)
+            const selectedDate = (0, date_fns_1.parseISO)(date);
+            start = (0, date_fns_1.startOfDay)(selectedDate);
+            end = (0, date_fns_1.endOfDay)(selectedDate);
+        }
+        else {
+            return res.status(400).json({ error: 'Datum oder Datumsbereich erforderlich' });
+        }
+        // Filter-Bedingungen konvertieren (falls vorhanden)
+        let filterWhereClause = {};
+        if (filterId) {
+            // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
+            try {
+                const filterData = yield filterCache_1.filterCache.get(parseInt(filterId, 10));
+                if (filterData) {
+                    const conditions = JSON.parse(filterData.conditions);
+                    const operators = JSON.parse(filterData.operators);
+                    filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'task', req);
+                    // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                    filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'task');
+                }
+                else {
+                    logger_1.logger.warn(`[getTodosChronological] Filter ${filterId} nicht gefunden`);
+                }
+            }
+            catch (filterError) {
+                logger_1.logger.error(`[getTodosChronological] Fehler beim Laden von Filter ${filterId}:`, filterError);
+                // Fallback: Versuche ohne Filter weiter
+            }
+        }
+        else if (filterConditions) {
+            // Direkte Filter-Bedingungen
+            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'task', req);
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'task');
+        }
+        // ✅ PHASE 4: Extrahiere und konvertiere Zeitraum-Filter für Analytics
+        const { timeFilter, remainingFilter } = extractAndConvertTimeFilterForAnalytics(filterWhereClause);
+        // Kombiniere taskFilter mit Zeitfilter und Filter-Bedingungen
+        // Zeige nur Tasks, die im Zeitraum erstellt, Status-Änderungen hatten oder gelöscht wurden
+        // NICHT: Tasks, die nur andere Updates hatten (z.B. Titel geändert)
+        const whereArray = [taskFilter];
+        // ✅ FIX: Nur remainingFilter hinzufügen, wenn es nicht leer ist (Object.keys().length > 0)
+        if (remainingFilter && typeof remainingFilter === 'object' && Object.keys(remainingFilter).length > 0) {
+            whereArray.push(remainingFilter);
+        }
+        // Verwende timeFilter falls vorhanden, sonst Fallback auf period/date
+        whereArray.push(timeFilter || {
+            OR: [
                 {
-                    OR: [
-                        { responsibleId: parseInt(userId, 10) },
-                        { qualityControlId: parseInt(userId, 10) }
-                    ]
+                    createdAt: {
+                        gte: start,
+                        lte: end
+                    }
                 },
                 {
-                    OR: [
-                        {
-                            updatedAt: {
-                                gte: start,
-                                lte: end
-                            }
-                        },
-                        {
-                            createdAt: {
+                    deletedAt: {
+                        gte: start,
+                        lte: end
+                    }
+                },
+                {
+                    statusHistory: {
+                        some: {
+                            changedAt: {
                                 gte: start,
                                 lte: end
                             }
                         }
-                    ]
+                    }
                 }
-            ];
-            if (branchId) {
-                where.AND.push({
-                    branchId: parseInt(branchId, 10)
-                });
-            }
-        }
+            ]
+        });
+        const where = {
+            AND: whereArray.filter(Boolean) // Entferne null/undefined Werte
+        };
         const tasks = yield prisma_1.prisma.task.findMany({
             where,
             include: {
@@ -376,6 +525,22 @@ const getTodosChronological = (req, res) => __awaiter(void 0, void 0, void 0, fu
                     select: {
                         id: true,
                         name: true
+                    }
+                },
+                createdBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true
+                    }
+                },
+                deletedBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true
                     }
                 },
                 // ✅ PERFORMANCE: Nur Count, KEINE Binary-Daten
@@ -416,58 +581,103 @@ const getTodosChronological = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.getTodosChronological = getTodosChronological;
-// Alle Requests chronologisch für ein Datum (Tab 3)
+// Alle Requests chronologisch für ein Datum oder Datumsbereich (Tab 3)
 const getRequestsChronological = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { date, branchId, userId } = req.query;
-        const currentUserId = req.userId;
-        if (!date || typeof date !== 'string') {
-            return res.status(400).json({ error: 'Datum erforderlich' });
-        }
+        const { date, period, startDate, endDate } = req.query;
+        // Filter-Parameter aus Query lesen
+        const filterId = req.query.filterId;
+        const filterConditions = req.query.filterConditions
+            ? JSON.parse(req.query.filterConditions)
+            : undefined;
         // Datenisolation
         const requestFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
-        const selectedDate = (0, date_fns_1.parseISO)(date);
-        const start = (0, date_fns_1.startOfDay)(selectedDate);
-        const end = (0, date_fns_1.endOfDay)(selectedDate);
-        // Kombiniere requestFilter mit Zeitfilter
-        const where = {
-            AND: [
-                requestFilter,
+        // Unterstütze sowohl einzelnes Datum als auch Datumsbereich
+        let start;
+        let end;
+        if (period && (period === 'custom' || period === 'week' || period === 'month' || period === 'year' || period === 'today')) {
+            // Neues Format: Datumsbereich
+            const dateRange = (0, dateHelpers_1.getDateRange)(period, startDate, endDate);
+            start = dateRange.start;
+            end = dateRange.end;
+        }
+        else if (date && typeof date === 'string') {
+            // Altes Format: Einzelnes Datum (Rückwärtskompatibilität)
+            const selectedDate = (0, date_fns_1.parseISO)(date);
+            start = (0, date_fns_1.startOfDay)(selectedDate);
+            end = (0, date_fns_1.endOfDay)(selectedDate);
+        }
+        else {
+            return res.status(400).json({ error: 'Datum oder Datumsbereich erforderlich' });
+        }
+        // Filter-Bedingungen konvertieren (falls vorhanden)
+        let filterWhereClause = {};
+        if (filterId) {
+            // OPTIMIERUNG: Lade Filter aus Cache (vermeidet DB-Query)
+            try {
+                const filterData = yield filterCache_1.filterCache.get(parseInt(filterId, 10));
+                if (filterData) {
+                    const conditions = JSON.parse(filterData.conditions);
+                    const operators = JSON.parse(filterData.operators);
+                    filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'request', req);
+                    // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+                    filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'request');
+                }
+                else {
+                    logger_1.logger.warn(`[getRequestsChronological] Filter ${filterId} nicht gefunden`);
+                }
+            }
+            catch (filterError) {
+                logger_1.logger.error(`[getRequestsChronological] Fehler beim Laden von Filter ${filterId}:`, filterError);
+                // Fallback: Versuche ohne Filter weiter
+            }
+        }
+        else if (filterConditions) {
+            // Direkte Filter-Bedingungen
+            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'request', req);
+            // ✅ SICHERHEIT: Validiere Filter gegen Datenisolation
+            filterWhereClause = (0, filterToPrisma_1.validateFilterAgainstIsolation)(filterWhereClause, req, 'request');
+        }
+        // ✅ PHASE 4: Extrahiere und konvertiere Zeitraum-Filter für Analytics
+        const { timeFilter, remainingFilter } = extractAndConvertTimeFilterForAnalytics(filterWhereClause);
+        // Kombiniere requestFilter mit Zeitfilter und Filter-Bedingungen
+        // Zeige nur Requests, die im Zeitraum erstellt, Status-Änderungen hatten oder gelöscht wurden
+        // NICHT: Requests, die nur andere Updates hatten (z.B. Titel geändert)
+        const whereArray = [requestFilter];
+        // ✅ FIX: Nur remainingFilter hinzufügen, wenn es nicht leer ist (Object.keys().length > 0)
+        if (remainingFilter && typeof remainingFilter === 'object' && Object.keys(remainingFilter).length > 0) {
+            whereArray.push(remainingFilter);
+        }
+        // Verwende timeFilter falls vorhanden, sonst Fallback auf period/date
+        whereArray.push(timeFilter || {
+            OR: [
                 {
                     createdAt: {
                         gte: start,
                         lte: end
+                    }
+                },
+                {
+                    deletedAt: {
+                        gte: start,
+                        lte: end
+                    }
+                },
+                {
+                    statusHistory: {
+                        some: {
+                            changedAt: {
+                                gte: start,
+                                lte: end
+                            }
+                        }
                     }
                 }
             ]
+        });
+        const where = {
+            AND: whereArray.filter(Boolean) // Entferne null/undefined Werte
         };
-        if (branchId) {
-            where.AND.push({
-                branchId: parseInt(branchId, 10)
-            });
-        }
-        if (userId) {
-            // Wenn userId gefiltert wird, überschreibe requestFilter
-            where.AND = [
-                {
-                    OR: [
-                        { requesterId: parseInt(userId, 10) },
-                        { responsibleId: parseInt(userId, 10) }
-                    ]
-                },
-                {
-                    createdAt: {
-                        gte: start,
-                        lte: end
-                    }
-                }
-            ];
-            if (branchId) {
-                where.AND.push({
-                    branchId: parseInt(branchId, 10)
-                });
-            }
-        }
         const requests = yield prisma_1.prisma.request.findMany({
             where,
             include: {
@@ -493,9 +703,38 @@ const getRequestsChronological = (req, res) => __awaiter(void 0, void 0, void 0,
                         name: true
                     }
                 },
+                deletedBy: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        username: true
+                    }
+                },
                 // ✅ PERFORMANCE: Nur Count, KEINE Binary-Daten
                 _count: {
                     select: { attachments: true }
+                },
+                statusHistory: {
+                    where: {
+                        changedAt: {
+                            gte: start,
+                            lte: end
+                        }
+                    },
+                    orderBy: {
+                        changedAt: 'desc'
+                    },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                username: true
+                            }
+                        }
+                    }
                 }
             },
             orderBy: {

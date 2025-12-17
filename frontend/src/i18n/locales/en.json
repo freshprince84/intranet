@@ -3233,5 +3233,143 @@
       "deleteConfirm": "Really delete rule?",
       "invalidJson": "Invalid JSON format"
     }
+  },
+  "landing": {
+    "hero": {
+      "label": "Intranet platform",
+      "title": "Hospitality & Consulting",
+      "badge": "Reduce workload • Control teams • Protect revenue",
+      "headline": "One intranet for hostels, hotels, Airbnbs & consulting teams",
+      "subline": "Time tracking, tasks, knowledge, billing and AI automation in one surface – mobile and on-prem.",
+      "ctaRegister": "Register",
+      "ctaLogin": "Login",
+      "ctaDemo": "Request demo",
+      "ctaHint": "Click an icon to proceed."
+    },
+    "stats": {
+      "uptime": "Uptime",
+      "automation": "Automation triggers live",
+      "languages": "Languages live"
+    },
+    "assets": {
+      "placeholderWorktracker": "Screenshot placeholder: Worktracker board with status flow and filters.",
+      "placeholderConsultations": "Screenshot placeholder: Consultations with QR invoices and monthly reports.",
+      "placeholderDocument": "Screenshot placeholder: AI document recognition with extracted fields."
+    },
+    "audience": {
+      "hospitality": {
+        "title": "Hostels, Airbnbs, Hotels",
+        "description": "Shifts, housekeeping, check-in/out, keys and documents in one flow.",
+        "point1": "Control shifts and worktime live (time tracking, team control).",
+        "point2": "Tasks/housekeeping with status flow and notifications.",
+        "point3": "LobbyPMS/TTLock chain for check-in/out and key handover."
+      },
+      "consulting": {
+        "title": "Consulting",
+        "description": "Capture billable consulting time and keep knowledge in sync.",
+        "point1": "Track consultations (start/stop or manual) with clients and notes.",
+        "point2": "Swiss QR invoices & monthly reports without double billing.",
+        "point3": "Knowledge base via Cerebro wiki + tasks for deliverables."
+      }
+    },
+    "features": {
+      "title": "Modules & value",
+      "labels": {
+        "worktime": "Time tracking",
+        "worktracker": "Worktracker",
+        "teamControl": "Team control",
+        "cerebro": "Cerebro wiki",
+        "workflow": "Workflow automation",
+        "consultations": "Consultations",
+        "invoices": "Invoices/Monthly reports",
+        "documentRecognition": "Document recognition (AI)",
+        "filters": "Filters & automation",
+        "lobbypms": "LobbyPMS/TTLock",
+        "mobile": "Mobile app"
+      },
+      "operations": {
+        "title": "Operations & team control",
+        "worktime": "Start/stop worktime live, timezone-safe, stats per branch.",
+        "worktracker": "Tasks with status flow, responsible/QC, saved filters, notifications.",
+        "teamControl": "Team worktime overview, stop running times, export analytics."
+      },
+      "knowledge": {
+        "title": "Knowledge & processes",
+        "cerebro": "Markdown wiki with structure, media, links to tasks/requests.",
+        "workflow": "Automations along roles and statuses; task descriptions are mandatory."
+      },
+      "billing": {
+        "title": "Billing & consulting",
+        "consultations": "Pick clients, track consultations, notes with autosave.",
+        "invoices": "Swiss QR invoices, monthly reports, anti double billing, payment status."
+      },
+      "ai": {
+        "title": "AI & automation",
+        "documentRecognition": "ID upload, AI extraction, validation, profile linkage.",
+        "filters": "Saved filters with AND/OR logic, standard filters per table."
+      },
+      "integration": {
+        "title": "Integrations & mobile",
+        "lobbypms": "LobbyPMS/TTLock chain for check-in/keys.",
+        "mobile": "Mobile app for time, tasks and notifications."
+      }
+    },
+    "proof": {
+      "badge": "Proven in operations",
+      "title": "Real outcomes",
+      "description": "Fewer errors, faster flows, happier teams.",
+      "hospitality": {
+        "title": "Operations Lead, Hostel"
+      },
+      "consulting": {
+        "title": "Consulting Lead"
+      },
+      "review1": "Shift handovers run cleanly, housekeeping is always up to date, check-in automation saves front desk time.",
+      "review2": "Consulting hours are audit-proof, QR invoices and monthly reports need no rework."
+    },
+    "cta": {
+      "title": "Ready to start?",
+      "subtitle": "Request a demo or register right away. Fully multilingual (de/en/es).",
+      "formTitle": "Request demo",
+      "formHint": "Short form, we schedule a slot.",
+      "formName": "Name",
+      "formOrganization": "Organization",
+      "formContact": "Email or phone",
+      "formSize": "Room/bed count or team size",
+      "formUseCase": "Use cases / specifics",
+      "formSubmit": "Send demo",
+      "formSecondary": "Or register now and start immediately.",
+      "formFallback": "Please configure the demo endpoint. Form is not sending yet."
+    },
+    "faq": {
+      "title": "FAQ",
+      "integration": {
+        "q": "How do you integrate with existing systems?",
+        "a": "LobbyPMS/TTLock is prepared. Further integrations are clarified during onboarding."
+      },
+      "support": {
+        "q": "How do you handle support?",
+        "a": "Support via the intranet with clear prioritization. Knowledge stored in the Cerebro wiki."
+      },
+      "security": {
+        "q": "How do you address security?",
+        "a": "Roles/permissions, audits, AI uploads with validation, HTTPS only."
+      },
+      "onboarding": {
+        "q": "How long does onboarding take?",
+        "a": "Usually a few hours: branches, roles, standard filters, then go-live."
+      }
+    },
+    "footer": {
+      "title": "Intranet for hospitality & consulting",
+      "copy": "More productivity, less chaos, full compliance."
+    },
+    "seo": {
+      "title": "Intranet landing page – hospitality & consulting",
+      "description": "Time tracking, worktracker, wiki, consultations, invoices and AI document recognition for hostels, hotels, Airbnbs and consulting teams."
+    },
+    "schema": {
+      "productName": "Intranet platform"
+    }
   }
 }

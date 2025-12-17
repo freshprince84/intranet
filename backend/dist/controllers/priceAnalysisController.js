@@ -28,8 +28,10 @@ exports.priceAnalysisController = {
         try {
             const { branchId, startDate, endDate } = req.body;
             if (!branchId || !startDate || !endDate) {
+                const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+                const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
                 return res.status(400).json({
-                    message: 'branchId, startDate und endDate sind erforderlich'
+                    message: (0, translations_1.getPriceAnalysisErrorText)(language, 'requiredFieldsMissing')
                 });
             }
             const analysisCount = yield priceAnalysisService_1.PriceAnalysisService.analyzePrices(branchId, new Date(startDate), new Date(endDate));
@@ -38,18 +40,18 @@ exports.priceAnalysisController = {
             if (userId) {
                 try {
                     const language = yield (0, translations_1.getUserLanguage)(userId);
-                    const notificationText = (0, translations_1.getPriceAnalysisNotificationText)(language, 'recommendationCreated', 'Alle Kategorien', new Date(startDate).toISOString().split('T')[0]);
+                    const notificationText = (0, translations_1.getPriceAnalysisNotificationText)(language, 'analysisCompleted', analysisCount);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId,
                         title: notificationText.title,
-                        message: `Preisanalyse für ${analysisCount} Kategorien abgeschlossen.`,
+                        message: notificationText.message,
                         type: client_1.NotificationType.system,
                         relatedEntityId: branchId,
                         relatedEntityType: 'analyzed'
                     });
                 }
                 catch (error) {
-                    logger_1.logger.error('Fehler beim Erstellen der Notification:', error);
+                    logger_1.logger.error('Error creating notification:', error);
                 }
             }
             res.json({
@@ -58,9 +60,11 @@ exports.priceAnalysisController = {
             });
         }
         catch (error) {
-            logger_1.logger.error('Fehler bei der Preisanalyse:', error);
+            logger_1.logger.error('Error analyzing prices:', error);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             res.status(500).json({
-                message: 'Fehler bei der Preisanalyse',
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'errorAnalyzing'),
                 error: error.message
             });
         }
@@ -81,17 +85,21 @@ exports.priceAnalysisController = {
                 ? new Date(req.query.endDate)
                 : undefined;
             if (!branchId) {
+                const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+                const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
                 return res.status(400).json({
-                    message: 'branchId ist erforderlich'
+                    message: (0, translations_1.getPriceAnalysisErrorText)(language, 'branchIdRequired')
                 });
             }
             const analyses = yield priceAnalysisService_1.PriceAnalysisService.getAnalyses(branchId, startDate, endDate);
             res.json(analyses);
         }
         catch (error) {
-            logger_1.logger.error('Fehler beim Abrufen der Preisanalysen:', error);
+            logger_1.logger.error('Error fetching price analyses:', error);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             res.status(500).json({
-                message: 'Fehler beim Abrufen der Preisanalysen',
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'errorFetchingAnalyses'),
                 error: error.message
             });
         }
@@ -104,17 +112,21 @@ exports.priceAnalysisController = {
         try {
             const analysisId = parseInt(req.params.id, 10);
             if (isNaN(analysisId)) {
+                const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+                const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
                 return res.status(400).json({
-                    message: 'Ungültige Analyse-ID'
+                    message: (0, translations_1.getPriceAnalysisErrorText)(language, 'invalidAnalysisId')
                 });
             }
             const analysis = yield priceAnalysisService_1.PriceAnalysisService.getAnalysisById(analysisId);
             res.json(analysis);
         }
         catch (error) {
-            logger_1.logger.error('Fehler beim Abrufen der Preisanalyse:', error);
+            logger_1.logger.error('Error fetching price analysis:', error);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             res.status(500).json({
-                message: 'Fehler beim Abrufen der Preisanalyse',
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'errorFetchingAnalysis'),
                 error: error.message
             });
         }
@@ -127,8 +139,10 @@ exports.priceAnalysisController = {
         try {
             const { branchId, startDate, endDate } = req.body;
             if (!branchId || !startDate || !endDate) {
+                const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+                const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
                 return res.status(400).json({
-                    message: 'branchId, startDate und endDate sind erforderlich'
+                    message: (0, translations_1.getPriceAnalysisErrorText)(language, 'requiredAnalysisFieldsMissing')
                 });
             }
             const recommendationCount = yield priceRecommendationService_1.PriceRecommendationService.generateRecommendations(branchId, new Date(startDate), new Date(endDate));
@@ -137,18 +151,18 @@ exports.priceAnalysisController = {
             if (userId && recommendationCount > 0) {
                 try {
                     const language = yield (0, translations_1.getUserLanguage)(userId);
-                    const notificationText = (0, translations_1.getPriceAnalysisNotificationText)(language, 'recommendationCreated', 'Alle Kategorien', new Date(startDate).toISOString().split('T')[0]);
+                    const notificationText = (0, translations_1.getPriceAnalysisNotificationText)(language, 'recommendationsGenerated', recommendationCount);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId,
                         title: notificationText.title,
-                        message: `${recommendationCount} Preisvorschläge wurden generiert.`,
+                        message: notificationText.message,
                         type: client_1.NotificationType.system,
                         relatedEntityId: branchId,
                         relatedEntityType: 'generated'
                     });
                 }
                 catch (error) {
-                    logger_1.logger.error('Fehler beim Erstellen der Notification:', error);
+                    logger_1.logger.error('Error creating notification:', error);
                 }
             }
             res.json({
@@ -157,9 +171,11 @@ exports.priceAnalysisController = {
             });
         }
         catch (error) {
-            logger_1.logger.error('Fehler bei der Generierung von Preisempfehlungen:', error);
+            logger_1.logger.error('Error generating price recommendations:', error);
+            const userId = req.userId ? parseInt(req.userId, 10) : undefined;
+            const language = userId ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
             res.status(500).json({
-                message: 'Fehler bei der Generierung von Preisempfehlungen',
+                message: (0, translations_1.getPriceAnalysisErrorText)(language, 'errorGeneratingRecommendations'),
                 error: error.message
             });
         }

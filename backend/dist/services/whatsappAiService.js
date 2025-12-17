@@ -51,6 +51,7 @@ const languageDetectionService_1 = require("./languageDetectionService");
 const prisma_1 = require("../utils/prisma");
 const whatsappFunctionHandlers_1 = require("./whatsappFunctionHandlers");
 const logger_1 = require("../utils/logger");
+const PromptBuilder_1 = require("./chatbot/PromptBuilder");
 /**
  * WhatsApp AI Service
  *
@@ -163,8 +164,8 @@ class WhatsAppAiService {
                 detectedFromPhone: phoneLanguage,
                 finalLanguage: language
             });
-            // 3. Baue System Prompt
-            const systemPrompt = this.buildSystemPrompt(aiConfig, language, conversationContext);
+            // 3. Baue System Prompt (modularer PromptBuilder)
+            const systemPrompt = PromptBuilder_1.PromptBuilder.buildPrompt(language, conversationContext, 'whatsapp', aiConfig);
             // 4. Prüfe ob Function Calling aktiviert werden soll
             // WICHTIG: check_room_availability sollte auch für Gäste verfügbar sein!
             const isEmployee = !!(conversationContext === null || conversationContext === void 0 ? void 0 : conversationContext.userId);
@@ -990,6 +991,13 @@ class WhatsAppAiService {
         prompt += '\n- get_tours: Hole verfügbare Touren (type, availableFrom, availableTo, limit)\n';
         prompt += '  WICHTIG: Verwende diese Function wenn der User nach Touren fragt!\n';
         prompt += '  WICHTIG: Diese Function zeigt eine Liste aller verfügbaren Touren\n';
+        prompt += '  KRITISCH: Bei get_tours() NUR Flyer-Bilder senden, ABSOLUT KEINEN Text!\n';
+        prompt += '  KRITISCH: Jede Tour hat ein imageUrl-Feld - verwende dieses als Flyer-Bild!\n';
+        prompt += '  KRITISCH: Format für Flyer-Bilder: ![Tour-Titel](/api/tours/{tourId}/image) - verwende IMMER /api/tours/{tourId}/image als URL!\n';
+        prompt += '  KRITISCH: Deine Antwort muss NUR Markdown-Bildreferenzen enthalten, KEINEN anderen Text!\n';
+        prompt += '  KRITISCH: Beispiel für get_tours() Antwort: ![Comuna 13](/api/tours/1/image)\\n![Guatapé](/api/tours/2/image)\\n![Tour 3](/api/tours/3/image)\n';
+        prompt += '  KRITISCH: KEINE Tour-Namen als Text, KEINE Beschreibungen, KEINE Preise - NUR die Bildreferenzen!\n';
+        prompt += '  KRITISCH: Der Text wird automatisch nach den Bildern hinzugefügt, du musst NICHTS schreiben!\n';
         prompt += '  KRITISCH: Wenn User bereits eine Tour gewählt hat (z.B. "die 2.", "guatape", "tour 2"), rufe diese Function NICHT nochmal auf!\n';
         prompt += '  KRITISCH: Wenn User nach get_tours() eine Tour wählt, rufe stattdessen book_tour() auf!\n';
         prompt += '  KRITISCH: Liste NICHT alle Touren nochmal auf, wenn User bereits eine Tour gewählt hat!\n';
@@ -1000,9 +1008,19 @@ class WhatsAppAiService {
         prompt += '    - User sagt "die 2." nach get_tours() → NICHT get_tours() nochmal, sondern book_tour()!\n';
         prompt += '\n- get_tour_details: Hole detaillierte Informationen zu einer Tour (tourId)\n';
         prompt += '  WICHTIG: Verwende diese Function wenn der User Details zu einer spezifischen Tour wissen möchte!\n';
+        prompt += '  WICHTIG: Diese Function gibt imageUrl (Hauptbild) und galleryUrls (Galerie-Bilder) zurück!\n';
+        prompt += '  KRITISCH: Bei get_tour_details() NUR Bilder senden (Hauptbild + alle Galerie-Bilder), ABSOLUT KEINEN Text!\n';
+        prompt += '  KRITISCH: Wenn imageUrl vorhanden ist, füge IMMER das Hauptbild ein: ![Tour-Name](imageUrl)\n';
+        prompt += '  KRITISCH: Wenn galleryUrls vorhanden sind, füge ALLE Galerie-Bilder ein: ![Bild 1](galleryUrls[0])\\n![Bild 2](galleryUrls[1])\\n![Bild 3](galleryUrls[2])\n';
+        prompt += '  KRITISCH: Format für Bilder: ![Tour-Titel](/api/tours/{tourId}/image) und ![Galerie-Bild](/api/tours/{tourId}/gallery/{index})\n';
+        prompt += '  KRITISCH: Deine Antwort muss NUR Markdown-Bildreferenzen enthalten, KEINEN anderen Text!\n';
+        prompt += '  KRITISCH: Beispiel für get_tour_details() Antwort: ![Guatapé](/api/tours/2/image)\\n![Galerie 1](/api/tours/2/gallery/0)\\n![Galerie 2](/api/tours/2/gallery/1)\n';
+        prompt += '  KRITISCH: KEINE Tour-Namen als Text, KEINE Beschreibungen, KEINE Details - NUR die Bildreferenzen!\n';
+        prompt += '  KRITISCH: Der Text wird automatisch nach den Bildern hinzugefügt, du musst NICHTS schreiben!\n';
         prompt += '  Beispiele:\n';
         prompt += '    - "zeige mir details zu tour 1" → get_tour_details({ tourId: 1 })\n';
         prompt += '    - "was ist in tour 5 inkludiert?" → get_tour_details({ tourId: 5 })\n';
+        prompt += '    - "gibt es bilder zu tour 2?" → get_tour_details({ tourId: 2 })\n';
         prompt += '\n- book_tour: Erstelle eine Tour-Buchung (tourId, tourDate, numberOfParticipants, customerName, customerPhone/customerEmail)\n';
         prompt += '  WICHTIG: Verwende diese Function wenn der User eine Tour buchen möchte!\n';
         prompt += '  WICHTIG: Generiert automatisch Payment Link und setzt Zahlungsfrist (1 Stunde)\n';
@@ -1034,6 +1052,7 @@ class WhatsAppAiService {
         prompt += '  WICHTIG: Wenn User "buche [Zimmer-Name] von [Datum] auf [Datum] für [Name]" sagt, hat er ALLE Informationen - rufe SOFORT create_room_reservation auf!\n';
         prompt += '  WICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "doble estándar", "apartamento doble", "primo deportista"), erkenne dies IMMER als Zimmer-Name aus der Verfügbarkeitsliste, NICHT als sozialen Begriff!\n';
         prompt += '  WICHTIG: Zimmer-Namen aus Verfügbarkeitsliste: "doble estándar", "doble básica", "doble deluxe", "apartamento doble", "apartamento singular", "apartaestudio", "primo deportista", "el primo aventurero", "la tia artista", "el abuelo viajero"!\n';
+        prompt += '  WICHTIG: Terminologie - Wenn du Dorm-Zimmer (compartida) auflistest, verwende "Dorm-Zimmer" oder "Schlafsaal" in der Frage, NICHT "Bett"! Beispiel: "Welches Dorm-Zimmer möchten Sie buchen?" oder "Welchen Schlafsaal möchten Sie buchen?" statt "welches Bett"!\n';
         prompt += '  WICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige → create_room_reservation mit categoryId!\n';
         prompt += '  WICHTIG: Wenn der User einen Zimmer-Namen sagt (z.B. "la tia artista", "el primo aventurero", "el abuelo viajero") → finde die categoryId aus der vorherigen check_room_availability Response!\n';
         prompt += '  WICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat → verwende "today" als checkInDate!\n';
@@ -1100,16 +1119,21 @@ class WhatsAppAiService {
         prompt += '\nWICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige, prüfe ob ALLE Daten vorhanden sind (Name, Check-in, Check-out). Wenn Name fehlt → create_potential_reservation() und FRAGE nach Name!';
         prompt += '\nWICHTIG: Wenn der User sagt "reservame 1 cama" oder "buche mir 1 bett" oder ähnlich, prüfe ob ALLE Daten vorhanden sind. Wenn Name fehlt → create_potential_reservation() und FRAGE nach Name!';
         prompt += '\nWICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "la tia artista"), finde die categoryId aus der vorherigen check_room_availability Response. Wenn Name fehlt → create_potential_reservation() und FRAGE nach Name!';
+        prompt += '\nWICHTIG: Fehlerbehandlung - Wenn Zimmer-Name nicht in Verfügbarkeitsliste gefunden wird, frage: "Dieses Zimmer ist nicht verfügbar. Möchten Sie ein anderes Zimmer wählen?" und zeige verfügbare Alternativen!';
         prompt += '\nWICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat, verwende "today" als checkInDate!';
         prompt += '\nWICHTIG: Wenn User nach einer Buchungsanfrage Daten gibt (z.B. "01.dez bis 02.dez"), prüfe ob ALLE Daten vorhanden sind. Wenn Name fehlt → create_potential_reservation() und FRAGE nach Name!';
         prompt += '\nWICHTIG: Beispiel: User sagt "apartamento doble para el 7. de diciembre entonces. 1 noche" → Name fehlt! → rufe create_potential_reservation() auf und FRAGE: "Wie lautet Ihr vollständiger Name?"';
         prompt += '\n\n=== KRITISCH: KONTEXT-NUTZUNG ===';
         prompt += '\nWICHTIG: Du MUSST ALLE Informationen aus der aktuellen UND vorherigen Nachrichten nutzen!';
+        prompt += '\nWICHTIG: Effizienz - Prüfe IMMER zuerst, ob alle Informationen bereits im Context vorhanden sind, bevor du nachfragst! Kombiniere alle verfügbaren Informationen aus Context und aktueller Nachricht!';
         prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht "heute" gesagt hat, verwende es IMMER als checkInDate!';
+        prompt += '\nWICHTIG: Datumsbestätigung - Wenn User "heute" sagt, bestätige das konkrete Datum explizit in deiner Antwort! Beispiel: "Gerne, für den [Datum]. Welche Art von Zimmer suchen Sie?"';
         prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht "checkin 02.12. und checkout 03.12." gesagt hat, verwende diese Daten IMMER!';
         prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht einen Zimmer-Namen gesagt hat (z.B. "el abuelo viajero"), behalte diesen IMMER im Kontext!';
         prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht "dorm" oder "privada" gesagt hat, behalte diese Information IMMER!';
         prompt += '\nWICHTIG: Wenn User in einer vorherigen Nachricht einen Namen gesagt hat (z.B. "Patrick Ammann"), verwende diesen als guestName!';
+        prompt += '\nWICHTIG: Namensabfrage optimieren - Wenn Name bereits im Context vorhanden ist (z.B. User hat "Patrick Ammann" in vorheriger Nachricht gesagt), frage: "Ist Patrick Ammann Ihr vollständiger Name?" statt "Wie lautet Ihr vollständiger Name?"!';
+        prompt += '\nWICHTIG: Wenn User den bereits genannten Namen bestätigt (z.B. "ja" oder "genau"), verwende diesen Namen direkt für die Buchung, frage NICHT nochmal!';
         prompt += '\nWICHTIG: Kombiniere Informationen aus MEHREREN Nachrichten! Wenn User "heute" sagt und später "1 nacht", dann: checkInDate="today", checkOutDate="tomorrow"!';
         prompt += '\nWICHTIG: Wenn User "1" sagt nachdem er "heute" gesagt hat, interpretiere es als "1 Nacht"!';
         prompt += '\nWICHTIG: Wenn User strukturierte Antworten gibt (z.B. "1. hoy, 02/12. 3. 1 4. sara"), interpretiere: 1. = Check-in, 3. = Nächte, 4. = Name!';
@@ -1154,7 +1178,7 @@ class WhatsAppAiService {
         prompt += '\nAntworte NICHT, dass du keinen Zugriff hast - nutze stattdessen die Function!';
         prompt += '\nWICHTIG: Wenn check_room_availability mehrere Zimmer zurückgibt, zeige ALLE Zimmer in der Antwort an!';
         prompt += '\nWICHTIG: Jedes Zimmer im Function-Ergebnis (rooms Array) muss in der Antwort erwähnt werden!';
-        prompt += '\nWICHTIG: Wenn get_tours mehrere Touren zurückgibt, zeige ALLE Touren in der Antwort an!';
+        prompt += '\nWICHTIG: Wenn get_tours mehrere Touren zurückgibt, sende ALLE Flyer-Bilder (ein Bild pro Tour)!';
         return prompt;
     }
     /**
@@ -1182,8 +1206,9 @@ class WhatsAppAiService {
         ];
         // Englische Wörter
         const englishIndicators = [
-            /\b(hello|hi|thanks|thank you|please|yes|no|how|where|when|why|goodbye|bye|see you)\b/i,
-            /\b(the|a|an|of|in|on|at|for|with|is|are|was|were)\b/i
+            /\b(hello|hi|thanks|thank you|please|yes|no|how|where|when|why|what|which|goodbye|bye|see you)\b/i,
+            /\b(the|a|an|of|in|on|at|for|with|is|are|was|were|do|does|did|have|has|had|you|your|tours|tour|available)\b/i,
+            /\b(can|could|would|should|will|want|need|show|tell|give|get|see|book|reserve|reservation)\b/i
         ];
         // Französische Wörter/Zeichen
         const frenchIndicators = [
@@ -1222,9 +1247,11 @@ class WhatsAppAiService {
         scores.sort((a, b) => b.score - a.score);
         // Wenn höchster Score > 0, verwende diese Sprache
         if (scores[0].score > 0) {
+            logger_1.logger.log(`[detectLanguageFromMessage] Sprache erkannt: ${scores[0].lang} (Score: ${scores[0].score}, alle Scores: es=${spanishScore}, de=${germanScore}, en=${englishScore}, fr=${frenchScore})`);
             return scores[0].lang;
         }
         // Keine Sprache erkannt
+        logger_1.logger.log(`[detectLanguageFromMessage] Keine Sprache erkannt für: "${message.substring(0, 50)}"`);
         return null;
     }
     /**

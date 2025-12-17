@@ -55,6 +55,11 @@ const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
 const prisma_1 = require("../utils/prisma");
 const logger_1 = require("../utils/logger");
+const MessageParserService_1 = require("./chatbot/MessageParserService");
+const ContextService_1 = require("./chatbot/ContextService");
+const LanguageService_1 = require("./chatbot/LanguageService");
+const ConversationService_1 = require("./chatbot/ConversationService");
+const WhatsAppMessageNormalizer_1 = require("./whatsapp/WhatsAppMessageNormalizer");
 /**
  * WhatsApp Message Handler
  *
@@ -71,7 +76,7 @@ class WhatsAppMessageHandler {
      */
     static handleIncomingMessage(phoneNumber, messageText, branchId, mediaUrl, groupId) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a, _b, _c, _d;
             try {
                 // 1. Normalisiere Telefonnummer
                 const normalizedPhone = languageDetectionService_1.LanguageDetectionService.normalizePhoneNumber(phoneNumber);
@@ -158,6 +163,15 @@ class WhatsAppMessageHandler {
                 }
                 // 3. Lade/Erstelle Conversation State
                 const conversation = yield this.getOrCreateConversation(normalizedPhone, branchId, user === null || user === void 0 ? void 0 : user.id);
+                // 3.1 Normalisiere Nachricht & aktualisiere Kontext über Core Services
+                const normalizedMessage = WhatsAppMessageNormalizer_1.WhatsAppMessageNormalizer.normalize(messageText);
+                const coreContext = yield ContextService_1.ContextService.getContext(conversation.id, 'WhatsAppConversation');
+                const parsedMessage = MessageParserService_1.MessageParserService.parseMessage(normalizedMessage, coreContext, (_d = (_c = coreContext.booking) === null || _c === void 0 ? void 0 : _c.lastAvailabilityCheck) === null || _d === void 0 ? void 0 : _d.rooms);
+                const mergedContext = ContextService_1.ContextService.mergeWithContext(parsedMessage, coreContext);
+                yield ContextService_1.ContextService.updateContext(conversation.id, mergedContext, 'WhatsAppConversation');
+                const detectedLanguage = LanguageService_1.LanguageService.detectLanguage(normalizedMessage, normalizedPhone, mergedContext);
+                // ConversationState vorläufig berechnen (Integration in bestehende Flows folgt in Phase 2.2)
+                yield ConversationService_1.ConversationService.processMessage(normalizedMessage, parsedMessage, mergedContext, detectedLanguage, conversation.id, 'WhatsAppConversation', branchId);
                 // 3.5. Tour-Buchungsantwort vom Anbieter erkennen (VOR Keyword-Erkennung)
                 const tourProvider = yield prisma_1.prisma.tourProvider.findFirst({
                     where: {
@@ -206,8 +220,11 @@ class WhatsAppMessageHandler {
                         }
                     }
                 }
+                // 4. KI-Antwort über neuen Core-Flow (Function Calling über WhatsAppAiService)
+                const aiResult = yield whatsappAiService_1.WhatsAppAiService.generateResponse(normalizedMessage, branchId, normalizedPhone, mergedContext, conversation.id);
+                return aiResult.message;
                 // 4. Prüfe Keywords
-                const normalizedText = messageText.toLowerCase().trim();
+                const normalizedText = normalizedMessage.toLowerCase().trim();
                 // Keyword: "requests" - Liste aller Requests
                 if (normalizedText === 'requests') {
                     if (user) {
@@ -266,7 +283,19 @@ class WhatsAppMessageHandler {
                                 context: null
                             }
                         });
-                        return bookingResult.message || 'Reservierung erfolgreich erstellt!';
+                        // KI aufrufen statt technische Message, um benutzerfreundliche Nachricht zu generieren
+                        const { WhatsAppAiService } = yield Promise.resolve().then(() => __importStar(require('./whatsappAiService')));
+                        const conversationContext = {
+                            userId: user === null || user === void 0 ? void 0 : user.id,
+                            roleId: roleId,
+                            userName: userWithRoles ? `${userWithRoles.firstName} ${userWithRoles.lastName}` : null,
+                            conversationState: conversation.state,
+                            groupId: groupId,
+                            bookingResult: bookingResult // Füge bookingResult hinzu für KI-Kontext
+                        };
+                        const aiResponse = yield WhatsAppAiService.generateResponse(`Reservierung erfolgreich erstellt für ${bookingResult.guestName || 'Gast'}.`, branchId, normalizedPhone, conversationContext, conversation.id);
+                        // WICHTIG: return hier, damit Zeile 259-278 nicht ausgeführt wird
+                        return aiResponse.message;
                     }
                     catch (bookingError) {
                         logger_1.logger.error('[WhatsApp Message Handler] Fehler bei automatischer Buchung:', bookingError);
@@ -1489,7 +1518,7 @@ class WhatsAppMessageHandler {
                 const bookingKeywords = ['reservar', 'buchen', 'quiero reservar', 'quiero hacer una reserva', 'buche', 'reservame'];
                 const confirmationKeywords = ['ja', 'sí', 'si', 'yes', 'ok', 'okay', 'genau', 'correcto', 'correct'];
                 const hasConfirmation = confirmationKeywords.some(keyword => normalizedMessage.includes(keyword));
-                const isBookingRequest = bookingKeywords.some(keyword => normalizedMessage.includes(keyword)) ||
+                let isBookingRequest = bookingKeywords.some(keyword => normalizedMessage.includes(keyword)) ||
                     (hasConfirmation && (bookingContext.checkInDate || bookingContext.lastAvailabilityCheck));
                 if (!isBookingRequest && !bookingContext.checkInDate && !bookingContext.guestName) {
                     // Keine Buchungsanfrage und kein Context vorhanden
@@ -1532,11 +1561,38 @@ class WhatsAppMessageHandler {
                 if (checkOutMatch) {
                     checkOutDate = checkOutMatch[1].trim();
                 }
-                // Parse Namen (einfache Heuristik: Wörter die wie Namen aussehen)
-                const namePattern = /(?:a nombre de|name|nombre|für)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
-                const nameMatch = currentMessage.match(namePattern);
-                if (nameMatch) {
-                    guestName = nameMatch[1].trim();
+                // Parse Namen (erweiterte Heuristik: Wörter die wie Namen aussehen)
+                // 1. Explizite Marker (z.B. "für Patrick Ammann", "a nombre de Juan Pérez", "ist Patrick Ammann", "mit Patrick Ammann")
+                const explicitNamePattern = /(?:a nombre de|name|nombre|für|para|ist|mit)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
+                const explicitNameMatch = currentMessage.match(explicitNamePattern);
+                if (explicitNameMatch) {
+                    guestName = explicitNameMatch[1].trim();
+                    guestName = this.cleanGuestName(guestName);
+                }
+                else {
+                    // 2. Namen nach Zimmer-Namen oder Kommas (z.B. "primo aventurero für Patrick Ammann" oder "dorm, Patrick Ammann")
+                    const nameAfterRoomPattern = /(?:primo|abuelo|tia|dorm|zimmer|habitación|apartamento|doble|básica|deluxe|estándar|singular|apartaestudio|deportista|aventurero|artista|viajero|bromista)\s+(?:für|para|,|ist|mit)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i;
+                    const nameAfterRoomMatch = currentMessage.match(nameAfterRoomPattern);
+                    if (nameAfterRoomMatch) {
+                        guestName = nameAfterRoomMatch[1].trim();
+                        guestName = this.cleanGuestName(guestName);
+                    }
+                    else {
+                        // 3. Namen am Ende der Nachricht (wenn Nachricht mit Großbuchstaben beginnt und 2+ Wörter hat)
+                        // Nur wenn keine anderen Buchungsinformationen erkannt wurden
+                        const words = currentMessage.trim().split(/\s+/);
+                        if (words.length >= 2 && words.length <= 4 &&
+                            words[0][0] === words[0][0].toUpperCase() &&
+                            words[1][0] === words[1][0].toUpperCase() &&
+                            !checkInDate && !checkOutDate && !roomType) {
+                            // Potentieller Name (z.B. "Patrick Ammann")
+                            const potentialName = words.join(' ');
+                            // Prüfe ob es wie ein Name aussieht (mindestens 2 Wörter, beide mit Großbuchstaben)
+                            if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+$/.test(potentialName)) {
+                                guestName = potentialName;
+                            }
+                        }
+                    }
                 }
                 // Parse Zimmer-Art
                 if (normalizedMessage.includes('compartida') || normalizedMessage.includes('dorm') || normalizedMessage.includes('cama')) {
@@ -1719,6 +1775,16 @@ class WhatsAppMessageHandler {
                     updatedContext.checkOutDate &&
                     updatedContext.roomType &&
                     (updatedContext.categoryId || !updatedContext.roomName); // categoryId nur erforderlich wenn roomName vorhanden
+                // WICHTIG: Wenn Name gerade gegeben wurde und alle Daten vorhanden sind, setze isBookingRequest = true
+                // Dies löst das Problem, dass der Bot nicht bucht, wenn der User nur den Namen gibt
+                const nameWasJustProvided = guestName && !bookingContext.guestName;
+                const hasActiveBookingRequest = updatedContext.checkInDate || updatedContext.lastAvailabilityCheck;
+                if (nameWasJustProvided && hasAllInfo && hasActiveBookingRequest) {
+                    // Name wurde gerade gegeben, alle Daten vorhanden, aktive Buchungsanfrage vorhanden
+                    // Setze isBookingRequest = true, damit gebucht wird
+                    isBookingRequest = true;
+                    logger_1.logger.log(`[checkBookingContext] Name wurde gerade gegeben, alle Daten vorhanden, setze isBookingRequest = true`);
+                }
                 if (hasAllInfo && isBookingRequest) {
                     // Wenn guestName fehlt, verwende Platzhalter (wird später nachgefragt)
                     const finalGuestName = updatedContext.guestName || 'Gast';
@@ -1742,6 +1808,17 @@ class WhatsAppMessageHandler {
                 return { shouldBook: false, context: {} };
             }
         });
+    }
+    /**
+     * Bereinigt Gast-Namen von führenden Wörtern wie "ist", "mit", "für", "para"
+     * @param name - Roher Name
+     * @returns Bereinigter Name
+     */
+    static cleanGuestName(name) {
+        if (!name)
+            return name;
+        // Entferne führende Wörter
+        return name.replace(/^(ist|mit|für|para|a nombre de|name|nombre)\s+/i, '').trim();
     }
 }
 exports.WhatsAppMessageHandler = WhatsAppMessageHandler;

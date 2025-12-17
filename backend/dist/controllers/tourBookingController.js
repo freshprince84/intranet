@@ -51,6 +51,7 @@ const filterCache_1 = require("../services/filterCache");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const organization_1 = require("../middleware/organization");
 const logger_1 = require("../utils/logger");
+const translations_1 = require("../utils/translations");
 const userSelect = {
     id: true,
     username: true,
@@ -229,9 +230,11 @@ const getAllTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         logger_1.logger.error('[getAllTourBookings] Fehler:', error);
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden der Buchungen'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'loadError')
         });
     }
 });
@@ -239,12 +242,14 @@ exports.getAllTourBookings = getAllTourBookings;
 // GET /api/tour-bookings/:id - Einzelne Buchung
 const getTourBookingById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         const { id } = req.params;
         const bookingId = parseInt(id, 10);
         if (isNaN(bookingId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Buchungs-ID'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'invalidBookingId')
             });
         }
         const booking = yield prisma_1.prisma.tourBooking.findUnique({
@@ -281,7 +286,7 @@ const getTourBookingById = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (!booking) {
             return res.status(404).json({
                 success: false,
-                message: 'Buchung nicht gefunden'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'bookingNotFound')
             });
         }
         res.json({
@@ -291,9 +296,11 @@ const getTourBookingById = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         logger_1.logger.error('[getTourBookingById] Fehler:', error);
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden der Buchung'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'loadBookingError')
         });
     }
 });
@@ -302,15 +309,16 @@ exports.getTourBookingById = getTourBookingById;
 const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_booking_create', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_booking_create', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Erstellen von Buchungen'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'noPermissionCreate')
             });
         }
-        const userId = parseInt(req.userId, 10);
         const organizationId = req.organizationId;
         const branchId = req.branchId;
         const { tourId, tourDate, numberOfParticipants, customerName, customerEmail, customerPhone, customerNotes, bookedById } = req.body;
@@ -318,38 +326,38 @@ const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!tourId || isNaN(parseInt(tourId, 10))) {
             return res.status(400).json({
                 success: false,
-                message: 'Tour-ID ist erforderlich'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'tourIdRequired')
             });
         }
         if (!tourDate) {
             return res.status(400).json({
                 success: false,
-                message: 'Tour-Datum ist erforderlich'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'tourDateRequired')
             });
         }
         const tourDateObj = new Date(tourDate);
         if (tourDateObj < new Date()) {
             return res.status(400).json({
                 success: false,
-                message: 'Tour-Datum muss in der Zukunft sein'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'tourDateFuture')
             });
         }
         if (!numberOfParticipants || numberOfParticipants < 1) {
             return res.status(400).json({
                 success: false,
-                message: 'Anzahl Teilnehmer muss >= 1 sein'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'participantsMin')
             });
         }
         if (!customerName || customerName.trim().length < 2) {
             return res.status(400).json({
                 success: false,
-                message: 'Kundenname muss mindestens 2 Zeichen lang sein'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'customerNameMinLength')
             });
         }
         if (!customerPhone && !customerEmail) {
             return res.status(400).json({
                 success: false,
-                message: 'Mindestens eine Kontaktinformation (Telefon oder E-Mail) ist erforderlich'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'contactRequired')
             });
         }
         // Lade Tour
@@ -362,13 +370,13 @@ const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!tour) {
             return res.status(404).json({
                 success: false,
-                message: 'Tour nicht gefunden'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'tourNotFound')
             });
         }
         if (!tour.isActive) {
             return res.status(400).json({
                 success: false,
-                message: 'Tour ist nicht aktiv'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'tourNotActive')
             });
         }
         // Validierung: Anzahl Teilnehmer
@@ -506,9 +514,11 @@ const createTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     catch (error) {
         logger_1.logger.error('[createTourBooking] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Erstellen der Buchung'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'createError')
         });
     }
 });
@@ -516,12 +526,14 @@ exports.createTourBooking = createTourBooking;
 // PUT /api/tour-bookings/:id - Buchung aktualisieren
 const updateTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_booking_edit', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_booking_edit', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Bearbeiten von Buchungen'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'noPermissionEdit')
             });
         }
         const { id } = req.params;
@@ -529,7 +541,7 @@ const updateTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (isNaN(bookingId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Buchungs-ID'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'invalidBookingId')
             });
         }
         const existingBooking = yield prisma_1.prisma.tourBooking.findUnique({
@@ -539,7 +551,7 @@ const updateTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!existingBooking) {
             return res.status(404).json({
                 success: false,
-                message: 'Buchung nicht gefunden'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'bookingNotFound')
             });
         }
         const { tourDate, numberOfParticipants, customerName, customerEmail, customerPhone, customerNotes } = req.body;
@@ -549,7 +561,7 @@ const updateTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
             if (tourDateObj < new Date()) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Tour-Datum muss in der Zukunft sein'
+                    message: (0, translations_1.getTourBookingErrorText)(language, 'tourDateFuture')
                 });
             }
             updateData.tourDate = tourDateObj;
@@ -558,7 +570,7 @@ const updateTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
             if (numberOfParticipants < 1) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Anzahl Teilnehmer muss >= 1 sein'
+                    message: (0, translations_1.getTourBookingErrorText)(language, 'participantsMin')
                 });
             }
             // Validierung: Anzahl Teilnehmer
@@ -595,7 +607,7 @@ const updateTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
             if (customerName.trim().length < 2) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Kundenname muss mindestens 2 Zeichen lang sein'
+                    message: (0, translations_1.getTourBookingErrorText)(language, 'customerNameMinLength')
                 });
             }
             updateData.customerName = customerName.trim();
@@ -627,9 +639,11 @@ const updateTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     catch (error) {
         logger_1.logger.error('[updateTourBooking] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Aktualisieren der Buchung'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'updateError')
         });
     }
 });
@@ -637,12 +651,14 @@ exports.updateTourBooking = updateTourBooking;
 // DELETE /api/tour-bookings/:id - Buchung löschen
 const deleteTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_booking_edit', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_booking_edit', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Löschen von Buchungen'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'noPermissionDelete')
             });
         }
         const { id } = req.params;
@@ -650,7 +666,7 @@ const deleteTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (isNaN(bookingId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Buchungs-ID'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'invalidBookingId')
             });
         }
         // Prüfe ob Reservations verknüpft sind
@@ -660,7 +676,7 @@ const deleteTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (reservations.length > 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Buchung kann nicht gelöscht werden, da Reservations verknüpft sind'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'cannotDeleteWithReservations')
             });
         }
         yield prisma_1.prisma.tourBooking.delete({
@@ -668,14 +684,16 @@ const deleteTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
         res.json({
             success: true,
-            message: 'Buchung gelöscht'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'bookingDeleted')
         });
     }
     catch (error) {
         logger_1.logger.error('[deleteTourBooking] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Löschen der Buchung'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'deleteError')
         });
     }
 });
@@ -683,19 +701,21 @@ exports.deleteTourBooking = deleteTourBooking;
 // POST /api/tour-bookings/:id/cancel - Buchung stornieren
 const cancelTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         const { id } = req.params;
         const bookingId = parseInt(id, 10);
         const { reason, cancelledBy } = req.body;
         if (isNaN(bookingId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Buchungs-ID'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'invalidBookingId')
             });
         }
         if (!cancelledBy || !['customer', 'provider'].includes(cancelledBy)) {
             return res.status(400).json({
                 success: false,
-                message: 'cancelledBy muss "customer" oder "provider" sein'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'cancelledByInvalid')
             });
         }
         const booking = yield prisma_1.prisma.tourBooking.update({
@@ -760,9 +780,11 @@ const cancelTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     catch (error) {
         logger_1.logger.error('[cancelTourBooking] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Stornieren der Buchung'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'cancelError')
         });
     }
 });
@@ -770,12 +792,14 @@ exports.cancelTourBooking = cancelTourBooking;
 // POST /api/tour-bookings/:id/complete - Buchung als abgeschlossen markieren
 const completeTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         const { id } = req.params;
         const bookingId = parseInt(id, 10);
         if (isNaN(bookingId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Buchungs-ID'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'invalidBookingId')
             });
         }
         const booking = yield prisma_1.prisma.tourBooking.update({
@@ -799,9 +823,11 @@ const completeTourBooking = (req, res) => __awaiter(void 0, void 0, void 0, func
     }
     catch (error) {
         logger_1.logger.error('[completeTourBooking] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Markieren der Buchung als abgeschlossen'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'completeError')
         });
     }
 });
@@ -809,6 +835,8 @@ exports.completeTourBooking = completeTourBooking;
 // GET /api/tour-bookings/user/:userId - Buchungen eines Mitarbeiters
 const getUserTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const requestUserId = parseInt(req.userId || '0', 10);
+        const language = requestUserId > 0 ? yield (0, translations_1.getUserLanguage)(requestUserId) : 'de';
         const { userId } = req.params;
         const userIdNum = parseInt(userId, 10);
         const startDate = req.query.startDate
@@ -821,7 +849,7 @@ const getUserTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (isNaN(userIdNum)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige User-ID'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'invalidUserId')
             });
         }
         const whereClause = {
@@ -855,9 +883,11 @@ const getUserTourBookings = (req, res) => __awaiter(void 0, void 0, void 0, func
     }
     catch (error) {
         logger_1.logger.error('[getUserTourBookings] Fehler:', error);
+        const requestUserId = parseInt(req.userId || '0', 10);
+        const language = requestUserId > 0 ? yield (0, translations_1.getUserLanguage)(requestUserId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden der Buchungen'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'loadError')
         });
     }
 });
@@ -865,6 +895,8 @@ exports.getUserTourBookings = getUserTourBookings;
 // GET /api/tour-bookings/user/:userId/commissions - Kommissionen eines Mitarbeiters
 const getUserCommissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const requestUserId = parseInt(req.userId || '0', 10);
+        const language = requestUserId > 0 ? yield (0, translations_1.getUserLanguage)(requestUserId) : 'de';
         const { userId } = req.params;
         const userIdNum = parseInt(userId, 10);
         const startDate = req.query.startDate
@@ -876,7 +908,7 @@ const getUserCommissions = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (isNaN(userIdNum)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige User-ID'
+                message: (0, translations_1.getTourBookingErrorText)(language, 'invalidUserId')
             });
         }
         const { getUserCommissionStats } = yield Promise.resolve().then(() => __importStar(require('../services/commissionService')));
@@ -888,9 +920,11 @@ const getUserCommissions = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         logger_1.logger.error('[getUserCommissions] Fehler:', error);
+        const requestUserId = parseInt(req.userId || '0', 10);
+        const language = requestUserId > 0 ? yield (0, translations_1.getUserLanguage)(requestUserId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden der Kommissionen'
+            message: (0, translations_1.getTourBookingErrorText)(language, 'loadCommissionsError')
         });
     }
 });

@@ -13,6 +13,7 @@ exports.deleteTourProvider = exports.updateTourProvider = exports.createTourProv
 const prisma_1 = require("../utils/prisma");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const logger_1 = require("../utils/logger");
+const translations_1 = require("../utils/translations");
 // GET /api/tour-providers - Alle Anbieter (mit Filtern)
 const getAllTourProviders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -69,9 +70,11 @@ const getAllTourProviders = (req, res) => __awaiter(void 0, void 0, void 0, func
     }
     catch (error) {
         logger_1.logger.error('[getAllTourProviders] Fehler:', error);
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden der Anbieter'
+            message: (0, translations_1.getTourProviderErrorText)(language, 'loadError')
         });
     }
 });
@@ -79,12 +82,14 @@ exports.getAllTourProviders = getAllTourProviders;
 // GET /api/tour-providers/:id - Einzelner Anbieter
 const getTourProviderById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         const { id } = req.params;
         const providerId = parseInt(id, 10);
         if (isNaN(providerId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Anbieter-ID'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'invalidProviderId')
             });
         }
         const provider = yield prisma_1.prisma.tourProvider.findUnique({
@@ -118,7 +123,7 @@ const getTourProviderById = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!provider) {
             return res.status(404).json({
                 success: false,
-                message: 'Anbieter nicht gefunden'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'providerNotFound')
             });
         }
         res.json({
@@ -128,9 +133,11 @@ const getTourProviderById = (req, res) => __awaiter(void 0, void 0, void 0, func
     }
     catch (error) {
         logger_1.logger.error('[getTourProviderById] Fehler:', error);
+        const userId = parseInt(req.userId || '0', 10);
+        const language = userId > 0 ? yield (0, translations_1.getUserLanguage)(userId) : 'de';
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Laden des Anbieters'
+            message: (0, translations_1.getTourProviderErrorText)(language, 'loadProviderError')
         });
     }
 });
@@ -138,12 +145,14 @@ exports.getTourProviderById = getTourProviderById;
 // POST /api/tour-providers - Neuen Anbieter erstellen
 const createTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_provider_create', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_provider_create', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Erstellen von Anbietern'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'noPermissionCreate')
             });
         }
         const organizationId = req.organizationId;
@@ -153,13 +162,13 @@ const createTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (!name || name.trim().length < 2) {
             return res.status(400).json({
                 success: false,
-                message: 'Name muss mindestens 2 Zeichen lang sein'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'nameMinLength')
             });
         }
         if (!organizationId) {
             return res.status(400).json({
                 success: false,
-                message: 'Organisation ist erforderlich'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'organizationRequired')
             });
         }
         const provider = yield prisma_1.prisma.tourProvider.create({
@@ -195,9 +204,11 @@ const createTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         logger_1.logger.error('[createTourProvider] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Erstellen des Anbieters'
+            message: (0, translations_1.getTourProviderErrorText)(language, 'createError')
         });
     }
 });
@@ -205,12 +216,14 @@ exports.createTourProvider = createTourProvider;
 // PUT /api/tour-providers/:id - Anbieter aktualisieren
 const updateTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_provider_edit', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_provider_edit', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Bearbeiten von Anbietern'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'noPermissionEdit')
             });
         }
         const { id } = req.params;
@@ -218,7 +231,7 @@ const updateTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (isNaN(providerId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Anbieter-ID'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'invalidProviderId')
             });
         }
         const existing = yield prisma_1.prisma.tourProvider.findUnique({
@@ -227,7 +240,7 @@ const updateTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (!existing) {
             return res.status(404).json({
                 success: false,
-                message: 'Anbieter nicht gefunden'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'providerNotFound')
             });
         }
         const { name, phone, email, contactPerson, notes } = req.body;
@@ -236,7 +249,7 @@ const updateTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
             if (name.trim().length < 2) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Name muss mindestens 2 Zeichen lang sein'
+                    message: (0, translations_1.getTourProviderErrorText)(language, 'nameMinLength')
                 });
             }
             updateData.name = name.trim();
@@ -275,9 +288,11 @@ const updateTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         logger_1.logger.error('[updateTourProvider] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Aktualisieren des Anbieters'
+            message: (0, translations_1.getTourProviderErrorText)(language, 'updateError')
         });
     }
 });
@@ -285,12 +300,14 @@ exports.updateTourProvider = updateTourProvider;
 // DELETE /api/tour-providers/:id - Anbieter löschen
 const deleteTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         // Berechtigung prüfen
-        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(parseInt(req.userId), parseInt(req.roleId), 'tour_provider_delete', 'write', 'button');
+        const hasPermission = yield (0, permissionMiddleware_1.checkUserPermission)(userId, parseInt(req.roleId), 'tour_provider_delete', 'write', 'button');
         if (!hasPermission) {
             return res.status(403).json({
                 success: false,
-                message: 'Keine Berechtigung zum Löschen von Anbietern'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'noPermissionDelete')
             });
         }
         const { id } = req.params;
@@ -298,7 +315,7 @@ const deleteTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (isNaN(providerId)) {
             return res.status(400).json({
                 success: false,
-                message: 'Ungültige Anbieter-ID'
+                message: (0, translations_1.getTourProviderErrorText)(language, 'invalidProviderId')
             });
         }
         // Prüfe ob Touren verknüpft sind
@@ -306,9 +323,10 @@ const deleteTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
             where: { externalProviderId: providerId }
         });
         if (tours.length > 0) {
+            const errorText = (0, translations_1.getTourProviderErrorText)(language, 'cannotDeleteWithTours');
             return res.status(400).json({
                 success: false,
-                message: `Anbieter kann nicht gelöscht werden, da ${tours.length} Tour(s) verknüpft sind`
+                message: errorText.replace('{count}', tours.length.toString())
             });
         }
         yield prisma_1.prisma.tourProvider.delete({
@@ -316,14 +334,16 @@ const deleteTourProvider = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
         res.json({
             success: true,
-            message: 'Anbieter gelöscht'
+            message: (0, translations_1.getTourProviderErrorText)(language, 'providerDeleted')
         });
     }
     catch (error) {
         logger_1.logger.error('[deleteTourProvider] Fehler:', error);
+        const userId = parseInt(req.userId, 10);
+        const language = yield (0, translations_1.getUserLanguage)(userId);
         res.status(500).json({
             success: false,
-            message: 'Fehler beim Löschen des Anbieters'
+            message: (0, translations_1.getTourProviderErrorText)(language, 'deleteError')
         });
     }
 });

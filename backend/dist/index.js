@@ -136,7 +136,7 @@ process.on('SIGTERM', () => __awaiter(void 0, void 0, void 0, function* () {
     logger_1.logger.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
     yield (0, queues_1.stopWorkers)();
     // ✅ MEMORY: Cleanup Timer
-    (0, exports.cleanupTimers)(); // index.ts Timer
+    yield (0, exports.cleanupTimers)(); // index.ts Timer
     (0, app_1.cleanupTimers)(); // app.ts Timer
     (0, rateLimiter_1.cleanupRateLimiter)(); // rateLimiter Timer
     // ✅ PERFORMANCE: Prisma-Instanz disconnecten
@@ -150,7 +150,7 @@ process.on('SIGINT', () => __awaiter(void 0, void 0, void 0, function* () {
     logger_1.logger.log('SIGINT signal empfangen. Server wird heruntergefahren...');
     yield (0, queues_1.stopWorkers)();
     // ✅ MEMORY: Cleanup Timer
-    (0, exports.cleanupTimers)(); // index.ts Timer
+    yield (0, exports.cleanupTimers)(); // index.ts Timer
     (0, app_1.cleanupTimers)(); // app.ts Timer
     (0, rateLimiter_1.cleanupRateLimiter)(); // rateLimiter Timer
     // ✅ PERFORMANCE: Prisma-Instanz disconnecten
@@ -178,13 +178,16 @@ passcodeCleanupTimeout = setTimeout(() => __awaiter(void 0, void 0, void 0, func
     try {
         const { ReservationPasscodeCleanupScheduler } = yield Promise.resolve().then(() => __importStar(require('./services/reservationPasscodeCleanupScheduler')));
         ReservationPasscodeCleanupScheduler.start();
+        // Rate Shopping Scheduler
+        const { RateShoppingScheduler } = yield Promise.resolve().then(() => __importStar(require('./services/rateShoppingScheduler')));
+        RateShoppingScheduler.start();
     }
     catch (error) {
         logger_1.logger.error('[Timer] Fehler beim Starten des Passcode-Cleanup-Schedulers:', error);
     }
 }), 1000); // Starte nach 1 Sekunde
 // ✅ MEMORY: Cleanup-Funktion für Server-Shutdown
-const cleanupTimers = () => {
+const cleanupTimers = () => __awaiter(void 0, void 0, void 0, function* () {
     if (tourBookingSchedulerInterval) {
         clearInterval(tourBookingSchedulerInterval);
         tourBookingSchedulerInterval = null;
@@ -197,7 +200,15 @@ const cleanupTimers = () => {
     }
     // ✅ MEMORY-LEAK-FIX: Cache-Cleanup-Service stoppen
     cacheCleanupService_1.cacheCleanupService.stop();
-};
+    // Rate Shopping Scheduler stoppen
+    try {
+        const { RateShoppingScheduler } = yield Promise.resolve().then(() => __importStar(require('./services/rateShoppingScheduler')));
+        RateShoppingScheduler.stop();
+    }
+    catch (error) {
+        logger_1.logger.error('[Cleanup] Fehler beim Stoppen des Rate Shopping Schedulers:', error);
+    }
+});
 exports.cleanupTimers = cleanupTimers;
 logger_1.logger.log('✅ Reservation-Passcode-Cleanup-Scheduler wird gestartet (prüft täglich um 11:00 Uhr)');
 // ✅ MEMORY-LEAK-FIX: Starte Cache-Cleanup-Service

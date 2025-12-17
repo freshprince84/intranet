@@ -3235,5 +3235,143 @@
       "deleteConfirm": "¿Realmente eliminar regla?",
       "invalidJson": "Formato JSON inválido"
     }
+  },
+  "landing": {
+    "hero": {
+      "label": "Plataforma intranet",
+      "title": "Hospitality y Consultoría",
+      "badge": "Menos carga • Control de equipos • Ingresos protegidos",
+      "headline": "Un intranet para hostales, hoteles, Airbnbs y equipos de consultoría",
+      "subline": "Control horario, tareas, conocimiento, facturación y automatización con IA en una sola interfaz – móvil y en sitio.",
+      "ctaRegister": "Registrarse",
+      "ctaLogin": "Login",
+      "ctaDemo": "Solicitar demo",
+      "ctaHint": "Haz clic en un icono para avanzar."
+    },
+    "stats": {
+      "uptime": "Disponibilidad",
+      "automation": "Disparadores de automatización activos",
+      "languages": "Idiomas activos"
+    },
+    "assets": {
+      "placeholderWorktracker": "Marcador de posición: tablero de Worktracker con flujo de estados y filtros.",
+      "placeholderConsultations": "Marcador de posición: Consultas con facturas QR y reportes mensuales.",
+      "placeholderDocument": "Marcador de posición: Reconocimiento de documentos con IA y campos extraídos."
+    },
+    "audience": {
+      "hospitality": {
+        "title": "Hostales, Airbnbs, Hoteles",
+        "description": "Turnos, housekeeping, check-in/out, llaves y documentos en un solo flujo.",
+        "point1": "Control de turnos y horas en vivo (control horario, control de equipo).",
+        "point2": "Tareas/housekeeping con flujo de estados y notificaciones.",
+        "point3": "Cadena LobbyPMS/TTLock para check-in/out y entrega de llaves."
+      },
+      "consulting": {
+        "title": "Consultoría",
+        "description": "Horas facturables y conocimiento siempre alineado.",
+        "point1": "Seguimiento de consultas (inicio/fin o manual) con clientes y notas.",
+        "point2": "Facturas QR suizas y reportes mensuales sin doble facturación.",
+        "point3": "Base de conocimiento con Cerebro y tareas para entregables."
+      }
+    },
+    "features": {
+      "title": "Módulos y valor",
+      "labels": {
+        "worktime": "Control horario",
+        "worktracker": "Worktracker",
+        "teamControl": "Control de equipo",
+        "cerebro": "Cerebro wiki",
+        "workflow": "Automatización de flujos",
+        "consultations": "Consultas",
+        "invoices": "Facturas/Reportes mensuales",
+        "documentRecognition": "Reconocimiento de documentos (IA)",
+        "filters": "Filtros y automatización",
+        "lobbypms": "LobbyPMS/TTLock",
+        "mobile": "App móvil"
+      },
+      "operations": {
+        "title": "Operaciones y control de equipo",
+        "worktime": "Iniciar/detener horas en vivo, seguro en zonas horarias, estadísticas por sede.",
+        "worktracker": "Tareas con flujo de estados, responsables/QC, filtros guardados, notificaciones.",
+        "teamControl": "Vista de horas del equipo, detener tiempos en curso, exportar análisis."
+      },
+      "knowledge": {
+        "title": "Conocimiento y procesos",
+        "cerebro": "Wiki Markdown con estructura, medios y enlaces a tareas/solicitudes.",
+        "workflow": "Automatizaciones por roles y estados; descripciones de tareas obligatorias."
+      },
+      "billing": {
+        "title": "Facturación y consultas",
+        "consultations": "Elegir clientes, registrar consultas, notas con guardado automático.",
+        "invoices": "Facturas QR suizas, reportes mensuales, anti doble facturación, estado de pagos."
+      },
+      "ai": {
+        "title": "IA y automatización",
+        "documentRecognition": "Carga de ID, extracción con IA, validación, enlace a perfil.",
+        "filters": "Filtros guardados con lógica AND/OR, filtros estándar por tabla."
+      },
+      "integration": {
+        "title": "Integraciones y móvil",
+        "lobbypms": "Cadena LobbyPMS/TTLock para check-in/llaves.",
+        "mobile": "App móvil para tiempo, tareas y notificaciones."
+      }
+    },
+    "proof": {
+      "badge": "Probado en operación",
+      "title": "Resultados reales",
+      "description": "Menos errores, flujos más rápidos, equipos más felices.",
+      "hospitality": {
+        "title": "Líder de Operaciones, Hostal"
+      },
+      "consulting": {
+        "title": "Líder de Consultoría"
+      },
+      "review1": "Los cambios de turno son limpios, housekeeping siempre actualizado, la automatización de check-in ahorra tiempo en recepción.",
+      "review2": "Horas de consultoría auditables, facturas QR y reportes mensuales sin retrabajo."
+    },
+    "cta": {
+      "title": "¿Listo para empezar?",
+      "subtitle": "Solicita una demo o regístrate ahora. Totalmente multilingüe (de/en/es).",
+      "formTitle": "Solicitar demo",
+      "formHint": "Formulario corto, agendamos un espacio.",
+      "formName": "Nombre",
+      "formOrganization": "Organización",
+      "formContact": "Correo o teléfono",
+      "formSize": "Número de habitaciones/camas o tamaño del equipo",
+      "formUseCase": "Casos de uso / detalles",
+      "formSubmit": "Enviar demo",
+      "formSecondary": "O regístrate y empieza de inmediato.",
+      "formFallback": "Configura el endpoint de demo. El formulario aún no envía."
+    },
+    "faq": {
+      "title": "FAQ",
+      "integration": {
+        "q": "¿Cómo se integran con sistemas existentes?",
+        "a": "LobbyPMS/TTLock ya está preparado. Más integraciones se definen en el onboarding."
+      },
+      "support": {
+        "q": "¿Cómo manejan el soporte?",
+        "a": "Soporte vía intranet con prioridades claras. Conocimiento en el wiki Cerebro."
+      },
+      "security": {
+        "q": "¿Cómo abordan la seguridad?",
+        "a": "Roles/permisos, auditorías, cargas de IA con validación, solo HTTPS."
+      },
+      "onboarding": {
+        "q": "¿Cuánto tarda el onboarding?",
+        "a": "Usualmente pocas horas: sedes, roles, filtros estándar y listo para producción."
+      }
+    },
+    "footer": {
+      "title": "Intranet para hospitality y consultoría",
+      "copy": "Más productividad, menos caos, cumplimiento total."
+    },
+    "seo": {
+      "title": "Landing de intranet – hospitality y consultoría",
+      "description": "Control horario, worktracker, wiki, consultas, facturas y reconocimiento de documentos con IA para hostales, hoteles, Airbnbs y equipos de consultoría."
+    },
+    "schema": {
+      "productName": "Plataforma Intranet"
+    }
   }
 }
