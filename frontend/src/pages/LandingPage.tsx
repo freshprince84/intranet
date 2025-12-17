@@ -15,13 +15,6 @@ import {
   Squares2X2Icon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
-import heroPoster from '/landing/worktracker.webp';
-import featureWorktracker from '/landing/worktracker.webp';
-import featureConsultations from '/landing/consultations.webp';
-import featureDocument from '/landing/document-recognition.webp';
-import featureTeam from '/landing/team-worktime.webp';
-import featureCerebro from '/landing/cerebro.webp';
-import featureMobile from '/landing/mobile.webp';
 
 type Feature = {
   key: string;
@@ -38,6 +31,13 @@ type FAQItem = {
   questionKey: string;
   answerKey: string;
 };
+
+const IMG_WORKTRACKER = '/landing/worktracker.webp';
+const IMG_CONSULTATIONS = '/landing/consultations.webp';
+const IMG_DOCUMENT = '/landing/document-recognition.webp';
+const IMG_TEAM = '/landing/team-worktime.webp';
+const IMG_CEREBRO = '/landing/cerebro.webp';
+const IMG_MOBILE = '/landing/mobile.webp';
 
 const CTAIconButton: React.FC<{
   to: string;
@@ -257,7 +257,7 @@ const LandingPage: React.FC = () => {
           <div className="grid gap-4">
             <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
               <img
-                src={featureWorktracker}
+                src={IMG_WORKTRACKER}
                 alt={t('landing.assets.placeholderWorktracker')}
                 loading="lazy"
                 className="w-full h-64 object-cover"
@@ -265,7 +265,7 @@ const LandingPage: React.FC = () => {
             </div>
             <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
               <img
-                src={featureConsultations}
+                src={IMG_CONSULTATIONS}
                 alt={t('landing.assets.placeholderConsultations')}
                 loading="lazy"
                 className="w-full h-64 object-cover"
@@ -273,7 +273,7 @@ const LandingPage: React.FC = () => {
             </div>
             <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
               <img
-                src={featureDocument}
+                src={IMG_DOCUMENT}
                 alt={t('landing.assets.placeholderDocument')}
                 loading="lazy"
                 className="w-full h-64 object-cover"
@@ -326,19 +326,19 @@ const LandingPage: React.FC = () => {
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <img
-              src={featureTeam}
+              src={IMG_TEAM}
               alt={t('landing.features.labels.teamControl')}
               loading="lazy"
               className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-800"
             />
             <img
-              src={featureCerebro}
+              src={IMG_CEREBRO}
               alt={t('landing.features.labels.cerebro')}
               loading="lazy"
               className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-800"
             />
             <img
-              src={featureMobile}
+              src={IMG_MOBILE}
               alt={t('landing.features.labels.mobile')}
               loading="lazy"
               className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-800"
