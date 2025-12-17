@@ -1119,6 +1119,7 @@ type PriceAnalysisNotificationTranslations = {
   rateShoppingFailed: (platform: string, error: string) => { title: string; message: string };
   analysisCompleted: (analysisCount: number) => { title: string; message: string };
   recommendationsGenerated: (recommendationCount: number) => { title: string; message: string };
+  occupancyAlert: (data: { branchName: string; alertCount: number; details: string }) => { title: string; message: string };
 };
 
 const priceAnalysisNotifications: Record<string, PriceAnalysisNotificationTranslations> = {
@@ -1158,6 +1159,10 @@ const priceAnalysisNotifications: Record<string, PriceAnalysisNotificationTransl
     recommendationsGenerated: (recommendationCount: number) => ({
       title: 'Preisvorschläge generiert',
       message: `${recommendationCount} Preisvorschläge wurden generiert.`
+    }),
+    occupancyAlert: (data: { branchName: string; alertCount: number; details: string }) => ({
+      title: `Occupancy-Alert: ${data.branchName}`,
+      message: `${data.alertCount} kritische Occupancy-Änderungen erkannt:\n\n${data.details}`
     })
   },
   es: {
@@ -1196,6 +1201,10 @@ const priceAnalysisNotifications: Record<string, PriceAnalysisNotificationTransl
     recommendationsGenerated: (recommendationCount: number) => ({
       title: 'Recomendaciones de precio generadas',
       message: `Se generaron ${recommendationCount} recomendaciones de precio.`
+    }),
+    occupancyAlert: (data: { branchName: string; alertCount: number; details: string }) => ({
+      title: `Alerta de ocupación: ${data.branchName}`,
+      message: `${data.alertCount} cambios críticos de ocupación detectados:\n\n${data.details}`
     })
   },
   en: {
@@ -1234,13 +1243,17 @@ const priceAnalysisNotifications: Record<string, PriceAnalysisNotificationTransl
     recommendationsGenerated: (recommendationCount: number) => ({
       title: 'Price recommendations generated',
       message: `${recommendationCount} price recommendations were generated.`
+    }),
+    occupancyAlert: (data: { branchName: string; alertCount: number; details: string }) => ({
+      title: `Occupancy Alert: ${data.branchName}`,
+      message: `${data.alertCount} critical occupancy changes detected:\n\n${data.details}`
     })
   }
 };
 
 export function getPriceAnalysisNotificationText(
   language: string,
-  type: 'recommendationCreated' | 'recommendationApplied' | 'ruleCreated' | 'ruleUpdated' | 'ruleDeleted' | 'rateShoppingCompleted' | 'rateShoppingFailed' | 'analysisCompleted' | 'recommendationsGenerated',
+  type: 'recommendationCreated' | 'recommendationApplied' | 'ruleCreated' | 'ruleUpdated' | 'ruleDeleted' | 'rateShoppingCompleted' | 'rateShoppingFailed' | 'analysisCompleted' | 'recommendationsGenerated' | 'occupancyAlert',
   ...args: any[]
 ): { title: string; message: string } {
   const lang = language in priceAnalysisNotifications ? language : 'de';
@@ -1265,6 +1278,8 @@ export function getPriceAnalysisNotificationText(
       return translations.analysisCompleted(args[0]);
     case 'recommendationsGenerated':
       return translations.recommendationsGenerated(args[0]);
+    case 'occupancyAlert':
+      return translations.occupancyAlert(args[0]);
     default:
       return translations.recommendationCreated(args[0], args[1]);
   }

@@ -161,7 +161,11 @@ export class WhatsAppAiService {
     });
 
     // 3. Baue System Prompt (modularer PromptBuilder)
-    const systemPrompt = PromptBuilder.buildPrompt(language, conversationContext, 'whatsapp', aiConfig);
+    // WICHTIG: conversationContext muss ConversationContext-Format haben (mit language)
+    const contextForPrompt = conversationContext && typeof conversationContext === 'object' 
+      ? { ...conversationContext, language: conversationContext.language || language }
+      : { language };
+    const systemPrompt = PromptBuilder.buildPrompt(language, contextForPrompt, 'whatsapp', aiConfig);
 
     // 4. Prüfe ob Function Calling aktiviert werden soll
     // WICHTIG: check_room_availability sollte auch für Gäste verfügbar sein!
