@@ -7,7 +7,7 @@ import IdentificationDocumentForm from './IdentificationDocumentForm.tsx';
 import { useAuth } from '../hooks/useAuth.tsx';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
-import { EyeIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon, PlusIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface IdentificationDocumentListProps {
   userId: number;
@@ -234,7 +234,7 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
 
   if (showAddForm) {
     return (
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
         <h3 className="text-lg font-medium mb-4">{t('identificationDocuments.addDocument')}</h3>
         <IdentificationDocumentForm
           userId={userId}
@@ -250,7 +250,7 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
 
   if (editingDocument) {
     return (
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
         <h3 className="text-lg font-medium mb-4">{t('identificationDocuments.editDocument')}</h3>
         <IdentificationDocumentForm
           userId={userId}
@@ -274,7 +274,7 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
     const isImage = contentType.startsWith('image/');
 
     return (
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">
             {doc ? formatDocumentType(doc.documentType) : t('identificationDocuments.viewDocument', { defaultValue: 'Dokument anzeigen' })}
@@ -282,15 +282,19 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
           <div className="flex space-x-2">
             <button
               onClick={() => handleDownloadDocument(viewingDocument)}
-              className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700"
+              className="p-2 rounded-md text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
               disabled={isDownloading === viewingDocument}
+              title={t('identificationDocuments.actions.download', { defaultValue: 'Herunterladen' })}
             >
-              {isDownloading === viewingDocument ? t('identificationDocuments.actions.downloading') : t('identificationDocuments.actions.download', { defaultValue: 'Herunterladen' })}
+              {isDownloading === viewingDocument ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600" />
+              ) : (
+                <ArrowDownTrayIcon className="h-5 w-5" />
+              )}
             </button>
             <button
               onClick={() => {
                 setViewingDocument(null);
-                // Cleanup: Revoke URL nach 1 Sekunde (wenn Modal geschlossen wird)
                 setTimeout(() => {
                   if (previewUrls[viewingDocument]) {
                     window.URL.revokeObjectURL(previewUrls[viewingDocument]);
@@ -307,9 +311,10 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
                   }
                 }, 1000);
               }}
-              className="px-3 py-1 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700"
+              className="p-2 rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              title={t('common.close', { defaultValue: 'Schließen' })}
             >
-              {t('common.close', { defaultValue: 'Schließen' })}
+              <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
         </div>
@@ -346,15 +351,20 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">{t('identificationDocuments.title')}</h3>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
-        >
-          {t('identificationDocuments.newDocument')}
-        </button>
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+            style={{ width: '30.19px', height: '30.19px' }}
+            title={t('identificationDocuments.newDocument')}
+          >
+            <PlusIcon className="h-4 w-4" />
+          </button>
+          <h3 className="text-lg font-medium">{t('identificationDocuments.title')}</h3>
+        </div>
+        <div />
       </div>
 
       {loading ? (
@@ -465,13 +475,13 @@ const IdentificationDocumentList = forwardRef<{ loadDocuments: () => void }, Ide
                         <TrashIcon className="h-5 w-5" />
                       </button>
                       {isAdmin && !doc.isVerified && (
-                        <button
-                          onClick={() => handleVerifyDocument(doc.id)}
-                          className="p-2 rounded-md text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
-                          title={t('identificationDocuments.actions.verify')}
-                        >
-                          {t('identificationDocuments.actions.verify')}
-                        </button>
+                      <button
+                        onClick={() => handleVerifyDocument(doc.id)}
+                        className="p-2 rounded-md text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                        title={t('identificationDocuments.actions.verify')}
+                      >
+                        <CheckIcon className="h-5 w-5" />
+                      </button>
                       )}
                     </div>
                   </td>

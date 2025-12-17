@@ -907,22 +907,23 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             }
           }
 
-          // Ersetze Links im Text durch HTML-Links
+          // Ersetze Links im Text durch formattierte Linktexte
           const buttonColor = branding?.colors?.primary || '#007bff';
+          const checkInLabel =
+            emailLanguageCode === 'en' ? 'Online Check-in' :
+            emailLanguageCode === 'es' ? 'Check-in en línea' :
+            'Online Check-in';
+          const paymentLabel =
+            emailLanguageCode === 'en' ? 'Make Payment' :
+            emailLanguageCode === 'es' ? 'Realizar pago' :
+            'Zahlung durchführen';
+
           let emailHtmlContent = emailMessage
             .replace(/\n/g, '<br>')
             .replace(new RegExp(checkInLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
-              `<a href="${checkInLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: bold;">${checkInLink}</a>`)
+              `<a href="${checkInLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: 600;">${checkInLabel}</a>`)
             .replace(new RegExp(paymentLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
-              `<a href="${paymentLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: bold;">${paymentLink}</a>`);
-
-          // Füge Buttons hinzu
-          emailHtmlContent += `
-            <div style="text-align: center; margin: 20px 0;">
-              <a href="${checkInLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Online Check-in</a>
-              <a href="${paymentLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Zahlung durchführen</a>
-            </div>
-          `;
+              `<a href="${paymentLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: 600;">${paymentLabel}</a>`);
 
           // NEU: Lade Email-Betreff aus Template
           const { CountryLanguageService: CLS } = require('./countryLanguageService');
@@ -2170,7 +2171,7 @@ ${contentText}
       }
     }
 
-    const buttonColor = branding?.colors?.primary || '#007bff';
+    const linkColor = branding?.colors?.primary || '#2563eb';
     let subject: string;
     let content: string;
     let text: string;
@@ -2183,14 +2184,8 @@ ${contentText}
         <p>We are pleased to welcome you to La Familia Hostel! 🎊</p>
         <p>In case that you arrive after 18:00 or before 09:00, our recepcion 🛎️ will be closed.</p>
         <p>We would then kindly ask you to complete check-in & payment online in advance:</p>
-        <p><strong>Check-In:</strong></p>
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${checkInLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Online Check-in</a>
-        </div>
-        <p><strong>Please make the payment in advance:</strong></p>
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${paymentLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Make Payment</a>
-        </div>
+        <p><strong>Check-In:</strong> <a href="${checkInLink}" style="color: ${linkColor}; text-decoration: none; font-weight: 600;">Online Check-in</a></p>
+        <p><strong>Please make the payment in advance:</strong> <a href="${paymentLink}" style="color: ${linkColor}; text-decoration: none; font-weight: 600;">Make Payment</a></p>
         <p>Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.</p>
         <p>Thank you!</p>
         <p>We look forward to seeing you soon!</p>
@@ -2227,14 +2222,8 @@ We look forward to seeing you soon!
         <p>¡Nos complace darte la bienvenida a La Familia Hostel! 🎊</p>
         <p>En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.</p>
         <p>Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:</p>
-        <p><strong>Check-In:</strong></p>
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${checkInLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Check-in en línea</a>
-        </div>
-        <p><strong>Por favor, realiza el pago por adelantado:</strong></p>
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${paymentLink}" style="display: inline-block; padding: 12px 24px; background-color: ${buttonColor}; color: white; text-decoration: none; border-radius: 6px; margin: 5px;">Realizar pago</a>
-        </div>
+        <p><strong>Check-In:</strong> <a href="${checkInLink}" style="color: ${linkColor}; text-decoration: none; font-weight: 600;">Check-in en línea</a></p>
+        <p><strong>Por favor, realiza el pago por adelantado:</strong> <a href="${paymentLink}" style="color: ${linkColor}; text-decoration: none; font-weight: 600;">Realizar pago</a></p>
         <p>Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.</p>
         <p>¡Gracias!</p>
         <p>¡Esperamos verte pronto!</p>

@@ -223,10 +223,12 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         
         setTodos(response.data || []);
       } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          console.error('Error loading todos:', error);
-          setError(t('analytics.todo.loadError'));
+        // Axios verwendet "CanceledError"/code "ERR_CANCELED" bei Abbruch über AbortController
+        if (error?.name === 'AbortError' || error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') {
+          return;
         }
+        console.error('Error loading todos:', error);
+        setError(t('analytics.todo.loadError'));
       } finally {
         if (!abortController.signal.aborted) {
           setLoading(false);
