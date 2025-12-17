@@ -231,60 +231,54 @@ const LandingPage: React.FC = () => {
             <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight">{t('landing.hero.headline')}</h1>
             <p className="text-lg text-gray-600 dark:text-gray-300">{t('landing.hero.subline')}</p>
             <div className="flex items-center gap-3 flex-wrap">
-              <CTAIconButton to="/register" title={t('landing.hero.ctaRegister')} Icon={ArrowRightIcon} />
-              <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaRegisterLabel')}</span>
-              <CTAIconButton to="/login" title={t('landing.hero.ctaLogin')} Icon={CheckCircleIcon} />
-              <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaLoginLabel')}</span>
-              <CTAIconButton to="#contact" title={t('landing.hero.ctaDemo')} Icon={SparklesIcon} />
-              <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaDemoLabel')}</span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{t('landing.hero.ctaHint')}</span>
+              <Link
+                to="/register"
+                className="inline-flex items-center justify-center rounded-lg bg-blue-600 text-white px-6 py-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-semibold"
+              >
+                {t('landing.hero.ctaRegister')}
+                <ArrowRightIcon className="h-5 w-5 ml-2" />
+              </Link>
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                {t('landing.hero.ctaLogin')}
+              </Link>
             </div>
             <div className="grid sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-                <p className="text-2xl font-bold">24/7</p>
-                <p className="text-sm text-gray-500">{t('landing.stats.uptime')}</p>
+                <p className="text-2xl font-bold text-blue-600">24/7</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.stats.uptime')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('landing.stats.uptimeDesc')}</p>
               </div>
               <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-                <p className="text-2xl font-bold">120+</p>
-                <p className="text-sm text-gray-500">{t('landing.stats.automation')}</p>
+                <p className="text-2xl font-bold text-blue-600">120+</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.stats.automation')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('landing.stats.automationDesc')}</p>
               </div>
               <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-                <p className="text-2xl font-bold">3</p>
-                <p className="text-sm text-gray-500">{t('landing.stats.languages')}</p>
+                <p className="text-2xl font-bold text-blue-600">3</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.stats.languages')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('landing.stats.languagesDesc')}</p>
               </div>
             </div>
           </div>
-          <div className="grid gap-4">
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
-              <img
-                src={IMG_WORKTRACKER}
-                alt={t('landing.assets.placeholderWorktracker')}
-                loading="lazy"
-                className="w-full h-64 object-cover"
-              />
-            </div>
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
-              <img
-                src={IMG_CONSULTATIONS}
-                alt={t('landing.assets.placeholderConsultations')}
-                loading="lazy"
-                className="w-full h-64 object-cover"
-              />
-            </div>
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
-              <img
-                src={IMG_DOCUMENT}
-                alt={t('landing.assets.placeholderDocument')}
-                loading="lazy"
-                className="w-full h-64 object-cover"
-              />
+          <div className="group relative rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
+            <img
+              src={IMG_WORKTRACKER}
+              alt={t('landing.assets.placeholderWorktracker')}
+              loading="lazy"
+              className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+              <p className="text-white font-semibold text-xl sm:text-2xl">{t('landing.features.labels.worktracker')}</p>
             </div>
           </div>
         </section>
 
         <section className="grid md:grid-cols-2 gap-8" id="audiences">
           {audiences.map((audience) => (
-            <div key={audience.key} className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm">
+            <div key={audience.key} className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm animate-fade-in-up">
               <h2 className="text-2xl font-bold mb-4">{t(`landing.audience.${audience.key}.title`)}</h2>
               <p className="text-gray-600 dark:text-gray-300 mb-4">{t(`landing.audience.${audience.key}.description`)}</p>
               <ul className="space-y-3">
@@ -324,25 +318,43 @@ const LandingPage: React.FC = () => {
               </div>
             ))}
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <img
-              src={IMG_TEAM}
-              alt={t('landing.features.labels.teamControl')}
-              loading="lazy"
-              className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-800"
-            />
-            <img
-              src={IMG_CEREBRO}
-              alt={t('landing.features.labels.cerebro')}
-              loading="lazy"
-              className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-800"
-            />
-            <img
-              src={IMG_MOBILE}
-              alt={t('landing.features.labels.mobile')}
-              loading="lazy"
-              className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-800"
-            />
+          <div className="grid gap-4 md:grid-cols-3 animate-fade-in-up">
+            <div className="group relative rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
+              <img
+                src={IMG_TEAM}
+                alt={t('landing.features.labels.teamControl')}
+                loading="lazy"
+                className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <p className="text-white font-semibold text-lg">{t('landing.features.labels.teamControl')}</p>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">{t('landing.features.screenshots.teamControl')}</p>
+            </div>
+            <div className="group relative rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
+              <img
+                src={IMG_CEREBRO}
+                alt={t('landing.features.labels.cerebro')}
+                loading="lazy"
+                className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <p className="text-white font-semibold text-lg">{t('landing.features.labels.cerebro')}</p>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">{t('landing.features.screenshots.cerebro')}</p>
+            </div>
+            <div className="group relative rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
+              <img
+                src={IMG_MOBILE}
+                alt={t('landing.features.labels.mobile')}
+                loading="lazy"
+                className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <p className="text-white font-semibold text-lg">{t('landing.features.labels.mobile')}</p>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">{t('landing.features.screenshots.mobile')}</p>
+            </div>
           </div>
         </section>
 

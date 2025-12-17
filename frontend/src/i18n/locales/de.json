@@ -3324,8 +3324,11 @@
     },
     "stats": {
       "uptime": "Verfügbarkeit",
+      "uptimeDesc": "24/7 Support",
       "automation": "Automationstrigger aktiv",
-      "languages": "Sprachen live"
+      "automationDesc": "Automatisierungen",
+      "languages": "Sprachen live",
+      "languagesDesc": "DE, EN, ES"
     },
     "assets": {
       "placeholderWorktracker": "Screenshot-Placeholder: Worktracker-Board mit Statuslauf und Filtern.",
@@ -3388,6 +3391,11 @@
         "title": "Integrationen & Mobil",
         "lobbypms": "LobbyPMS/TTLock-Kette für Check-in/Keys.",
         "mobile": "Mobile App für Zeiten, Tasks und Benachrichtigungen."
+      },
+      "screenshots": {
+        "teamControl": "Team-Übersicht mit Arbeitszeiten",
+        "cerebro": "Wiki-Editor mit Media-Support",
+        "mobile": "Mobile-Interface für unterwegs"
       }
     },
     "proof": {

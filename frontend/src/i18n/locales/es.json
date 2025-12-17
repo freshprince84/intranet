@@ -3253,8 +3253,11 @@
     },
     "stats": {
       "uptime": "Disponibilidad",
+      "uptimeDesc": "Soporte 24/7",
       "automation": "Disparadores de automatización activos",
-      "languages": "Idiomas activos"
+      "automationDesc": "Automatizaciones",
+      "languages": "Idiomas activos",
+      "languagesDesc": "DE, EN, ES"
     },
     "assets": {
       "placeholderWorktracker": "Marcador de posición: tablero de Worktracker con flujo de estados y filtros.",
@@ -3317,6 +3320,11 @@
         "title": "Integraciones y móvil",
         "lobbypms": "Cadena LobbyPMS/TTLock para check-in/llaves.",
         "mobile": "App móvil para tiempo, tareas y notificaciones."
+      },
+      "screenshots": {
+        "teamControl": "Vista general del equipo con tiempos de trabajo",
+        "cerebro": "Editor wiki con soporte multimedia",
+        "mobile": "Interfaz móvil sobre la marcha"
       }
     },
     "proof": {

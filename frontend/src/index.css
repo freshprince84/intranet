@@ -1763,3 +1763,22 @@ div.fixed.top-16.bottom-0.right-0.sidepane-panel-container {
     flex-shrink: 0;
   }
 }
+
+/* ============================================
+   LANDING PAGE ANIMATIONEN
+   ============================================ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
