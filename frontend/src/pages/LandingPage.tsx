@@ -15,6 +15,13 @@ import {
   Squares2X2Icon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import heroPoster from '/landing/worktracker.webp';
+import featureWorktracker from '/landing/worktracker.webp';
+import featureConsultations from '/landing/consultations.webp';
+import featureDocument from '/landing/document-recognition.webp';
+import featureTeam from '/landing/team-worktime.webp';
+import featureCerebro from '/landing/cerebro.webp';
+import featureMobile from '/landing/mobile.webp';
 
 type Feature = {
   key: string;
@@ -145,6 +152,16 @@ const LandingPage: React.FC = () => {
       meta.content = description;
       document.head.appendChild(meta);
     }
+
+    // Optional: canonical/hreflang Konfiguration, wenn Domain/Subdomain gesetzt werden soll
+    // const canonicalHref = `${window.location.origin}/landing`;
+    // let canonicalLink = document.querySelector("link[rel='canonical']");
+    // if (!canonicalLink) {
+    //   canonicalLink = document.createElement('link');
+    //   canonicalLink.setAttribute('rel', 'canonical');
+    //   document.head.appendChild(canonicalLink);
+    // }
+    // canonicalLink.setAttribute('href', canonicalHref);
   }, [t]);
 
   const jsonLd = useMemo(() => {
@@ -198,8 +215,11 @@ const LandingPage: React.FC = () => {
           </div>
           <nav className="flex items-center gap-3">
             <CTAIconButton to="/register" title={t('landing.hero.ctaRegister')} Icon={ArrowRightIcon} />
+            <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaRegisterLabel')}</span>
             <CTAIconButton to="/login" title={t('landing.hero.ctaLogin')} Icon={CheckCircleIcon} />
+            <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaLoginLabel')}</span>
             <CTAIconButton to="#contact" title={t('landing.hero.ctaDemo')} Icon={SparklesIcon} />
+            <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaDemoLabel')}</span>
           </nav>
         </div>
       </header>
@@ -210,10 +230,13 @@ const LandingPage: React.FC = () => {
             <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold">{t('landing.hero.badge')}</p>
             <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight">{t('landing.hero.headline')}</h1>
             <p className="text-lg text-gray-600 dark:text-gray-300">{t('landing.hero.subline')}</p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <CTAIconButton to="/register" title={t('landing.hero.ctaRegister')} Icon={ArrowRightIcon} />
+              <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaRegisterLabel')}</span>
               <CTAIconButton to="/login" title={t('landing.hero.ctaLogin')} Icon={CheckCircleIcon} />
+              <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaLoginLabel')}</span>
               <CTAIconButton to="#contact" title={t('landing.hero.ctaDemo')} Icon={SparklesIcon} />
+              <span className="text-sm text-gray-600 dark:text-gray-300">{t('landing.hero.ctaDemoLabel')}</span>
               <span className="text-sm text-gray-500 dark:text-gray-400">{t('landing.hero.ctaHint')}</span>
             </div>
             <div className="grid sm:grid-cols-3 gap-4">
@@ -232,14 +255,29 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="grid gap-4">
-            <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-6">
-              <p className="text-sm text-gray-500">{t('landing.assets.placeholderWorktracker')}</p>
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
+              <img
+                src={featureWorktracker}
+                alt={t('landing.assets.placeholderWorktracker')}
+                loading="lazy"
+                className="w-full h-64 object-cover"
+              />
             </div>
-            <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-6">
-              <p className="text-sm text-gray-500">{t('landing.assets.placeholderConsultations')}</p>
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
+              <img
+                src={featureConsultations}
+                alt={t('landing.assets.placeholderConsultations')}
+                loading="lazy"
+                className="w-full h-64 object-cover"
+              />
             </div>
-            <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-6">
-              <p className="text-sm text-gray-500">{t('landing.assets.placeholderDocument')}</p>
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-800">
+              <img
+                src={featureDocument}
+                alt={t('landing.assets.placeholderDocument')}
+                loading="lazy"
+                className="w-full h-64 object-cover"
+              />
             </div>
           </div>
         </section>
@@ -286,6 +324,26 @@ const LandingPage: React.FC = () => {
               </div>
             ))}
           </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <img
+              src={featureTeam}
+              alt={t('landing.features.labels.teamControl')}
+              loading="lazy"
+              className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-800"
+            />
+            <img
+              src={featureCerebro}
+              alt={t('landing.features.labels.cerebro')}
+              loading="lazy"
+              className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-800"
+            />
+            <img
+              src={featureMobile}
+              alt={t('landing.features.labels.mobile')}
+              loading="lazy"
+              className="w-full h-48 object-cover rounded-xl border border-gray-200 dark:border-gray-800"
+            />
+          </div>
         </section>
 
         <section className="grid md:grid-cols-3 gap-6" id="proof">
@@ -295,11 +353,23 @@ const LandingPage: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-300">{t('landing.proof.description')}</p>
           </div>
           <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm">
-            <p className="font-semibold mb-2">{t('landing.proof.hospitality.title')}</p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-full bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">H</div>
+              <div>
+                <p className="font-semibold">{t('landing.proof.hospitality.title')}</p>
+                <p className="text-xs text-gray-500">Operations</p>
+              </div>
+            </div>
             <p className="text-sm text-gray-600 dark:text-gray-300">{t('landing.proof.review1')}</p>
           </div>
           <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm">
-            <p className="font-semibold mb-2">{t('landing.proof.consulting.title')}</p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-full bg-green-50 dark:bg-green-900/40 flex items-center justify-center text-green-600 dark:text-green-300 font-semibold">C</div>
+              <div>
+                <p className="font-semibold">{t('landing.proof.consulting.title')}</p>
+                <p className="text-xs text-gray-500">Consulting</p>
+              </div>
+            </div>
             <p className="text-sm text-gray-600 dark:text-gray-300">{t('landing.proof.review2')}</p>
           </div>
         </section>
