@@ -47,3 +47,4 @@
 - Ob Booking-Demand-API-Partnerschaft zeitnah erreichbar ist.
 - Wie groß das Free-Tier real nutzbar ist (Outscraper/axiom.ai) und ob das für manuelle Läufe genügt.
 
+

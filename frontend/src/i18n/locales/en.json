@@ -3251,8 +3251,11 @@
     },
     "stats": {
       "uptime": "Uptime",
+      "uptimeDesc": "24/7 Support",
       "automation": "Automation triggers live",
-      "languages": "Languages live"
+      "automationDesc": "Automations",
+      "languages": "Languages live",
+      "languagesDesc": "DE, EN, ES"
     },
     "assets": {
       "placeholderWorktracker": "Screenshot placeholder: Worktracker board with status flow and filters.",
@@ -3315,6 +3318,11 @@
         "title": "Integrations & mobile",
         "lobbypms": "LobbyPMS/TTLock chain for check-in/keys.",
         "mobile": "Mobile app for time, tasks and notifications."
+      },
+      "screenshots": {
+        "teamControl": "Team overview with work times",
+        "cerebro": "Wiki editor with media support",
+        "mobile": "Mobile interface on the go"
       }
     },
     "proof": {
