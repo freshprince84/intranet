@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import { motion } from 'framer-motion';
 import DeviceFrame from '../components/DeviceFrame.tsx';
+import LanguageSelector from '../components/LanguageSelector.tsx';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
@@ -221,6 +222,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <nav className="flex items-center gap-3">
+            <LanguageSelector />
             <Link
               to="/register"
               className="inline-flex items-center justify-center rounded-lg bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium text-sm"

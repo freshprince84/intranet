@@ -1,4 +1,3 @@
-import apiClient from './apiClient.ts';
 import axiosInstance from '../config/axios.ts';
 import { logger } from '../utils/logger.ts';
 
