@@ -827,6 +827,7 @@ const Requests: React.FC = () => {
               // ✅ OPTIMIERUNG: Template-String nur einmal erstellen
               return `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
             case 'branch':
+            case 'branch.name':
               return request.branch.name.toLowerCase();
             case 'dueDate':
               return new Date(request.dueDate).getTime();
@@ -842,7 +843,8 @@ const Requests: React.FC = () => {
         // ❌ ENTFERNT: Table-Header-Sortierung (Priorität 1) - war redundant, da Hauptsortierung bereits sortConfig verwendet
         
         // Hauptsortierung (sortConfig) - für Table & Card gleich (synchron)
-        if (sortConfig.key && (selectedFilterId === null || filterConditions.length === 0)) {
+        // ✅ FIX: Sortierung IMMER anwenden, unabhängig von Filtern
+        if (sortConfig.key) {
           // Verwende getSortValue für konsistente Sortierung (Table & Card)
           const valueA = getSortValue(a, sortConfig.key);
           const valueB = getSortValue(b, sortConfig.key);
