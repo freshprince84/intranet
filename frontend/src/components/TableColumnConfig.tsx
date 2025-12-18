@@ -64,13 +64,21 @@ const DraggableColumnItem: React.FC<DraggableItemProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TableColumnConfig.tsx:65',message:'Modal sort button click ENTRY',data:{columnId:id,isMainSort,sortDirection,willToggle:isMainSort && sortDirection !== undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+              // #endregion
               // Wenn diese Spalte bereits die Hauptsortierung ist, toggle die Richtung
               // Sonst setze diese Spalte als neue Hauptsortierung (Standard: 'asc')
-              if (isMainSort && sortDirection !== undefined) {
-                onSortDirectionChange(id, sortDirection === 'asc' ? 'desc' : 'asc');
-              } else {
-                onSortDirectionChange(id, 'asc');
-              }
+              const newDirection = isMainSort && sortDirection !== undefined 
+                ? (sortDirection === 'asc' ? 'desc' : 'asc')
+                : 'asc';
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TableColumnConfig.tsx:70',message:'Modal sort button BEFORE onSortDirectionChange',data:{columnId:id,newDirection,isMainSort,sortDirection},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+              // #endregion
+              onSortDirectionChange(id, newDirection);
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TableColumnConfig.tsx:73',message:'Modal sort button AFTER onSortDirectionChange',data:{called:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+              // #endregion
             }}
             className={`inline-flex items-center justify-center p-1.5 rounded-md transition-colors duration-150 ${
               isMainSort
@@ -124,6 +132,11 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
   onOpenChange
 }) => {
   const { t } = useTranslation();
+  // #region agent log
+  React.useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TableColumnConfig.tsx:126',message:'TableColumnConfig render',data:{mainSortConfigKey:mainSortConfig?.key,mainSortConfigDirection:mainSortConfig?.direction,isOpen:externalIsOpen!==undefined?externalIsOpen:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  }, [mainSortConfig, externalIsOpen]);
+  // #endregion
   const defaultButtonTitle = buttonTitle || t('tableColumn.configure');
   const defaultModalTitle = modalTitle || t('tableColumn.configure');
   // Interner State nur verwenden, wenn keine externe Steuerung übergeben wurde
@@ -240,6 +253,9 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
               // Prüfe ob diese Spalte die Hauptsortierung ist
               const isMainSort = mainSortConfig?.key === column.id;
               const sortDirection = isMainSort ? mainSortConfig.direction : undefined;
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TableColumnConfig.tsx:241',message:'Modal column render',data:{columnId:column.id,mainSortConfigKey:mainSortConfig?.key,mainSortConfigDirection:mainSortConfig?.direction,isMainSort,sortDirection},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+              // #endregion
               // Sort-Button für alle Spalten anzeigen (unabhängig von Sichtbarkeit)
               const showSortButton = showMainSort && onMainSortChange;
               
