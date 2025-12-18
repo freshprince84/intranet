@@ -232,7 +232,7 @@ const PriceRecommendationsTab: React.FC = () => {
     };
 
     const formatPercent = (value: number | null): string => {
-        if (value === null) return '-';
+        if (value === null || value === undefined || isNaN(value)) return '-';
         const sign = value >= 0 ? '+' : '';
         return `${sign}${value.toFixed(1)}%`;
     };

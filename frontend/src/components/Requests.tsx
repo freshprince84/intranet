@@ -274,12 +274,14 @@ const Requests: React.FC = () => {
   const viewMode = settings.viewMode || 'cards';
   
   // Hauptsortierung aus Settings laden (für Table & Cards synchron)
-  const sortConfig: SortConfig = settings.sortConfig || { key: 'dueDate', direction: 'asc' };
+  const sortConfig: SortConfig = useMemo(() => {
+    return settings.sortConfig || { key: 'dueDate', direction: 'asc' };
+  }, [settings.sortConfig]);
   
   // Hauptsortierung Handler (für Table & Cards synchron)
-  const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
+  const handleMainSortChange = useCallback((key: string, direction: 'asc' | 'desc') => {
     updateSortConfig({ key: key as SortConfig['key'], direction });
-  };
+  }, [updateSortConfig]);
 
   // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
   // Card-Metadaten-Reihenfolge aus columnOrder ableiten
@@ -578,11 +580,13 @@ const Requests: React.FC = () => {
     }
   };
 
-  const handleSort = (key: SortConfig['key']) => {
+  const handleSort = useCallback((key: SortConfig['key']) => {
     // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
-    const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    // ✅ FIX: Verwende settings.sortConfig direkt (aktueller Wert) statt Closure-Variable
+    const currentSortConfig = settings.sortConfig || { key: 'dueDate', direction: 'asc' };
+    const newDirection = currentSortConfig.key === key && currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
     updateSortConfig({ key, direction: newDirection });
-  };
+  }, [settings.sortConfig, updateSortConfig]);
 
   const handleStatusChange = async (requestId: number, newStatus: Request['status']) => {
     try {

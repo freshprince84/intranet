@@ -243,7 +243,29 @@ NICHT: Bot erwähnt Kontext-Informationen, die nicht relevant sind ❌
 
 ---
 
+---
+
+### Problem 8: Sprache aus Context wird nicht korrekt verwendet (Englisch wird ignoriert) ✅ BEHOBEN
+
+**Ursache:**
+- `LanguageService.detectLanguage()` hatte falsche Priorität: Nachricht hatte Priorität 1, Context nur Priorität 2
+- `ContextService.mergeWithContext()` behielt die Sprache nicht aus dem bestehenden Context
+- `whatsappAiService.ts` verwendete erkannte Sprache statt Context-Sprache
+
+**Lösung:**
+- ✅ Priorität in `LanguageService.detectLanguage()` geändert: Context hat jetzt Priorität 1 (höchste Priorität!)
+- ✅ `ContextService.mergeWithContext()` behält jetzt die Sprache aus dem bestehenden Context
+- ✅ `whatsappAiService.ts` verwendet jetzt Context-Sprache, wenn vorhanden (höchste Priorität)
+- ✅ Logging hinzugefügt für besseres Debugging
+
+**Code-Änderungen:**
+- `LanguageService.ts` Zeile 32-49: Priorität geändert (Context → Nachricht → Telefonnummer → Fallback)
+- `ContextService.ts` Zeile 143-145: Sprache wird aus bestehendem Context behalten
+- `whatsappAiService.ts` Zeile 139-180: Context-Sprache hat höchste Priorität
+
+---
+
 **Erstellt:** 2025-12-17  
 **Aktualisiert:** 2025-12-18  
-**Status:** ✅ Alle kritischen Probleme behoben (inkl. Englisch-Erkennung), bereit für Tests
+**Status:** ✅ Alle kritischen Probleme behoben (inkl. Englisch-Erkennung und Context-Priorität), bereit für Tests
 

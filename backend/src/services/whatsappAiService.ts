@@ -137,6 +137,8 @@ export class WhatsAppAiService {
     }
 
     // 2. Erkenne Sprache und stelle Konsistenz sicher (über Core Service)
+    // WICHTIG: conversationContext sollte bereits die Sprache enthalten (aus whatsappMessageHandler)
+    // Aber wir prüfen nochmal, um sicherzustellen, dass die Sprache korrekt ist
     const detectedLanguage = LanguageService.detectLanguage(
       message,
       phoneNumber,
@@ -144,6 +146,7 @@ export class WhatsAppAiService {
     );
     
     // WICHTIG: Stelle Sprach-Konsistenz sicher (verwendet Context, falls vorhanden)
+    // KRITISCH: ensureLanguageConsistency prüft zuerst den Context und verwendet die Sprache daraus
     let language = detectedLanguage;
     if (conversationId) {
       language = await LanguageService.ensureLanguageConsistency(
@@ -153,11 +156,23 @@ export class WhatsAppAiService {
       );
     }
     
+    // KRITISCH: Wenn conversationContext bereits eine Sprache hat, verwende diese (höchste Priorität!)
+    if (conversationContext?.language && conversationContext.language !== language) {
+      logger.warn('[WhatsApp AI Service] Sprache aus conversationContext überschreibt erkannte Sprache:', {
+        detectedLanguage: detectedLanguage,
+        fromContext: conversationContext.language,
+        finalLanguage: language,
+        newLanguage: conversationContext.language
+      });
+      language = conversationContext.language;
+    }
+    
     logger.log('[WhatsApp AI Service] Spracherkennung:', {
       message: message.substring(0, 50),
       detectedLanguage: detectedLanguage,
       finalLanguage: language,
-      fromContext: conversationContext?.language || 'kein Context'
+      fromContext: conversationContext?.language || 'kein Context',
+      conversationId: conversationId || 'keine ID'
     });
 
     // 3. Baue System Prompt (modularer PromptBuilder)
