@@ -87,14 +87,20 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
   // Versteckte Spalten aktualisieren
   const updateHiddenColumns = useCallback(async (newHiddenColumns: string[]) => {
     try {
-      const updatedSettings = { ...settings, hiddenColumns: newHiddenColumns };
-      setSettings(updatedSettings);
-      await tableSettingsApi.saveTableSettings(updatedSettings);
+      // ✅ FIX: Verwende funktionales Update, um stale closure zu vermeiden
+      setSettings(prevSettings => {
+        const updatedSettings = { ...prevSettings, hiddenColumns: newHiddenColumns };
+        tableSettingsApi.saveTableSettings(updatedSettings).catch(err => {
+          setError(err instanceof Error ? err : new Error('Fehler beim Speichern der versteckten Spalten'));
+          console.error('Fehler beim Speichern der versteckten Spalten:', err);
+        });
+        return updatedSettings;
+      });
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Fehler beim Speichern der versteckten Spalten'));
       console.error('Fehler beim Speichern der versteckten Spalten:', err);
     }
-  }, [settings]);
+  }, []);
 
   // Eine einzelne Spalte ein- oder ausblenden
   const toggleColumnVisibility = useCallback(async (columnId: string) => {
@@ -121,26 +127,39 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
   // View-Mode aktualisieren
   const updateViewMode = useCallback(async (newViewMode: 'table' | 'cards') => {
     try {
-      const updatedSettings = { ...settings, viewMode: newViewMode };
-      setSettings(updatedSettings);
-      await tableSettingsApi.saveTableSettings(updatedSettings);
+      // ✅ FIX: Verwende funktionales Update, um stale closure zu vermeiden
+      setSettings(prevSettings => {
+        const updatedSettings = { ...prevSettings, viewMode: newViewMode };
+        tableSettingsApi.saveTableSettings(updatedSettings).catch(err => {
+          setError(err instanceof Error ? err : new Error('Fehler beim Speichern des View-Modes'));
+          console.error('Fehler beim Speichern des View-Modes:', err);
+        });
+        return updatedSettings;
+      });
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Fehler beim Speichern des View-Modes'));
       console.error('Fehler beim Speichern des View-Modes:', err);
     }
-  }, [settings]);
+  }, []);
 
   // Sortierung aktualisieren
   const updateSortConfig = useCallback(async (newSortConfig: { key: string; direction: 'asc' | 'desc' }) => {
     try {
-      const updatedSettings = { ...settings, sortConfig: newSortConfig };
-      setSettings(updatedSettings);
-      await tableSettingsApi.saveTableSettings(updatedSettings);
+      // ✅ FIX: Verwende funktionales Update, um stale closure zu vermeiden
+      setSettings(prevSettings => {
+        const updatedSettings = { ...prevSettings, sortConfig: newSortConfig };
+        // Speichere asynchron (nicht await, da setState synchron sein muss)
+        tableSettingsApi.saveTableSettings(updatedSettings).catch(err => {
+          setError(err instanceof Error ? err : new Error('Fehler beim Speichern der Sortierung'));
+          console.error('Fehler beim Speichern der Sortierung:', err);
+        });
+        return updatedSettings;
+      });
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Fehler beim Speichern der Sortierung'));
       console.error('Fehler beim Speichern der Sortierung:', err);
     }
-  }, [settings]);
+  }, []); // ✅ FIX: Keine Dependencies mehr - verwendet funktionales Update
 
   return {
     settings,

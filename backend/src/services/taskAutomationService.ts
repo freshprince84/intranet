@@ -687,28 +687,16 @@ export class TaskAutomationService {
       }
 
       // Erstelle Task
-      // Titel: Zimmername (bei Dorms: "Zimmername (Bettnummer)", bei Privates: "Zimmername")
+      // Titel: Zimmername (bei Dorms: roomNumber enthält bereits "Zimmername (Bettnummer)", bei Privates: roomDescription)
       const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-      let taskTitle: string;
-      if (isDorm) {
-        // Dorm: "Zimmername (Bettnummer)"
-        const roomName = reservation.roomDescription?.trim() || '';
-        const bedNumber = reservation.roomNumber?.trim() || '';
-        taskTitle = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || `Reservation ${reservation.id}`);
-      } else {
-        // Private: "Zimmername"
-        taskTitle = reservation.roomDescription?.trim() || `Reservation ${reservation.id}`;
-      }
+      const taskTitle = isDorm 
+        ? reservation.roomNumber?.trim() || `Reservation ${reservation.id}`
+        : reservation.roomDescription?.trim() || `Reservation ${reservation.id}`;
       
       // Zimmer-Anzeige für Beschreibung
-      let roomDisplay: string;
-      if (isDorm) {
-        const roomName = reservation.roomDescription?.trim() || '';
-        const bedNumber = reservation.roomNumber?.trim() || '';
-        roomDisplay = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || 'Noch nicht zugewiesen');
-      } else {
-        roomDisplay = reservation.roomDescription?.trim() || 'Noch nicht zugewiesen';
-      }
+      const roomDisplay = isDorm
+        ? reservation.roomNumber?.trim() || 'Noch nicht zugewiesen'
+        : reservation.roomDescription?.trim() || 'Noch nicht zugewiesen';
       
       const taskDescription = `
 Reservierungsdetails:
