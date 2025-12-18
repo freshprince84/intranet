@@ -175,8 +175,75 @@ Erwartet: "El abuelo viajero" erkannt ✅
 NICHT: "El primo aventurero" ❌
 ```
 
+### Test 6: Englisch-Erkennung
+```
+User: "hi"
+Erwartet: Bot antwortet auf Englisch ✅
+NICHT: Bot antwortet auf Spanisch ❌
+
+User: "do you have rooms for tonight?"
+Erwartet: Bot antwortet auf Englisch ✅
+NICHT: Bot antwortet auf Spanisch ❌
+
+User: "hello"
+Bot: [Englisch] ✅
+
+User: "do you have rooms for tonight?"
+Bot: [Englisch, beantwortet Frage direkt] ✅
+NICHT: "Esa información ya está en el contexto" ❌
+```
+
+### Test 7: Keine irrelevanten Kontext-Informationen
+```
+User: "do you have rooms for tonight?"
+Erwartet: Bot beantwortet Frage direkt (z.B. "Yes, we have rooms available for tonight. Would you like to book one?") ✅
+NICHT: "Esa información ya está en el contexto: "roomName" es "El primo aventurero"" ❌
+NICHT: Bot erwähnt Kontext-Informationen, die nicht relevant sind ❌
+```
+
+---
+
+---
+
+### Problem 6: Englisch wird nicht erkannt (Bot antwortet auf Spanisch) ✅ BEHOBEN
+
+**Ursache:**
+- `LanguageService.detectLanguageFromMessage()` hatte zu schwache englische Patterns
+- Kurze Nachrichten wie "hi" wurden nicht erkannt
+- Score-System zählte nur Pattern-Treffer, nicht Anzahl der Matches
+
+**Lösung:**
+- ✅ Englische Patterns erweitert: mehr Wörter, Buchungs-spezifische Wörter ("do you have", "rooms", "tonight", "available")
+- ✅ Score-System verbessert: zählt jetzt alle Matches, nicht nur ob Pattern vorhanden
+- ✅ Spezielle Behandlung für kurze Nachrichten: "hi", "hello", "hey" → direkt Englisch
+- ✅ Mehr englische Wörter hinzugefügt: "do you have", "have you", "are there", "i want", "i need", "i would like", "i'm looking", "looking for", "check", "check in", "check out", "tonight", "today", "tomorrow"
+
+**Code-Änderungen:**
+- `LanguageService.ts` Zeile 84-88: Englische Patterns erweitert
+- `LanguageService.ts` Zeile 98-137: Score-System verbessert, spezielle Behandlung für "hi"
+
+---
+
+### Problem 7: Irrelevante Kontext-Informationen werden an User weitergegeben ✅ BEHOBEN
+
+**Ursache:**
+- `PromptBuilder.getContextInstructions()` sagte KI, Kontext-Informationen zu nutzen, aber KI interpretierte das falsch
+- KI gab Kontext-Informationen direkt an User weiter (z.B. "Esa información ya está en el contexto: "roomName" es "El primo aventurero"")
+
+**Lösung:**
+- ✅ Context-Instructions verschärft:
+  - "Kontext-Informationen sind NUR für dich intern - gib sie NIEMALS direkt an den User weiter!"
+  - "Wenn User eine Frage stellt, beantworte die Frage direkt - erwähne KEINE Kontext-Informationen!"
+  - "NIEMALS antworten mit 'Esa información ya está en el contexto' oder ähnlichen Sätzen!"
+- ✅ `getGeneralContextInstructions()` erweitert mit klaren Anweisungen
+
+**Code-Änderungen:**
+- `PromptBuilder.ts` Zeile 111-133: Context-Instructions verschärft
+- `PromptBuilder.ts` Zeile 467-476: `getGeneralContextInstructions()` erweitert
+
 ---
 
 **Erstellt:** 2025-12-17  
-**Status:** ✅ Alle kritischen Probleme behoben, bereit für Tests
+**Aktualisiert:** 2025-12-18  
+**Status:** ✅ Alle kritischen Probleme behoben (inkl. Englisch-Erkennung), bereit für Tests
 
