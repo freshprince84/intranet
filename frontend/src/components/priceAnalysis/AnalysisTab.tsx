@@ -128,9 +128,11 @@ const AnalysisTab: React.FC = () => {
         return new Date(dateString).toLocaleDateString('de-DE');
     };
 
-    const formatPercent = (value: number | null): string => {
-        if (value === null) return '-';
-        return `${value.toFixed(1)}%`;
+    const formatPercent = (value: number | null | string | undefined): string => {
+        if (value === null || value === undefined) return '-';
+        const numValue = typeof value === 'string' ? parseFloat(value) : value;
+        if (isNaN(numValue)) return '-';
+        return `${numValue.toFixed(1)}%`;
     };
 
     if (loading) {
