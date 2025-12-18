@@ -141,6 +141,11 @@ export class ContextService {
   static mergeWithContext(parsed: ParsedMessage, context: ConversationContext): ConversationContext {
     const updated: ConversationContext = { ...context };
     
+    // KRITISCH: Sprache aus bestehendem Context behalten (wichtig für Sprach-Konsistenz!)
+    if (!updated.language) {
+      updated.language = context.language || 'es';
+    }
+    
     // Merge dates
     if (parsed.dates) {
       if (!updated.booking) updated.booking = {};

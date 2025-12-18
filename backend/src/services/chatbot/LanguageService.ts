@@ -29,23 +29,29 @@ export class LanguageService {
     phoneNumber?: string,
     context?: ConversationContext
   ): string {
-    // Priorität 1: Aus Nachricht
-    const fromMessage = this.detectLanguageFromMessage(message);
-    if (fromMessage) {
-      return fromMessage;
+    // KRITISCH: Priorität 1: Aus Context (wenn vorhanden, verwende diese zuerst für Konsistenz!)
+    // Dies stellt sicher, dass die Sprache konsistent bleibt, auch wenn User kurze Nachrichten schreibt
+    if (context?.language) {
+      logger.log(`[LanguageService] Sprache aus Context verwendet: ${context.language} (Nachricht: "${message.substring(0, 30)}")`);
+      return context.language;
     }
     
-    // Priorität 2: Aus Context
-    if (context?.language) {
-      return context.language;
+    // Priorität 2: Aus Nachricht
+    const fromMessage = this.detectLanguageFromMessage(message);
+    if (fromMessage) {
+      logger.log(`[LanguageService] Sprache aus Nachricht erkannt: ${fromMessage} (Nachricht: "${message.substring(0, 30)}")`);
+      return fromMessage;
     }
     
     // Priorität 3: Aus Telefonnummer
     if (phoneNumber) {
-      return LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+      const fromPhone = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+      logger.log(`[LanguageService] Sprache aus Telefonnummer erkannt: ${fromPhone}`);
+      return fromPhone;
     }
     
     // Fallback
+    logger.log(`[LanguageService] Fallback zu Spanisch (keine Sprache erkannt)`);
     return 'es';
   }
 

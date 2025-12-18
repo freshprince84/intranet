@@ -1459,6 +1459,7 @@ const Worktracker: React.FC = () => {
                     // ✅ OPTIMIERUNG: Template-String nur wenn vorhanden
                     return task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase() : '';
                 case 'branch':
+                case 'branch.name':
                     return task.branch.name.toLowerCase();
                 case 'dueDate':
                     return task.dueDate ? new Date(task.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
@@ -2435,11 +2436,21 @@ const Worktracker: React.FC = () => {
                                                     const column = availableColumns.find(col => col.id === columnId);
                                                     if (!column) return null;
                                                     
+                                                    // Mapping-Logik: columnId (Anzeige) → sortKey (Sortierung)
+                                                    let sortKey: SortConfig['key'] | undefined;
+                                                    if (columnId === 'title') sortKey = 'title';
+                                                    if (columnId === 'status') sortKey = 'status';
+                                                    if (columnId === 'branch') sortKey = 'branch.name';
+                                                    if (columnId === 'dueDate') sortKey = 'dueDate';
+                                                    // 'description' wird NICHT gemappt (nur in Cards verfügbar, nicht in Table-Header)
+                                                    // 'responsibleAndQualityControl' wird NICHT gemappt (kombinierte Anzeige-Spalte, nicht direkt sortierbar)
+                                                    // 'actions' wird NICHT gemappt (nicht sortierbar)
+                                                    
                                                     return (
                                                         <th
                                                             key={columnId}
                                                             scope="col"
-                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''} ${sortKey ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''} ${columnId !== 'actions' ? 'cursor-move' : ''}`}
                                                             draggable={true}
                                                             onDragStart={() => handleDragStart(columnId)}
                                                             onDragOver={(e) => handleDragOver(e, columnId)}
@@ -2448,12 +2459,36 @@ const Worktracker: React.FC = () => {
                                                         >
                                                             <div className="flex items-center">
                                                                 {window.innerWidth <= 640 ? column.shortLabel : column.label}
-                                                                {columnId !== 'actions' && (
+                                                                {columnId !== 'actions' && sortKey && (
                                                                     <button 
-                                                                        onClick={() => handleSort(columnId as keyof Task)}
-                                                                        className="ml-1 focus:outline-none"
+                                                                        type="button"
+                                                                        onClick={sortKey ? () => handleSort(sortKey) : undefined}
+                                                                        className="ml-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+                                                                        aria-label={
+                                                                            sortKey && tableSortConfig.key === sortKey
+                                                                                ? tableSortConfig.direction === 'asc'
+                                                                                    ? t('tableColumn.sortDescending', 'Absteigend sortieren')
+                                                                                    : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
+                                                                                : sortKey
+                                                                                    ? t('tableColumn.setMainSort', 'Sortierung setzen')
+                                                                                    : undefined
+                                                                        }
+                                                                        title={
+                                                                            sortKey && tableSortConfig.key === sortKey
+                                                                                ? tableSortConfig.direction === 'asc'
+                                                                                    ? t('tableColumn.sortDescending', 'Absteigend sortieren')
+                                                                                    : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
+                                                                                : sortKey
+                                                                                    ? t('tableColumn.setMainSort', 'Sortierung setzen')
+                                                                                    : undefined
+                                                                        }
+                                                                        disabled={!sortKey}
                                                                     >
-                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        {sortKey && tableSortConfig.key === sortKey ? (
+                                                                            tableSortConfig.direction === 'asc' ? '↑' : '↓'
+                                                                        ) : (
+                                                                            <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        )}
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -3120,11 +3155,26 @@ const Worktracker: React.FC = () => {
                                                     const column = availableReservationColumns.find(col => col.id === columnId);
                                                     if (!column) return null;
                                                     
+                                                    // Mapping-Logik: columnId (Anzeige) → sortKey (Sortierung)
+                                                    let sortKey: ReservationSortConfig['key'] | undefined;
+                                                    if (columnId === 'guestName') sortKey = 'guestName';
+                                                    if (columnId === 'status') sortKey = 'status';
+                                                    if (columnId === 'paymentStatus') sortKey = 'paymentStatus';
+                                                    if (columnId === 'checkInDate') sortKey = 'checkInDate';
+                                                    if (columnId === 'checkOutDate') sortKey = 'checkOutDate';
+                                                    if (columnId === 'roomNumber') sortKey = 'roomNumber';
+                                                    if (columnId === 'branch') sortKey = 'branch.name'; // ✅ WICHTIG: 'branch' → 'branch.name'
+                                                    if (columnId === 'guestEmail') sortKey = 'guestEmail';
+                                                    if (columnId === 'guestPhone') sortKey = 'guestPhone';
+                                                    if (columnId === 'amount') sortKey = 'amount';
+                                                    if (columnId === 'arrivalTime') sortKey = 'arrivalTime';
+                                                    // 'actions' wird NICHT gemappt (nicht sortierbar)
+                                                    
                                                     return (
                                                         <th
                                                             key={columnId}
                                                             scope="col"
-                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''} ${sortKey ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''} ${columnId !== 'actions' ? 'cursor-move' : ''}`}
                                                             draggable={true}
                                                             onDragStart={() => handleDragStart(columnId)}
                                                             onDragOver={(e) => handleDragOver(e, columnId)}
@@ -3133,12 +3183,36 @@ const Worktracker: React.FC = () => {
                                                         >
                                                             <div className="flex items-center">
                                                                 {window.innerWidth <= 640 ? column.shortLabel : column.label}
-                                                                {columnId !== 'actions' && (
+                                                                {columnId !== 'actions' && sortKey && (
                                                                     <button 
-                                                                        onClick={() => handleReservationSort(columnId as ReservationSortConfig['key'])}
-                                                                        className="ml-1 focus:outline-none"
+                                                                        type="button"
+                                                                        onClick={sortKey ? () => handleReservationSort(sortKey) : undefined}
+                                                                        className="ml-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+                                                                        aria-label={
+                                                                            sortKey && reservationTableSortConfig.key === sortKey
+                                                                                ? reservationTableSortConfig.direction === 'asc'
+                                                                                    ? t('tableColumn.sortDescending', 'Absteigend sortieren')
+                                                                                    : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
+                                                                                : sortKey
+                                                                                    ? t('tableColumn.setMainSort', 'Sortierung setzen')
+                                                                                    : undefined
+                                                                        }
+                                                                        title={
+                                                                            sortKey && reservationTableSortConfig.key === sortKey
+                                                                                ? reservationTableSortConfig.direction === 'asc'
+                                                                                    ? t('tableColumn.sortDescending', 'Absteigend sortieren')
+                                                                                    : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
+                                                                                : sortKey
+                                                                                    ? t('tableColumn.setMainSort', 'Sortierung setzen')
+                                                                                    : undefined
+                                                                        }
+                                                                        disabled={!sortKey}
                                                                     >
-                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        {sortKey && reservationTableSortConfig.key === sortKey ? (
+                                                                            reservationTableSortConfig.direction === 'asc' ? '↑' : '↓'
+                                                                        ) : (
+                                                                            <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        )}
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -3758,11 +3832,21 @@ const Worktracker: React.FC = () => {
                                                     const column = availableColumns.find(col => col.id === columnId);
                                                     if (!column) return null;
 
+                                                    // Mapping-Logik: columnId (Anzeige) → sortKey (Sortierung)
+                                                    let sortKey: SortConfig['key'] | undefined;
+                                                    if (columnId === 'title') sortKey = 'title';
+                                                    if (columnId === 'status') sortKey = 'status';
+                                                    if (columnId === 'branch') sortKey = 'branch.name';
+                                                    if (columnId === 'dueDate') sortKey = 'dueDate';
+                                                    // 'description' wird NICHT gemappt (nur in Cards verfügbar, nicht in Table-Header)
+                                                    // 'responsibleAndQualityControl' wird NICHT gemappt (kombinierte Anzeige-Spalte, nicht direkt sortierbar)
+                                                    // 'actions' wird NICHT gemappt (nicht sortierbar)
+
                                                     return (
                                                         <th 
                                                             key={columnId}
                                                             scope="col"
-                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''} ${sortKey ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''} ${columnId !== 'actions' ? 'cursor-move' : ''}`}
                                                             draggable={true}
                                                             onDragStart={() => handleDragStart(columnId)}
                                                             onDragOver={(e) => handleDragOver(e, columnId)}
@@ -3771,12 +3855,36 @@ const Worktracker: React.FC = () => {
                                                         >
                                                             <div className="flex items-center">
                                                                 {window.innerWidth <= 640 ? column.shortLabel : column.label}
-                                                                {columnId !== 'actions' && (
+                                                                {columnId !== 'actions' && sortKey && (
                                                                     <button 
-                                                                        onClick={() => handleSort(columnId as keyof Task)}
-                                                                        className="ml-1 focus:outline-none"
+                                                                        type="button"
+                                                                        onClick={sortKey ? () => handleSort(sortKey) : undefined}
+                                                                        className="ml-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+                                                                        aria-label={
+                                                                            sortKey && tableSortConfig.key === sortKey
+                                                                                ? tableSortConfig.direction === 'asc'
+                                                                                    ? t('tableColumn.sortDescending', 'Absteigend sortieren')
+                                                                                    : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
+                                                                                : sortKey
+                                                                                    ? t('tableColumn.setMainSort', 'Sortierung setzen')
+                                                                                    : undefined
+                                                                        }
+                                                                        title={
+                                                                            sortKey && tableSortConfig.key === sortKey
+                                                                                ? tableSortConfig.direction === 'asc'
+                                                                                    ? t('tableColumn.sortDescending', 'Absteigend sortieren')
+                                                                                    : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
+                                                                                : sortKey
+                                                                                    ? t('tableColumn.setMainSort', 'Sortierung setzen')
+                                                                                    : undefined
+                                                                        }
+                                                                        disabled={!sortKey}
                                                                     >
-                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        {sortKey && tableSortConfig.key === sortKey ? (
+                                                                            tableSortConfig.direction === 'asc' ? '↑' : '↓'
+                                                                        ) : (
+                                                                            <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        )}
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -4431,11 +4539,26 @@ const Worktracker: React.FC = () => {
                                                     const column = availableReservationColumns.find(col => col.id === columnId);
                                                     if (!column) return null;
                                                     
+                                                    // Mapping-Logik: columnId (Anzeige) → sortKey (Sortierung)
+                                                    let sortKey: ReservationSortConfig['key'] | undefined;
+                                                    if (columnId === 'guestName') sortKey = 'guestName';
+                                                    if (columnId === 'status') sortKey = 'status';
+                                                    if (columnId === 'paymentStatus') sortKey = 'paymentStatus';
+                                                    if (columnId === 'checkInDate') sortKey = 'checkInDate';
+                                                    if (columnId === 'checkOutDate') sortKey = 'checkOutDate';
+                                                    if (columnId === 'roomNumber') sortKey = 'roomNumber';
+                                                    if (columnId === 'branch') sortKey = 'branch.name'; // ✅ WICHTIG: 'branch' → 'branch.name'
+                                                    if (columnId === 'guestEmail') sortKey = 'guestEmail';
+                                                    if (columnId === 'guestPhone') sortKey = 'guestPhone';
+                                                    if (columnId === 'amount') sortKey = 'amount';
+                                                    if (columnId === 'arrivalTime') sortKey = 'arrivalTime';
+                                                    // 'actions' wird NICHT gemappt (nicht sortierbar)
+                                                    
                                                     return (
                                                         <th
                                                             key={columnId}
                                                             scope="col"
-                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''} ${sortKey ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''} ${columnId !== 'actions' ? 'cursor-move' : ''}`}
                                                             draggable={true}
                                                             onDragStart={() => handleDragStart(columnId)}
                                                             onDragOver={(e) => handleDragOver(e, columnId)}
@@ -4444,12 +4567,36 @@ const Worktracker: React.FC = () => {
                                                         >
                                                             <div className="flex items-center">
                                                                 {window.innerWidth <= 640 ? column.shortLabel : column.label}
-                                                                {columnId !== 'actions' && (
+                                                                {columnId !== 'actions' && sortKey && (
                                                                     <button 
-                                                                        onClick={() => handleReservationSort(columnId as ReservationSortConfig['key'])}
-                                                                        className="ml-1 focus:outline-none"
+                                                                        type="button"
+                                                                        onClick={sortKey ? () => handleReservationSort(sortKey) : undefined}
+                                                                        className="ml-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+                                                                        aria-label={
+                                                                            sortKey && reservationTableSortConfig.key === sortKey
+                                                                                ? reservationTableSortConfig.direction === 'asc'
+                                                                                    ? t('tableColumn.sortDescending', 'Absteigend sortieren')
+                                                                                    : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
+                                                                                : sortKey
+                                                                                    ? t('tableColumn.setMainSort', 'Sortierung setzen')
+                                                                                    : undefined
+                                                                        }
+                                                                        title={
+                                                                            sortKey && reservationTableSortConfig.key === sortKey
+                                                                                ? reservationTableSortConfig.direction === 'asc'
+                                                                                    ? t('tableColumn.sortDescending', 'Absteigend sortieren')
+                                                                                    : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
+                                                                                : sortKey
+                                                                                    ? t('tableColumn.setMainSort', 'Sortierung setzen')
+                                                                                    : undefined
+                                                                        }
+                                                                        disabled={!sortKey}
                                                                     >
-                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        {sortKey && reservationTableSortConfig.key === sortKey ? (
+                                                                            reservationTableSortConfig.direction === 'asc' ? '↑' : '↓'
+                                                                        ) : (
+                                                                            <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                        )}
                                                                     </button>
                                                                 )}
                                                             </div>
