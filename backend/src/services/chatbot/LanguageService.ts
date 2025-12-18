@@ -80,11 +80,18 @@ export class LanguageService {
       /\b(der|die|das|ein|eine|von|in|mit|für|ist|sind|sind)\b/i
     ];
     
-    // Englische Wörter
+    // Englische Wörter (erweitert für bessere Erkennung)
     const englishIndicators = [
-      /\b(hello|hi|thanks|thank you|please|yes|no|how|where|when|why|what|which|goodbye|bye|see you)\b/i,
-      /\b(the|a|an|of|in|on|at|for|with|is|are|was|were|do|does|did|have|has|had|you|your|tours|tour|available)\b/i,
-      /\b(can|could|would|should|will|want|need|show|tell|give|get|see|book|reserve|reservation)\b/i
+      // Begrüßungen und Höflichkeitsformeln
+      /\b(hello|hi|hey|thanks|thank you|please|yes|no|how|where|when|why|what|which|goodbye|bye|see you|good morning|good afternoon|good evening)\b/i,
+      // Häufige englische Wörter (Artikel, Präpositionen, Verben)
+      /\b(the|a|an|of|in|on|at|for|with|is|are|was|were|do|does|did|have|has|had|you|your|yourself|yourselves|i|me|my|myself|we|us|our|ourselves|they|them|their|theirs|this|that|these|those)\b/i,
+      // Verben und Modalverben
+      /\b(can|could|would|should|will|want|need|show|tell|give|get|see|book|reserve|reservation|booking|room|rooms|available|availability|tonight|today|tomorrow|tonight)\b/i,
+      // Buchungs-spezifische Wörter
+      /\b(do you have|have you|are there|is there|i want|i need|i would like|i'd like|i'm looking|looking for|check|check in|check out|check-in|check-out)\b/i,
+      // Fragewörter und Konjunktionen
+      /\b(and|or|but|if|then|than|as|so|because|while|until|before|after|during|through|throughout|despite|although|however|therefore|moreover|furthermore|nevertheless)\b/i
     ];
     
     // Französische Wörter/Zeichen (optional, wird nicht zurückgegeben, aber für bessere Erkennung)
@@ -94,27 +101,52 @@ export class LanguageService {
       /\b(le|la|les|un|une|de|du|des|dans|avec|pour|est|sont)\b/i
     ];
     
-    // Zähle Treffer für jede Sprache
+    // Zähle Treffer für jede Sprache (gewichtet)
     let spanishScore = 0;
     let germanScore = 0;
     let englishScore = 0;
     let frenchScore = 0;
     
+    // Spanisch: Zähle Pattern-Treffer
     spanishIndicators.forEach(pattern => {
-      if (pattern.test(text)) spanishScore++;
+      const matches = text.match(pattern);
+      if (matches) {
+        spanishScore += matches.length; // Zähle alle Treffer, nicht nur ob vorhanden
+      }
     });
     
+    // Deutsch: Zähle Pattern-Treffer
     germanIndicators.forEach(pattern => {
-      if (pattern.test(text)) germanScore++;
+      const matches = text.match(pattern);
+      if (matches) {
+        germanScore += matches.length;
+      }
     });
     
+    // Englisch: Zähle Pattern-Treffer (gewichtet für bessere Erkennung)
     englishIndicators.forEach(pattern => {
-      if (pattern.test(text)) englishScore++;
+      const matches = text.match(pattern);
+      if (matches) {
+        englishScore += matches.length;
+      }
     });
     
+    // Französisch: Zähle Pattern-Treffer
     frenchIndicators.forEach(pattern => {
-      if (pattern.test(text)) frenchScore++;
+      const matches = text.match(pattern);
+      if (matches) {
+        frenchScore += matches.length;
+      }
     });
+    
+    // Spezielle Behandlung für sehr kurze Nachrichten (z.B. "hi")
+    if (text.trim().length <= 10) {
+      // Wenn nur "hi", "hello", "hey" → Englisch
+      if (/^(hi|hello|hey)$/i.test(text.trim())) {
+        logger.log(`[LanguageService] Kurze Begrüßung erkannt: "${text.trim()}" → Englisch`);
+        return 'en';
+      }
+    }
     
     // Finde Sprache mit höchstem Score
     const scores = [
