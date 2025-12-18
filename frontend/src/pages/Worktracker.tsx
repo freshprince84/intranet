@@ -446,9 +446,10 @@ const Worktracker: React.FC = () => {
 
     // Hauptsortierung aus Settings laden (für Table & Cards synchron)
     // ✅ FIX: tableSortConfig mit useMemo stabilisieren (verhindert neue Referenz bei jedem Render)
+    // ✅ FIX: Dependency korrigiert (tasksSettings.sortConfig statt tasksSettings) - verhindert, dass tableSortConfig nicht neu berechnet wird wenn Sortierung geändert wird
     const tableSortConfig: SortConfig = useMemo(() => {
         return tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
-    }, [tasksSettings]);
+    }, [tasksSettings.sortConfig]);
     // ✅ FIX: reservationTableSortConfig mit useMemo stabilisieren (verhindert neue Referenz bei jedem Render)
     const reservationTableSortConfig: ReservationSortConfig = useMemo(() => {
         return reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };
