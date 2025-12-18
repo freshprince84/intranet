@@ -159,3 +159,4 @@ Alle 3 Phasen des Modernisierungsplans wurden erfolgreich umgesetzt:
 - [ ] Performance (PageSpeed Insights)
 - [ ] Slider-Funktionalität
 - [ ] Scroll-Animationen
+

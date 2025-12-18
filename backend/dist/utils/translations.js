@@ -972,6 +972,10 @@ const priceAnalysisNotifications = {
         recommendationsGenerated: (recommendationCount) => ({
             title: 'Preisvorschläge generiert',
             message: `${recommendationCount} Preisvorschläge wurden generiert.`
+        }),
+        occupancyAlert: (data) => ({
+            title: `Occupancy-Alert: ${data.branchName}`,
+            message: `${data.alertCount} kritische Occupancy-Änderungen erkannt:\n\n${data.details}`
         })
     },
     es: {
@@ -1010,6 +1014,10 @@ const priceAnalysisNotifications = {
         recommendationsGenerated: (recommendationCount) => ({
             title: 'Recomendaciones de precio generadas',
             message: `Se generaron ${recommendationCount} recomendaciones de precio.`
+        }),
+        occupancyAlert: (data) => ({
+            title: `Alerta de ocupación: ${data.branchName}`,
+            message: `${data.alertCount} cambios críticos de ocupación detectados:\n\n${data.details}`
         })
     },
     en: {
@@ -1048,6 +1056,10 @@ const priceAnalysisNotifications = {
         recommendationsGenerated: (recommendationCount) => ({
             title: 'Price recommendations generated',
             message: `${recommendationCount} price recommendations were generated.`
+        }),
+        occupancyAlert: (data) => ({
+            title: `Occupancy Alert: ${data.branchName}`,
+            message: `${data.alertCount} critical occupancy changes detected:\n\n${data.details}`
         })
     }
 };
@@ -1073,6 +1085,8 @@ function getPriceAnalysisNotificationText(language, type, ...args) {
             return translations.analysisCompleted(args[0]);
         case 'recommendationsGenerated':
             return translations.recommendationsGenerated(args[0]);
+        case 'occupancyAlert':
+            return translations.occupancyAlert(args[0]);
         default:
             return translations.recommendationCreated(args[0], args[1]);
     }

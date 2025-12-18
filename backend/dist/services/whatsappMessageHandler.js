@@ -169,9 +169,14 @@ class WhatsAppMessageHandler {
                 const parsedMessage = MessageParserService_1.MessageParserService.parseMessage(normalizedMessage, coreContext, (_d = (_c = coreContext.booking) === null || _c === void 0 ? void 0 : _c.lastAvailabilityCheck) === null || _d === void 0 ? void 0 : _d.rooms);
                 const mergedContext = ContextService_1.ContextService.mergeWithContext(parsedMessage, coreContext);
                 yield ContextService_1.ContextService.updateContext(conversation.id, mergedContext, 'WhatsAppConversation');
+                // WICHTIG: Stelle Sprach-Konsistenz sicher (speichert Sprache im Context)
                 const detectedLanguage = LanguageService_1.LanguageService.detectLanguage(normalizedMessage, normalizedPhone, mergedContext);
-                // ConversationState vorläufig berechnen (Integration in bestehende Flows folgt in Phase 2.2)
-                yield ConversationService_1.ConversationService.processMessage(normalizedMessage, parsedMessage, mergedContext, detectedLanguage, conversation.id, 'WhatsAppConversation', branchId);
+                const language = yield LanguageService_1.LanguageService.ensureLanguageConsistency(conversation.id, detectedLanguage, 'WhatsAppConversation');
+                // Aktualisiere mergedContext mit konsistenter Sprache
+                mergedContext.language = language;
+                yield ContextService_1.ContextService.updateContext(conversation.id, { language }, 'WhatsAppConversation');
+                // ConversationState berechnen
+                yield ConversationService_1.ConversationService.processMessage(normalizedMessage, parsedMessage, mergedContext, language, conversation.id, 'WhatsAppConversation', branchId);
                 // 3.5. Tour-Buchungsantwort vom Anbieter erkennen (VOR Keyword-Erkennung)
                 const tourProvider = yield prisma_1.prisma.tourProvider.findFirst({
                     where: {

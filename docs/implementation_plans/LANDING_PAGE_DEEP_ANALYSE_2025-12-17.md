@@ -384,3 +384,4 @@
 4. **Phase 3 umsetzen** (Design-Verbesserungen)
 5. **Performance-Optimierung**
 6. **A/B Testing** (verschiedene Varianten testen)
+

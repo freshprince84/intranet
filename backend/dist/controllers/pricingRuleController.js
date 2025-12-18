@@ -25,14 +25,18 @@ exports.pricingRuleController = {
      */
     getRules: (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         try {
-            const branchId = req.query.branchId
-                ? parseInt(req.query.branchId, 10)
-                : undefined;
+            let branchId = undefined;
+            if (req.query.branchId) {
+                const parsed = parseInt(req.query.branchId, 10);
+                if (!isNaN(parsed)) {
+                    branchId = parsed;
+                }
+            }
             const isActive = req.query.isActive !== undefined
                 ? req.query.isActive === 'true'
                 : undefined;
             const where = {};
-            if (branchId) {
+            if (branchId !== undefined) {
                 where.branchId = branchId;
             }
             if (isActive !== undefined) {

@@ -52,3 +52,4 @@ const DeviceFrame: React.FC<DeviceFrameProps> = ({ type, children, className = '
 };
 
 export default DeviceFrame;
+
