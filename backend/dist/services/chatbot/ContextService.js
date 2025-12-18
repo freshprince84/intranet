@@ -136,6 +136,10 @@ class ContextService {
     static mergeWithContext(parsed, context) {
         var _a;
         const updated = Object.assign({}, context);
+        // KRITISCH: Sprache aus bestehendem Context behalten (wichtig für Sprach-Konsistenz!)
+        if (!updated.language) {
+            updated.language = context.language || 'es';
+        }
         // Merge dates
         if (parsed.dates) {
             if (!updated.booking)

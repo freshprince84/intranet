@@ -561,7 +561,7 @@ class TaskAutomationService {
      */
     static createReservationTask(reservation, organizationId) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d, _e, _f;
+            var _a, _b, _c, _d;
             try {
                 // Hole Organisation Settings
                 const organization = yield prisma_1.prisma.organization.findUnique({
@@ -638,29 +638,15 @@ class TaskAutomationService {
                     return null;
                 }
                 // Erstelle Task
-                // Titel: Zimmername (bei Dorms: "Zimmername (Bettnummer)", bei Privates: "Zimmername")
+                // Titel: Zimmername (bei Dorms: roomNumber enthält bereits "Zimmername (Bettnummer)", bei Privates: roomDescription)
                 const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                let taskTitle;
-                if (isDorm) {
-                    // Dorm: "Zimmername (Bettnummer)"
-                    const roomName = ((_a = reservation.roomDescription) === null || _a === void 0 ? void 0 : _a.trim()) || '';
-                    const bedNumber = ((_b = reservation.roomNumber) === null || _b === void 0 ? void 0 : _b.trim()) || '';
-                    taskTitle = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || `Reservation ${reservation.id}`);
-                }
-                else {
-                    // Private: "Zimmername"
-                    taskTitle = ((_c = reservation.roomDescription) === null || _c === void 0 ? void 0 : _c.trim()) || `Reservation ${reservation.id}`;
-                }
+                const taskTitle = isDorm
+                    ? ((_a = reservation.roomNumber) === null || _a === void 0 ? void 0 : _a.trim()) || `Reservation ${reservation.id}`
+                    : ((_b = reservation.roomDescription) === null || _b === void 0 ? void 0 : _b.trim()) || `Reservation ${reservation.id}`;
                 // Zimmer-Anzeige für Beschreibung
-                let roomDisplay;
-                if (isDorm) {
-                    const roomName = ((_d = reservation.roomDescription) === null || _d === void 0 ? void 0 : _d.trim()) || '';
-                    const bedNumber = ((_e = reservation.roomNumber) === null || _e === void 0 ? void 0 : _e.trim()) || '';
-                    roomDisplay = roomName && bedNumber ? `${roomName} (${bedNumber})` : (roomName || bedNumber || 'Noch nicht zugewiesen');
-                }
-                else {
-                    roomDisplay = ((_f = reservation.roomDescription) === null || _f === void 0 ? void 0 : _f.trim()) || 'Noch nicht zugewiesen';
-                }
+                const roomDisplay = isDorm
+                    ? ((_c = reservation.roomNumber) === null || _c === void 0 ? void 0 : _c.trim()) || 'Noch nicht zugewiesen'
+                    : ((_d = reservation.roomDescription) === null || _d === void 0 ? void 0 : _d.trim()) || 'Noch nicht zugewiesen';
                 const taskDescription = `
 Reservierungsdetails:
 - Gast: ${reservation.guestName}

@@ -3313,7 +3313,7 @@
       "title": "Hospitality & Beratung",
       "badge": "Betrieb entlasten • Teams steuern • Umsatz sichern",
       "headline": "Ein Intranet für Hostels, Hotels, Airbnbs & Beratungen",
-      "subline": "Mehr Produktivität, weniger Chaos. Alles in einer Oberfläche – für Teams, die effizienter arbeiten wollen.",
+      "subline": "Zeiterfassung, Aufgaben, Wissen, Abrechnung und KI-gestützte Automatisierung in einer Oberfläche – mobil und im Haus einsetzbar.",
       "ctaRegister": "Registrieren",
       "ctaRegisterLabel": "Registrieren",
       "ctaLogin": "Login",
@@ -3339,16 +3339,16 @@
       "hospitality": {
         "title": "Hostels, Airbnbs, Hotels",
         "description": "Schichten, Housekeeping, Check-in/Check-out, Schlüssel und Dokumente in einem Flow.",
-        "point1": "Schichten im Griff: Arbeitszeiten live steuern, Fehler reduzieren, Transparenz schaffen.",
-        "point2": "Housekeeping optimieren: Tasks mit Statuslauf, automatischen Benachrichtigungen und klaren Verantwortlichkeiten.",
-        "point3": "Check-in/Check-out automatisieren: LobbyPMS/TTLock-Integration für reibungslose Abläufe."
+        "point1": "Schicht- und Arbeitszeiten live steuern (Zeiterfassung, Teamkontrolle).",
+        "point2": "Tasks/Housekeeping mit Statuslauf und Benachrichtigungen.",
+        "point3": "LobbyPMS/TTLock-Kette für Check-in/Check-out und Schlüsselübergaben."
       },
       "consulting": {
         "title": "Beratungen",
         "description": "Beratungszeiten erfassen, abrechnen und Wissen sichern.",
-        "point1": "Beratungszeiten präzise erfassen – revisionssicher, ohne Nacharbeit.",
-        "point2": "Rechnungen automatisch erstellen: Swiss-QR-Rechnungen und Monatsberichte ohne Doppel-Billing.",
-        "point3": "Wissen zentral sichern: Cerebro-Wiki und Tasks für Deliverables."
+        "point1": "Beratungen tracken (Start/Stop oder manuell) mit Clients und Notizen.",
+        "point2": "Swiss-QR-Rechnungen & Monatsberichte ohne Doppel-Billing.",
+        "point3": "Wissenssicherung via Cerebro-Wiki + Tasks für Deliverables."
       }
     },
     "features": {
@@ -3368,37 +3368,34 @@
       },
       "operations": {
         "title": "Operations & Teamsteuerung",
-        "worktime": "Arbeitszeiten automatisch erfassen – präzise, zeitzonen-sicher, mit klaren Statistiken.",
-        "worktracker": "Aufgaben im Blick behalten – nie wieder etwas vergessen. Mit klaren Verantwortlichkeiten und automatischen Benachrichtigungen.",
-        "teamControl": "Team-Performance im Überblick – Arbeitszeiten steuern, Auswertungen exportieren, Fehler vermeiden."
+        "worktime": "Arbeitszeiten live starten/stoppen, Zeitzonen-sicher, Statistiken pro Branch.",
+        "worktracker": "Tasks mit Statuslauf, Verantwortlichen, QC, gespeicherten Filtern und Notifications.",
+        "teamControl": "Team-Worktime-Übersicht, Laufzeiten stoppen, Auswertungen exportieren."
       },
       "knowledge": {
         "title": "Wissen & Prozesse",
-        "cerebro": "Wissen zentral sichern – Markdown-Wiki mit Struktur, Medien und Verlinkung zu Tasks.",
-        "workflow": "Prozesse automatisieren – klare Workflows entlang von Rollen und Status."
+        "cerebro": "Markdown-Wiki mit Struktur, Medien, Verlinkung zu Tasks/Requests.",
+        "workflow": "Automatisierungen entlang von Rollen und Status, klare Task-Beschreibungen verpflichtend."
       },
       "billing": {
         "title": "Abrechnung & Beratung",
-        "consultations": "Beratungszeiten präzise erfassen – revisionssicher, ohne Nacharbeit.",
-        "invoices": "Rechnungen automatisch erstellen – Swiss-QR-Rechnungen, Monatsberichte, Anti-Doppel-Billing."
+        "consultations": "Clients wählen, Beratungen tracken, Notizen mit Auto-Save.",
+        "invoices": "Swiss-QR-Rechnungen, Monatsberichte, Anti-Doppel-Billing, Zahlungsstatus."
       },
       "ai": {
         "title": "KI & Automatisierung",
-        "documentRecognition": "Dokumente automatisch verarbeiten – KI-Extraktion, Validierung, Profil-Verknüpfung.",
-        "filters": "Daten schnell finden – gespeicherte Filter mit UND/ODER-Logik."
+        "documentRecognition": "ID-Upload, KI-Extraktion, Validierung, Profil-Verknüpfung.",
+        "filters": "Gespeicherte Filter mit UND/ODER-Logik, Standardfilter pro Tabelle."
       },
       "integration": {
         "title": "Integrationen & Mobil",
-        "lobbypms": "Check-in/Check-out automatisieren – LobbyPMS/TTLock-Integration.",
-        "mobile": "Unterwegs produktiv bleiben – Mobile App für Zeiten, Tasks und Benachrichtigungen."
+        "lobbypms": "LobbyPMS/TTLock-Kette für Check-in/Keys.",
+        "mobile": "Mobile App für Zeiten, Tasks und Benachrichtigungen."
       },
       "screenshots": {
-        "teamControl": "Team-Übersicht",
-        "teamControlDesc": "Arbeitszeiten im Überblick, Laufzeiten stoppen, Auswertungen exportieren.",
-        "cerebro": "Wiki-Editor",
-        "cerebroDesc": "Markdown-Wiki mit Struktur, Medien und Verlinkung zu Tasks.",
-        "mobile": "Mobile-Interface",
-        "mobileDesc": "Unterwegs produktiv bleiben – Zeiten, Tasks und Benachrichtigungen."
+        "teamControl": "Team-Übersicht mit Arbeitszeiten",
+        "cerebro": "Wiki-Editor mit Media-Support",
+        "mobile": "Mobile-Interface für unterwegs"
       }
     },
     "proof": {
@@ -3411,8 +3408,8 @@
       "consulting": {
         "title": "Consulting Lead"
       },
-      "review1": "Seit wir das Intranet nutzen, laufen Schichtwechsel sauberer. Housekeeping ist immer aktuell, und die Check-in-Automation spart uns täglich Stunden am Frontdesk.",
-      "review2": "Beratungsstunden sind jetzt revisionssicher erfasst. QR-Rechnungen und Monatsberichte gehen ohne Nacharbeit raus – das spart uns enorm Zeit."
+      "review1": "Schichtwechsel laufen sauber, Housekeeping ist immer aktuell, Check-in-Automation spart Frontdesk-Zeit.",
+      "review2": "Beratungsstunden sind revisionssicher erfasst, QR-Rechnungen und Monatsberichte ohne Nacharbeit."
     },
     "cta": {
       "title": "Bereit zum Start?",
@@ -3432,19 +3429,19 @@
       "title": "FAQ",
       "integration": {
         "q": "Wie integriert ihr in bestehende Systeme?",
-        "a": "LobbyPMS/TTLock ist bereits vorbereitet. Weitere Integrationen klären wir im Onboarding – meist geht es schnell."
+        "a": "LobbyPMS/TTLock ist vorbereitet. Weitere Integrationen klären wir im Onboarding."
       },
       "support": {
         "q": "Wie läuft Support?",
-        "a": "Support direkt über das Intranet, klar priorisiert. Wissen liegt im Cerebro-Wiki – alles an einem Ort."
+        "a": "Support über das Intranet, klar priorisiert. Wissen liegt im Cerebro-Wiki."
       },
       "security": {
         "q": "Wie adressiert ihr Sicherheit?",
-        "a": "Sicherheit steht an erster Stelle: Rollen/Berechtigungen, Audits, Validierung bei KI-Uploads, HTTPS-only."
+        "a": "Rollen/Berechtigungen, Audits, KI-Uploads mit Validierung, HTTPS-only."
       },
       "onboarding": {
         "q": "Wie lange dauert das Onboarding?",
-        "a": "Onboarding geht schnell: In der Regel wenige Stunden für Branches, Rollen und Standardfilter – dann kann es losgehen."
+        "a": "In der Regel wenige Stunden: Branches, Rollen, Standardfilter, dann Live-Gang."
       }
     },
     "footer": {

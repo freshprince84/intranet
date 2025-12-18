@@ -445,14 +445,18 @@ const Worktracker: React.FC = () => {
     const updateSortConfig = activeTab === 'todos' ? updateTasksSortConfig : updateReservationsSortConfig;
 
     // Hauptsortierung aus Settings laden (für Table & Cards synchron)
+    // ✅ FIX: Fallback-Objekt außerhalb von useMemo definieren (konstante Referenz, verhindert neue Referenz bei jedem Render)
+    const defaultSortConfig: SortConfig = { key: 'dueDate', direction: 'asc' };
     // ✅ FIX: tableSortConfig mit useMemo stabilisieren (verhindert neue Referenz bei jedem Render)
     // ✅ FIX: Dependency korrigiert (tasksSettings.sortConfig statt tasksSettings) - verhindert, dass tableSortConfig nicht neu berechnet wird wenn Sortierung geändert wird
     const tableSortConfig: SortConfig = useMemo(() => {
-        return tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
+        return tasksSettings.sortConfig || defaultSortConfig;
     }, [tasksSettings.sortConfig]);
+    // ✅ FIX: Fallback-Objekt außerhalb von useMemo definieren (konstante Referenz, verhindert neue Referenz bei jedem Render)
+    const defaultReservationSortConfig: ReservationSortConfig = { key: 'checkInDate', direction: 'desc' };
     // ✅ FIX: reservationTableSortConfig mit useMemo stabilisieren (verhindert neue Referenz bei jedem Render)
     const reservationTableSortConfig: ReservationSortConfig = useMemo(() => {
-        return reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };
+        return reservationsSettings.sortConfig || defaultReservationSortConfig;
     }, [reservationsSettings.sortConfig]);
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
@@ -1183,20 +1187,22 @@ const Worktracker: React.FC = () => {
     // ✅ FIX: handleSort mit useCallback stabilisieren (verhindert veraltete Closure-Referenz)
     const handleSort = useCallback((key: SortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
-        // ✅ FIX: Verwende tasksSettings.sortConfig direkt (aktueller Wert) - identisch mit Reservations
-        const currentSortConfig = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
+        // ✅ FIX: Verwende tableSortConfig statt tasksSettings.sortConfig direkt (verhindert Inkonsistenz zwischen Visualisierung und Handler)
+        // ✅ FIX: tableSortConfig ist bereits stabilisiert und verwendet korrekten Fallback
+        const currentSortConfig = tableSortConfig;
         const newDirection = currentSortConfig.key === key && currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
         updateTasksSortConfig({ key, direction: newDirection });
-    }, [tasksSettings.sortConfig, updateTasksSortConfig]);
+    }, [tableSortConfig, updateTasksSortConfig]);
 
     // ✅ FIX: handleReservationSort mit useCallback stabilisieren (verhindert veraltete Closure-Referenz)
     const handleReservationSort = useCallback((key: ReservationSortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
-        // ✅ FIX: Verwende reservationsSettings.sortConfig direkt (aktueller Wert) statt Closure-Variable
-        const currentSortConfig = reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };
+        // ✅ FIX: Verwende reservationTableSortConfig statt reservationsSettings.sortConfig direkt (verhindert Inkonsistenz zwischen Visualisierung und Handler)
+        // ✅ FIX: reservationTableSortConfig ist bereits stabilisiert und verwendet korrekten Fallback
+        const currentSortConfig = reservationTableSortConfig;
         const newDirection = currentSortConfig.key === key && currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
         updateReservationsSortConfig({ key, direction: newDirection });
-    }, [reservationsSettings.sortConfig, updateReservationsSortConfig]);
+    }, [reservationTableSortConfig, updateReservationsSortConfig]);
 
     const handleTourBookingsSort = (key: TourBookingSortConfig['key']) => {
         // Nur für Tabellen-Ansicht (Header-Sortierung)

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config.ts';
+import languageService from '../services/languageService.ts';
 
 interface LanguageSelectorProps {
   className?: string;
@@ -48,8 +49,8 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ className = '' }) =
     { code: 'en', label: 'EN' }
   ];
 
-  const handleLanguageChange = (langCode: string) => {
-    i18n.changeLanguage(langCode);
+  const handleLanguageChange = async (langCode: string) => {
+    await languageService.setLanguage(langCode);
     document.documentElement.lang = langCode;
     setIsOpen(false);
   };

@@ -80,19 +80,22 @@ class PromptBuilder {
         let instructions = '\n\n=== KRITISCH: KONTEXT-NUTZUNG ===\n';
         instructions += 'WICHTIG: Du MUSST ALLE Informationen aus der aktuellen UND vorherigen Nachrichten nutzen!\n';
         instructions += 'WICHTIG: Effizienz - Prüfe IMMER zuerst, ob alle Informationen bereits im Context vorhanden sind, bevor du nachfragst!\n';
-        // Dynamische Instructions basierend auf Context
+        instructions += 'KRITISCH: Kontext-Informationen sind NUR für dich intern - gib sie NIEMALS direkt an den User weiter!\n';
+        instructions += 'KRITISCH: Wenn User eine Frage stellt, beantworte die Frage direkt - erwähne KEINE Kontext-Informationen wie "Esa información ya está en el contexto"!\n';
+        instructions += 'KRITISCH: Kontext-Informationen sind nur dazu da, dass du weißt, welche Daten bereits vorhanden sind - nutze sie für Function Calls, aber erwähne sie NICHT in deiner Antwort!\n';
+        // Dynamische Instructions basierend auf Context (nur für interne Nutzung)
         if (context.booking) {
             if (context.booking.checkInDate) {
-                instructions += `WICHTIG: checkInDate ist bereits im Context: ${context.booking.checkInDate} - verwende diesen Wert!\n`;
+                instructions += `INTERN: checkInDate ist bereits im Context: ${context.booking.checkInDate} - verwende diesen Wert für Function Calls, erwähne ihn NICHT in der Antwort, es sei denn User fragt danach!\n`;
             }
             if (context.booking.checkOutDate) {
-                instructions += `WICHTIG: checkOutDate ist bereits im Context: ${context.booking.checkOutDate} - verwende diesen Wert!\n`;
+                instructions += `INTERN: checkOutDate ist bereits im Context: ${context.booking.checkOutDate} - verwende diesen Wert für Function Calls, erwähne ihn NICHT in der Antwort, es sei denn User fragt danach!\n`;
             }
             if (context.booking.guestName) {
-                instructions += `WICHTIG: guestName ist bereits im Context: ${context.booking.guestName} - verwende diesen Wert, frage NICHT erneut nach Name!\n`;
+                instructions += `INTERN: guestName ist bereits im Context: ${context.booking.guestName} - verwende diesen Wert für Function Calls, frage NICHT erneut nach Name, erwähne ihn NICHT in der Antwort, es sei denn User fragt danach!\n`;
             }
             if (context.booking.roomName) {
-                instructions += `WICHTIG: roomName ist bereits im Context: ${context.booking.roomName} - verwende diesen Wert!\n`;
+                instructions += `INTERN: roomName ist bereits im Context: ${context.booking.roomName} - verwende diesen Wert für Function Calls, erwähne ihn NICHT in der Antwort, es sei denn User fragt danach!\n`;
             }
         }
         return instructions;
@@ -400,8 +403,13 @@ class PromptBuilder {
      * General Context Instructions
      */
     static getGeneralContextInstructions(language) {
-        // Zusätzliche allgemeine Context-Instructions können hier hinzugefügt werden
-        return '';
+        let prompt = '\n\n=== ALLGEMEINE KONTEXT-NUTZUNG ===\n';
+        prompt += 'KRITISCH: Kontext-Informationen sind NUR für dich intern - gib sie NIEMALS direkt an den User weiter!\n';
+        prompt += 'KRITISCH: Wenn User eine Frage stellt (z.B. "do you have rooms for tonight?"), beantworte die Frage direkt - erwähne KEINE Kontext-Informationen!\n';
+        prompt += 'KRITISCH: Kontext-Informationen wie "roomName", "checkInDate", etc. sind nur dazu da, dass du weißt, welche Daten bereits vorhanden sind - nutze sie für Function Calls, aber erwähne sie NICHT in deiner Antwort!\n';
+        prompt += 'KRITISCH: Wenn User eine neue Frage stellt, die nichts mit dem Kontext zu tun hat, ignoriere den Kontext und beantworte die Frage direkt!\n';
+        prompt += 'KRITISCH: NIEMALS antworten mit "Esa información ya está en el contexto" oder ähnlichen Sätzen - beantworte die Frage direkt!\n';
+        return prompt;
     }
     /**
      * Language-Instructions (immer vorhanden)
