@@ -1182,7 +1182,7 @@ const Worktracker: React.FC = () => {
     // ✅ FIX: handleSort mit useCallback stabilisieren (verhindert veraltete Closure-Referenz)
     const handleSort = useCallback((key: SortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
-        // ✅ FIX: Verwende tasksSettings.sortConfig direkt (aktueller Wert) statt Closure-Variable
+        // ✅ FIX: Verwende tasksSettings.sortConfig direkt (aktueller Wert) - identisch mit Reservations
         const currentSortConfig = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
         const newDirection = currentSortConfig.key === key && currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
         updateTasksSortConfig({ key, direction: newDirection });
@@ -2465,8 +2465,8 @@ const Worktracker: React.FC = () => {
                                                                         onClick={sortKey ? () => handleSort(sortKey) : undefined}
                                                                         className="ml-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
                                                                         aria-label={
-                                                                            sortKey && tableSortConfig.key === sortKey
-                                                                                ? tableSortConfig.direction === 'asc'
+                                                                            sortKey && (tasksSettings.sortConfig?.key === sortKey)
+                                                                                ? (tasksSettings.sortConfig?.direction === 'asc')
                                                                                     ? t('tableColumn.sortDescending', 'Absteigend sortieren')
                                                                                     : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
                                                                                 : sortKey
@@ -2474,8 +2474,8 @@ const Worktracker: React.FC = () => {
                                                                                     : undefined
                                                                         }
                                                                         title={
-                                                                            sortKey && tableSortConfig.key === sortKey
-                                                                                ? tableSortConfig.direction === 'asc'
+                                                                            sortKey && (tasksSettings.sortConfig?.key === sortKey)
+                                                                                ? (tasksSettings.sortConfig?.direction === 'asc')
                                                                                     ? t('tableColumn.sortDescending', 'Absteigend sortieren')
                                                                                     : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
                                                                                 : sortKey
@@ -2484,8 +2484,8 @@ const Worktracker: React.FC = () => {
                                                                         }
                                                                         disabled={!sortKey}
                                                                     >
-                                                                        {sortKey && tableSortConfig.key === sortKey ? (
-                                                                            tableSortConfig.direction === 'asc' ? '↑' : '↓'
+                                                                        {sortKey && (tasksSettings.sortConfig?.key === sortKey) ? (
+                                                                            (tasksSettings.sortConfig?.direction === 'asc') ? '↑' : '↓'
                                                                         ) : (
                                                                             <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                                                                         )}
@@ -3831,8 +3831,8 @@ const Worktracker: React.FC = () => {
                                                                         onClick={sortKey ? () => handleSort(sortKey) : undefined}
                                                                         className="ml-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
                                                                         aria-label={
-                                                                            sortKey && tableSortConfig.key === sortKey
-                                                                                ? tableSortConfig.direction === 'asc'
+                                                                            sortKey && (tasksSettings.sortConfig?.key === sortKey)
+                                                                                ? (tasksSettings.sortConfig?.direction === 'asc')
                                                                                     ? t('tableColumn.sortDescending', 'Absteigend sortieren')
                                                                                     : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
                                                                                 : sortKey
@@ -3840,8 +3840,8 @@ const Worktracker: React.FC = () => {
                                                                                     : undefined
                                                                         }
                                                                         title={
-                                                                            sortKey && tableSortConfig.key === sortKey
-                                                                                ? tableSortConfig.direction === 'asc'
+                                                                            sortKey && (tasksSettings.sortConfig?.key === sortKey)
+                                                                                ? (tasksSettings.sortConfig?.direction === 'asc')
                                                                                     ? t('tableColumn.sortDescending', 'Absteigend sortieren')
                                                                                     : t('tableColumn.sortAscending', 'Aufsteigend sortieren')
                                                                                 : sortKey
@@ -3850,8 +3850,8 @@ const Worktracker: React.FC = () => {
                                                                         }
                                                                         disabled={!sortKey}
                                                                     >
-                                                                        {sortKey && tableSortConfig.key === sortKey ? (
-                                                                            tableSortConfig.direction === 'asc' ? '↑' : '↓'
+                                                                        {sortKey && (tasksSettings.sortConfig?.key === sortKey) ? (
+                                                                            (tasksSettings.sortConfig?.direction === 'asc') ? '↑' : '↓'
                                                                         ) : (
                                                                             <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                                                                         )}
