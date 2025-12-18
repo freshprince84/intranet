@@ -122,28 +122,12 @@ const ReservationCard: React.FC<ReservationCardProps> = ({ reservation, onClick,
           </span>
         </div>
 
-        {/* Zimmer - Dorms zeigen "Zimmername (Bettnummer)", Privates zeigen nur "Zimmername" */}
+        {/* Zimmer - Dorms zeigen roomNumber (bereits "Zimmername (Bettnummer)"), Privates zeigen roomDescription */}
         {(() => {
-          // Vereinfachte Erkennung: roomNumber gefüllt = Dorm, leer = Private
           const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-          
-          let roomDisplayText: string | null = null;
-          
-          if (isDorm) {
-            // Dorm: Zeige "Zimmername (Bettnummer)"
-            const roomName = reservation.roomDescription?.trim() || '';
-            const bedNumber = reservation.roomNumber?.trim() || '';
-            if (roomName && bedNumber) {
-              roomDisplayText = `${roomName} (${bedNumber})`;
-            } else if (roomName) {
-              roomDisplayText = roomName;
-            } else if (bedNumber) {
-              roomDisplayText = bedNumber;
-            }
-          } else {
-            // Private: Zeige nur Zimmername (aus roomDescription)
-            roomDisplayText = reservation.roomDescription?.trim() || null;
-          }
+          const roomDisplayText = isDorm 
+            ? reservation.roomNumber?.trim() || null
+            : reservation.roomDescription?.trim() || null;
           
           return roomDisplayText ? (
             <div className="flex items-center text-gray-600 dark:text-gray-400">
