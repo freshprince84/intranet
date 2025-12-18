@@ -380,3 +380,4 @@ npm install swiper framer-motion
 - [ ] Dark Mode
 - [ ] Performance (PageSpeed Insights)
 - [ ] Accessibility (Screen Reader, Keyboard Navigation)
+

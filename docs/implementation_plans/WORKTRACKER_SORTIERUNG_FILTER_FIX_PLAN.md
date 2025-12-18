@@ -1,7 +1,7 @@
 # Worktracker Sortierung & Filter Fix - Implementierungsplan
 
 **Datum:** 2025-01-31  
-**Status:** Geplant  
+**Status:** ✅ UMGESETZT (2025-12-18)  
 **Priorität:** Hoch
 
 ## Problem-Zusammenfassung
@@ -46,19 +46,14 @@ const handleSort = (key: SortConfig['key']) => {
 **Schritt 1.1: handleSort mit useCallback stabilisieren**
 
 **Datei:** `frontend/src/pages/Worktracker.tsx`  
-**Zeile:** 1160-1164
+**Zeile:** 1178-1182
 
-**Änderung:**
+**✅ UMGESETZT (2025-12-18):**
 ```typescript
-// VORHER:
-const handleSort = (key: SortConfig['key']) => {
-    const newDirection = tableSortConfig.key === key && tableSortConfig.direction === 'asc' ? 'desc' : 'asc';
-    updateTasksSortConfig({ key, direction: newDirection });
-};
-
-// NACHHER:
+// ✅ FIX: handleSort mit useCallback stabilisieren (verhindert veraltete Closure-Referenz)
 const handleSort = useCallback((key: SortConfig['key']) => {
-    // ✅ FIX: Verwende tasksSettings.sortConfig direkt (aktueller Wert)
+    // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
+    // ✅ FIX: Verwende tasksSettings.sortConfig direkt (aktueller Wert) statt Closure-Variable
     const currentSortConfig = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
     const newDirection = currentSortConfig.key === key && currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
     updateTasksSortConfig({ key, direction: newDirection });
@@ -69,6 +64,8 @@ const handleSort = useCallback((key: SortConfig['key']) => {
 - `useCallback` mit `tasksSettings.sortConfig` als Dependency stellt sicher, dass `handleSort` neu erstellt wird, wenn sich die Sortierung ändert
 - Verwendet `tasksSettings.sortConfig` direkt statt Closure-Variable `tableSortConfig`
 - `updateTasksSortConfig` als Dependency (stabil, aber für Vollständigkeit)
+
+**⚠️ WICHTIG: Dieser Fix verhindert, dass `handleSort` veraltete `tableSortConfig`-Referenzen aus dem Closure verwendet.**
 
 ---
 

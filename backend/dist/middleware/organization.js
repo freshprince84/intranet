@@ -79,6 +79,10 @@ exports.getUserOrganizationFilter = getUserOrganizationFilter;
 // Neue Hilfsfunktion für Datenisolation je nach User-Typ
 const getDataIsolationFilter = (req, entity) => {
     var _a, _b, _c, _d;
+    // ✅ FIX: Admin/Owner sehen alle Daten (keine Isolation)
+    if ((0, exports.isAdminOrOwner)(req)) {
+        return {}; // Leerer Filter = alle Daten
+    }
     // Konvertiere userId von String zu Integer
     const userId = Number(req.userId);
     if (isNaN(userId)) {

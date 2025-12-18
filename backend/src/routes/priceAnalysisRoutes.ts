@@ -8,29 +8,80 @@ import { otaController } from '../controllers/otaController';
 
 const router = express.Router();
 
-// Preisanalyse Routes
+// ⚠️ WICHTIG: Spezifische Routen MÜSSEN vor generischen Routen (/:id) definiert werden!
+// Sonst wird z.B. /rules als /:id mit id="rules" interpretiert
+
+// OTA Routes (spezifisch)
+router.get(
+  '/ota/listings',
+  authenticate,
+  checkPermission('price_analysis', 'read', 'page'),
+  otaController.getListings
+);
+
 router.post(
-  '/analyze',
+  '/ota/rate-shopping',
   authenticate,
-  checkPermission('price_analysis', 'write', 'page'),
-  priceAnalysisController.analyze
+  (req: any, res: any, next: any) => {
+    const logger = require('../utils/logger').logger;
+    logger.warn('[Price Analysis Routes] ⚡ POST /ota/rate-shopping Route erreicht');
+    logger.warn('[Price Analysis Routes] 📋 Request Body:', JSON.stringify(req.body));
+    logger.warn('[Price Analysis Routes] 👤 UserId:', req.userId, 'RoleId:', req.roleId);
+    next();
+  },
+  checkPermission('price_analysis_run_rate_shopping', 'write', 'button'),
+  (req: any, res: any, next: any) => {
+    const logger = require('../utils/logger').logger;
+    logger.warn('[Price Analysis Routes] ✅ Permission Check bestanden, rufe Controller auf...');
+    next();
+  },
+  otaController.runRateShopping
+);
+
+router.post(
+  '/ota/discover',
+  authenticate,
+  checkPermission('price_analysis_run_rate_shopping', 'write', 'button'),
+  otaController.discoverListings
+);
+
+// Preisregeln Routes (spezifisch)
+router.get(
+  '/rules',
+  authenticate,
+  checkPermission('price_analysis', 'read', 'page'),
+  pricingRuleController.getRules
+);
+
+router.post(
+  '/rules',
+  authenticate,
+  checkPermission('price_analysis_create_rule', 'write', 'button'),
+  pricingRuleController.createRule
 );
 
 router.get(
-  '/',
+  '/rules/:id',
   authenticate,
   checkPermission('price_analysis', 'read', 'page'),
-  priceAnalysisController.getAnalyses
+  pricingRuleController.getRuleById
 );
 
-router.get(
-  '/:id',
+router.put(
+  '/rules/:id',
   authenticate,
-  checkPermission('price_analysis', 'read', 'page'),
-  priceAnalysisController.getAnalysisById
+  checkPermission('price_analysis_edit_rule', 'write', 'button'),
+  pricingRuleController.updateRule
 );
 
-// Preisempfehlungen Routes
+router.delete(
+  '/rules/:id',
+  authenticate,
+  checkPermission('price_analysis_delete_rule', 'write', 'button'),
+  pricingRuleController.deleteRule
+);
+
+// Preisempfehlungen Routes (spezifisch)
 router.post(
   '/recommendations/generate',
   authenticate,
@@ -66,74 +117,27 @@ router.post(
   priceRecommendationController.rejectRecommendation
 );
 
-// Preisregeln Routes
+// Preisanalyse Routes (spezifisch)
+router.post(
+  '/analyze',
+  authenticate,
+  checkPermission('price_analysis', 'write', 'page'),
+  priceAnalysisController.analyze
+);
+
 router.get(
-  '/rules',
+  '/',
   authenticate,
   checkPermission('price_analysis', 'read', 'page'),
-  pricingRuleController.getRules
+  priceAnalysisController.getAnalyses
 );
 
+// ⚠️ GENERISCHE ROUTE ZULETZT: /:id muss nach allen spezifischen Routen kommen!
 router.get(
-  '/rules/:id',
+  '/:id',
   authenticate,
   checkPermission('price_analysis', 'read', 'page'),
-  pricingRuleController.getRuleById
-);
-
-router.post(
-  '/rules',
-  authenticate,
-  checkPermission('price_analysis_create_rule', 'write', 'button'),
-  pricingRuleController.createRule
-);
-
-router.put(
-  '/rules/:id',
-  authenticate,
-  checkPermission('price_analysis_edit_rule', 'write', 'button'),
-  pricingRuleController.updateRule
-);
-
-router.delete(
-  '/rules/:id',
-  authenticate,
-  checkPermission('price_analysis_delete_rule', 'write', 'button'),
-  pricingRuleController.deleteRule
-);
-
-// OTA Routes
-router.get(
-  '/ota/listings',
-  authenticate,
-  checkPermission('price_analysis', 'read', 'page'),
-  otaController.getListings
-);
-
-router.post(
-  '/ota/rate-shopping',
-  authenticate,
-  (req: any, res: any, next: any) => {
-    const logger = require('../utils/logger').logger;
-    logger.warn('[Price Analysis Routes] ⚡ POST /ota/rate-shopping Route erreicht');
-    logger.warn('[Price Analysis Routes] 📋 Request Body:', JSON.stringify(req.body));
-    logger.warn('[Price Analysis Routes] 👤 UserId:', req.userId, 'RoleId:', req.roleId);
-    next();
-  },
-  checkPermission('price_analysis_run_rate_shopping', 'write', 'button'),
-  (req: any, res: any, next: any) => {
-    const logger = require('../utils/logger').logger;
-    logger.warn('[Price Analysis Routes] ✅ Permission Check bestanden, rufe Controller auf...');
-    next();
-  },
-  otaController.runRateShopping
-);
-
-router.post(
-  '/ota/discover',
-  authenticate,
-  checkPermission('price_analysis_run_rate_shopping', 'write', 'button'),
-  otaController.discoverListings
+  priceAnalysisController.getAnalysisById
 );
 
 export default router;

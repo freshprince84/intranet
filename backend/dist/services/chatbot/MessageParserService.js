@@ -79,26 +79,76 @@ class MessageParserService {
         if (checkOutMatch) {
             checkOutDate = checkOutMatch[1].trim();
         }
-        // Parse date formats (DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, DD/MM, DD.MM)
-        const dateFormats = [
-            /(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/, // DD/MM/YYYY
-            /(\d{1,2})[\/\.-](\d{1,2})/, // DD/MM (aktuelles Jahr)
-        ];
-        for (const format of dateFormats) {
-            const match = message.match(format);
-            if (match) {
-                const day = parseInt(match[1], 10);
-                const month = parseInt(match[2], 10);
-                const year = match[3] ? parseInt(match[3], 10) : new Date().getFullYear();
-                // Format: YYYY-MM-DD
-                const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                if (!checkInDate) {
-                    checkInDate = dateStr;
+        // Parse date ranges first (z.B. "19.12.-20.12.", "19.12.25-20.12.25", "19.12-20.12")
+        const dateRangePattern = /(\d{1,2})[\.\/-](\d{1,2})(?:\.(\d{2,4}))?\s*[-–—]\s*(\d{1,2})[\.\/-](\d{1,2})(?:\.(\d{2,4}))?/i;
+        const dateRangeMatch = message.match(dateRangePattern);
+        if (dateRangeMatch) {
+            // Erster Datum (Check-in)
+            const day1 = parseInt(dateRangeMatch[1], 10);
+            const month1 = parseInt(dateRangeMatch[2], 10);
+            const year1Str = dateRangeMatch[3];
+            let year1;
+            if (year1Str) {
+                year1 = parseInt(year1Str, 10);
+                if (year1 < 100)
+                    year1 = 2000 + year1;
+            }
+            else {
+                year1 = new Date().getFullYear();
+            }
+            checkInDate = `${year1}-${month1.toString().padStart(2, '0')}-${day1.toString().padStart(2, '0')}`;
+            // Zweiter Datum (Check-out)
+            const day2 = parseInt(dateRangeMatch[4], 10);
+            const month2 = parseInt(dateRangeMatch[5], 10);
+            const year2Str = dateRangeMatch[6];
+            let year2;
+            if (year2Str) {
+                year2 = parseInt(year2Str, 10);
+                if (year2 < 100)
+                    year2 = 2000 + year2;
+            }
+            else {
+                // Wenn kein Jahr für Check-out, verwende gleiches Jahr wie Check-in
+                year2 = year1;
+                // Wenn Check-out Monat kleiner als Check-in Monat, ist es nächstes Jahr
+                if (month2 < month1 || (month2 === month1 && day2 < day1)) {
+                    year2 = year1 + 1;
                 }
-                else if (!checkOutDate) {
-                    checkOutDate = dateStr;
+            }
+            checkOutDate = `${year2}-${month2.toString().padStart(2, '0')}-${day2.toString().padStart(2, '0')}`;
+        }
+        else {
+            // Parse einzelne date formats (DD/MM/YYYY, DD.MM.YYYY, DD-MM-YYYY, DD/MM, DD.MM, DD.MM.YY)
+            const dateFormats = [
+                /(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{2,4})/, // DD/MM/YYYY oder DD/MM/YY
+                /(\d{1,2})[\/\.-](\d{1,2})/, // DD/MM (aktuelles Jahr)
+            ];
+            for (const format of dateFormats) {
+                const match = message.match(format);
+                if (match) {
+                    const day = parseInt(match[1], 10);
+                    const month = parseInt(match[2], 10);
+                    let year;
+                    if (match[3]) {
+                        year = parseInt(match[3], 10);
+                        // Wenn Jahr 2-stellig, interpretiere als 20XX
+                        if (year < 100) {
+                            year = 2000 + year;
+                        }
+                    }
+                    else {
+                        year = new Date().getFullYear();
+                    }
+                    // Format: YYYY-MM-DD
+                    const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                    if (!checkInDate) {
+                        checkInDate = dateStr;
+                    }
+                    else if (!checkOutDate) {
+                        checkOutDate = dateStr;
+                    }
+                    break;
                 }
-                break;
             }
         }
         // Parse date ranges ("von X bis Y", "X bis Y")
@@ -183,8 +233,8 @@ class MessageParserService {
      * @returns Geparster Name oder null
      */
     static parseName(message) {
-        // 1. Explizite Marker (z.B. "für Patrick Ammann", "a nombre de Juan Pérez", "ist Patrick Ammann", "mit Patrick Ammann")
-        const explicitNamePattern = /(?:a nombre de|name|nombre|für|para|ist|mit)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
+        // 1. Explizite Marker (z.B. "für Patrick Ammann", "a nombre de Juan Pérez", "ist Patrick Ammann", "mit Patrick Ammann", "Ich heisse Patrick Ammann", "Ich heiße Patrick Ammann")
+        const explicitNamePattern = /(?:a nombre de|name|nombre|für|para|ist|mit|ich heisse|ich heiße|ich heiβe|me llamo|mi nombre es|my name is)\s+([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)+)/i;
         const explicitNameMatch = message.match(explicitNamePattern);
         if (explicitNameMatch) {
             const name = explicitNameMatch[1].trim();
@@ -224,7 +274,7 @@ class MessageParserService {
         if (!name)
             return name;
         // Entferne führende Wörter
-        return name.replace(/^(ist|mit|für|para|a nombre de|name|nombre)\s+/i, '').trim();
+        return name.replace(/^(ist|mit|für|para|a nombre de|name|nombre|ich heisse|ich heiße|ich heiβe|me llamo|mi nombre es|my name is)\s+/i, '').trim();
     }
     /**
      * Parst Zimmer-Name und categoryId aus Nachricht
@@ -303,16 +353,40 @@ class MessageParserService {
                 logger_1.logger.log(`[MessageParserService] Zimmer gefunden (Teilübereinstimmung, ${matchingParts.length} Wörter): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
                 break;
             }
-            // 3. Fuzzy-Matching: Prüfe auf ähnliche Wörter (z.B. "abuel" vs "abuelo")
+            // 3. Fuzzy-Matching: Prüfe auf ähnliche Wörter (z.B. "abuel" vs "abuelo", "el abuel viajero" vs "el abuelo viajero")
             // Entferne letzte Buchstaben für Vergleich (z.B. "abuelo" -> "abuel", "viajero" -> "viajer")
             const fuzzyRoomName = roomNameWithoutArticle.replace(/(o|a|e|s)$/g, '');
             const fuzzyMessage = messageWithoutArticle.replace(/(o|a|e|s)$/g, '');
+            // Prüfe ob fuzzyRoomName in fuzzyMessage enthalten ist (auch als Teilstring)
+            // Oder ob beide ähnlich sind (mindestens 70% Übereinstimmung)
             if (fuzzyMessage.includes(fuzzyRoomName) || fuzzyRoomName.includes(fuzzyMessage)) {
                 roomName = room.name;
                 categoryId = room.categoryId;
                 roomType = room.type;
                 foundMatch = true;
                 logger_1.logger.log(`[MessageParserService] Zimmer gefunden (fuzzy): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
+                break;
+            }
+            // 3.5. Erweiterte Fuzzy-Suche: Prüfe einzelne Wörter (z.B. "abuel" in "abuelo viajero")
+            const fuzzyRoomWords = fuzzyRoomName.split(' ').filter(w => w.length > 3);
+            const fuzzyMessageWords = fuzzyMessage.split(' ').filter(w => w.length > 3);
+            let fuzzyWordMatches = 0;
+            for (const roomWord of fuzzyRoomWords) {
+                for (const msgWord of fuzzyMessageWords) {
+                    // Prüfe ob Wörter ähnlich sind (Teilübereinstimmung)
+                    if (msgWord.includes(roomWord) || roomWord.includes(msgWord)) {
+                        fuzzyWordMatches++;
+                        break;
+                    }
+                }
+            }
+            // Wenn mindestens 2 Wörter übereinstimmen, ist es ein Match
+            if (fuzzyWordMatches >= 2) {
+                roomName = room.name;
+                categoryId = room.categoryId;
+                roomType = room.type;
+                foundMatch = true;
+                logger_1.logger.log(`[MessageParserService] Zimmer gefunden (erweiterte fuzzy, ${fuzzyWordMatches} Wörter): ${room.name} (categoryId: ${categoryId}, type: ${roomType})`);
                 break;
             }
         }

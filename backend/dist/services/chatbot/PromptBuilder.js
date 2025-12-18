@@ -21,21 +21,25 @@ class PromptBuilder {
      */
     static buildPrompt(language, context, channel, aiConfig, conversationContext) {
         const components = [];
+        // WICHTIG: Sprache aus Context verwenden, falls vorhanden (für Konsistenz)
+        const finalLanguage = (context && typeof context === 'object' && context.language)
+            ? context.language
+            : language;
         // 1. Language-Instructions (ganz am Anfang für maximale Priorität)
-        const languageInstruction = this.getLanguageInstructions(language);
+        const languageInstruction = this.getLanguageInstructions(finalLanguage);
         components.push(languageInstruction);
         components.push(languageInstruction); // Wiederholung für maximale Betonung
         // 2. Basis-Prompt
-        components.push(this.getBasePrompt(language, aiConfig));
+        components.push(this.getBasePrompt(finalLanguage, aiConfig));
         // 3. Context-Instructions (dynamisch basierend auf Context)
-        if (context) {
-            components.push(this.getContextInstructions(context, language));
+        if (context && typeof context === 'object') {
+            components.push(this.getContextInstructions(context, finalLanguage));
         }
         // 4. Function-Instructions (dynamisch basierend auf verfügbaren Functions)
-        components.push(this.getFunctionInstructions([], language, conversationContext));
+        components.push(this.getFunctionInstructions([], finalLanguage, conversationContext || context));
         // 5. Channel-spezifische Instructions
         if (channel) {
-            components.push(this.getChannelSpecificInstructions(channel, language));
+            components.push(this.getChannelSpecificInstructions(channel, finalLanguage));
         }
         return components.join('\n\n');
     }
@@ -272,12 +276,13 @@ class PromptBuilder {
         prompt += '    2. DU MUSST eine vollständige Nachricht generieren mit:\n';
         prompt += '       - Reservierungsbestätigung (Gast-Name, Zimmer, Check-in/Check-out Datum)\n';
         prompt += '       - Payment-Link (immer vorhanden, aus paymentLink)\n';
-        prompt += '       - Check-in-Link (nur wenn checkInLink nicht null ist!)\n';
-        prompt += '       - Hinweis: "Falls Ankunft nach 18:00 (NICHT 22:00!), bitte Check-in-Link vor Ankunft erledigen, damit PIN-Code zugesendet wird"\n';
+        prompt += '       - Check-in-Link NUR wenn checkInLink NICHT null ist! Wenn checkInLink null ist, erwähne KEINEN Check-in-Link!\n';
+        prompt += '       - Hinweis für Check-in: "Falls Ankunft nach 18:00 (NICHT 22:00!), bitte Check-in-Link vor Ankunft erledigen, damit PIN-Code zugesendet wird" - NUR wenn checkInLink vorhanden ist!\n';
         prompt += '       - Zahlungsfrist: "Bitte zahlen Sie innerhalb von 1 Stunde, sonst wird die Reservierung automatisch storniert"\n';
         prompt += '    3. Verwende IMMER 18:00 (NICHT 22:00!) für den Ankunfts-Hinweis!\n';
-        prompt += '    4. Wenn checkInLink null ist, erwähne den Check-in-Link NICHT in der Nachricht!\n';
-        prompt += '    5. Die Nachricht muss in der erkannten Sprache sein (Spanisch/Deutsch/Englisch)\n';
+        prompt += '    4. KRITISCH: Wenn checkInLink null ist, schreibe KEINE Nachricht über Check-in-Link! KEINE widersprüchlichen Nachrichten wie "Check-in-Link nicht vorhanden"!\n';
+        prompt += '    5. KRITISCH: Wenn checkInLink vorhanden ist, zeige den Link und den Hinweis für 18:00!\n';
+        prompt += '    6. Die Nachricht muss in der erkannten Sprache sein (Spanisch/Deutsch/Englisch) - IMMER konsistent, KEIN Sprach-Wechsel!\n';
         prompt += '  Beispiele:\n';
         prompt += '    - "reservame 1 cama en el primo aventurero für heute, 1 nacht" → create_room_reservation({ checkInDate: "today", checkOutDate: "tomorrow", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34280 })\n';
         prompt += '    - "ich möchte das Zimmer 2 buchen vom 1.12. bis 3.12." → create_room_reservation({ checkInDate: "2025-12-01", checkOutDate: "2025-12-04", guestName: "Max Mustermann", roomType: "compartida", categoryId: 34281 })\n';

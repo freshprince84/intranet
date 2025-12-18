@@ -281,3 +281,4 @@
 4. Responsive Padding (`px-3 sm:px-4 md:px-6`) verwenden
 
 **Priorität:** 🔴 **KRITISCH** - Buttons sind nicht zugänglich!
+

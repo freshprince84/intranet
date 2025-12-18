@@ -47,11 +47,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsAppAiService = void 0;
 const axios_1 = __importDefault(require("axios"));
-const languageDetectionService_1 = require("./languageDetectionService");
 const prisma_1 = require("../utils/prisma");
 const whatsappFunctionHandlers_1 = require("./whatsappFunctionHandlers");
 const logger_1 = require("../utils/logger");
 const PromptBuilder_1 = require("./chatbot/PromptBuilder");
+const LanguageService_1 = require("./chatbot/LanguageService");
 /**
  * WhatsApp AI Service
  *
@@ -153,19 +153,24 @@ class WhatsAppAiService {
                     branchId
                 });
             }
-            // 2. Erkenne Sprache aus Nachricht (primär) oder Telefonnummer (Fallback)
-            const detectedLanguage = this.detectLanguageFromMessage(message);
-            const phoneLanguage = languageDetectionService_1.LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
-            // Verwende erkannte Sprache aus Nachricht, falls vorhanden, sonst Telefonnummer
-            const language = detectedLanguage || phoneLanguage;
+            // 2. Erkenne Sprache und stelle Konsistenz sicher (über Core Service)
+            const detectedLanguage = LanguageService_1.LanguageService.detectLanguage(message, phoneNumber, conversationContext);
+            // WICHTIG: Stelle Sprach-Konsistenz sicher (verwendet Context, falls vorhanden)
+            let language = detectedLanguage;
+            if (conversationId) {
+                language = yield LanguageService_1.LanguageService.ensureLanguageConsistency(conversationId, detectedLanguage, 'WhatsAppConversation');
+            }
             logger_1.logger.log('[WhatsApp AI Service] Spracherkennung:', {
                 message: message.substring(0, 50),
-                detectedFromMessage: detectedLanguage,
-                detectedFromPhone: phoneLanguage,
-                finalLanguage: language
+                detectedLanguage: detectedLanguage,
+                finalLanguage: language,
+                fromContext: (conversationContext === null || conversationContext === void 0 ? void 0 : conversationContext.language) || 'kein Context'
             });
             // 3. Baue System Prompt (modularer PromptBuilder)
-            const systemPrompt = PromptBuilder_1.PromptBuilder.buildPrompt(language, conversationContext, 'whatsapp', aiConfig);
+            // WICHTIG: conversationContext muss ConversationContext-Format haben (mit language)
+            const contextForPrompt = conversationContext && typeof conversationContext === 'object'
+                ? Object.assign(Object.assign({}, conversationContext), { language: conversationContext.language || language }) : { language };
+            const systemPrompt = PromptBuilder_1.PromptBuilder.buildPrompt(language, contextForPrompt, 'whatsapp', aiConfig);
             // 4. Prüfe ob Function Calling aktiviert werden soll
             // WICHTIG: check_room_availability sollte auch für Gäste verfügbar sein!
             const isEmployee = !!(conversationContext === null || conversationContext === void 0 ? void 0 : conversationContext.userId);

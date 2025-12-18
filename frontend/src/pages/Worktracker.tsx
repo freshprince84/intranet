@@ -266,7 +266,7 @@ const getReservationCardMetadataFromColumnOrder = (columnOrder: string[]): strin
 const Worktracker: React.FC = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const { hasPermission, permissions } = usePermissions();
+    const { hasPermission, permissions, isAdmin } = usePermissions();
     const location = useLocation();
     const navigate = useNavigate();
     const { showMessage } = useMessage();
@@ -445,10 +445,14 @@ const Worktracker: React.FC = () => {
     const updateSortConfig = activeTab === 'todos' ? updateTasksSortConfig : updateReservationsSortConfig;
 
     // Hauptsortierung aus Settings laden (für Table & Cards synchron)
-    // Tasks: Aus tasksSettings
-    const tableSortConfig: SortConfig = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
-    // Reservations: Aus reservationsSettings
-    const reservationTableSortConfig: ReservationSortConfig = reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };
+    // ✅ FIX: tableSortConfig mit useMemo stabilisieren (verhindert neue Referenz bei jedem Render)
+    const tableSortConfig: SortConfig = useMemo(() => {
+        return tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
+    }, [tasksSettings.sortConfig]);
+    // ✅ FIX: reservationTableSortConfig mit useMemo stabilisieren (verhindert neue Referenz bei jedem Render)
+    const reservationTableSortConfig: ReservationSortConfig = useMemo(() => {
+        return reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };
+    }, [reservationsSettings.sortConfig]);
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -496,14 +500,14 @@ const Worktracker: React.FC = () => {
         return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
     }, [cardMetadataOrder, hiddenCardMetadata]);
 
-    // Hauptsortierung Handler (für Table & Cards synchron)
-    const handleMainSortChange = (key: string, direction: 'asc' | 'desc') => {
+    // ✅ FIX: handleMainSortChange mit useCallback stabilisieren (verhindert neue Referenz bei jedem Render)
+    const handleMainSortChange = useCallback((key: string, direction: 'asc' | 'desc') => {
       if (activeTab === 'todos') {
         updateTasksSortConfig({ key: key as SortConfig['key'], direction });
       } else if (activeTab === 'reservations') {
         updateReservationsSortConfig({ key: key as ReservationSortConfig['key'], direction });
       }
-    };
+    }, [activeTab, updateTasksSortConfig, updateReservationsSortConfig]);
 
 
     // Toggle-Funktion für Expand/Collapse bei Reservations
@@ -1175,17 +1179,23 @@ const Worktracker: React.FC = () => {
         return task.qualityControl?.id === user?.id;
     };
 
-    const handleSort = (key: SortConfig['key']) => {
+    // ✅ FIX: handleSort mit useCallback stabilisieren (verhindert veraltete Closure-Referenz)
+    const handleSort = useCallback((key: SortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
-        const newDirection = tableSortConfig.key === key && tableSortConfig.direction === 'asc' ? 'desc' : 'asc';
+        // ✅ FIX: Verwende tasksSettings.sortConfig direkt (aktueller Wert) statt Closure-Variable
+        const currentSortConfig = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
+        const newDirection = currentSortConfig.key === key && currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
         updateTasksSortConfig({ key, direction: newDirection });
-    };
+    }, [tasksSettings.sortConfig, updateTasksSortConfig]);
 
-    const handleReservationSort = (key: ReservationSortConfig['key']) => {
+    // ✅ FIX: handleReservationSort mit useCallback stabilisieren (verhindert veraltete Closure-Referenz)
+    const handleReservationSort = useCallback((key: ReservationSortConfig['key']) => {
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
-        const newDirection = reservationTableSortConfig.key === key && reservationTableSortConfig.direction === 'asc' ? 'desc' : 'asc';
+        // ✅ FIX: Verwende reservationsSettings.sortConfig direkt (aktueller Wert) statt Closure-Variable
+        const currentSortConfig = reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };
+        const newDirection = currentSortConfig.key === key && currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
         updateReservationsSortConfig({ key, direction: newDirection });
-    };
+    }, [reservationsSettings.sortConfig, updateReservationsSortConfig]);
 
     const handleTourBookingsSort = (key: TourBookingSortConfig['key']) => {
         // Nur für Tabellen-Ansicht (Header-Sortierung)
@@ -1206,8 +1216,11 @@ const Worktracker: React.FC = () => {
         
         if (!canModifyTasks) return buttons;
         
+        // ✅ FIX: Admin kann alle Tasks status-shiften, unabhängig von isResponsibleForTask
+        const userIsAdmin = isAdmin();
+        
         // Zurück-Button (links)
-        if (task.status === 'in_progress' && isResponsibleForTask(task)) {
+        if (task.status === 'in_progress' && (userIsAdmin || isResponsibleForTask(task))) {
             buttons.push(
                 <div className="relative group">
                     <button
@@ -1222,7 +1235,7 @@ const Worktracker: React.FC = () => {
                     </div>
                 </div>
             );
-        } else if (task.status === 'quality_control' && isResponsibleForTask(task)) {
+        } else if (task.status === 'quality_control' && (userIsAdmin || isResponsibleForTask(task))) {
             buttons.push(
                 <div className="relative group">
                     <button
@@ -1237,7 +1250,7 @@ const Worktracker: React.FC = () => {
                     </div>
                 </div>
             );
-        } else if (task.status === 'done' && isQualityControlForTask(task)) {
+        } else if (task.status === 'done' && (userIsAdmin || isQualityControlForTask(task))) {
             buttons.push(
                 <div className="relative group">
                     <button
@@ -1255,7 +1268,7 @@ const Worktracker: React.FC = () => {
         }
 
         // Weiter-Button (rechts)
-        if (task.status === 'open' && isResponsibleForTask(task)) {
+        if (task.status === 'open' && (userIsAdmin || isResponsibleForTask(task))) {
             buttons.push(
                 <div className="relative group">
                     <button
@@ -1270,7 +1283,7 @@ const Worktracker: React.FC = () => {
                     </div>
                 </div>
             );
-        } else if (task.status === 'in_progress' && isResponsibleForTask(task)) {
+        } else if (task.status === 'in_progress' && (userIsAdmin || isResponsibleForTask(task))) {
             buttons.push(
                 <div className="relative group">
                     <button
@@ -1285,7 +1298,7 @@ const Worktracker: React.FC = () => {
                     </div>
                 </div>
             );
-        } else if (task.status === 'quality_control' && isQualityControlForTask(task)) {
+        } else if (task.status === 'quality_control' && (userIsAdmin || isQualityControlForTask(task))) {
             buttons.push(
                 <div className="relative group">
                     <button

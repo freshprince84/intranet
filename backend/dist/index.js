@@ -181,6 +181,19 @@ passcodeCleanupTimeout = setTimeout(() => __awaiter(void 0, void 0, void 0, func
         // Rate Shopping Scheduler
         const { RateShoppingScheduler } = yield Promise.resolve().then(() => __importStar(require('./services/rateShoppingScheduler')));
         RateShoppingScheduler.start();
+        // Pricing Rule Scheduler (Preisregeln automatisch ausführen)
+        const { PricingRuleScheduler } = yield Promise.resolve().then(() => __importStar(require('./services/pricingRuleScheduler')));
+        PricingRuleScheduler.start();
+        // Occupancy Monitoring Scheduler (Occupancy-Änderungen überwachen)
+        const { OccupancyMonitoringService } = yield Promise.resolve().then(() => __importStar(require('./services/occupancyMonitoringService')));
+        // Prüfe alle 12 Stunden auf Occupancy-Änderungen
+        setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
+            yield OccupancyMonitoringService.checkAllBranches();
+        }), 12 * 60 * 60 * 1000); // 12 Stunden
+        // Führe sofort einen Check aus
+        OccupancyMonitoringService.checkAllBranches().catch(err => {
+            logger_1.logger.error('[OccupancyMonitoring] Fehler beim ersten Check:', err);
+        });
     }
     catch (error) {
         logger_1.logger.error('[Timer] Fehler beim Starten des Passcode-Cleanup-Schedulers:', error);
@@ -207,6 +220,14 @@ const cleanupTimers = () => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (error) {
         logger_1.logger.error('[Cleanup] Fehler beim Stoppen des Rate Shopping Schedulers:', error);
+    }
+    // Pricing Rule Scheduler stoppen
+    try {
+        const { PricingRuleScheduler } = yield Promise.resolve().then(() => __importStar(require('./services/pricingRuleScheduler')));
+        PricingRuleScheduler.stop();
+    }
+    catch (error) {
+        logger_1.logger.error('[Cleanup] Fehler beim Stoppen des Pricing Rule Schedulers:', error);
     }
 });
 exports.cleanupTimers = cleanupTimers;
