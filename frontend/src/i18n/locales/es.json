@@ -3242,7 +3242,7 @@
       "title": "Hospitality y Consultoría",
       "badge": "Menos carga • Control de equipos • Ingresos protegidos",
       "headline": "Un intranet para hostales, hoteles, Airbnbs y equipos de consultoría",
-      "subline": "Control horario, tareas, conocimiento, facturación y automatización con IA en una sola interfaz – móvil y en sitio.",
+      "subline": "Más productividad, menos caos. Todo en una interfaz – para equipos que quieren trabajar de manera más eficiente.",
       "ctaRegister": "Registrarse",
       "ctaRegisterLabel": "Registrarse",
       "ctaLogin": "Login",
@@ -3268,16 +3268,16 @@
       "hospitality": {
         "title": "Hostales, Airbnbs, Hoteles",
         "description": "Turnos, housekeeping, check-in/out, llaves y documentos en un solo flujo.",
-        "point1": "Control de turnos y horas en vivo (control horario, control de equipo).",
-        "point2": "Tareas/housekeeping con flujo de estados y notificaciones.",
-        "point3": "Cadena LobbyPMS/TTLock para check-in/out y entrega de llaves."
+        "point1": "Turnos bajo control: Gestionar horas en vivo, reducir errores, crear transparencia.",
+        "point2": "Optimizar housekeeping: Tareas con flujo de estados, notificaciones automáticas y responsabilidades claras.",
+        "point3": "Automatizar check-in/check-out: Integración LobbyPMS/TTLock para operaciones fluidas."
       },
       "consulting": {
         "title": "Consultoría",
         "description": "Horas facturables y conocimiento siempre alineado.",
-        "point1": "Seguimiento de consultas (inicio/fin o manual) con clientes y notas.",
-        "point2": "Facturas QR suizas y reportes mensuales sin doble facturación.",
-        "point3": "Base de conocimiento con Cerebro y tareas para entregables."
+        "point1": "Capturar tiempo de consultoría con precisión – auditables, sin retrabajo.",
+        "point2": "Crear facturas automáticamente: Facturas QR suizas y reportes mensuales sin doble facturación.",
+        "point3": "Centralizar conocimiento: Wiki Cerebro y tareas para entregables."
       }
     },
     "features": {
@@ -3297,34 +3297,37 @@
       },
       "operations": {
         "title": "Operaciones y control de equipo",
-        "worktime": "Iniciar/detener horas en vivo, seguro en zonas horarias, estadísticas por sede.",
-        "worktracker": "Tareas con flujo de estados, responsables/QC, filtros guardados, notificaciones.",
-        "teamControl": "Vista de horas del equipo, detener tiempos en curso, exportar análisis."
+        "worktime": "Capturar horas automáticamente – preciso, seguro en zonas horarias, con estadísticas claras.",
+        "worktracker": "Mantener tareas a la vista – nunca olvidar nada. Con responsabilidades claras y notificaciones automáticas.",
+        "teamControl": "Rendimiento del equipo de un vistazo – gestionar horas, exportar análisis, evitar errores."
       },
       "knowledge": {
         "title": "Conocimiento y procesos",
-        "cerebro": "Wiki Markdown con estructura, medios y enlaces a tareas/solicitudes.",
-        "workflow": "Automatizaciones por roles y estados; descripciones de tareas obligatorias."
+        "cerebro": "Centralizar conocimiento – Wiki Markdown con estructura, medios y enlaces a tareas.",
+        "workflow": "Automatizar procesos – flujos claros por roles y estados."
       },
       "billing": {
         "title": "Facturación y consultas",
-        "consultations": "Elegir clientes, registrar consultas, notas con guardado automático.",
-        "invoices": "Facturas QR suizas, reportes mensuales, anti doble facturación, estado de pagos."
+        "consultations": "Capturar tiempo de consultoría con precisión – auditables, sin retrabajo.",
+        "invoices": "Crear facturas automáticamente – facturas QR suizas, reportes mensuales, anti doble facturación."
       },
       "ai": {
         "title": "IA y automatización",
-        "documentRecognition": "Carga de ID, extracción con IA, validación, enlace a perfil.",
-        "filters": "Filtros guardados con lógica AND/OR, filtros estándar por tabla."
+        "documentRecognition": "Procesar documentos automáticamente – extracción con IA, validación, enlace a perfil.",
+        "filters": "Encontrar datos rápidamente – filtros guardados con lógica AND/OR."
       },
       "integration": {
         "title": "Integraciones y móvil",
-        "lobbypms": "Cadena LobbyPMS/TTLock para check-in/llaves.",
-        "mobile": "App móvil para tiempo, tareas y notificaciones."
+        "lobbypms": "Automatizar check-in/check-out – integración LobbyPMS/TTLock.",
+        "mobile": "Mantenerse productivo sobre la marcha – app móvil para tiempo, tareas y notificaciones."
       },
       "screenshots": {
-        "teamControl": "Vista general del equipo con tiempos de trabajo",
-        "cerebro": "Editor wiki con soporte multimedia",
-        "mobile": "Interfaz móvil sobre la marcha"
+        "teamControl": "Vista general del equipo",
+        "teamControlDesc": "Horas de un vistazo, detener tiempos en curso, exportar análisis.",
+        "cerebro": "Editor wiki",
+        "cerebroDesc": "Wiki Markdown con estructura, medios y enlaces a tareas.",
+        "mobile": "Interfaz móvil",
+        "mobileDesc": "Mantenerse productivo sobre la marcha – tiempo, tareas y notificaciones."
       }
     },
     "proof": {
@@ -3337,8 +3340,8 @@
       "consulting": {
         "title": "Líder de Consultoría"
       },
-      "review1": "Los cambios de turno son limpios, housekeeping siempre actualizado, la automatización de check-in ahorra tiempo en recepción.",
-      "review2": "Horas de consultoría auditables, facturas QR y reportes mensuales sin retrabajo."
+      "review1": "Desde que usamos el intranet, los cambios de turno son más fluidos. Housekeeping siempre está actualizado, y la automatización de check-in nos ahorra horas en recepción cada día.",
+      "review2": "Las horas de consultoría ahora son auditables. Las facturas QR y reportes mensuales salen sin retrabajo – eso nos ahorra mucho tiempo."
     },
     "cta": {
       "title": "¿Listo para empezar?",
@@ -3358,19 +3361,19 @@
       "title": "FAQ",
       "integration": {
         "q": "¿Cómo se integran con sistemas existentes?",
-        "a": "LobbyPMS/TTLock ya está preparado. Más integraciones se definen en el onboarding."
+        "a": "LobbyPMS/TTLock ya está preparado. Más integraciones se definen en el onboarding – usualmente es rápido."
       },
       "support": {
         "q": "¿Cómo manejan el soporte?",
-        "a": "Soporte vía intranet con prioridades claras. Conocimiento en el wiki Cerebro."
+        "a": "Soporte directamente vía intranet, claramente priorizado. El conocimiento está en el wiki Cerebro – todo en un lugar."
       },
       "security": {
         "q": "¿Cómo abordan la seguridad?",
-        "a": "Roles/permisos, auditorías, cargas de IA con validación, solo HTTPS."
+        "a": "La seguridad es lo primero: roles/permisos, auditorías, validación para cargas de IA, solo HTTPS."
       },
       "onboarding": {
         "q": "¿Cuánto tarda el onboarding?",
-        "a": "Usualmente pocas horas: sedes, roles, filtros estándar y listo para producción."
+        "a": "El onboarding es rápido: usualmente pocas horas para sedes, roles y filtros estándar – luego estás listo para empezar."
       }
     },
     "footer": {

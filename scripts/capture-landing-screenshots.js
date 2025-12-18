@@ -55,24 +55,80 @@ if (!fs.existsSync(OUTPUT_DIR)) {
       await page.goto(`${BASE_URL}/app/worktracker`, { waitUntil: 'networkidle', timeout: 30000 });
       await page.waitForTimeout(3000);
       
-      // Versuche Task-Liste oder Hauptinhalt zu finden
-      const mainContent = await page.$('main, [role="main"], .container, .content, .main-content');
-      if (mainContent) {
-        const boundingBox = await mainContent.boundingBox();
+      // Suche spezifisch nach Task-Liste, Tabelle oder Filter-Bereich
+      const taskList = await page.$('table, .task-list, [class*="task"], [class*="filter"], tbody, .overflow-x-auto');
+      if (taskList) {
+        const boundingBox = await taskList.boundingBox();
         if (boundingBox) {
-          // Fokus auf Hauptinhalt (ohne Navigation/Header)
+          // Fokus auf Task-Liste mit etwas Kontext (50px mehr)
           await page.screenshot({ 
             path: path.join(OUTPUT_DIR, 'worktracker.png'),
             clip: {
-              x: Math.max(0, boundingBox.x),
-              y: Math.max(0, boundingBox.y),
-              width: Math.min(boundingBox.width, 1200),
-              height: Math.min(boundingBox.height, 600)
+              x: Math.max(0, boundingBox.x - 50),
+              y: Math.max(0, boundingBox.y - 50),
+              width: Math.min(boundingBox.width + 100, 1200),
+              height: Math.min(boundingBox.height + 100, 600)
             }
           });
           console.log('Worktracker Screenshot erstellt (Ausschnitt)');
         } else {
-          // Fallback: Vollbild
+          // Fallback: Hauptinhalt
+          const mainContent = await page.$('main, [role="main"]');
+          if (mainContent) {
+            const mainBox = await mainContent.boundingBox();
+            if (mainBox) {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'worktracker.png'),
+                clip: {
+                  x: Math.max(0, mainBox.x),
+                  y: Math.max(0, mainBox.y),
+                  width: Math.min(mainBox.width, 1200),
+                  height: Math.min(mainBox.height, 600)
+                }
+              });
+              console.log('Worktracker Screenshot erstellt (Hauptinhalt)');
+            } else {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'worktracker.png'),
+                fullPage: false,
+                clip: { x: 0, y: 0, width: 1600, height: 900 }
+              });
+              console.log('Worktracker Screenshot erstellt (Vollbild)');
+            }
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'worktracker.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Worktracker Screenshot erstellt (Vollbild)');
+          }
+        }
+      } else {
+        // Fallback: Hauptinhalt
+        const mainContent = await page.$('main, [role="main"]');
+        if (mainContent) {
+          const mainBox = await mainContent.boundingBox();
+          if (mainBox) {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'worktracker.png'),
+              clip: {
+                x: Math.max(0, mainBox.x),
+                y: Math.max(0, mainBox.y),
+                width: Math.min(mainBox.width, 1200),
+                height: Math.min(mainBox.height, 600)
+              }
+            });
+            console.log('Worktracker Screenshot erstellt (Hauptinhalt)');
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'worktracker.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Worktracker Screenshot erstellt (Vollbild)');
+          }
+        } else {
           await page.screenshot({ 
             path: path.join(OUTPUT_DIR, 'worktracker.png'),
             fullPage: false,
@@ -80,14 +136,6 @@ if (!fs.existsSync(OUTPUT_DIR)) {
           });
           console.log('Worktracker Screenshot erstellt (Vollbild)');
         }
-      } else {
-        // Fallback: Vollbild
-        await page.screenshot({ 
-          path: path.join(OUTPUT_DIR, 'worktracker.png'),
-          fullPage: false,
-          clip: { x: 0, y: 0, width: 1600, height: 900 }
-        });
-        console.log('Worktracker Screenshot erstellt (Vollbild)');
       }
     } catch (err) {
       console.log(`Worktracker Screenshot fehlgeschlagen: ${err.message}`);
@@ -99,20 +147,76 @@ if (!fs.existsSync(OUTPUT_DIR)) {
       await page.goto(`${BASE_URL}/app/consultations`, { waitUntil: 'networkidle', timeout: 30000 });
       await page.waitForTimeout(3000);
       
-      const mainContent = await page.$('main, [role="main"], .container, .content, form, table');
-      if (mainContent) {
-        const boundingBox = await mainContent.boundingBox();
+      // Suche spezifisch nach Consultation-Formular, Liste oder Tabelle
+      const consultationForm = await page.$('form, .consultation-form, .consultation-list, table, [class*="consultation"], [class*="client"]');
+      if (consultationForm) {
+        const boundingBox = await consultationForm.boundingBox();
         if (boundingBox) {
           await page.screenshot({ 
             path: path.join(OUTPUT_DIR, 'consultations.png'),
             clip: {
-              x: Math.max(0, boundingBox.x),
-              y: Math.max(0, boundingBox.y),
-              width: Math.min(boundingBox.width, 1200),
-              height: Math.min(boundingBox.height, 600)
+              x: Math.max(0, boundingBox.x - 50),
+              y: Math.max(0, boundingBox.y - 50),
+              width: Math.min(boundingBox.width + 100, 1200),
+              height: Math.min(boundingBox.height + 100, 600)
             }
           });
           console.log('Consultations Screenshot erstellt (Ausschnitt)');
+        } else {
+          const mainContent = await page.$('main, [role="main"]');
+          if (mainContent) {
+            const mainBox = await mainContent.boundingBox();
+            if (mainBox) {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'consultations.png'),
+                clip: {
+                  x: Math.max(0, mainBox.x),
+                  y: Math.max(0, mainBox.y),
+                  width: Math.min(mainBox.width, 1200),
+                  height: Math.min(mainBox.height, 600)
+                }
+              });
+              console.log('Consultations Screenshot erstellt (Hauptinhalt)');
+            } else {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'consultations.png'),
+                fullPage: false,
+                clip: { x: 0, y: 0, width: 1600, height: 900 }
+              });
+              console.log('Consultations Screenshot erstellt (Vollbild)');
+            }
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'consultations.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Consultations Screenshot erstellt (Vollbild)');
+          }
+        }
+      } else {
+        const mainContent = await page.$('main, [role="main"]');
+        if (mainContent) {
+          const mainBox = await mainContent.boundingBox();
+          if (mainBox) {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'consultations.png'),
+              clip: {
+                x: Math.max(0, mainBox.x),
+                y: Math.max(0, mainBox.y),
+                width: Math.min(mainBox.width, 1200),
+                height: Math.min(mainBox.height, 600)
+              }
+            });
+            console.log('Consultations Screenshot erstellt (Hauptinhalt)');
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'consultations.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Consultations Screenshot erstellt (Vollbild)');
+          }
         } else {
           await page.screenshot({ 
             path: path.join(OUTPUT_DIR, 'consultations.png'),
@@ -121,13 +225,6 @@ if (!fs.existsSync(OUTPUT_DIR)) {
           });
           console.log('Consultations Screenshot erstellt (Vollbild)');
         }
-      } else {
-        await page.screenshot({ 
-          path: path.join(OUTPUT_DIR, 'consultations.png'),
-          fullPage: false,
-          clip: { x: 0, y: 0, width: 1600, height: 900 }
-        });
-        console.log('Consultations Screenshot erstellt (Vollbild)');
       }
     } catch (err) {
       console.log(`Consultations Screenshot fehlgeschlagen: ${err.message}`);
@@ -139,20 +236,76 @@ if (!fs.existsSync(OUTPUT_DIR)) {
       await page.goto(`${BASE_URL}/app/team-worktime-control`, { waitUntil: 'networkidle', timeout: 30000 });
       await page.waitForTimeout(3000);
       
-      const mainContent = await page.$('main, [role="main"], .container, .content, table');
-      if (mainContent) {
-        const boundingBox = await mainContent.boundingBox();
+      // Suche spezifisch nach Team-Tabelle oder Liste
+      const teamTable = await page.$('table, .team-list, [class*="team"], [class*="worktime"], tbody, .overflow-x-auto');
+      if (teamTable) {
+        const boundingBox = await teamTable.boundingBox();
         if (boundingBox) {
           await page.screenshot({ 
             path: path.join(OUTPUT_DIR, 'team-worktime.png'),
             clip: {
-              x: Math.max(0, boundingBox.x),
-              y: Math.max(0, boundingBox.y),
-              width: Math.min(boundingBox.width, 1200),
-              height: Math.min(boundingBox.height, 600)
+              x: Math.max(0, boundingBox.x - 50),
+              y: Math.max(0, boundingBox.y - 50),
+              width: Math.min(boundingBox.width + 100, 1200),
+              height: Math.min(boundingBox.height + 100, 600)
             }
           });
           console.log('Team Worktime Screenshot erstellt (Ausschnitt)');
+        } else {
+          const mainContent = await page.$('main, [role="main"]');
+          if (mainContent) {
+            const mainBox = await mainContent.boundingBox();
+            if (mainBox) {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'team-worktime.png'),
+                clip: {
+                  x: Math.max(0, mainBox.x),
+                  y: Math.max(0, mainBox.y),
+                  width: Math.min(mainBox.width, 1200),
+                  height: Math.min(mainBox.height, 600)
+                }
+              });
+              console.log('Team Worktime Screenshot erstellt (Hauptinhalt)');
+            } else {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'team-worktime.png'),
+                fullPage: false,
+                clip: { x: 0, y: 0, width: 1600, height: 900 }
+              });
+              console.log('Team Worktime Screenshot erstellt (Vollbild)');
+            }
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'team-worktime.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Team Worktime Screenshot erstellt (Vollbild)');
+          }
+        }
+      } else {
+        const mainContent = await page.$('main, [role="main"]');
+        if (mainContent) {
+          const mainBox = await mainContent.boundingBox();
+          if (mainBox) {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'team-worktime.png'),
+              clip: {
+                x: Math.max(0, mainBox.x),
+                y: Math.max(0, mainBox.y),
+                width: Math.min(mainBox.width, 1200),
+                height: Math.min(mainBox.height, 600)
+              }
+            });
+            console.log('Team Worktime Screenshot erstellt (Hauptinhalt)');
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'team-worktime.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Team Worktime Screenshot erstellt (Vollbild)');
+          }
         } else {
           await page.screenshot({ 
             path: path.join(OUTPUT_DIR, 'team-worktime.png'),
@@ -161,29 +314,96 @@ if (!fs.existsSync(OUTPUT_DIR)) {
           });
           console.log('Team Worktime Screenshot erstellt (Vollbild)');
         }
-      } else {
-        await page.screenshot({ 
-          path: path.join(OUTPUT_DIR, 'team-worktime.png'),
-          fullPage: false,
-          clip: { x: 0, y: 0, width: 1600, height: 900 }
-        });
-        console.log('Team Worktime Screenshot erstellt (Vollbild)');
       }
     } catch (err) {
       console.log(`Team Worktime Screenshot fehlgeschlagen: ${err.message}`);
     }
 
-    // 6. Cerebro Screenshot
+    // 6. Cerebro Screenshot (Ausschnitt: Wiki-Editor)
     console.log('Screenshot: Cerebro...');
     try {
       await page.goto(`${BASE_URL}/app/cerebro`, { waitUntil: 'networkidle', timeout: 30000 });
       await page.waitForTimeout(3000);
-      await page.screenshot({ 
-        path: path.join(OUTPUT_DIR, 'cerebro.png'),
-        fullPage: false,
-        clip: { x: 0, y: 0, width: 1600, height: 900 }
-      });
-      console.log('Cerebro Screenshot erstellt');
+      
+      // Suche spezifisch nach Editor oder Wiki-Content
+      const cerebroEditor = await page.$('.editor, textarea, [contenteditable="true"], [class*="editor"], [class*="wiki"], [class*="markdown"], pre, code');
+      if (cerebroEditor) {
+        const boundingBox = await cerebroEditor.boundingBox();
+        if (boundingBox) {
+          await page.screenshot({ 
+            path: path.join(OUTPUT_DIR, 'cerebro.png'),
+            clip: {
+              x: Math.max(0, boundingBox.x - 50),
+              y: Math.max(0, boundingBox.y - 50),
+              width: Math.min(boundingBox.width + 100, 1200),
+              height: Math.min(boundingBox.height + 100, 600)
+            }
+          });
+          console.log('Cerebro Screenshot erstellt (Ausschnitt)');
+        } else {
+          const mainContent = await page.$('main, [role="main"]');
+          if (mainContent) {
+            const mainBox = await mainContent.boundingBox();
+            if (mainBox) {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'cerebro.png'),
+                clip: {
+                  x: Math.max(0, mainBox.x),
+                  y: Math.max(0, mainBox.y),
+                  width: Math.min(mainBox.width, 1200),
+                  height: Math.min(mainBox.height, 600)
+                }
+              });
+              console.log('Cerebro Screenshot erstellt (Hauptinhalt)');
+            } else {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'cerebro.png'),
+                fullPage: false,
+                clip: { x: 0, y: 0, width: 1600, height: 900 }
+              });
+              console.log('Cerebro Screenshot erstellt (Vollbild)');
+            }
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'cerebro.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Cerebro Screenshot erstellt (Vollbild)');
+          }
+        }
+      } else {
+        const mainContent = await page.$('main, [role="main"]');
+        if (mainContent) {
+          const mainBox = await mainContent.boundingBox();
+          if (mainBox) {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'cerebro.png'),
+              clip: {
+                x: Math.max(0, mainBox.x),
+                y: Math.max(0, mainBox.y),
+                width: Math.min(mainBox.width, 1200),
+                height: Math.min(mainBox.height, 600)
+              }
+            });
+            console.log('Cerebro Screenshot erstellt (Hauptinhalt)');
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'cerebro.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Cerebro Screenshot erstellt (Vollbild)');
+          }
+        } else {
+          await page.screenshot({ 
+            path: path.join(OUTPUT_DIR, 'cerebro.png'),
+            fullPage: false,
+            clip: { x: 0, y: 0, width: 1600, height: 900 }
+          });
+          console.log('Cerebro Screenshot erstellt (Vollbild)');
+        }
+      }
     } catch (err) {
       console.log(`Cerebro Screenshot fehlgeschlagen: ${err.message}`);
     }
@@ -200,20 +420,76 @@ if (!fs.existsSync(OUTPUT_DIR)) {
         await page.waitForTimeout(2000);
       }
       
-      const mainContent = await page.$('main, [role="main"], .container, .content, form, .upload');
-      if (mainContent) {
-        const boundingBox = await mainContent.boundingBox();
+      // Suche spezifisch nach Upload-Interface oder Dokument-Liste
+      const documentUpload = await page.$('.upload, [class*="upload"], [class*="document"], form, input[type="file"], button:has-text("Upload"), button:has-text("Hochladen")');
+      if (documentUpload) {
+        const boundingBox = await documentUpload.boundingBox();
         if (boundingBox) {
           await page.screenshot({ 
             path: path.join(OUTPUT_DIR, 'document-recognition.png'),
             clip: {
-              x: Math.max(0, boundingBox.x),
-              y: Math.max(0, boundingBox.y),
-              width: Math.min(boundingBox.width, 1200),
-              height: Math.min(boundingBox.height, 600)
+              x: Math.max(0, boundingBox.x - 50),
+              y: Math.max(0, boundingBox.y - 50),
+              width: Math.min(boundingBox.width + 100, 1200),
+              height: Math.min(boundingBox.height + 100, 600)
             }
           });
           console.log('Document Recognition Screenshot erstellt (Ausschnitt)');
+        } else {
+          const mainContent = await page.$('main, [role="main"]');
+          if (mainContent) {
+            const mainBox = await mainContent.boundingBox();
+            if (mainBox) {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'document-recognition.png'),
+                clip: {
+                  x: Math.max(0, mainBox.x),
+                  y: Math.max(0, mainBox.y),
+                  width: Math.min(mainBox.width, 1200),
+                  height: Math.min(mainBox.height, 600)
+                }
+              });
+              console.log('Document Recognition Screenshot erstellt (Hauptinhalt)');
+            } else {
+              await page.screenshot({ 
+                path: path.join(OUTPUT_DIR, 'document-recognition.png'),
+                fullPage: false,
+                clip: { x: 0, y: 0, width: 1600, height: 900 }
+              });
+              console.log('Document Recognition Screenshot erstellt (Vollbild)');
+            }
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'document-recognition.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Document Recognition Screenshot erstellt (Vollbild)');
+          }
+        }
+      } else {
+        const mainContent = await page.$('main, [role="main"]');
+        if (mainContent) {
+          const mainBox = await mainContent.boundingBox();
+          if (mainBox) {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'document-recognition.png'),
+              clip: {
+                x: Math.max(0, mainBox.x),
+                y: Math.max(0, mainBox.y),
+                width: Math.min(mainBox.width, 1200),
+                height: Math.min(mainBox.height, 600)
+              }
+            });
+            console.log('Document Recognition Screenshot erstellt (Hauptinhalt)');
+          } else {
+            await page.screenshot({ 
+              path: path.join(OUTPUT_DIR, 'document-recognition.png'),
+              fullPage: false,
+              clip: { x: 0, y: 0, width: 1600, height: 900 }
+            });
+            console.log('Document Recognition Screenshot erstellt (Vollbild)');
+          }
         } else {
           await page.screenshot({ 
             path: path.join(OUTPUT_DIR, 'document-recognition.png'),
@@ -222,13 +498,6 @@ if (!fs.existsSync(OUTPUT_DIR)) {
           });
           console.log('Document Recognition Screenshot erstellt (Vollbild)');
         }
-      } else {
-        await page.screenshot({ 
-          path: path.join(OUTPUT_DIR, 'document-recognition.png'),
-          fullPage: false,
-          clip: { x: 0, y: 0, width: 1600, height: 900 }
-        });
-        console.log('Document Recognition Screenshot erstellt (Vollbild)');
       }
     } catch (err) {
       console.log(`Document Recognition Screenshot fehlgeschlagen: ${err.message}`);

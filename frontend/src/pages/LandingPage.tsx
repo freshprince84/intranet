@@ -410,7 +410,10 @@ const LandingPage: React.FC = () => {
                   </div>
                 </div>
               </DeviceFrame>
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">{t('landing.features.screenshots.teamControl')}</p>
+              <div className="mt-4 text-center">
+                <p className="text-base font-medium text-gray-900 dark:text-gray-100">{t('landing.features.screenshots.teamControl')}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('landing.features.screenshots.teamControlDesc')}</p>
+              </div>
             </div>
             {/* Kleine Features (1 Spalte) */}
             <div className="space-y-4">
@@ -428,7 +431,10 @@ const LandingPage: React.FC = () => {
                     </div>
                   </div>
                 </DeviceFrame>
-                <p className="text-xs text-gray-600 dark:text-gray-400 text-center">{t('landing.features.screenshots.cerebro')}</p>
+                <div className="mt-2 text-center">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.features.screenshots.cerebro')}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{t('landing.features.screenshots.cerebroDesc')}</p>
+                </div>
               </div>
               <div className="space-y-2">
                 <DeviceFrame type="phone">
@@ -444,7 +450,10 @@ const LandingPage: React.FC = () => {
                     </div>
                   </div>
                 </DeviceFrame>
-                <p className="text-xs text-gray-600 dark:text-gray-400 text-center">{t('landing.features.screenshots.mobile')}</p>
+                <div className="mt-2 text-center">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.features.screenshots.mobile')}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{t('landing.features.screenshots.mobileDesc')}</p>
+                </div>
               </div>
             </div>
           </div>
