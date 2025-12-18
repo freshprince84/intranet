@@ -9,6 +9,7 @@ interface UseTableSettingsOptions {
   defaultVisibleCardMetadata?: string[];
   defaultCardColumnOrder?: string[];
   defaultCardSortDirections?: Record<string, 'asc' | 'desc'>;
+  defaultSortConfig?: { key: string; direction: 'asc' | 'desc' };
 }
 
 /**
@@ -48,8 +49,10 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
           loadedSettings.viewMode = options.defaultViewMode;
         }
         
-        // sortConfig wird bereits vom Server geladen (falls vorhanden)
-        // Keine Initialisierung nötig, da optional
+        // sortConfig initialisieren, falls nicht vorhanden
+        if (!loadedSettings.sortConfig && options?.defaultSortConfig) {
+          loadedSettings.sortConfig = options.defaultSortConfig;
+        }
         
         logger.log('Finale Tabelleneinstellungen nach Initialisierung:', loadedSettings);
         setSettings(loadedSettings);
@@ -144,10 +147,19 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
 
   // Sortierung aktualisieren
   const updateSortConfig = useCallback(async (newSortConfig: { key: string; direction: 'asc' | 'desc' }) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useTableSettings.ts:146',message:'updateSortConfig ENTRY',data:{newSortConfigKey:newSortConfig.key,newSortConfigDirection:newSortConfig.direction},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     try {
       // ✅ FIX: Verwende funktionales Update, um stale closure zu vermeiden
       setSettings(prevSettings => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useTableSettings.ts:149',message:'updateSortConfig setSettings callback',data:{prevSortConfig:prevSettings.sortConfig,newSortConfigKey:newSortConfig.key,newSortConfigDirection:newSortConfig.direction},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         const updatedSettings = { ...prevSettings, sortConfig: newSortConfig };
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'useTableSettings.ts:151',message:'updateSortConfig returning updatedSettings',data:{updatedSortConfigKey:updatedSettings.sortConfig?.key,updatedSortConfigDirection:updatedSettings.sortConfig?.direction},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         // Speichere asynchron (nicht await, da setState synchron sein muss)
         tableSettingsApi.saveTableSettings(updatedSettings).catch(err => {
           setError(err instanceof Error ? err : new Error('Fehler beim Speichern der Sortierung'));

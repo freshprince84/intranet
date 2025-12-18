@@ -417,6 +417,13 @@ const Worktracker: React.FC = () => {
         defaultViewMode: 'cards'
     });
     
+    // #region agent log
+    // Log tasksSettings changes
+    useEffect(() => {
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Worktracker.tsx:418',message:'tasksSettings changed',data:{sortConfigKey:tasksSettings.sortConfig?.key,sortConfigDirection:tasksSettings.sortConfig?.direction,isUndefined:tasksSettings.sortConfig===undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    }, [tasksSettings.sortConfig]);
+    // #endregion
+    
     // Tabellen-Einstellungen laden - Reservations
     const defaultReservationColumnOrder = ['guestName', 'status', 'paymentStatus', 'checkInDate', 'checkOutDate', 'roomNumber', 'branch', 'actions'];
     const {
@@ -445,12 +452,18 @@ const Worktracker: React.FC = () => {
     const updateSortConfig = activeTab === 'todos' ? updateTasksSortConfig : updateReservationsSortConfig;
 
     // Hauptsortierung aus Settings laden (für Table & Cards synchron)
-    // ✅ FIX: Fallback-Objekt außerhalb von useMemo definieren (konstante Referenz, verhindert neue Referenz bei jedem Render)
-    const defaultSortConfig: SortConfig = { key: 'dueDate', direction: 'asc' };
     // ✅ FIX: tableSortConfig mit useMemo stabilisieren (verhindert neue Referenz bei jedem Render)
     // ✅ FIX: Dependency korrigiert (tasksSettings.sortConfig statt tasksSettings) - verhindert, dass tableSortConfig nicht neu berechnet wird wenn Sortierung geändert wird
+    // ✅ FIX: Fallback inline (wie bei Requests) - verhindert neue Referenz bei jedem Render
     const tableSortConfig: SortConfig = useMemo(() => {
-        return tasksSettings.sortConfig || defaultSortConfig;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Worktracker.tsx:452',message:'tableSortConfig useMemo ENTRY',data:{tasksSettingsSortConfig:tasksSettings.sortConfig,isUndefined:tasksSettings.sortConfig===undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        const result = tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Worktracker.tsx:454',message:'tableSortConfig useMemo EXIT',data:{resultKey:result.key,resultDirection:result.direction,usedDefault:!tasksSettings.sortConfig},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        return result;
     }, [tasksSettings.sortConfig]);
     // ✅ FIX: Fallback-Objekt außerhalb von useMemo definieren (konstante Referenz, verhindert neue Referenz bei jedem Render)
     const defaultReservationSortConfig: ReservationSortConfig = { key: 'checkInDate', direction: 'desc' };
@@ -1186,12 +1199,23 @@ const Worktracker: React.FC = () => {
 
     // ✅ FIX: handleSort mit useCallback stabilisieren (verhindert veraltete Closure-Referenz)
     const handleSort = useCallback((key: SortConfig['key']) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Worktracker.tsx:1188',message:'handleSort ENTRY',data:{clickedKey:key,tableSortConfigKey:tableSortConfig.key,tableSortConfigDirection:tableSortConfig.direction,tasksSettingsSortConfig:tasksSettings.sortConfig},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         // Table-Header-Sortierung: Aktualisiert Hauptsortierung direkt (synchron für Table & Cards)
         // ✅ FIX: Verwende tableSortConfig statt tasksSettings.sortConfig direkt (verhindert Inkonsistenz zwischen Visualisierung und Handler)
         // ✅ FIX: tableSortConfig ist bereits stabilisiert und verwendet korrekten Fallback
         const currentSortConfig = tableSortConfig;
-        const newDirection = currentSortConfig.key === key && currentSortConfig.direction === 'asc' ? 'desc' : 'asc';
+        const isSameKey = currentSortConfig.key === key;
+        const isAsc = currentSortConfig.direction === 'asc';
+        const newDirection = isSameKey && isAsc ? 'desc' : 'asc';
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Worktracker.tsx:1193',message:'handleSort BEFORE update',data:{currentSortConfigKey:currentSortConfig.key,currentSortConfigDirection:currentSortConfig.direction,isSameKey,isAsc,newDirection,newKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         updateTasksSortConfig({ key, direction: newDirection });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Worktracker.tsx:1194',message:'handleSort AFTER updateTasksSortConfig call',data:{called:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
     }, [tableSortConfig, updateTasksSortConfig]);
 
     // ✅ FIX: handleReservationSort mit useCallback stabilisieren (verhindert veraltete Closure-Referenz)
@@ -2491,11 +2515,17 @@ const Worktracker: React.FC = () => {
                                                                         }
                                                                         disabled={!sortKey}
                                                                     >
-                                                                        {sortKey && tableSortConfig.key === sortKey ? (
-                                                                            tableSortConfig.direction === 'asc' ? '↑' : '↓'
-                                                                        ) : (
-                                                                            <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                                                                        )}
+                                                                        {(() => {
+                                                                            // #region agent log
+                                                                            const isActive = sortKey && tableSortConfig.key === sortKey;
+                                                                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Worktracker.tsx:2519',message:'Visualization render FIRST',data:{sortKey,tableSortConfigKey:tableSortConfig.key,tableSortConfigDirection:tableSortConfig.direction,isActive,willShowArrow:isActive},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                                                                            // #endregion
+                                                                            return isActive ? (
+                                                                                tableSortConfig.direction === 'asc' ? '↑' : '↓'
+                                                                            ) : (
+                                                                                <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                            );
+                                                                        })()}
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -3857,11 +3887,17 @@ const Worktracker: React.FC = () => {
                                                                         }
                                                                         disabled={!sortKey}
                                                                     >
-                                                                        {sortKey && tableSortConfig.key === sortKey ? (
-                                                                            tableSortConfig.direction === 'asc' ? '↑' : '↓'
-                                                                        ) : (
-                                                                            <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                                                                        )}
+                                                                        {(() => {
+                                                                            // #region agent log
+                                                                            const isActive = sortKey && tableSortConfig.key === sortKey;
+                                                                            fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Worktracker.tsx:2519',message:'Visualization render FIRST',data:{sortKey,tableSortConfigKey:tableSortConfig.key,tableSortConfigDirection:tableSortConfig.direction,isActive,willShowArrow:isActive},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                                                                            // #endregion
+                                                                            return isActive ? (
+                                                                                tableSortConfig.direction === 'asc' ? '↑' : '↓'
+                                                                            ) : (
+                                                                                <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                            );
+                                                                        })()}
                                                                     </button>
                                                                 )}
                                                             </div>
