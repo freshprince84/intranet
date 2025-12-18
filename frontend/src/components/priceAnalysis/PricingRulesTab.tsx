@@ -209,7 +209,11 @@ const PricingRulesTab: React.FC = () => {
             }
 
             setIsModalOpen(false);
-            loadRules();
+            setEditingRule(null);
+            // Warte kurz, damit der Server die Regel verarbeitet hat
+            setTimeout(() => {
+                loadRules();
+            }, 500);
         } catch (error: any) {
             handleError(error);
         }

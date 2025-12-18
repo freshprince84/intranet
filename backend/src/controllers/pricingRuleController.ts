@@ -16,15 +16,20 @@ export const pricingRuleController = {
    */
   getRules: async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const branchId = req.query.branchId 
-        ? parseInt(req.query.branchId as string, 10) 
-        : undefined;
+      let branchId: number | undefined = undefined;
+      if (req.query.branchId) {
+        const parsed = parseInt(req.query.branchId as string, 10);
+        if (!isNaN(parsed)) {
+          branchId = parsed;
+        }
+      }
+      
       const isActive = req.query.isActive !== undefined 
         ? req.query.isActive === 'true' 
         : undefined;
 
       const where: any = {};
-      if (branchId) {
+      if (branchId !== undefined) {
         where.branchId = branchId;
       }
       if (isActive !== undefined) {
