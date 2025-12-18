@@ -448,7 +448,7 @@ const Worktracker: React.FC = () => {
     // ✅ FIX: tableSortConfig mit useMemo stabilisieren (verhindert neue Referenz bei jedem Render)
     const tableSortConfig: SortConfig = useMemo(() => {
         return tasksSettings.sortConfig || { key: 'dueDate', direction: 'asc' };
-    }, [tasksSettings.sortConfig]);
+    }, [tasksSettings]);
     // ✅ FIX: reservationTableSortConfig mit useMemo stabilisieren (verhindert neue Referenz bei jedem Render)
     const reservationTableSortConfig: ReservationSortConfig = useMemo(() => {
         return reservationsSettings.sortConfig || { key: 'checkInDate', direction: 'desc' };

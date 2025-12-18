@@ -3240,7 +3240,7 @@
       "title": "Hospitality & Consulting",
       "badge": "Reduce workload • Control teams • Protect revenue",
       "headline": "One intranet for hostels, hotels, Airbnbs & consulting teams",
-      "subline": "Time tracking, tasks, knowledge, billing and AI automation in one surface – mobile and on-prem.",
+      "subline": "More productivity, less chaos. Everything in one interface – for teams who want to work more efficiently.",
       "ctaRegister": "Register",
       "ctaRegisterLabel": "Register",
       "ctaLogin": "Login",
@@ -3266,16 +3266,16 @@
       "hospitality": {
         "title": "Hostels, Airbnbs, Hotels",
         "description": "Shifts, housekeeping, check-in/out, keys and documents in one flow.",
-        "point1": "Control shifts and worktime live (time tracking, team control).",
-        "point2": "Tasks/housekeeping with status flow and notifications.",
-        "point3": "LobbyPMS/TTLock chain for check-in/out and key handover."
+        "point1": "Shifts under control: Manage worktime live, reduce errors, create transparency.",
+        "point2": "Optimize housekeeping: Tasks with status flow, automatic notifications and clear responsibilities.",
+        "point3": "Automate check-in/check-out: LobbyPMS/TTLock integration for smooth operations."
       },
       "consulting": {
         "title": "Consulting",
         "description": "Capture billable consulting time and keep knowledge in sync.",
-        "point1": "Track consultations (start/stop or manual) with clients and notes.",
-        "point2": "Swiss QR invoices & monthly reports without double billing.",
-        "point3": "Knowledge base via Cerebro wiki + tasks for deliverables."
+        "point1": "Capture consulting time precisely – audit-proof, without rework.",
+        "point2": "Automatically create invoices: Swiss QR invoices and monthly reports without double billing.",
+        "point3": "Centralize knowledge: Cerebro wiki and tasks for deliverables."
       }
     },
     "features": {
@@ -3295,34 +3295,37 @@
       },
       "operations": {
         "title": "Operations & team control",
-        "worktime": "Start/stop worktime live, timezone-safe, stats per branch.",
-        "worktracker": "Tasks with status flow, responsible/QC, saved filters, notifications.",
-        "teamControl": "Team worktime overview, stop running times, export analytics."
+        "worktime": "Automatically capture worktime – precise, timezone-safe, with clear statistics.",
+        "worktracker": "Keep tasks in view – never forget anything again. With clear responsibilities and automatic notifications.",
+        "teamControl": "Team performance at a glance – manage worktime, export analytics, avoid errors."
       },
       "knowledge": {
         "title": "Knowledge & processes",
-        "cerebro": "Markdown wiki with structure, media, links to tasks/requests.",
-        "workflow": "Automations along roles and statuses; task descriptions are mandatory."
+        "cerebro": "Centralize knowledge – Markdown wiki with structure, media and links to tasks.",
+        "workflow": "Automate processes – clear workflows along roles and status."
       },
       "billing": {
         "title": "Billing & consulting",
-        "consultations": "Pick clients, track consultations, notes with autosave.",
-        "invoices": "Swiss QR invoices, monthly reports, anti double billing, payment status."
+        "consultations": "Capture consulting time precisely – audit-proof, without rework.",
+        "invoices": "Automatically create invoices – Swiss QR invoices, monthly reports, anti double billing."
       },
       "ai": {
         "title": "AI & automation",
-        "documentRecognition": "ID upload, AI extraction, validation, profile linkage.",
-        "filters": "Saved filters with AND/OR logic, standard filters per table."
+        "documentRecognition": "Automatically process documents – AI extraction, validation, profile linkage.",
+        "filters": "Find data quickly – saved filters with AND/OR logic."
       },
       "integration": {
         "title": "Integrations & mobile",
-        "lobbypms": "LobbyPMS/TTLock chain for check-in/keys.",
-        "mobile": "Mobile app for time, tasks and notifications."
+        "lobbypms": "Automate check-in/check-out – LobbyPMS/TTLock integration.",
+        "mobile": "Stay productive on the go – mobile app for time, tasks and notifications."
       },
       "screenshots": {
-        "teamControl": "Team overview with work times",
-        "cerebro": "Wiki editor with media support",
-        "mobile": "Mobile interface on the go"
+        "teamControl": "Team overview",
+        "teamControlDesc": "Worktime at a glance, stop running times, export analytics.",
+        "cerebro": "Wiki editor",
+        "cerebroDesc": "Markdown wiki with structure, media and links to tasks.",
+        "mobile": "Mobile interface",
+        "mobileDesc": "Stay productive on the go – time, tasks and notifications."
       }
     },
     "proof": {
@@ -3335,8 +3338,8 @@
       "consulting": {
         "title": "Consulting Lead"
       },
-      "review1": "Shift handovers run cleanly, housekeeping is always up to date, check-in automation saves front desk time.",
-      "review2": "Consulting hours are audit-proof, QR invoices and monthly reports need no rework."
+      "review1": "Since we've been using the intranet, shift handovers run more smoothly. Housekeeping is always up to date, and check-in automation saves us hours at the front desk every day.",
+      "review2": "Consulting hours are now audit-proof. QR invoices and monthly reports go out without rework – that saves us a lot of time."
     },
     "cta": {
       "title": "Ready to start?",
@@ -3356,19 +3359,19 @@
       "title": "FAQ",
       "integration": {
         "q": "How do you integrate with existing systems?",
-        "a": "LobbyPMS/TTLock is prepared. Further integrations are clarified during onboarding."
+        "a": "LobbyPMS/TTLock is already prepared. Further integrations are clarified during onboarding – usually it's quick."
       },
       "support": {
         "q": "How do you handle support?",
-        "a": "Support via the intranet with clear prioritization. Knowledge stored in the Cerebro wiki."
+        "a": "Support directly via the intranet, clearly prioritized. Knowledge is stored in the Cerebro wiki – everything in one place."
       },
       "security": {
         "q": "How do you address security?",
-        "a": "Roles/permissions, audits, AI uploads with validation, HTTPS only."
+        "a": "Security comes first: roles/permissions, audits, validation for AI uploads, HTTPS only."
       },
       "onboarding": {
         "q": "How long does onboarding take?",
-        "a": "Usually a few hours: branches, roles, standard filters, then go-live."
+        "a": "Onboarding is quick: usually a few hours for branches, roles and standard filters – then you're ready to go."
       }
     },
     "footer": {
