@@ -265,8 +265,29 @@ NICHT: Bot erwähnt Kontext-Informationen, die nicht relevant sind ❌
 
 ---
 
+---
+
+### Problem 9: Bot fragt nach Zimmertyp, obwohl "dorm" eindeutig "compartida" bedeutet ✅ BEHOBEN
+
+**Ursache:**
+- Bot erkannte "dorm" zwar als "compartida" im `MessageParserService`, aber fragte trotzdem nochmal nach dem Typ
+- Prompt sagte Bot nicht explizit, dass er direkt `check_room_availability` aufrufen soll, wenn roomType bekannt ist
+- Bot prüfte nicht, ob roomType bereits im Context vorhanden ist, bevor er fragte
+
+**Lösung:**
+- ✅ Prompt erweitert mit klaren Anweisungen:
+  - "Wenn User 'dorm', 'dormitory', 'Schlafsaal' oder 'compartida' sagt → roomType ist 'compartida'! Rufe SOFORT check_room_availability mit roomType='compartida' auf, frage NICHT nochmal nach dem Typ!"
+  - "Wenn roomType bereits im Context vorhanden ist → verwende diesen roomType und rufe check_room_availability direkt auf, frage NICHT nochmal nach dem Typ!"
+- ✅ Beispiele hinzugefügt: "User sagt 'dorm' → check_room_availability({ startDate: 'today', roomType: 'compartida' }) - NICHT nach Typ fragen!"
+
+**Code-Änderungen:**
+- `PromptBuilder.ts` Zeile 222-228: Anweisungen für "dorm" → "compartida" hinzugefügt
+- `PromptBuilder.ts` Zeile 312-315: Anweisungen für roomType-Erkennung erweitert
+
+---
+
 **Erstellt:** 2025-12-17  
 **Aktualisiert:** 2025-12-18  
-**Status:** ✅ Alle kritischen Probleme behoben (inkl. Englisch-Erkennung und Context-Priorität), bereit für Tests
+**Status:** ✅ Alle kritischen Probleme behoben (inkl. Englisch-Erkennung, Context-Priorität und "dorm"-Erkennung), bereit für Tests
 
 
