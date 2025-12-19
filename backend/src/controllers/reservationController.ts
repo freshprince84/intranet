@@ -622,6 +622,12 @@ export const getAllReservations = async (req: Request, res: Response) => {
     const sortBy = req.query.sortBy as string | undefined;
     const sortOrder = (req.query.sortOrder as string)?.toLowerCase() === 'desc' ? 'desc' : 'asc';
 
+    // ✅ SORTIERUNG: Mapping von Frontend-Feldern zu Backend-Feldern
+    let prismaSortBy = sortBy;
+    if (sortBy === 'branch') {
+      prismaSortBy = 'branch.name';
+    }
+
     // ✅ ROLLEN-ISOLATION: Baue Where-Clause basierend auf Rolle
     const whereClause: any = {
       organizationId: req.organizationId
