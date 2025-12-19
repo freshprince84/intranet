@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 /**
- * Test-Script: Testet POST-Endpoints (da PUT/PATCH 405 geben)
+ * Test-Script: Testet Preis-Update-Endpoints (PUT/POST/PATCH)
+ * 
+ * Verwendung:
+ * npx ts-node scripts/test-lobbypms-post-endpoints.ts [branchId]
+ * 
+ * Beispiel:
+ * npx ts-node scripts/test-lobbypms-post-endpoints.ts 3
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -14,7 +20,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const prisma = new PrismaClient();
 
 async function testPostEndpoints(branchId: number) {
-  console.log('\n🔍 LobbyPMS POST-Endpoint Test');
+  console.log('\n🔍 LobbyPMS Preis-Update-Endpoint Test');
   console.log('='.repeat(60));
 
   try {
@@ -79,50 +85,65 @@ async function testPostEndpoints(branchId: number) {
       }
     });
 
-    // Hole Reservierung aus DB
-    const dbReservation = await prisma.reservation.findFirst({
-      where: { 
-        branchId: branchId,
-        lobbyReservationId: { not: null }
-      },
-      select: {
-        lobbyReservationId: true,
-        guestName: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-
-    if (!dbReservation || !dbReservation.lobbyReservationId) {
-      console.log('⚠️  Keine Reservierung gefunden\n');
+    // Hole Verfügbarkeitsdaten, um categoryId und Datum zu bekommen
+    const { LobbyPmsService } = await import('../src/services/lobbyPmsService');
+    const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
+    
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 7); // Nächste 7 Tage
+    
+    console.log('📋 Hole Verfügbarkeitsdaten...');
+    const availabilityData = await lobbyPmsService.checkAvailability(startDate, endDate);
+    
+    if (availabilityData.length === 0) {
+      console.log('⚠️  Keine Verfügbarkeitsdaten gefunden\n');
       return;
     }
+    
+    // Nimm erste Kategorie und Datum
+    const testEntry = availabilityData[0];
+    const categoryId = testEntry.categoryId;
+    const testDate = testEntry.date;
+    const currentPrice = testEntry.pricePerNight;
+    const testPrice = currentPrice + 5000; // Erhöhe um 5000 für Test
+    
+    console.log(`📋 Test-Daten:`);
+    console.log(`   Kategorie ID: ${categoryId}`);
+    console.log(`   Datum: ${testDate}`);
+    console.log(`   Aktueller Preis: ${currentPrice}`);
+    console.log(`   Test-Preis: ${testPrice}\n`);
 
-    const reservationId = dbReservation.lobbyReservationId;
-    console.log(`📋 Test-Reservierung: ${reservationId} (${dbReservation.guestName})\n`);
-
-    // Teste POST-Endpoints
+    // Teste Preis-Update-Endpoints (PUT und POST)
     const testCases = [
-      // Status-Update mit POST
-      { path: `/api/v1/bookings/${reservationId}/status`, method: 'POST', body: { status: 'confirmed' }, desc: 'POST /api/v1/bookings/{id}/status' },
-      { path: `/api/v1/bookings/${reservationId}/update-status`, method: 'POST', body: { status: 'confirmed' }, desc: 'POST /api/v1/bookings/{id}/update-status' },
-      // Payment-Update mit POST
-      { path: `/api/v1/bookings/${reservationId}/payment`, method: 'POST', body: { paid_out: 1 }, desc: 'POST /api/v1/bookings/{id}/payment' },
-      { path: `/api/v1/bookings/${reservationId}/update-payment`, method: 'POST', body: { paid_out: 1 }, desc: 'POST /api/v1/bookings/{id}/update-payment' },
-      { path: `/api/v1/bookings/${reservationId}/payments`, method: 'POST', body: { paid_out: 1 }, desc: 'POST /api/v1/bookings/{id}/payments' },
-      // Allgemeine Updates
-      { path: `/api/v1/bookings/${reservationId}/update`, method: 'POST', body: { paid_out: 1 }, desc: 'POST /api/v1/bookings/{id}/update' },
-      { path: `/api/v1/bookings/${reservationId}`, method: 'POST', body: { paid_out: 1, _method: 'PATCH' }, desc: 'POST /api/v1/bookings/{id} (mit _method)' },
-      // Mit Reservations statt Bookings
-      { path: `/api/v1/reservations/${reservationId}/payment`, method: 'POST', body: { paid_out: 1 }, desc: 'POST /api/v1/reservations/{id}/payment' },
-      { path: `/api/v1/reservations/${reservationId}/status`, method: 'POST', body: { status: 'confirmed' }, desc: 'POST /api/v1/reservations/{id}/status' },
+      // PUT-Endpoints
+      { path: `/api/v2/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/categories/{id}/prices' },
+      { path: `/api/v2/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'PUT /api/v2/categories/{id}/prices (mit prices array)' },
+      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PUT', body: { price: testPrice }, desc: 'PUT /api/v2/categories/{id}/prices/{date}' },
+      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PUT', body: { prices: [{ people: 1, value: testPrice }] }, desc: 'PUT /api/v2/categories/{id}/prices/{date} (mit prices array)' },
+      
+      // POST-Endpoints
+      { path: `/api/v2/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'POST /api/v2/prices' },
+      { path: `/api/v2/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'POST /api/v2/prices (mit prices array)' },
+      { path: `/api/v2/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'POST /api/v2/categories/{id}/prices' },
+      { path: `/api/v2/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'POST /api/v2/categories/{id}/prices (mit prices array)' },
+      
+      // PATCH-Endpoints
+      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PATCH', body: { price: testPrice }, desc: 'PATCH /api/v2/categories/{id}/prices/{date}' },
+      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PATCH', body: { prices: [{ people: 1, value: testPrice }] }, desc: 'PATCH /api/v2/categories/{id}/prices/{date} (mit prices array)' },
+      
+      // V1-Endpoints (für Kompatibilität)
+      { path: `/api/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v1/categories/{id}/prices' },
+      { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'POST /api/v1/prices' },
+      
+      // available-rooms mit Preis-Updates
+      { path: `/api/v2/available-rooms`, method: 'PUT', body: { date: testDate, categories: [{ category_id: categoryId, plans: [{ prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'PUT /api/v2/available-rooms (mit Preis-Updates)' },
     ];
 
     const successful: any[] = [];
     const failed: any[] = [];
 
-    console.log('🧪 Teste POST-Endpoints...\n');
+    console.log('🧪 Teste Preis-Update-Endpoints (PUT/POST/PATCH)...\n');
 
     for (const test of testCases) {
       try {
@@ -183,15 +204,29 @@ async function testPostEndpoints(branchId: number) {
     console.log('='.repeat(60) + '\n');
 
     if (successful.length > 0) {
-      console.log(`✅ ${successful.length} ERFOLGREICHE ENDPOINTS:\n`);
+      console.log(`✅ ${successful.length} ERFOLGREICHE PREIS-UPDATE-ENDPOINTS:\n`);
       successful.forEach((result, index) => {
         console.log(`${index + 1}. ${result.method} ${result.path}`);
         console.log(`   Status: ${result.status}`);
         console.log(`   Response:`, JSON.stringify(result.response, null, 2));
         console.log('');
       });
+      
+      // Prüfe ob Preis wirklich aktualisiert wurde
+      console.log('\n🔍 Prüfe ob Preis wirklich aktualisiert wurde...');
+      const updatedAvailability = await lobbyPmsService.checkAvailability(new Date(testDate), new Date(testDate));
+      const updatedEntry = updatedAvailability.find(a => a.categoryId === categoryId && a.date === testDate);
+      if (updatedEntry) {
+        console.log(`   Aktueller Preis nach Update: ${updatedEntry.pricePerNight}`);
+        if (updatedEntry.pricePerNight === testPrice) {
+          console.log(`   ✅ Preis wurde erfolgreich aktualisiert!`);
+        } else {
+          console.log(`   ⚠️  Preis wurde nicht aktualisiert (erwartet: ${testPrice}, aktuell: ${updatedEntry.pricePerNight})`);
+        }
+      }
+      console.log('');
     } else {
-      console.log('❌ KEINE ERFOLGREICHEN POST-ENDPOINTS GEFUNDEN\n');
+      console.log('❌ KEINE ERFOLGREICHEN PREIS-UPDATE-ENDPOINTS GEFUNDEN\n');
     }
 
     if (failed.length > 0 && failed.some(f => f.status !== 404)) {
