@@ -193,54 +193,67 @@ async function testPostEndpoints(branchId: number) {
     let rateId: number | null = null;
     let roomTypeId: number | null = null;
     
-    try {
-      const ratesResponse = await axiosInstance.get('/api/v1/rates', {
-        validateStatus: (s) => s < 500
-      });
-      
-      if (ratesResponse.status === 200 && ratesResponse.data) {
-        console.log(`   ✅ /api/v1/rates existiert`);
-        const ratesData = ratesResponse.data.data || ratesResponse.data;
+    // Teste verschiedene Endpoints für Rate Plans
+    const ratePlanEndpoints = ['/api/v1/rates', '/api/v1/rate-plans', '/api/v2/rates', '/api/v2/rate-plans'];
+    
+    for (const endpoint of ratePlanEndpoints) {
+      try {
+        const ratesResponse = await axiosInstance.get(endpoint, {
+          validateStatus: (s) => s < 500
+        });
         
-        if (Array.isArray(ratesData) && ratesData.length > 0) {
-          ratePlans = ratesData;
-          console.log(`   📋 ${ratesData.length} Rate Plan(s) gefunden`);
+        if (ratesResponse.status === 200 && ratesResponse.data) {
+          console.log(`   ✅ ${endpoint} existiert`);
+          const ratesData = ratesResponse.data.data || ratesResponse.data;
           
-          // Versuche rate_id und room_type_id zu finden, die zur categoryId passen
-          // Oder nimm einfach den ersten Rate Plan
-          const firstRate = ratesData[0];
-          console.log(`   📋 Erster Rate Plan:`, JSON.stringify(firstRate, null, 2).substring(0, 500));
-          
-          // Versuche rate_id und room_type_id zu extrahieren
-          if (firstRate.id) {
-            rateId = firstRate.id;
-          } else if (firstRate.rate_id) {
-            rateId = firstRate.rate_id;
+          if (Array.isArray(ratesData) && ratesData.length > 0) {
+            ratePlans = ratesData;
+            console.log(`   📋 ${ratesData.length} Rate Plan(s) gefunden`);
+            
+            // Versuche rate_id und room_type_id zu finden, die zur categoryId passen
+            // Oder nimm einfach den ersten Rate Plan
+            const firstRate = ratesData[0];
+            console.log(`   📋 Erster Rate Plan:`, JSON.stringify(firstRate, null, 2).substring(0, 500));
+            
+            // Versuche rate_id und room_type_id zu extrahieren
+            if (firstRate.id) {
+              rateId = firstRate.id;
+            } else if (firstRate.rate_id) {
+              rateId = firstRate.rate_id;
+            }
+            
+            if (firstRate.room_type_id) {
+              roomTypeId = firstRate.room_type_id;
+            } else if (firstRate.roomTypeId) {
+              roomTypeId = firstRate.roomTypeId;
+            }
+            
+            console.log(`   📋 Extrahierte IDs: rate_id=${rateId}, room_type_id=${roomTypeId}`);
+            break; // Erfolgreich gefunden, stoppe Suche
+          } else if (typeof ratesData === 'object') {
+            // Vielleicht ist es ein einzelnes Objekt oder hat eine andere Struktur
+            console.log(`   📋 Rate Plans Struktur:`, JSON.stringify(ratesData, null, 2).substring(0, 500));
+            break;
           }
-          
-          if (firstRate.room_type_id) {
-            roomTypeId = firstRate.room_type_id;
-          } else if (firstRate.roomTypeId) {
-            roomTypeId = firstRate.roomTypeId;
-          }
-          
-          // Versuche auch in der categoryId-Struktur zu finden
-          if (!roomTypeId && categoryId) {
-            // Vielleicht ist categoryId = room_type_id?
-            roomTypeId = categoryId;
-          }
-          
-          console.log(`   📋 Extrahierte IDs: rate_id=${rateId}, room_type_id=${roomTypeId}`);
-        } else if (typeof ratesData === 'object') {
-          // Vielleicht ist es ein einzelnes Objekt oder hat eine andere Struktur
-          console.log(`   📋 Rate Plans Struktur:`, JSON.stringify(ratesData, null, 2).substring(0, 500));
+        } else {
+          console.log(`   ⚠️  ${endpoint} Status: ${ratesResponse.status}`);
         }
-      } else {
-        console.log(`   ⚠️  /api/v1/rates Status: ${ratesResponse.status}`);
+      } catch (error) {
+        console.log(`   ⚠️  ${endpoint} Fehler:`, (error as any).message);
       }
-    } catch (error) {
-      console.log(`   ⚠️  Fehler beim Abrufen von Rate Plans:`, (error as any).message);
     }
+    
+    // Fallback: Verwende categoryId als room_type_id (laut Dokumentation könnte das funktionieren)
+    if (!roomTypeId && categoryId) {
+      roomTypeId = categoryId;
+      console.log(`   📋 Verwende categoryId (${categoryId}) als room_type_id (Fallback)`);
+    }
+    
+    // Fallback: Versuche verschiedene rate_id Werte (1, categoryId, etc.)
+    if (!rateId) {
+      console.log(`   ⚠️  Keine rate_id gefunden - werde verschiedene Werte testen`);
+    }
+    
     console.log('');
 
     // Erweiterte Suche nach dem Preis-Endpoint
@@ -250,93 +263,113 @@ async function testPostEndpoints(branchId: number) {
     // Erstelle Testfälle basierend auf der GET-Struktur
     const testCases: Array<{ path: string; method: string; body: any; desc: string }> = [
       // ⚠️ PRIORITÄT: Rate Plans Endpoint (laut Dokumentation!)
-      ...(rateId && roomTypeId ? [
-        { 
-          path: `/api/v1/rates/${rateId}/prices`, 
-          method: 'POST', 
-          body: { 
-            room_type_id: roomTypeId, 
-            date_from: testDate, 
-            date_to: testDate, 
-            price: testPrice, 
-            currency: 'USD' 
-          }, 
-          desc: 'v1 Rates Prices POST (Date Range - laut Dokumentation!)' 
-        },
-        { 
-          path: `/api/v1/rates/${rateId}/prices`, 
-          method: 'POST', 
-          body: { 
-            room_type_id: roomTypeId, 
-            prices: [{ date: testDate, price: testPrice }] 
-          }, 
-          desc: 'v1 Rates Prices POST (Daily Pricing - laut Dokumentation!)' 
-        },
-        { 
-          path: `/api/v1/rates/${rateId}/prices`, 
-          method: 'PUT', 
-          body: { 
-            room_type_id: roomTypeId, 
-            date_from: testDate, 
-            date_to: testDate, 
-            price: testPrice, 
-            currency: 'USD' 
-          }, 
-          desc: 'v1 Rates Prices PUT (Date Range)' 
-        },
-        { 
-          path: `/api/v1/rates/${rateId}/prices`, 
-          method: 'PUT', 
-          body: { 
-            room_type_id: roomTypeId, 
-            prices: [{ date: testDate, price: testPrice }] 
-          }, 
-          desc: 'v1 Rates Prices PUT (Daily Pricing)' 
-        },
-        { 
-          path: `/api/v1/rates/${rateId}/prices`, 
-          method: 'PATCH', 
-          body: { 
-            room_type_id: roomTypeId, 
-            date_from: testDate, 
-            date_to: testDate, 
-            price: testPrice, 
-            currency: 'USD' 
-          }, 
-          desc: 'v1 Rates Prices PATCH (Date Range)' 
-        },
-        { 
-          path: `/api/v1/rates/${rateId}/prices`, 
-          method: 'PATCH', 
-          body: { 
-            room_type_id: roomTypeId, 
-            prices: [{ date: testDate, price: testPrice }] 
-          }, 
-          desc: 'v1 Rates Prices PATCH (Daily Pricing)' 
-        },
-      ] : []),
-      // Fallback: Versuche auch ohne rate_id (falls wir sie nicht gefunden haben)
+      // Teste mit verschiedenen rate_id Werten, auch wenn wir keine gefunden haben
+      ...(roomTypeId ? (() => {
+        const possibleRateIds = rateId ? [rateId] : [categoryId, 1, 'STANDARD_RATE', 'default'];
+        const cases: Array<{ path: string; method: string; body: any; desc: string }> = [];
+        
+        for (const testRateId of possibleRateIds) {
+          // Date Range Variante
+          cases.push({
+            path: `/api/v1/rates/${testRateId}/prices`,
+            method: 'POST',
+            body: {
+              room_type_id: roomTypeId,
+              date_from: testDate,
+              date_to: testDate,
+              price: testPrice,
+              currency: 'USD'
+            },
+            desc: `v1 Rates Prices POST (Date Range - rate_id=${testRateId} - laut Dokumentation!)`
+          });
+          
+          // Daily Pricing Variante
+          cases.push({
+            path: `/api/v1/rates/${testRateId}/prices`,
+            method: 'POST',
+            body: {
+              room_type_id: roomTypeId,
+              prices: [{ date: testDate, price: testPrice }]
+            },
+            desc: `v1 Rates Prices POST (Daily Pricing - rate_id=${testRateId} - laut Dokumentation!)`
+          });
+          
+          // PUT Varianten
+          cases.push({
+            path: `/api/v1/rates/${testRateId}/prices`,
+            method: 'PUT',
+            body: {
+              room_type_id: roomTypeId,
+              date_from: testDate,
+              date_to: testDate,
+              price: testPrice,
+              currency: 'USD'
+            },
+            desc: `v1 Rates Prices PUT (Date Range - rate_id=${testRateId})`
+          });
+          
+          cases.push({
+            path: `/api/v1/rates/${testRateId}/prices`,
+            method: 'PUT',
+            body: {
+              room_type_id: roomTypeId,
+              prices: [{ date: testDate, price: testPrice }]
+            },
+            desc: `v1 Rates Prices PUT (Daily Pricing - rate_id=${testRateId})`
+          });
+          
+          // PATCH Varianten
+          cases.push({
+            path: `/api/v1/rates/${testRateId}/prices`,
+            method: 'PATCH',
+            body: {
+              room_type_id: roomTypeId,
+              date_from: testDate,
+              date_to: testDate,
+              price: testPrice,
+              currency: 'USD'
+            },
+            desc: `v1 Rates Prices PATCH (Date Range - rate_id=${testRateId})`
+          });
+          
+          cases.push({
+            path: `/api/v1/rates/${testRateId}/prices`,
+            method: 'PATCH',
+            body: {
+              room_type_id: roomTypeId,
+              prices: [{ date: testDate, price: testPrice }]
+            },
+            desc: `v1 Rates Prices PATCH (Daily Pricing - rate_id=${testRateId})`
+          });
+        }
+        
+        return cases;
+      })() : []),
+      
+      // Fallback: Versuche auch ohne rate_id im Pfad (falls es anders strukturiert ist)
       ...(roomTypeId ? [
-        { 
-          path: `/api/v1/rates/prices`, 
-          method: 'POST', 
-          body: { 
-            room_type_id: roomTypeId, 
-            date_from: testDate, 
-            date_to: testDate, 
-            price: testPrice, 
-            currency: 'USD' 
-          }, 
-          desc: 'v1 Rates Prices POST (ohne rate_id im Pfad)' 
+        {
+          path: `/api/v1/rates/prices`,
+          method: 'POST',
+          body: {
+            rate_id: rateId || categoryId,
+            room_type_id: roomTypeId,
+            date_from: testDate,
+            date_to: testDate,
+            price: testPrice,
+            currency: 'USD'
+          },
+          desc: 'v1 Rates Prices POST (ohne rate_id im Pfad, im Body)'
         },
-        { 
-          path: `/api/v1/rates/prices`, 
-          method: 'POST', 
-          body: { 
-            room_type_id: roomTypeId, 
-            prices: [{ date: testDate, price: testPrice }] 
-          }, 
-          desc: 'v1 Rates Prices POST (Daily, ohne rate_id im Pfad)' 
+        {
+          path: `/api/v1/rates/prices`,
+          method: 'POST',
+          body: {
+            rate_id: rateId || categoryId,
+            room_type_id: roomTypeId,
+            prices: [{ date: testDate, price: testPrice }]
+          },
+          desc: 'v1 Rates Prices POST (Daily, ohne rate_id im Pfad, im Body)'
         },
       ] : []),
       
