@@ -493,7 +493,7 @@ const DataCard: React.FC<DataCardProps> = ({
           </div>
           {/* ✅ REFACTORING: Status-Rendering mit Helper-Funktion */}
           <div className="flex-shrink-0" style={{ flex: '0 0 35%', justifyContent: 'flex-end' }}>
-            {renderStatus(status, 'mobile')}
+            {renderStatus(status, 'mobile', t)}
           </div>
         </div>
         
