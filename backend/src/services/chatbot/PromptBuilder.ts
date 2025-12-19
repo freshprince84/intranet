@@ -219,12 +219,17 @@ export class PromptBuilder {
     prompt += '  WICHTIG: Wenn Function Results "Dorm-Zimmer" oder "Privates Zimmer" enthalten, übersetze diese IMMER!\n';
     prompt += '  WICHTIG: Wenn Function Results einen Fehler enthalten (error-Feld), erkläre den Fehler in der erkannten Sprache und gib hilfreiche Anweisungen!\n';
     prompt += '  WICHTIG: Bei Fehlern in Function Results: Erkläre den Fehler auf ' + (language === 'es' ? 'Spanisch' : language === 'en' ? 'Englisch' : 'Deutsch') + ' und gib dem User hilfreiche Anweisungen, was zu tun ist!\n';
+    prompt += '  KRITISCH: Wenn User "dorm", "dormitory", "Schlafsaal" oder "compartida" sagt → roomType ist "compartida"! Rufe SOFORT check_room_availability mit roomType="compartida" auf, frage NICHT nochmal nach dem Typ!\n';
+    prompt += '  KRITISCH: Wenn User "private", "privada", "Zimmer" oder "habitación" sagt → roomType ist "privada"! Rufe SOFORT check_room_availability mit roomType="privada" auf, frage NICHT nochmal nach dem Typ!\n';
+    prompt += '  KRITISCH: Wenn roomType bereits im Context vorhanden ist (z.B. User hat "dorm" gesagt) → verwende diesen roomType und rufe check_room_availability direkt auf, frage NICHT nochmal nach dem Typ!\n';
     prompt += '  Beispiele:\n';
     prompt += '    - "tienen habitacion para hoy?" → check_room_availability({ startDate: "today" })\n';
     prompt += '    - "Haben wir Zimmer frei morgen?" → check_room_availability({ startDate: "tomorrow" })\n';
     prompt += '    - "Haben wir Zimmer frei vom 1.2. bis 3.2.?" → check_room_availability({ startDate: "2025-02-01", endDate: "2025-02-03" })\n';
     prompt += '    - "gibt es Dorm-Zimmer frei?" → check_room_availability({ startDate: "today", roomType: "compartida" })\n';
     prompt += '    - "¿tienen habitaciones privadas disponibles?" → check_room_availability({ startDate: "today", roomType: "privada" })\n';
+    prompt += '    - "do you have rooms for tonight?" → check_room_availability({ startDate: "today" })\n';
+    prompt += '    - User sagt "dorm" → check_room_availability({ startDate: "today", roomType: "compartida" }) - NICHT nach Typ fragen!\n';
     
     return prompt;
   }
@@ -310,6 +315,9 @@ export class PromptBuilder {
     prompt += '  WICHTIG: Wenn User einen Zimmer-Namen sagt (z.B. "doble estándar", "apartamento doble", "primo deportista"), erkenne dies IMMER als Zimmer-Name aus der Verfügbarkeitsliste, NICHT als sozialen Begriff!\n';
     prompt += '  WICHTIG: Zimmer-Namen aus Verfügbarkeitsliste: "doble estándar", "doble básica", "doble deluxe", "apartamento doble", "apartamento singular", "apartaestudio", "primo deportista", "el primo aventurero", "la tia artista", "el abuelo viajero"!\n';
     prompt += '  WICHTIG: Terminologie - Wenn du Dorm-Zimmer (compartida) auflistest, verwende "Dorm-Zimmer" oder "Schlafsaal" in der Frage, NICHT "Bett"! Beispiel: "Welches Dorm-Zimmer möchten Sie buchen?" oder "Welchen Schlafsaal möchten Sie buchen?" statt "welches Bett"!\n';
+    prompt += '  KRITISCH: Wenn User "dorm", "dormitory", "Schlafsaal" oder "compartida" sagt → roomType ist "compartida"! Rufe SOFORT check_room_availability mit roomType="compartida" auf, frage NICHT nochmal nach dem Typ!\n';
+    prompt += '  KRITISCH: Wenn User "private", "privada", "Zimmer" oder "habitación" sagt → roomType ist "privada"! Rufe SOFORT check_room_availability mit roomType="privada" auf, frage NICHT nochmal nach dem Typ!\n';
+    prompt += '  KRITISCH: Wenn roomType bereits im Context vorhanden ist (z.B. User hat "dorm" gesagt) → verwende diesen roomType und rufe check_room_availability direkt auf, frage NICHT nochmal nach dem Typ!\n';
     prompt += '  WICHTIG: Wenn der User eine Nummer wählt (z.B. "2.") nach Verfügbarkeitsanzeige → create_room_reservation mit categoryId!\n';
     prompt += '  WICHTIG: Wenn der User einen Zimmer-Namen sagt (z.B. "la tia artista", "el primo aventurero", "el abuelo viajero") → finde die categoryId aus der vorherigen check_room_availability Response!\n';
     prompt += '  WICHTIG: Wenn User in vorheriger Nachricht "heute" gesagt hat → verwende "today" als checkInDate!\n';

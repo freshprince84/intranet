@@ -21,39 +21,57 @@ if (!fs.existsSync(OUTPUT_DIR)) {
   try {
     // 1. Login (für geschützte Module)
     console.log('Login...');
-    await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(2000);
     
-    // Versuche verschiedene Login-Feld-Selektoren
-    const usernameField = await page.$('input[type="text"], input[name="username"], input[id*="username"], input[placeholder*="username" i], input[placeholder*="benutzer" i]');
-    const passwordField = await page.$('input[type="password"], input[name="password"], input[id*="password"], input[placeholder*="password" i], input[placeholder*="passwort" i]');
+    // Warte auf Login-Felder
+    await page.waitForSelector('input[name="username"], input[id="username"]', { timeout: 10000 });
+    await page.waitForSelector('input[name="password"], input[id="password"]', { timeout: 10000 });
     
-    if (usernameField && passwordField) {
-      await usernameField.fill('pat');
-      await passwordField.fill('megustalafamilia25');
-      
-      const submitButton = await page.$('button[type="submit"], button:has-text("Login"), button:has-text("Anmelden"), form button');
-      if (submitButton) {
-        await submitButton.click();
-        // Warte auf Navigation (entweder Dashboard oder bleibt auf Login bei Fehler)
-        await page.waitForTimeout(3000);
-        const currentUrl = page.url();
-        console.log(`Nach Login: ${currentUrl}`);
-        
-        // Wenn noch auf Login-Seite, versuche es nochmal oder überspringe Login
-        if (currentUrl.includes('/login')) {
-          console.log('Login fehlgeschlagen, versuche direkten Zugriff auf geschützte Seiten...');
-        }
-      }
-    } else {
-      console.log('Login-Felder nicht gefunden, versuche direkten Zugriff...');
+    // Fülle Login-Felder aus
+    await page.fill('input[name="username"], input[id="username"]', 'pat');
+    await page.fill('input[name="password"], input[id="password"]', 'megustalafamilia25');
+    
+    // Warte kurz, dann klicke Submit
+    await page.waitForTimeout(500);
+    
+    // Klicke Submit-Button und warte auf Navigation
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }),
+      page.click('button[type="submit"]')
+    ]);
+    
+    // Prüfe ob Login erfolgreich war
+    const currentUrl = page.url();
+    console.log(`Nach Login: ${currentUrl}`);
+    
+    if (currentUrl.includes('/login')) {
+      console.error('Login fehlgeschlagen - noch auf Login-Seite!');
+      throw new Error('Login fehlgeschlagen');
+    }
+    
+    // Warte zusätzlich, damit die Seite vollständig geladen ist
+    await page.waitForTimeout(2000);
+    console.log('Login erfolgreich!');
+
+    // Prüfe ob wir eingeloggt sind, bevor wir Screenshots machen
+    const isLoggedIn = !page.url().includes('/login');
+    if (!isLoggedIn) {
+      console.error('FEHLER: Nicht eingeloggt! Bitte Login-Prozess prüfen.');
+      throw new Error('Login fehlgeschlagen - kann keine Screenshots erstellen');
     }
 
     // 3. Worktracker Screenshot (Ausschnitt: Task-Liste mit Filter)
     console.log('Screenshot: Worktracker...');
     try {
-      await page.goto(`${BASE_URL}/app/worktracker`, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(`${BASE_URL}/app/worktracker`, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.waitForTimeout(3000);
+      
+      // Prüfe ob wir auf Login umgeleitet wurden
+      if (page.url().includes('/login')) {
+        console.log('Worktracker: Umleitung zu Login erkannt - überspringe Screenshot');
+        throw new Error('Nicht authentifiziert');
+      }
       
       // Suche spezifisch nach Task-Liste, Tabelle oder Filter-Bereich
       const taskList = await page.$('table, .task-list, [class*="task"], [class*="filter"], tbody, .overflow-x-auto');
@@ -144,8 +162,14 @@ if (!fs.existsSync(OUTPUT_DIR)) {
     // 4. Consultations Screenshot (Ausschnitt: Formular/Liste)
     console.log('Screenshot: Consultations...');
     try {
-      await page.goto(`${BASE_URL}/app/consultations`, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(`${BASE_URL}/app/consultations`, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.waitForTimeout(3000);
+      
+      // Prüfe ob wir auf Login umgeleitet wurden
+      if (page.url().includes('/login')) {
+        console.log('Consultations: Umleitung zu Login erkannt - überspringe Screenshot');
+        throw new Error('Nicht authentifiziert');
+      }
       
       // Suche spezifisch nach Consultation-Formular, Liste oder Tabelle
       const consultationForm = await page.$('form, .consultation-form, .consultation-list, table, [class*="consultation"], [class*="client"]');
@@ -233,8 +257,14 @@ if (!fs.existsSync(OUTPUT_DIR)) {
     // 5. Team Worktime Control Screenshot (Ausschnitt: Team-Übersicht)
     console.log('Screenshot: Team Worktime Control...');
     try {
-      await page.goto(`${BASE_URL}/app/team-worktime-control`, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(`${BASE_URL}/app/team-worktime-control`, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.waitForTimeout(3000);
+      
+      // Prüfe ob wir auf Login umgeleitet wurden
+      if (page.url().includes('/login')) {
+        console.log('Team Worktime: Umleitung zu Login erkannt - überspringe Screenshot');
+        throw new Error('Nicht authentifiziert');
+      }
       
       // Suche spezifisch nach Team-Tabelle oder Liste
       const teamTable = await page.$('table, .team-list, [class*="team"], [class*="worktime"], tbody, .overflow-x-auto');
@@ -322,8 +352,14 @@ if (!fs.existsSync(OUTPUT_DIR)) {
     // 6. Cerebro Screenshot (Ausschnitt: Wiki-Editor)
     console.log('Screenshot: Cerebro...');
     try {
-      await page.goto(`${BASE_URL}/app/cerebro`, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(`${BASE_URL}/app/cerebro`, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.waitForTimeout(3000);
+      
+      // Prüfe ob wir auf Login umgeleitet wurden
+      if (page.url().includes('/login')) {
+        console.log('Cerebro: Umleitung zu Login erkannt - überspringe Screenshot');
+        throw new Error('Nicht authentifiziert');
+      }
       
       // Suche spezifisch nach Editor oder Wiki-Content
       const cerebroEditor = await page.$('.editor, textarea, [contenteditable="true"], [class*="editor"], [class*="wiki"], [class*="markdown"], pre, code');
@@ -411,8 +447,14 @@ if (!fs.existsSync(OUTPUT_DIR)) {
     // 7. Document Recognition (Profile/Documents Tab) - Ausschnitt: Upload-Interface
     console.log('Screenshot: Document Recognition...');
     try {
-      await page.goto(`${BASE_URL}/app/profile`, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(`${BASE_URL}/app/profile`, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.waitForTimeout(2000);
+      
+      // Prüfe ob wir auf Login umgeleitet wurden
+      if (page.url().includes('/login')) {
+        console.log('Document Recognition: Umleitung zu Login erkannt - überspringe Screenshot');
+        throw new Error('Nicht authentifiziert');
+      }
       // Versuche, zum Documents-Tab zu navigieren
       const docTab = await page.$('button:has-text("Documents"), button:has-text("Dokumente"), [role="tab"]:has-text("Documents"), [role="tab"]:has-text("Dokumente")');
       if (docTab) {
