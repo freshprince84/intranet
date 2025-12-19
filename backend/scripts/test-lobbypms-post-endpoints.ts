@@ -114,30 +114,69 @@ async function testPostEndpoints(branchId: number) {
     console.log(`   Aktueller Preis: ${currentPrice}`);
     console.log(`   Test-Preis: ${testPrice}\n`);
 
-    // Teste Preis-Update-Endpoints (PUT und POST)
+    // Zuerst: Prüfe welche Endpoints überhaupt existieren (GET-Requests)
+    console.log('🔍 Prüfe verfügbare Endpoints (GET-Requests)...\n');
+    const discoveryEndpoints = [
+      `/api/v2/categories/${categoryId}`,
+      `/api/v2/categories/${categoryId}/prices`,
+      `/api/v2/categories/${categoryId}/prices/${testDate}`,
+      `/api/v2/prices`,
+      `/api/v2/rooms`,
+      `/api/v2/rooms/${categoryId}`,
+      `/api/v2/rate-plans`,
+      `/api/v2/rate-plans/${categoryId}`,
+      `/api/v1/categories/${categoryId}`,
+      `/api/v1/categories/${categoryId}/prices`,
+    ];
+    
+    const existingEndpoints: string[] = [];
+    for (const endpoint of discoveryEndpoints) {
+      try {
+        const response = await axiosInstance.get(endpoint, { validateStatus: (s) => s < 500 });
+        if (response.status !== 404) {
+          existingEndpoints.push(endpoint);
+          console.log(`   ✅ ${endpoint} existiert (Status: ${response.status})`);
+        }
+      } catch (error) {
+        // Ignoriere Fehler
+      }
+    }
+    console.log('');
+
+    // Teste Preis-Update-Endpoints (PUT, POST, PATCH)
     const testCases = [
       // PUT-Endpoints
       { path: `/api/v2/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/categories/{id}/prices' },
       { path: `/api/v2/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'PUT /api/v2/categories/{id}/prices (mit prices array)' },
       { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PUT', body: { price: testPrice }, desc: 'PUT /api/v2/categories/{id}/prices/{date}' },
       { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PUT', body: { prices: [{ people: 1, value: testPrice }] }, desc: 'PUT /api/v2/categories/{id}/prices/{date} (mit prices array)' },
+      { path: `/api/v2/categories/${categoryId}/update-price`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/categories/{id}/update-price' },
+      { path: `/api/v2/categories/${categoryId}/set-price`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/categories/{id}/set-price' },
       
       // POST-Endpoints
       { path: `/api/v2/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'POST /api/v2/prices' },
       { path: `/api/v2/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'POST /api/v2/prices (mit prices array)' },
+      { path: `/api/v2/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, value: testPrice, people: 1 }, desc: 'POST /api/v2/prices (mit value statt price)' },
       { path: `/api/v2/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'POST /api/v2/categories/{id}/prices' },
       { path: `/api/v2/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'POST /api/v2/categories/{id}/prices (mit prices array)' },
+      { path: `/api/v2/categories/${categoryId}/update-price`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'POST /api/v2/categories/{id}/update-price' },
+      { path: `/api/v2/categories/${categoryId}/set-price`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'POST /api/v2/categories/{id}/set-price' },
       
       // PATCH-Endpoints
       { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PATCH', body: { price: testPrice }, desc: 'PATCH /api/v2/categories/{id}/prices/{date}' },
       { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PATCH', body: { prices: [{ people: 1, value: testPrice }] }, desc: 'PATCH /api/v2/categories/{id}/prices/{date} (mit prices array)' },
+      { path: `/api/v2/categories/${categoryId}`, method: 'PATCH', body: { prices: { [testDate]: { [1]: testPrice } } }, desc: 'PATCH /api/v2/categories/{id} (mit prices object)' },
       
       // V1-Endpoints (für Kompatibilität)
       { path: `/api/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v1/categories/{id}/prices' },
       { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'POST /api/v1/prices' },
       
-      // available-rooms mit Preis-Updates
-      { path: `/api/v2/available-rooms`, method: 'PUT', body: { date: testDate, categories: [{ category_id: categoryId, plans: [{ prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'PUT /api/v2/available-rooms (mit Preis-Updates)' },
+      // available-rooms mit Preis-Updates (POST statt PUT)
+      { path: `/api/v2/available-rooms`, method: 'POST', body: { date: testDate, categories: [{ category_id: categoryId, plans: [{ prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'POST /api/v2/available-rooms (mit Preis-Updates)' },
+      
+      // Rate Plans
+      { path: `/api/v2/rate-plans/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/rate-plans/{id}/prices' },
+      { path: `/api/v2/rate-plans/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'POST /api/v2/rate-plans/{id}/prices' },
     ];
 
     const successful: any[] = [];
