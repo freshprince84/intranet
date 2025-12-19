@@ -106,13 +106,11 @@ async function testPostEndpoints(branchId: number) {
     const categoryId = testEntry.categoryId;
     const testDate = testEntry.date;
     const currentPrice = testEntry.pricePerNight;
-    const testPrice = currentPrice + 5000; // Erhöhe um 5000 für Test
     
     console.log(`📋 Test-Daten:`);
     console.log(`   Kategorie ID: ${categoryId}`);
     console.log(`   Datum: ${testDate}`);
-    console.log(`   Aktueller Preis: ${currentPrice}`);
-    console.log(`   Test-Preis: ${testPrice}\n`);
+    console.log(`   Aktueller Preis: ${currentPrice}\n`);
 
     // Zuerst: Prüfe welche Endpoints überhaupt existieren (GET-Requests)
     console.log('🔍 Prüfe verfügbare Endpoints (GET-Requests)...\n');
@@ -189,109 +187,42 @@ async function testPostEndpoints(branchId: number) {
     }
     console.log('');
 
-    // Teste Preis-Update-Endpoints (PUT, POST, PATCH)
+    // Erweiterte Suche nach dem Preis-Endpoint
+    const testPrice = currentPrice + 1000; // Kleine Änderung für Test
+    const propertyId = lobbyPmsSettings.propertyId;
+
     const testCases = [
-      // PUT-Endpoints
-      { path: `/api/v2/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/categories/{id}/prices' },
-      { path: `/api/v2/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'PUT /api/v2/categories/{id}/prices (mit prices array)' },
-      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PUT', body: { price: testPrice }, desc: 'PUT /api/v2/categories/{id}/prices/{date}' },
-      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PUT', body: { prices: [{ people: 1, value: testPrice }] }, desc: 'PUT /api/v2/categories/{id}/prices/{date} (mit prices array)' },
-      { path: `/api/v2/categories/${categoryId}/update-price`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/categories/{id}/update-price' },
-      { path: `/api/v2/categories/${categoryId}/set-price`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/categories/{id}/set-price' },
+      // 1. Die wahrscheinlichsten v1 Varianten (da v1 für Bookings funktioniert)
+      { path: `/api/v1/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v1 Category Prices POST' },
+      { path: `/api/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v1 Category Prices PUT' },
+      { path: `/api/v1/categories/${categoryId}`, method: 'PUT', body: { prices: [{ date: testDate, value: testPrice }] }, desc: 'v1 Category PUT (nested)' },
       
-      // POST-Endpoints
-      { path: `/api/v2/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'POST /api/v2/prices' },
-      { path: `/api/v2/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'POST /api/v2/prices (mit prices array)' },
-      { path: `/api/v2/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, value: testPrice, people: 1 }, desc: 'POST /api/v2/prices (mit value statt price)' },
-      { path: `/api/v2/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'POST /api/v2/categories/{id}/prices' },
-      { path: `/api/v2/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'POST /api/v2/categories/{id}/prices (mit prices array)' },
-      { path: `/api/v2/categories/${categoryId}/update-price`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'POST /api/v2/categories/{id}/update-price' },
-      { path: `/api/v2/categories/${categoryId}/set-price`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'POST /api/v2/categories/{id}/set-price' },
+      // 2. Verfügbarkeit/Inventory (oft für Bulk-Updates genutzt)
+      { path: `/api/v1/availability`, method: 'POST', body: { property_id: propertyId, category_id: categoryId, date: testDate, price: testPrice }, desc: 'v1 Availability POST' },
+      { path: `/api/v1/inventory`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v1 Inventory POST' },
       
-      // PATCH-Endpoints
-      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PATCH', body: { price: testPrice }, desc: 'PATCH /api/v2/categories/{id}/prices/{date}' },
-      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PATCH', body: { prices: [{ people: 1, value: testPrice }] }, desc: 'PATCH /api/v2/categories/{id}/prices/{date} (mit prices array)' },
-      { path: `/api/v2/categories/${categoryId}`, method: 'PATCH', body: { prices: { [testDate]: { [1]: testPrice } } }, desc: 'PATCH /api/v2/categories/{id} (mit prices object)' },
+      // 3. Preis-spezifische Endpoints
+      { path: `/api/v1/prices/update`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v1 Prices Update POST' },
+      { path: `/api/v1/prices/set`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v1 Prices Set POST' },
       
-      // V1-Endpoints (für Kompatibilität)
-      { path: `/api/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v1/categories/{id}/prices' },
-      { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'POST /api/v1/prices' },
+      // 4. Struktur-Varianten (manchmal ist es plural/singular)
+      { path: `/api/v1/category/${categoryId}/price`, method: 'POST', body: { date: testDate, value: testPrice }, desc: 'v1 Category Price POST' },
       
-      // available-rooms mit Preis-Updates - EXAKTE Struktur wie GET-Response (wenn verfügbar)
-      ...(exactStructure ? [
-        { 
-          path: `/api/v2/available-rooms`, 
-          method: 'PUT', 
-          body: {
-            ...exactStructure,
-            categories: exactStructure.categories.map((cat: any) => 
-              cat.category_id === categoryId 
-                ? {
-                    ...cat,
-                    plans: cat.plans.map((plan: any) => ({
-                      ...plan,
-                      prices: plan.prices.map((p: any) => 
-                        p.people === 1 ? { ...p, value: testPrice } : p
-                      )
-                    }))
-                  }
-                : cat
-            )
-          }, 
-          desc: 'PUT /api/v2/available-rooms (exakte GET-Struktur mit aktualisiertem Preis)' 
-        },
-        { 
-          path: `/api/v2/available-rooms`, 
-          method: 'POST', 
-          body: {
-            ...exactStructure,
-            categories: exactStructure.categories.map((cat: any) => 
-              cat.category_id === categoryId 
-                ? {
-                    ...cat,
-                    plans: cat.plans.map((plan: any) => ({
-                      ...plan,
-                      prices: plan.prices.map((p: any) => 
-                        p.people === 1 ? { ...p, value: testPrice } : p
-                      )
-                    }))
-                  }
-                : cat
-            )
-          }, 
-          desc: 'POST /api/v2/available-rooms (exakte GET-Struktur mit aktualisiertem Preis)' 
-        },
-      ] : []),
+      // 5. Mit property_id im Pfad
+      { path: `/api/v1/properties/${propertyId}/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v1 Prop/Cat Prices POST' },
       
-      // Fallback: Vereinfachte Struktur
-      { path: `/api/v2/available-rooms`, method: 'PUT', body: { date: testDate, categories: [{ category_id: categoryId, name: testEntry.roomName, available_rooms: testEntry.availableRooms, plans: [{ id: null, name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'PUT /api/v2/available-rooms (vereinfachte Struktur)' },
-      { path: `/api/v2/available-rooms`, method: 'POST', body: { date: testDate, categories: [{ category_id: categoryId, name: testEntry.roomName, available_rooms: testEntry.availableRooms, plans: [{ id: null, name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'POST /api/v2/available-rooms (vereinfachte Struktur)' },
-      { path: `/api/v2/available-rooms`, method: 'PATCH', body: { date: testDate, categories: [{ category_id: categoryId, plans: [{ prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'PATCH /api/v2/available-rooms (nur Preise)' },
+      // 6. Teste ob PUT über POST mit _method simuliert werden muss
+      { path: `/api/v1/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice, _method: 'PUT' }, desc: 'v1 PUT via POST _method' },
       
-      // Vielleicht gibt es einen separaten Endpoint für Rate Plans?
-      { path: `/api/v2/rate-plans`, method: 'POST', body: { category_id: categoryId, date: testDate, plan_name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }, desc: 'POST /api/v2/rate-plans (mit category_id)' },
-      { path: `/api/v2/rate-plans`, method: 'PUT', body: { category_id: categoryId, date: testDate, plan_name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }, desc: 'PUT /api/v2/rate-plans (mit category_id)' },
-      
-      // Vielleicht über Bookings-Update? (unwahrscheinlich, aber testen)
-      { path: `/api/v1/bookings`, method: 'PUT', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'PUT /api/v1/bookings (unwahrscheinlich)' },
-      
-      // Analog zu /api/v1/bookings - vielleicht gibt es /api/v1/prices?
-      { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice, people: 1 }, desc: 'POST /api/v1/prices (analog zu bookings)' },
-      { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, start_date: testDate, end_date: testDate, price: testPrice }, desc: 'POST /api/v1/prices (mit start/end_date)' },
-      
-      // Kategorien-Update (PATCH/PUT) - vielleicht kann man Preise direkt in Kategorie aktualisieren?
-      { path: `/api/v2/categories/${categoryId}`, method: 'PATCH', body: { prices: { [testDate]: { [1]: testPrice } } }, desc: 'PATCH /api/v2/categories/{id} (mit prices object)' },
-      { path: `/api/v2/categories/${categoryId}`, method: 'PUT', body: { prices: { [testDate]: { [1]: testPrice } } }, desc: 'PUT /api/v2/categories/{id} (mit prices object)' },
-      
-      // Rate Plans
-      { path: `/api/v2/rate-plans/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/rate-plans/{id}/prices' },
-      { path: `/api/v2/rate-plans/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'POST /api/v2/rate-plans/{id}/prices' },
+      // 7. Teste v2 Varianten ohne "api/" Präfix (falls baseURL anders ist)
+      { path: `/v2/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v2 directly PUT' },
+      { path: `/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v1 directly PUT' }
     ];
 
     const successful: any[] = [];
     const failed: any[] = [];
 
-    console.log('🧪 Teste Preis-Update-Endpoints (PUT/POST/PATCH)...\n');
+    console.log('🧪 Teste Preis-Update-Endpoints (ERWEITERT)...\n');
 
     for (const test of testCases) {
       try {
@@ -411,17 +342,3 @@ testPostEndpoints(branchId)
     console.error('❌ Test fehlgeschlagen:', error);
     process.exit(1);
   });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
