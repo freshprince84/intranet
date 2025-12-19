@@ -1070,9 +1070,9 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
     ? `${branding.fonts.primary}, Arial, sans-serif`
     : 'Arial, sans-serif';
 
-  // Logo-HTML (falls vorhanden)
+  // Logo-HTML (falls vorhanden) - Größe wie im Frontend (h-10 = 40px)
   const logoHtml = logo
-    ? `<img src="${logo}" alt="${headerTitle}" style="max-height: 60px; max-width: 200px; margin-bottom: 20px;" />`
+    ? `<img src="${logo}" alt="${headerTitle}" style="height: 40px; width: auto; display: block;" />`
     : '';
 
   return `
@@ -1112,8 +1112,12 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
       font-weight: 600;
       color: ${primaryColor};
     }
+    .logo-container {
+      display: flex;
+      align-items: center;
+    }
     .logo-container img {
-      max-height: 48px;
+      height: 40px;
       width: auto;
       display: block;
       object-fit: contain;
@@ -1147,8 +1151,8 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
 <body>
   <div class="email-wrapper">
     <div class="header">
-      ${logoHtml ? `<div class="logo-container">${logoHtml}</div>` : ''}
       ${headerTitle ? `<h1>${headerTitle}</h1>` : ''}
+      ${logoHtml ? `<div class="logo-container">${logoHtml}</div>` : ''}
     </div>
     <div class="content">
       ${content}

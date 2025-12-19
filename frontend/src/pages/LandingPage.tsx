@@ -301,8 +301,10 @@ const LandingPage: React.FC = () => {
                     loading="lazy"
                     className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <p className="text-white font-semibold text-xl sm:text-2xl">{t('landing.features.labels.worktracker')}</p>
+                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
+                    <SparklesIcon className="h-10 w-10 text-white mb-2 animate-pulse" />
+                    <p className="text-white font-bold text-xl sm:text-2xl mb-1">{t('landing.features.labels.worktracker')}</p>
+                    <p className="text-blue-100 text-sm">{t('landing.features.operations.worktracker')}</p>
                   </div>
                 </div>
               </DeviceFrame>
@@ -316,8 +318,10 @@ const LandingPage: React.FC = () => {
                     loading="lazy"
                     className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <p className="text-white font-semibold text-xl sm:text-2xl">{t('landing.features.labels.consultations')}</p>
+                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
+                    <CheckCircleIcon className="h-10 w-10 text-white mb-2 animate-bounce" />
+                    <p className="text-white font-bold text-xl sm:text-2xl mb-1">{t('landing.features.labels.consultations')}</p>
+                    <p className="text-blue-100 text-sm">{t('landing.features.billing.consultations')}</p>
                   </div>
                 </div>
               </DeviceFrame>
@@ -331,8 +335,10 @@ const LandingPage: React.FC = () => {
                     loading="lazy"
                     className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <p className="text-white font-semibold text-xl sm:text-2xl">{t('landing.features.labels.documentRecognition')}</p>
+                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
+                    <FingerPrintIcon className="h-10 w-10 text-white mb-2 animate-pulse" />
+                    <p className="text-white font-bold text-xl sm:text-2xl mb-1">{t('landing.features.labels.documentRecognition')}</p>
+                    <p className="text-blue-100 text-sm">{t('landing.features.ai.documentRecognition')}</p>
                   </div>
                 </div>
               </DeviceFrame>
@@ -474,25 +480,35 @@ const LandingPage: React.FC = () => {
             <p className="text-2xl font-bold mb-2">{t('landing.proof.title')}</p>
             <p className="text-gray-600 dark:text-gray-300">{t('landing.proof.description')}</p>
           </div>
-          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-full bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">H</div>
+          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm relative overflow-hidden">
+            <div className="flex items-center gap-1 text-yellow-500 mb-4">
+              {[...Array(5)].map((_, i) => (
+                <SparklesIcon key={i} className="h-4 w-4 fill-current" />
+              ))}
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-lg shadow-inner">H</div>
               <div>
-                <p className="font-semibold">{t('landing.proof.hospitality.title')}</p>
-                <p className="text-xs text-gray-500">Operations</p>
+                <p className="font-bold text-gray-900 dark:text-white leading-tight">{t('landing.proof.hospitality.title')}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider">Operations</p>
               </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300">{t('landing.proof.review1')}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 italic leading-relaxed">"{t('landing.proof.review1')}"</p>
           </div>
-          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-full bg-green-50 dark:bg-green-900/40 flex items-center justify-center text-green-600 dark:text-green-300 font-semibold">C</div>
+          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm relative overflow-hidden">
+            <div className="flex items-center gap-1 text-yellow-500 mb-4">
+              {[...Array(5)].map((_, i) => (
+                <SparklesIcon key={i} className="h-4 w-4 fill-current" />
+              ))}
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center font-bold text-white text-lg shadow-inner">C</div>
               <div>
-                <p className="font-semibold">{t('landing.proof.consulting.title')}</p>
-                <p className="text-xs text-gray-500">Consulting</p>
+                <p className="font-bold text-gray-900 dark:text-white leading-tight">{t('landing.proof.consulting.title')}</p>
+                <p className="text-xs text-green-600 dark:text-green-400 font-semibold uppercase tracking-wider">Consulting</p>
               </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300">{t('landing.proof.review2')}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 italic leading-relaxed">"{t('landing.proof.review2')}"</p>
           </div>
         </motion.section>
 
