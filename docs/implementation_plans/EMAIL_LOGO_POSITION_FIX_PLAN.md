@@ -221,3 +221,4 @@ Nach den Änderungen:
 - [ ] Responsive: Funktioniert auf verschiedenen E-Mail-Clients
 - [ ] Alle 5 E-Mail-Typen: Logo korrekt platziert
 
+

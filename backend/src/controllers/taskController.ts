@@ -55,6 +55,10 @@ export const getAllTasks = async (req: Request, res: Response) => {
             : 0; // Standard: 0
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         
+        // ✅ SORTIERUNG: Sortier-Parameter aus Query lesen
+        const sortBy = req.query.sortBy as string | undefined;
+        const sortOrder = (req.query.sortOrder as string)?.toLowerCase() === 'desc' ? 'desc' : 'asc';
+        
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause: any = {};
         if (filterId) {
@@ -163,7 +167,15 @@ export const getAllTasks = async (req: Request, res: Response) => {
             // ✅ PAGINATION: Nur limit Items laden, offset überspringen
             take: limit,
             skip: offset,
-            orderBy: { createdAt: 'desc' }, // Neueste Tasks zuerst
+            orderBy: sortBy ? (
+                sortBy.includes('.') ? {
+                    [sortBy.split('.')[0]]: {
+                        [sortBy.split('.')[1]]: sortOrder
+                    }
+                } : {
+                    [sortBy]: sortOrder
+                }
+            ) : { createdAt: 'desc' }, // Fallback: Neueste Tasks zuerst
             include: {
                 responsible: {
                     select: userSelect

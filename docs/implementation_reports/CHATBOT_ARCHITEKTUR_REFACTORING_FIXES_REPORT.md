@@ -269,3 +269,4 @@ NICHT: Bot erwähnt Kontext-Informationen, die nicht relevant sind ❌
 **Aktualisiert:** 2025-12-18  
 **Status:** ✅ Alle kritischen Probleme behoben (inkl. Englisch-Erkennung und Context-Priorität), bereit für Tests
 
+
