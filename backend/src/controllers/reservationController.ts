@@ -758,17 +758,19 @@ export const getAllReservations = async (req: Request, res: Response) => {
         },
         task: true
       },
-      orderBy: sortBy ? (
-        sortBy.includes('.') ? {
-            [sortBy.split('.')[0]]: {
-                [sortBy.split('.')[1]]: sortOrder
+      orderBy: prismaSortBy ? [
+        prismaSortBy.includes('.') ? {
+            [prismaSortBy.split('.')[0]]: {
+                [prismaSortBy.split('.')[1]]: sortOrder
             }
         } : {
-            [sortBy]: sortOrder
-        }
-      ) : {
-        createdAt: 'desc'
-      }
+            [prismaSortBy]: sortOrder
+        },
+        { id: 'asc' } // ✅ STABILE SORTIERUNG: Fallback auf ID für Infinite Scroll
+      ] : [
+        { createdAt: 'desc' },
+        { id: 'desc' }
+      ]
     });
 
     // ✅ PAGINATION: Response mit totalCount für Infinite Scroll

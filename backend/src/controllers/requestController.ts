@@ -78,6 +78,10 @@ export const getAllRequests = async (req: Request, res: Response) => {
             : 0; // Standard: 0
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
         
+        // ✅ SORTIERUNG: Sortier-Parameter aus Query lesen
+        const sortBy = req.query.sortBy as string | undefined;
+        const sortOrder = (req.query.sortOrder as string)?.toLowerCase() === 'desc' ? 'desc' : 'asc';
+        
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause: any = {};
         if (filterId) {
@@ -238,9 +242,19 @@ export const getAllRequests = async (req: Request, res: Response) => {
                 }
                 } : {})
             },
-            orderBy: {
-                createdAt: 'desc'
-            }
+            orderBy: prismaSortBy ? [
+                prismaSortBy.includes('.') ? {
+                    [prismaSortBy.split('.')[0]]: {
+                        [prismaSortBy.split('.')[1]]: sortOrder
+                    }
+                } : {
+                    [prismaSortBy]: sortOrder
+                },
+                { id: 'asc' } // ✅ STABILE SORTIERUNG: Fallback auf ID für Infinite Scroll
+            ] : [
+                { createdAt: 'desc' },
+                { id: 'desc' }
+            ]
         });
         const queryDuration = Date.now() - queryStartTime;
         logger.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests (${offset}-${offset + requests.length} von ${totalCount}) in ${queryDuration}ms`);

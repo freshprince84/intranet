@@ -374,7 +374,9 @@ const Requests: React.FC = () => {
     append = false, // ✅ PAGINATION: Items anhängen statt ersetzen
     limit = 20,
     offset = 0,
-    operators?: ('AND' | 'OR')[] // ✅ NEU: operators als Parameter
+    operators?: ('AND' | 'OR')[], // ✅ NEU: operators als Parameter
+    sortBy?: string, // ✅ NEU: Sortier-Parameter
+    sortOrder?: 'asc' | 'desc'
   ) => {
     try {
       if (!append) {
@@ -387,7 +389,9 @@ const Requests: React.FC = () => {
       const params: any = {
         limit: limit,
         offset: offset,
-        includeAttachments: 'true' // ✅ VORSCHAU: Attachments für Bild/Link-Vorschau benötigt
+        includeAttachments: 'true', // ✅ VORSCHAU: Attachments für Bild/Link-Vorschau benötigt
+        sortBy: sortBy || sortConfig.key, // ✅ SORTIERUNG: Aktuelle Sortierung mitgeben
+        sortOrder: sortOrder || sortConfig.direction
       };
       if (filterId) {
         params.filterId = filterId;
@@ -484,14 +488,17 @@ const Requests: React.FC = () => {
       
       if (append) {
         // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-        // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Requests im Memory
+        // ✅ DEDUPLIZIERUNG: Verhindert doppelte Einträge durch ID-Filter
         setRequests(prev => {
-          const newRequests = [...prev, ...requestsWithAttachments];
-          // Wenn Maximum überschritten, entferne älteste Items (behalte nur die letzten MAX_REQUESTS)
-          if (newRequests.length > MAX_REQUESTS) {
-            return newRequests.slice(-MAX_REQUESTS);
+          const existingIds = new Set(prev.map(r => r.id));
+          const uniqueNewRequests = requestsWithAttachments.filter(r => !existingIds.has(r.id));
+          const combined = [...prev, ...uniqueNewRequests];
+          
+          // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Requests im Memory
+          if (combined.length > MAX_REQUESTS) {
+            return combined.slice(-MAX_REQUESTS);
           }
-          return newRequests;
+          return combined;
         });
       } else {
         // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
@@ -768,6 +775,7 @@ const Requests: React.FC = () => {
   const filteredAndSortedRequests = useMemo(() => {
     // ✅ FAKT: Wenn selectedFilterId gesetzt ist, wurden Requests bereits server-seitig gefiltert
     // ✅ FAKT: Wenn filterConditions gesetzt sind (ohne selectedFilterId), wurden Requests bereits server-seitig gefiltert
+    // ✅ FAKT: Wenn sortConfig gesetzt ist, wurden Requests bereits server-seitig sortiert
     // ✅ NUR searchTerm wird client-seitig gefiltert (nicht server-seitig)
     const requestsToFilter = requests;
     
@@ -791,83 +799,10 @@ const Requests: React.FC = () => {
           return false; // Kein Match gefunden
         }
         
-        // ❌ ENTFERNEN: Client-seitige Filterung wenn selectedFilterId oder filterConditions gesetzt sind
-        // ✅ Server hat bereits gefiltert, keine doppelte Filterung mehr
-        
         return true;
-      })
-      .sort((a, b) => {
-        // Hilfsfunktion zum Abrufen von Sortierwerten
-        const getSortValue = (request: Request, columnId: string): any => {
-          switch (columnId) {
-            case 'title':
-              return request.title.toLowerCase();
-            case 'status':
-              const statusOrder: Record<string, number> = {
-                'approval': 0,
-                'to_improve': 1,
-                'approved': 2,
-                'denied': 3
-              };
-              return statusOrder[request.status] ?? 999;
-            case 'type':
-              const typeOrder: Record<string, number> = {
-                'vacation': 0,
-                'improvement_suggestion': 1,
-                'sick_leave': 2,
-                'employment_certificate': 3,
-                'other': 4
-              };
-              return typeOrder[request.type || 'other'] ?? 999;
-            case 'requestedBy':
-            case 'requestedByResponsible':
-              // ✅ OPTIMIERUNG: Template-String nur einmal erstellen
-              return `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
-            case 'responsible':
-              // ✅ OPTIMIERUNG: Template-String nur einmal erstellen
-              return `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
-            case 'branch':
-            case 'branch.name':
-              return request.branch.name.toLowerCase();
-            case 'dueDate':
-              return new Date(request.dueDate).getTime();
-            case 'description':
-              return (request.description || '').toLowerCase();
-            default:
-              return '';
-          }
-        };
-        
-        // ❌ ENTFERNT: Filter-Sortierrichtungen (Priorität 2) - Filter-Sortierung wurde entfernt (Phase 1)
-        // ❌ ENTFERNT: Cards-Mode Multi-Sortierung (Priorität 2) - Card-Sortierung wurde entfernt (Phase 2)
-        // ❌ ENTFERNT: Table-Header-Sortierung (Priorität 1) - war redundant, da Hauptsortierung bereits sortConfig verwendet
-        
-        // Hauptsortierung (sortConfig) - für Table & Card gleich (synchron)
-        // ✅ FIX: Sortierung IMMER anwenden, unabhängig von Filtern
-        if (sortConfig.key) {
-          // Verwende getSortValue für konsistente Sortierung (Table & Card)
-          const valueA = getSortValue(a, sortConfig.key);
-          const valueB = getSortValue(b, sortConfig.key);
-          
-          let comparison = 0;
-          if (typeof valueA === 'number' && typeof valueB === 'number') {
-            comparison = valueA - valueB;
-          } else {
-            // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
-            const strA = typeof valueA === 'string' ? valueA : String(valueA);
-            const strB = typeof valueB === 'string' ? valueB : String(valueB);
-            comparison = strA.localeCompare(strB);
-          }
-          
-          if (comparison !== 0) {
-            return sortConfig.direction === 'asc' ? comparison : -comparison;
-          }
-        }
-        
-        // 3. Fallback: Standardsortierung
-        return 0;
       });
-  }, [requests, selectedFilterId, searchTerm, sortConfig]); // ✅ cardSortDirections entfernt (Phase 2), cardMetadataOrder & visibleCardMetadata entfernt (nicht mehr benötigt für Sortierung)
+      // ❌ ENTFERNT: Client-seitige Sortierung, da Server jetzt sortiert (Phase 4)
+  }, [requests, searchTerm]);
 
   // ✅ MEMORY-LEAK-FIX: Ref für aktuelle Operatoren (verhindert fetchRequests-Recreation)
   const filterLogicalOperatorsRef = useRef(filterLogicalOperators);

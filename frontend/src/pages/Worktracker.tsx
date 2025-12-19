@@ -461,14 +461,22 @@ const Worktracker: React.FC = () => {
 
     // ✅ SORTIERUNG: Neuladen wenn sich die Sortierung ändert (Tasks)
     useEffect(() => {
-        if (!isLoadingTasksSettings && activeTab === 'todos') {
+        // Nur neuladen wenn:
+        // 1. Settings geladen sind
+        // 2. Initial-Load bereits stattgefunden hat (verhindert Doppel-Request beim Start)
+        // 3. Tab aktiv ist
+        if (!isLoadingTasksSettings && initialLoadAttemptedRef.current.todos && activeTab === 'todos') {
             loadTasks(selectedFilterId || undefined, filterConditions.length > 0 ? filterConditions : undefined);
         }
     }, [tableSortConfig.key, tableSortConfig.direction, activeTab, isLoadingTasksSettings]);
 
     // ✅ SORTIERUNG: Neuladen wenn sich die Sortierung ändert (Reservations)
     useEffect(() => {
-        if (!isLoadingReservationsSettings && activeTab === 'reservations') {
+        // Nur neuladen wenn:
+        // 1. Settings geladen sind
+        // 2. Initial-Load bereits stattgefunden hat
+        // 3. Tab aktiv ist
+        if (!isLoadingReservationsSettings && initialLoadAttemptedRef.current.reservations && activeTab === 'reservations') {
             loadReservations(reservationSelectedFilterId || undefined, reservationFilterConditions.length > 0 ? reservationFilterConditions : undefined);
         }
     }, [reservationTableSortConfig.key, reservationTableSortConfig.direction, activeTab, isLoadingReservationsSettings]);
@@ -668,14 +676,17 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Tasks im Memory
+                // ✅ DEDUPLIZIERUNG: Verhindert doppelte Einträge durch ID-Filter
                 setTasks(prev => {
-                    const newTasks = [...prev, ...tasksWithAttachments];
-                    // Wenn Maximum überschritten, entferne älteste Items (behalte nur die letzten MAX_TASKS)
-                    if (newTasks.length > MAX_TASKS) {
-                        return newTasks.slice(-MAX_TASKS);
+                    const existingIds = new Set(prev.map(t => t.id));
+                    const uniqueNewTasks = tasksWithAttachments.filter(t => !existingIds.has(t.id));
+                    const combined = [...prev, ...uniqueNewTasks];
+                    
+                    // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Tasks im Memory
+                    if (combined.length > MAX_TASKS) {
+                        return combined.slice(-MAX_TASKS);
                     }
-                    return newTasks;
+                    return combined;
                 });
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
@@ -800,14 +811,17 @@ const Worktracker: React.FC = () => {
             
             if (append) {
                 // ✅ PAGINATION: Items anhängen (Infinite Scroll)
-                // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Reservations im Memory
+                // ✅ DEDUPLIZIERUNG: Verhindert doppelte Einträge durch ID-Filter
                 setReservations(prev => {
-                    const newReservations = [...prev, ...reservationsData];
-                    // Wenn Maximum überschritten, entferne älteste Items (behalte nur die letzten MAX_RESERVATIONS)
-                    if (newReservations.length > MAX_RESERVATIONS) {
-                        return newReservations.slice(-MAX_RESERVATIONS);
+                    const existingIds = new Set(prev.map(r => r.id));
+                    const uniqueNewReservations = reservationsData.filter(r => !existingIds.has(r.id));
+                    const combined = [...prev, ...uniqueNewReservations];
+                    
+                    // ✅ MEMORY LEAK FIX: Begrenzung der maximalen Anzahl Reservations im Memory
+                    if (combined.length > MAX_RESERVATIONS) {
+                        return combined.slice(-MAX_RESERVATIONS);
                     }
-                    return newReservations;
+                    return combined;
                 });
             } else {
                 // ✅ PAGINATION: Items ersetzen (Initial oder Filter-Change)
