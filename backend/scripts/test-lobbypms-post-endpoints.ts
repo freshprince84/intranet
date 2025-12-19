@@ -187,14 +187,72 @@ async function testPostEndpoints(branchId: number) {
     }
     console.log('');
 
+    // ⚠️ WICHTIG: Rate Plans abrufen (laut Dokumentation benötigt!)
+    console.log('🔍 Hole Rate Plans (laut Dokumentation benötigt für Preis-Updates)...\n');
+    let ratePlans: any[] = [];
+    let rateId: number | null = null;
+    let roomTypeId: number | null = null;
+    
+    try {
+      const ratesResponse = await axiosInstance.get('/api/v1/rates', {
+        validateStatus: (s) => s < 500
+      });
+      
+      if (ratesResponse.status === 200 && ratesResponse.data) {
+        console.log(`   ✅ /api/v1/rates existiert`);
+        const ratesData = ratesResponse.data.data || ratesResponse.data;
+        
+        if (Array.isArray(ratesData) && ratesData.length > 0) {
+          ratePlans = ratesData;
+          console.log(`   📋 ${ratesData.length} Rate Plan(s) gefunden`);
+          
+          // Versuche rate_id und room_type_id zu finden, die zur categoryId passen
+          // Oder nimm einfach den ersten Rate Plan
+          const firstRate = ratesData[0];
+          console.log(`   📋 Erster Rate Plan:`, JSON.stringify(firstRate, null, 2).substring(0, 500));
+          
+          // Versuche rate_id und room_type_id zu extrahieren
+          if (firstRate.id) {
+            rateId = firstRate.id;
+          } else if (firstRate.rate_id) {
+            rateId = firstRate.rate_id;
+          }
+          
+          if (firstRate.room_type_id) {
+            roomTypeId = firstRate.room_type_id;
+          } else if (firstRate.roomTypeId) {
+            roomTypeId = firstRate.roomTypeId;
+          }
+          
+          // Versuche auch in der categoryId-Struktur zu finden
+          if (!roomTypeId && categoryId) {
+            // Vielleicht ist categoryId = room_type_id?
+            roomTypeId = categoryId;
+          }
+          
+          console.log(`   📋 Extrahierte IDs: rate_id=${rateId}, room_type_id=${roomTypeId}`);
+        } else if (typeof ratesData === 'object') {
+          // Vielleicht ist es ein einzelnes Objekt oder hat eine andere Struktur
+          console.log(`   📋 Rate Plans Struktur:`, JSON.stringify(ratesData, null, 2).substring(0, 500));
+        }
+      } else {
+        console.log(`   ⚠️  /api/v1/rates Status: ${ratesResponse.status}`);
+      }
+    } catch (error) {
+      console.log(`   ⚠️  Fehler beim Abrufen von Rate Plans:`, (error as any).message);
+    }
+    console.log('');
+
     // Erweiterte Suche nach dem Preis-Endpoint
     const testPrice = currentPrice + 1000; // Kleine Änderung für Test
     const propertyId = lobbyPmsSettings.propertyId;
 
-    const testCases = [
+    // Erstelle Testfälle basierend auf der GET-Struktur
+    const testCases: Array<{ path: string; method: string; body: any; desc: string }> = [
       // 1. Die wahrscheinlichsten v1 Varianten (da v1 für Bookings funktioniert)
       { path: `/api/v1/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v1 Category Prices POST' },
       { path: `/api/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v1 Category Prices PUT' },
+      { path: `/api/v1/categories/${categoryId}/prices`, method: 'PATCH', body: { date: testDate, price: testPrice }, desc: 'v1 Category Prices PATCH' },
       { path: `/api/v1/categories/${categoryId}`, method: 'PUT', body: { prices: [{ date: testDate, value: testPrice }] }, desc: 'v1 Category PUT (nested)' },
       
       // 2. Verfügbarkeit/Inventory (oft für Bulk-Updates genutzt)
@@ -210,13 +268,115 @@ async function testPostEndpoints(branchId: number) {
       
       // 5. Mit property_id im Pfad
       { path: `/api/v1/properties/${propertyId}/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v1 Prop/Cat Prices POST' },
+      { path: `/api/v1/properties/${propertyId}/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v1 Prop/Cat Prices PUT' },
       
       // 6. Teste ob PUT über POST mit _method simuliert werden muss
       { path: `/api/v1/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice, _method: 'PUT' }, desc: 'v1 PUT via POST _method' },
       
       // 7. Teste v2 Varianten ohne "api/" Präfix (falls baseURL anders ist)
       { path: `/v2/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v2 directly PUT' },
-      { path: `/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v1 directly PUT' }
+      { path: `/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v1 directly PUT' },
+      
+      // 8. v2 Endpoints (da available-rooms v2 funktioniert)
+      { path: `/api/v2/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v2 Category Prices POST' },
+      { path: `/api/v2/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v2 Category Prices PUT' },
+      { path: `/api/v2/categories/${categoryId}/prices`, method: 'PATCH', body: { date: testDate, price: testPrice }, desc: 'v2 Category Prices PATCH' },
+      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PUT', body: { price: testPrice }, desc: 'v2 Category Prices PUT (mit Datum im Pfad)' },
+      { path: `/api/v2/categories/${categoryId}/prices/${testDate}`, method: 'PATCH', body: { price: testPrice }, desc: 'v2 Category Prices PATCH (mit Datum im Pfad)' },
+      
+      // 9. v2 mit property_id
+      { path: `/api/v2/properties/${propertyId}/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v2 Prop/Cat Prices POST' },
+      { path: `/api/v2/properties/${propertyId}/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v2 Prop/Cat Prices PUT' },
+      
+      // 10. v2 available-rooms basierend auf GET-Struktur
+      { path: `/api/v2/available-rooms`, method: 'PUT', body: { date: testDate, property_id: propertyId, categories: [{ category_id: categoryId, plans: [{ name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'v2 Available Rooms PUT (vereinfacht)' },
+      { path: `/api/v2/available-rooms`, method: 'POST', body: { date: testDate, property_id: propertyId, categories: [{ category_id: categoryId, plans: [{ name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'v2 Available Rooms POST (vereinfacht)' },
+      { path: `/api/v2/available-rooms`, method: 'PATCH', body: { date: testDate, property_id: propertyId, categories: [{ category_id: categoryId, plans: [{ name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'v2 Available Rooms PATCH (vereinfacht)' },
+      
+      // 11. v2 prices Endpoint
+      { path: `/api/v2/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v2 Prices POST' },
+      { path: `/api/v2/prices`, method: 'PUT', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v2 Prices PUT' },
+      { path: `/api/v2/prices/${categoryId}`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v2 Prices PUT (mit category_id im Pfad)' },
+      
+      // 12. v2 rate-plans
+      { path: `/api/v2/rate-plans`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v2 Rate Plans POST' },
+      { path: `/api/v2/rate-plans/${categoryId}`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v2 Rate Plans PUT' },
+      
+      // 13. Teste mit exakter available-rooms Struktur (wenn vorhanden)
+      ...(exactStructure ? [
+        { 
+          path: `/api/v2/available-rooms`, 
+          method: 'PUT', 
+          body: {
+            ...exactStructure,
+            categories: exactStructure.categories.map((cat: any) => 
+              cat.category_id === categoryId 
+                ? {
+                    ...cat,
+                    plans: cat.plans.map((plan: any) => ({
+                      ...plan,
+                      prices: plan.prices.map((p: any) => 
+                        p.people === 1 ? { ...p, value: testPrice } : p
+                      )
+                    }))
+                  }
+                : cat
+            )
+          }, 
+          desc: 'PUT /api/v2/available-rooms (exakte GET-Struktur)' 
+        },
+        { 
+          path: `/api/v2/available-rooms`, 
+          method: 'POST', 
+          body: {
+            ...exactStructure,
+            categories: exactStructure.categories.map((cat: any) => 
+              cat.category_id === categoryId 
+                ? {
+                    ...cat,
+                    plans: cat.plans.map((plan: any) => ({
+                      ...plan,
+                      prices: plan.prices.map((p: any) => 
+                        p.people === 1 ? { ...p, value: testPrice } : p
+                      )
+                    }))
+                  }
+                : cat
+            )
+          }, 
+          desc: 'POST /api/v2/available-rooms (exakte GET-Struktur)' 
+        },
+        { 
+          path: `/api/v2/available-rooms`, 
+          method: 'PATCH', 
+          body: {
+            ...exactStructure,
+            categories: exactStructure.categories.map((cat: any) => 
+              cat.category_id === categoryId 
+                ? {
+                    ...cat,
+                    plans: cat.plans.map((plan: any) => ({
+                      ...plan,
+                      prices: plan.prices.map((p: any) => 
+                        p.people === 1 ? { ...p, value: testPrice } : p
+                      )
+                    }))
+                  }
+                : cat
+            )
+          }, 
+          desc: 'PATCH /api/v2/available-rooms (exakte GET-Struktur)' 
+        },
+      ] : []),
+      
+      // 14. Weitere v1 Varianten mit verschiedenen Payload-Strukturen
+      { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v1 Prices POST (einfach)' },
+      { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, prices: [{ people: 1, value: testPrice }] }, desc: 'v1 Prices POST (mit prices array)' },
+      { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, start_date: testDate, end_date: testDate, price: testPrice }, desc: 'v1 Prices POST (mit start/end_date)' },
+      
+      // 15. Rate Plans Varianten v1
+      { path: `/api/v1/rate-plans`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v1 Rate Plans POST' },
+      { path: `/api/v1/rate-plans/${categoryId}`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v1 Rate Plans PUT' },
     ];
 
     const successful: any[] = [];

@@ -12,6 +12,7 @@ import { WorktimeModal } from './WorktimeModal.tsx';
 import { convertWeekToDate, getWeekDays, getQuinzenaFromDate, convertQuinzenaToDate, getQuinzenaDays, getCurrentQuinzena } from '../utils/dateUtils.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useOrganization } from '../contexts/OrganizationContext.tsx';
+import ResponsiveLabel from './shared/ResponsiveLabel.tsx';
 
 // Neue Schnittstelle für das WorktimeModal mit selectedDate
 interface WorktimeModalProps {
@@ -551,8 +552,9 @@ const WorktimeStats: React.FC = () => {
                                 }`}
                             >
                                 <CalendarIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                <span className="hidden sm:inline whitespace-nowrap">{t('worktime.stats.week')}</span>
-                                <span className="sm:hidden whitespace-nowrap">7d</span>
+                                <span className="whitespace-nowrap">
+                                    <ResponsiveLabel long={t('worktime.stats.week')} short="7d" />
+                                </span>
                             </button>
                             <button
                                 type="button"
@@ -564,8 +566,9 @@ const WorktimeStats: React.FC = () => {
                                 }`}
                             >
                                 <ClockIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                <span className="hidden sm:inline whitespace-nowrap">{t('worktime.stats.quinzena')}</span>
-                                <span className="sm:hidden whitespace-nowrap">15d</span>
+                                <span className="whitespace-nowrap">
+                                    <ResponsiveLabel long={t('worktime.stats.quinzena')} short="15d" />
+                                </span>
                             </button>
                         </div>
                     )}

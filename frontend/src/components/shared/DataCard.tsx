@@ -329,6 +329,108 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
   );
 };
 
+// ✅ REFACTORING: Helper-Funktion für Metadaten-Rendering (eliminiert Duplikation)
+const renderMetadataItem = (item: MetadataItem, index: number, variant: 'mobile' | 'desktop' = 'desktop'): React.ReactNode => {
+  if (item.descriptionContent) return null;
+  
+  const baseClasses = variant === 'mobile' 
+    ? 'flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0'
+    : 'flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400';
+  
+  const valueClasses = variant === 'mobile'
+    ? 'whitespace-nowrap'
+    : 'whitespace-nowrap flex-shrink-0';
+  
+  return (
+    <div key={index} className={baseClasses}>
+      {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+      {item.label && (
+        <span className={`font-medium ${variant === 'mobile' ? 'whitespace-nowrap' : 'whitespace-nowrap flex-shrink-0'}`}>
+          {item.label.endsWith(':') ? item.label : `${item.label}:`}
+        </span>
+      )}
+      <span className={`${item.className || 'text-gray-900 dark:text-white'} ${valueClasses}`}>
+        {typeof item.value === 'string' ? item.value : item.value}
+      </span>
+    </div>
+  );
+};
+
+// ✅ REFACTORING: Helper-Funktion für Status-Rendering (eliminiert Duplikation)
+const renderStatus = (status: DataCardProps['status'], variant: 'mobile' | 'desktop' = 'desktop', t: (key: string) => string): React.ReactNode => {
+  if (!status) return null;
+  
+  const buttonSize = variant === 'mobile' ? 'h-4 w-4' : 'h-6 w-6';
+  const buttonPadding = variant === 'mobile' ? 'p-1' : 'p-2';
+  const statusPadding = variant === 'mobile' 
+    ? 'px-1.5 py-0.5 text-xs'
+    : 'px-1.5 sm:px-2 md:px-2.5 py-0.5 sm:py-0.5 md:py-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl';
+  
+  return (
+    <div className={`flex items-center ${variant === 'mobile' ? 'gap-0.5' : 'gap-0.5 sm:gap-1'} flex-shrink-0 ${variant === 'desktop' ? 'min-w-0' : ''}`}>
+      {status.onPreviousClick && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            status.onPreviousClick?.();
+          }}
+          className={`${buttonPadding} text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0`}
+          title={t('dataCard.previousStatus')}
+        >
+          <ChevronLeftIcon className={buttonSize} />
+        </button>
+      )}
+      <span className={`${statusPadding} font-medium rounded-full ${status.color} ${status.className || ''} whitespace-nowrap flex-shrink-0`}>
+        {status.label}
+      </span>
+      {status.onNextClick && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            status.onNextClick?.();
+          }}
+          className={`${buttonPadding} text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0`}
+          title={t('dataCard.nextStatus')}
+        >
+          <ChevronRightIcon className={buttonSize} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ✅ REFACTORING: Helper-Funktion für Titel-Rendering (eliminiert Duplikation)
+const renderTitle = (title: string | React.ReactNode, subtitle?: string, variant: 'mobile' | 'desktop' = 'desktop'): React.ReactNode => {
+  const titleClasses = variant === 'mobile'
+    ? 'font-semibold text-gray-900 dark:text-white break-words text-sm'
+    : 'font-semibold text-gray-900 dark:text-white break-words';
+  
+  const titleStyle = variant === 'mobile'
+    ? { wordBreak: 'break-word' as const, overflowWrap: 'break-word' as const }
+    : { fontSize: 'clamp(0.9375rem, 1.2vw + 0.5rem, 1.25rem)', wordBreak: 'break-word' as const, overflowWrap: 'break-word' as const };
+  
+  const subtitleClasses = variant === 'mobile'
+    ? 'text-xs text-gray-500 dark:text-gray-400 mt-1 break-words'
+    : 'text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-500 dark:text-gray-400 mt-1 break-words';
+  
+  return (
+    <>
+      {typeof title === 'string' ? (
+        <h3 className={titleClasses} style={titleStyle}>
+          {title}
+        </h3>
+      ) : (
+        title
+      )}
+      {subtitle && (
+        <p className={subtitleClasses}>
+          {subtitle}
+        </p>
+      )}
+    </>
+  );
+};
+
 const DataCard: React.FC<DataCardProps> = ({
   title,
   subtitle,
@@ -359,45 +461,16 @@ const DataCard: React.FC<DataCardProps> = ({
         <div className="flex items-center justify-between gap-2 mb-2">
           {/* Links: Resp und QC nebeneinander */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            {/* Resp (main) */}
-            {metadata.filter(item => item.section === 'main' || (!item.section && (item.label === 'Angefragt von' || item.label === 'Verantwortlicher'))).map((item, index) => {
-              if (item.descriptionContent) return null;
-              return (
-                <div key={index} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">
-                  {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                  {item.label && <span className="font-medium whitespace-nowrap">{item.label}:</span>}
-                  <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
-                    {typeof item.value === 'string' ? item.value : item.value}
-                  </span>
-                </div>
-              );
-            })}
-            {/* QC (main-second) */}
-            {metadata.filter(item => item.section === 'main-second' || (!item.section && item.label === 'Qualitätskontrolle')).map((item, index) => {
-              if (item.descriptionContent) return null;
-              return (
-                <div key={index} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">
-                  {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                  {item.label && <span className="font-medium whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
-                  <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
-                    {typeof item.value === 'string' ? item.value : item.value}
-                  </span>
-                </div>
-              );
-            })}
-            {/* main-third (Para/Responsible) */}
-            {metadata.filter(item => item.section === 'main-third' || (!item.section && item.label === 'Verantwortlicher')).map((item, index) => {
-              if (item.descriptionContent) return null;
-              return (
-                <div key={index} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">
-                  {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                  {item.label && <span className="font-medium whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
-                  <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
-                    {typeof item.value === 'string' ? item.value : item.value}
-                  </span>
-                </div>
-              );
-            })}
+            {/* ✅ REFACTORING: Metadaten-Rendering mit Helper-Funktion */}
+            {metadata.filter(item => item.section === 'main' || (!item.section && (item.label === 'Angefragt von' || item.label === 'Verantwortlicher'))).map((item, index) => 
+              renderMetadataItem(item, index, 'mobile')
+            )}
+            {metadata.filter(item => item.section === 'main-second' || (!item.section && item.label === 'Qualitätskontrolle')).map((item, index) => 
+              renderMetadataItem(item, index, 'mobile')
+            )}
+            {metadata.filter(item => item.section === 'main-third' || (!item.section && item.label === 'Verantwortlicher')).map((item, index) => 
+              renderMetadataItem(item, index, 'mobile')
+            )}
           </div>
           {/* Rechts: Datum (50%) */}
           <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0" style={{ width: '50%', justifyContent: 'flex-end' }}>
@@ -414,55 +487,14 @@ const DataCard: React.FC<DataCardProps> = ({
         
         {/* Zeile 2: Titel (60-70%) | Status (30-40%) */}
         <div className="flex items-start justify-between gap-2 mb-2">
-          {/* Titel links (60-70%) */}
+          {/* ✅ REFACTORING: Titel-Rendering mit Helper-Funktion */}
           <div className="flex-1 min-w-0" style={{ flex: '0 0 65%' }}>
-            {typeof title === 'string' ? (
-              <h3 className="font-semibold text-gray-900 dark:text-white break-words text-sm" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-                {title}
-              </h3>
-            ) : (
-              title
-            )}
-            {subtitle && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">
-                {subtitle}
-              </p>
-            )}
+            {renderTitle(title, subtitle, 'mobile')}
           </div>
-          {/* Status rechts (30-40%) */}
-          {status && (
-            <div className="flex items-center gap-0.5 flex-shrink-0" style={{ flex: '0 0 35%', justifyContent: 'flex-end' }}>
-              {/* Status-Shift-Button (links) */}
-              {status.onPreviousClick ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    status.onPreviousClick?.();
-                  }}
-                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                  title={t('dataCard.previousStatus')}
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                </button>
-              ) : null}
-              <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${status.color} ${status.className || ''} whitespace-nowrap flex-shrink-0`}>
-                {status.label}
-              </span>
-              {/* Status-Shift-Button (rechts) */}
-              {status.onNextClick ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    status.onNextClick?.();
-                  }}
-                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                  title={t('dataCard.nextStatus')}
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                </button>
-              ) : null}
-            </div>
-          )}
+          {/* ✅ REFACTORING: Status-Rendering mit Helper-Funktion */}
+          <div className="flex-shrink-0" style={{ flex: '0 0 35%', justifyContent: 'flex-end' }}>
+            {renderStatus(status, 'mobile')}
+          </div>
         </div>
         
         {/* Right-Metadaten für Mobile - unter Status, NUR wenn KEIN 3-Spalten-Layout aktiv ist */}
@@ -490,20 +522,9 @@ const DataCard: React.FC<DataCardProps> = ({
       <div className="hidden sm:block">
         {/* Container für Titel links und alle Metadaten rechts - Grid-Layout mit 2 Spalten */}
         <div className="grid items-center gap-4 mb-2" style={{ gridTemplateColumns: '1fr auto' }}>
-          {/* Titel links - flexibel, nimmt nur benötigten Platz, kann umbrechen */}
+          {/* ✅ REFACTORING: Titel-Rendering mit Helper-Funktion */}
           <div className="min-w-0 pr-2">
-            {typeof title === 'string' ? (
-              <h3 className="font-semibold text-gray-900 dark:text-white break-words" style={{ fontSize: 'clamp(0.9375rem, 1.2vw + 0.5rem, 1.25rem)', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-                {title}
-              </h3>
-            ) : (
-              title
-            )}
-            {subtitle && (
-              <p className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-500 dark:text-gray-400 mt-1 break-words">
-                {subtitle}
-              </p>
-            )}
+            {renderTitle(title, subtitle, 'desktop')}
           </div>
           
           {/* Rechts: Alle Metadaten zusammen (Typ, Solicitado por, Responsable, Datum, Status) - rechtsbündig ausgerichtet, flexibel für Responsive */}
@@ -580,40 +601,8 @@ const DataCard: React.FC<DataCardProps> = ({
               </div>
             ))}
             
-            {/* Status - sicherstellen dass innerhalb der Card bleibt */}
-            {status && (
-              <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 min-w-0">
-                {/* Status-Shift-Button (links) */}
-                {status.onPreviousClick ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      status.onPreviousClick?.();
-                    }}
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title={t('dataCard.previousStatus')}
-                  >
-                    <ChevronLeftIcon className="h-6 w-6" />
-                  </button>
-                ) : null}
-                <span className={`px-1.5 sm:px-2 md:px-2.5 py-0.5 sm:py-0.5 md:py-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-medium rounded-full ${status.color} ${status.className || ''} whitespace-nowrap flex-shrink-0`}>
-                  {status.label}
-                </span>
-                {/* Status-Shift-Button (rechts) */}
-                {status.onNextClick ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      status.onNextClick?.();
-                    }}
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title={t('dataCard.nextStatus')}
-                  >
-                    <ChevronRightIcon className="h-6 w-6" />
-                  </button>
-                ) : null}
-              </div>
-            )}
+            {/* ✅ REFACTORING: Status-Rendering mit Helper-Funktion */}
+            {renderStatus(status, 'desktop', t)}
           </div>
         </div>
       </div>

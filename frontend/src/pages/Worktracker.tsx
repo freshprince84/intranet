@@ -28,6 +28,7 @@ import axiosInstance from '../config/axios.ts';
 import FilterPane from '../components/FilterPane.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
+import ResponsiveLabel from '../components/shared/ResponsiveLabel.tsx';
 import { useFilterContext } from '../contexts/FilterContext.tsx';
 import { applyFilters, evaluateDateCondition, evaluateUserRoleCondition, evaluateResponsibleAndQualityControl } from '../utils/filterLogic.ts';
 import { toast } from 'react-toastify';
@@ -2644,13 +2645,15 @@ const Worktracker: React.FC = () => {
                                                                     <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <div className="flex flex-col">
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200">
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('tasks.columns.responsible')}:</span>
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('tasks.columns.responsible').substring(0, 3)}:</span><br />
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                    <ResponsiveLabel long={`${t('tasks.columns.responsible')}:`} short={`${t('tasks.columns.responsible').substring(0, 3)}:`} />
+                                                                                </span><br />
                                                                                 {task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : task.role ? task.role.name : '-'}
                                                                             </div>
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('tasks.qualityControlLabel')}</span>
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('tasks.columns.qualityControl').substring(0, 2)}:</span><br />
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                    <ResponsiveLabel long={t('tasks.qualityControlLabel')} short={`${t('tasks.columns.qualityControl').substring(0, 2)}:`} />
+                                                                                </span><br />
                                                                                 {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
                                                                             </div>
                                                                         </div>

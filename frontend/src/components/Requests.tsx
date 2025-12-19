@@ -41,6 +41,7 @@ import { de } from 'date-fns/locale';
 import MarkdownPreview from './MarkdownPreview.tsx';
 import DataCard, { MetadataItem } from './shared/DataCard.tsx';
 import CardGrid from './shared/CardGrid.tsx';
+import ResponsiveLabel from './shared/ResponsiveLabel.tsx';
 import { getExpiryStatus, getExpiryColorClasses, createDueDateMetadataItem } from '../utils/expiryUtils.ts';
 
 // Helper-Funktion für Request-Typ-Icons
@@ -1179,8 +1180,7 @@ const Requests: React.FC = () => {
                       >
                         <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
                           <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400 dark:text-gray-500" />
-                          <span className="hidden sm:inline">{column.label}</span>
-                          <span className="inline sm:hidden">{column.shortLabel}</span>
+                          <ResponsiveLabel long={column.label} short={column.shortLabel} />
                         </div>
                       </th>
                     );
@@ -1207,8 +1207,7 @@ const Requests: React.FC = () => {
                     >
                       <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
                         {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400 dark:text-gray-500" />}
-                        <span className="hidden sm:inline">{column.label}</span>
-                        <span className="inline sm:hidden">{column.shortLabel}</span>
+                        <ResponsiveLabel long={column.label} short={column.shortLabel} />
                         {sortKey && sortConfig.key === sortKey && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </div>
                     </th>
@@ -1292,13 +1291,15 @@ const Requests: React.FC = () => {
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex flex-col">
                                   <div className="text-sm text-gray-900 dark:text-gray-200">
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('requests.columns.requestedBy')}:</span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('requests.columns.requestedBy').substring(0, 5)}:</span><br />
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      <ResponsiveLabel long={`${t('requests.columns.requestedBy')}:`} short={`${t('requests.columns.requestedBy').substring(0, 5)}:`} />
+                                    </span><br />
                                     {`${request.requestedBy.firstName} ${request.requestedBy.lastName}`}
                                   </div>
                                   <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('requests.columns.responsible')}:</span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('requests.columns.responsible').substring(0, 4)}:</span><br />
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      <ResponsiveLabel long={`${t('requests.columns.responsible')}:`} short={`${t('requests.columns.responsible').substring(0, 4)}:`} />
+                                    </span><br />
                                     {`${request.responsible.firstName} ${request.responsible.lastName}`}
                                   </div>
                                 </div>
