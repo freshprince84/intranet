@@ -198,7 +198,8 @@ async function testPostEndpoints(branchId: number) {
     
     for (const endpoint of ratePlanEndpoints) {
       try {
-        const ratesResponse = await axiosInstance.get(endpoint, {
+        // Teste ohne Parameter
+        let ratesResponse = await axiosInstance.get(endpoint, {
           validateStatus: (s) => s < 500
         });
         
@@ -206,16 +207,16 @@ async function testPostEndpoints(branchId: number) {
           console.log(`   ✅ ${endpoint} existiert`);
           const ratesData = ratesResponse.data.data || ratesResponse.data;
           
+          // Logge vollständige Struktur, auch wenn leer
+          console.log(`   📋 Vollständige Response:`, JSON.stringify(ratesResponse.data, null, 2).substring(0, 1000));
+          
           if (Array.isArray(ratesData) && ratesData.length > 0) {
             ratePlans = ratesData;
             console.log(`   📋 ${ratesData.length} Rate Plan(s) gefunden`);
             
-            // Versuche rate_id und room_type_id zu finden, die zur categoryId passen
-            // Oder nimm einfach den ersten Rate Plan
             const firstRate = ratesData[0];
             console.log(`   📋 Erster Rate Plan:`, JSON.stringify(firstRate, null, 2).substring(0, 500));
             
-            // Versuche rate_id und room_type_id zu extrahieren
             if (firstRate.id) {
               rateId = firstRate.id;
             } else if (firstRate.rate_id) {
@@ -229,9 +230,44 @@ async function testPostEndpoints(branchId: number) {
             }
             
             console.log(`   📋 Extrahierte IDs: rate_id=${rateId}, room_type_id=${roomTypeId}`);
-            break; // Erfolgreich gefunden, stoppe Suche
+            break;
+          } else if (Array.isArray(ratesData) && ratesData.length === 0) {
+            console.log(`   ⚠️  ${endpoint} gibt leeres Array zurück - teste mit Parametern...`);
+            
+            // Teste mit verschiedenen Query-Parametern
+            const testParams = [
+              { property_id: propertyId },
+              { category_id: categoryId },
+              { room_type_id: categoryId },
+              { property_id: propertyId, category_id: categoryId },
+            ];
+            
+            for (const params of testParams) {
+              try {
+                const paramResponse = await axiosInstance.get(endpoint, {
+                  params,
+                  validateStatus: (s) => s < 500
+                });
+                
+                if (paramResponse.status === 200 && paramResponse.data) {
+                  const paramData = paramResponse.data.data || paramResponse.data;
+                  if (Array.isArray(paramData) && paramData.length > 0) {
+                    console.log(`   ✅ ${endpoint} mit Parametern ${JSON.stringify(params)}: ${paramData.length} Rate Plan(s) gefunden`);
+                    ratePlans = paramData;
+                    const firstRate = paramData[0];
+                    if (firstRate.id) rateId = firstRate.id;
+                    else if (firstRate.rate_id) rateId = firstRate.rate_id;
+                    if (firstRate.room_type_id) roomTypeId = firstRate.room_type_id;
+                    else if (firstRate.roomTypeId) roomTypeId = firstRate.roomTypeId;
+                    console.log(`   📋 Extrahierte IDs: rate_id=${rateId}, room_type_id=${roomTypeId}`);
+                    break;
+                  }
+                }
+              } catch (e) {
+                // Ignoriere
+              }
+            }
           } else if (typeof ratesData === 'object') {
-            // Vielleicht ist es ein einzelnes Objekt oder hat eine andere Struktur
             console.log(`   📋 Rate Plans Struktur:`, JSON.stringify(ratesData, null, 2).substring(0, 500));
             break;
           }
@@ -264,11 +300,13 @@ async function testPostEndpoints(branchId: number) {
     const testCases: Array<{ path: string; method: string; body: any; desc: string }> = [
       // ⚠️ PRIORITÄT: Rate Plans Endpoint (laut Dokumentation!)
       // Teste mit verschiedenen rate_id Werten, auch wenn wir keine gefunden haben
+      // WICHTIG: Teste sowohl /api/v1/rates/{id}/prices als auch /api/v1/rate-plans/{id}/prices
       ...(roomTypeId ? (() => {
         const possibleRateIds = rateId ? [rateId] : [categoryId, 1, 'STANDARD_RATE', 'default'];
         const cases: Array<{ path: string; method: string; body: any; desc: string }> = [];
         
         for (const testRateId of possibleRateIds) {
+          // Teste /api/v1/rates/{id}/prices (aus Dokumentation)
           // Date Range Variante
           cases.push({
             path: `/api/v1/rates/${testRateId}/prices`,
@@ -292,6 +330,32 @@ async function testPostEndpoints(branchId: number) {
               prices: [{ date: testDate, price: testPrice }]
             },
             desc: `v1 Rates Prices POST (Daily Pricing - rate_id=${testRateId} - laut Dokumentation!)`
+          });
+          
+          // Teste /api/v1/rate-plans/{id}/prices (da /api/v1/rate-plans existiert!)
+          // Date Range Variante
+          cases.push({
+            path: `/api/v1/rate-plans/${testRateId}/prices`,
+            method: 'POST',
+            body: {
+              room_type_id: roomTypeId,
+              date_from: testDate,
+              date_to: testDate,
+              price: testPrice,
+              currency: 'USD'
+            },
+            desc: `v1 Rate-Plans Prices POST (Date Range - rate_id=${testRateId} - ALTERNATIVE!)`
+          });
+          
+          // Daily Pricing Variante
+          cases.push({
+            path: `/api/v1/rate-plans/${testRateId}/prices`,
+            method: 'POST',
+            body: {
+              room_type_id: roomTypeId,
+              prices: [{ date: testDate, price: testPrice }]
+            },
+            desc: `v1 Rate-Plans Prices POST (Daily Pricing - rate_id=${testRateId} - ALTERNATIVE!)`
           });
           
           // PUT Varianten
