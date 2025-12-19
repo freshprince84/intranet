@@ -100,31 +100,19 @@ code {
 /* NEUE CSS-REGELN FÜR MOBILE TABELLENOPTIMIERUNG */
 
 /* Grundlegende Tabellenoptimierung für mobile Geräte */
+/* Worktracker Seite - Container für Box-Reihenfolge (Desktop & Mobile) */
+.min-h-screen > div > .max-w-7xl.mx-auto.py-0 {
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+}
+
 @media (max-width: 640px) {
-  /* Worktracker Seite - Box-Reihenfolge umkehren (nur mobile) */
-  /* Container für Worktracker-Seite */
-  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 {
-    position: relative !important;
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: calc(100vh - 64px) !important; /* Höhe abzüglich Header */
-    padding-bottom: 0 !important; /* Kein Padding unten, da die Zeit-Box fixiert ist */
-  }
-  
-  /* Selektor für die Tasks-Box (hat p-6 und w-full Klassen) */
-  /* ✅ REFACTORING: Angepasst für vereinheitlichte Tasks-Box mit CSS-Klasse */
+  /* To Do's Box auf Mobile oben */
   .worktracker-tasks-box,
   .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6.w-full {
-    order: 2 !important; /* Mobile: unten (Tasks-Box) */
-    margin-bottom: 170px !important; /* Erhöht von 150px auf 170px - mehr Platz für die fixierte Zeiterfassung-Box und den Footer */
-  }
-  
-  /* Desktop: Tasks-Box oben (order: 1) */
-  @media (min-width: 640px) {
-    .worktracker-tasks-box {
-      order: 1 !important; /* Desktop: oben */
-      margin-bottom: 1.25rem !important; /* Normaler Abstand auf Desktop */
-    }
+    order: 1 !important;
+    margin-bottom: 170px !important; /* Platz für fixierte Zeiterfassung */
   }
   
   /* Ausnahme für Profil und Organisation - Formularfelder behalten Desktop-Design */
@@ -139,12 +127,9 @@ code {
     padding: 0.5rem 0.75rem !important;
   }
   
-  /* Zeiterfassungs-Box (WorktimeTracker/WorktimeList) identifizieren und fixieren */
-  /* ✅ REFACTORING: Mobile - Fixed Position (kein order, da fixed) */
-  /* Selektor für die Zeiterfassungs-Box (MB-8 Klasse) - Mobile: Fixed */
+  /* Zeiterfassungs-Box auf Mobile fixiert unten */
   .worktracker-worktime-box-mobile,
   .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8.block.sm\:hidden {
-    order: 1 !important; /* Mobile: oben (Zeiterfassung) - wird durch fixed position überschrieben */
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
@@ -154,18 +139,29 @@ code {
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
     margin-top: auto !important;
     margin-bottom: 0 !important;
-    padding-bottom: 0 !important; /* Reduziert von 0.5rem auf 0 - kein Abstand zum Footer */
+    padding-bottom: 0 !important;
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
     width: 100% !important;
-    max-height: 150px !important; /* Erhöht von 130px auf 150px, damit alles sichtbar ist */
+    max-height: 150px !important;
     overflow-y: auto !important;
   }
-  
-  /* Desktop: Zeiterfassung normaler Flow mit order */
+}
+
+/* --- DESKTOP LAYOUT (>= 640px) --- */
+@media (min-width: 640px) {
+  /* Zeiterfassung auf Desktop oben */
   .worktracker-worktime-box-desktop {
-    order: 2 !important; /* Desktop: unten (Zeiterfassung) */
+    order: 1 !important;
+    margin-bottom: 2rem !important;
   }
+
+  /* To Do's Box auf Desktop unten */
+  .worktracker-tasks-box {
+    order: 2 !important;
+    margin-bottom: 1.25rem !important;
+  }
+}
   
   /* DIREKTER SELEKTOR FÜR DIE ZEITERFASSUNGSBOX */
   /* Diese Regel zielt direkt auf alle p-6 Zeiterfassungsboxen ab, unabhängig von ihrer Verschachtelung */

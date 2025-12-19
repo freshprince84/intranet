@@ -112,6 +112,9 @@ async function testPostEndpoints(branchId: number) {
     console.log(`   Datum: ${testDate}`);
     console.log(`   Aktueller Preis: ${currentPrice}\n`);
 
+    // Definiere propertyId früh (wird später benötigt)
+    const propertyId = lobbyPmsSettings.propertyId;
+
     // Zuerst: Prüfe welche Endpoints überhaupt existieren (GET-Requests)
     console.log('🔍 Prüfe verfügbare Endpoints (GET-Requests)...\n');
     const discoveryEndpoints = [
@@ -294,7 +297,6 @@ async function testPostEndpoints(branchId: number) {
 
     // Erweiterte Suche nach dem Preis-Endpoint
     const testPrice = currentPrice + 1000; // Kleine Änderung für Test
-    const propertyId = lobbyPmsSettings.propertyId;
 
     // Erstelle Testfälle basierend auf der GET-Struktur
     const testCases: Array<{ path: string; method: string; body: any; desc: string }> = [
@@ -358,7 +360,7 @@ async function testPostEndpoints(branchId: number) {
             desc: `v1 Rate-Plans Prices POST (Daily Pricing - rate_id=${testRateId} - ALTERNATIVE!)`
           });
           
-          // PUT Varianten
+          // PUT Varianten für /api/v1/rates/{id}/prices
           cases.push({
             path: `/api/v1/rates/${testRateId}/prices`,
             method: 'PUT',
@@ -382,7 +384,31 @@ async function testPostEndpoints(branchId: number) {
             desc: `v1 Rates Prices PUT (Daily Pricing - rate_id=${testRateId})`
           });
           
-          // PATCH Varianten
+          // PUT Varianten für /api/v1/rate-plans/{id}/prices
+          cases.push({
+            path: `/api/v1/rate-plans/${testRateId}/prices`,
+            method: 'PUT',
+            body: {
+              room_type_id: roomTypeId,
+              date_from: testDate,
+              date_to: testDate,
+              price: testPrice,
+              currency: 'USD'
+            },
+            desc: `v1 Rate-Plans Prices PUT (Date Range - rate_id=${testRateId})`
+          });
+          
+          cases.push({
+            path: `/api/v1/rate-plans/${testRateId}/prices`,
+            method: 'PUT',
+            body: {
+              room_type_id: roomTypeId,
+              prices: [{ date: testDate, price: testPrice }]
+            },
+            desc: `v1 Rate-Plans Prices PUT (Daily Pricing - rate_id=${testRateId})`
+          });
+          
+          // PATCH Varianten für /api/v1/rates/{id}/prices
           cases.push({
             path: `/api/v1/rates/${testRateId}/prices`,
             method: 'PATCH',
@@ -404,6 +430,30 @@ async function testPostEndpoints(branchId: number) {
               prices: [{ date: testDate, price: testPrice }]
             },
             desc: `v1 Rates Prices PATCH (Daily Pricing - rate_id=${testRateId})`
+          });
+          
+          // PATCH Varianten für /api/v1/rate-plans/{id}/prices
+          cases.push({
+            path: `/api/v1/rate-plans/${testRateId}/prices`,
+            method: 'PATCH',
+            body: {
+              room_type_id: roomTypeId,
+              date_from: testDate,
+              date_to: testDate,
+              price: testPrice,
+              currency: 'USD'
+            },
+            desc: `v1 Rate-Plans Prices PATCH (Date Range - rate_id=${testRateId})`
+          });
+          
+          cases.push({
+            path: `/api/v1/rate-plans/${testRateId}/prices`,
+            method: 'PATCH',
+            body: {
+              room_type_id: roomTypeId,
+              prices: [{ date: testDate, price: testPrice }]
+            },
+            desc: `v1 Rate-Plans Prices PATCH (Daily Pricing - rate_id=${testRateId})`
           });
         }
         
