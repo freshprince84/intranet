@@ -154,6 +154,7 @@ async function testPostEndpoints(branchId: number) {
     
     // Prüfe verfügbare Räume/Verfügbarkeit für dieses Datum (um Struktur zu sehen)
     console.log('🔍 Prüfe verfügbare Räume-Struktur für Preis-Updates...\n');
+    let exactStructure: any = null;
     try {
       const availabilityResponse = await axiosInstance.get('/api/v2/available-rooms', {
         params: {
@@ -170,6 +171,9 @@ async function testPostEndpoints(branchId: number) {
         if (Array.isArray(availData) && availData.length > 0) {
           const firstEntry = availData[0];
           console.log(`   📋 Struktur-Beispiel:`, JSON.stringify(firstEntry, null, 2).substring(0, 800));
+          
+          // Speichere exakte Struktur für Update-Tests
+          exactStructure = firstEntry;
           
           // Prüfe ob Kategorien Preise enthalten
           if (firstEntry.categories && Array.isArray(firstEntry.categories) && firstEntry.categories.length > 0) {
@@ -213,9 +217,63 @@ async function testPostEndpoints(branchId: number) {
       { path: `/api/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v1/categories/{id}/prices' },
       { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'POST /api/v1/prices' },
       
-      // available-rooms mit Preis-Updates (POST statt PUT) - basierend auf GET-Struktur
-      { path: `/api/v2/available-rooms`, method: 'POST', body: { date: testDate, categories: [{ category_id: categoryId, plans: [{ prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'POST /api/v2/available-rooms (mit Preis-Updates)' },
-      { path: `/api/v2/available-rooms`, method: 'POST', body: { data: [{ date: testDate, categories: [{ category_id: categoryId, plans: [{ prices: [{ people: 1, value: testPrice }] }] }] }] }, desc: 'POST /api/v2/available-rooms (mit data array)' },
+      // available-rooms mit Preis-Updates - EXAKTE Struktur wie GET-Response (wenn verfügbar)
+      ...(exactStructure ? [
+        { 
+          path: `/api/v2/available-rooms`, 
+          method: 'PUT', 
+          body: {
+            ...exactStructure,
+            categories: exactStructure.categories.map((cat: any) => 
+              cat.category_id === categoryId 
+                ? {
+                    ...cat,
+                    plans: cat.plans.map((plan: any) => ({
+                      ...plan,
+                      prices: plan.prices.map((p: any) => 
+                        p.people === 1 ? { ...p, value: testPrice } : p
+                      )
+                    }))
+                  }
+                : cat
+            )
+          }, 
+          desc: 'PUT /api/v2/available-rooms (exakte GET-Struktur mit aktualisiertem Preis)' 
+        },
+        { 
+          path: `/api/v2/available-rooms`, 
+          method: 'POST', 
+          body: {
+            ...exactStructure,
+            categories: exactStructure.categories.map((cat: any) => 
+              cat.category_id === categoryId 
+                ? {
+                    ...cat,
+                    plans: cat.plans.map((plan: any) => ({
+                      ...plan,
+                      prices: plan.prices.map((p: any) => 
+                        p.people === 1 ? { ...p, value: testPrice } : p
+                      )
+                    }))
+                  }
+                : cat
+            )
+          }, 
+          desc: 'POST /api/v2/available-rooms (exakte GET-Struktur mit aktualisiertem Preis)' 
+        },
+      ] : []),
+      
+      // Fallback: Vereinfachte Struktur
+      { path: `/api/v2/available-rooms`, method: 'PUT', body: { date: testDate, categories: [{ category_id: categoryId, name: testEntry.roomName, available_rooms: testEntry.availableRooms, plans: [{ id: null, name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'PUT /api/v2/available-rooms (vereinfachte Struktur)' },
+      { path: `/api/v2/available-rooms`, method: 'POST', body: { date: testDate, categories: [{ category_id: categoryId, name: testEntry.roomName, available_rooms: testEntry.availableRooms, plans: [{ id: null, name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'POST /api/v2/available-rooms (vereinfachte Struktur)' },
+      { path: `/api/v2/available-rooms`, method: 'PATCH', body: { date: testDate, categories: [{ category_id: categoryId, plans: [{ prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'PATCH /api/v2/available-rooms (nur Preise)' },
+      
+      // Vielleicht gibt es einen separaten Endpoint für Rate Plans?
+      { path: `/api/v2/rate-plans`, method: 'POST', body: { category_id: categoryId, date: testDate, plan_name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }, desc: 'POST /api/v2/rate-plans (mit category_id)' },
+      { path: `/api/v2/rate-plans`, method: 'PUT', body: { category_id: categoryId, date: testDate, plan_name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }, desc: 'PUT /api/v2/rate-plans (mit category_id)' },
+      
+      // Vielleicht über Bookings-Update? (unwahrscheinlich, aber testen)
+      { path: `/api/v1/bookings`, method: 'PUT', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'PUT /api/v1/bookings (unwahrscheinlich)' },
       
       // Analog zu /api/v1/bookings - vielleicht gibt es /api/v1/prices?
       { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice, people: 1 }, desc: 'POST /api/v1/prices (analog zu bookings)' },
