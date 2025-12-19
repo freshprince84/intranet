@@ -3312,8 +3312,8 @@
       "label": "Intranet Plattform",
       "title": "Hospitality & Beratung",
       "badge": "Betrieb entlasten • Teams steuern • Umsatz sichern",
-      "headline": "Ein Intranet für Hostels, Hotels, Airbnbs & Beratungen",
-      "subline": "Zeiterfassung, Aufgaben, Wissen, Abrechnung und KI-gestützte Automatisierung in einer Oberfläche – mobil und im Haus einsetzbar.",
+      "headline": "Dein Betrieb in der Hosentasche – Das Intranet für Profis",
+      "subline": "Schluss mit WhatsApp-Chaos und Zettelwirtschaft. Die Komplettlösung für Hostels, Hotels und Beratungen. Alles in einer Oberfläche.",
       "ctaRegister": "Registrieren",
       "ctaRegisterLabel": "Registrieren",
       "ctaLogin": "Login",
@@ -3426,22 +3426,22 @@
       "formFallback": "Bitte Demo-Endpoint konfigurieren. Formular sendet aktuell nicht."
     },
     "faq": {
-      "title": "FAQ",
+      "title": "Häufige Fragen",
       "integration": {
         "q": "Wie integriert ihr in bestehende Systeme?",
-        "a": "LobbyPMS/TTLock ist vorbereitet. Weitere Integrationen klären wir im Onboarding."
+        "a": "LobbyPMS und TTLock sind nativ integriert. Weitere Schnittstellen realisieren wir individuell im Onboarding."
       },
       "support": {
-        "q": "Wie läuft Support?",
-        "a": "Support über das Intranet, klar priorisiert. Wissen liegt im Cerebro-Wiki."
+        "q": "Wie funktioniert der Support?",
+        "a": "Wir bieten 24/7 Notfall-Support und ein integriertes Wiki (Cerebro) für alle Standardabläufe Ihres Teams."
       },
       "security": {
-        "q": "Wie adressiert ihr Sicherheit?",
-        "a": "Rollen/Berechtigungen, Audits, KI-Uploads mit Validierung, HTTPS-only."
+        "q": "Wie sicher sind meine Daten?",
+        "a": "Wir nutzen modernste Verschlüsselung, rollenbasierte Zugriffe und regelmäßige Sicherheits-Audits."
       },
       "onboarding": {
-        "q": "Wie lange dauert das Onboarding?",
-        "a": "In der Regel wenige Stunden: Branches, Rollen, Standardfilter, dann Live-Gang."
+        "q": "Wie lange dauert die Einrichtung?",
+        "a": "In der Regel ist Ihr Team innerhalb von 24 Stunden startklar – inklusive aller Rollen und Branches."
       }
     },
     "footer": {
