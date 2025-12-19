@@ -2898,9 +2898,19 @@ const Worktracker: React.FC = () => {
                                                 // Hilfsfunktion: Erkenne Dorm vs. Private und formatiere Zimmername-Anzeige
                                                 const getRoomDisplayText = (reservation: Reservation): string | null => {
                                                     const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                                                    return isDorm 
-                                                        ? reservation.roomNumber?.trim() || null
-                                                        : reservation.roomDescription?.trim() || null;
+                                                    if (isDorm) {
+                                                        const roomNumber = reservation.roomNumber?.trim() || '';
+                                                        const roomName = reservation.roomDescription?.trim() || '';
+                                                        // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                                                        if (roomNumber.includes('(')) {
+                                                            return roomNumber;
+                                                        } else if (roomName && roomNumber) {
+                                                            return `${roomName} (${roomNumber})`;
+                                                        }
+                                                        return roomNumber || roomName || null;
+                                                    } else {
+                                                        return reservation.roomDescription?.trim() || null;
+                                                    }
                                                 };
                                                 
                                                 const formatDate = (dateString: string) => {
@@ -3332,12 +3342,22 @@ const Worktracker: React.FC = () => {
                                                                                 </td>
                                                                             );
                                                                         case 'roomNumber':
-                                                                            // Tabellen-Anzeige: Dorms zeigen roomNumber (bereits "Zimmername (Bettnummer)"), Privates zeigen roomDescription
+                                                                            // Tabellen-Anzeige: Dorms können "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Privates zeigen roomDescription
                                                                             const getRoomDisplayTextForTable = (reservation: Reservation): string => {
                                                                                 const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                                                                                return isDorm 
-                                                                                    ? reservation.roomNumber?.trim() || '-'
-                                                                                    : reservation.roomDescription?.trim() || '-';
+                                                                                if (isDorm) {
+                                                                                    const roomNumber = reservation.roomNumber?.trim() || '';
+                                                                                    const roomName = reservation.roomDescription?.trim() || '';
+                                                                                    // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                                                                                    if (roomNumber.includes('(')) {
+                                                                                        return roomNumber;
+                                                                                    } else if (roomName && roomNumber) {
+                                                                                        return `${roomName} (${roomNumber})`;
+                                                                                    }
+                                                                                    return roomNumber || roomName || '-';
+                                                                                } else {
+                                                                                    return reservation.roomDescription?.trim() || '-';
+                                                                                }
                                                                             };
                                                                             return (
                                                                                 <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
@@ -4267,9 +4287,19 @@ const Worktracker: React.FC = () => {
                                                 // Hilfsfunktion: Erkenne Dorm vs. Private und formatiere Zimmername-Anzeige
                                                 const getRoomDisplayText = (reservation: Reservation): string | null => {
                                                     const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                                                    return isDorm 
-                                                        ? reservation.roomNumber?.trim() || null
-                                                        : reservation.roomDescription?.trim() || null;
+                                                    if (isDorm) {
+                                                        const roomNumber = reservation.roomNumber?.trim() || '';
+                                                        const roomName = reservation.roomDescription?.trim() || '';
+                                                        // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                                                        if (roomNumber.includes('(')) {
+                                                            return roomNumber;
+                                                        } else if (roomName && roomNumber) {
+                                                            return `${roomName} (${roomNumber})`;
+                                                        }
+                                                        return roomNumber || roomName || null;
+                                                    } else {
+                                                        return reservation.roomDescription?.trim() || null;
+                                                    }
                                                 };
                                                 
                                                 const formatDate = (dateString: string) => {
@@ -4689,12 +4719,22 @@ const Worktracker: React.FC = () => {
                                                                                 </td>
                                                                             );
                                                                         case 'roomNumber':
-                                                                            // Tabellen-Anzeige: Dorms zeigen roomNumber (bereits "Zimmername (Bettnummer)"), Privates zeigen roomDescription
+                                                                            // Tabellen-Anzeige: Dorms können "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Privates zeigen roomDescription
                                                                             const getRoomDisplayTextForTable = (reservation: Reservation): string => {
                                                                                 const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                                                                                return isDorm 
-                                                                                    ? reservation.roomNumber?.trim() || '-'
-                                                                                    : reservation.roomDescription?.trim() || '-';
+                                                                                if (isDorm) {
+                                                                                    const roomNumber = reservation.roomNumber?.trim() || '';
+                                                                                    const roomName = reservation.roomDescription?.trim() || '';
+                                                                                    // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                                                                                    if (roomNumber.includes('(')) {
+                                                                                        return roomNumber;
+                                                                                    } else if (roomName && roomNumber) {
+                                                                                        return `${roomName} (${roomNumber})`;
+                                                                                    }
+                                                                                    return roomNumber || roomName || '-';
+                                                                                } else {
+                                                                                    return reservation.roomDescription?.trim() || '-';
+                                                                                }
                                                                             };
                                                                             return (
                                                                                 <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
