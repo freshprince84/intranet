@@ -231,10 +231,27 @@ const PriceRecommendationsTab: React.FC = () => {
         return new Date(dateString).toLocaleDateString('de-DE');
     };
 
-    const formatPercent = (value: number | null): string => {
-        if (value === null || value === undefined || isNaN(value)) return '-';
-        const sign = value >= 0 ? '+' : '';
-        return `${sign}${value.toFixed(1)}%`;
+    const formatPercent = (value: number | null | any): string => {
+        if (value === null || value === undefined) return '-';
+        
+        // Konvertiere Prisma Decimal oder andere Objekte zu Number
+        let numValue: number;
+        if (typeof value === 'object' && value !== null) {
+            // Prisma Decimal hat toNumber() Methode
+            if (typeof value.toNumber === 'function') {
+                numValue = value.toNumber();
+            } else if (typeof value.toString === 'function') {
+                numValue = parseFloat(value.toString());
+            } else {
+                numValue = Number(value);
+            }
+        } else {
+            numValue = Number(value);
+        }
+        
+        if (isNaN(numValue)) return '-';
+        const sign = numValue >= 0 ? '+' : '';
+        return `${sign}${numValue.toFixed(1)}%`;
     };
 
     const getStatusColor = (status: string): string => {
