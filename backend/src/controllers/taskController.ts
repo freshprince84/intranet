@@ -59,6 +59,16 @@ export const getAllTasks = async (req: Request, res: Response) => {
         const sortBy = req.query.sortBy as string | undefined;
         const sortOrder = (req.query.sortOrder as string)?.toLowerCase() === 'desc' ? 'desc' : 'asc';
         
+        // ✅ SORTIERUNG: Mapping von Frontend-Feldern zu Backend-Feldern
+        let prismaSortBy = sortBy;
+        if (sortBy === 'responsible') {
+            prismaSortBy = 'responsible.firstName';
+        } else if (sortBy === 'branch') {
+            prismaSortBy = 'branch.name';
+        } else if (sortBy === 'qualityControl') {
+            prismaSortBy = 'qualityControl.firstName';
+        }
+        
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause: any = {};
         if (filterId) {
