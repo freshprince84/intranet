@@ -167,15 +167,19 @@ export const getAllTasks = async (req: Request, res: Response) => {
             // ✅ PAGINATION: Nur limit Items laden, offset überspringen
             take: limit,
             skip: offset,
-            orderBy: sortBy ? (
-                sortBy.includes('.') ? {
-                    [sortBy.split('.')[0]]: {
-                        [sortBy.split('.')[1]]: sortOrder
+            orderBy: prismaSortBy ? [
+                prismaSortBy.includes('.') ? {
+                    [prismaSortBy.split('.')[0]]: {
+                        [prismaSortBy.split('.')[1]]: sortOrder
                     }
                 } : {
-                    [sortBy]: sortOrder
-                }
-            ) : { createdAt: 'desc' }, // Fallback: Neueste Tasks zuerst
+                    [prismaSortBy]: sortOrder
+                },
+                { id: 'asc' } // ✅ STABILE SORTIERUNG: Fallback auf ID für Infinite Scroll
+            ] : [
+                { createdAt: 'desc' },
+                { id: 'desc' }
+            ],
             include: {
                 responsible: {
                     select: userSelect
