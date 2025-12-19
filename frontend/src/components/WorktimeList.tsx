@@ -6,6 +6,7 @@ import { de } from 'date-fns/locale';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { formatTime, calculateDuration } from '../utils/dateUtils.ts';
 import axiosInstance from '../config/axios.ts';
+import ResponsiveLabel from './shared/ResponsiveLabel.tsx';
 
 interface WorkTime {
     id: number;
@@ -132,41 +133,36 @@ const WorktimeList: React.FC = () => {
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 worktime-table">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
-                            <th 
+                            <th
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('startTime')}
                             >
-                                <span className="hidden sm:inline">{t('worktime.list.columns.start')}</span>
-                                <span className="inline sm:hidden">{t('worktime.list.columns.start')}</span>
+                                <ResponsiveLabel long={t('worktime.list.columns.start')} />
                                 {sortConfig.key === 'startTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('endTime')}
                             >
-                                <span className="hidden sm:inline">{t('worktime.list.columns.end')}</span>
-                                <span className="inline sm:hidden">{t('worktime.list.columns.end')}</span>
+                                <ResponsiveLabel long={t('worktime.list.columns.end')} />
                                 {sortConfig.key === 'endTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('duration')}
                             >
-                                <span className="hidden sm:inline">{t('worktime.list.columns.duration')}</span>
-                                <span className="inline sm:hidden">{t('worktime.list.columns.duration')}</span>
+                                <ResponsiveLabel long={t('worktime.list.columns.duration')} />
                                 {sortConfig.key === 'duration' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('branch.name')}
                             >
-                                <span className="hidden sm:inline">{t('worktime.list.columns.branch')}</span>
-                                <span className="inline sm:hidden">{t('worktime.list.columns.branchShort')}</span>
+                                <ResponsiveLabel long={t('worktime.list.columns.branch')} short={t('worktime.list.columns.branchShort')} />
                                 {sortConfig.key === 'branch.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                <span className="hidden sm:inline">{t('common.actions')}</span>
-                                <span className="inline sm:hidden">{t('worktime.list.columns.actionsShort')}</span>
+                                <ResponsiveLabel long={t('common.actions')} short={t('worktime.list.columns.actionsShort')} />
                             </th>
                         </tr>
                     </thead>
