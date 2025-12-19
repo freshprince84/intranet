@@ -3527,6 +3527,19 @@ const Worktracker: React.FC = () => {
                                                     </div>
                                             </div>
                                 </div>
+                    </div>
+                </div>
+
+                {/* ✅ REFACTORING: Zeiterfassung - Mobile: Fixed Position, Desktop: Normaler Flow mit order */}
+                {/* Mobile: Zeiterfassung fixiert über dem Footermenü */}
+                <div className="worktracker-worktime-box-mobile block sm:hidden">
+                    <WorktimeTracker />
+                </div>
+
+                {/* Desktop: Zeiterfassung normaler Flow mit order Property */}
+                <div className="worktracker-worktime-box-desktop hidden sm:block mb-8">
+                    <WorktimeTracker />
+                </div>
             </div>
             
             {/* Die Modals für beide Ansichten (mobil und desktop) */}
