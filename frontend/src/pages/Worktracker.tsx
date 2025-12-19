@@ -2159,10 +2159,8 @@ const Worktracker: React.FC = () => {
             <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
                 {/* Neu angeordnete UI-Elemente in einer Zeile */}
                 <div className="w-full mb-4">
-                    {/* Auf mobilen Geräten wird diese Reihenfolge angezeigt - Tasks oben, Zeiterfassung unten */}
-                    <div className="block sm:hidden w-full">
-                    {/* Tasks */}
-                        <div className="dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
+                    {/* ✅ REFACTORING: Tasks-Box vereinheitlicht - EINMAL für beide Ansichten (Mobile & Desktop) */}
+                    <div className="worktracker-tasks-box dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
                             <div className="flex items-center justify-between px-3 sm:px-4 md:px-6">
                                 {/* Linke Seite: "Neuer Task"-Button */}
                                 <div className="flex items-center">
@@ -3510,15 +3508,8 @@ const Worktracker: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Auf größeren Geräten bleibt die ursprüngliche Reihenfolge - Zeiterfassung oben, Tasks unten */}
-                    <div className="hidden sm:block">
-                        {/* Zeiterfassung */}
-                        <div className="mb-8">
-                            <WorktimeTracker />
-                        </div>
-                        
-                        {/* Tasks - vollständiger Inhalt für Desktop-Ansicht */}
-                        <div className="dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
+                    {/* ✅ REFACTORING: Tasks-Box vereinheitlicht - EINMAL für beide Ansichten (Mobile & Desktop) */}
+                    <div className="worktracker-tasks-box dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
                             <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
                                 {/* Linke Seite: "Neuer Task/Reservation"-Button */}
                                 <div className="flex items-center">
