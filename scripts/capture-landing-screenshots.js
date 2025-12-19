@@ -257,14 +257,44 @@ if (!fs.existsSync(OUTPUT_DIR)) {
     // 5. Team Worktime Control Screenshot (Ausschnitt: Team-Übersicht)
     console.log('Screenshot: Team Worktime Control...');
     try {
-      await page.goto(`${BASE_URL}/app/team-worktime-control`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(3000);
+      // Versuche verschiedene mögliche Routen
+      const teamRoutes = [
+        '/app/team-worktime-control',
+        '/app/teamworktime',
+        '/app/team-worktime',
+        '/app/teamworktimecontrol'
+      ];
       
-      // Prüfe ob wir auf Login umgeleitet wurden
-      if (page.url().includes('/login')) {
-        console.log('Team Worktime: Umleitung zu Login erkannt - überspringe Screenshot');
-        throw new Error('Nicht authentifiziert');
+      let teamPageLoaded = false;
+      for (const route of teamRoutes) {
+        try {
+          await page.goto(`${BASE_URL}${route}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          await page.waitForTimeout(2000);
+          
+          // Prüfe ob wir auf Login umgeleitet wurden
+          if (page.url().includes('/login')) {
+            console.log(`Team Worktime (${route}): Umleitung zu Login - versuche nächste Route`);
+            continue;
+          }
+          
+          // Prüfe ob Seite geladen ist (suche nach typischen Elementen)
+          const hasContent = await page.$('main, [role="main"], table, .team-list') !== null;
+          if (hasContent) {
+            teamPageLoaded = true;
+            console.log(`Team Worktime erfolgreich geladen: ${route}`);
+            break;
+          }
+        } catch (routeErr) {
+          console.log(`Route ${route} fehlgeschlagen: ${routeErr.message}`);
+          continue;
+        }
       }
+      
+      if (!teamPageLoaded) {
+        throw new Error('Keine gültige Team Worktime Route gefunden');
+      }
+      
+      await page.waitForTimeout(2000);
       
       // Suche spezifisch nach Team-Tabelle oder Liste
       const teamTable = await page.$('table, .team-list, [class*="team"], [class*="worktime"], tbody, .overflow-x-auto');
