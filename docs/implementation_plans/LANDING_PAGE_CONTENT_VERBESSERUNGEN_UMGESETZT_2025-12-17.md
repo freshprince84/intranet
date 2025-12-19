@@ -181,3 +181,4 @@ Alle 3 Phasen des Content-Verbesserungsplans wurden erfolgreich umgesetzt:
 3. `frontend/src/i18n/locales/es.json` - Alle Content-Verbesserungen
 4. `frontend/src/pages/LandingPage.tsx` - Screenshot-Beschreibungen
 5. `scripts/capture-landing-screenshots.js` - Präzisere Ausschnitte
+

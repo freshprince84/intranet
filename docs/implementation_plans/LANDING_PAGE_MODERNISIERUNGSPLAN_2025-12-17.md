@@ -381,3 +381,4 @@ npm install swiper framer-motion
 - [ ] Performance (PageSpeed Insights)
 - [ ] Accessibility (Screen Reader, Keyboard Navigation)
 
+

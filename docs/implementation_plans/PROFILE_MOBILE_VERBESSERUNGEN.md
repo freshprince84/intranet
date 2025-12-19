@@ -217,3 +217,4 @@ const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 5. Kleinere Schrift auf Mobile
 
 **Priorität:** 🔴 **HOCH** - Mobile-Erfahrung ist kritisch!
+

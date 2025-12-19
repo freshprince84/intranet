@@ -618,6 +618,10 @@ export const getAllReservations = async (req: Request, res: Response) => {
         ? parseInt(req.query.branchId as string, 10) 
         : undefined;
 
+    // ✅ SORTIERUNG: Sortier-Parameter aus Query lesen
+    const sortBy = req.query.sortBy as string | undefined;
+    const sortOrder = (req.query.sortOrder as string)?.toLowerCase() === 'desc' ? 'desc' : 'asc';
+
     // ✅ ROLLEN-ISOLATION: Baue Where-Clause basierend auf Rolle
     const whereClause: any = {
       organizationId: req.organizationId
@@ -754,7 +758,15 @@ export const getAllReservations = async (req: Request, res: Response) => {
         },
         task: true
       },
-      orderBy: {
+      orderBy: sortBy ? (
+        sortBy.includes('.') ? {
+            [sortBy.split('.')[0]]: {
+                [sortBy.split('.')[1]]: sortOrder
+            }
+        } : {
+            [sortBy]: sortOrder
+        }
+      ) : {
         createdAt: 'desc'
       }
     });

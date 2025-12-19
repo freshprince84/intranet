@@ -160,3 +160,4 @@ Alle 3 Phasen des Modernisierungsplans wurden erfolgreich umgesetzt:
 - [ ] Slider-Funktionalität
 - [ ] Scroll-Animationen
 
+

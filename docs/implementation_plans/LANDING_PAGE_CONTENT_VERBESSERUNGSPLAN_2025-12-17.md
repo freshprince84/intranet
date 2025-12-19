@@ -313,3 +313,4 @@ if (cerebroEditor) {
 - [ ] Screenshots zeigen wichtige Features
 - [ ] Beschreibungstexte klar und verständlich
 - [ ] Value Proposition klar kommuniziert
+
