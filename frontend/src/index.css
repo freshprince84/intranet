@@ -107,24 +107,33 @@ code {
   position: relative !important;
 }
 
+/* --- DESKTOP LAYOUT (>= 640px) --- */
+@media (min-width: 640px) {
+  /* Zeiterfassung auf Desktop oben */
+  .worktracker-worktime-box-desktop {
+    order: 1 !important;
+    margin-bottom: 2rem !important;
+  }
+
+  /* To Do's Box auf Desktop unten */
+  .worktracker-tasks-box {
+    order: 2 !important;
+    margin-bottom: 1.25rem !important;
+  }
+}
+
+/* --- MOBILE LAYOUT (< 640px) --- */
 @media (max-width: 640px) {
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 {
+    min-height: calc(100vh - 64px) !important; /* Höhe abzüglich Header */
+    padding-bottom: 0 !important;
+  }
+  
   /* To Do's Box auf Mobile oben */
   .worktracker-tasks-box,
   .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6.w-full {
     order: 1 !important;
     margin-bottom: 170px !important; /* Platz für fixierte Zeiterfassung */
-  }
-  
-  /* Ausnahme für Profil und Organisation - Formularfelder behalten Desktop-Design */
-  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 input,
-  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 select,
-  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 textarea,
-  div[class*="ProfileData"] input,
-  div[class*="ProfileData"] select,
-  div[class*="ProfileData"] textarea {
-    font-size: 0.875rem !important;
-    height: 2.25rem !important;
-    padding: 0.5rem 0.75rem !important;
   }
   
   /* Zeiterfassungs-Box auf Mobile fixiert unten */
@@ -146,22 +155,6 @@ code {
     max-height: 150px !important;
     overflow-y: auto !important;
   }
-}
-
-/* --- DESKTOP LAYOUT (>= 640px) --- */
-@media (min-width: 640px) {
-  /* Zeiterfassung auf Desktop oben */
-  .worktracker-worktime-box-desktop {
-    order: 1 !important;
-    margin-bottom: 2rem !important;
-  }
-
-  /* To Do's Box auf Desktop unten */
-  .worktracker-tasks-box {
-    order: 2 !important;
-    margin-bottom: 1.25rem !important;
-  }
-}
   
   /* DIREKTER SELEKTOR FÜR DIE ZEITERFASSUNGSBOX */
   /* Diese Regel zielt direkt auf alle p-6 Zeiterfassungsboxen ab, unabhängig von ihrer Verschachtelung */
