@@ -127,19 +127,61 @@ async function testPostEndpoints(branchId: number) {
       `/api/v2/rate-plans/${categoryId}`,
       `/api/v1/categories/${categoryId}`,
       `/api/v1/categories/${categoryId}/prices`,
+      `/api/v1/categories`, // Liste aller Kategorien
     ];
     
     const existingEndpoints: string[] = [];
+    let categoryData: any = null;
+    
     for (const endpoint of discoveryEndpoints) {
       try {
         const response = await axiosInstance.get(endpoint, { validateStatus: (s) => s < 500 });
         if (response.status !== 404) {
           existingEndpoints.push(endpoint);
           console.log(`   ✅ ${endpoint} existiert (Status: ${response.status})`);
+          
+          // Speichere Kategorie-Daten für weitere Analyse
+          if (endpoint === `/api/v2/categories/${categoryId}` || endpoint === `/api/v1/categories/${categoryId}`) {
+            categoryData = response.data;
+            console.log(`   📋 Kategorie-Daten-Struktur:`, JSON.stringify(categoryData, null, 2).substring(0, 500));
+          }
         }
       } catch (error) {
         // Ignoriere Fehler
       }
+    }
+    console.log('');
+    
+    // Prüfe verfügbare Räume/Verfügbarkeit für dieses Datum (um Struktur zu sehen)
+    console.log('🔍 Prüfe verfügbare Räume-Struktur für Preis-Updates...\n');
+    try {
+      const availabilityResponse = await axiosInstance.get('/api/v2/available-rooms', {
+        params: {
+          start_date: testDate,
+          end_date: testDate,
+          property_id: lobbyPmsSettings.propertyId
+        },
+        validateStatus: (s) => s < 500
+      });
+      
+      if (availabilityResponse.status === 200 && availabilityResponse.data) {
+        console.log(`   ✅ /api/v2/available-rooms existiert`);
+        const availData = availabilityResponse.data.data || availabilityResponse.data;
+        if (Array.isArray(availData) && availData.length > 0) {
+          const firstEntry = availData[0];
+          console.log(`   📋 Struktur-Beispiel:`, JSON.stringify(firstEntry, null, 2).substring(0, 800));
+          
+          // Prüfe ob Kategorien Preise enthalten
+          if (firstEntry.categories && Array.isArray(firstEntry.categories) && firstEntry.categories.length > 0) {
+            const firstCategory = firstEntry.categories.find((c: any) => c.category_id === categoryId);
+            if (firstCategory) {
+              console.log(`   📋 Kategorie-Struktur mit Preisen:`, JSON.stringify(firstCategory, null, 2).substring(0, 800));
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // Ignoriere Fehler
     }
     console.log('');
 
@@ -171,8 +213,17 @@ async function testPostEndpoints(branchId: number) {
       { path: `/api/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v1/categories/{id}/prices' },
       { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'POST /api/v1/prices' },
       
-      // available-rooms mit Preis-Updates (POST statt PUT)
+      // available-rooms mit Preis-Updates (POST statt PUT) - basierend auf GET-Struktur
       { path: `/api/v2/available-rooms`, method: 'POST', body: { date: testDate, categories: [{ category_id: categoryId, plans: [{ prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'POST /api/v2/available-rooms (mit Preis-Updates)' },
+      { path: `/api/v2/available-rooms`, method: 'POST', body: { data: [{ date: testDate, categories: [{ category_id: categoryId, plans: [{ prices: [{ people: 1, value: testPrice }] }] }] }] }, desc: 'POST /api/v2/available-rooms (mit data array)' },
+      
+      // Analog zu /api/v1/bookings - vielleicht gibt es /api/v1/prices?
+      { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice, people: 1 }, desc: 'POST /api/v1/prices (analog zu bookings)' },
+      { path: `/api/v1/prices`, method: 'POST', body: { category_id: categoryId, start_date: testDate, end_date: testDate, price: testPrice }, desc: 'POST /api/v1/prices (mit start/end_date)' },
+      
+      // Kategorien-Update (PATCH/PUT) - vielleicht kann man Preise direkt in Kategorie aktualisieren?
+      { path: `/api/v2/categories/${categoryId}`, method: 'PATCH', body: { prices: { [testDate]: { [1]: testPrice } } }, desc: 'PATCH /api/v2/categories/{id} (mit prices object)' },
+      { path: `/api/v2/categories/${categoryId}`, method: 'PUT', body: { prices: { [testDate]: { [1]: testPrice } } }, desc: 'PUT /api/v2/categories/{id} (mit prices object)' },
       
       // Rate Plans
       { path: `/api/v2/rate-plans/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'PUT /api/v2/rate-plans/{id}/prices' },
