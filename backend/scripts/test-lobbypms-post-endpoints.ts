@@ -249,6 +249,97 @@ async function testPostEndpoints(branchId: number) {
 
     // Erstelle Testfälle basierend auf der GET-Struktur
     const testCases: Array<{ path: string; method: string; body: any; desc: string }> = [
+      // ⚠️ PRIORITÄT: Rate Plans Endpoint (laut Dokumentation!)
+      ...(rateId && roomTypeId ? [
+        { 
+          path: `/api/v1/rates/${rateId}/prices`, 
+          method: 'POST', 
+          body: { 
+            room_type_id: roomTypeId, 
+            date_from: testDate, 
+            date_to: testDate, 
+            price: testPrice, 
+            currency: 'USD' 
+          }, 
+          desc: 'v1 Rates Prices POST (Date Range - laut Dokumentation!)' 
+        },
+        { 
+          path: `/api/v1/rates/${rateId}/prices`, 
+          method: 'POST', 
+          body: { 
+            room_type_id: roomTypeId, 
+            prices: [{ date: testDate, price: testPrice }] 
+          }, 
+          desc: 'v1 Rates Prices POST (Daily Pricing - laut Dokumentation!)' 
+        },
+        { 
+          path: `/api/v1/rates/${rateId}/prices`, 
+          method: 'PUT', 
+          body: { 
+            room_type_id: roomTypeId, 
+            date_from: testDate, 
+            date_to: testDate, 
+            price: testPrice, 
+            currency: 'USD' 
+          }, 
+          desc: 'v1 Rates Prices PUT (Date Range)' 
+        },
+        { 
+          path: `/api/v1/rates/${rateId}/prices`, 
+          method: 'PUT', 
+          body: { 
+            room_type_id: roomTypeId, 
+            prices: [{ date: testDate, price: testPrice }] 
+          }, 
+          desc: 'v1 Rates Prices PUT (Daily Pricing)' 
+        },
+        { 
+          path: `/api/v1/rates/${rateId}/prices`, 
+          method: 'PATCH', 
+          body: { 
+            room_type_id: roomTypeId, 
+            date_from: testDate, 
+            date_to: testDate, 
+            price: testPrice, 
+            currency: 'USD' 
+          }, 
+          desc: 'v1 Rates Prices PATCH (Date Range)' 
+        },
+        { 
+          path: `/api/v1/rates/${rateId}/prices`, 
+          method: 'PATCH', 
+          body: { 
+            room_type_id: roomTypeId, 
+            prices: [{ date: testDate, price: testPrice }] 
+          }, 
+          desc: 'v1 Rates Prices PATCH (Daily Pricing)' 
+        },
+      ] : []),
+      // Fallback: Versuche auch ohne rate_id (falls wir sie nicht gefunden haben)
+      ...(roomTypeId ? [
+        { 
+          path: `/api/v1/rates/prices`, 
+          method: 'POST', 
+          body: { 
+            room_type_id: roomTypeId, 
+            date_from: testDate, 
+            date_to: testDate, 
+            price: testPrice, 
+            currency: 'USD' 
+          }, 
+          desc: 'v1 Rates Prices POST (ohne rate_id im Pfad)' 
+        },
+        { 
+          path: `/api/v1/rates/prices`, 
+          method: 'POST', 
+          body: { 
+            room_type_id: roomTypeId, 
+            prices: [{ date: testDate, price: testPrice }] 
+          }, 
+          desc: 'v1 Rates Prices POST (Daily, ohne rate_id im Pfad)' 
+        },
+      ] : []),
+      
       // 1. Die wahrscheinlichsten v1 Varianten (da v1 für Bookings funktioniert)
       { path: `/api/v1/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v1 Category Prices POST' },
       { path: `/api/v1/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v1 Category Prices PUT' },
