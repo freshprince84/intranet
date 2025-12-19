@@ -3519,14 +3519,9 @@ const Worktracker: React.FC = () => {
                                 <div ref={tourBookingsLoadMoreRef} className="flex justify-center py-4">
                                     {tourBookingsLoadingMore && (
                                         <CircularProgress size={24} />
-                                                    )}
-                                                </div>
-                            )}
-                            
-                            
-                                                    </div>
-                                            </div>
+                                    )}
                                 </div>
+                            )}
                     </div>
 
                     {/* ✅ REFACTORING: Zeiterfassung - Mobile: Fixed Position, Desktop: Normaler Flow mit order */}
