@@ -1768,11 +1768,23 @@ ${contentText}
               languageCode as 'en' | 'es' | 'de'
             );
             
-            // Formatiere Zimmer-Anzeige: Dorm = roomNumber (bereits "Zimmername (Bettnummer)"), Private = roomDescription
+            // Formatiere Zimmer-Anzeige: Dorm kann "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Private = roomDescription
             const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-            const roomDisplay = isDorm
-              ? reservation.roomNumber?.trim() || 'N/A'
-              : reservation.roomDescription?.trim() || 'N/A';
+            let roomDisplay: string;
+            if (isDorm) {
+              const roomNumber = reservation.roomNumber?.trim() || '';
+              const roomName = reservation.roomDescription?.trim() || '';
+              // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+              if (roomNumber.includes('(')) {
+                roomDisplay = roomNumber;
+              } else if (roomName && roomNumber) {
+                roomDisplay = `${roomName} (${roomNumber})`;
+              } else {
+                roomDisplay = roomNumber || roomName || 'N/A';
+              }
+            } else {
+              roomDisplay = reservation.roomDescription?.trim() || 'N/A';
+            }
             
             let contentText: string;
             if (languageCode === 'en') {
@@ -1825,11 +1837,23 @@ ${contentText}
               languageCode
             );
             
-            // Formatiere Zimmer-Anzeige: Dorm = roomNumber (bereits "Zimmername (Bettnummer)"), Private = roomDescription
+            // Formatiere Zimmer-Anzeige: Dorm kann "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Private = roomDescription
             const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-            const roomDisplay = isDorm
-              ? reservation.roomNumber?.trim() || 'N/A'
-              : reservation.roomDescription?.trim() || 'N/A';
+            let roomDisplay: string;
+            if (isDorm) {
+              const roomNumber = reservation.roomNumber?.trim() || '';
+              const roomName = reservation.roomDescription?.trim() || '';
+              // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+              if (roomNumber.includes('(')) {
+                roomDisplay = roomNumber;
+              } else if (roomName && roomNumber) {
+                roomDisplay = `${roomName} (${roomNumber})`;
+              } else {
+                roomDisplay = roomNumber || roomName || 'N/A';
+              }
+            } else {
+              roomDisplay = reservation.roomDescription?.trim() || 'N/A';
+            }
             
             // Lade WhatsApp-Template
             const whatsappTemplate = await this.getMessageTemplate(
@@ -2300,11 +2324,23 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       languageCode
     );
 
-    // Formatiere roomDisplay: Dorm = roomNumber (bereits "Zimmername (Bettnummer)"), Private = roomDescription
+    // Formatiere roomDisplay: Dorm kann "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Private = roomDescription
     const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-    const roomDisplay = isDorm
-      ? reservation.roomNumber?.trim() || 'N/A'
-      : reservation.roomDescription?.trim() || 'N/A';
+    let roomDisplay: string;
+    if (isDorm) {
+      const roomNumber = reservation.roomNumber?.trim() || '';
+      const roomName = reservation.roomDescription?.trim() || '';
+      // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+      if (roomNumber.includes('(')) {
+        roomDisplay = roomNumber;
+      } else if (roomName && roomNumber) {
+        roomDisplay = `${roomName} (${roomNumber})`;
+      } else {
+        roomDisplay = roomNumber || roomName || 'N/A';
+      }
+    } else {
+      roomDisplay = reservation.roomDescription?.trim() || 'N/A';
+    }
 
     // Formatiere roomDescription für Template (nur wenn vorhanden)
     const descriptionLabel = languageCode === 'en' ? 'Description' : languageCode === 'es' ? 'Descripción' : 'Beschreibung';
