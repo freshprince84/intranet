@@ -323,71 +323,166 @@ async function testPostEndpoints(branchId: number) {
 
     // ⚠️ PRIORITÄT: /calendario/setCustomRate (aus Screenshot!)
     // Screenshot zeigt: POST https://app.lobbypms.com/calendario/setCustomRate
-    console.log('🎯 Teste /calendario/setCustomRate (aus Screenshot!)...\n');
-    const setCustomRatePayloads = [
+    // PROBLEM: 302 Redirect zu /entrar (Login) = Authentifizierung funktioniert nicht!
+    // LÖSUNG: Teste verschiedene Authentifizierungsmethoden (wie bei Bold Payment: x-api-key, etc.)
+    console.log('🎯 Teste /calendario/setCustomRate mit verschiedenen Authentifizierungsmethoden...\n');
+    
+    // Basis-Payload (wird für alle Auth-Methoden verwendet)
+    const basePayload = {
+      categoryId: categoryId,
+      date: testDate,
+      price: testPrice
+    };
+    
+    // Verschiedene Authentifizierungsmethoden (basierend auf Code-Analyse)
+    // 1. Bearer Token (aktuell - funktioniert für /api/v1/bookings)
+    // 2. X-API-Key Header (wie bei Bold Payment)
+    // 3. X-API-Token Header
+    // 4. Query Parameter
+    // 5. Form-encoded statt JSON
+    const authMethods = [
       {
-        categoryId: categoryId,
-        date: testDate,
-        price: testPrice
+        name: 'Authorization: Bearer (aktuell - funktioniert für /api/v1/bookings)',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        payload: basePayload
       },
       {
-        category_id: categoryId,
-        date: testDate,
-        price: testPrice
+        name: 'X-API-Key Header (wie Bold Payment)',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey
+        },
+        payload: basePayload
       },
       {
-        categoryId: categoryId,
-        date: testDate,
-        price: testPrice,
-        currency: 'USD'
+        name: 'X-API-Token Header',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Token': apiKey
+        },
+        payload: basePayload
       },
       {
-        categoryId: categoryId,
-        date: testDate,
-        value: testPrice
+        name: 'Authorization: x-api-key (Bold Payment Format)',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `x-api-key ${apiKey}`
+        },
+        payload: basePayload
       },
       {
-        categoryId: categoryId,
-        date_from: testDate,
-        date_to: testDate,
-        price: testPrice
+        name: 'Query Parameter ?api_key=...',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        payload: basePayload,
+        params: { api_key: apiKey }
       },
       {
-        categoryId: categoryId,
-        dates: [testDate],
-        price: testPrice
+        name: 'Query Parameter ?token=...',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        payload: basePayload,
+        params: { token: apiKey }
       },
       {
-        categoryId: categoryId,
-        date: testDate,
-        customRate: testPrice
+        name: 'Form-encoded (application/x-www-form-urlencoded)',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        payload: new URLSearchParams({
+          categoryId: categoryId.toString(),
+          date: testDate,
+          price: testPrice.toString()
+        }).toString()
       },
       {
-        categoryId: categoryId,
-        date: testDate,
-        rate: testPrice
+        name: 'Form-encoded + X-API-Key',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-API-Key': apiKey
+        },
+        payload: new URLSearchParams({
+          categoryId: categoryId.toString(),
+          date: testDate,
+          price: testPrice.toString()
+        }).toString()
+      },
+      {
+        name: 'JSON + category_id statt categoryId',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        payload: {
+          category_id: categoryId,
+          date: testDate,
+          price: testPrice
+        }
+      },
+      {
+        name: 'JSON + value statt price',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        payload: {
+          categoryId: categoryId,
+          date: testDate,
+          value: testPrice
+        }
       },
     ];
 
-    for (const payload of setCustomRatePayloads) {
+    for (const authMethod of authMethods) {
       try {
-        console.log(`   🧪 Teste Payload: ${JSON.stringify(payload)}`);
-        const response = await appAxiosInstance.post('/calendario/setCustomRate', payload, {
-          validateStatus: (s) => s < 500,
-          maxRedirects: 0 // Screenshot zeigt 302 Redirect, also erlauben wir das
-        });
+        console.log(`   🔐 Teste Auth-Methode: ${authMethod.name}`);
+        console.log(`   📋 Payload: ${typeof authMethod.payload === 'string' ? authMethod.payload : JSON.stringify(authMethod.payload)}`);
+        
+        const config: any = {
+          validateStatus: (s: number) => s < 500,
+          maxRedirects: 0, // Screenshot zeigt 302 Redirect
+          headers: authMethod.headers
+        };
+        
+        if (authMethod.params) {
+          config.params = authMethod.params;
+        }
+        
+        const response = await appAxiosInstance.post('/calendario/setCustomRate', authMethod.payload, config);
         
         console.log(`   📋 Status: ${response.status}`);
-        if (response.status === 200 || response.status === 302) {
-          console.log(`   ✅ ✅ ✅ ERFOLG! Status ${response.status} - Endpoint funktioniert! ✅ ✅ ✅`);
+        
+        // Prüfe ob Redirect zu /entrar (Login) = Auth fehlgeschlagen
+        const location = response.headers.location || '';
+        if (response.status === 302 && location.includes('/entrar')) {
+          console.log(`   ⚠️  Status 302 → /entrar (Login) = Authentifizierung fehlgeschlagen`);
+        } else if (response.status === 200) {
+          console.log(`   ✅ ✅ ✅ ERFOLG! Status 200 - Authentifizierung funktioniert! ✅ ✅ ✅`);
           console.log(`   📋 Response:`, JSON.stringify(response.data, null, 2).substring(0, 500));
           console.log(`   📋 Response Headers:`, JSON.stringify(response.headers, null, 2).substring(0, 500));
+        } else if (response.status === 302 && !location.includes('/entrar')) {
+          console.log(`   ✅ ✅ ✅ ERFOLG! Status 302 (aber nicht zu /entrar) - möglicherweise erfolgreich! ✅ ✅ ✅`);
+          console.log(`   📋 Location: ${location}`);
+          console.log(`   📋 Response:`, JSON.stringify(response.data, null, 2).substring(0, 500));
         } else {
           console.log(`   ⚠️  Status ${response.status}:`, JSON.stringify(response.data, null, 2).substring(0, 300));
+          if (location) {
+            console.log(`   📋 Location: ${location}`);
+          }
         }
       } catch (error: any) {
         if (error.response) {
+          const location = error.response.headers?.location || '';
           console.log(`   ⚠️  Status ${error.response.status}:`, JSON.stringify(error.response.data, null, 2).substring(0, 300));
+          if (location && !location.includes('/entrar')) {
+            console.log(`   📋 Location: ${location} (nicht /entrar - möglicherweise erfolgreich!)`);
+          }
         } else if (error.code === 'ECONNREFUSED' || error.message.includes('ENOTFOUND')) {
           console.log(`   ❌ Verbindungsfehler: ${error.message}`);
         } else {
