@@ -3,10 +3,13 @@
  * Test-Script: Testet Preis-Update-Endpoints (PUT/POST/PATCH)
  * 
  * Verwendung:
- * npx ts-node scripts/test-lobbypms-post-endpoints.ts [branchId]
+ * npx ts-node scripts/test-lobbypms-post-endpoints.ts [branchId] [email] [password]
  * 
  * Beispiel:
  * npx ts-node scripts/test-lobbypms-post-endpoints.ts 3
+ * npx ts-node scripts/test-lobbypms-post-endpoints.ts 3 email@example.com password123
+ * 
+ * HINWEIS: Wenn email/password nicht angegeben, wird Session-basierte Auth übersprungen
  */
 
 import { PrismaClient } from '@prisma/client';
