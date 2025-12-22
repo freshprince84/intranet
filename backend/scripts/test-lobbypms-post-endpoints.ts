@@ -191,12 +191,13 @@ async function testPostEndpoints(branchId: number) {
     console.log('');
 
     // ⚠️ WICHTIG: Rate Plans abrufen (laut Dokumentation benötigt!)
-    console.log('🔍 Hole Rate Plans (laut Dokumentation benötigt für Preis-Updates)...\n');
+    // Screenshot zeigt: GET /api/v1/rates (WICHTIG!)
+    console.log('🔍 Hole Rate Plans (laut Screenshots: GET /api/v1/rates)...\n');
     let ratePlans: any[] = [];
     let rateId: number | null = null;
     let roomTypeId: number | null = null;
     
-    // Teste verschiedene Endpoints für Rate Plans
+    // PRIORITÄT: Teste /api/v1/rates zuerst (wie in Screenshots gezeigt!)
     const ratePlanEndpoints = ['/api/v1/rates', '/api/v1/rate-plans', '/api/v2/rates', '/api/v2/rate-plans'];
     
     for (const endpoint of ratePlanEndpoints) {
@@ -237,12 +238,16 @@ async function testPostEndpoints(branchId: number) {
           } else if (Array.isArray(ratesData) && ratesData.length === 0) {
             console.log(`   ⚠️  ${endpoint} gibt leeres Array zurück - teste mit Parametern...`);
             
-            // Teste mit verschiedenen Query-Parametern
+            // Teste mit ERWEITERTEN Query-Parametern (vielleicht braucht /api/v1/rates spezielle Parameter?)
             const testParams = [
               { property_id: propertyId },
               { category_id: categoryId },
               { room_type_id: categoryId },
               { property_id: propertyId, category_id: categoryId },
+              { property_id: propertyId, room_type_id: categoryId },
+              { property: propertyId }, // Vielleicht "property" statt "property_id"?
+              { property: propertyId, category: categoryId },
+              { property: propertyId, room_type: categoryId },
             ];
             
             for (const params of testParams) {
@@ -264,7 +269,11 @@ async function testPostEndpoints(branchId: number) {
                     else if (firstRate.roomTypeId) roomTypeId = firstRate.roomTypeId;
                     console.log(`   📋 Extrahierte IDs: rate_id=${rateId}, room_type_id=${roomTypeId}`);
                     break;
+                  } else {
+                    console.log(`   📋 ${endpoint} mit Parametern ${JSON.stringify(params)}: Status ${paramResponse.status}, Data:`, JSON.stringify(paramData, null, 2).substring(0, 300));
                   }
+                } else {
+                  console.log(`   📋 ${endpoint} mit Parametern ${JSON.stringify(params)}: Status ${paramResponse.status}`);
                 }
               } catch (e) {
                 // Ignoriere
@@ -276,6 +285,9 @@ async function testPostEndpoints(branchId: number) {
           }
         } else {
           console.log(`   ⚠️  ${endpoint} Status: ${ratesResponse.status}`);
+          if (ratesResponse.status === 404) {
+            console.log(`   ⚠️  ${endpoint} gibt 404 - Endpoint existiert nicht oder benötigt Parameter`);
+          }
         }
       } catch (error) {
         console.log(`   ⚠️  ${endpoint} Fehler:`, (error as any).message);
@@ -460,6 +472,90 @@ async function testPostEndpoints(branchId: number) {
         return cases;
       })() : []),
       
+      // Teste direkte Updates auf Rate Plans (ohne /prices Suffix)
+      ...(roomTypeId ? (() => {
+        const possibleRateIds = rateId ? [rateId] : [categoryId, 1];
+        const directCases: Array<{ path: string; method: string; body: any; desc: string }> = [];
+        
+        for (const testRateId of possibleRateIds) {
+          // PUT direkt auf Rate Plan
+          directCases.push({
+            path: `/api/v1/rate-plans/${testRateId}`,
+            method: 'PUT',
+            body: {
+              prices: [{
+                room_type_id: roomTypeId,
+                date: testDate,
+                price: testPrice
+              }]
+            },
+            desc: `v1 Rate-Plans PUT (direkt - rate_id=${testRateId})`
+          });
+          
+          directCases.push({
+            path: `/api/v1/rate-plans/${testRateId}`,
+            method: 'PATCH',
+            body: {
+              prices: [{
+                room_type_id: roomTypeId,
+                date: testDate,
+                price: testPrice
+              }]
+            },
+            desc: `v1 Rate-Plans PATCH (direkt - rate_id=${testRateId})`
+          });
+          
+          // Mit Date Range im Body
+          directCases.push({
+            path: `/api/v1/rate-plans/${testRateId}`,
+            method: 'PUT',
+            body: {
+              room_type_id: roomTypeId,
+              date_from: testDate,
+              date_to: testDate,
+              price: testPrice,
+              currency: 'USD'
+            },
+            desc: `v1 Rate-Plans PUT (Date Range - rate_id=${testRateId})`
+          });
+        }
+        
+        return directCases;
+      })() : []),
+      
+      // Teste Preis-Endpoints ohne rate_id, aber mit category_id
+      {
+        path: `/api/v1/prices`,
+        method: 'POST',
+        body: {
+          category_id: categoryId,
+          room_type_id: categoryId,
+          date: testDate,
+          price: testPrice
+        },
+        desc: 'v1 Prices POST (mit category_id und room_type_id)'
+      },
+      {
+        path: `/api/v1/prices`,
+        method: 'POST',
+        body: {
+          category_id: categoryId,
+          date: testDate,
+          price: testPrice
+        },
+        desc: 'v1 Prices POST (nur category_id)'
+      },
+      {
+        path: `/api/v2/prices`,
+        method: 'POST',
+        body: {
+          category_id: categoryId,
+          date: testDate,
+          price: testPrice
+        },
+        desc: 'v2 Prices POST (mit category_id)'
+      },
+      
       // Fallback: Versuche auch ohne rate_id im Pfad (falls es anders strukturiert ist)
       ...(roomTypeId ? [
         {
@@ -525,6 +621,14 @@ async function testPostEndpoints(branchId: number) {
       // 9. v2 mit property_id
       { path: `/api/v2/properties/${propertyId}/categories/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v2 Prop/Cat Prices POST' },
       { path: `/api/v2/properties/${propertyId}/categories/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v2 Prop/Cat Prices PUT' },
+      
+      // 10. Plan-basierte Endpoints (da available-rooms plans enthält)
+      { path: `/api/v1/plans/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v1 Plans Prices POST' },
+      { path: `/api/v1/plans/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v1 Plans Prices PUT' },
+      { path: `/api/v2/plans/${categoryId}/prices`, method: 'POST', body: { date: testDate, price: testPrice }, desc: 'v2 Plans Prices POST' },
+      { path: `/api/v2/plans/${categoryId}/prices`, method: 'PUT', body: { date: testDate, price: testPrice }, desc: 'v2 Plans Prices PUT' },
+      { path: `/api/v1/plans/STANDARD_RATE/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v1 Plans STANDARD_RATE Prices POST' },
+      { path: `/api/v2/plans/STANDARD_RATE/prices`, method: 'POST', body: { category_id: categoryId, date: testDate, price: testPrice }, desc: 'v2 Plans STANDARD_RATE Prices POST' },
       
       // 10. v2 available-rooms basierend auf GET-Struktur
       { path: `/api/v2/available-rooms`, method: 'PUT', body: { date: testDate, property_id: propertyId, categories: [{ category_id: categoryId, plans: [{ name: 'STANDARD_RATE', prices: [{ people: 1, value: testPrice }] }] }] }, desc: 'v2 Available Rooms PUT (vereinfacht)' },

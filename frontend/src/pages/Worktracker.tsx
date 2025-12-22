@@ -2159,7 +2159,7 @@ const Worktracker: React.FC = () => {
         <div className="min-h-screen dark:bg-gray-900">
             <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
                 {/* Neu angeordnete UI-Elemente in einer Zeile */}
-                <div className="w-full mb-4">
+                <div className="w-full mb-4" style={{ display: 'flex', flexDirection: 'column' }}>
 
                     {/* ✅ REFACTORING: Tasks-Box vereinheitlicht - EINMAL für beide Ansichten (Mobile & Desktop) */}
                     <div className="worktracker-tasks-box dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
@@ -3522,22 +3522,22 @@ const Worktracker: React.FC = () => {
                                 <div ref={tourBookingsLoadMoreRef} className="flex justify-center py-4">
                                     {tourBookingsLoadingMore && (
                                         <CircularProgress size={24} />
-                                    )}
-                                </div>
+                                                    )}
+                                                </div>
                             )}
                     </div>
-
+                            
                     {/* ✅ REFACTORING: Zeiterfassung - Mobile: Fixed Position, Desktop: Normaler Flow mit order */}
                     {/* Mobile: Zeiterfassung fixiert über dem Footermenü */}
                     <div className="worktracker-worktime-box-mobile block sm:hidden">
                         <WorktimeTracker />
                     </div>
-
+                            
                     {/* Desktop: Zeiterfassung normaler Flow mit order Property */}
                     <div className="worktracker-worktime-box-desktop hidden sm:block mb-8">
                         <WorktimeTracker />
-                    </div>
-                </div>
+                                </div>
+            </div>
             
             {/* Die Modals für beide Ansichten (mobil und desktop) */}
             <CreateTaskModal 

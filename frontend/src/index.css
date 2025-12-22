@@ -107,21 +107,29 @@ code {
   position: relative !important;
 }
 
+/* Flex-Container für w-full mb-4 (enthält beide Boxen) */
+.min-h-screen > div > .max-w-7xl.mx-auto.py-0 > .w-full.mb-4 {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
 /* --- DESKTOP LAYOUT (>= 640px) --- */
 @media (min-width: 640px) {
-  /* Zeiterfassung auf Desktop oben */
+  /* Zeiterfassung auf Desktop oben - Erhöhte Spezifität */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > .w-full.mb-4 > .worktracker-worktime-box-desktop,
   .worktracker-worktime-box-desktop {
     order: 1 !important;
     margin-bottom: 2rem !important;
   }
 
-  /* To Do's Box auf Desktop unten */
+  /* To Do's Box auf Desktop unten - Erhöhte Spezifität */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > .w-full.mb-4 > .worktracker-tasks-box,
   .worktracker-tasks-box {
     order: 2 !important;
     margin-bottom: 1.25rem !important;
   }
 }
-
+  
 /* --- MOBILE LAYOUT (< 640px) --- */
 @media (max-width: 640px) {
   .min-h-screen > div > .max-w-7xl.mx-auto.py-0 {
@@ -129,16 +137,16 @@ code {
     padding-bottom: 0 !important;
   }
   
-  /* To Do's Box auf Mobile oben */
-  .worktracker-tasks-box,
-  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6.w-full {
+  /* To Do's Box auf Mobile oben - Erhöhte Spezifität */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > .w-full.mb-4 > .worktracker-tasks-box,
+  .worktracker-tasks-box {
     order: 1 !important;
     margin-bottom: 170px !important; /* Platz für fixierte Zeiterfassung */
   }
   
-  /* Zeiterfassungs-Box auf Mobile fixiert unten */
-  .worktracker-worktime-box-mobile,
-  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8.block.sm\:hidden {
+  /* Zeiterfassungs-Box auf Mobile fixiert unten - Erhöhte Spezifität */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > .w-full.mb-4 > .worktracker-worktime-box-mobile,
+  .worktracker-worktime-box-mobile {
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
