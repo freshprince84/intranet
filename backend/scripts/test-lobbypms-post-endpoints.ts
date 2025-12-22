@@ -495,6 +495,183 @@ async function testPostEndpoints(branchId: number, lobbyEmail?: string, lobbyPas
       console.log('');
     }
 
+    // ⚠️ NEU: /tarifas/guardar (aus Screenshot!)
+    // Screenshot zeigt: POST https://app.lobbypms.com/tarifas/guardar
+    // Möglicherweise benötigt es zuerst eine Temporada (Saison)!
+    console.log('🎯 Teste /tarifas/guardar (aus Screenshot!) + Temporada-Endpoints...\n');
+    
+    if (lobbyEmail && lobbyPassword) {
+      // Verwende Session-Cookies falls vorhanden
+      const sessionAxiosInstance = axios.create({
+        baseURL: 'https://app.lobbypms.com',
+        timeout: 30000,
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      });
+
+      // Versuche Login falls noch nicht gemacht
+      try {
+        const loginResponse = await sessionAxiosInstance.post('/entrar', 
+          new URLSearchParams({ email: lobbyEmail, password: lobbyPassword }).toString(),
+          { validateStatus: (s) => s < 500, maxRedirects: 5 }
+        );
+        const cookies = loginResponse.headers['set-cookie'] || [];
+        if (cookies.length > 0) {
+          sessionAxiosInstance.defaults.headers.common['Cookie'] = cookies.map(c => c.split(';')[0]).join('; ');
+        }
+      } catch (e) {
+        // Ignoriere
+      }
+
+      // SCHRITT 1: Prüfe Temporada-Endpoints (vielleicht muss zuerst eine Temporada erstellt werden)
+      console.log('   🔍 SCHRITT 1: Prüfe Temporada-Endpoints...\n');
+      const temporadaEndpoints = [
+        '/temporadas',
+        '/temporadas/crear',
+        '/temporadas/guardar',
+        '/api/temporadas',
+        '/api/v1/temporadas',
+        '/seasons',
+        '/seasons/create',
+      ];
+
+      let temporadaId: number | null = null;
+      let temporadaName: string | null = null;
+
+      for (const endpoint of temporadaEndpoints) {
+        try {
+          // Teste GET (um existierende Temporadas zu finden)
+          const getResponse = await sessionAxiosInstance.get(endpoint, {
+            validateStatus: (s) => s < 500,
+            maxRedirects: 0,
+          });
+
+          if (getResponse.status === 200 && getResponse.data) {
+            console.log(`   ✅ ${endpoint} (GET) existiert`);
+            // Versuche Temporada-ID aus Response zu extrahieren
+            const data = getResponse.data;
+            if (Array.isArray(data) && data.length > 0) {
+              const firstTemporada = data[0];
+              temporadaId = firstTemporada.id || firstTemporada.temporada_id || null;
+              temporadaName = firstTemporada.nombre || firstTemporada.name || null;
+              console.log(`   📋 Gefundene Temporada: id=${temporadaId}, name=${temporadaName}`);
+            }
+          }
+
+          // Teste POST (um neue Temporada zu erstellen)
+          const createPayload = {
+            nombre: 'Test Temporada',
+            fecha_inicio: testDate,
+            fecha_fin: testDate,
+          };
+
+          const postResponse = await sessionAxiosInstance.post(endpoint,
+            new URLSearchParams(createPayload as any).toString(),
+            {
+              validateStatus: (s) => s < 500,
+              maxRedirects: 0,
+            }
+          );
+
+          if (postResponse.status === 200 || (postResponse.status === 302 && !postResponse.headers.location?.includes('/entrar'))) {
+            console.log(`   ✅ ${endpoint} (POST) funktioniert - Temporada kann erstellt werden`);
+            // Versuche ID aus Response zu extrahieren
+            if (postResponse.data && typeof postResponse.data === 'object') {
+              temporadaId = postResponse.data.id || postResponse.data.temporada_id || temporadaId;
+            }
+          }
+        } catch (e) {
+          // Ignoriere
+        }
+      }
+
+      // SCHRITT 2: Teste /tarifas/guardar mit verschiedenen Payload-Strukturen
+      console.log('\n   🔍 SCHRITT 2: Teste /tarifas/guardar...\n');
+      const tarifasPayloads = [
+        // Einfache Struktur (ohne Temporada)
+        { categoryId: categoryId, date: testDate, price: testPrice },
+        { category_id: categoryId, date: testDate, price: testPrice },
+        { categoryId: categoryId, date: testDate, value: testPrice },
+        { habitacion_id: categoryId, fecha: testDate, precio: testPrice },
+        
+        // Mit Temporada (falls gefunden)
+        ...(temporadaId ? [
+          { 
+            temporada_id: temporadaId,
+            categoryId: categoryId,
+            date: testDate,
+            price: testPrice
+          },
+          { 
+            temporada_id: temporadaId,
+            habitacion_id: categoryId,
+            fecha: testDate,
+            precio: testPrice
+          },
+        ] : []),
+        
+        // Mit Temporada-Name (falls gefunden)
+        ...(temporadaName ? [
+          { 
+            temporada: temporadaName,
+            categoryId: categoryId,
+            date: testDate,
+            price: testPrice
+          },
+        ] : []),
+        
+        // Neue Temporada + Preis in einem Request
+        { 
+          temporada_nombre: 'Test Temporada',
+          temporada_inicio: testDate,
+          temporada_fin: testDate,
+          categoryId: categoryId,
+          date: testDate,
+          price: testPrice
+        },
+      ];
+
+      for (const payload of tarifasPayloads) {
+        try {
+          const response = await sessionAxiosInstance.post('/tarifas/guardar', 
+            new URLSearchParams(payload as any).toString(),
+            {
+              validateStatus: (s) => s < 500,
+              maxRedirects: 0,
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              }
+            }
+          );
+
+          console.log(`   📋 Status: ${response.status}`);
+          const location = response.headers.location || '';
+          
+          if (response.status === 200) {
+            console.log(`   ✅ ✅ ✅ ERFOLG! Status 200 - /tarifas/guardar funktioniert! ✅ ✅ ✅`);
+            console.log(`   📋 Response:`, JSON.stringify(response.data, null, 2).substring(0, 500));
+            console.log(`   📋 Payload: ${JSON.stringify(payload)}`);
+          } else if (response.status === 302 && !location.includes('/entrar')) {
+            console.log(`   ✅ ✅ ✅ ERFOLG! Status 302 (nicht zu /entrar) - möglicherweise erfolgreich! ✅ ✅ ✅`);
+            console.log(`   📋 Location: ${location}`);
+            console.log(`   📋 Payload: ${JSON.stringify(payload)}`);
+          } else {
+            console.log(`   ⚠️  Status ${response.status}, Location: ${location}`);
+          }
+        } catch (error: any) {
+          if (error.response) {
+            const location = error.response.headers?.location || '';
+            console.log(`   ⚠️  Status ${error.response.status}, Location: ${location}`);
+          }
+        }
+      }
+      console.log('');
+    } else {
+      console.log('⚠️  /tarifas/guardar benötigt Session-Cookies - Login-Daten erforderlich\n');
+    }
+
     // ⚠️ SESSION-BASIERTE AUTHENTIFIZIERUNG (falls Login-Daten vorhanden)
     // /calendario/setCustomRate benötigt Session-Cookies, nicht API-Key!
     if (lobbyEmail && lobbyPassword) {
