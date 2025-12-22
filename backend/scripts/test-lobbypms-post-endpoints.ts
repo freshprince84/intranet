@@ -75,9 +75,20 @@ async function testPostEndpoints(branchId: number) {
     console.log(`   API URL: ${apiUrl}`);
     console.log(`   API Key: ${apiKey.substring(0, 10)}...\n`);
 
-    // Erstelle Axios-Instanz
+    // Erstelle Axios-Instanz für API-Endpoints
     const axiosInstance: AxiosInstance = axios.create({
       baseURL: apiUrl,
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      }
+    });
+
+    // ⚠️ WICHTIG: Erstelle zusätzliche Axios-Instanz für app.lobbypms.com (für /calendario/setCustomRate)
+    // Screenshot zeigt: https://app.lobbypms.com/calendario/setCustomRate
+    const appAxiosInstance: AxiosInstance = axios.create({
+      baseURL: 'https://app.lobbypms.com',
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
@@ -310,8 +321,84 @@ async function testPostEndpoints(branchId: number) {
     // Erweiterte Suche nach dem Preis-Endpoint
     const testPrice = currentPrice + 1000; // Kleine Änderung für Test
 
+    // ⚠️ PRIORITÄT: /calendario/setCustomRate (aus Screenshot!)
+    // Screenshot zeigt: POST https://app.lobbypms.com/calendario/setCustomRate
+    console.log('🎯 Teste /calendario/setCustomRate (aus Screenshot!)...\n');
+    const setCustomRatePayloads = [
+      {
+        categoryId: categoryId,
+        date: testDate,
+        price: testPrice
+      },
+      {
+        category_id: categoryId,
+        date: testDate,
+        price: testPrice
+      },
+      {
+        categoryId: categoryId,
+        date: testDate,
+        price: testPrice,
+        currency: 'USD'
+      },
+      {
+        categoryId: categoryId,
+        date: testDate,
+        value: testPrice
+      },
+      {
+        categoryId: categoryId,
+        date_from: testDate,
+        date_to: testDate,
+        price: testPrice
+      },
+      {
+        categoryId: categoryId,
+        dates: [testDate],
+        price: testPrice
+      },
+      {
+        categoryId: categoryId,
+        date: testDate,
+        customRate: testPrice
+      },
+      {
+        categoryId: categoryId,
+        date: testDate,
+        rate: testPrice
+      },
+    ];
+
+    for (const payload of setCustomRatePayloads) {
+      try {
+        console.log(`   🧪 Teste Payload: ${JSON.stringify(payload)}`);
+        const response = await appAxiosInstance.post('/calendario/setCustomRate', payload, {
+          validateStatus: (s) => s < 500,
+          maxRedirects: 0 // Screenshot zeigt 302 Redirect, also erlauben wir das
+        });
+        
+        console.log(`   📋 Status: ${response.status}`);
+        if (response.status === 200 || response.status === 302) {
+          console.log(`   ✅ ✅ ✅ ERFOLG! Status ${response.status} - Endpoint funktioniert! ✅ ✅ ✅`);
+          console.log(`   📋 Response:`, JSON.stringify(response.data, null, 2).substring(0, 500));
+          console.log(`   📋 Response Headers:`, JSON.stringify(response.headers, null, 2).substring(0, 500));
+        } else {
+          console.log(`   ⚠️  Status ${response.status}:`, JSON.stringify(response.data, null, 2).substring(0, 300));
+        }
+      } catch (error: any) {
+        if (error.response) {
+          console.log(`   ⚠️  Status ${error.response.status}:`, JSON.stringify(error.response.data, null, 2).substring(0, 300));
+        } else if (error.code === 'ECONNREFUSED' || error.message.includes('ENOTFOUND')) {
+          console.log(`   ❌ Verbindungsfehler: ${error.message}`);
+        } else {
+          console.log(`   ⚠️  Fehler: ${error.message}`);
+        }
+      }
+      console.log('');
+    }
+
     // Erstelle Testfälle basierend auf der GET-Struktur
-    const testCases: Array<{ path: string; method: string; body: any; desc: string }> = [
+    const testCases: Array<{ path: string; method: string; body: any; desc: string; useAppBase?: boolean }> = [
       // ⚠️ PRIORITÄT: Rate Plans Endpoint (laut Dokumentation!)
       // Teste mit verschiedenen rate_id Werten, auch wenn wir keine gefunden haben
       // WICHTIG: Teste sowohl /api/v1/rates/{id}/prices als auch /api/v1/rate-plans/{id}/prices
