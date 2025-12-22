@@ -22,7 +22,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
 
-async function testPostEndpoints(branchId: number) {
+async function testPostEndpoints(branchId: number, lobbyEmail?: string, lobbyPassword?: string) {
   console.log('\n🔍 LobbyPMS Preis-Update-Endpoint Test');
   console.log('='.repeat(60));
 
@@ -493,6 +493,134 @@ async function testPostEndpoints(branchId: number) {
         }
       }
       console.log('');
+    }
+
+    // ⚠️ SESSION-BASIERTE AUTHENTIFIZIERUNG (falls Login-Daten vorhanden)
+    // /calendario/setCustomRate benötigt Session-Cookies, nicht API-Key!
+    if (lobbyEmail && lobbyPassword) {
+      console.log('🔐 Teste Session-basierte Authentifizierung (Login + Cookies)...\n');
+      
+      // Erstelle Axios-Instanz mit Cookie-Unterstützung
+      const sessionAxiosInstance = axios.create({
+        baseURL: 'https://app.lobbypms.com',
+        timeout: 30000,
+        withCredentials: true, // WICHTIG: Cookies senden/empfangen
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded', // Login-Formulare verwenden meist Form-encoded
+        }
+      });
+
+      // Teste verschiedene Login-Endpoints
+      const loginEndpoints = [
+        '/entrar',
+        '/login',
+        '/api/login',
+        '/auth/login',
+        '/iniciar-sesion',
+      ];
+
+      let loginSuccessful = false;
+      let cookies: string[] = [];
+
+      for (const loginEndpoint of loginEndpoints) {
+        try {
+          console.log(`   🔐 Teste Login-Endpoint: ${loginEndpoint}`);
+          
+          // Teste verschiedene Login-Payload-Formate
+          const loginPayloads = [
+            { email: lobbyEmail, password: lobbyPassword },
+            { username: lobbyEmail, password: lobbyPassword },
+            { user: lobbyEmail, pass: lobbyPassword },
+            { login: lobbyEmail, password: lobbyPassword },
+          ];
+
+          for (const payload of loginPayloads) {
+            try {
+              const loginResponse = await sessionAxiosInstance.post(loginEndpoint, 
+                new URLSearchParams(payload as any).toString(),
+                {
+                  validateStatus: (s) => s < 500,
+                  maxRedirects: 5, // Erlaube Redirects (nach erfolgreichem Login)
+                }
+              );
+
+              // Prüfe ob Cookies gesetzt wurden
+              const setCookieHeaders = loginResponse.headers['set-cookie'] || [];
+              if (setCookieHeaders.length > 0) {
+                cookies = setCookieHeaders;
+                console.log(`   ✅ Login erfolgreich! Cookies erhalten: ${cookies.length}`);
+                console.log(`   📋 Cookies: ${cookies.map(c => c.split(';')[0]).join(', ')}`);
+                loginSuccessful = true;
+                break;
+              } else if (loginResponse.status === 200 || loginResponse.status === 302) {
+                // Möglicherweise erfolgreich, aber keine expliziten Cookies
+                const location = loginResponse.headers.location || '';
+                if (!location.includes('/entrar') && !location.includes('/login')) {
+                  console.log(`   ✅ Login möglicherweise erfolgreich (Status ${loginResponse.status}, Location: ${location})`);
+                  loginSuccessful = true;
+                  break;
+                }
+              }
+            } catch (error: any) {
+              // Ignoriere Fehler, teste nächste Payload
+            }
+          }
+
+          if (loginSuccessful) break;
+        } catch (error: any) {
+          // Ignoriere Fehler, teste nächsten Endpoint
+        }
+      }
+
+      // Wenn Login erfolgreich, teste /calendario/setCustomRate mit Cookies
+      if (loginSuccessful && cookies.length > 0) {
+        console.log('\n   🎯 Teste /calendario/setCustomRate mit Session-Cookies...\n');
+        
+        // Setze Cookies für weitere Requests
+        const cookieHeader = cookies.map(c => c.split(';')[0]).join('; ');
+        sessionAxiosInstance.defaults.headers.common['Cookie'] = cookieHeader;
+
+        try {
+          const payload = {
+            categoryId: categoryId,
+            date: testDate,
+            price: testPrice
+          };
+
+          const response = await sessionAxiosInstance.post('/calendario/setCustomRate', payload, {
+            validateStatus: (s) => s < 500,
+            maxRedirects: 0,
+          });
+
+          console.log(`   📋 Status: ${response.status}`);
+          const location = response.headers.location || '';
+          
+          if (response.status === 200) {
+            console.log(`   ✅ ✅ ✅ ERFOLG! Status 200 - Preis-Update funktioniert mit Session-Cookies! ✅ ✅ ✅`);
+            console.log(`   📋 Response:`, JSON.stringify(response.data, null, 2).substring(0, 500));
+          } else if (response.status === 302 && !location.includes('/entrar')) {
+            console.log(`   ✅ ✅ ✅ ERFOLG! Status 302 (nicht zu /entrar) - möglicherweise erfolgreich! ✅ ✅ ✅`);
+            console.log(`   📋 Location: ${location}`);
+          } else {
+            console.log(`   ⚠️  Status ${response.status}, Location: ${location}`);
+          }
+        } catch (error: any) {
+          if (error.response) {
+            const location = error.response.headers?.location || '';
+            console.log(`   ⚠️  Status ${error.response.status}, Location: ${location}`);
+          } else {
+            console.log(`   ⚠️  Fehler: ${error.message}`);
+          }
+        }
+      } else {
+        console.log('   ⚠️  Login fehlgeschlagen - Session-basierte Auth nicht möglich');
+      }
+      
+      console.log('');
+    } else {
+      console.log('⚠️  Keine Login-Daten angegeben - Session-basierte Auth wird übersprungen');
+      console.log('   💡 Hinweis: Um Session-basierte Auth zu testen, führen Sie aus:');
+      console.log(`   npx ts-node scripts/test-lobbypms-post-endpoints.ts ${branchId} email@example.com password123\n`);
     }
 
     // Erstelle Testfälle basierend auf der GET-Struktur
@@ -1014,13 +1142,15 @@ async function testPostEndpoints(branchId: number) {
 }
 
 const branchId = process.argv[2] ? parseInt(process.argv[2], 10) : 3;
+const lobbyEmail = process.argv[3];
+const lobbyPassword = process.argv[4];
 
 if (isNaN(branchId)) {
   console.error('❌ Ungültige Branch-ID');
   process.exit(1);
 }
 
-testPostEndpoints(branchId)
+testPostEndpoints(branchId, lobbyEmail, lobbyPassword)
   .then(() => {
     console.log('✅ Test erfolgreich abgeschlossen');
     process.exit(0);
