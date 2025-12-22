@@ -494,7 +494,7 @@ const DataCard: React.FC<DataCardProps> = ({
           {/* ✅ REFACTORING: Status-Rendering mit Helper-Funktion */}
           <div className="flex-shrink-0" style={{ flex: '0 0 35%', justifyContent: 'flex-end' }}>
             {renderStatus(status, 'mobile', t)}
-          </div>
+            </div>
         </div>
         
         {/* Right-Metadaten für Mobile - unter Status, NUR wenn KEIN 3-Spalten-Layout aktiv ist */}

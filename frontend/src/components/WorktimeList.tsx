@@ -133,7 +133,7 @@ const WorktimeList: React.FC = () => {
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 worktime-table">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
-                            <th
+                            <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('startTime')}
                             >

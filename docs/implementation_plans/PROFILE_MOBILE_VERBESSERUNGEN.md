@@ -218,3 +218,4 @@ const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
 **Priorität:** 🔴 **HOCH** - Mobile-Erfahrung ist kritisch!
 
+
