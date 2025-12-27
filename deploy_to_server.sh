@@ -11,25 +11,22 @@ echo ""
 echo "📥 Schritt 1: Git Pull..."
 cd /var/www/intranet
 
-# Auflösen von Git-Konflikten und lokalen Änderungen
+# Löse Git-Konflikte auf
 echo "   🔧 Löse Git-Konflikte auf..."
-# Temporär set -e deaktivieren für Reset-Operationen
 set +e
 git reset --hard HEAD || true
-git clean -fd || true
-# Merge-Konflikte auflösen
 git merge --abort 2>/dev/null || true
 set -e
 
-# Bereinige untracked Build-Dateien, die Git Pull blockieren könnten
-echo "   🧹 Bereinige untracked Build-Dateien..."
-# Lösche alle Build-Dateien, die Konflikte verursachen könnten
-find frontend/build/static/js -name "*.js" -type f -delete 2>/dev/null || true
-find frontend/build/static/js -name "*.js.map" -type f -delete 2>/dev/null || true
-find frontend/build/static/js -name "*.LICENSE.txt" -type f -delete 2>/dev/null || true
-# Allgemeine Bereinigung
-git clean -fd frontend/build/ || true
-git clean -fd backend/dist/ || true
+# Lösche Build-Ordner komplett (werden beim Build sowieso neu erstellt)
+echo "   🗑️  Lösche Build-Ordner (werden beim Build neu erstellt)..."
+rm -rf frontend/build
+rm -rf backend/dist
+# Entferne Build-Dateien aus Git-Index falls vorhanden
+set +e
+git rm -r --cached frontend/build 2>/dev/null || true
+git rm -r --cached backend/dist 2>/dev/null || true
+set -e
 
 # Git Pull ausführen
 git pull
