@@ -407,3 +407,4 @@ useEffect(() => {
 3. Gleiche Lösung in Worktracker.tsx anwenden
 4. Weitere betroffene Komponenten prüfen
 
+
