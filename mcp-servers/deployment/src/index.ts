@@ -121,27 +121,21 @@ async function executeSSHCommand(
 }
 
 /**
- * Bereinigt Build-Dateien und löst Git-Konflikte auf dem Server
+ * Bereinigt Build-Ordner und löst Git-Konflikte auf dem Server
  */
 async function cleanupBuildFiles(): Promise<DeploymentResult> {
   const cleanupCommand = `cd ${SERVER_CONFIG.serverPath} && ` +
     `echo "🔧 Löse Git-Konflikte auf..." && ` +
     `git reset --hard HEAD 2>/dev/null || true && ` +
     `git merge --abort 2>/dev/null || true && ` +
-    `git rm --cached -r frontend/build/static/js/main.*.js* 2>/dev/null || true && ` +
-    `git rm --cached -r frontend/build/static/js/908.*.chunk.js* 2>/dev/null || true && ` +
-    `echo "🧹 Bereinige Build-Dateien..." && ` +
-    `rm -rf frontend/build/static/js/908.*.chunk.js* 2>/dev/null || true && ` +
-    `rm -rf frontend/build/static/js/main.*.js* 2>/dev/null || true && ` +
-    `rm -rf frontend/build/static/js/*.js.map 2>/dev/null || true && ` +
-    `rm -rf frontend/build/static/js/*.LICENSE.txt 2>/dev/null || true && ` +
-    `find frontend/build/static/js -name "*.js" -type f ! -name "*.chunk.js" -delete 2>/dev/null || true && ` +
-    `git clean -fd frontend/build/ 2>/dev/null || true && ` +
-    `git clean -fd backend/dist/ 2>/dev/null || true && ` +
-    `git status --porcelain && ` +
-    `echo "✅ Build-Dateien bereinigt und Konflikte aufgelöst"`;
+    `echo "🗑️  Lösche Build-Ordner (werden beim Build neu erstellt)..." && ` +
+    `rm -rf frontend/build 2>/dev/null || true && ` +
+    `rm -rf backend/dist 2>/dev/null || true && ` +
+    `git rm -r --cached frontend/build 2>/dev/null || true && ` +
+    `git rm -r --cached backend/dist 2>/dev/null || true && ` +
+    `echo "✅ Build-Ordner gelöscht und Konflikte aufgelöst"`;
   
-  console.error(`[MCP Deployment] Bereinige Build-Dateien und löse Git-Konflikte auf ${SERVER_CONFIG.host}...`);
+  console.error(`[MCP Deployment] Lösche Build-Ordner und löse Git-Konflikte auf ${SERVER_CONFIG.host}...`);
   return await executeSSHCommand(cleanupCommand, 30000); // 30 Sekunden Timeout
 }
 
