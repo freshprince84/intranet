@@ -1433,7 +1433,7 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             where: { id: roleId },
             select: { id: true, organizationId: true }
         });
-
+            
         if (!newRole) {
             return res.status(404).json({ message: 'Rolle nicht gefunden' });
         }
