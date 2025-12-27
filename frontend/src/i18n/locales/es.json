@@ -742,6 +742,13 @@
       "delete": "Eliminar rol",
       "copy": "Copiar rol"
     },
+    "accessLevels": {
+      "none": "Sin acceso",
+      "own_read": "Solo leer propios",
+      "own_both": "Leer y editar propios",
+      "all_read": "Leer todos",
+      "all_both": "Leer y editar todos"
+    },
     "form": {
       "name": "Nombre",
       "description": "Descripción",
@@ -757,7 +764,8 @@
       "activateAllButtons": "Activar todos los botones",
       "deactivateAllButtons": "Desactivar todos los botones",
       "buttonsChecked": "Botones ✓",
-      "buttonsUnchecked": "Botones ✗"
+      "buttonsUnchecked": "Botones ✗",
+      "setAllTo": "Establecer todos a"
     },
     "pages": {
       "dashboard": "Dashboard",

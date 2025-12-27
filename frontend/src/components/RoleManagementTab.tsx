@@ -16,6 +16,14 @@ import { useError } from '../contexts/ErrorContext.tsx';
 import { ErrorCategory } from '../services/ErrorHandler.ts';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 import { logger } from '../utils/logger.ts';
+import { 
+  AccessLevel as NewAccessLevel, 
+  AccessLevelValues,
+  convertLegacyAccessLevel
+} from '../config/permissions.ts';
+
+// AccessLevel-Optionen für Dropdowns (sortiert nach Berechtigung)
+const ACCESS_LEVEL_OPTIONS: NewAccessLevel[] = ['none', 'own_read', 'own_both', 'all_read', 'all_both'];
 
 interface RoleManagementTabProps {
   onRolesChange?: () => void;
@@ -330,6 +338,59 @@ const buttonToTableMapping: Record<string, string | null> = {
 
 // TableID für gespeicherte Filter
 const ROLES_TABLE_ID = 'roles-table';
+
+// ============================================
+// ACCESS LEVEL DROPDOWN KOMPONENTE
+// ============================================
+interface AccessLevelSelectProps {
+  value: AccessLevel;
+  onChange: (newValue: NewAccessLevel) => void;
+  disabled?: boolean;
+  size?: 'sm' | 'md';
+  t: (key: string) => string;
+}
+
+const AccessLevelSelect: React.FC<AccessLevelSelectProps> = ({ 
+  value, 
+  onChange, 
+  disabled = false,
+  size = 'md',
+  t 
+}) => {
+  // Konvertiere Legacy-Werte zu neuen Werten
+  const normalizedValue = convertLegacyAccessLevel(value);
+  
+  // Farbe basierend auf AccessLevel
+  const getColorClass = (level: NewAccessLevel): string => {
+    switch (level) {
+      case 'none': return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
+      case 'own_read': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'own_both': return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
+      case 'all_read': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+      case 'all_both': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+      default: return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
+    }
+  };
+
+  const sizeClasses = size === 'sm' 
+    ? 'text-xs px-1.5 py-0.5' 
+    : 'text-sm px-2 py-1';
+
+  return (
+    <select
+      value={normalizedValue}
+      onChange={(e) => onChange(e.target.value as NewAccessLevel)}
+      disabled={disabled}
+      className={`${sizeClasses} ${getColorClass(normalizedValue)} rounded border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+    >
+      {ACCESS_LEVEL_OPTIONS.map((level) => (
+        <option key={level} value={level}>
+          {t(`roles.accessLevels.${level}`)}
+        </option>
+      ))}
+    </select>
+  );
+};
 
 // Standardrollen-IDs (für Rollen ohne Organisation)
 const STANDARD_ROLE_IDS = [1, 2, 999]; // Admin (1), User (2), Hamburger (999)
@@ -1755,34 +1816,25 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                       )
                       .map((permission, index) => {
                         const permIndex = formData.permissions.indexOf(permission);
-                        const isActive = permission.accessLevel === 'both';
+                        const isFixedPage = alwaysVisiblePages.includes(permission.entity);
                         return (
                           <div key={`permission-page-${permission.entity}-${index}`}>
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{pageDisplayNames[permission.entity] || permission.entity}</span>
-                              <label className={`inline-flex items-center ${alwaysVisiblePages.includes(permission.entity) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
-                                <input
-                                  type="checkbox"
-                                  className="sr-only peer"
-                                  checked={isActive}
-                                  disabled={alwaysVisiblePages.includes(permission.entity)}
-                                  onChange={() => {
-                                    const newPermissions = [...formData.permissions];
-                                    newPermissions[permIndex] = {
-                                      ...permission,
-                                      accessLevel: isActive ? 'none' : 'both'
-                                    };
-                                    setFormData({ ...formData, permissions: newPermissions });
-                                  }}
-                                />
-                                <div className={`relative w-11 h-6 ${alwaysVisiblePages.includes(permission.entity) ? 'bg-blue-600 dark:bg-blue-700' : 'bg-gray-200 dark:bg-gray-700'} peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700`}>
-                                  {alwaysVisiblePages.includes(permission.entity) && (
-                                    <span className="absolute inset-0 flex items-center justify-center text-xs text-white font-medium">
-                                      Fix
-                                    </span>
-                                  )}
-                                </div>
-                              </label>
+                              <AccessLevelSelect
+                                value={permission.accessLevel}
+                                onChange={(newValue) => {
+                                  const newPermissions = [...formData.permissions];
+                                  newPermissions[permIndex] = {
+                                    ...permission,
+                                    accessLevel: newValue
+                                  };
+                                  setFormData({ ...formData, permissions: newPermissions });
+                                }}
+                                disabled={isFixedPage}
+                                size="sm"
+                                t={t}
+                              />
                             </div>
                             
                             {/* Tabellen-Berechtigungen mit zugehörigen Buttons gruppiert */}
@@ -1843,51 +1895,42 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                     {/* Tabelle selbst */}
                                     <div className="flex items-center justify-between pl-6 border-l-2 border-blue-300 dark:border-blue-600">
                                       <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">└ {tableDisplayName}</span>
-                                      <label className="inline-flex items-center cursor-pointer">
-                                        <input
-                                          type="checkbox"
-                                          className="sr-only peer"
-                                          checked={isTableActive}
-                                          onChange={() => {
-                                            const newPermissions = [...formData.permissions];
-                                            newPermissions[tablePermIndex] = {
-                                              ...tablePerm,
-                                              accessLevel: isTableActive ? 'none' : 'both'
-                                            };
-                                            setFormData({ ...formData, permissions: newPermissions });
-                                          }}
-                                        />
-                                        <div className="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
-                                        </div>
-                                      </label>
+                                      <AccessLevelSelect
+                                        value={tablePerm.accessLevel}
+                                        onChange={(newValue) => {
+                                          const newPermissions = [...formData.permissions];
+                                          newPermissions[tablePermIndex] = {
+                                            ...tablePerm,
+                                            accessLevel: newValue
+                                          };
+                                          setFormData({ ...formData, permissions: newPermissions });
+                                        }}
+                                        size="sm"
+                                        t={t}
+                                      />
                                     </div>
                                     
                                     {/* Zu dieser Tabelle gehörige Buttons */}
                                     {relatedButtons.map((buttonPerm, buttonIndex) => {
                                       const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
-                                      const isButtonActive = buttonPerm.accessLevel === 'both';
                                       const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
                                       return (
                                         <div key={`button-permission-${buttonPerm.entity}-${buttonIndex}`} 
                                           className="flex items-center justify-between mt-2 pl-12 border-l-2 border-gray-300 dark:border-gray-600">
                                           <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
-                                          <label className="inline-flex items-center cursor-pointer">
-                                            <input
-                                              type="checkbox"
-                                              className="sr-only peer"
-                                              checked={isButtonActive}
-                                              onChange={() => {
-                                                const newPermissions = [...formData.permissions];
-                                                newPermissions[buttonPermIndex] = {
-                                                  ...buttonPerm,
-                                                  accessLevel: isButtonActive ? 'none' : 'both'
-                                                };
-                                                setFormData({ ...formData, permissions: newPermissions });
-                                              }}
-                                            />
-                                            <div className="relative w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
-                                            </div>
-                                          </label>
+                                          <AccessLevelSelect
+                                            value={buttonPerm.accessLevel}
+                                            onChange={(newValue) => {
+                                              const newPermissions = [...formData.permissions];
+                                              newPermissions[buttonPermIndex] = {
+                                                ...buttonPerm,
+                                                accessLevel: newValue
+                                              };
+                                              setFormData({ ...formData, permissions: newPermissions });
+                                            }}
+                                            size="sm"
+                                            t={t}
+                                          />
                                         </div>
                                       );
                                     })}
@@ -1910,29 +1953,24 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                 })
                                 .map((buttonPerm, buttonIndex) => {
                                   const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
-                                  const isButtonActive = buttonPerm.accessLevel === 'both';
                                   const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
                                   return (
                                     <div key={`button-permission-${buttonPerm.entity}-${buttonIndex}`} 
                                       className="flex items-center justify-between mt-2 pl-6 border-l-2 border-gray-300 dark:border-gray-600">
                                       <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
-                                      <label className="inline-flex items-center cursor-pointer">
-                                        <input
-                                          type="checkbox"
-                                          className="sr-only peer"
-                                          checked={isButtonActive}
-                                          onChange={() => {
-                                            const newPermissions = [...formData.permissions];
-                                            newPermissions[buttonPermIndex] = {
-                                              ...buttonPerm,
-                                              accessLevel: isButtonActive ? 'none' : 'both'
-                                            };
-                                            setFormData({ ...formData, permissions: newPermissions });
-                                          }}
-                                        />
-                                        <div className="relative w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
-                                        </div>
-                                      </label>
+                                      <AccessLevelSelect
+                                        value={buttonPerm.accessLevel}
+                                        onChange={(newValue) => {
+                                          const newPermissions = [...formData.permissions];
+                                          newPermissions[buttonPermIndex] = {
+                                            ...buttonPerm,
+                                            accessLevel: newValue
+                                          };
+                                          setFormData({ ...formData, permissions: newPermissions });
+                                        }}
+                                        size="sm"
+                                        t={t}
+                                      />
                           </div>
                         );
                       })
@@ -2127,34 +2165,25 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                           )
                           .map((permission, index) => {
                             const permIndex = formData.permissions.indexOf(permission);
-                            const isActive = permission.accessLevel === 'both';
+                            const isFixedPage = alwaysVisiblePages.includes(permission.entity);
                             return (
                               <div key={`permission-page-desktop-${permission.entity}-${index}`}>
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{pageDisplayNames[permission.entity] || permission.entity}</span>
-                                  <label className={`inline-flex items-center ${alwaysVisiblePages.includes(permission.entity) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
-                                    <input
-                                      type="checkbox"
-                                      className="sr-only peer"
-                                      checked={isActive}
-                                      disabled={alwaysVisiblePages.includes(permission.entity)}
-                                      onChange={() => {
-                                        const newPermissions = [...formData.permissions];
-                                        newPermissions[permIndex] = {
-                                          ...permission,
-                                          accessLevel: isActive ? 'none' : 'both'
-                                        };
-                                        setFormData({ ...formData, permissions: newPermissions });
-                                      }}
-                                    />
-                                    <div className={`relative w-11 h-6 ${alwaysVisiblePages.includes(permission.entity) ? 'bg-blue-600 dark:bg-blue-700' : 'bg-gray-200 dark:bg-gray-700'} peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700`}>
-                                      {alwaysVisiblePages.includes(permission.entity) && (
-                                        <span className="absolute inset-0 flex items-center justify-center text-xs text-white font-medium">
-                                          Fix
-                                        </span>
-                                      )}
-                                    </div>
-                                  </label>
+                                  <AccessLevelSelect
+                                    value={permission.accessLevel}
+                                    onChange={(newValue) => {
+                                      const newPermissions = [...formData.permissions];
+                                      newPermissions[permIndex] = {
+                                        ...permission,
+                                        accessLevel: newValue
+                                      };
+                                      setFormData({ ...formData, permissions: newPermissions });
+                                    }}
+                                    disabled={isFixedPage}
+                                    size="sm"
+                                    t={t}
+                                  />
                                 </div>
                                 
                                 {/* Tabellen-Berechtigungen mit zugehörigen Buttons gruppiert */}
@@ -2205,51 +2234,42 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                         {/* Tabelle selbst */}
                                         <div className="flex items-center justify-between pl-6 border-l-2 border-blue-300 dark:border-blue-600">
                                           <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">└ {tableDisplayName}</span>
-                                          <label className="inline-flex items-center cursor-pointer">
-                                            <input
-                                              type="checkbox"
-                                              className="sr-only peer"
-                                              checked={isTableActive}
-                                              onChange={() => {
-                                                const newPermissions = [...formData.permissions];
-                                                newPermissions[tablePermIndex] = {
-                                                  ...tablePerm,
-                                                  accessLevel: isTableActive ? 'none' : 'both'
-                                                };
-                                                setFormData({ ...formData, permissions: newPermissions });
-                                              }}
-                                            />
-                                            <div className="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
-                                            </div>
-                                          </label>
+                                          <AccessLevelSelect
+                                            value={tablePerm.accessLevel}
+                                            onChange={(newValue) => {
+                                              const newPermissions = [...formData.permissions];
+                                              newPermissions[tablePermIndex] = {
+                                                ...tablePerm,
+                                                accessLevel: newValue
+                                              };
+                                              setFormData({ ...formData, permissions: newPermissions });
+                                            }}
+                                            size="sm"
+                                            t={t}
+                                          />
                                         </div>
                                         
                                         {/* Zu dieser Tabelle gehörige Buttons */}
                                         {relatedButtons.map((buttonPerm, buttonIndex) => {
                                           const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
-                                          const isButtonActive = buttonPerm.accessLevel === 'both';
                                           const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
                                           return (
                                             <div key={`button-permission-desktop-${buttonPerm.entity}-${buttonIndex}`} 
                                               className="flex items-center justify-between mt-2 pl-12 border-l-2 border-gray-300 dark:border-gray-600">
                                               <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
-                                              <label className="inline-flex items-center cursor-pointer">
-                                                <input
-                                                  type="checkbox"
-                                                  className="sr-only peer"
-                                                  checked={isButtonActive}
-                                                  onChange={() => {
-                                                    const newPermissions = [...formData.permissions];
-                                                    newPermissions[buttonPermIndex] = {
-                                                      ...buttonPerm,
-                                                      accessLevel: isButtonActive ? 'none' : 'both'
-                                                    };
-                                                    setFormData({ ...formData, permissions: newPermissions });
-                                                  }}
-                                                />
-                                                <div className="relative w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
-                                                </div>
-                                              </label>
+                                              <AccessLevelSelect
+                                                value={buttonPerm.accessLevel}
+                                                onChange={(newValue) => {
+                                                  const newPermissions = [...formData.permissions];
+                                                  newPermissions[buttonPermIndex] = {
+                                                    ...buttonPerm,
+                                                    accessLevel: newValue
+                                                  };
+                                                  setFormData({ ...formData, permissions: newPermissions });
+                                                }}
+                                                size="sm"
+                                                t={t}
+                                              />
                                             </div>
                                           );
                                         })}
@@ -2272,29 +2292,24 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                   })
                                   .map((buttonPerm, buttonIndex) => {
                                     const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
-                                    const isButtonActive = buttonPerm.accessLevel === 'both';
                                     const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
                                     return (
                                       <div key={`button-permission-desktop-${buttonPerm.entity}-${buttonIndex}`} 
                                         className="flex items-center justify-between mt-2 pl-6 border-l-2 border-gray-300 dark:border-gray-600">
                                         <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
-                                        <label className="inline-flex items-center cursor-pointer">
-                                          <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={isButtonActive}
-                                            onChange={() => {
-                                              const newPermissions = [...formData.permissions];
-                                              newPermissions[buttonPermIndex] = {
-                                                ...buttonPerm,
-                                                accessLevel: isButtonActive ? 'none' : 'both'
-                                              };
-                                              setFormData({ ...formData, permissions: newPermissions });
-                                            }}
-                                          />
-                                          <div className="relative w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
-                                          </div>
-                                        </label>
+                                        <AccessLevelSelect
+                                          value={buttonPerm.accessLevel}
+                                          onChange={(newValue) => {
+                                            const newPermissions = [...formData.permissions];
+                                            newPermissions[buttonPermIndex] = {
+                                              ...buttonPerm,
+                                              accessLevel: newValue
+                                            };
+                                            setFormData({ ...formData, permissions: newPermissions });
+                                          }}
+                                          size="sm"
+                                          t={t}
+                                        />
                                       </div>
                                     );
                                   })

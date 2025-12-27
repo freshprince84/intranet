@@ -682,6 +682,13 @@
       "delete": "Delete role",
       "copy": "Copy role"
     },
+    "accessLevels": {
+      "none": "No access",
+      "own_read": "Own read only",
+      "own_both": "Own read & write",
+      "all_read": "All read only",
+      "all_both": "All read & write"
+    },
     "form": {
       "name": "Name",
       "description": "Description",
@@ -697,7 +704,8 @@
       "activateAllButtons": "Activate All Buttons",
       "deactivateAllButtons": "Deactivate All Buttons",
       "buttonsChecked": "Buttons ✓",
-      "buttonsUnchecked": "Buttons ✗"
+      "buttonsUnchecked": "Buttons ✗",
+      "setAllTo": "Set all to"
     },
     "pages": {
       "dashboard": "Dashboard",

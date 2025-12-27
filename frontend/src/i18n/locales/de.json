@@ -594,6 +594,13 @@
       "delete": "Rolle löschen",
       "copy": "Rolle kopieren"
     },
+    "accessLevels": {
+      "none": "Kein Zugriff",
+      "own_read": "Nur eigene lesen",
+      "own_both": "Nur eigene bearbeiten",
+      "all_read": "Alle lesen",
+      "all_both": "Alle bearbeiten"
+    },
     "form": {
       "name": "Name",
       "description": "Beschreibung",
@@ -609,7 +616,8 @@
       "activateAllButtons": "Alle Buttons aktivieren",
       "deactivateAllButtons": "Alle Buttons deaktivieren",
       "buttonsChecked": "Buttons ✓",
-      "buttonsUnchecked": "Buttons ✗"
+      "buttonsUnchecked": "Buttons ✗",
+      "setAllTo": "Alle setzen auf"
     },
     "pages": {
       "dashboard": "Dashboard",
