@@ -638,15 +638,31 @@ class TaskAutomationService {
                     return null;
                 }
                 // Erstelle Task
-                // Titel: Zimmername (bei Dorms: roomNumber enthält bereits "Zimmername (Bettnummer)", bei Privates: roomDescription)
+                // Titel: Zimmername (bei Dorms: roomNumber kann "Zimmername (Bettnummer)" ODER nur Bettnummer sein, bei Privates: roomDescription)
                 const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                const taskTitle = isDorm
-                    ? ((_a = reservation.roomNumber) === null || _a === void 0 ? void 0 : _a.trim()) || `Reservation ${reservation.id}`
-                    : ((_b = reservation.roomDescription) === null || _b === void 0 ? void 0 : _b.trim()) || `Reservation ${reservation.id}`;
-                // Zimmer-Anzeige für Beschreibung
-                const roomDisplay = isDorm
-                    ? ((_c = reservation.roomNumber) === null || _c === void 0 ? void 0 : _c.trim()) || 'Noch nicht zugewiesen'
-                    : ((_d = reservation.roomDescription) === null || _d === void 0 ? void 0 : _d.trim()) || 'Noch nicht zugewiesen';
+                let taskTitle;
+                let roomDisplay;
+                if (isDorm) {
+                    const roomNumber = ((_a = reservation.roomNumber) === null || _a === void 0 ? void 0 : _a.trim()) || '';
+                    const roomName = ((_b = reservation.roomDescription) === null || _b === void 0 ? void 0 : _b.trim()) || '';
+                    // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                    if (roomNumber.includes('(')) {
+                        taskTitle = roomNumber;
+                        roomDisplay = roomNumber;
+                    }
+                    else if (roomName && roomNumber) {
+                        taskTitle = `${roomName} (${roomNumber})`;
+                        roomDisplay = `${roomName} (${roomNumber})`;
+                    }
+                    else {
+                        taskTitle = roomNumber || roomName || `Reservation ${reservation.id}`;
+                        roomDisplay = roomNumber || roomName || 'Noch nicht zugewiesen';
+                    }
+                }
+                else {
+                    taskTitle = ((_c = reservation.roomDescription) === null || _c === void 0 ? void 0 : _c.trim()) || `Reservation ${reservation.id}`;
+                    roomDisplay = ((_d = reservation.roomDescription) === null || _d === void 0 ? void 0 : _d.trim()) || 'Noch nicht zugewiesen';
+                }
                 const taskDescription = `
 Reservierungsdetails:
 - Gast: ${reservation.guestName}

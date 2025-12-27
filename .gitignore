@@ -38,6 +38,9 @@ prisma/.env
 # Cursor
 .cursor/
 
+# MCP Configuration (enthält SSH-Passwörter)
+mcp.json
+
 # Uploads
 /uploads
 

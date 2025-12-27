@@ -517,6 +517,7 @@ exports.createReservation = createReservation;
  * Holt alle Reservierungen für die aktuelle Organisation (mit Branch-Filter basierend auf Berechtigungen)
  */
 const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         logger_1.logger.log('[Reservation] getAllReservations aufgerufen, organizationId:', req.organizationId);
         if (!req.organizationId) {
@@ -564,6 +565,14 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const queryBranchId = req.query.branchId
             ? parseInt(req.query.branchId, 10)
             : undefined;
+        // ✅ SORTIERUNG: Sortier-Parameter aus Query lesen
+        const sortBy = req.query.sortBy;
+        const sortOrder = ((_a = req.query.sortOrder) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === 'desc' ? 'desc' : 'asc';
+        // ✅ SORTIERUNG: Mapping von Frontend-Feldern zu Backend-Feldern
+        let prismaSortBy = sortBy;
+        if (sortBy === 'branch') {
+            prismaSortBy = 'branch.name';
+        }
         // ✅ ROLLEN-ISOLATION: Baue Where-Clause basierend auf Rolle
         const whereClause = {
             organizationId: req.organizationId
@@ -689,9 +698,19 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 },
                 task: true
             },
-            orderBy: {
-                createdAt: 'desc'
-            }
+            orderBy: prismaSortBy ? [
+                prismaSortBy.includes('.') ? {
+                    [prismaSortBy.split('.')[0]]: {
+                        [prismaSortBy.split('.')[1]]: sortOrder
+                    }
+                } : {
+                    [prismaSortBy]: sortOrder
+                },
+                { id: 'asc' } // ✅ STABILE SORTIERUNG: Fallback auf ID für Infinite Scroll
+            ] : [
+                { createdAt: 'desc' },
+                { id: 'desc' }
+            ]
         });
         // ✅ PAGINATION: Response mit totalCount für Infinite Scroll
         res.json({

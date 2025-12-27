@@ -979,9 +979,9 @@ const generateEmailTemplate = (options) => {
     const fontFamily = ((_d = branding === null || branding === void 0 ? void 0 : branding.fonts) === null || _d === void 0 ? void 0 : _d.primary)
         ? `${branding.fonts.primary}, Arial, sans-serif`
         : 'Arial, sans-serif';
-    // Logo-HTML (falls vorhanden)
+    // Logo-HTML (falls vorhanden) - Größe wie im Frontend (h-10 = 40px)
     const logoHtml = logo
-        ? `<img src="${logo}" alt="${headerTitle}" style="max-height: 60px; max-width: 200px; margin-bottom: 20px;" />`
+        ? `<img src="${logo}" alt="${headerTitle}" style="height: 40px; width: auto; display: block;" />`
         : '';
     return `
 <!DOCTYPE html>
@@ -1020,8 +1020,12 @@ const generateEmailTemplate = (options) => {
       font-weight: 600;
       color: ${primaryColor};
     }
+    .logo-container {
+      display: flex;
+      align-items: center;
+    }
     .logo-container img {
-      max-height: 48px;
+      height: 40px;
       width: auto;
       display: block;
       object-fit: contain;
@@ -1055,8 +1059,8 @@ const generateEmailTemplate = (options) => {
 <body>
   <div class="email-wrapper">
     <div class="header">
-      ${logoHtml ? `<div class="logo-container">${logoHtml}</div>` : ''}
       ${headerTitle ? `<h1>${headerTitle}</h1>` : ''}
+      ${logoHtml ? `<div class="logo-container">${logoHtml}</div>` : ''}
     </div>
     <div class="content">
       ${content}

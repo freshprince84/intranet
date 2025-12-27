@@ -16,6 +16,7 @@
         "DEPLOY_SERVER_HOST": "65.109.228.106",
         "DEPLOY_SERVER_USER": "root",
         "DEPLOY_SSH_KEY_PATH": "~/.ssh/intranet_rsa",
+        "DEPLOY_SSH_KEY_PASSPHRASE": "Intranet123!",
         "DEPLOY_SERVER_PATH": "/var/www/intranet",
         "DEPLOY_SCRIPT_PATH": "/var/www/intranet/deploy_to_server.sh"
       }

@@ -74,51 +74,148 @@ class OccupancyMonitoringService {
                         analysisDate: 'desc'
                     }
                 });
-                // Gruppiere aktuelle Daten nach Kategorie und Datum
+                // Gruppiere aktuelle Daten nach roomType und Datum
+                // WICHTIG: Bei Privatzimmern (privada) werden ALLE Kategorien zusammen betrachtet
+                // Bei Dorms (compartida) wird jede Kategorie einzeln betrachtet
                 const currentDataMap = new Map();
-                // Berechne totalRooms pro Kategorie (Maximum über Zeitraum)
-                const totalRoomsMap = new Map();
+                // Schritt 1: Berechne totalRooms
+                // Für Dorms: pro Kategorie (Maximum über Zeitraum)
+                // Für Privates: Maximum pro Kategorie über Zeitraum, dann Summe aller Maxima
+                const dormTotalRoomsMap = new Map(); // Für Dorms: categoryId -> max totalRooms
+                const privateCategoryMaxMap = new Map(); // Für Privates: categoryId -> max totalRooms (über Zeitraum)
                 for (const entry of currentAvailability) {
-                    const key = `${entry.categoryId}-${entry.date}`;
-                    const currentTotal = totalRoomsMap.get(entry.categoryId) || 0;
-                    totalRoomsMap.set(entry.categoryId, Math.max(currentTotal, entry.availableRooms));
+                    if (entry.roomType === 'compartida') {
+                        // Dorm: Maximum pro Kategorie über Zeitraum
+                        const currentTotal = dormTotalRoomsMap.get(entry.categoryId) || 0;
+                        dormTotalRoomsMap.set(entry.categoryId, Math.max(currentTotal, entry.availableRooms));
+                    }
+                    else {
+                        // Privatzimmer: Maximum pro Kategorie über Zeitraum
+                        const currentTotal = privateCategoryMaxMap.get(entry.categoryId) || 0;
+                        privateCategoryMaxMap.set(entry.categoryId, Math.max(currentTotal, entry.availableRooms));
+                    }
                 }
-                // Berechne Occupancy-Rate für aktuelle Daten
+                // Berechne Gesamtzahl aller Privatzimmer (Summe aller Maxima)
+                const totalPrivateRooms = Array.from(privateCategoryMaxMap.values()).reduce((sum, max) => sum + max, 0);
+                // Schritt 2: Gruppiere Daten und berechne Occupancy-Rate
+                // Für Dorms: pro Kategorie und Datum
+                // Für Privates: alle Kategorien zusammen pro Datum
+                const privateDataByDate = new Map();
                 for (const entry of currentAvailability) {
-                    const key = `${entry.categoryId}-${entry.date}`;
-                    const totalRooms = totalRoomsMap.get(entry.categoryId) || 1;
-                    const occupancyRate = totalRooms > 0
-                        ? ((totalRooms - entry.availableRooms) / totalRooms) * 100
+                    if (entry.roomType === 'compartida') {
+                        // Dorm: pro Kategorie
+                        const key = `compartida-${entry.categoryId}-${entry.date}`;
+                        const totalRooms = dormTotalRoomsMap.get(entry.categoryId) || 1;
+                        const occupancyRate = totalRooms > 0
+                            ? ((totalRooms - entry.availableRooms) / totalRooms) * 100
+                            : 0;
+                        currentDataMap.set(key, {
+                            categoryId: entry.categoryId,
+                            date: entry.date,
+                            availableRooms: entry.availableRooms,
+                            totalRooms,
+                            occupancyRate,
+                            roomType: 'compartida',
+                            roomName: entry.roomName
+                        });
+                    }
+                    else {
+                        // Privatzimmer: sammle alle zusammen pro Datum
+                        const existing = privateDataByDate.get(entry.date);
+                        if (existing) {
+                            existing.availableRooms += entry.availableRooms;
+                            existing.categoryIds.push(entry.categoryId);
+                        }
+                        else {
+                            privateDataByDate.set(entry.date, {
+                                availableRooms: entry.availableRooms,
+                                totalRooms: 0, // Wird später gesetzt
+                                categoryIds: [entry.categoryId]
+                            });
+                        }
+                    }
+                }
+                // Schritt 3: Berechne Occupancy-Rate für gruppierte Privatzimmer
+                // Verwende Gesamtzahl aller Privatzimmer (Summe aller Maxima) für alle Daten
+                for (const [date, data] of privateDataByDate.entries()) {
+                    data.totalRooms = totalPrivateRooms;
+                    const occupancyRate = totalPrivateRooms > 0
+                        ? ((totalPrivateRooms - data.availableRooms) / totalPrivateRooms) * 100
                         : 0;
+                    const key = `privada-${date}`;
                     currentDataMap.set(key, {
-                        categoryId: entry.categoryId,
-                        date: entry.date,
-                        availableRooms: entry.availableRooms,
-                        occupancyRate
+                        categoryId: null, // null = alle Privatzimmer zusammen
+                        date,
+                        availableRooms: data.availableRooms,
+                        totalRooms: totalPrivateRooms,
+                        occupancyRate,
+                        roomType: 'privada',
+                        roomName: 'Privatzimmer'
                     });
                 }
                 // Vergleiche mit historischen Daten
+                // WICHTIG: Bei Privatzimmern müssen historische Daten ebenfalls gruppiert werden
                 let alertCount = 0;
                 const alerts = [];
+                // Gruppiere historische Daten für Privatzimmer (alle zusammen pro Datum)
+                const historicalPrivateByDate = new Map();
+                for (const h of historicalAnalyses) {
+                    if (h.roomType === 'privada' && h.occupancyRate !== null) {
+                        const dateKey = new Date(h.analysisDate).toISOString().split('T')[0];
+                        const existing = historicalPrivateByDate.get(dateKey);
+                        if (existing) {
+                            // Durchschnitt der Occupancy-Rates für alle Privatzimmer an diesem Tag
+                            existing.occupancyRate = (existing.occupancyRate * existing.count + Number(h.occupancyRate)) / (existing.count + 1);
+                            existing.count += 1;
+                        }
+                        else {
+                            historicalPrivateByDate.set(dateKey, {
+                                occupancyRate: Number(h.occupancyRate),
+                                count: 1
+                            });
+                        }
+                    }
+                }
                 for (const [key, current] of currentDataMap.entries()) {
-                    // Finde historische Daten für gleiche Kategorie und ähnliches Datum (±1 Tag)
-                    const historical = historicalAnalyses.find(h => {
-                        const hDate = new Date(h.analysisDate);
+                    let historicalOccupancy = null;
+                    if (current.roomType === 'compartida') {
+                        // Dorm: Finde historische Daten für gleiche Kategorie und ähnliches Datum (±1 Tag)
+                        const historical = historicalAnalyses.find(h => {
+                            if (h.roomType !== 'compartida' || h.categoryId !== current.categoryId)
+                                return false;
+                            const hDate = new Date(h.analysisDate);
+                            const cDate = new Date(current.date);
+                            const daysDiff = Math.abs((hDate.getTime() - cDate.getTime()) / (1000 * 60 * 60 * 24));
+                            return daysDiff <= 1;
+                        });
+                        if (historical && historical.occupancyRate !== null) {
+                            historicalOccupancy = Number(historical.occupancyRate);
+                        }
+                    }
+                    else {
+                        // Privatzimmer: Finde gruppierte historische Daten für ähnliches Datum (±1 Tag)
                         const cDate = new Date(current.date);
-                        const daysDiff = Math.abs((hDate.getTime() - cDate.getTime()) / (1000 * 60 * 60 * 24));
-                        return h.categoryId === current.categoryId && daysDiff <= 1;
-                    });
-                    if (historical && historical.occupancyRate !== null) {
-                        const changePercent = Math.abs(current.occupancyRate - Number(historical.occupancyRate));
+                        for (const [hDateKey, hData] of historicalPrivateByDate.entries()) {
+                            const hDate = new Date(hDateKey);
+                            const daysDiff = Math.abs((hDate.getTime() - cDate.getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysDiff <= 1) {
+                                historicalOccupancy = hData.occupancyRate;
+                                break;
+                            }
+                        }
+                    }
+                    if (historicalOccupancy !== null) {
+                        const changePercent = Math.abs(current.occupancyRate - historicalOccupancy);
                         // Prüfe ob Änderung über Schwellenwert liegt
                         if (changePercent >= thresholdPercent) {
                             alerts.push({
                                 date: current.date,
                                 categoryId: current.categoryId,
-                                roomType: historical.roomType,
+                                roomType: current.roomType,
                                 currentOccupancy: current.occupancyRate,
-                                previousOccupancy: Number(historical.occupancyRate),
-                                changePercent
+                                previousOccupancy: historicalOccupancy,
+                                changePercent,
+                                roomName: current.roomName
                             });
                             alertCount++;
                         }
@@ -165,26 +262,33 @@ class OccupancyMonitoringService {
                     }
                     // Erstelle To-Do für kritischste Änderung
                     const criticalAlert = alerts.sort((a, b) => b.changePercent - a.changePercent)[0];
-                    // Finde Kategorie-Name
-                    const categoryInfo = currentAvailability.find(a => a.categoryId === criticalAlert.categoryId && a.date === criticalAlert.date);
-                    if (categoryInfo) {
-                        // Erstelle To-Do für ersten Rezeption-User
-                        if (receptionUsers.length > 0) {
-                            const firstUser = receptionUsers[0];
-                            yield prisma_1.prisma.task.create({
-                                data: {
-                                    title: `Occupancy-Alert: ${categoryInfo.roomName} - ${criticalAlert.changePercent.toFixed(1)}% Änderung`,
-                                    description: `Kategorie: ${categoryInfo.roomName}\nDatum: ${new Date(criticalAlert.date).toLocaleDateString()}\nÄnderung: ${criticalAlert.previousOccupancy.toFixed(1)}% → ${criticalAlert.currentOccupancy.toFixed(1)}%\n\nBitte Preise prüfen und ggf. anpassen.`,
-                                    status: 'open',
-                                    responsibleId: firstUser.id,
-                                    qualityControlId: firstUser.id,
-                                    organizationId: branch.organizationId,
-                                    branchId: branch.id,
-                                    dueDate: new Date(criticalAlert.date)
-                                }
-                            });
-                            logger_1.logger.log(`[OccupancyMonitoring] To-Do erstellt für kritische Occupancy-Änderung: ${categoryInfo.roomName}`);
-                        }
+                    // Bestimme Anzeige-Name
+                    let displayName;
+                    if (criticalAlert.roomType === 'privada') {
+                        // Privatzimmer: Verwende "Privatzimmer" statt einzelner Kategorie
+                        displayName = 'Privatzimmer';
+                    }
+                    else {
+                        // Dorm: Finde Kategorie-Name aus currentAvailability
+                        const categoryInfo = currentAvailability.find(a => a.categoryId === criticalAlert.categoryId && a.date === criticalAlert.date);
+                        displayName = (categoryInfo === null || categoryInfo === void 0 ? void 0 : categoryInfo.roomName) || `Dorm (Kategorie ${criticalAlert.categoryId})`;
+                    }
+                    // Erstelle To-Do für ersten Rezeption-User
+                    if (receptionUsers.length > 0) {
+                        const firstUser = receptionUsers[0];
+                        yield prisma_1.prisma.task.create({
+                            data: {
+                                title: `Occupancy-Alert: ${displayName} - ${criticalAlert.changePercent.toFixed(1)}% Änderung`,
+                                description: `${criticalAlert.roomType === 'privada' ? 'Alle Privatzimmer' : 'Kategorie'}: ${displayName}\nDatum: ${new Date(criticalAlert.date).toLocaleDateString()}\nÄnderung: ${criticalAlert.previousOccupancy.toFixed(1)}% → ${criticalAlert.currentOccupancy.toFixed(1)}%\n\nBitte Preise prüfen und ggf. anpassen.`,
+                                status: 'open',
+                                responsibleId: firstUser.id,
+                                qualityControlId: firstUser.id,
+                                organizationId: branch.organizationId,
+                                branchId: branch.id,
+                                dueDate: new Date(criticalAlert.date)
+                            }
+                        });
+                        logger_1.logger.log(`[OccupancyMonitoring] To-Do erstellt für kritische Occupancy-Änderung: ${displayName}`);
                     }
                 }
                 logger_1.logger.log(`[OccupancyMonitoring] Branch ${branchId}: ${alertCount} Alerts erstellt`);

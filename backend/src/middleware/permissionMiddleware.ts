@@ -43,6 +43,14 @@ interface AuthenticatedRequest extends Request {
     branchId?: number;
 }
 
+// Generischer Request-Typ für Middleware (akzeptiert alle Request-Varianten)
+type AnyRequest = Request & {
+    userId?: string;
+    roleId?: string;
+    organizationId?: number;
+    branchId?: number;
+};
+
 /**
  * Konvertiert Legacy-AccessLevel zu neuem Format
  */
@@ -165,7 +173,7 @@ export const checkPermission = (
     requiredAccess: 'read' | 'write', 
     entityType: EntityType = 'page'
 ) => {
-    return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    return async (req: AnyRequest, res: Response, next: NextFunction) => {
         try {
             const isDebug = req.path.includes('rate-shopping');
             
@@ -173,8 +181,8 @@ export const checkPermission = (
                 logger.warn(`[checkPermission] 🔍 Prüfe: Entity=${entity}, Type=${entityType}, Access=${requiredAccess}`);
             }
             
-            const userId = parseInt(req.userId, 10);
-            const roleId = parseInt(req.roleId, 10);
+            const userId = parseInt(req.userId || '', 10);
+            const roleId = parseInt(req.roleId || '', 10);
 
             if (isNaN(userId) || isNaN(roleId)) {
                 logger.error(`[checkPermission] ❌ Nicht authentifiziert: userId=${req.userId}, roleId=${req.roleId}`);
@@ -314,10 +322,10 @@ export const checkUserPermission = async (
 /**
  * Middleware zur Überprüfung von Admin-Berechtigungen
  */
-export const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
+export const isAdmin = async (req: AnyRequest, res: Response, next: NextFunction) => {
     try {
-        const userId = parseInt(req.userId, 10);
-        const roleId = parseInt(req.roleId, 10);
+        const userId = parseInt(req.userId || '', 10);
+        const roleId = parseInt(req.roleId || '', 10);
 
         if (isNaN(userId)) {
             return res.status(401).json({ 
@@ -354,12 +362,12 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction) =
  * Ausnahmen: Profil-Seite selbst und Profil-Prüf-Endpoint
  */
 export const requireCompleteProfile = async (
-    req: AuthenticatedRequest,
+    req: AnyRequest,
     res: Response,
     next: NextFunction
 ) => {
     try {
-        const userId = parseInt(req.userId, 10);
+        const userId = parseInt(req.userId || '', 10);
         
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });

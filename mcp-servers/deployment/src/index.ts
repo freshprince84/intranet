@@ -24,6 +24,7 @@ const SERVER_CONFIG = {
     ".ssh",
     "intranet_rsa"
   ),
+  passphrase: process.env.DEPLOY_SSH_KEY_PASSPHRASE || undefined,
   serverPath: process.env.DEPLOY_SERVER_PATH || "/var/www/intranet",
   deployScript: process.env.DEPLOY_SCRIPT_PATH || "/var/www/intranet/deploy_to_server.sh",
 };
@@ -113,6 +114,7 @@ async function executeSSHCommand(
         host: SERVER_CONFIG.host,
         username: SERVER_CONFIG.username,
         privateKey: privateKey,
+        passphrase: SERVER_CONFIG.passphrase,
         readyTimeout: 20000,
       });
   });

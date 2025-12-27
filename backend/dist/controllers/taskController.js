@@ -38,7 +38,7 @@ const branchSelect = {
 };
 // Alle Tasks abrufen
 const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a, _b, _c;
     try {
         const userId = parseInt(req.userId, 10);
         const organizationId = req.organizationId;
@@ -56,6 +56,20 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             ? parseInt(req.query.offset, 10)
             : 0; // Standard: 0
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
+        // ✅ SORTIERUNG: Sortier-Parameter aus Query lesen
+        const sortBy = req.query.sortBy;
+        const sortOrder = ((_c = req.query.sortOrder) === null || _c === void 0 ? void 0 : _c.toLowerCase()) === 'desc' ? 'desc' : 'asc';
+        // ✅ SORTIERUNG: Mapping von Frontend-Feldern zu Backend-Feldern
+        let prismaSortBy = sortBy;
+        if (sortBy === 'responsible') {
+            prismaSortBy = 'responsible.firstName';
+        }
+        else if (sortBy === 'branch') {
+            prismaSortBy = 'branch.name';
+        }
+        else if (sortBy === 'qualityControl') {
+            prismaSortBy = 'qualityControl.firstName';
+        }
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause = {};
         if (filterId) {
@@ -149,7 +163,19 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             // ✅ PAGINATION: Nur limit Items laden, offset überspringen
             take: limit,
             skip: offset,
-            orderBy: { createdAt: 'desc' }, // Neueste Tasks zuerst
+            orderBy: prismaSortBy ? [
+                prismaSortBy.includes('.') ? {
+                    [prismaSortBy.split('.')[0]]: {
+                        [prismaSortBy.split('.')[1]]: sortOrder
+                    }
+                } : {
+                    [prismaSortBy]: sortOrder
+                },
+                { id: 'asc' } // ✅ STABILE SORTIERUNG: Fallback auf ID für Infinite Scroll
+            ] : [
+                { createdAt: 'desc' },
+                { id: 'desc' }
+            ],
             include: Object.assign({ responsible: {
                     select: userSelect
                 }, role: {

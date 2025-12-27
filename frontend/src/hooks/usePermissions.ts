@@ -10,7 +10,7 @@ import {
     allowsAllData,
     allowsWrite,
     isVisible
-} from '../config/permissions';
+} from '../config/permissions.ts';
 
 // ✅ PERFORMANCE: Globaler Cache für lifecycle-roles (verhindert doppelte Requests)
 let lifecycleRolesCache: { data: any; timestamp: number; promise: Promise<any> | null } = {

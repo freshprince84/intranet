@@ -16,6 +16,7 @@ const shiftController_1 = require("../controllers/shiftController");
 const shiftSwapController_1 = require("../controllers/shiftSwapController");
 const auth_1 = require("../middleware/auth");
 const organization_1 = require("../middleware/organization");
+const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const logger_1 = require("../utils/logger");
 const router = (0, express_1.Router)();
 // Test-Endpunkt (vor Middleware, um zu prüfen, ob Route erreichbar ist)
@@ -40,21 +41,21 @@ router.use((req, res, next) => {
     logger_1.logger.log('[Shifts Route] 🏢 Nach organizationMiddleware, Path:', req.path, 'organizationId:', req.organizationId);
     next();
 });
-// ShiftTemplate-Routen
-router.get('/templates', shiftTemplateController_1.getAllShiftTemplates);
-router.get('/templates/:id', shiftTemplateController_1.getShiftTemplateById);
-router.post('/templates', shiftTemplateController_1.createShiftTemplate);
-router.put('/templates/:id', shiftTemplateController_1.updateShiftTemplate);
-router.delete('/templates/:id', shiftTemplateController_1.deleteShiftTemplate);
-// UserAvailability-Routen
-router.get('/availabilities', userAvailabilityController_1.getAllAvailabilities);
-router.get('/availabilities/:id', userAvailabilityController_1.getAvailabilityById);
-router.post('/availabilities', userAvailabilityController_1.createAvailability);
-router.put('/availabilities/:id', userAvailabilityController_1.updateAvailability);
-router.delete('/availabilities/:id', userAvailabilityController_1.deleteAvailability);
-// Shift-Routen
+// ShiftTemplate-Routen mit Permission-Checks
+router.get('/templates', (0, permissionMiddleware_1.checkPermission)('shift_planning', 'read', 'tab'), shiftTemplateController_1.getAllShiftTemplates);
+router.get('/templates/:id', (0, permissionMiddleware_1.checkPermission)('shift_planning', 'read', 'tab'), shiftTemplateController_1.getShiftTemplateById);
+router.post('/templates', (0, permissionMiddleware_1.checkPermission)('shift_create', 'write', 'button'), shiftTemplateController_1.createShiftTemplate);
+router.put('/templates/:id', (0, permissionMiddleware_1.checkPermission)('shift_edit', 'write', 'button'), shiftTemplateController_1.updateShiftTemplate);
+router.delete('/templates/:id', (0, permissionMiddleware_1.checkPermission)('shift_delete', 'write', 'button'), shiftTemplateController_1.deleteShiftTemplate);
+// UserAvailability-Routen mit Permission-Checks
+router.get('/availabilities', (0, permissionMiddleware_1.checkPermission)('shift_planning', 'read', 'tab'), userAvailabilityController_1.getAllAvailabilities);
+router.get('/availabilities/:id', (0, permissionMiddleware_1.checkPermission)('shift_planning', 'read', 'tab'), userAvailabilityController_1.getAvailabilityById);
+router.post('/availabilities', (0, permissionMiddleware_1.checkPermission)('shift_create', 'write', 'button'), userAvailabilityController_1.createAvailability);
+router.put('/availabilities/:id', (0, permissionMiddleware_1.checkPermission)('shift_edit', 'write', 'button'), userAvailabilityController_1.updateAvailability);
+router.delete('/availabilities/:id', (0, permissionMiddleware_1.checkPermission)('shift_delete', 'write', 'button'), userAvailabilityController_1.deleteAvailability);
+// Shift-Routen mit Permission-Checks
 // WICHTIG: GET / muss VOR GET /:id kommen, sonst wird / als :id interpretiert!
-router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/', (0, permissionMiddleware_1.checkPermission)('shift_planning', 'read', 'tab'), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     logger_1.logger.log('[Shifts Route] 📥 GET / aufgerufen');
     logger_1.logger.log('[Shifts Route] Query:', req.query);
     logger_1.logger.log('[Shifts Route] OrganizationId:', req.organizationId);
@@ -68,16 +69,16 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.status(500).json({ error: 'Fehler beim Laden der Schichten' });
     }
 }));
-router.get('/generate', shiftController_1.generateShiftPlan); // Muss vor /:id stehen!
-router.post('/generate', shiftController_1.generateShiftPlan);
-router.get('/:id', shiftController_1.getShiftById);
-router.post('/', shiftController_1.createShift);
-router.put('/:id', shiftController_1.updateShift);
-router.delete('/:id', shiftController_1.deleteShift);
-// ShiftSwap-Routen
-router.get('/swaps', shiftSwapController_1.getAllSwapRequests);
-router.get('/swaps/:id', shiftSwapController_1.getSwapRequestById);
-router.post('/swaps', shiftSwapController_1.createSwapRequest);
+router.get('/generate', (0, permissionMiddleware_1.checkPermission)('shift_planning', 'read', 'tab'), shiftController_1.generateShiftPlan); // Muss vor /:id stehen!
+router.post('/generate', (0, permissionMiddleware_1.checkPermission)('shift_create', 'write', 'button'), shiftController_1.generateShiftPlan);
+router.get('/:id', (0, permissionMiddleware_1.checkPermission)('shift_planning', 'read', 'tab'), shiftController_1.getShiftById);
+router.post('/', (0, permissionMiddleware_1.checkPermission)('shift_create', 'write', 'button'), shiftController_1.createShift);
+router.put('/:id', (0, permissionMiddleware_1.checkPermission)('shift_edit', 'write', 'button'), shiftController_1.updateShift);
+router.delete('/:id', (0, permissionMiddleware_1.checkPermission)('shift_delete', 'write', 'button'), shiftController_1.deleteShift);
+// ShiftSwap-Routen mit Permission-Checks
+router.get('/swaps', (0, permissionMiddleware_1.checkPermission)('shift_planning', 'read', 'tab'), shiftSwapController_1.getAllSwapRequests);
+router.get('/swaps/:id', (0, permissionMiddleware_1.checkPermission)('shift_planning', 'read', 'tab'), shiftSwapController_1.getSwapRequestById);
+router.post('/swaps', (0, permissionMiddleware_1.checkPermission)('shift_swap_request', 'write', 'button'), shiftSwapController_1.createSwapRequest);
 router.put('/swaps/:id/approve', shiftSwapController_1.approveSwapRequest);
 router.put('/swaps/:id/reject', shiftSwapController_1.rejectSwapRequest);
 exports.default = router;

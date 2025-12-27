@@ -40,6 +40,7 @@ Die Konfiguration erfolgt über Umgebungsvariablen in `mcp.json`:
 - `DEPLOY_SERVER_HOST`: Server-IP (Standard: 65.109.228.106)
 - `DEPLOY_SERVER_USER`: SSH-User (Standard: root)
 - `DEPLOY_SSH_KEY_PATH`: Pfad zum SSH-Private-Key (Standard: ~/.ssh/intranet_rsa)
+- `DEPLOY_SSH_KEY_PASSPHRASE`: Passwort für den SSH-Key (optional, falls Key passwortgeschützt ist)
 - `DEPLOY_SERVER_PATH`: Pfad auf dem Server (Standard: /var/www/intranet)
 - `DEPLOY_SCRIPT_PATH`: Pfad zum Deployment-Skript (Standard: /var/www/intranet/deploy_to_server.sh)
 
