@@ -1,6 +1,7 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
+import { checkPermission } from '../middleware/permissionMiddleware';
 import { 
   getCurrentOrganization,
   createOrganization,
@@ -56,7 +57,8 @@ router.get('/current', getCurrentOrganization);
 router.get('/current/stats', getOrganizationStats);
 router.get('/current/language', getOrganizationLanguage);
 router.put('/current/language', updateOrganizationLanguage);
-router.put('/current', updateCurrentOrganization);
+// ✅ FIX: Organisation Bearbeitung erfordert organization_edit Button-Berechtigung
+router.put('/current', checkPermission('organization_edit', 'write', 'button'), updateCurrentOrganization);
 
 // Join Request Routen
 router.get('/join-requests', getJoinRequests);

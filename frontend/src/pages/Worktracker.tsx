@@ -2182,7 +2182,7 @@ const Worktracker: React.FC = () => {
                                             </div>
                                         </div>
                                     )}
-                                    {activeTab === 'reservations' && hasPermission('reservations', 'write', 'table') && (
+                                    {activeTab === 'reservations' && hasPermission('reservations', 'write', 'tab') && (
                                         <div className="relative group">
                                             <button
                                                 onClick={() => setIsCreateReservationModalOpen(true)}
@@ -2213,7 +2213,7 @@ const Worktracker: React.FC = () => {
                                             <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                                             {t('tasks.title', "To Do's")}
                                         </button>
-                                        {hasPermission('reservations', 'read', 'table') && (
+                                        {hasPermission('reservations', 'read', 'tab') && (
                                             <button
                                                 onClick={() => setActiveTab('reservations')}
                                                 className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
@@ -3135,7 +3135,7 @@ const Worktracker: React.FC = () => {
                                                 }
                                                 
                                                 // Action-Buttons für Einladung senden und PIN-Generierung
-                                                const hasWritePermission = hasPermission('reservations', 'write', 'table');
+                                                const hasWritePermission = hasPermission('reservations', 'write', 'tab');
                                                 const actionButtons = hasWritePermission ? (
                                                     <div className="flex items-center space-x-2">
                                                         {/* Einladung senden Button */}
@@ -3438,7 +3438,7 @@ const Worktracker: React.FC = () => {
                                                                             return (
                                                                                 <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                                     <div className="flex space-x-2 action-buttons">
-                                                                                        {hasPermission('reservations', 'write', 'table') && (
+                                                                                        {hasPermission('reservations', 'write', 'tab') && (
                                                                                             <>
                                                                                                 {/* Einladung senden Button */}
                                                                                                 <div className="relative group">

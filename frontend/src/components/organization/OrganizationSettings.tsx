@@ -33,7 +33,7 @@ const OrganizationSettings: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
-  const { canViewOrganization, canManageOrganization, loading: permissionsLoading } = usePermissions();
+  const { canViewOrganization, canManageOrganization, hasPermission, loading: permissionsLoading } = usePermissions();
   const { showMessage } = useMessage();
   const { t } = useTranslation();
   const { refreshOrganization } = useOrganization();
@@ -247,7 +247,8 @@ const OrganizationSettings: React.FC = () => {
                         {organization.domain || t('organization.noDomain')}
                       </p>
             </div>
-                    {canManageOrganization() && (
+                    {/* ✅ FIX: Prüfe organization_edit Button-Berechtigung */}
+                    {(canManageOrganization() || hasPermission('organization_edit', 'write', 'button')) && (
                       <button
                         onClick={() => {
                           // ✅ PERFORMANCE: Modal öffnet sofort - Settings werden im Modal geladen wenn benötigt

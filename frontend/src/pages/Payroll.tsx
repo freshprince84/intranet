@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { usePermissions } from '../hooks/usePermissions.ts';
 import PayrollComponent from '../components/PayrollComponent.tsx';
 import InvoiceManagementTab from '../components/InvoiceManagementTab.tsx';
 import MonthlyReportsTab from '../components/MonthlyReportsTab.tsx';
@@ -10,6 +11,7 @@ type TabType = 'invoices' | 'monthly-reports' | 'payroll';
 
 const Payroll: React.FC = () => {
   const { t } = useTranslation();
+  const { canView } = usePermissions();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabType>('invoices');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
@@ -41,26 +43,40 @@ const Payroll: React.FC = () => {
     }
   }, [location.search]);
 
-  const tabs = [
+  // ✅ FIX: Tabs basierend auf Berechtigungen filtern
+  const allTabs = [
     {
       id: 'invoices' as TabType,
+      entity: 'consultation_invoices',
       name: t('payroll.tabs.invoices'),
       icon: DocumentTextIcon,
       component: <InvoiceManagementTab />
     },
     {
       id: 'monthly-reports' as TabType,
+      entity: 'monthly_reports',
       name: t('payroll.tabs.monthlyReports'),
       icon: ClipboardDocumentListIcon,
       component: <MonthlyReportsTab />
     },
     {
       id: 'payroll' as TabType,
+      entity: 'payroll_reports',
       name: t('payroll.tabs.payroll'),
       icon: CalculatorIcon,
       component: <PayrollComponent />
     }
   ];
+
+  // Filtere Tabs basierend auf Berechtigungen
+  const tabs = allTabs.filter(tab => canView(tab.entity, 'tab'));
+
+  // ✅ FIX: Default Tab setzen basierend auf verfügbaren Tabs
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.find(t => t.id === activeTab)) {
+      setActiveTab(tabs[0].id);
+    }
+  }, [tabs, activeTab]);
 
   return (
     <div className="min-h-screen dark:bg-gray-900">

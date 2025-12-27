@@ -98,49 +98,11 @@ export const getAllTasks = async (req: Request, res: Response) => {
         // ✅ PERFORMANCE: Flachere OR-Struktur für bessere Index-Nutzung
         const baseWhereConditions: any[] = [];
         
-        // ✅ ROLLEN-ISOLATION: Isolation-Filter basierend auf Rolle
-        if (organizationId) {
-            if (isAdminOrOwner(req)) {
-                // Admin/Owner: Alle Tasks der Organisation
-                baseWhereConditions.push({
-                    organizationId: organizationId
-                });
-            } else {
-                // User/Andere Rollen: Nur Tasks der eigenen Rolle + eigene Tasks, innerhalb der eigenen Branch
-                const branchId = (req as any).branchId;
-                const taskFilter: any = {
-                    organizationId: organizationId
-                };
-                
-                if (branchId) {
-                    taskFilter.branchId = branchId;
-                }
-                
-                if (userRoleId) {
-                    taskFilter.OR = [
-                        { responsibleId: userId },
-                        { qualityControlId: userId },
-                        { roleId: userRoleId }
-                    ];
-                } else {
-                    // Fallback: Nur eigene Tasks
-                    taskFilter.OR = [
-                        { responsibleId: userId },
-                        { qualityControlId: userId }
-                    ];
-                }
-                
-                baseWhereConditions.push(taskFilter);
-            }
-        } else {
-            // Standalone User: Nur eigene Tasks
-            baseWhereConditions.push({
-                OR: [
-                    { responsibleId: userId },
-                    { qualityControlId: userId }
-                ]
-            });
-        }
+        // ✅ FIX: Verwende getDataIsolationFilter() statt hardcodierte Filterung
+        // Diese Funktion berücksichtigt permissionContext (own_both vs all_both)
+        // und wird von checkPermission Middleware gesetzt
+        const isolationFilter = getDataIsolationFilter(req as any, 'task');
+        baseWhereConditions.push(isolationFilter);
         
         // Füge Filter-Bedingungen hinzu (falls vorhanden)
         if (Object.keys(filterWhereClause).length > 0) {

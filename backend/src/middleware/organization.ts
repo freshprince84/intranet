@@ -276,11 +276,16 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
   }
 
   // User mit Organisation - Filter nach organizationId
+  // ✅ FIX: Fallback-Code nur verwenden, wenn permissionContext NICHT vorhanden ist
+  // Wenn permissionContext vorhanden ist, wurde bereits oben (Zeile 167-211) gehandhabt
   
   switch (entity) {
     case 'task':
-      // Tasks: Nach organizationId UND (responsibleId ODER roleId ODER qualityControlId)
-      // Wenn User eine Rolle hat, die einer Task-Rolle entspricht, soll er die Task sehen
+      // ✅ FIX: Fallback nur wenn permissionContext NICHT vorhanden
+      // In diesem Fall: Nur eigene Tasks (sicherer Fallback)
+      // permissionContext sollte aber immer vorhanden sein, wenn checkPermission Middleware verwendet wird
+      logger.warn('[getDataIsolationFilter] Task: permissionContext nicht vorhanden, verwende sicheren Fallback (nur eigene Tasks)');
+      
       const taskFilter: any = {};
       
       // Nur organizationId hinzufügen, wenn es gesetzt ist
@@ -288,38 +293,14 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
         taskFilter.organizationId = req.organizationId;
       }
       
-      // Wenn User eine aktive Rolle hat, füge roleId-Filter hinzu
-      const userRoleId = req.userRole?.role?.id;
+      // ✅ FIX: Fallback zeigt nur eigene Tasks (sicherer als roleId-Filter)
+      // Wenn permissionContext vorhanden wäre, würde es own_both vs all_both berücksichtigen
+      taskFilter.OR = [
+        { responsibleId: userId },
+        { qualityControlId: userId }
+      ];
       
-      // Debug-Logging
-      logger.log('[getDataIsolationFilter] Task filter:', {
-        userId,
-        organizationId: req.organizationId,
-        userRoleId,
-        userRoleName: req.userRole?.role?.name,
-        hasOrganization: !!req.organizationId
-      });
-      
-      if (userRoleId) {
-        taskFilter.OR = [
-          { responsibleId: userId },
-          { qualityControlId: userId },
-          { roleId: userRoleId }
-        ];
-      } else {
-        // Fallback: Nur eigene Tasks
-        taskFilter.OR = [
-          { responsibleId: userId },
-          { qualityControlId: userId }
-        ];
-      }
-      
-      // Wenn organizationId gesetzt ist, muss es in der OR-Bedingung auch berücksichtigt werden
-      // ABER: Prisma unterstützt keine verschachtelten OR-Bedingungen mit AND
-      // Lösung: organizationId wird als separate Bedingung hinzugefügt
-      // Das bedeutet: (organizationId = X) AND (responsibleId = Y OR roleId = Z OR qualityControlId = Y)
-      
-      logger.log('[getDataIsolationFilter] Final task filter:', JSON.stringify(taskFilter, null, 2));
+      logger.log('[getDataIsolationFilter] Task fallback filter (nur eigene Tasks):', JSON.stringify(taskFilter, null, 2));
       
       return taskFilter;
     

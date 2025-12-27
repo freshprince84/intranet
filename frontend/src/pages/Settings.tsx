@@ -22,7 +22,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Settings: React.FC = () => {
     const { user, fetchCurrentUser } = useAuth();
-    const { isAdmin } = usePermissions();
+    const { isAdmin, canView } = usePermissions();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const { showMessage } = useMessage();
     const { t } = useTranslation();
@@ -59,6 +59,23 @@ const Settings: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     // Tab-Zustand für Navigation zwischen den Einstellungen
     const [activeTab, setActiveTab] = useState<'personal' | 'notifications' | 'system' | 'password_manager'>('personal');
+    
+    // ✅ FIX: Default Tab setzen basierend auf verfügbaren Tabs
+    useEffect(() => {
+        // Personal und Notifications sind immer verfügbar
+        const availableTabs: ('personal' | 'notifications' | 'system' | 'password_manager')[] = ['personal', 'notifications'];
+        if (canView('system', 'tab')) {
+            availableTabs.push('system');
+        }
+        if (canView('password_manager', 'tab')) {
+            availableTabs.push('password_manager');
+        }
+        
+        // Wenn aktueller Tab nicht verfügbar ist, wechsle zum ersten verfügbaren
+        if (!availableTabs.includes(activeTab)) {
+            setActiveTab(availableTabs[0]);
+        }
+    }, [canView, activeTab]);
     
     // Monatsabrechnungs-Einstellungen
     const [monthlyReportSettings, setMonthlyReportSettings] = useState<MonthlyReportSettings>({
@@ -267,6 +284,7 @@ const Settings: React.FC = () => {
                 {/* Tabs für Navigation */}
                 <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
                     <nav className="-mb-px flex space-x-8">
+                        {/* Personal und Notifications sind immer verfügbar */}
                         <button
                             className={`${
                                 activeTab === 'personal'
@@ -289,28 +307,34 @@ const Settings: React.FC = () => {
                             <BellIcon className="h-4 w-4 mr-2" />
                             {t('settings.notifications')}
                         </button>
-                        <button
-                            className={`${
-                                activeTab === 'system'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
-                            onClick={() => handleTabChange('system')}
-                        >
-                            <ComputerDesktopIcon className="h-4 w-4 mr-2" />
-                            {t('settings.system')}
-                        </button>
-                        <button
-                            className={`${
-                                activeTab === 'password_manager'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
-                            onClick={() => handleTabChange('password_manager')}
-                        >
-                            <KeyIcon className="h-4 w-4 mr-2" />
-                            {t('settings.passwordManager')}
-                        </button>
+                        {/* ✅ FIX: System Tab nur anzeigen wenn Berechtigung vorhanden */}
+                        {canView('system', 'tab') && (
+                            <button
+                                className={`${
+                                    activeTab === 'system'
+                                        ? 'border-blue-500 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                                onClick={() => handleTabChange('system')}
+                            >
+                                <ComputerDesktopIcon className="h-4 w-4 mr-2" />
+                                {t('settings.system')}
+                            </button>
+                        )}
+                        {/* ✅ FIX: Password Manager Tab nur anzeigen wenn Berechtigung vorhanden */}
+                        {canView('password_manager', 'tab') && (
+                            <button
+                                className={`${
+                                    activeTab === 'password_manager'
+                                        ? 'border-blue-500 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                                onClick={() => handleTabChange('password_manager')}
+                            >
+                                <KeyIcon className="h-4 w-4 mr-2" />
+                                {t('settings.passwordManager')}
+                            </button>
+                        )}
                     </nav>
                 </div>
 
