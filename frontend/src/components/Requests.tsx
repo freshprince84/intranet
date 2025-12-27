@@ -771,6 +771,26 @@ const Requests: React.FC = () => {
     initialize();
   }, []); // ✅ FIX: Leere Dependencies wie im Standard-Pattern geplant
 
+  // ✅ SORTIERUNG: Neuladen wenn sich die Sortierung ändert
+  useEffect(() => {
+    // Nur neuladen wenn:
+    // 1. Settings geladen sind
+    // 2. Initial-Load bereits stattgefunden hat (verhindert Doppel-Request beim Start)
+    if (!isLoadingSettings && initialLoadAttemptedRef.current) {
+      fetchRequests(
+        selectedFilterIdRef.current || undefined,
+        filterConditionsRef.current.length > 0 ? filterConditionsRef.current : undefined,
+        false, // append = false (komplett neu laden)
+        20, // limit
+        0, // offset
+        filterLogicalOperatorsRef.current, // operators
+        sortConfig.key, // sortBy
+        sortConfig.direction // sortOrder
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortConfig.key, sortConfig.direction, isLoadingSettings]); // ✅ fetchRequests ist stabil (keine Dependencies), Filter-Werte kommen aus Refs
+
   // getActiveFilterCount wird direkt inline verwendet (filterConditions.length)
 
   const filteredAndSortedRequests = useMemo(() => {
@@ -810,6 +830,14 @@ const Requests: React.FC = () => {
   useEffect(() => {
     filterLogicalOperatorsRef.current = filterLogicalOperators;
   }, [filterLogicalOperators]);
+
+  // ✅ MEMORY-LEAK-FIX: Refs für Filter-Werte (verhindert fetchRequests-Recreation)
+  const selectedFilterIdRef = useRef(selectedFilterId);
+  const filterConditionsRef = useRef(filterConditions);
+  useEffect(() => {
+    selectedFilterIdRef.current = selectedFilterId;
+    filterConditionsRef.current = filterConditions;
+  }, [selectedFilterId, filterConditions]);
 
   // ✅ PAGINATION: Infinite Scroll mit Intersection Observer
   useEffect(() => {
