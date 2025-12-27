@@ -1762,6 +1762,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                       onChange={(newPermissions) => setFormData({ ...formData, permissions: newPermissions })}
                     />
                   </div>
+                      </div>
+                    </div>
                   
                   {/* Footer */}
                   <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end gap-2 border-t dark:border-gray-600 flex-shrink-0">
