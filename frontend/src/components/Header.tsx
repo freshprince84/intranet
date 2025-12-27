@@ -53,29 +53,43 @@ const Header: React.FC = () => {
 
     // Separate Handler für Rollen-Untermenü mit längerem Timeout
     const handleRoleSubMenuMouseEnter = () => {
+        // ✅ WICHTIG: Timeout IMMER löschen, auch wenn Ref undefined ist
         if (roleSubMenuTimeoutRef.current) {
             clearTimeout(roleSubMenuTimeoutRef.current);
+            roleSubMenuTimeoutRef.current = undefined; // Ref zurücksetzen
         }
         handleMouseEnter(); // Auch Hauptmenü-Timeout löschen
     };
 
     const handleRoleSubMenuMouseLeave = () => {
+        // ✅ WICHTIG: Vorherigen Timeout löschen, falls vorhanden
+        if (roleSubMenuTimeoutRef.current) {
+            clearTimeout(roleSubMenuTimeoutRef.current);
+        }
         roleSubMenuTimeoutRef.current = setTimeout(() => {
             setIsRoleSubMenuOpen(false);
+            roleSubMenuTimeoutRef.current = undefined; // Ref zurücksetzen nach Ausführung
         }, 2500); // Längerer Timeout für Untermenü (2.5 Sekunden)
     };
 
     // Separate Handler für Branch-Untermenü mit längerem Timeout
     const handleBranchSubMenuMouseEnter = () => {
+        // ✅ WICHTIG: Timeout IMMER löschen, auch wenn Ref undefined ist
         if (branchSubMenuTimeoutRef.current) {
             clearTimeout(branchSubMenuTimeoutRef.current);
+            branchSubMenuTimeoutRef.current = undefined; // Ref zurücksetzen
         }
         handleMouseEnter(); // Auch Hauptmenü-Timeout löschen
     };
 
     const handleBranchSubMenuMouseLeave = () => {
+        // ✅ WICHTIG: Vorherigen Timeout löschen, falls vorhanden
+        if (branchSubMenuTimeoutRef.current) {
+            clearTimeout(branchSubMenuTimeoutRef.current);
+        }
         branchSubMenuTimeoutRef.current = setTimeout(() => {
             setIsBranchSubMenuOpen(false);
+            branchSubMenuTimeoutRef.current = undefined; // Ref zurücksetzen nach Ausführung
         }, 2500); // Längerer Timeout für Untermenü (2.5 Sekunden)
     };
 
