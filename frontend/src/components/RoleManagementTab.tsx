@@ -21,6 +21,17 @@ import {
   AccessLevelValues,
   convertLegacyAccessLevel
 } from '../config/permissions.ts';
+import {
+  PERMISSION_STRUCTURE,
+  PermissionPage,
+  PermissionBox,
+  PermissionTab,
+  PermissionButton,
+  PermissionOptions,
+  getAllEntities,
+  getAccessLevelOptions
+} from '../config/permissionStructure.ts';
+import PermissionEditor from './PermissionEditor.tsx';
 
 // AccessLevel-Optionen für Dropdowns (sortiert nach Berechtigung)
 const ACCESS_LEVEL_OPTIONS: NewAccessLevel[] = ['none', 'own_read', 'own_both', 'all_read', 'all_both'];
@@ -348,27 +359,8 @@ interface AccessLevelSelectProps {
   disabled?: boolean;
   size?: 'sm' | 'md';
   t: (key: string) => string;
-  entityType?: 'page' | 'table' | 'button';
+  permOptions: PermissionOptions; // 'binary' = ja/nein, 'ternary' = alle/eigene/nein
 }
-
-// AccessLevel-Optionen je nach EntityType (gemäß Plan)
-// page: ja/nein → none, all_both
-// button: ja/nein → none, all_both  
-// table (Tabs/Boxes): nein/eigene/alle → none, own_both, all_both
-const getOptionsForEntityType = (entityType?: string): NewAccessLevel[] => {
-  switch (entityType) {
-    case 'page':
-    case 'button':
-      // Nur ja/nein (erlaubt/nicht erlaubt)
-      return ['none', 'all_both'];
-    case 'table':
-      // Nein/Eigene/Alle
-      return ['none', 'own_both', 'all_both'];
-    default:
-      // Fallback: alle Optionen
-      return ACCESS_LEVEL_OPTIONS;
-  }
-};
 
 const AccessLevelSelect: React.FC<AccessLevelSelectProps> = ({ 
   value, 
@@ -376,19 +368,19 @@ const AccessLevelSelect: React.FC<AccessLevelSelectProps> = ({
   disabled = false,
   size = 'md',
   t,
-  entityType
+  permOptions
 }) => {
   // Konvertiere Legacy-Werte zu neuen Werten
   const normalizedValue = convertLegacyAccessLevel(value);
   
-  // Hole Optionen basierend auf EntityType
-  const options = getOptionsForEntityType(entityType);
+  // Hole Optionen basierend auf PermissionOptions
+  const options = getAccessLevelOptions(permOptions) as NewAccessLevel[];
   
-  // Normalisiere den Wert auf gültige Option (falls alte Werte wie own_read vorhanden)
+  // Normalisiere den Wert auf gültige Option
   const displayValue = options.includes(normalizedValue) 
     ? normalizedValue 
     : (normalizedValue === 'own_read' || normalizedValue === 'own_both') 
-      ? (options.includes('own_both') ? 'own_both' : 'all_both')
+      ? (options.includes('own_both' as NewAccessLevel) ? 'own_both' : 'all_both')
       : (normalizedValue === 'all_read' || normalizedValue === 'all_both')
         ? 'all_both'
         : 'none';
@@ -397,9 +389,7 @@ const AccessLevelSelect: React.FC<AccessLevelSelectProps> = ({
   const getColorClass = (level: NewAccessLevel): string => {
     switch (level) {
       case 'none': return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
-      case 'own_read': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
       case 'own_both': return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
-      case 'all_read': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
       case 'all_both': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
       default: return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
     }
@@ -414,7 +404,7 @@ const AccessLevelSelect: React.FC<AccessLevelSelectProps> = ({
       value={displayValue}
       onChange={(e) => onChange(e.target.value as NewAccessLevel)}
       disabled={disabled}
-      className={`${sizeClasses} ${getColorClass(displayValue)} rounded border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed max-w-[140px]`}
+      className={`${sizeClasses} ${getColorClass(displayValue as NewAccessLevel)} rounded border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed max-w-[100px]`}
     >
       {options.map((level) => (
         <option key={level} value={level}>
@@ -1762,263 +1752,15 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                     </div>
                   </div>
                   
-                  <div className="mt-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('roles.form.detailedPermissions')}</label>
-                        {/* Bulk Actions - kompakt integriert */}
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllPagePermissions('both')}
-                              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
-                            >
-                              {t('roles.form.pagesChecked')}
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              {t('roles.form.activateAllPages')}
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllPagePermissions('none')}
-                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            >
-                              {t('roles.form.pagesUnchecked')}
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              {t('roles.form.deactivateAllPages')}
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllTablePermissions('both')}
-                              className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
-                            >
-                              {t('roles.form.tablesChecked')}
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              {t('roles.form.activateAllTables')}
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllTablePermissions('none')}
-                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            >
-                              {t('roles.form.tablesUnchecked')}
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              {t('roles.form.deactivateAllTables')}
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllButtonPermissions('both')}
-                              className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
-                            >
-                              {t('roles.form.buttonsChecked')}
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              {t('roles.form.activateAllButtons')}
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllButtonPermissions('none')}
-                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            >
-                              {t('roles.form.buttonsUnchecked')}
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              {t('roles.form.deactivateAllButtons')}
-                            </div>
-                          </div>
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 gap-4 overflow-y-auto border rounded-lg p-4 dark:border-gray-600">
-                    {formData.permissions
-                      .filter(permission => 
-                        permission.entityType === 'page'
-                      )
-                      .map((permission, index) => {
-                        const permIndex = formData.permissions.indexOf(permission);
-                        const isFixedPage = alwaysVisiblePages.includes(permission.entity);
-                        return (
-                          <div key={`permission-page-${permission.entity}-${index}`}>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{pageDisplayNames[permission.entity] || permission.entity}</span>
-                              <AccessLevelSelect
-                                value={permission.accessLevel}
-                                onChange={(newValue) => {
-                                  const newPermissions = [...formData.permissions];
-                                  newPermissions[permIndex] = {
-                                    ...permission,
-                                    accessLevel: newValue
-                                  };
-                                  setFormData({ ...formData, permissions: newPermissions });
-                                }}
-                                disabled={isFixedPage}
-                                size="sm"
-                                t={t}
-                                entityType="page"
-                              />
-                            </div>
-                            
-                            {/* Tabellen-Berechtigungen mit zugehörigen Buttons gruppiert */}
-                            {formData.permissions
-                              .filter(tablePerm => 
-                                tablePerm.entityType === 'table' && 
-                                tableToPageMapping[tablePerm.entity] === permission.entity
-                              )
-                              .sort((a, b) => {
-                                const aName = tableDisplayNames[a.entity] || a.entity;
-                                const bName = tableDisplayNames[b.entity] || b.entity;
-                                // Sortierung: users, roles, organization zuerst (in dieser Reihenfolge)
-                                const priorityOrder = ['users', 'roles', 'organization'];
-                                const aIndex = priorityOrder.indexOf(a.entity);
-                                const bIndex = priorityOrder.indexOf(b.entity);
-                                if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-                                if (aIndex !== -1) return -1;
-                                if (bIndex !== -1) return 1;
-                                return aName.localeCompare(bName);
-                              })
-                              .map((tablePerm, tableIndex) => {
-                                const tablePermIndex = formData.permissions.indexOf(tablePerm);
-                                const isTableActive = tablePerm.accessLevel === 'both';
-                                const tableEntity = tablePerm.entity;
-                                const tableDisplayName = tableDisplayNames[tableEntity] || tableEntity;
-                                
-                                // Finde alle Buttons, die zu dieser Tabelle gehören
-                                // Filtere Duplikate: task_* und todo_* sind dasselbe, nur task_* behalten
-                                const relatedButtons = formData.permissions
-                                  .filter(buttonPerm => 
-                                    buttonPerm.entityType === 'button' && 
-                                    buttonToPageMapping[buttonPerm.entity] === permission.entity &&
-                                    buttonToTableMapping[buttonPerm.entity] === tableEntity &&
-                                    // Entferne todo_* Buttons wenn task_* existiert (sind dasselbe)
-                                    !(tableEntity === 'tasks' && buttonPerm.entity.startsWith('todo_'))
-                                  )
-                                  .sort((a, b) => {
-                                    const aName = buttonDisplayNames[a.entity] || a.entity;
-                                    const bName = buttonDisplayNames[b.entity] || b.entity;
-                                    // Logische Reihenfolge: Start, Stop, Erstellen, Bearbeiten, Löschen, dann alphabetisch
-                                    const order = [
-                                      t('roleManagement.buttonOrder.start'),
-                                      t('roleManagement.buttonOrder.stop'),
-                                      t('roleManagement.buttonOrder.create'),
-                                      t('roleManagement.buttonOrder.edit'),
-                                      t('roleManagement.buttonOrder.delete')
-                                    ];
-                                    const aIndex = order.indexOf(aName);
-                                    const bIndex = order.indexOf(bName);
-                                    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-                                    if (aIndex !== -1) return -1;
-                                    if (bIndex !== -1) return 1;
-                                    return aName.localeCompare(bName);
-                                  });
-                                
-                                return (
-                                  <div key={`table-permission-${tableEntity}-${tableIndex}`} className="mt-3">
-                                    {/* Tabelle selbst */}
-                                    <div className="flex items-center justify-between pl-6 border-l-2 border-blue-300 dark:border-blue-600">
-                                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">└ {tableDisplayName}</span>
-                                      <AccessLevelSelect
-                                        value={tablePerm.accessLevel}
-                                        onChange={(newValue) => {
-                                          const newPermissions = [...formData.permissions];
-                                          newPermissions[tablePermIndex] = {
-                                            ...tablePerm,
-                                            accessLevel: newValue
-                                          };
-                                          setFormData({ ...formData, permissions: newPermissions });
-                                        }}
-                                        size="sm"
-                                        t={t}
-                                        entityType="table"
-                                      />
-                                    </div>
-                                    
-                                    {/* Zu dieser Tabelle gehörige Buttons */}
-                                    {relatedButtons.map((buttonPerm, buttonIndex) => {
-                                      const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
-                                      const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
-                                      return (
-                                        <div key={`button-permission-${buttonPerm.entity}-${buttonIndex}`} 
-                                          className="flex items-center justify-between mt-2 pl-12 border-l-2 border-gray-300 dark:border-gray-600">
-                                          <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
-                                          <AccessLevelSelect
-                                            value={buttonPerm.accessLevel}
-                                            onChange={(newValue) => {
-                                              const newPermissions = [...formData.permissions];
-                                              newPermissions[buttonPermIndex] = {
-                                                ...buttonPerm,
-                                                accessLevel: newValue
-                                              };
-                                              setFormData({ ...formData, permissions: newPermissions });
-                                            }}
-                                            size="sm"
-                                            t={t}
-                                            entityType="button"
-                                          />
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                );
-                              })
-                            }
-                              
-                              {/* Button-Berechtigungen ohne Tabelle-Zuordnung (am Ende) */}
-                              {formData.permissions
-                                .filter(buttonPerm => 
-                                  buttonPerm.entityType === 'button' && 
-                                  buttonToPageMapping[buttonPerm.entity] === permission.entity &&
-                                  !buttonToTableMapping[buttonPerm.entity]
-                                )
-                                .sort((a, b) => {
-                                  const aName = buttonDisplayNames[a.entity] || a.entity;
-                                  const bName = buttonDisplayNames[b.entity] || b.entity;
-                                  return aName.localeCompare(bName);
-                                })
-                                .map((buttonPerm, buttonIndex) => {
-                                  const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
-                                  const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
-                                  return (
-                                    <div key={`button-permission-${buttonPerm.entity}-${buttonIndex}`} 
-                                      className="flex items-center justify-between mt-2 pl-6 border-l-2 border-gray-300 dark:border-gray-600">
-                                      <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
-                                      <AccessLevelSelect
-                                        value={buttonPerm.accessLevel}
-                                        onChange={(newValue) => {
-                                          const newPermissions = [...formData.permissions];
-                                          newPermissions[buttonPermIndex] = {
-                                            ...buttonPerm,
-                                            accessLevel: newValue
-                                          };
-                                          setFormData({ ...formData, permissions: newPermissions });
-                                        }}
-                                        size="sm"
-                                        t={t}
-                                        entityType="button"
-                                      />
-                          </div>
-                        );
-                      })
-                    }
-                            </div>
-                          );
-                        })
-                      }
-                    </div>
-                  </div>
-                    </div>
+                  {/* Berechtigungen - Neue strukturierte Komponente */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {t('roles.form.detailedPermissions')}
+                    </label>
+                    <PermissionEditor
+                      permissions={formData.permissions}
+                      onChange={(newPermissions) => setFormData({ ...formData, permissions: newPermissions })}
+                    />
                   </div>
                   
                   {/* Footer */}
@@ -2115,248 +1857,15 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                       </div>
                     </div>
                     
-                    <div className="mt-2">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Detaillierte Berechtigungen</label>
-                        {/* Bulk Actions */}
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllPagePermissions('both')}
-                              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
-                            >
-                              Seiten ✓
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              Alle Seiten aktivieren
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllPagePermissions('none')}
-                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            >
-                              Seiten ✗
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              Alle Seiten deaktivieren
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllTablePermissions('both')}
-                              className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
-                            >
-                              Tabellen ✓
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              Alle Tabellen aktivieren
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllTablePermissions('none')}
-                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            >
-                              Tabellen ✗
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              Alle Tabellen deaktivieren
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllButtonPermissions('both')}
-                              className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
-                            >
-                              Buttons ✓
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              Alle Buttons aktivieren
-                            </div>
-                          </div>
-                          <div className="relative group">
-                            <button
-                              type="button"
-                              onClick={() => setAllButtonPermissions('none')}
-                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            >
-                              Buttons ✗
-                            </button>
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                              Alle Buttons deaktivieren
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 gap-4 overflow-y-auto border rounded-lg p-4 dark:border-gray-600 max-h-[60vh]">
-                        {formData.permissions
-                          .filter(permission => 
-                            permission.entityType === 'page'
-                          )
-                          .map((permission, index) => {
-                            const permIndex = formData.permissions.indexOf(permission);
-                            const isFixedPage = alwaysVisiblePages.includes(permission.entity);
-                            return (
-                              <div key={`permission-page-desktop-${permission.entity}-${index}`}>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{pageDisplayNames[permission.entity] || permission.entity}</span>
-                                  <AccessLevelSelect
-                                    value={permission.accessLevel}
-                                    onChange={(newValue) => {
-                                      const newPermissions = [...formData.permissions];
-                                      newPermissions[permIndex] = {
-                                        ...permission,
-                                        accessLevel: newValue
-                                      };
-                                      setFormData({ ...formData, permissions: newPermissions });
-                                    }}
-                                    disabled={isFixedPage}
-                                    size="sm"
-                                    t={t}
-                                  />
-                                </div>
-                                
-                                {/* Tabellen-Berechtigungen mit zugehörigen Buttons gruppiert */}
-                                {formData.permissions
-                                  .filter(tablePerm => 
-                                    tablePerm.entityType === 'table' && 
-                                    tableToPageMapping[tablePerm.entity] === permission.entity
-                                  )
-                                  .sort((a, b) => {
-                                    const aName = tableDisplayNames[a.entity] || a.entity;
-                                    const bName = tableDisplayNames[b.entity] || b.entity;
-                                    return aName.localeCompare(bName);
-                                  })
-                                  .map((tablePerm, tableIndex) => {
-                                    const tablePermIndex = formData.permissions.indexOf(tablePerm);
-                                    const isTableActive = tablePerm.accessLevel === 'both';
-                                    const tableEntity = tablePerm.entity;
-                                    const tableDisplayName = tableDisplayNames[tableEntity] || tableEntity;
-                                    
-                                    // Finde alle Buttons, die zu dieser Tabelle gehören
-                                    const relatedButtons = formData.permissions
-                                      .filter(buttonPerm => 
-                                        buttonPerm.entityType === 'button' && 
-                                        buttonToPageMapping[buttonPerm.entity] === permission.entity &&
-                                        buttonToTableMapping[buttonPerm.entity] === tableEntity &&
-                                        !(tableEntity === 'tasks' && buttonPerm.entity.startsWith('todo_'))
-                                      )
-                                      .sort((a, b) => {
-                                        const aName = buttonDisplayNames[a.entity] || a.entity;
-                                        const bName = buttonDisplayNames[b.entity] || b.entity;
-                                        const order = [
-                                      t('roleManagement.buttonOrder.start'),
-                                      t('roleManagement.buttonOrder.stop'),
-                                      t('roleManagement.buttonOrder.create'),
-                                      t('roleManagement.buttonOrder.edit'),
-                                      t('roleManagement.buttonOrder.delete')
-                                    ];
-                                        const aIndex = order.indexOf(aName);
-                                        const bIndex = order.indexOf(bName);
-                                        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-                                        if (aIndex !== -1) return -1;
-                                        if (bIndex !== -1) return 1;
-                                        return aName.localeCompare(bName);
-                                      });
-                                    
-                                    return (
-                                      <div key={`table-permission-desktop-${tableEntity}-${tableIndex}`} className="mt-3">
-                                        {/* Tabelle selbst */}
-                                        <div className="flex items-center justify-between pl-6 border-l-2 border-blue-300 dark:border-blue-600">
-                                          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">└ {tableDisplayName}</span>
-                                          <AccessLevelSelect
-                                            value={tablePerm.accessLevel}
-                                            onChange={(newValue) => {
-                                              const newPermissions = [...formData.permissions];
-                                              newPermissions[tablePermIndex] = {
-                                                ...tablePerm,
-                                                accessLevel: newValue
-                                              };
-                                              setFormData({ ...formData, permissions: newPermissions });
-                                            }}
-                                            size="sm"
-                                            t={t}
-                                          />
-                                        </div>
-                                        
-                                        {/* Zu dieser Tabelle gehörige Buttons */}
-                                        {relatedButtons.map((buttonPerm, buttonIndex) => {
-                                          const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
-                                          const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
-                                          return (
-                                            <div key={`button-permission-desktop-${buttonPerm.entity}-${buttonIndex}`} 
-                                              className="flex items-center justify-between mt-2 pl-12 border-l-2 border-gray-300 dark:border-gray-600">
-                                              <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
-                                              <AccessLevelSelect
-                                                value={buttonPerm.accessLevel}
-                                                onChange={(newValue) => {
-                                                  const newPermissions = [...formData.permissions];
-                                                  newPermissions[buttonPermIndex] = {
-                                                    ...buttonPerm,
-                                                    accessLevel: newValue
-                                                  };
-                                                  setFormData({ ...formData, permissions: newPermissions });
-                                                }}
-                                                size="sm"
-                                                t={t}
-                                              />
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    );
-                                  })
-                                }
-                                  
-                                {/* Button-Berechtigungen ohne Tabelle-Zuordnung (am Ende) */}
-                                {formData.permissions
-                                  .filter(buttonPerm => 
-                                    buttonPerm.entityType === 'button' && 
-                                    buttonToPageMapping[buttonPerm.entity] === permission.entity &&
-                                    !buttonToTableMapping[buttonPerm.entity]
-                                  )
-                                  .sort((a, b) => {
-                                    const aName = buttonDisplayNames[a.entity] || a.entity;
-                                    const bName = buttonDisplayNames[b.entity] || b.entity;
-                                    return aName.localeCompare(bName);
-                                  })
-                                  .map((buttonPerm, buttonIndex) => {
-                                    const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
-                                    const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
-                                    return (
-                                      <div key={`button-permission-desktop-${buttonPerm.entity}-${buttonIndex}`} 
-                                        className="flex items-center justify-between mt-2 pl-6 border-l-2 border-gray-300 dark:border-gray-600">
-                                        <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
-                                        <AccessLevelSelect
-                                          value={buttonPerm.accessLevel}
-                                          onChange={(newValue) => {
-                                            const newPermissions = [...formData.permissions];
-                                            newPermissions[buttonPermIndex] = {
-                                              ...buttonPerm,
-                                              accessLevel: newValue
-                                            };
-                                            setFormData({ ...formData, permissions: newPermissions });
-                                          }}
-                                          size="sm"
-                                          t={t}
-                                          entityType="button"
-                                        />
-                                      </div>
-                                    );
-                                  })
-                                }
-                              </div>
-                            );
-                          })
-                        }
-                      </div>
+                    {/* Berechtigungen - Neue strukturierte Komponente */}
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {t('roles.form.detailedPermissions')}
+                      </label>
+                      <PermissionEditor
+                        permissions={formData.permissions}
+                        onChange={(newPermissions) => setFormData({ ...formData, permissions: newPermissions })}
+                      />
                     </div>
 
                     {/* Buttons */}
