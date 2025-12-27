@@ -97,10 +97,13 @@ async function executeSSHCommand(command, timeout = 300000) {
     });
 }
 /**
- * Bereinigt Build-Dateien auf dem Server, die Git Pull blockieren könnten
+ * Bereinigt Build-Dateien und löst Git-Konflikte auf dem Server
  */
 async function cleanupBuildFiles() {
     const cleanupCommand = `cd ${SERVER_CONFIG.serverPath} && ` +
+        `echo "🔧 Löse Git-Konflikte auf..." && ` +
+        `git reset --hard HEAD 2>/dev/null || true && ` +
+        `git merge --abort 2>/dev/null || true && ` +
         `echo "🧹 Bereinige Build-Dateien..." && ` +
         `rm -f frontend/build/static/js/908.*.chunk.js* 2>/dev/null || true && ` +
         `rm -f frontend/build/static/js/main.*.js* 2>/dev/null || true && ` +
@@ -109,8 +112,8 @@ async function cleanupBuildFiles() {
         `find frontend/build/static/js -name "*.js" -type f ! -name "*.chunk.js" -delete 2>/dev/null || true && ` +
         `git clean -fd frontend/build/ 2>/dev/null || true && ` +
         `git clean -fd backend/dist/ 2>/dev/null || true && ` +
-        `echo "✅ Build-Dateien bereinigt"`;
-    console.error(`[MCP Deployment] Bereinige Build-Dateien auf ${SERVER_CONFIG.host}...`);
+        `echo "✅ Build-Dateien bereinigt und Konflikte aufgelöst"`;
+    console.error(`[MCP Deployment] Bereinige Build-Dateien und löse Git-Konflikte auf ${SERVER_CONFIG.host}...`);
     return await executeSSHCommand(cleanupCommand, 30000); // 30 Sekunden Timeout
 }
 /**
