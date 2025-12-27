@@ -595,11 +595,11 @@
       "copy": "Rolle kopieren"
     },
     "accessLevels": {
-      "none": "Kein Zugriff",
-      "own_read": "Nur eigene lesen",
-      "own_both": "Nur eigene bearbeiten",
-      "all_read": "Alle lesen",
-      "all_both": "Alle bearbeiten"
+      "none": "Nein",
+      "own_read": "Eigene (lesen)",
+      "own_both": "Eigene",
+      "all_read": "Alle (lesen)",
+      "all_both": "Ja"
     },
     "form": {
       "name": "Name",

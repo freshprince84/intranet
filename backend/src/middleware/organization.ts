@@ -115,13 +115,46 @@ const OWNERSHIP_FIELDS: Record<string, string[]> = {
  * @returns Prisma WHERE-Filter für Row-Level-Isolation
  */
 export const getDataIsolationFilter = (req: Request, entity: string): any => {
-  // ✅ FIX: Admin/Owner sehen alle Daten (keine Isolation)
-  if (isAdminOrOwner(req)) {
-    return {}; // Leerer Filter = alle Daten
-  }
-  
   // Konvertiere userId von String zu Integer
   const userId = Number(req.userId);
+  
+  // ✅ FIX: Admin/Owner sehen alle Daten der EIGENEN ORGANISATION (keine Row-Level-Isolation)
+  // ABER: Immer noch auf organizationId beschränkt!
+  if (isAdminOrOwner(req)) {
+    if (!req.organizationId) {
+      // Standalone Admin ohne Organisation: Keine Daten (außer eigene)
+      return { id: -1 };
+    }
+    // Admin mit Organisation: Nur Daten der eigenen Organisation
+    switch (entity) {
+      case 'role':
+      case 'branch':
+      case 'request':
+      case 'worktime':
+      case 'client':
+      case 'invoice':
+      case 'consultationInvoice':
+      case 'monthlyReport':
+      case 'monthlyConsultationReport':
+      case 'cerebroCarticle':
+      case 'carticle':
+        return { organizationId: req.organizationId };
+      case 'user':
+        return {
+          roles: {
+            some: {
+              role: {
+                organizationId: req.organizationId
+              }
+            }
+          }
+        };
+      case 'task':
+        return { organizationId: req.organizationId };
+      default:
+        return { organizationId: req.organizationId };
+    }
+  }
   
   if (isNaN(userId)) {
     logger.error('Invalid userId in request:', req.userId);

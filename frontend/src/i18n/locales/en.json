@@ -683,11 +683,11 @@
       "copy": "Copy role"
     },
     "accessLevels": {
-      "none": "No access",
-      "own_read": "Own read only",
-      "own_both": "Own read & write",
-      "all_read": "All read only",
-      "all_both": "All read & write"
+      "none": "No",
+      "own_read": "Own (read)",
+      "own_both": "Own",
+      "all_read": "All (read)",
+      "all_both": "Yes"
     },
     "form": {
       "name": "Name",

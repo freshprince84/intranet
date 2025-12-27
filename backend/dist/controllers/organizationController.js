@@ -810,6 +810,30 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         lastUsed: false // Nicht als aktiv setzen, da User bereits andere Rolle haben könnte
                     }
                 });
+                // ✅ Erste Branch der Organisation dem User zuweisen
+                // Bei Org-Beitritt braucht der User mindestens eine Branch
+                const firstBranch = yield tx.branch.findFirst({
+                    where: { organizationId: joinRequest.organizationId },
+                    orderBy: { id: 'asc' }
+                });
+                if (firstBranch) {
+                    // Prüfe ob User diese Branch schon hat
+                    const existingUserBranch = yield tx.usersBranches.findFirst({
+                        where: {
+                            userId: joinRequest.requesterId,
+                            branchId: firstBranch.id
+                        }
+                    });
+                    if (!existingUserBranch) {
+                        yield tx.usersBranches.create({
+                            data: {
+                                userId: joinRequest.requesterId,
+                                branchId: firstBranch.id,
+                                lastUsed: false // Nicht aktiv, da User bereits andere Rolle/Branch haben kann
+                            }
+                        });
+                    }
+                }
             }
             return updatedRequest;
         }));

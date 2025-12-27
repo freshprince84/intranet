@@ -1167,34 +1167,19 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (isNaN(roleId) || roleId <= 0) {
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
-        // Prüfe, ob die Rolle für die aktive Branch verfügbar ist (VOR der Transaktion)
-        const activeBranch = yield prisma_1.prisma.usersBranches.findFirst({
-            where: {
-                userId,
-                lastUsed: true
-            },
-            select: {
-                branchId: true
-            }
+        // Hole die neue Rolle mit Organisation
+        const newRole = yield prisma_1.prisma.role.findUnique({
+            where: { id: roleId },
+            select: { id: true, organizationId: true }
         });
-        if (activeBranch) {
-            // Importiere die Hilfsfunktion dynamisch, um Zirkelimporte zu vermeiden
-            const { isRoleAvailableForBranch } = yield Promise.resolve().then(() => __importStar(require('./roleController')));
-            const isAvailable = yield isRoleAvailableForBranch(roleId, activeBranch.branchId);
-            if (!isAvailable) {
-                return res.status(400).json({
-                    message: 'Diese Rolle ist für die aktive Branch nicht verfügbar'
-                });
-            }
+        if (!newRole) {
+            return res.status(404).json({ message: 'Rolle nicht gefunden' });
         }
         // Transaktion starten - alle Prisma-Operationen innerhalb der Transaktion
         yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
-            // Prüfen, ob die Rolle dem Benutzer zugewiesen ist (INNERHALB der Transaktion)
+            // Prüfen, ob die Rolle dem Benutzer zugewiesen ist
             const userRole = yield tx.userRole.findFirst({
-                where: {
-                    userId,
-                    roleId
-                }
+                where: { userId, roleId }
             });
             if (!userRole) {
                 throw new Error('Diese Rolle ist dem Benutzer nicht zugewiesen');
@@ -1209,12 +1194,38 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 where: { id: userRole.id },
                 data: { lastUsed: true }
             });
+            // ✅ Branch für neue Organisation aktivieren
+            // Branches sind pro Organisation - bei Org-Wechsel muss die Branch der neuen Org aktiviert werden
+            if (newRole.organizationId) {
+                // Alle Branches auf lastUsed=false
+                yield tx.usersBranches.updateMany({
+                    where: { userId },
+                    data: { lastUsed: false }
+                });
+                // Suche zuletzt aktualisierte Branch der neuen Organisation (= zuletzt aktiv gewesen)
+                const existingBranch = yield tx.usersBranches.findFirst({
+                    where: {
+                        userId,
+                        branch: { organizationId: newRole.organizationId }
+                    },
+                    orderBy: { updatedAt: 'desc' }
+                });
+                if (existingBranch) {
+                    yield tx.usersBranches.update({
+                        where: { id: existingBranch.id },
+                        data: { lastUsed: true }
+                    });
+                }
+                // Falls User keine Branch der neuen Org hat, bleibt keine aktiv (kein Fehler)
+            }
         }));
-        // ✅ PERFORMANCE: UserCache invalidieren bei Rollen-Wechsel
+        // ✅ PERFORMANCE: Caches invalidieren bei Rollen-Wechsel
         userCache_1.userCache.invalidate(userId);
-        // ✅ PERFORMANCE: OrganizationCache invalidieren (lastUsed hat sich geändert)
         const { organizationCache } = yield Promise.resolve().then(() => __importStar(require('../utils/organizationCache')));
         organizationCache.invalidate(userId);
+        // ✅ BranchCache invalidieren (Branch hat sich geändert)
+        const { branchCache } = yield Promise.resolve().then(() => __importStar(require('../services/branchCache')));
+        branchCache.clear();
         // Benutzer mit aktualisierten Rollen zurückgeben
         const updatedUser = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },

@@ -743,11 +743,11 @@
       "copy": "Copiar rol"
     },
     "accessLevels": {
-      "none": "Sin acceso",
-      "own_read": "Solo leer propios",
-      "own_both": "Leer y editar propios",
-      "all_read": "Leer todos",
-      "all_both": "Leer y editar todos"
+      "none": "No",
+      "own_read": "Propios (leer)",
+      "own_both": "Propios",
+      "all_read": "Todos (leer)",
+      "all_both": "Sí"
     },
     "form": {
       "name": "Nombre",
