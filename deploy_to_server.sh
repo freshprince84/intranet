@@ -11,6 +11,12 @@ echo ""
 echo "📥 Schritt 1: Git Pull..."
 cd /var/www/intranet
 git stash || true  # Falls lokale Änderungen vorhanden sind
+
+# Bereinige untracked Build-Dateien, die Git Pull blockieren könnten
+echo "   🧹 Bereinige untracked Build-Dateien..."
+git clean -fd frontend/build/ || true
+git clean -fd backend/dist/ || true
+
 git pull
 git stash pop || true  # Falls lokale Änderungen gestashed wurden
 echo "✅ Git Pull abgeschlossen"
