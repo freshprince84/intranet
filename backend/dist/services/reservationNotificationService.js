@@ -1145,11 +1145,23 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
                         languageCode
                       );
                       
-                      // Formatiere Zimmer-Anzeige: Dorm = roomNumber (bereits "Zimmername (Bettnummer)"), Private = roomDescription
+                      // Formatiere Zimmer-Anzeige: Dorm kann "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Private = roomDescription
                       const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                      const roomDisplay = isDorm
-                        ? reservation.roomNumber?.trim() || 'N/A'
-                        : reservation.roomDescription?.trim() || 'N/A';
+                      let roomDisplay: string;
+                      if (isDorm) {
+                        const roomNumber = reservation.roomNumber?.trim() || '';
+                        const roomName = reservation.roomDescription?.trim() || '';
+                        // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                        if (roomNumber.includes('(')) {
+                          roomDisplay = roomNumber;
+                        } else if (roomName && roomNumber) {
+                          roomDisplay = `${roomName} (${roomNumber})`;
+                        } else {
+                          roomDisplay = roomNumber || roomName || 'N/A';
+                        }
+                      } else {
+                        roomDisplay = reservation.roomDescription?.trim() || 'N/A';
+                      }
                       
                       const whatsappSuccessResult = await whatsappService.sendCheckInConfirmation(
                         reservation.guestName,
@@ -1253,7 +1265,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
      */
     static sendPasscodeNotification(reservationId, options) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
             try {
                 const reservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservationId },
@@ -1367,11 +1379,26 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
                         guestNationality: reservation.guestNationality,
                         guestPhone: reservation.guestPhone
                     });
-                    // Formatiere Zimmer-Anzeige: Dorm = roomNumber (bereits "Zimmername (Bettnummer)"), Private = roomDescription
+                    // Formatiere Zimmer-Anzeige: Dorm kann "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Private = roomDescription
                     const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                    const roomDisplay = isDorm
-                        ? ((_d = reservation.roomNumber) === null || _d === void 0 ? void 0 : _d.trim()) || 'N/A'
-                        : ((_e = reservation.roomDescription) === null || _e === void 0 ? void 0 : _e.trim()) || 'N/A';
+                    let roomDisplay;
+                    if (isDorm) {
+                        const roomNumber = ((_d = reservation.roomNumber) === null || _d === void 0 ? void 0 : _d.trim()) || '';
+                        const roomName = ((_e = reservation.roomDescription) === null || _e === void 0 ? void 0 : _e.trim()) || '';
+                        // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                        if (roomNumber.includes('(')) {
+                            roomDisplay = roomNumber;
+                        }
+                        else if (roomName && roomNumber) {
+                            roomDisplay = `${roomName} (${roomNumber})`;
+                        }
+                        else {
+                            roomDisplay = roomNumber || roomName || 'N/A';
+                        }
+                    }
+                    else {
+                        roomDisplay = ((_f = reservation.roomDescription) === null || _f === void 0 ? void 0 : _f.trim()) || 'N/A';
+                    }
                     const template = yield this.getMessageTemplate(reservation.branchId, reservation.organizationId, 'checkInConfirmation', languageCode);
                     // Lade roomDescription aus Branch-Settings
                     const roomDescription = yield this.loadRoomDescriptionFromBranchSettings(reservation, languageCode);
@@ -1493,11 +1520,26 @@ ${contentText}
                                 : `Hola ${reservation.guestName},`;
                             // Lade roomDescription aus Branch-Settings
                             const roomDescription = yield this.loadRoomDescriptionFromBranchSettings(reservation, languageCode);
-                            // Formatiere Zimmer-Anzeige: Dorm = roomNumber (bereits "Zimmername (Bettnummer)"), Private = roomDescription
+                            // Formatiere Zimmer-Anzeige: Dorm kann "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Private = roomDescription
                             const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                            const roomDisplay = isDorm
-                                ? ((_f = reservation.roomNumber) === null || _f === void 0 ? void 0 : _f.trim()) || 'N/A'
-                                : ((_g = reservation.roomDescription) === null || _g === void 0 ? void 0 : _g.trim()) || 'N/A';
+                            let roomDisplay;
+                            if (isDorm) {
+                                const roomNumber = ((_g = reservation.roomNumber) === null || _g === void 0 ? void 0 : _g.trim()) || '';
+                                const roomName = ((_h = reservation.roomDescription) === null || _h === void 0 ? void 0 : _h.trim()) || '';
+                                // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                                if (roomNumber.includes('(')) {
+                                    roomDisplay = roomNumber;
+                                }
+                                else if (roomName && roomNumber) {
+                                    roomDisplay = `${roomName} (${roomNumber})`;
+                                }
+                                else {
+                                    roomDisplay = roomNumber || roomName || 'N/A';
+                                }
+                            }
+                            else {
+                                roomDisplay = ((_j = reservation.roomDescription) === null || _j === void 0 ? void 0 : _j.trim()) || 'N/A';
+                            }
                             let contentText;
                             if (languageCode === 'en') {
                                 const roomInfo = roomDescription && roomDescription !== 'N/A'
@@ -1538,11 +1580,26 @@ ${contentText}
                                 guestPhone: reservation.guestPhone
                             });
                             const roomDescription = yield this.loadRoomDescriptionFromBranchSettings(reservation, languageCode);
-                            // Formatiere Zimmer-Anzeige: Dorm = roomNumber (bereits "Zimmername (Bettnummer)"), Private = roomDescription
+                            // Formatiere Zimmer-Anzeige: Dorm kann "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Private = roomDescription
                             const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-                            const roomDisplay = isDorm
-                                ? ((_h = reservation.roomNumber) === null || _h === void 0 ? void 0 : _h.trim()) || 'N/A'
-                                : ((_j = reservation.roomDescription) === null || _j === void 0 ? void 0 : _j.trim()) || 'N/A';
+                            let roomDisplay;
+                            if (isDorm) {
+                                const roomNumber = ((_k = reservation.roomNumber) === null || _k === void 0 ? void 0 : _k.trim()) || '';
+                                const roomName = ((_l = reservation.roomDescription) === null || _l === void 0 ? void 0 : _l.trim()) || '';
+                                // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                                if (roomNumber.includes('(')) {
+                                    roomDisplay = roomNumber;
+                                }
+                                else if (roomName && roomNumber) {
+                                    roomDisplay = `${roomName} (${roomNumber})`;
+                                }
+                                else {
+                                    roomDisplay = roomNumber || roomName || 'N/A';
+                                }
+                            }
+                            else {
+                                roomDisplay = ((_m = reservation.roomDescription) === null || _m === void 0 ? void 0 : _m.trim()) || 'N/A';
+                            }
                             // Lade WhatsApp-Template
                             const whatsappTemplate = yield this.getMessageTemplate(reservation.branchId, reservation.organizationId, 'checkInConfirmation', languageCode);
                             const greeting = languageCode === 'en'
@@ -1574,7 +1631,7 @@ ${contentText}
                                 .replace(/\{\{roomDescription\}\}/g, roomDescription && roomDescription !== 'N/A' ? roomDescription : '')
                                 .replace(/\{\{doorPin\}\}/g, doorPin || 'N/A')
                                 .replace(/\{\{guestName\}\}/g, reservation.guestName);
-                            const templateParams = ((_k = whatsappTemplate === null || whatsappTemplate === void 0 ? void 0 : whatsappTemplate.whatsappTemplateParams) === null || _k === void 0 ? void 0 : _k.length) > 0
+                            const templateParams = ((_o = whatsappTemplate === null || whatsappTemplate === void 0 ? void 0 : whatsappTemplate.whatsappTemplateParams) === null || _o === void 0 ? void 0 : _o.length) > 0
                                 ? whatsappTemplate.whatsappTemplateParams.map((param) => {
                                     return param
                                         .replace(/\{\{1\}\}/g, greeting)
@@ -1913,7 +1970,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
      */
     static sendCheckInConfirmationEmail(reservation, doorPin, doorAppName) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a, _b, _c;
             // Ermittle Sprache für Übersetzungen
             const { CountryLanguageService } = require('./countryLanguageService');
             const languageCode = CountryLanguageService.getLanguageForReservation({
@@ -1924,11 +1981,26 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             const roomDescription = yield this.loadRoomDescriptionFromBranchSettings(reservation, languageCode);
             // NEU: Lade Template aus Branch Settings
             const template = yield this.getMessageTemplate(reservation.branchId, reservation.organizationId, 'checkInConfirmation', languageCode);
-            // Formatiere roomDisplay: Dorm = roomNumber (bereits "Zimmername (Bettnummer)"), Private = roomDescription
+            // Formatiere roomDisplay: Dorm kann "Zimmername (Bettnummer)" ODER nur Bettnummer haben, Private = roomDescription
             const isDorm = reservation.roomNumber !== null && reservation.roomNumber.trim() !== '';
-            const roomDisplay = isDorm
-                ? ((_a = reservation.roomNumber) === null || _a === void 0 ? void 0 : _a.trim()) || 'N/A'
-                : ((_b = reservation.roomDescription) === null || _b === void 0 ? void 0 : _b.trim()) || 'N/A';
+            let roomDisplay;
+            if (isDorm) {
+                const roomNumber = ((_a = reservation.roomNumber) === null || _a === void 0 ? void 0 : _a.trim()) || '';
+                const roomName = ((_b = reservation.roomDescription) === null || _b === void 0 ? void 0 : _b.trim()) || '';
+                // Prüfe ob roomNumber bereits "Zimmername (Bettnummer)" enthält
+                if (roomNumber.includes('(')) {
+                    roomDisplay = roomNumber;
+                }
+                else if (roomName && roomNumber) {
+                    roomDisplay = `${roomName} (${roomNumber})`;
+                }
+                else {
+                    roomDisplay = roomNumber || roomName || 'N/A';
+                }
+            }
+            else {
+                roomDisplay = ((_c = reservation.roomDescription) === null || _c === void 0 ? void 0 : _c.trim()) || 'N/A';
+            }
             // Formatiere roomDescription für Template (nur wenn vorhanden)
             const descriptionLabel = languageCode === 'en' ? 'Description' : languageCode === 'es' ? 'Descripción' : 'Beschreibung';
             const formattedRoomDescription = roomDescription && roomDescription !== 'N/A'

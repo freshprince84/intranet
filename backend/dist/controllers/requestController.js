@@ -39,6 +39,7 @@ const branchSelect = {
 };
 // Alle Requests abrufen
 const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const userId = parseInt(req.userId, 10);
         const organizationId = req.organizationId;
@@ -55,6 +56,20 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             ? parseInt(req.query.offset, 10)
             : 0; // Standard: 0
         const includeAttachments = req.query.includeAttachments === 'true'; // OPTIMIERUNG: Attachments optional
+        // ✅ SORTIERUNG: Sortier-Parameter aus Query lesen
+        const sortBy = req.query.sortBy;
+        const sortOrder = ((_a = req.query.sortOrder) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === 'desc' ? 'desc' : 'asc';
+        // ✅ SORTIERUNG: Mapping von Frontend-Feldern zu Backend-Feldern
+        let prismaSortBy = sortBy;
+        if (sortBy === 'requestedBy') {
+            prismaSortBy = 'requester.firstName';
+        }
+        else if (sortBy === 'responsible') {
+            prismaSortBy = 'responsible.firstName';
+        }
+        else if (sortBy === 'branch') {
+            prismaSortBy = 'branch.name';
+        }
         // Filter-Bedingungen konvertieren (falls vorhanden)
         let filterWhereClause = {};
         if (filterId) {
@@ -199,9 +214,19 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     }
                 }
             } : {})),
-            orderBy: {
-                createdAt: 'desc'
-            }
+            orderBy: prismaSortBy ? [
+                prismaSortBy.includes('.') ? {
+                    [prismaSortBy.split('.')[0]]: {
+                        [prismaSortBy.split('.')[1]]: sortOrder
+                    }
+                } : {
+                    [prismaSortBy]: sortOrder
+                },
+                { id: 'asc' } // ✅ STABILE SORTIERUNG: Fallback auf ID für Infinite Scroll
+            ] : [
+                { createdAt: 'desc' },
+                { id: 'desc' }
+            ]
         });
         const queryDuration = Date.now() - queryStartTime;
         logger_1.logger.log(`[getAllRequests] ✅ Query abgeschlossen: ${requests.length} Requests (${offset}-${offset + requests.length} von ${totalCount}) in ${queryDuration}ms`);

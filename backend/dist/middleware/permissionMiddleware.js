@@ -9,104 +9,209 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireCompleteProfile = exports.isAdmin = exports.checkUserPermission = exports.checkPermission = void 0;
+exports.requireCompleteProfile = exports.isAdmin = exports.checkUserPermission = exports.checkUserPermissionWithDetails = exports.checkPermission = void 0;
 const prisma_1 = require("../utils/prisma");
 const userCache_1 = require("../services/userCache");
 const logger_1 = require("../utils/logger");
 /**
+ * Konvertiert Legacy-AccessLevel zu neuem Format
+ */
+function convertLegacyAccessLevel(level) {
+    switch (level) {
+        case 'read': return 'all_read';
+        case 'write': return 'own_both';
+        case 'both': return 'all_both';
+        case 'none': return 'none';
+        default:
+            // Prüfe ob bereits neues Format
+            if (['own_read', 'own_both', 'all_read', 'all_both', 'none'].includes(level)) {
+                return level;
+            }
+            return 'none';
+    }
+}
+/**
+ * Prüft ob ein AccessLevel den erforderlichen Zugang gewährt
+ * @param currentLevel - Aktuelles AccessLevel des Users
+ * @param requiredAccess - Erforderlicher Zugang ('read' oder 'write')
+ * @returns Ob Zugang gewährt wird und ob Ownership-Check nötig ist
+ */
+function evaluateAccess(currentLevel, requiredAccess) {
+    const normalizedLevel = convertLegacyAccessLevel(currentLevel);
+    switch (normalizedLevel) {
+        case 'none':
+            return { hasAccess: false, requiresOwnership: false };
+        case 'all_both':
+            return { hasAccess: true, requiresOwnership: false };
+        case 'all_read':
+            return { hasAccess: requiredAccess === 'read', requiresOwnership: false };
+        case 'own_both':
+            return { hasAccess: true, requiresOwnership: true };
+        case 'own_read':
+            return { hasAccess: requiredAccess === 'read', requiresOwnership: true };
+        default:
+            return { hasAccess: false, requiresOwnership: false };
+    }
+}
+/**
+ * Ownership-Felder pro Entity (für Row-Level-Isolation)
+ */
+const OWNERSHIP_FIELDS = {
+    // Requests
+    'requests': ['requesterId', 'responsibleId'],
+    'request_create': ['requesterId'],
+    'request_edit': ['requesterId', 'responsibleId'],
+    'request_delete': ['requesterId'],
+    // Tasks
+    'todos': ['responsibleId', 'qualityControlId', 'roleId'],
+    'task_create': ['responsibleId'],
+    'task_edit': ['responsibleId', 'qualityControlId', 'roleId'],
+    'task_delete': ['responsibleId'],
+    // Reservations
+    'reservations': ['branchId'],
+    'reservation_create': [],
+    'reservation_edit': ['branchId'],
+    'reservation_delete': ['branchId'],
+    // Tour Bookings
+    'tour_bookings': ['bookedById', 'branchId'],
+    'tour_booking_create': [],
+    'tour_booking_edit': ['bookedById'],
+    'tour_booking_cancel': ['bookedById'],
+    // Worktime
+    'worktime': ['userId'],
+    'worktime_start': ['userId'],
+    'worktime_stop': ['userId'],
+    // Working Times (Workcenter)
+    'working_times': ['userId'],
+    'working_time_create': ['userId'],
+    'working_time_edit': ['userId'],
+    'working_time_delete': ['userId'],
+    // Consultations
+    'consultation_tracker': ['userId'],
+    'consultation_list': ['userId'],
+    'consultation_start': ['userId'],
+    'consultation_stop': ['userId'],
+    'consultation_edit': ['userId'],
+    'consultation_delete': ['userId'],
+    // Clients
+    'client_create': [],
+    'client_edit': ['createdById'],
+    'client_delete': ['createdById'],
+    // Payroll
+    'consultation_invoices': ['userId'],
+    'monthly_reports': ['userId'],
+    'payroll_reports': ['userId'],
+    // Password Manager
+    'password_manager': ['createdById'],
+    'password_entry_create': [],
+    'password_entry_edit': ['createdById'],
+    'password_entry_delete': ['createdById'],
+};
+/**
  * Middleware zur Überprüfung von Berechtigungen
- * @param entity - Entität (z.B. 'page', 'table' oder 'cerebro')
+ * @param entity - Entität (z.B. 'dashboard', 'requests', 'task_create')
  * @param requiredAccess - Erforderliche Zugriffsebene ('read' oder 'write')
- * @param entityType - Typ der Entität ('page', 'table' oder 'cerebro')
+ * @param entityType - Typ der Entität ('page' | 'box' | 'tab' | 'button' | 'table' | 'cerebro')
  * @returns Express Middleware
  */
 const checkPermission = (entity, requiredAccess, entityType = 'page') => {
     return (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
         try {
-            // Nur für Rate Shopping Route loggen (um Log-Spam zu vermeiden)
-            if (req.path.includes('rate-shopping')) {
-                logger_1.logger.warn(`[checkPermission] 🔍 Prüfe Permission: Entity=${entity}, EntityType=${entityType}, RequiredAccess=${requiredAccess}, Path=${req.path}`);
+            const isDebug = req.path.includes('rate-shopping');
+            if (isDebug) {
+                logger_1.logger.warn(`[checkPermission] 🔍 Prüfe: Entity=${entity}, Type=${entityType}, Access=${requiredAccess}`);
             }
             const userId = parseInt(req.userId, 10);
             const roleId = parseInt(req.roleId, 10);
             if (isNaN(userId) || isNaN(roleId)) {
-                logger_1.logger.error(`[checkPermission] ❌ Authentifizierung fehlgeschlagen: userId=${req.userId}, roleId=${req.roleId}`);
+                logger_1.logger.error(`[checkPermission] ❌ Nicht authentifiziert: userId=${req.userId}, roleId=${req.roleId}`);
                 return res.status(401).json({ message: 'Nicht authentifiziert' });
             }
-            if (req.path.includes('rate-shopping')) {
-                logger_1.logger.warn(`[checkPermission] ✅ Authentifiziert: UserId=${userId}, RoleId=${roleId}`);
-            }
-            // Prüfe, ob der Benutzer die erforderliche Berechtigung hat
-            const hasAccess = yield (0, exports.checkUserPermission)(userId, roleId, entity, requiredAccess, entityType);
-            if (!hasAccess) {
-                logger_1.logger.error(`[checkPermission] ❌ VERWEIGERT: Entity=${entity}, EntityType=${entityType}, UserId=${userId}, RoleId=${roleId}`);
+            // Hole Permission-Details
+            const permissionResult = yield (0, exports.checkUserPermissionWithDetails)(userId, roleId, entity, requiredAccess, entityType);
+            if (!permissionResult.hasAccess) {
+                logger_1.logger.warn(`[checkPermission] ❌ VERWEIGERT: Entity=${entity}, User=${userId}, Role=${roleId}`);
                 return res.status(403).json({
                     message: 'Zugriff verweigert',
                     details: `Keine ausreichenden Berechtigungen für ${entityType} ${entity}`
                 });
             }
-            if (req.path.includes('rate-shopping')) {
-                logger_1.logger.warn(`[checkPermission] ✅ Permission erteilt für Entity=${entity}, EntityType=${entityType}`);
+            // Speichere Permission-Kontext für Controller (Row-Level-Isolation)
+            req.permissionContext = {
+                accessLevel: permissionResult.accessLevel,
+                isOwnershipRequired: permissionResult.requiresOwnership,
+                ownershipFields: OWNERSHIP_FIELDS[entity] || []
+            };
+            if (isDebug) {
+                logger_1.logger.warn(`[checkPermission] ✅ Erlaubt: Entity=${entity}, Level=${permissionResult.accessLevel}, Ownership=${permissionResult.requiresOwnership}`);
             }
             next();
         }
         catch (error) {
-            logger_1.logger.error('[checkPermission] ❌ Fehler bei der Berechtigungsprüfung:', error);
+            logger_1.logger.error('[checkPermission] ❌ Fehler:', error);
             res.status(500).json({ message: 'Interner Server-Fehler' });
         }
     });
 };
 exports.checkPermission = checkPermission;
-// Hilfsfunktion zur Überprüfung der Berechtigungen eines Benutzers
-// ✅ PERFORMANCE: Verwendet UserCache statt eigene DB-Query
-const checkUserPermission = (userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1) => __awaiter(void 0, [userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1], void 0, function* (userId, roleId, currentEntity, requiredAccess, entityType = 'page') {
+/**
+ * Prüft Berechtigungen und gibt Details zurück
+ * Verwendet UserCache für Performance
+ */
+const checkUserPermissionWithDetails = (userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1) => __awaiter(void 0, [userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1], void 0, function* (userId, roleId, currentEntity, requiredAccess, entityType = 'page') {
+    var _a;
+    const noAccess = { hasAccess: false, accessLevel: 'none', requiresOwnership: false };
     try {
-        // ✅ PERFORMANCE: Verwende UserCache statt eigene DB-Query
+        // ✅ PERFORMANCE: Verwende UserCache
         const cached = yield userCache_1.userCache.get(userId);
         if (!cached || !cached.user) {
-            logger_1.logger.error(`[checkUserPermission] ❌ User nicht gefunden: userId=${userId}`);
-            return false;
+            logger_1.logger.error(`[checkPermission] ❌ User nicht im Cache: userId=${userId}`);
+            return noAccess;
         }
-        // Finde aktive Rolle (mit lastUsed: true)
+        // Finde aktive Rolle
         const activeRole = cached.user.roles.find((r) => r.lastUsed);
         if (!activeRole) {
-            logger_1.logger.error(`[checkUserPermission] ❌ Keine aktive Rolle gefunden: userId=${userId}`);
-            return false;
+            logger_1.logger.error(`[checkPermission] ❌ Keine aktive Rolle: userId=${userId}`);
+            return noAccess;
         }
-        // Prüfe ob die roleId mit der aktiven Rolle übereinstimmt
-        if (activeRole.role.id !== roleId) {
-            logger_1.logger.warn(`[checkUserPermission] ⚠️ roleId mismatch: requested=${roleId}, active=${activeRole.role.id}, verwende aktive Rolle`);
-            // Verwende die aktive Rolle statt der angeforderten roleId
+        // Admin-Bypass: Prüfe ob Rollenname 'admin' enthält (case-insensitive)
+        const roleName = ((_a = activeRole.role.name) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || '';
+        if (roleName === 'admin' || roleName.includes('admin')) {
+            return { hasAccess: true, accessLevel: 'all_both', requiresOwnership: false };
         }
-        // Hole Permissions aus der aktiven Rolle (bereits im Cache geladen)
+        // Hole Permissions aus der aktiven Rolle
         const permissions = activeRole.role.permissions || [];
-        // Suche nach der Berechtigung für die angeforderte Entität
-        const permission = permissions.find((p) => p.entity === currentEntity && p.entityType === entityType);
+        // Suche nach der Berechtigung
+        // Versuche erst mit exaktem entityType, dann mit 'table' als Fallback für Legacy
+        let permission = permissions.find((p) => p.entity === currentEntity && p.entityType === entityType);
+        // Legacy-Fallback: 'box' und 'tab' wurden früher als 'table' gespeichert
+        if (!permission && (entityType === 'box' || entityType === 'tab')) {
+            permission = permissions.find((p) => p.entity === currentEntity && p.entityType === 'table');
+        }
         if (!permission) {
-            logger_1.logger.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${activeRole.role.name}" (ID: ${activeRole.role.id})`);
-            logger_1.logger.log(`[checkUserPermission] Verfügbare Cerebro-Permissions:`);
-            permissions
-                .filter((p) => p.entity.includes('cerebro'))
-                .forEach((p) => {
-                logger_1.logger.log(`   - ${p.entity} (${p.entityType}): ${p.accessLevel}`);
-            });
-            return false;
+            // Kein Fehler-Log für fehlende Permissions (normal für nicht-berechtigte Entities)
+            return noAccess;
         }
-        // Prüfe, ob die Berechtigung ausreichend ist
-        const hasAccess = permission.accessLevel === 'both' ||
-            (requiredAccess === 'read' && (permission.accessLevel === 'read' || permission.accessLevel === 'write')) ||
-            (requiredAccess === 'write' && permission.accessLevel === 'write');
-        if (!hasAccess) {
-            logger_1.logger.error(`[checkUserPermission] ❌ Zugriff unzureichend: ${permission.accessLevel} < ${requiredAccess}`);
-            return false;
-        }
-        // Zugriff gewähren, wenn alle Prüfungen bestanden wurden
-        return true;
+        // Evaluiere Access
+        const { hasAccess, requiresOwnership } = evaluateAccess(permission.accessLevel, requiredAccess);
+        return {
+            hasAccess,
+            accessLevel: permission.accessLevel,
+            requiresOwnership
+        };
     }
     catch (error) {
-        logger_1.logger.error('Fehler bei der Berechtigungsprüfung:', error);
-        return false;
+        logger_1.logger.error('[checkPermission] ❌ Fehler:', error);
+        return noAccess;
     }
+});
+exports.checkUserPermissionWithDetails = checkUserPermissionWithDetails;
+/**
+ * Einfache Permission-Prüfung (Legacy-Kompatibilität)
+ */
+const checkUserPermission = (userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1) => __awaiter(void 0, [userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1], void 0, function* (userId, roleId, currentEntity, requiredAccess, entityType = 'page') {
+    const result = yield (0, exports.checkUserPermissionWithDetails)(userId, roleId, currentEntity, requiredAccess, entityType);
+    return result.hasAccess;
 });
 exports.checkUserPermission = checkUserPermission;
 /**

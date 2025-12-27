@@ -57,6 +57,7 @@ const urlValidation_1 = require("../utils/urlValidation");
 const organizationSettingsSchema_1 = require("../validation/organizationSettingsSchema");
 const logger_1 = require("../utils/logger");
 const auditService_1 = require("../services/auditService");
+const permissions_1 = require("../config/permissions");
 // Validation Schemas
 const createOrganizationSchema = zod_1.z.object({
     name: zod_1.z.string().min(1, 'Name ist erforderlich'),
@@ -215,87 +216,16 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 return res.status(400).json({ message: 'Organisation mit dieser Domain existiert bereits' });
             }
         }
-        // Alle verfügbaren Seiten, Tabellen und Buttons (aus seed.ts)
-        const ALL_PAGES = [
-            'dashboard',
-            'worktracker',
-            'consultations',
-            'team_worktime_control', // = workcenter
-            'payroll', // = lohnabrechnung
-            'organization_management', // = organisation (Hauptseite)
-            'cerebro',
-            'settings',
-            'profile'
-        ];
-        const ALL_TABLES = [
-            'requests', // auf dashboard
-            'tasks', // auf worktracker
-            'users', // auf organization_management
-            'roles', // auf organization_management
-            'organization', // auf organization_management
-            'team_worktime', // auf team_worktime_control
-            'worktime', // auf worktracker
-            'clients', // auf consultations
-            'consultation_invoices', // auf consultations
-            'branches', // auf settings/system
-            'notifications', // allgemein
-            'settings', // auf settings
-            'monthly_reports', // auf consultations/reports
-            'organization_join_requests', // auf organization_management
-            'organization_users' // auf organization_management
-        ];
-        const ALL_BUTTONS = [
-            // Database Management Buttons (Settings/System)
-            'database_reset_table',
-            'database_logs',
-            // Invoice Functions Buttons
-            'invoice_create',
-            'invoice_download',
-            'invoice_mark_paid',
-            'invoice_settings',
-            // Todo/Task Buttons (Worktracker)
-            'todo_create',
-            'todo_edit',
-            'todo_delete',
-            'task_create',
-            'task_edit',
-            'task_delete',
-            // User Management Buttons
-            'user_create',
-            'user_edit',
-            'user_delete',
-            'role_assign',
-            'role_create',
-            'role_edit',
-            'role_delete',
-            // Organization Management Buttons
-            'organization_create',
-            'organization_edit',
-            'organization_delete',
-            // Worktime Buttons
-            'worktime_start',
-            'worktime_stop',
-            'worktime_edit',
-            'worktime_delete',
-            // General Cerebro Button
-            'cerebro',
-            // Consultation Buttons
-            'consultation_start',
-            'consultation_stop',
-            'consultation_edit',
-            // Client Management Buttons
-            'client_create',
-            'client_edit',
-            'client_delete',
-            // Settings Buttons
-            'settings_system',
-            'settings_notifications',
-            'settings_profile',
-            // Payroll Buttons
-            'payroll_generate',
-            'payroll_export',
-            'payroll_edit'
-        ];
+        // ============================================
+        // PERMISSION-LISTEN AUS ZENTRALER QUELLE
+        // ============================================
+        // Importiert aus backend/src/config/permissions.ts
+        const ALL_PAGES = permissions_1.ALL_PAGES.map(p => p.entity);
+        const ALL_BOXES = permissions_1.ALL_BOXES.map(b => b.entity);
+        const ALL_TABS = permissions_1.ALL_TABS.map(t => t.entity);
+        const ALL_BUTTONS = permissions_1.ALL_BUTTONS.map(b => b.entity);
+        // Kombiniert: Boxes + Tabs für Legacy-Kompatibilität (wurden früher als 'table' gespeichert)
+        const ALL_TABLES = [...ALL_BOXES, ...ALL_TABS];
         // Erstelle Organisation und Admin-Rolle in einer Transaction
         const result = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             var _a, _b;
@@ -320,44 +250,37 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     organizationId: organization.id
                 }
             });
-            // 3. Alle Berechtigungen für Admin-Rolle erstellen (alles mit 'both')
-            const permissions = [];
-            // Pages
-            for (const page of ALL_PAGES) {
-                permissions.push({
-                    entity: page,
-                    entityType: 'page',
-                    accessLevel: 'both',
-                    roleId: adminRole.id
-                });
-            }
-            // Tables
-            for (const table of ALL_TABLES) {
-                permissions.push({
-                    entity: table,
-                    entityType: 'table',
-                    accessLevel: 'both',
-                    roleId: adminRole.id
-                });
-            }
-            // Buttons
-            for (const button of ALL_BUTTONS) {
-                permissions.push({
-                    entity: button,
-                    entityType: 'button',
-                    accessLevel: 'both',
-                    roleId: adminRole.id
-                });
-            }
+            // 3. Alle Berechtigungen für Admin-Rolle aus zentraler Definition erstellen
+            // Admin hat all_both (voller Zugriff) auf alle Entities
+            const adminPermissions = (0, permissions_1.generatePermissionsForRole)(adminRole.id, permissions_1.ADMIN_PERMISSIONS);
             // Branch-basierte Reservations-Berechtigungen für Admin (alle Branches)
-            permissions.push({
+            adminPermissions.push({
                 entity: 'reservations_all_branches',
                 entityType: 'table',
-                accessLevel: 'read',
+                accessLevel: 'all_read',
+                roleId: adminRole.id
+            });
+            // Cerebro-spezifische Berechtigungen für Admin
+            adminPermissions.push({
+                entity: 'cerebro',
+                entityType: 'cerebro',
+                accessLevel: 'all_both',
+                roleId: adminRole.id
+            });
+            adminPermissions.push({
+                entity: 'cerebro_media',
+                entityType: 'cerebro',
+                accessLevel: 'all_both',
+                roleId: adminRole.id
+            });
+            adminPermissions.push({
+                entity: 'cerebro_links',
+                entityType: 'cerebro',
+                accessLevel: 'all_both',
                 roleId: adminRole.id
             });
             yield tx.permission.createMany({
-                data: permissions
+                data: adminPermissions
             });
             // 3b. User-Rolle für die Organisation erstellen
             const userRole = yield tx.role.create({
@@ -367,86 +290,32 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     organizationId: organization.id
                 }
             });
-            // 3c. Berechtigungen für User-Rolle erstellen (basierend auf seed.ts)
-            const userPermissions = [];
-            const userPermissionMap = {
-                'page_dashboard': 'both',
-                'page_worktracker': 'both',
-                'page_consultations': 'both',
-                'page_payroll': 'both',
-                'page_cerebro': 'both',
-                'page_settings': 'both',
-                'page_profile': 'both',
-                'table_requests': 'both',
-                'table_clients': 'both',
-                'table_consultation_invoices': 'both',
-                'table_notifications': 'both',
-                'table_monthly_reports': 'both',
-                'button_invoice_create': 'both',
-                'button_invoice_download': 'both',
-                'button_cerebro': 'both',
-                'button_consultation_start': 'both',
-                'button_consultation_stop': 'both',
-                'button_consultation_edit': 'both',
-                'button_client_create': 'both',
-                'button_client_edit': 'both',
-                'button_client_delete': 'both',
-                'button_settings_notifications': 'both',
-                'button_settings_profile': 'both',
-                'button_worktime_start': 'both',
-                'button_worktime_stop': 'both'
-            };
-            for (const page of ALL_PAGES) {
-                const accessLevel = userPermissionMap[`page_${page}`] || 'none';
-                userPermissions.push({
-                    entity: page,
-                    entityType: 'page',
-                    accessLevel: accessLevel,
-                    roleId: userRole.id
-                });
-            }
-            for (const table of ALL_TABLES) {
-                const accessLevel = userPermissionMap[`table_${table}`] || 'none';
-                userPermissions.push({
-                    entity: table,
-                    entityType: 'table',
-                    accessLevel: accessLevel,
-                    roleId: userRole.id
-                });
-            }
-            for (const button of ALL_BUTTONS) {
-                const accessLevel = userPermissionMap[`button_${button}`] || 'none';
-                userPermissions.push({
-                    entity: button,
-                    entityType: 'button',
-                    accessLevel: accessLevel,
-                    roleId: userRole.id
-                });
-            }
-            // Cerebro-spezifische Berechtigungen hinzufügen (entityType: 'cerebro')
+            // 3c. Berechtigungen für User-Rolle aus zentraler Definition erstellen
+            const userPermissions = (0, permissions_1.generatePermissionsForRole)(userRole.id, permissions_1.USER_PERMISSIONS);
+            // Cerebro-spezifische Berechtigungen für User
             userPermissions.push({
                 entity: 'cerebro',
                 entityType: 'cerebro',
-                accessLevel: 'both',
+                accessLevel: 'all_both',
                 roleId: userRole.id
             });
             userPermissions.push({
                 entity: 'cerebro_media',
                 entityType: 'cerebro',
-                accessLevel: 'both',
+                accessLevel: 'all_both',
                 roleId: userRole.id
             });
             userPermissions.push({
                 entity: 'cerebro_links',
                 entityType: 'cerebro',
-                accessLevel: 'both',
+                accessLevel: 'all_both',
                 roleId: userRole.id
             });
             // Branch-basierte Reservations-Berechtigungen für User (nur eigene Branch)
             userPermissions.push({
                 entity: 'reservations_own_branch',
                 entityType: 'table',
-                accessLevel: 'read',
+                accessLevel: 'own_read',
                 roleId: userRole.id
             });
             yield tx.permission.createMany({
@@ -460,63 +329,27 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     organizationId: organization.id
                 }
             });
-            // 3e. Berechtigungen für Hamburger-Rolle erstellen (basierend auf seed.ts)
-            const hamburgerPermissions = [];
-            // Cerebro-spezifische Berechtigungen für Hamburger-Rolle hinzufügen
+            // 3e. Berechtigungen für Hamburger-Rolle aus zentraler Definition erstellen
+            const hamburgerPermissions = (0, permissions_1.generatePermissionsForRole)(hamburgerRole.id, permissions_1.HAMBURGER_PERMISSIONS);
+            // Cerebro-spezifische Berechtigungen für Hamburger-Rolle
             hamburgerPermissions.push({
                 entity: 'cerebro',
                 entityType: 'cerebro',
-                accessLevel: 'both',
+                accessLevel: 'all_read',
                 roleId: hamburgerRole.id
             });
             hamburgerPermissions.push({
                 entity: 'cerebro_media',
                 entityType: 'cerebro',
-                accessLevel: 'both',
+                accessLevel: 'all_read',
                 roleId: hamburgerRole.id
             });
             hamburgerPermissions.push({
                 entity: 'cerebro_links',
                 entityType: 'cerebro',
-                accessLevel: 'both',
+                accessLevel: 'all_read',
                 roleId: hamburgerRole.id
             });
-            const hamburgerPermissionMap = {
-                'page_dashboard': 'both',
-                'page_settings': 'both',
-                'page_profile': 'both',
-                'page_cerebro': 'both',
-                'button_cerebro': 'both',
-                'button_settings_profile': 'both',
-                'table_notifications': 'both'
-            };
-            for (const page of ALL_PAGES) {
-                const accessLevel = hamburgerPermissionMap[`page_${page}`] || 'none';
-                hamburgerPermissions.push({
-                    entity: page,
-                    entityType: 'page',
-                    accessLevel: accessLevel,
-                    roleId: hamburgerRole.id
-                });
-            }
-            for (const table of ALL_TABLES) {
-                const accessLevel = hamburgerPermissionMap[`table_${table}`] || 'none';
-                hamburgerPermissions.push({
-                    entity: table,
-                    entityType: 'table',
-                    accessLevel: accessLevel,
-                    roleId: hamburgerRole.id
-                });
-            }
-            for (const button of ALL_BUTTONS) {
-                const accessLevel = hamburgerPermissionMap[`button_${button}`] || 'none';
-                hamburgerPermissions.push({
-                    entity: button,
-                    entityType: 'button',
-                    accessLevel: accessLevel,
-                    roleId: hamburgerRole.id
-                });
-            }
             yield tx.permission.createMany({
                 data: hamburgerPermissions
             });

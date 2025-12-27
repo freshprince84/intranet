@@ -76,9 +76,36 @@ const getUserOrganizationFilter = (req) => {
     };
 };
 exports.getUserOrganizationFilter = getUserOrganizationFilter;
-// Neue Hilfsfunktion für Datenisolation je nach User-Typ
+// ============================================
+// OWNERSHIP-FELDER FÜR ROW-LEVEL-ISOLATION
+// ============================================
+// Definiert welche DB-Felder für "eigene Daten" geprüft werden
+const OWNERSHIP_FIELDS = {
+    'task': ['responsibleId', 'qualityControlId', 'roleId'],
+    'request': ['requesterId', 'responsibleId'],
+    'worktime': ['userId'],
+    'client': ['createdById'],
+    'branch': [], // Branch-Zugehörigkeit wird über BranchUser geprüft
+    'invoice': ['userId'],
+    'consultationInvoice': ['userId'],
+    'monthlyReport': ['userId'],
+    'monthlyConsultationReport': ['userId'],
+    'cerebroCarticle': ['createdById'],
+    'carticle': ['createdById'],
+    'reservation': ['branchId'], // Branch-basiert
+    'tour_booking': ['bookedById', 'branchId'],
+    'password_entry': ['createdById'],
+};
+/**
+ * Neue Hilfsfunktion für Datenisolation basierend auf AccessLevel
+ * Berücksichtigt das Permission-System (own_read, own_both, all_read, all_both)
+ *
+ * @param req - Express Request mit userId, organizationId, permissionContext
+ * @param entity - Entity-Name (z.B. 'task', 'request')
+ * @returns Prisma WHERE-Filter für Row-Level-Isolation
+ */
 const getDataIsolationFilter = (req, entity) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f;
     // ✅ FIX: Admin/Owner sehen alle Daten (keine Isolation)
     if ((0, exports.isAdminOrOwner)(req)) {
         return {}; // Leerer Filter = alle Daten
@@ -88,6 +115,48 @@ const getDataIsolationFilter = (req, entity) => {
     if (isNaN(userId)) {
         logger_1.logger.error('Invalid userId in request:', req.userId);
         return {}; // Leerer Filter als Fallback
+    }
+    // ✅ NEU: Prüfe permissionContext (gesetzt von checkPermission Middleware)
+    const permissionContext = req.permissionContext;
+    if (permissionContext) {
+        const { accessLevel, isOwnershipRequired, ownershipFields } = permissionContext;
+        // all_both oder all_read: Keine Row-Level-Isolation nötig (alle Daten der Org sehen)
+        if (accessLevel === 'all_both' || accessLevel === 'all_read') {
+            // Nur nach organizationId filtern (falls vorhanden)
+            if (req.organizationId) {
+                return { organizationId: req.organizationId };
+            }
+            return {};
+        }
+        // own_both oder own_read: Nur eigene Daten
+        if (isOwnershipRequired && ownershipFields.length > 0) {
+            const orConditions = [];
+            for (const field of ownershipFields) {
+                if (field === 'userId' || field === 'responsibleId' || field === 'qualityControlId' ||
+                    field === 'requesterId' || field === 'createdById' || field === 'bookedById') {
+                    orConditions.push({ [field]: userId });
+                }
+                else if (field === 'roleId') {
+                    const userRoleId = (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.id;
+                    if (userRoleId) {
+                        orConditions.push({ [field]: userRoleId });
+                    }
+                }
+                else if (field === 'branchId') {
+                    if (req.branchId) {
+                        orConditions.push({ [field]: req.branchId });
+                    }
+                }
+            }
+            const filter = {};
+            if (req.organizationId) {
+                filter.organizationId = req.organizationId;
+            }
+            if (orConditions.length > 0) {
+                filter.OR = orConditions;
+            }
+            return filter;
+        }
     }
     // Standalone User (ohne Organisation) - nur eigene Daten
     if (!req.organizationId) {
@@ -155,13 +224,13 @@ const getDataIsolationFilter = (req, entity) => {
                 taskFilter.organizationId = req.organizationId;
             }
             // Wenn User eine aktive Rolle hat, füge roleId-Filter hinzu
-            const userRoleId = (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.id;
+            const userRoleId = (_d = (_c = req.userRole) === null || _c === void 0 ? void 0 : _c.role) === null || _d === void 0 ? void 0 : _d.id;
             // Debug-Logging
             logger_1.logger.log('[getDataIsolationFilter] Task filter:', {
                 userId,
                 organizationId: req.organizationId,
                 userRoleId,
-                userRoleName: (_d = (_c = req.userRole) === null || _c === void 0 ? void 0 : _c.role) === null || _d === void 0 ? void 0 : _d.name,
+                userRoleName: (_f = (_e = req.userRole) === null || _e === void 0 ? void 0 : _e.role) === null || _f === void 0 ? void 0 : _f.name,
                 hasOrganization: !!req.organizationId
             });
             if (userRoleId) {
