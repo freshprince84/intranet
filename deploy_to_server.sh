@@ -115,16 +115,34 @@ else
 fi
 echo ""
 
-# 11. Zusammenfassung
+# 12. Server-Neustart (Backend & Nginx)
+echo "🔄 Schritt 12: Server-Neustart..."
+echo "   🔄 Starte Backend neu (PM2)..."
+pm2 restart intranet-backend
+if [ $? -eq 0 ]; then
+  echo "   ✅ Backend erfolgreich neu gestartet"
+else
+  echo "   ⚠️  Warnung: Backend-Neustart möglicherweise fehlgeschlagen"
+fi
+
+echo "   🔄 Starte Nginx neu..."
+sudo systemctl restart nginx
+if [ $? -eq 0 ]; then
+  echo "   ✅ Nginx erfolgreich neu gestartet"
+else
+  echo "   ⚠️  Warnung: Nginx-Neustart möglicherweise fehlgeschlagen"
+fi
+echo ""
+
+# 13. Zusammenfassung
 echo ""
 echo "============================================================"
 echo "✅ Deployment abgeschlossen!"
 echo "============================================================"
 echo ""
-echo "⚠️  WICHTIG: Server-Neustart erforderlich!"
-echo "   Führe aus:"
-echo "   pm2 restart intranet-backend"
-echo "   sudo systemctl restart nginx"
+echo "✅ Server-Neustart automatisch ausgeführt:"
+echo "   - Backend (PM2): neu gestartet"
+echo "   - Nginx: neu gestartet"
 echo ""
 echo "📋 Queue-System:"
 echo "   - Redis läuft: $(systemctl is-active redis-server)"
