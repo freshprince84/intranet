@@ -264,13 +264,20 @@ const getDataIsolationFilter = (req, entity) => {
         case 'cerebroCarticle':
         case 'carticle':
             // Einfache Filterung nach organizationId
-            // WICHTIG: Wenn organizationId gesetzt ist, werden nur Einträge mit dieser organizationId angezeigt
-            // NULL-Werte werden automatisch ausgeschlossen
+            // WICHTIG: Wenn organizationId null/undefined ist, gibt es keine Ergebnisse
+            if (!req.organizationId) {
+                // Keine Organisation: Garantiert keine Ergebnisse (sicherer als leeres Objekt)
+                return { id: -1 };
+            }
             return {
                 organizationId: req.organizationId
             };
         case 'user':
             // User-Filterung bleibt komplex (über UserRole)
+            if (!req.organizationId) {
+                // Keine Organisation: Nur eigene User-Daten
+                return { id: userId };
+            }
             return {
                 roles: {
                     some: {
@@ -281,6 +288,11 @@ const getDataIsolationFilter = (req, entity) => {
                 }
             };
         case 'role':
+            // Rollen: Nur Rollen der Organisation
+            if (!req.organizationId) {
+                // Keine Organisation: Garantiert keine Ergebnisse
+                return { id: -1 };
+            }
             return {
                 organizationId: req.organizationId
             };

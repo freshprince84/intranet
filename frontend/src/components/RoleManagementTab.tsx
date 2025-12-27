@@ -348,17 +348,50 @@ interface AccessLevelSelectProps {
   disabled?: boolean;
   size?: 'sm' | 'md';
   t: (key: string) => string;
+  entityType?: 'page' | 'table' | 'button';
 }
+
+// AccessLevel-Optionen je nach EntityType (gemäß Plan)
+// page: ja/nein → none, all_both
+// button: ja/nein → none, all_both  
+// table (Tabs/Boxes): nein/eigene/alle → none, own_both, all_both
+const getOptionsForEntityType = (entityType?: string): NewAccessLevel[] => {
+  switch (entityType) {
+    case 'page':
+    case 'button':
+      // Nur ja/nein (erlaubt/nicht erlaubt)
+      return ['none', 'all_both'];
+    case 'table':
+      // Nein/Eigene/Alle
+      return ['none', 'own_both', 'all_both'];
+    default:
+      // Fallback: alle Optionen
+      return ACCESS_LEVEL_OPTIONS;
+  }
+};
 
 const AccessLevelSelect: React.FC<AccessLevelSelectProps> = ({ 
   value, 
   onChange, 
   disabled = false,
   size = 'md',
-  t 
+  t,
+  entityType
 }) => {
   // Konvertiere Legacy-Werte zu neuen Werten
   const normalizedValue = convertLegacyAccessLevel(value);
+  
+  // Hole Optionen basierend auf EntityType
+  const options = getOptionsForEntityType(entityType);
+  
+  // Normalisiere den Wert auf gültige Option (falls alte Werte wie own_read vorhanden)
+  const displayValue = options.includes(normalizedValue) 
+    ? normalizedValue 
+    : (normalizedValue === 'own_read' || normalizedValue === 'own_both') 
+      ? (options.includes('own_both') ? 'own_both' : 'all_both')
+      : (normalizedValue === 'all_read' || normalizedValue === 'all_both')
+        ? 'all_both'
+        : 'none';
   
   // Farbe basierend auf AccessLevel
   const getColorClass = (level: NewAccessLevel): string => {
@@ -378,12 +411,12 @@ const AccessLevelSelect: React.FC<AccessLevelSelectProps> = ({
 
   return (
     <select
-      value={normalizedValue}
+      value={displayValue}
       onChange={(e) => onChange(e.target.value as NewAccessLevel)}
       disabled={disabled}
-      className={`${sizeClasses} ${getColorClass(normalizedValue)} rounded border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`${sizeClasses} ${getColorClass(displayValue)} rounded border-0 cursor-pointer focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed max-w-[140px]`}
     >
-      {ACCESS_LEVEL_OPTIONS.map((level) => (
+      {options.map((level) => (
         <option key={level} value={level}>
           {t(`roles.accessLevels.${level}`)}
         </option>
@@ -1834,6 +1867,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                 disabled={isFixedPage}
                                 size="sm"
                                 t={t}
+                                entityType="page"
                               />
                             </div>
                             
@@ -1907,6 +1941,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                         }}
                                         size="sm"
                                         t={t}
+                                        entityType="table"
                                       />
                                     </div>
                                     
@@ -1930,6 +1965,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                             }}
                                             size="sm"
                                             t={t}
+                                            entityType="button"
                                           />
                                         </div>
                                       );
@@ -1970,6 +2006,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                         }}
                                         size="sm"
                                         t={t}
+                                        entityType="button"
                                       />
                           </div>
                         );
@@ -2309,6 +2346,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                           }}
                                           size="sm"
                                           t={t}
+                                          entityType="button"
                                         />
                                       </div>
                                     );
