@@ -90,7 +90,9 @@ export const getUserOrganizationFilter = (req: Request): any => {
 // ============================================
 // Definiert welche DB-Felder für "eigene Daten" geprüft werden
 const OWNERSHIP_FIELDS: Record<string, string[]> = {
-  'task': ['responsibleId', 'qualityControlId', 'roleId'],
+  // ✅ FIX: roleId entfernt für own_both - nur responsibleId und qualityControlId
+  // roleId wird nur verwendet, wenn accessLevel all_both ist (siehe getDataIsolationFilter)
+  'task': ['responsibleId', 'qualityControlId'],
   'request': ['requesterId', 'responsibleId'],
   'worktime': ['userId'],
   'client': ['createdById'],
