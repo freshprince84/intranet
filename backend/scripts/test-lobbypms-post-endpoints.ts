@@ -114,7 +114,7 @@ async function testPostEndpoints(branchId: number, lobbyEmail?: string, lobbyPas
       console.log('⚠️  Keine Verfügbarkeitsdaten gefunden\n');
       return;
     }
-    
+
     // Nimm erste Kategorie und Datum
     const testEntry = availabilityData[0];
     const categoryId = testEntry.categoryId;
@@ -511,19 +511,33 @@ async function testPostEndpoints(branchId: number, lobbyEmail?: string, lobbyPas
         }
       });
 
-      // Versuche Login falls noch nicht gemacht
+      // Versuche Login und speichere Cookies
+      let sessionCookies: string[] = [];
       try {
         const loginResponse = await sessionAxiosInstance.post('/entrar', 
           new URLSearchParams({ email: lobbyEmail, password: lobbyPassword }).toString(),
           { validateStatus: (s) => s < 500, maxRedirects: 5 }
         );
-        const cookies = loginResponse.headers['set-cookie'] || [];
-        if (cookies.length > 0) {
-          sessionAxiosInstance.defaults.headers.common['Cookie'] = cookies.map(c => c.split(';')[0]).join('; ');
+        sessionCookies = loginResponse.headers['set-cookie'] || [];
+        if (sessionCookies.length > 0) {
+          const cookieString = sessionCookies.map(c => c.split(';')[0]).join('; ');
+          sessionAxiosInstance.defaults.headers.common['Cookie'] = cookieString;
+          console.log(`   ✅ Login erfolgreich! Cookies: ${cookieString.substring(0, 50)}...`);
         }
       } catch (e) {
-        // Ignoriere
+        console.log(`   ⚠️  Login-Fehler: ${(e as any).message}`);
       }
+      
+      // WICHTIG: Verwende Cookie-Jar für alle Requests
+      // Axios sendet Cookies automatisch mit withCredentials: true, aber wir setzen sie auch manuell
+      const cookieInterceptor = (config: any) => {
+        if (sessionCookies.length > 0) {
+          const cookieString = sessionCookies.map(c => c.split(';')[0]).join('; ');
+          config.headers['Cookie'] = cookieString;
+        }
+        return config;
+      };
+      sessionAxiosInstance.interceptors.request.use(cookieInterceptor);
 
       // SCHRITT 1: Prüfe Temporada-Endpoints (vielleicht muss zuerst eine Temporada erstellt werden)
       console.log('   🔍 SCHRITT 1: Prüfe Temporada-Endpoints...\n');
@@ -581,9 +595,63 @@ async function testPostEndpoints(branchId: number, lobbyEmail?: string, lobbyPas
             if (postResponse.data && typeof postResponse.data === 'object') {
               temporadaId = postResponse.data.id || postResponse.data.temporada_id || temporadaId;
             }
+            // Prüfe auch Location-Header für ID (z.B. /temporadas/123)
+            const location = postResponse.headers.location || '';
+            const locationMatch = location.match(/\/(\d+)/);
+            if (locationMatch && !temporadaId) {
+              temporadaId = parseInt(locationMatch[1], 10);
+              console.log(`   📋 Temporada-ID aus Location extrahiert: ${temporadaId}`);
+            }
           }
         } catch (e) {
           // Ignoriere
+        }
+      }
+
+      // SCHRITT 1.5: Versuche explizit eine Temporada zu erstellen (falls noch keine gefunden)
+      if (!temporadaId) {
+        console.log('\n   🔍 SCHRITT 1.5: Versuche explizit Temporada zu erstellen...\n');
+        const createEndpoints = ['/temporadas/guardar', '/temporadas/crear', '/api/temporadas'];
+        
+        for (const endpoint of createEndpoints) {
+          try {
+            const createPayload = {
+              nombre: `Test Temporada ${Date.now()}`,
+              fecha_inicio: testDate,
+              fecha_fin: testDate,
+            };
+
+            const createResponse = await sessionAxiosInstance.post(endpoint,
+              new URLSearchParams(createPayload as any).toString(),
+              {
+                validateStatus: (s) => s < 500,
+                maxRedirects: 5, // Erlaube Redirects
+              }
+            );
+
+            console.log(`   📋 ${endpoint} Response Status: ${createResponse.status}`);
+            console.log(`   📋 ${endpoint} Response Location: ${createResponse.headers.location || 'keine'}`);
+            
+            // Prüfe Location-Header für ID
+            const location = createResponse.headers.location || '';
+            const locationMatch = location.match(/\/(\d+)/);
+            if (locationMatch) {
+              temporadaId = parseInt(locationMatch[1], 10);
+              console.log(`   ✅ Temporada erstellt! ID aus Location: ${temporadaId}`);
+              break;
+            }
+            
+            // Prüfe Response-Body
+            if (createResponse.data && typeof createResponse.data === 'object') {
+              temporadaId = createResponse.data.id || createResponse.data.temporada_id || null;
+              if (temporadaId) {
+                console.log(`   ✅ Temporada erstellt! ID aus Response: ${temporadaId}`);
+                break;
+              }
+            }
+          } catch (e: any) {
+            console.log(`   ⚠️  ${endpoint} Fehler: ${e.message}`);
+          }
         }
       }
 

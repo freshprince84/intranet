@@ -85,7 +85,35 @@ export const getUserOrganizationFilter = (req: Request): any => {
   };
 };
 
-// Neue Hilfsfunktion für Datenisolation je nach User-Typ
+// ============================================
+// OWNERSHIP-FELDER FÜR ROW-LEVEL-ISOLATION
+// ============================================
+// Definiert welche DB-Felder für "eigene Daten" geprüft werden
+const OWNERSHIP_FIELDS: Record<string, string[]> = {
+  'task': ['responsibleId', 'qualityControlId', 'roleId'],
+  'request': ['requesterId', 'responsibleId'],
+  'worktime': ['userId'],
+  'client': ['createdById'],
+  'branch': [],  // Branch-Zugehörigkeit wird über BranchUser geprüft
+  'invoice': ['userId'],
+  'consultationInvoice': ['userId'],
+  'monthlyReport': ['userId'],
+  'monthlyConsultationReport': ['userId'],
+  'cerebroCarticle': ['createdById'],
+  'carticle': ['createdById'],
+  'reservation': ['branchId'],  // Branch-basiert
+  'tour_booking': ['bookedById', 'branchId'],
+  'password_entry': ['createdById'],
+};
+
+/**
+ * Neue Hilfsfunktion für Datenisolation basierend auf AccessLevel
+ * Berücksichtigt das Permission-System (own_read, own_both, all_read, all_both)
+ * 
+ * @param req - Express Request mit userId, organizationId, permissionContext
+ * @param entity - Entity-Name (z.B. 'task', 'request')
+ * @returns Prisma WHERE-Filter für Row-Level-Isolation
+ */
 export const getDataIsolationFilter = (req: Request, entity: string): any => {
   // ✅ FIX: Admin/Owner sehen alle Daten (keine Isolation)
   if (isAdminOrOwner(req)) {
@@ -98,6 +126,55 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
   if (isNaN(userId)) {
     logger.error('Invalid userId in request:', req.userId);
     return {}; // Leerer Filter als Fallback
+  }
+
+  // ✅ NEU: Prüfe permissionContext (gesetzt von checkPermission Middleware)
+  const permissionContext = req.permissionContext;
+  
+  if (permissionContext) {
+    const { accessLevel, isOwnershipRequired, ownershipFields } = permissionContext;
+    
+    // all_both oder all_read: Keine Row-Level-Isolation nötig (alle Daten der Org sehen)
+    if (accessLevel === 'all_both' || accessLevel === 'all_read') {
+      // Nur nach organizationId filtern (falls vorhanden)
+      if (req.organizationId) {
+        return { organizationId: req.organizationId };
+      }
+      return {};
+    }
+    
+    // own_both oder own_read: Nur eigene Daten
+    if (isOwnershipRequired && ownershipFields.length > 0) {
+      const orConditions: any[] = [];
+      
+      for (const field of ownershipFields) {
+        if (field === 'userId' || field === 'responsibleId' || field === 'qualityControlId' || 
+            field === 'requesterId' || field === 'createdById' || field === 'bookedById') {
+          orConditions.push({ [field]: userId });
+        } else if (field === 'roleId') {
+          const userRoleId = req.userRole?.role?.id;
+          if (userRoleId) {
+            orConditions.push({ [field]: userRoleId });
+          }
+        } else if (field === 'branchId') {
+          if (req.branchId) {
+            orConditions.push({ [field]: req.branchId });
+          }
+        }
+      }
+      
+      const filter: any = {};
+      
+      if (req.organizationId) {
+        filter.organizationId = req.organizationId;
+      }
+      
+      if (orConditions.length > 0) {
+        filter.OR = orConditions;
+      }
+      
+      return filter;
+    }
   }
 
   // Standalone User (ohne Organisation) - nur eigene Daten
