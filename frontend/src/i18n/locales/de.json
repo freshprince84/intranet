@@ -17,6 +17,10 @@
     "filter": "Filter",
     "expandAll": "Alle aufklappen",
     "collapseAll": "Alle zuklappen",
+    "start": "Starten",
+    "stop": "Stoppen",
+    "plan": "Planen",
+    "exchangeRequests": "Tausch-Anfragen",
     "reset": "Zurücksetzen",
     "apply": "Anwenden",
     "copy": "Kopieren",
@@ -77,7 +81,11 @@
     "profile": "Profil",
     "switchRole": "Rolle wechseln",
     "switchBranch": "Standort wechseln",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "roleSwitched": "Rolle erfolgreich gewechselt",
+    "roleSwitchError": "Fehler beim Wechseln der Rolle",
+    "branchSwitched": "Standort erfolgreich gewechselt",
+    "branchSwitchError": "Fehler beim Wechseln der Niederlassung"
   },
   "dataCard": {
     "expandDescription": "Beschreibung aufklappen",
@@ -620,6 +628,8 @@
       "buttonsChecked": "Buttons ✓",
       "buttonsUnchecked": "Buttons ✗",
       "setAllTo": "Alle setzen auf",
+      "setAllToYes": "Alle auf Ja/Alle",
+      "setAllToNo": "Alle auf Nein",
       "allBranches": "Für alle Branches",
       "specificBranches": "Spezifische Branches"
     },

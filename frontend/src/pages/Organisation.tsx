@@ -21,17 +21,19 @@ const Organisation: React.FC = () => {
   const { 
     isAdmin, 
     hasPermission, 
+    canView,
     canViewOrganization,
     loading: permissionsLoading
   } = usePermissions();
 
   // Berechtigungen prüfen
-  const canViewOrganisation = hasPermission('organization_management', 'read', 'page');
-  const canViewUsers = hasPermission('users', 'read', 'table');
-  const canViewRoles = hasPermission('roles', 'read', 'table');
-  const canViewBranches = hasPermission('branches', 'read', 'table');
-  const canViewProviders = hasPermission('tour_providers', 'read', 'table');
-  const canViewOrg = canViewOrganization();
+  const canViewOrganisation = canView('organization_management', 'page');
+  // ✅ FIX: Verwende korrekte Entity-Namen (synchron mit seed.ts)
+  const canViewUsers = canView('users', 'tab');
+  const canViewRoles = canView('roles', 'tab');
+  const canViewBranches = canView('branches', 'tab');
+  const canViewProviders = canView('tour_providers', 'tab');
+  const canViewOrg = canView('organization_settings', 'tab');
 
   const [activeTabState, setActiveTabState] = useState<'users' | 'roles' | 'branches' | 'providers' | 'organization'>('users');
   const [providersViewMode, setProvidersViewMode] = useState<'tours' | 'providers'>('tours');
@@ -102,91 +104,63 @@ const Organisation: React.FC = () => {
           {/* Tabs für Navigation */}
           <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
             <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto overflow-y-hidden">
-              {/* Users Tab - immer sichtbar, aber mit Pro-Badge wenn nicht berechtigt */}
-              <button
-                className={`${
-                  activeTabState === 'users' && canViewUsers
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : !canViewUsers
-                    ? 'border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
-                onClick={() => canViewUsers && handleTabChange('users')}
-                disabled={!canViewUsers}
-              >
-                <UserIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                {t('organisation.tabs.users')}
-                {!canViewUsers && (
-                  <span className="ml-1 sm:ml-2 px-1 sm:px-2 py-0.5 text-[0.625rem] sm:text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
-                    PRO
-                  </span>
-                )}
-              </button>
+              {/* ✅ FIX: Tabs komplett ausblenden wenn accessLevel === 'none' (keine PRO-Labels mehr) */}
+              {canViewUsers && (
+                <button
+                  className={`${
+                    activeTabState === 'users'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
+                  onClick={() => handleTabChange('users')}
+                >
+                  <UserIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                  {t('organisation.tabs.users')}
+                </button>
+              )}
 
-              {/* Roles Tab - immer sichtbar, aber mit Pro-Badge wenn nicht berechtigt */}
-              <button
-                className={`${
-                  activeTabState === 'roles' && canViewRoles
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : !canViewRoles
-                    ? 'border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
-                onClick={() => canViewRoles && handleTabChange('roles')}
-                disabled={!canViewRoles}
-              >
-                <ShieldCheckIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                {t('organisation.tabs.roles')}
-                {!canViewRoles && (
-                  <span className="ml-1 sm:ml-2 px-1 sm:px-2 py-0.5 text-[0.625rem] sm:text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
-                    PRO
-                  </span>
-                )}
-              </button>
+              {canViewRoles && (
+                <button
+                  className={`${
+                    activeTabState === 'roles'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
+                  onClick={() => handleTabChange('roles')}
+                >
+                  <ShieldCheckIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                  {t('organisation.tabs.roles')}
+                </button>
+              )}
 
-              {/* Branches Tab - immer sichtbar, aber mit Pro-Badge wenn nicht berechtigt */}
-              <button
-                className={`${
-                  activeTabState === 'branches' && canViewBranches
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : !canViewBranches
-                    ? 'border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
-                onClick={() => canViewBranches && handleTabChange('branches')}
-                disabled={!canViewBranches}
-              >
-                <MapPinIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                {t('organisation.tabs.branches', { defaultValue: 'Niederlassungen' })}
-                {!canViewBranches && (
-                  <span className="ml-1 sm:ml-2 px-1 sm:px-2 py-0.5 text-[0.625rem] sm:text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
-                    PRO
-                  </span>
-                )}
-              </button>
+              {canViewBranches && (
+                <button
+                  className={`${
+                    activeTabState === 'branches'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
+                  onClick={() => handleTabChange('branches')}
+                >
+                  <MapPinIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                  {t('organisation.tabs.branches', { defaultValue: 'Niederlassungen' })}
+                </button>
+              )}
 
-              {/* Providers Tab - immer sichtbar, aber mit Pro-Badge wenn nicht berechtigt */}
-              <button
-                className={`${
-                  activeTabState === 'providers' && canViewProviders
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : !canViewProviders
-                    ? 'border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
-                onClick={() => canViewProviders && handleTabChange('providers')}
-                disabled={!canViewProviders}
-              >
-                <TruckIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                {t('organisation.tabs.providers', { defaultValue: 'Proveedores' })}
-                {!canViewProviders && (
-                  <span className="ml-1 sm:ml-2 px-1 sm:px-2 py-0.5 text-[0.625rem] sm:text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
-                    PRO
-                  </span>
-                )}
-              </button>
+              {canViewProviders && (
+                <button
+                  className={`${
+                    activeTabState === 'providers'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  } whitespace-nowrap py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center relative flex-shrink-0`}
+                  onClick={() => handleTabChange('providers')}
+                >
+                  <TruckIcon className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                  {t('organisation.tabs.providers', { defaultValue: 'Proveedores' })}
+                </button>
+              )}
 
-              {/* Organization Tab - sichtbar wenn berechtigt */}
               {canViewOrg && (
                 <button
                   className={`${
@@ -214,109 +188,58 @@ const Organisation: React.FC = () => {
 
           {/* Tab Inhalte */}
           <div className="mt-6">
-            {activeTabState === 'users' ? (
-              canViewUsers ? (
-                <UserManagementTab />
-              ) : (
-                <div className="p-8 text-center">
-                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-                    <span className="inline-block px-3 py-1 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded mb-4">
-                      PRO
-                    </span>
-                    <p className="text-gray-700 dark:text-gray-300 mt-4">
-                      {t('organisation.proFeature.users')}
-                    </p>
-                  </div>
+            {/* ✅ FIX: Tabs werden nur gerendert wenn sie sichtbar sind (keine PRO-Messages mehr) */}
+            {activeTabState === 'users' && canViewUsers && (
+              <UserManagementTab />
+            )}
+            {activeTabState === 'roles' && canViewRoles && (
+              <RoleManagementTab />
+            )}
+            {activeTabState === 'branches' && canViewBranches && (
+              <BranchManagementTab />
+            )}
+            {activeTabState === 'providers' && canViewProviders && (
+              <div className="space-y-4">
+                {/* Switch für Tours/Providers */}
+                <div className="flex gap-2 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setProvidersViewMode('tours')}
+                    className={`p-2 rounded-md transition-colors ${
+                      providersViewMode === 'tours'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                    }`}
+                    title={t('tours.title', 'Touren')}
+                  >
+                    <CalendarIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProvidersViewMode('providers')}
+                    className={`p-2 rounded-md transition-colors ${
+                      providersViewMode === 'providers'
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                    }`}
+                    title={t('organisation.tabs.providers', { defaultValue: 'Proveedores' })}
+                  >
+                    <TruckIcon className="h-5 w-5" />
+                  </button>
                 </div>
-              )
-            ) : activeTabState === 'roles' ? (
-              canViewRoles ? (
-                <RoleManagementTab />
-              ) : (
-                <div className="p-8 text-center">
-                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-                    <span className="inline-block px-3 py-1 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded mb-4">
-                      PRO
-                    </span>
-                    <p className="text-gray-700 dark:text-gray-300 mt-4">
-                      {t('organisation.proFeature.roles')}
-                    </p>
-                  </div>
-                </div>
-              )
-            ) : activeTabState === 'branches' ? (
-              canViewBranches ? (
-                <BranchManagementTab />
-              ) : (
-                <div className="p-8 text-center">
-                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-                    <span className="inline-block px-3 py-1 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded mb-4">
-                      PRO
-                    </span>
-                    <p className="text-gray-700 dark:text-gray-300 mt-4">
-                      {t('organisation.proFeature.branches', { defaultValue: 'Niederlassungs-Verwaltung ist eine PRO-Funktion' })}
-                    </p>
-                  </div>
-                </div>
-              )
-            ) : activeTabState === 'providers' ? (
-              canViewProviders ? (
-                <div className="space-y-4">
-                  {/* Switch für Tours/Providers */}
-                  <div className="flex gap-2 mb-4">
-                    <button
-                      type="button"
-                      onClick={() => setProvidersViewMode('tours')}
-                      className={`p-2 rounded-md transition-colors ${
-                        providersViewMode === 'tours'
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                      }`}
-                      title={t('tours.title', 'Touren')}
-                    >
-                      <CalendarIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setProvidersViewMode('providers')}
-                      className={`p-2 rounded-md transition-colors ${
-                        providersViewMode === 'providers'
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                      }`}
-                      title={t('organisation.tabs.providers', { defaultValue: 'Proveedores' })}
-                    >
-                      <TruckIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                  
-                  {/* Bedingtes Rendering */}
-                  {providersViewMode === 'tours' ? (
-                    <ToursTab />
-                  ) : (
-                    <TourProvidersTab />
-                  )}
-                </div>
-              ) : (
-                <div className="p-8 text-center">
-                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-                    <span className="inline-block px-3 py-1 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded mb-4">
-                      PRO
-                    </span>
-                    <p className="text-gray-700 dark:text-gray-300 mt-4">
-                      {t('organisation.proFeature.providers', { defaultValue: 'Tour-Provider-Verwaltung ist eine PRO-Funktion' })}
-                    </p>
-                  </div>
-                </div>
-              )
-            ) : activeTabState === 'organization' && canViewOrg ? (
+                
+                {/* Bedingtes Rendering */}
+                {providersViewMode === 'tours' ? (
+                  <ToursTab />
+                ) : (
+                  <TourProvidersTab />
+                )}
+              </div>
+            )}
+            {activeTabState === 'organization' && canViewOrg && (
               <div className="space-y-6">
                 <OrganizationSettings />
                 <JoinRequestsList />
-              </div>
-            ) : (
-              <div className="p-4 text-red-600 dark:text-red-400">
-                {t('organisation.noPermissionForPage')}
               </div>
             )}
           </div>

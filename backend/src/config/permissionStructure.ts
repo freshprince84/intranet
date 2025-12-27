@@ -103,7 +103,7 @@ export const PERMISSION_STRUCTURE: PermissionPage[] = [
         ]
       },
       {
-        entity: 'tours_tab',
+        entity: 'tour_bookings',
         label: 'Touren',
         options: 'ternary',
         buttons: [
@@ -191,17 +191,17 @@ export const PERMISSION_STRUCTURE: PermissionPage[] = [
     options: 'binary',
     tabs: [
       {
-        entity: 'beratungsrechnungen',
+        entity: 'consultation_invoices',
         label: 'Beratungsrechnungen',
         options: 'ternary'
       },
       {
-        entity: 'monatsrechnungen',
+        entity: 'monthly_reports',
         label: 'Monatsrechnungen',
         options: 'ternary'
       },
       {
-        entity: 'lohnabrechnungen',
+        entity: 'payroll_reports',
         label: 'Lohnabrechnungen',
         options: 'ternary'
       }
@@ -222,7 +222,7 @@ export const PERMISSION_STRUCTURE: PermissionPage[] = [
     options: 'binary',
     tabs: [
       {
-        entity: 'users_tab',
+        entity: 'users',
         label: 'Benutzer',
         options: 'ternary',
         buttons: [
@@ -232,7 +232,7 @@ export const PERMISSION_STRUCTURE: PermissionPage[] = [
         ]
       },
       {
-        entity: 'roles_tab',
+        entity: 'roles',
         label: 'Rollen',
         options: 'ternary',
         buttons: [
@@ -242,7 +242,7 @@ export const PERMISSION_STRUCTURE: PermissionPage[] = [
         ]
       },
       {
-        entity: 'branches_tab',
+        entity: 'branches',
         label: 'Niederlassungen',
         options: 'ternary',
         buttons: [
@@ -252,7 +252,7 @@ export const PERMISSION_STRUCTURE: PermissionPage[] = [
         ]
       },
       {
-        entity: 'provedores_tab',
+        entity: 'tour_providers',
         label: 'Tour-Anbieter',
         options: 'ternary',
         buttons: [
@@ -265,7 +265,7 @@ export const PERMISSION_STRUCTURE: PermissionPage[] = [
         ]
       },
       {
-        entity: 'organization_tab',
+        entity: 'organization_settings',
         label: 'Organisation',
         options: 'ternary',
         buttons: [
@@ -294,6 +294,11 @@ export const PERMISSION_STRUCTURE: PermissionPage[] = [
         entity: 'password_manager',
         label: 'Passwort-Manager',
         options: 'ternary'
+      },
+      {
+        entity: 'system',
+        label: 'System',
+        options: 'ternary'
       }
     ]
   },
@@ -305,6 +310,33 @@ export const PERMISSION_STRUCTURE: PermissionPage[] = [
     options: 'binary'
   }
 ];
+
+/**
+ * Initialisiert alle Permissions aus PERMISSION_STRUCTURE mit Standardwerten
+ * und übernimmt dann die gespeicherten Werte (falls vorhanden)
+ */
+export const initializePermissions = (
+  savedPermissions: { entity: string; entityType: string; accessLevel: string }[] = []
+): { entity: string; entityType: string; accessLevel: string }[] => {
+  const allEntities = getAllEntities();
+  const initialized: { entity: string; entityType: string; accessLevel: string }[] = [];
+
+  allEntities.forEach(({ entity, type }) => {
+    // Suche gespeicherten Wert
+    const saved = savedPermissions.find(
+      p => p.entity === entity && p.entityType === type
+    );
+
+    // Verwende gespeicherten Wert oder Standard 'none'
+    initialized.push({
+      entity,
+      entityType: type,
+      accessLevel: saved?.accessLevel || 'none'
+    });
+  });
+
+  return initialized;
+};
 
 /**
  * Hilfsfunktion: Alle Entities aus der Struktur extrahieren

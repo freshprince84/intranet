@@ -36,6 +36,29 @@ interface PermissionEditorProps {
   disabled?: boolean;
 }
 
+// Hilfsfunktion: Übersetze Label (falls es ein Standard-Label ist)
+const translateLabel = (label: string, t: (key: string) => string): string => {
+  // Standard-Button-Labels übersetzen
+  const labelMap: Record<string, string> = {
+    'Erstellen': t('common.create'),
+    'Bearbeiten': t('common.edit'),
+    'Löschen': t('common.delete'),
+    'Starten': t('common.start') || 'Starten',
+    'Stoppen': t('common.stop') || 'Stoppen',
+    'Planen': t('common.plan') || 'Planen',
+    'Client anlegen': t('roles.buttons.client_create') || 'Client anlegen',
+    'Anbieter erstellen': t('roles.buttons.tour_provider_create') || 'Anbieter erstellen',
+    'Anbieter bearbeiten': t('roles.buttons.tour_provider_edit') || 'Anbieter bearbeiten',
+    'Anbieter löschen': t('roles.buttons.tour_provider_delete') || 'Anbieter löschen',
+    'Tour erstellen': t('roles.buttons.tour_create') || 'Tour erstellen',
+    'Tour bearbeiten': t('roles.buttons.tour_edit') || 'Tour bearbeiten',
+    'Tour löschen': t('roles.buttons.tour_delete') || 'Tour löschen',
+    'Tausch-Anfragen': t('common.exchangeRequests') || 'Tausch-Anfragen'
+  };
+  
+  return labelMap[label] || label;
+};
+
 // Hilfsfunktion: Finde Permission für Entity
 const findPermission = (permissions: Permission[], entity: string): Permission | undefined => {
   return permissions.find(p => p.entity === entity);
@@ -118,12 +141,13 @@ const ButtonEntry: React.FC<{
   onChange: (permissions: Permission[]) => void;
   disabled?: boolean;
 }> = ({ button, permissions, onChange, disabled }) => {
+  const { t } = useTranslation();
   const perm = findPermission(permissions, button.entity);
   const currentValue = perm?.accessLevel || 'none';
 
   return (
     <div className="flex items-center justify-between mt-1 pl-12 border-l-2 border-gray-300 dark:border-gray-600">
-      <span className="text-xs text-gray-600 dark:text-gray-400 truncate mr-2">└ {button.label}</span>
+      <span className="text-xs text-gray-600 dark:text-gray-400 truncate mr-2">└ {translateLabel(button.label, t)}</span>
       <AccessLevelDropdown
         value={currentValue}
         options={button.options}
@@ -143,13 +167,14 @@ const TabEntry: React.FC<{
   onChange: (permissions: Permission[]) => void;
   disabled?: boolean;
 }> = ({ tab, permissions, onChange, disabled }) => {
+  const { t } = useTranslation();
   const perm = findPermission(permissions, tab.entity);
   const currentValue = perm?.accessLevel || 'none';
 
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between pl-6 border-l-2 border-blue-300 dark:border-blue-600">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate mr-2">└ {tab.label}</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate mr-2">└ {translateLabel(tab.label, t)}</span>
         <AccessLevelDropdown
           value={currentValue}
           options={tab.options}
@@ -179,13 +204,14 @@ const BoxEntry: React.FC<{
   onChange: (permissions: Permission[]) => void;
   disabled?: boolean;
 }> = ({ box, permissions, onChange, disabled }) => {
+  const { t } = useTranslation();
   const perm = findPermission(permissions, box.entity);
   const currentValue = perm?.accessLevel || 'none';
 
   return (
     <div className="mt-2">
       <div className="flex items-center justify-between pl-6 border-l-2 border-purple-300 dark:border-purple-600">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate mr-2">└ {box.label}</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate mr-2">└ {translateLabel(box.label, t)}</span>
         {box.options ? (
           <AccessLevelDropdown
             value={currentValue}
@@ -230,6 +256,7 @@ const PageEntry: React.FC<{
   isExpanded: boolean;
   onToggle: () => void;
 }> = ({ page, permissions, onChange, disabled, isExpanded, onToggle }) => {
+  const { t } = useTranslation();
   const perm = findPermission(permissions, page.entity);
   const currentValue = perm?.accessLevel || 'none';
   const hasChildren = (page.boxes && page.boxes.length > 0) || (page.tabs && page.tabs.length > 0);
@@ -246,7 +273,7 @@ const PageEntry: React.FC<{
               ▶
             </span>
           )}
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{page.label}</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{translateLabel(page.label, t)}</span>
         </div>
         <AccessLevelDropdown
           value={currentValue}
@@ -363,14 +390,14 @@ const PermissionEditor: React.FC<PermissionEditorProps> = ({
           onClick={() => setAllTo('all_both')}
           className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200"
         >
-          {t('roles.form.setAllTo') || 'Alle auf'} Ja/Alle
+          {t('roles.form.setAllToYes')}
         </button>
         <button
           type="button"
           onClick={() => setAllTo('none')}
           className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200"
         >
-          {t('roles.form.setAllTo') || 'Alle auf'} Nein
+          {t('roles.form.setAllToNo')}
         </button>
       </div>
 
