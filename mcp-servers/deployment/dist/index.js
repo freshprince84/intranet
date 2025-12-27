@@ -101,9 +101,12 @@ async function executeSSHCommand(command, timeout = 300000) {
  */
 async function cleanupBuildFiles() {
     const cleanupCommand = `cd ${SERVER_CONFIG.serverPath} && ` +
-        `find frontend/build/static/js -name "*.js" -type f -delete 2>/dev/null || true && ` +
-        `find frontend/build/static/js -name "*.js.map" -type f -delete 2>/dev/null || true && ` +
-        `find frontend/build/static/js -name "*.LICENSE.txt" -type f -delete 2>/dev/null || true && ` +
+        `echo "🧹 Bereinige Build-Dateien..." && ` +
+        `rm -f frontend/build/static/js/908.*.chunk.js* 2>/dev/null || true && ` +
+        `rm -f frontend/build/static/js/main.*.js* 2>/dev/null || true && ` +
+        `rm -f frontend/build/static/js/*.js.map 2>/dev/null || true && ` +
+        `rm -f frontend/build/static/js/*.LICENSE.txt 2>/dev/null || true && ` +
+        `find frontend/build/static/js -name "*.js" -type f ! -name "*.chunk.js" -delete 2>/dev/null || true && ` +
         `git clean -fd frontend/build/ 2>/dev/null || true && ` +
         `git clean -fd backend/dist/ 2>/dev/null || true && ` +
         `echo "✅ Build-Dateien bereinigt"`;
