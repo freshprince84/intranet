@@ -109,6 +109,7 @@ const PayrollComponent: React.FC = () => {
       }
     };
 
+    // ✅ FIX: Prüfe Berechtigung für payroll_reports Tab (nicht 'payroll')
     if (hasPermission('payroll_reports', 'read', 'tab')) {
       fetchUsers();
     }

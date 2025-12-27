@@ -361,6 +361,13 @@ const isolationFilter = getDataIsolationFilter(req as any, 'task');
 
 **Datei:** `backend/src/middleware/organization.ts`
 - Fallback-Code für Tasks angepasst (nur eigene Tasks, nicht mehr roleId-Filter)
+- `roleId` aus Ownership-Feldern für `own_both` entfernt (nur `responsibleId` und `qualityControlId`)
+- `roleId` wird jetzt ignoriert bei `own_both` (nur eigene Tasks, nicht alle Tasks der Rolle)
+
+**Datei:** `backend/src/middleware/permissionMiddleware.ts`
+- `roleId` aus `OWNERSHIP_FIELDS['todos']` entfernt
+- `roleId` aus `OWNERSHIP_FIELDS['task_edit']` entfernt
+- Für `own_both`: Nur Tasks wo User in `responsibleId` oder `qualityControlId` ist
 
 ---
 
@@ -424,3 +431,4 @@ Backend-Änderungen erfordern Server-Neustart:
 pm2 restart intranet-backend
 sudo systemctl restart nginx
 ```
+
