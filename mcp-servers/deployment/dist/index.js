@@ -104,14 +104,17 @@ async function cleanupBuildFiles() {
         `echo "🔧 Löse Git-Konflikte auf..." && ` +
         `git reset --hard HEAD 2>/dev/null || true && ` +
         `git merge --abort 2>/dev/null || true && ` +
+        `git rm --cached -r frontend/build/static/js/main.*.js* 2>/dev/null || true && ` +
+        `git rm --cached -r frontend/build/static/js/908.*.chunk.js* 2>/dev/null || true && ` +
         `echo "🧹 Bereinige Build-Dateien..." && ` +
-        `rm -f frontend/build/static/js/908.*.chunk.js* 2>/dev/null || true && ` +
-        `rm -f frontend/build/static/js/main.*.js* 2>/dev/null || true && ` +
-        `rm -f frontend/build/static/js/*.js.map 2>/dev/null || true && ` +
-        `rm -f frontend/build/static/js/*.LICENSE.txt 2>/dev/null || true && ` +
+        `rm -rf frontend/build/static/js/908.*.chunk.js* 2>/dev/null || true && ` +
+        `rm -rf frontend/build/static/js/main.*.js* 2>/dev/null || true && ` +
+        `rm -rf frontend/build/static/js/*.js.map 2>/dev/null || true && ` +
+        `rm -rf frontend/build/static/js/*.LICENSE.txt 2>/dev/null || true && ` +
         `find frontend/build/static/js -name "*.js" -type f ! -name "*.chunk.js" -delete 2>/dev/null || true && ` +
         `git clean -fd frontend/build/ 2>/dev/null || true && ` +
         `git clean -fd backend/dist/ 2>/dev/null || true && ` +
+        `git status --porcelain && ` +
         `echo "✅ Build-Dateien bereinigt und Konflikte aufgelöst"`;
     console.error(`[MCP Deployment] Bereinige Build-Dateien und löse Git-Konflikte auf ${SERVER_CONFIG.host}...`);
     return await executeSSHCommand(cleanupCommand, 30000); // 30 Sekunden Timeout
