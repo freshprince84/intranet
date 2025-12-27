@@ -14,10 +14,10 @@ git stash || true  # Falls lokale Änderungen vorhanden sind
 
 # Bereinige untracked Build-Dateien, die Git Pull blockieren könnten
 echo "   🧹 Bereinige untracked Build-Dateien..."
-# Lösche spezifische Build-Dateien, die Konflikte verursachen könnten
-rm -f frontend/build/static/js/908.*.chunk.js* || true
-rm -f frontend/build/static/js/main.*.js* || true
-rm -f backend/dist/**/*.js.map || true
+# Lösche alle Build-Dateien, die Konflikte verursachen könnten
+find frontend/build/static/js -name "*.js" -type f -delete 2>/dev/null || true
+find frontend/build/static/js -name "*.js.map" -type f -delete 2>/dev/null || true
+find frontend/build/static/js -name "*.LICENSE.txt" -type f -delete 2>/dev/null || true
 # Allgemeine Bereinigung
 git clean -fd frontend/build/ || true
 git clean -fd backend/dist/ || true
