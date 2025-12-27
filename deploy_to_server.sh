@@ -10,7 +10,16 @@ echo ""
 # 1. Git Pull
 echo "📥 Schritt 1: Git Pull..."
 cd /var/www/intranet
-git stash || true  # Falls lokale Änderungen vorhanden sind
+
+# Auflösen von Git-Konflikten und lokalen Änderungen
+echo "   🔧 Löse Git-Konflikte auf..."
+# Temporär set -e deaktivieren für Reset-Operationen
+set +e
+git reset --hard HEAD || true
+git clean -fd || true
+# Merge-Konflikte auflösen
+git merge --abort 2>/dev/null || true
+set -e
 
 # Bereinige untracked Build-Dateien, die Git Pull blockieren könnten
 echo "   🧹 Bereinige untracked Build-Dateien..."
@@ -22,8 +31,8 @@ find frontend/build/static/js -name "*.LICENSE.txt" -type f -delete 2>/dev/null 
 git clean -fd frontend/build/ || true
 git clean -fd backend/dist/ || true
 
+# Git Pull ausführen
 git pull
-git stash pop || true  # Falls lokale Änderungen gestashed wurden
 echo "✅ Git Pull abgeschlossen"
 echo ""
 
