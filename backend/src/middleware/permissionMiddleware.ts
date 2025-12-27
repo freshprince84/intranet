@@ -1,4 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { ParamsDictionary } from 'express-serve-static-core';
 import { prisma } from '../utils/prisma';
 import { userCache } from '../services/userCache';
 import { logger } from '../utils/logger';
@@ -23,9 +24,13 @@ type AccessLevel = NewAccessLevel | LegacyAccessLevel;
 type EntityType = 'page' | 'box' | 'tab' | 'button' | 'table' | 'cerebro';
 
 // Erweitere den Request-Typ um Permission-Kontext
+// HINWEIS: userId und roleId werden bereits in auth.ts definiert (required)
 declare global {
     namespace Express {
         interface Request {
+            // userId und roleId sind bereits in auth.ts als required definiert
+            organizationId?: number;
+            branchId?: number;
             userPermissions?: any[];
             permissionContext?: {
                 accessLevel: AccessLevel;
@@ -166,14 +171,14 @@ const OWNERSHIP_FIELDS: Record<string, string[]> = {
  * @param entity - Entität (z.B. 'dashboard', 'requests', 'task_create')
  * @param requiredAccess - Erforderliche Zugriffsebene ('read' oder 'write')
  * @param entityType - Typ der Entität ('page' | 'box' | 'tab' | 'button' | 'table' | 'cerebro')
- * @returns Express Middleware
+ * @returns Express Middleware (behält Request-Parameter-Typen bei)
  */
 export const checkPermission = (
     entity: string, 
     requiredAccess: 'read' | 'write', 
     entityType: EntityType = 'page'
-) => {
-    return async (req: AnyRequest, res: Response, next: NextFunction) => {
+): RequestHandler => {
+    return async (req: Request, res: Response, next: NextFunction) => {
         try {
             const isDebug = req.path.includes('rate-shopping');
             
@@ -181,8 +186,8 @@ export const checkPermission = (
                 logger.warn(`[checkPermission] 🔍 Prüfe: Entity=${entity}, Type=${entityType}, Access=${requiredAccess}`);
             }
             
-            const userId = parseInt(req.userId || '', 10);
-            const roleId = parseInt(req.roleId || '', 10);
+            const userId = parseInt(req.userId, 10);
+            const roleId = parseInt(req.roleId, 10);
 
             if (isNaN(userId) || isNaN(roleId)) {
                 logger.error(`[checkPermission] ❌ Nicht authentifiziert: userId=${req.userId}, roleId=${req.roleId}`);
@@ -322,10 +327,10 @@ export const checkUserPermission = async (
 /**
  * Middleware zur Überprüfung von Admin-Berechtigungen
  */
-export const isAdmin = async (req: AnyRequest, res: Response, next: NextFunction) => {
+export const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = parseInt(req.userId || '', 10);
-        const roleId = parseInt(req.roleId || '', 10);
+        const userId = parseInt(req.userId, 10);
+        const roleId = parseInt(req.roleId, 10);
 
         if (isNaN(userId)) {
             return res.status(401).json({ 
@@ -362,12 +367,12 @@ export const isAdmin = async (req: AnyRequest, res: Response, next: NextFunction
  * Ausnahmen: Profil-Seite selbst und Profil-Prüf-Endpoint
  */
 export const requireCompleteProfile = async (
-    req: AnyRequest,
+    req: Request,
     res: Response,
     next: NextFunction
 ) => {
     try {
-        const userId = parseInt(req.userId || '', 10);
+        const userId = parseInt(req.userId, 10);
         
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
