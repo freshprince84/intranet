@@ -97,20 +97,52 @@ async function executeSSHCommand(command, timeout = 300000) {
     });
 }
 /**
+ * Bereinigt Build-Dateien auf dem Server, die Git Pull blockieren könnten
+ */
+async function cleanupBuildFiles() {
+    const cleanupCommand = `cd ${SERVER_CONFIG.serverPath} && ` +
+        `find frontend/build/static/js -name "*.js" -type f -delete 2>/dev/null || true && ` +
+        `find frontend/build/static/js -name "*.js.map" -type f -delete 2>/dev/null || true && ` +
+        `find frontend/build/static/js -name "*.LICENSE.txt" -type f -delete 2>/dev/null || true && ` +
+        `git clean -fd frontend/build/ 2>/dev/null || true && ` +
+        `git clean -fd backend/dist/ 2>/dev/null || true && ` +
+        `echo "✅ Build-Dateien bereinigt"`;
+    console.error(`[MCP Deployment] Bereinige Build-Dateien auf ${SERVER_CONFIG.host}...`);
+    return await executeSSHCommand(cleanupCommand, 30000); // 30 Sekunden Timeout
+}
+/**
  * Führt Deployment auf dem Server aus
  */
 async function deployToProduction() {
-    const command = `cd ${SERVER_CONFIG.serverPath} && bash ${SERVER_CONFIG.deployScript}`;
     console.error(`[MCP Deployment] Starte Deployment auf ${SERVER_CONFIG.host}...`);
+    // Schritt 1: Build-Dateien bereinigen
+    console.error(`[MCP Deployment] Schritt 1: Bereinige Build-Dateien...`);
+    const cleanupResult = await cleanupBuildFiles();
+    if (!cleanupResult.success) {
+        console.error(`[MCP Deployment] ⚠️ Warnung: Build-Dateien-Bereinigung fehlgeschlagen, fahre trotzdem fort...`);
+    }
+    else {
+        console.error(`[MCP Deployment] ✅ Build-Dateien bereinigt`);
+    }
+    // Schritt 2: Deployment-Skript ausführen
+    console.error(`[MCP Deployment] Schritt 2: Führe Deployment-Skript aus...`);
+    const command = `cd ${SERVER_CONFIG.serverPath} && bash ${SERVER_CONFIG.deployScript}`;
     console.error(`[MCP Deployment] Befehl: ${command}`);
     const result = await executeSSHCommand(command, 600000); // 10 Minuten Timeout für Deployment
+    // Kombiniere Outputs
+    const combinedOutput = cleanupResult.output + "\n\n" + result.output;
+    const combinedResult = {
+        success: result.success,
+        output: combinedOutput,
+        error: result.error,
+    };
     if (result.success) {
         console.error(`[MCP Deployment] ✅ Deployment erfolgreich abgeschlossen`);
     }
     else {
         console.error(`[MCP Deployment] ❌ Deployment fehlgeschlagen: ${result.error}`);
     }
-    return result;
+    return combinedResult;
 }
 /**
  * Prüft Server-Verbindung
