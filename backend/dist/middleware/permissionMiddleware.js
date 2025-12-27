@@ -112,7 +112,7 @@ const OWNERSHIP_FIELDS = {
  * @param entity - Entität (z.B. 'dashboard', 'requests', 'task_create')
  * @param requiredAccess - Erforderliche Zugriffsebene ('read' oder 'write')
  * @param entityType - Typ der Entität ('page' | 'box' | 'tab' | 'button' | 'table' | 'cerebro')
- * @returns Express Middleware
+ * @returns Express Middleware (behält Request-Parameter-Typen bei)
  */
 const checkPermission = (entity, requiredAccess, entityType = 'page') => {
     return (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {

@@ -30,10 +30,6 @@ const branchSelect = {
     name: true
 } as const;
 
-interface TaskParams {
-    id: string;
-}
-
 // Alle Tasks abrufen
 export const getAllTasks = async (req: Request, res: Response) => {
     try {
@@ -264,7 +260,7 @@ export const getAllTasks = async (req: Request, res: Response) => {
 };
 
 // Einzelnen Task abrufen
-export const getTaskById = async (req: Request<TaskParams>, res: Response) => {
+export const getTaskById = async (req: Request, res: Response) => {
     try {
         const taskId = parseInt(req.params.id, 10);
         if (isNaN(taskId)) {
@@ -459,7 +455,7 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
 };
 
 // Task aktualisieren
-export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>, res: Response) => {
+export const updateTask = async (req: Request, res: Response) => {
     try {
         const taskId = parseInt(req.params.id, 10);
         if (isNaN(taskId)) {
@@ -882,7 +878,7 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
 };
 
 // Task löschen
-export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
+export const deleteTask = async (req: Request, res: Response) => {
     try {
         const taskId = parseInt(req.params.id, 10);
         if (isNaN(taskId)) {
@@ -970,7 +966,7 @@ export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
 };
 
 // Cerebro-Artikel eines Tasks abrufen
-export const getTaskCarticles = async (req: Request<TaskParams>, res: Response) => {
+export const getTaskCarticles = async (req: Request, res: Response) => {
     try {
         const taskId = parseInt(req.params.id, 10);
         if (isNaN(taskId)) {
