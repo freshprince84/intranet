@@ -458,7 +458,7 @@
       "users": "Benutzer",
       "roles": "Rollen",
       "branches": "Niederlassungen",
-      "providers": "Proveedores",
+      "providers": "Anbieter",
       "organization": "Organisation"
     },
     "noPermission": "Nur Administratoren haben Zugriff auf diese Seite.",
@@ -617,7 +617,9 @@
       "deactivateAllButtons": "Alle Buttons deaktivieren",
       "buttonsChecked": "Buttons ✓",
       "buttonsUnchecked": "Buttons ✗",
-      "setAllTo": "Alle setzen auf"
+      "setAllTo": "Alle setzen auf",
+      "allBranches": "Für alle Branches",
+      "specificBranches": "Spezifische Branches"
     },
     "pages": {
       "dashboard": "Dashboard",

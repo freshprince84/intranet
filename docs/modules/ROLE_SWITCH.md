@@ -18,6 +18,19 @@ Die Berechtigungsstruktur wurde aktualisiert, um granularere Kontrolle zu ermög
 - Im Rollenauswahlmenü werden die Rollen alphabetisch (A-Z) sortiert angezeigt
 - Nach einem Rollenwechsel bleibt diese Rolle auch für den nächsten Login aktiv (wird in der Datenbank gespeichert)
 
+## Rollenwechsel zwischen Organisationen
+Branches sind pro Organisation. Beim Wechsel zu einer Rolle einer anderen Organisation:
+- Die aktive Branch wird automatisch auf eine Branch der neuen Organisation umgeschaltet
+- Es wird die zuletzt aktive Branch der neuen Organisation aktiviert (`updatedAt DESC`)
+- Falls der User keine Branch der neuen Organisation hat, bleibt keine Branch aktiv
+- BranchCache wird invalidiert, damit das Frontend die neuen Branches lädt
+
+## Branch-Zuweisung bei Org-Beitritt
+Wenn ein User einer Organisation beitritt (Join-Request wird genehmigt):
+- Die Hamburger-Rolle (oder eine angegebene Rolle) wird zugewiesen
+- Die erste verfügbare Branch der Organisation wird dem User zugewiesen (niedrigste ID)
+- Die Branch wird mit `lastUsed=false` erstellt, da der User evtl. noch in einer anderen Org aktiv ist
+
 ## Überblick
 
 Die Rollenauswahl-Funktionalität ermöglicht es Benutzern, zwischen ihren zugewiesenen Rollen zu wechseln. Diese Funktion ist als Untermenü im Profilmenü der Topbar verfügbar und bietet folgenden Nutzen:

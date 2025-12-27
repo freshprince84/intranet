@@ -1428,37 +1428,21 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
 
-        // Prüfe, ob die Rolle für die aktive Branch verfügbar ist (VOR der Transaktion)
-        const activeBranch = await prisma.usersBranches.findFirst({
-            where: {
-                userId,
-                lastUsed: true
-            },
-            select: {
-                branchId: true
-            }
+        // Hole die neue Rolle mit Organisation
+        const newRole = await prisma.role.findUnique({
+            where: { id: roleId },
+            select: { id: true, organizationId: true }
         });
 
-        if (activeBranch) {
-            // Importiere die Hilfsfunktion dynamisch, um Zirkelimporte zu vermeiden
-            const { isRoleAvailableForBranch } = await import('./roleController');
-            const isAvailable = await isRoleAvailableForBranch(roleId, activeBranch.branchId);
-            
-            if (!isAvailable) {
-                return res.status(400).json({
-                    message: 'Diese Rolle ist für die aktive Branch nicht verfügbar'
-                });
-            }
+        if (!newRole) {
+            return res.status(404).json({ message: 'Rolle nicht gefunden' });
         }
         
         // Transaktion starten - alle Prisma-Operationen innerhalb der Transaktion
         await prisma.$transaction(async (tx) => {
-            // Prüfen, ob die Rolle dem Benutzer zugewiesen ist (INNERHALB der Transaktion)
+            // Prüfen, ob die Rolle dem Benutzer zugewiesen ist
             const userRole = await tx.userRole.findFirst({
-                where: {
-                    userId,
-                    roleId
-                }
+                where: { userId, roleId }
             });
 
             if (!userRole) {
@@ -1476,13 +1460,42 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
                 where: { id: userRole.id },
                 data: { lastUsed: true }
             });
+
+            // ✅ Branch für neue Organisation aktivieren
+            // Branches sind pro Organisation - bei Org-Wechsel muss die Branch der neuen Org aktiviert werden
+            if (newRole.organizationId) {
+                // Alle Branches auf lastUsed=false
+                await tx.usersBranches.updateMany({
+                    where: { userId },
+                    data: { lastUsed: false }
+                });
+
+                // Suche zuletzt aktualisierte Branch der neuen Organisation (= zuletzt aktiv gewesen)
+                const existingBranch = await tx.usersBranches.findFirst({
+                    where: {
+                        userId,
+                        branch: { organizationId: newRole.organizationId }
+                    },
+                    orderBy: { updatedAt: 'desc' }
+                });
+
+                if (existingBranch) {
+                    await tx.usersBranches.update({
+                        where: { id: existingBranch.id },
+                        data: { lastUsed: true }
+                    });
+                }
+                // Falls User keine Branch der neuen Org hat, bleibt keine aktiv (kein Fehler)
+            }
         });
 
-        // ✅ PERFORMANCE: UserCache invalidieren bei Rollen-Wechsel
+        // ✅ PERFORMANCE: Caches invalidieren bei Rollen-Wechsel
         userCache.invalidate(userId);
-        // ✅ PERFORMANCE: OrganizationCache invalidieren (lastUsed hat sich geändert)
         const { organizationCache } = await import('../utils/organizationCache');
         organizationCache.invalidate(userId);
+        // ✅ BranchCache invalidieren (Branch hat sich geändert)
+        const { branchCache } = await import('../services/branchCache');
+        branchCache.clear();
 
         // Benutzer mit aktualisierten Rollen zurückgeben
         const updatedUser = await prisma.user.findUnique({

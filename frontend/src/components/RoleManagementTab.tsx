@@ -1389,7 +1389,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                   <ChevronDownIcon className="h-5 w-5" />
                 </button>
                 <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                  {`Mehr anzeigen (${filteredAndSortedRoles.length - displayLimit} verbleibend)`}
+                  {t('common.showMore')} ({filteredAndSortedRoles.length - displayLimit} {t('common.remaining')})
                 </div>
               </div>
             </div>
@@ -1426,7 +1426,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                   <ChevronDownIcon className="h-5 w-5" />
                 </button>
                 <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                  {`Mehr anzeigen (${filteredAndSortedRoles.length - displayLimit} verbleibend)`}
+                  {t('common.showMore')} ({filteredAndSortedRoles.length - displayLimit} {t('common.remaining')})
                 </div>
               </div>
             </div>

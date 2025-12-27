@@ -705,7 +705,9 @@
       "deactivateAllButtons": "Deactivate All Buttons",
       "buttonsChecked": "Buttons ✓",
       "buttonsUnchecked": "Buttons ✗",
-      "setAllTo": "Set all to"
+      "setAllTo": "Set all to",
+      "allBranches": "For all branches",
+      "specificBranches": "Specific branches"
     },
     "pages": {
       "dashboard": "Dashboard",
