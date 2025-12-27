@@ -25,6 +25,8 @@ const Header: React.FC = () => {
     const [logoSrc, setLogoSrc] = useState<string>('/settings/logo');
     const [logoLoadFailed, setLogoLoadFailed] = useState<boolean>(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+    const roleSubMenuTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+    const branchSubMenuTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
     const roleMenuButtonRef = useRef<HTMLButtonElement>(null);
     const roleSubMenuRef = useRef<HTMLDivElement>(null);
     const branchMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -47,6 +49,34 @@ const Header: React.FC = () => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
+    };
+
+    // Separate Handler für Rollen-Untermenü mit längerem Timeout
+    const handleRoleSubMenuMouseEnter = () => {
+        if (roleSubMenuTimeoutRef.current) {
+            clearTimeout(roleSubMenuTimeoutRef.current);
+        }
+        handleMouseEnter(); // Auch Hauptmenü-Timeout löschen
+    };
+
+    const handleRoleSubMenuMouseLeave = () => {
+        roleSubMenuTimeoutRef.current = setTimeout(() => {
+            setIsRoleSubMenuOpen(false);
+        }, 2500); // Längerer Timeout für Untermenü (2.5 Sekunden)
+    };
+
+    // Separate Handler für Branch-Untermenü mit längerem Timeout
+    const handleBranchSubMenuMouseEnter = () => {
+        if (branchSubMenuTimeoutRef.current) {
+            clearTimeout(branchSubMenuTimeoutRef.current);
+        }
+        handleMouseEnter(); // Auch Hauptmenü-Timeout löschen
+    };
+
+    const handleBranchSubMenuMouseLeave = () => {
+        branchSubMenuTimeoutRef.current = setTimeout(() => {
+            setIsBranchSubMenuOpen(false);
+        }, 2500); // Längerer Timeout für Untermenü (2.5 Sekunden)
     };
 
     // Neues Event-Handling für das Hovern über den "Rolle wechseln"-Button
@@ -198,11 +228,17 @@ const Header: React.FC = () => {
         }
     }, [logoLoadFailed, organization]);
 
-    // ✅ MEMORY FIX: Cleanup für timeoutRef beim Unmount
+    // ✅ MEMORY FIX: Cleanup für alle Timeout-Refs beim Unmount
     useEffect(() => {
         return () => {
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
+            }
+            if (roleSubMenuTimeoutRef.current) {
+                clearTimeout(roleSubMenuTimeoutRef.current);
+            }
+            if (branchSubMenuTimeoutRef.current) {
+                clearTimeout(branchSubMenuTimeoutRef.current);
             }
         };
     }, []);
@@ -383,17 +419,17 @@ const Header: React.FC = () => {
                                             {/* Rollen-Untermenü */}
                                             {isRoleSubMenuOpen && (
                                                 <>
-                                                    {/* Unsichtbare "Brücke" zwischen Hauptmenü und Untermenü */}
+                                                    {/* Unsichtbare "Brücke" zwischen Hauptmenü und Untermenü - verbreitert für bessere Navigation */}
                                                     <div 
-                                                        className="absolute right-full top-0 w-2 h-full" 
-                                                        style={{ marginRight: "-2px" }}
-                                                        onMouseEnter={handleMouseEnter}
+                                                        className="absolute right-full top-0 w-8 h-full pointer-events-auto" 
+                                                        style={{ marginRight: "-8px" }}
+                                                        onMouseEnter={handleRoleSubMenuMouseEnter}
                                                     />
                                                     <div 
                                                         ref={roleSubMenuRef}
                                                         className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 mr-1"
-                                                        onMouseEnter={handleMouseEnter}
-                                                        onMouseLeave={handleMouseLeave}
+                                                        onMouseEnter={handleRoleSubMenuMouseEnter}
+                                                        onMouseLeave={handleRoleSubMenuMouseLeave}
                                                     >
                                                         {availableRoles.length === 0 ? (
                                                             <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
@@ -414,6 +450,7 @@ const Header: React.FC = () => {
                                                                 <button
                                                                     key={userRole.role.id}
                                                                     onClick={() => handleRoleSwitch(userRole.role.id)}
+                                                                    onMouseEnter={handleRoleSubMenuMouseEnter}
                                                                     className={`w-full text-left block px-4 py-2 text-sm ${
                                                                         userRole.lastUsed
                                                                             ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium'
@@ -461,17 +498,17 @@ const Header: React.FC = () => {
                                             {/* Standort-Untermenü */}
                                             {isBranchSubMenuOpen && (
                                                 <>
-                                                    {/* Unsichtbare "Brücke" zwischen Hauptmenü und Untermenü */}
+                                                    {/* Unsichtbare "Brücke" zwischen Hauptmenü und Untermenü - verbreitert für bessere Navigation */}
                                                     <div 
-                                                        className="absolute right-full top-0 w-2 h-full" 
-                                                        style={{ marginRight: "-2px" }}
-                                                        onMouseEnter={handleMouseEnter}
+                                                        className="absolute right-full top-0 w-8 h-full pointer-events-auto" 
+                                                        style={{ marginRight: "-8px" }}
+                                                        onMouseEnter={handleBranchSubMenuMouseEnter}
                                                     />
                                                     <div 
                                                         ref={branchSubMenuRef}
                                                         className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 mr-1"
-                                                        onMouseEnter={handleMouseEnter}
-                                                        onMouseLeave={handleMouseLeave}
+                                                        onMouseEnter={handleBranchSubMenuMouseEnter}
+                                                        onMouseLeave={handleBranchSubMenuMouseLeave}
                                                     >
                                                         {availableBranches.length === 0 ? (
                                                             <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
@@ -484,6 +521,7 @@ const Header: React.FC = () => {
                                                                 <button
                                                                     key={branch.id}
                                                                     onClick={() => handleBranchSwitch(branch.id)}
+                                                                    onMouseEnter={handleBranchSubMenuMouseEnter}
                                                                     className={`w-full text-left block px-4 py-2 text-sm ${
                                                                         selectedBranch === branch.id
                                                                             ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium'

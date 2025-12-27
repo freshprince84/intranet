@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CalculatorIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
+import { useAuth } from '../hooks/useAuth.tsx';
 import { useOrganization } from '../contexts/OrganizationContext.tsx';
 
 interface Hours {
@@ -57,7 +58,8 @@ const formatCurrency = (amount: number, currency: string = 'CHF'): string => {
 
 const PayrollComponent: React.FC = () => {
   const { t } = useTranslation();
-  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const { user } = useAuth();
+  const { hasPermission, getAccessLevel, loading: permissionsLoading } = usePermissions();
   const canEditPayroll = hasPermission('payroll', 'write') || hasPermission('payroll', 'both');
   const [hours, setHours] = useState<Hours>({
     regular: 0,
@@ -72,26 +74,42 @@ const PayrollComponent: React.FC = () => {
   const [payroll, setPayroll] = useState<Payroll | null>(null);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
-  const [users, setUsers] = useState<{ id: number; firstName: string; lastName: string; payrollCountry?: string }[]>([]);
+  const [allUsers, setAllUsers] = useState<{ id: number; firstName: string; lastName: string; payrollCountry?: string }[]>([]);
   const { organization } = useOrganization();
   const [periodStart, setPeriodStart] = useState<Date | null>(null);
   const [periodEnd, setPeriodEnd] = useState<Date | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ FIX: Prüfe Berechtigung für payroll_reports Tab
+  const payrollAccessLevel = getAccessLevel('payroll_reports', 'tab');
+  const canSeeAllUsers = payrollAccessLevel === 'all_both' || payrollAccessLevel === 'all_read';
+
+  // ✅ FIX: Filtere User basierend auf Berechtigung
+  const users = useMemo(() => {
+    if (canSeeAllUsers) {
+      return allUsers; // Alle User anzeigen
+    }
+    // Nur eigenen User anzeigen
+    if (user?.id) {
+      return allUsers.filter(u => u.id === user.id);
+    }
+    return [];
+  }, [allUsers, canSeeAllUsers, user?.id]);
+
   // Benutzer laden (nur aktive User)
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const response = await axiosInstance.get(API_ENDPOINTS.USERS.DROPDOWN);
-        setUsers(response.data);
+        setAllUsers(response.data);
       } catch (error) {
         console.error('Fehler beim Laden der Benutzer:', error);
         setError(t('payroll.payrollComponent.usersLoadError'));
       }
     };
 
-    if (hasPermission('payroll', 'read')) {
+    if (hasPermission('payroll_reports', 'read', 'tab')) {
       fetchUsers();
     }
   }, [hasPermission, t]);
