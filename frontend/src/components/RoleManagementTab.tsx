@@ -29,7 +29,8 @@ import {
   PermissionButton,
   PermissionOptions,
   getAllEntities,
-  getAccessLevelOptions
+  getAccessLevelOptions,
+  initializePermissions
 } from '../config/permissionStructure.ts';
 import PermissionEditor from './PermissionEditor.tsx';
 
@@ -1135,39 +1136,17 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       return;
     }
     
-    // Alle möglichen Berechtigungen erstellen (Seiten, Tabellen und Buttons)
-    const allPermissions = [
-      ...defaultPages.map(page => ({
-        entity: page,
-        entityType: 'page',
-        // Für die immer sichtbaren Seiten 'both' als Standard setzen
-        accessLevel: alwaysVisiblePages.includes(page) ? 'both' as AccessLevel : 'none' as AccessLevel
-      })),
-      ...defaultTables.map(table => ({
-        entity: table,
-        entityType: 'table',
-        accessLevel: 'none' as AccessLevel
-      })),
-      ...defaultButtons.map(button => ({
-        entity: button,
-        entityType: 'button',
-        accessLevel: 'none' as AccessLevel
-      }))
-    ];
+    // ✅ FIX: Initialisiere ALLE Permissions aus PERMISSION_STRUCTURE
+    // und übernehme dann die gespeicherten Werte
+    const allPermissions = initializePermissions(role.permissions).map(p => ({
+      ...p,
+      accessLevel: p.accessLevel as AccessLevel
+    }));
 
-    // Vorhandene Berechtigungen übernehmen
-    role.permissions.forEach(permission => {
-      const existingPermIndex = allPermissions.findIndex(
-        p => p.entity === permission.entity && p.entityType === permission.entityType
-      );
-      
-      if (existingPermIndex !== -1) {
-        // Stelle sicher, dass alwaysVisiblePages immer 'both' als AccessLevel haben
-        if (permission.entityType === 'page' && alwaysVisiblePages.includes(permission.entity)) {
-          allPermissions[existingPermIndex].accessLevel = 'both';
-        } else {
-          allPermissions[existingPermIndex].accessLevel = permission.accessLevel;
-        }
+    // Stelle sicher, dass alwaysVisiblePages immer 'both' haben
+    allPermissions.forEach(perm => {
+      if (perm.entityType === 'page' && alwaysVisiblePages.includes(perm.entity)) {
+        perm.accessLevel = 'both';
       }
     });
 
@@ -1825,7 +1804,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
               >
                 <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
                   <h2 className="text-lg font-semibold dark:text-white">
-                    {editingRole ? 'Rolle bearbeiten' : 'Neue Rolle erstellen'}
+                    {editingRole ? t('roles.editRole') : t('roles.createRole')}
                   </h2>
                   <button
                     onClick={() => setIsModalOpen(false)}

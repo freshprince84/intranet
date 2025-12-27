@@ -58,6 +58,7 @@ const CENTRAL_TABS: PermissionEntity[] = [
   { entity: 'organization_settings', entityType: 'tab', description: 'Organisation-Einstellungen', parent: 'organization_management' },
   { entity: 'join_requests', entityType: 'tab', description: 'Beitrittsanfragen Tab', parent: 'organization_management' },
   { entity: 'password_manager', entityType: 'tab', description: 'Passwort-Manager Tab', parent: 'settings' },
+  { entity: 'system', entityType: 'tab', description: 'System Tab', parent: 'settings' },
   { entity: 'price_analysis_listings', entityType: 'tab', description: 'OTA Listings', parent: 'price_analysis' },
   { entity: 'price_analysis_recommendations', entityType: 'tab', description: 'Preisempfehlungen', parent: 'price_analysis' },
   { entity: 'price_analysis_rules', entityType: 'tab', description: 'Preisregeln', parent: 'price_analysis' },

@@ -80,6 +80,43 @@ const { t } = useTranslation();
 
 **⚠️ WICHTIGSTE REGEL: Berechtigungen sind TEIL DER IMPLEMENTIERUNG, nicht optional!**
 
+**🚨 KRITISCH: Permissions beim Laden von Formularen/Sidepanes initialisieren!**
+
+**Bei JEDEM Formular/Sidepane das Permissions lädt:**
+- [ ] **ALLE Permissions aus PERMISSION_STRUCTURE initialisieren** (nicht nur gespeicherte)
+- [ ] **Gespeicherte Werte dann übernehmen** (falls vorhanden)
+- [ ] **`initializePermissions()` Funktion verwenden** (aus `permissionStructure.ts`)
+- [ ] **NICHT nur gespeicherte Permissions übernehmen** (fehlende würden sonst nicht angezeigt)
+
+**Beispiel:**
+```typescript
+// ✅ RICHTIG
+import { initializePermissions } from '../config/permissionStructure.ts';
+
+const handleEdit = (role: Role) => {
+  // Initialisiere ALLE Permissions aus Struktur, übernehme dann gespeicherte Werte
+  const allPermissions = initializePermissions(role.permissions).map(p => ({
+    ...p,
+    accessLevel: p.accessLevel as AccessLevel
+  }));
+  
+  setFormData({
+    name: role.name,
+    description: role.description || '',
+    permissions: allPermissions
+  });
+};
+
+// ❌ FALSCH - Nur gespeicherte Permissions übernehmen
+const handleEdit = (role: Role) => {
+  setFormData({
+    name: role.name,
+    description: role.description || '',
+    permissions: role.permissions // Fehlende Permissions werden nicht angezeigt!
+  });
+};
+```
+
 **Bei JEDER neuen Seite/Tabelle/Button:**
 
 #### 3.1 Seed-File aktualisieren (`backend/prisma/seed.ts`)
