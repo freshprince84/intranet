@@ -868,6 +868,33 @@ export const processJoinRequest = async (req: Request, res: Response) => {
             lastUsed: false // Nicht als aktiv setzen, da User bereits andere Rolle haben könnte
           }
         });
+
+        // ✅ Erste Branch der Organisation dem User zuweisen
+        // Bei Org-Beitritt braucht der User mindestens eine Branch
+        const firstBranch = await tx.branch.findFirst({
+          where: { organizationId: joinRequest.organizationId },
+          orderBy: { id: 'asc' }
+        });
+
+        if (firstBranch) {
+          // Prüfe ob User diese Branch schon hat
+          const existingUserBranch = await tx.usersBranches.findFirst({
+            where: {
+              userId: joinRequest.requesterId,
+              branchId: firstBranch.id
+            }
+          });
+
+          if (!existingUserBranch) {
+            await tx.usersBranches.create({
+              data: {
+                userId: joinRequest.requesterId,
+                branchId: firstBranch.id,
+                lastUsed: false // Nicht aktiv, da User bereits andere Rolle/Branch haben kann
+              }
+            });
+          }
+        }
       }
 
       return updatedRequest;

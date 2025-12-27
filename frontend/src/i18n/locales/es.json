@@ -765,7 +765,9 @@
       "deactivateAllButtons": "Desactivar todos los botones",
       "buttonsChecked": "Botones ✓",
       "buttonsUnchecked": "Botones ✗",
-      "setAllTo": "Establecer todos a"
+      "setAllTo": "Establecer todos a",
+      "allBranches": "Para todas las sucursales",
+      "specificBranches": "Sucursales específicas"
     },
     "pages": {
       "dashboard": "Dashboard",
