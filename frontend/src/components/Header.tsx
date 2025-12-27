@@ -90,7 +90,7 @@ const Header: React.FC = () => {
             await loadBranches();
             setIsRoleSubMenuOpen(false);
             setIsProfileMenuOpen(false);
-            showMessage(t('header.roleSwitched') || 'Rolle erfolgreich gewechselt', 'success');
+            showMessage(t('header.roleSwitched', { defaultValue: 'Rolle erfolgreich gewechselt' }), 'success');
             
             // Prüfe ob switch_role_after_join Schritt aktiv ist und schließe ihn ab
             try {
@@ -101,7 +101,7 @@ const Header: React.FC = () => {
             }
         } catch (error: any) {
             console.error('Fehler beim Rollenwechsel:', error);
-            const errorMessage = error.response?.data?.message || error.message || t('header.roleSwitchError') || 'Fehler beim Wechseln der Rolle';
+            const errorMessage = error.response?.data?.message || error.message || t('header.roleSwitchError', { defaultValue: 'Fehler beim Wechseln der Rolle' });
             showMessage(errorMessage, 'error');
         }
     };
@@ -120,12 +120,13 @@ const Header: React.FC = () => {
                 
                 setIsBranchSubMenuOpen(false);
                 setIsProfileMenuOpen(false);
+                showMessage(t('header.branchSwitched', { defaultValue: 'Standort erfolgreich gewechselt' }), 'success');
             } else {
                 throw new Error('Branch-Wechsel fehlgeschlagen');
             }
         } catch (error: any) {
             console.error('Fehler beim Standortwechsel:', error);
-            const errorMessage = error.response?.data?.message || error.message || t('header.branchSwitchError') || 'Fehler beim Wechseln der Niederlassung';
+            const errorMessage = error.response?.data?.message || error.message || t('header.branchSwitchError', { defaultValue: 'Fehler beim Wechseln der Niederlassung' });
             showMessage(errorMessage, 'error');
         }
     };

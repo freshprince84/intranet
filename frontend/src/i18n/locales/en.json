@@ -78,7 +78,11 @@
     "profile": "Profile",
     "switchRole": "Switch role",
     "switchBranch": "Switch location",
-    "logout": "Logout"
+    "logout": "Logout",
+    "roleSwitched": "Role switched successfully",
+    "roleSwitchError": "Error switching role",
+    "branchSwitched": "Location switched successfully",
+    "branchSwitchError": "Error switching location"
   },
   "dataCard": {
     "nextStatus": "Next Status",

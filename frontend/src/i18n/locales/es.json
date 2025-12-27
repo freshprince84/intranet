@@ -78,7 +78,11 @@
     "profile": "Perfil",
     "switchRole": "Cambiar rol",
     "switchBranch": "Cambiar ubicación",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "roleSwitched": "Rol cambiado exitosamente",
+    "roleSwitchError": "Error al cambiar de rol",
+    "branchSwitched": "Ubicación cambiada exitosamente",
+    "branchSwitchError": "Error al cambiar de ubicación"
   },
   "dataCard": {
     "nextStatus": "Siguiente Estado",
