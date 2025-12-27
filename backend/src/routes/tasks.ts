@@ -18,6 +18,7 @@ import {
 } from '../controllers/taskAttachmentController';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
+import { checkPermission } from '../middleware/permissionMiddleware';
 
 const router = Router();
 
@@ -37,13 +38,17 @@ router.get('/:taskId/attachments/:attachmentId', getAttachment);
 router.use(authMiddleware);
 router.use(organizationMiddleware);
 
-// Task-Routen
-router.get('/', getAllTasks);
-router.get('/:id', getTaskById);
-router.post('/', createTask);
-router.put('/:id', updateTask);
-router.patch('/:id', updateTask);
-router.delete('/:id', deleteTask);
+// Task-Routen mit Permission-Checks
+// GET / und GET /:id prüfen 'todos' Tab mit Lesezugriff
+// POST prüft 'task_create' Button mit Schreibzugriff
+// PUT/PATCH prüft 'task_edit' Button mit Schreibzugriff
+// DELETE prüft 'task_delete' Button mit Schreibzugriff
+router.get('/', checkPermission('todos', 'read', 'tab'), getAllTasks);
+router.get('/:id', checkPermission('todos', 'read', 'tab'), getTaskById);
+router.post('/', checkPermission('task_create', 'write', 'button'), createTask);
+router.put('/:id', checkPermission('task_edit', 'write', 'button'), updateTask);
+router.patch('/:id', checkPermission('task_edit', 'write', 'button'), updateTask);
+router.delete('/:id', checkPermission('task_delete', 'write', 'button'), deleteTask);
 
 // Verbindung zu Wiki-Artikeln
 router.get('/:id/carticles', getTaskCarticles);

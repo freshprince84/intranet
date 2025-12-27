@@ -30,6 +30,7 @@ import {
 } from '../controllers/shiftSwapController';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
+import { checkPermission } from '../middleware/permissionMiddleware';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -58,23 +59,23 @@ router.use((req, res, next) => {
   next();
 });
 
-// ShiftTemplate-Routen
-router.get('/templates', getAllShiftTemplates);
-router.get('/templates/:id', getShiftTemplateById);
-router.post('/templates', createShiftTemplate);
-router.put('/templates/:id', updateShiftTemplate);
-router.delete('/templates/:id', deleteShiftTemplate);
+// ShiftTemplate-Routen mit Permission-Checks
+router.get('/templates', checkPermission('shift_planning', 'read', 'tab'), getAllShiftTemplates);
+router.get('/templates/:id', checkPermission('shift_planning', 'read', 'tab'), getShiftTemplateById);
+router.post('/templates', checkPermission('shift_create', 'write', 'button'), createShiftTemplate);
+router.put('/templates/:id', checkPermission('shift_edit', 'write', 'button'), updateShiftTemplate);
+router.delete('/templates/:id', checkPermission('shift_delete', 'write', 'button'), deleteShiftTemplate);
 
-// UserAvailability-Routen
-router.get('/availabilities', getAllAvailabilities);
-router.get('/availabilities/:id', getAvailabilityById);
-router.post('/availabilities', createAvailability);
-router.put('/availabilities/:id', updateAvailability);
-router.delete('/availabilities/:id', deleteAvailability);
+// UserAvailability-Routen mit Permission-Checks
+router.get('/availabilities', checkPermission('shift_planning', 'read', 'tab'), getAllAvailabilities);
+router.get('/availabilities/:id', checkPermission('shift_planning', 'read', 'tab'), getAvailabilityById);
+router.post('/availabilities', checkPermission('shift_create', 'write', 'button'), createAvailability);
+router.put('/availabilities/:id', checkPermission('shift_edit', 'write', 'button'), updateAvailability);
+router.delete('/availabilities/:id', checkPermission('shift_delete', 'write', 'button'), deleteAvailability);
 
-// Shift-Routen
+// Shift-Routen mit Permission-Checks
 // WICHTIG: GET / muss VOR GET /:id kommen, sonst wird / als :id interpretiert!
-router.get('/', async (req, res) => {
+router.get('/', checkPermission('shift_planning', 'read', 'tab'), async (req, res) => {
   logger.log('[Shifts Route] 📥 GET / aufgerufen');
   logger.log('[Shifts Route] Query:', req.query);
   logger.log('[Shifts Route] OrganizationId:', req.organizationId);
@@ -87,17 +88,17 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: 'Fehler beim Laden der Schichten' });
   }
 });
-router.get('/generate', generateShiftPlan); // Muss vor /:id stehen!
-router.post('/generate', generateShiftPlan);
-router.get('/:id', getShiftById);
-router.post('/', createShift);
-router.put('/:id', updateShift);
-router.delete('/:id', deleteShift);
+router.get('/generate', checkPermission('shift_planning', 'read', 'tab'), generateShiftPlan); // Muss vor /:id stehen!
+router.post('/generate', checkPermission('shift_create', 'write', 'button'), generateShiftPlan);
+router.get('/:id', checkPermission('shift_planning', 'read', 'tab'), getShiftById);
+router.post('/', checkPermission('shift_create', 'write', 'button'), createShift);
+router.put('/:id', checkPermission('shift_edit', 'write', 'button'), updateShift);
+router.delete('/:id', checkPermission('shift_delete', 'write', 'button'), deleteShift);
 
-// ShiftSwap-Routen
-router.get('/swaps', getAllSwapRequests);
-router.get('/swaps/:id', getSwapRequestById);
-router.post('/swaps', createSwapRequest);
+// ShiftSwap-Routen mit Permission-Checks
+router.get('/swaps', checkPermission('shift_planning', 'read', 'tab'), getAllSwapRequests);
+router.get('/swaps/:id', checkPermission('shift_planning', 'read', 'tab'), getSwapRequestById);
+router.post('/swaps', checkPermission('shift_swap_request', 'write', 'button'), createSwapRequest);
 router.put('/swaps/:id/approve', approveSwapRequest);
 router.put('/swaps/:id/reject', rejectSwapRequest);
 

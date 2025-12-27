@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { isTeamManager } from '../middleware/isTeamManager';
 import { organizationMiddleware } from '../middleware/organization';
+import { checkPermission } from '../middleware/permissionMiddleware';
 import {
   getActiveTeamWorktimes,
   stopUserWorktime,
@@ -29,46 +30,26 @@ router.use(authenticateToken);
 router.use(organizationMiddleware);
 router.use(isTeamManager);
 
-// Aktive Zeiterfassungen im Team abrufen
-router.get('/active', getActiveTeamWorktimes);
+// Arbeitszeiten-Tab Routen mit Permission-Checks
+router.get('/active', checkPermission('working_times', 'read', 'tab'), getActiveTeamWorktimes);
+router.post('/stop-user', checkPermission('working_time_edit', 'write', 'button'), stopUserWorktime);
+router.get('/user-day', checkPermission('working_times', 'read', 'tab'), getUserWorktimesByDay);
+router.put('/update', checkPermission('working_time_edit', 'write', 'button'), updateUserWorktime);
+router.put('/overtime', checkPermission('working_time_edit', 'write', 'button'), updateApprovedOvertimeHours);
 
-// Zeiterfassung eines Benutzers stoppen
-router.post('/stop-user', stopUserWorktime);
+// Analytics-Endpunkte mit Permission-Checks
+// Task Analytics Tab
+router.get('/analytics/todos-by-user', checkPermission('task_analytics', 'read', 'tab'), getTodosByUserForDate);
+router.get('/analytics/todos-chronological', checkPermission('task_analytics', 'read', 'tab'), getTodosChronological);
+router.get('/analytics/todos-frequency', checkPermission('task_analytics', 'read', 'tab'), getTodosFrequencyAnalysis);
+router.get('/analytics/todos-shifts', checkPermission('task_analytics', 'read', 'tab'), getTodosShiftAnalysis);
+router.get('/analytics/user-tasks-activity', checkPermission('task_analytics', 'read', 'tab'), getUserTasksActivity);
+router.get('/analytics/tasks-activity', checkPermission('task_analytics', 'read', 'tab'), getTasksActivity);
 
-// Zeiterfassungen eines Benutzers für einen Tag abrufen
-router.get('/user-day', getUserWorktimesByDay);
-
-// Zeiterfassung aktualisieren
-router.put('/update', updateUserWorktime);
-
-// Bewilligte Überstunden aktualisieren
-router.put('/overtime', updateApprovedOvertimeHours);
-
-// Analytics-Endpunkte
-// To-Dos pro User für ein Datum (Tab 1)
-router.get('/analytics/todos-by-user', getTodosByUserForDate);
-
-// Requests pro User für ein Datum (Tab 1)
-router.get('/analytics/requests-by-user', getRequestsByUserForDate);
-
-// Alle To-Dos chronologisch für ein Datum (Tab 2)
-router.get('/analytics/todos-chronological', getTodosChronological);
-
-// Alle Requests chronologisch für ein Datum (Tab 3)
-router.get('/analytics/requests-chronological', getRequestsChronological);
-
-// Häufigkeitsanalyse für To-Dos (Tab 2)
-router.get('/analytics/todos-frequency', getTodosFrequencyAnalysis);
-
-// Schicht-basierte Analysen für To-Dos (Tab 2)
-router.get('/analytics/todos-shifts', getTodosShiftAnalysis);
-
-// User-zentrierte Aktivitäts-Analysen (NEU)
-router.get('/analytics/user-tasks-activity', getUserTasksActivity);
-router.get('/analytics/user-requests-activity', getUserRequestsActivity);
-
-// Task/Request-zentrierte Aktivitäts-Analysen (NEU)
-router.get('/analytics/tasks-activity', getTasksActivity);
-router.get('/analytics/requests-activity', getRequestsActivity);
+// Request Analytics Tab
+router.get('/analytics/requests-by-user', checkPermission('request_analytics', 'read', 'tab'), getRequestsByUserForDate);
+router.get('/analytics/requests-chronological', checkPermission('request_analytics', 'read', 'tab'), getRequestsChronological);
+router.get('/analytics/user-requests-activity', checkPermission('request_analytics', 'read', 'tab'), getUserRequestsActivity);
+router.get('/analytics/requests-activity', checkPermission('request_analytics', 'read', 'tab'), getRequestsActivity);
 
 export default router; 

@@ -2,6 +2,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Role, Permission, AccessLevel } from '../types/interfaces';
 import { useAuth } from './useAuth.tsx';
 import axiosInstance from '../config/axios.ts';
+import { 
+    AccessLevel as NewAccessLevel, 
+    EntityType,
+    convertLegacyAccessLevel,
+    hasAccess as checkAccessLevel,
+    allowsAllData,
+    allowsWrite,
+    isVisible
+} from '../config/permissions';
 
 // ✅ PERFORMANCE: Globaler Cache für lifecycle-roles (verhindert doppelte Requests)
 let lifecycleRolesCache: { data: any; timestamp: number; promise: Promise<any> | null } = {
@@ -12,21 +21,26 @@ let lifecycleRolesCache: { data: any; timestamp: number; promise: Promise<any> |
 const LIFECYCLE_ROLES_CACHE_TTL = 5 * 60 * 1000; // 5 Minuten
 
 /**
- * WICHTIG: Berechtigungssystem
+ * BERECHTIGUNGSSYSTEM
  * 
- * 1. Jeder Benutzer kann mehrere Rollen haben
- * 2. Eine dieser Rollen ist die "aktive" Rolle (lastUsed = true)
- * 3. Die aktive Rolle bestimmt die Berechtigungen des Benutzers
- * 4. Die Admin-Rolle hat immer die ID 1
- * 5. Berechtigungen werden anhand der entity (z.B. 'roles'), entityType ('page'/'table') 
- *    und accessLevel ('read'/'write'/'both'/'none') geprüft
- * 6. Bei Rollenwechsel im Topmenü werden die Berechtigungen neu geladen
+ * ACCESS LEVEL FORMAT (neu):
+ * - 'none': Kein Zugriff
+ * - 'own_read': Nur eigene Daten lesen
+ * - 'own_both': Eigene Daten lesen und bearbeiten
+ * - 'all_read': Alle Daten lesen
+ * - 'all_both': Alle Daten lesen und bearbeiten
  * 
- * Korrekte Berechtigungsprüfung:
- * - hasPermission('roles', 'read') für Lesezugriff auf Rollenseite
- * - hasPermission('roles', 'write') für Schreibzugriff auf Rollenseite
- * - hasPermission('roles', 'both') für vollen Zugriff auf Rollenseite
- * - hasPermission('roles', 'write', 'table') für Schreibzugriff auf Rollentabelle
+ * ENTITY TYPES:
+ * - 'page': Seitenebene (Sidebar/Footer Menü)
+ * - 'box': Container auf Seiten (z.B. Requests auf Dashboard)
+ * - 'tab': Tabs innerhalb von Seiten (z.B. To-Dos auf Worktracker)
+ * - 'button': Aktions-Buttons (z.B. task_create, request_edit)
+ * 
+ * LEGACY SUPPORT:
+ * - 'read' -> 'all_read'
+ * - 'write' -> 'own_both'
+ * - 'both' -> 'all_both'
+ * - 'table' -> 'tab' (für entityType)
  */
 
 // Hilfsfunktion zur Typkonvertierung
@@ -183,36 +197,125 @@ export const usePermissions = () => {
         }
     };
 
+    /**
+     * Prüft ob User eine Berechtigung hat
+     * @param entity - Entity-Name (z.B. 'dashboard', 'todos', 'task_create')
+     * @param requiredLevel - Erforderliches Level ('read' oder 'write')
+     * @param entityType - Entity-Typ ('page' | 'box' | 'tab' | 'button' | 'table')
+     * @returns true wenn Zugriff erlaubt
+     */
     const hasPermission = (entity: string, requiredLevel: AccessLevel = 'read', entityType: string = 'page'): boolean => {
         if (!permissions || permissions.length === 0) {
             return false;
         }
 
+        // Admin-Bypass: Wenn aktive Rolle 'admin' heisst, hat sie immer Zugriff
+        const roleName = currentRole?.name?.toLowerCase() || '';
+        if (roleName === 'admin' || roleName.includes('admin')) {
+            return true;
+        }
+
+        // Normalisiere entityType: 'table' -> 'tab' für Legacy-Support
+        const normalizedEntityType = entityType === 'table' ? 'tab' : entityType;
+
         // Suche nach der Berechtigung für die Entität
-        const permission = permissions.find(p => 
-            p.entity === entity && p.entityType === entityType
+        let permission = permissions.find(p => 
+            p.entity === entity && p.entityType === normalizedEntityType
         );
+
+        // Legacy-Fallback: Versuche mit 'table' wenn nicht gefunden
+        if (!permission && (normalizedEntityType === 'tab' || normalizedEntityType === 'box')) {
+            permission = permissions.find(p => 
+                p.entity === entity && p.entityType === 'table'
+            );
+        }
 
         if (!permission) {
             return false;
         }
 
-        let hasAccess = false;
-        switch (requiredLevel) {
-            case 'read':
-                hasAccess = ['read', 'write', 'both'].includes(permission.accessLevel);
-                break;
-            case 'write':
-                hasAccess = ['write', 'both'].includes(permission.accessLevel);
-                break;
-            case 'both':
-                hasAccess = permission.accessLevel === 'both';
-                break;
-            default:
-                hasAccess = false;
+        // Konvertiere Access-Level (Legacy-Support)
+        const accessLevel = convertLegacyAccessLevel(permission.accessLevel);
+        
+        // Prüfe Zugang basierend auf neuem Format
+        // isOwner ist hier immer false, da Frontend die Ownership nicht prüfen kann
+        // Das Backend prüft Ownership separat
+        return checkAccessLevel(accessLevel, requiredLevel as 'read' | 'write', false);
+    };
+
+    /**
+     * Prüft ob ein Entity sichtbar ist (AccessLevel != 'none')
+     */
+    const canView = (entity: string, entityType: string = 'page'): boolean => {
+        if (!permissions || permissions.length === 0) {
+            return false;
         }
 
-        return hasAccess;
+        // Admin sieht immer alles
+        const roleName = currentRole?.name?.toLowerCase() || '';
+        if (roleName === 'admin' || roleName.includes('admin')) {
+            return true;
+        }
+
+        const normalizedEntityType = entityType === 'table' ? 'tab' : entityType;
+        
+        let permission = permissions.find(p => 
+            p.entity === entity && p.entityType === normalizedEntityType
+        );
+
+        if (!permission && (normalizedEntityType === 'tab' || normalizedEntityType === 'box')) {
+            permission = permissions.find(p => 
+                p.entity === entity && p.entityType === 'table'
+            );
+        }
+
+        if (!permission) {
+            return false;
+        }
+
+        const accessLevel = convertLegacyAccessLevel(permission.accessLevel);
+        return isVisible(accessLevel);
+    };
+
+    /**
+     * Holt das Access-Level für eine Entity
+     */
+    const getAccessLevel = (entity: string, entityType: string = 'page'): NewAccessLevel => {
+        if (!permissions || permissions.length === 0) {
+            return 'none';
+        }
+
+        // Admin hat immer all_both
+        const roleName = currentRole?.name?.toLowerCase() || '';
+        if (roleName === 'admin' || roleName.includes('admin')) {
+            return 'all_both';
+        }
+
+        const normalizedEntityType = entityType === 'table' ? 'tab' : entityType;
+        
+        let permission = permissions.find(p => 
+            p.entity === entity && p.entityType === normalizedEntityType
+        );
+
+        if (!permission && (normalizedEntityType === 'tab' || normalizedEntityType === 'box')) {
+            permission = permissions.find(p => 
+                p.entity === entity && p.entityType === 'table'
+            );
+        }
+
+        if (!permission) {
+            return 'none';
+        }
+
+        return convertLegacyAccessLevel(permission.accessLevel);
+    };
+
+    /**
+     * Prüft ob User alle Daten sehen darf (nicht nur eigene)
+     */
+    const canSeeAllData = (entity: string, entityType: string = 'page'): boolean => {
+        const accessLevel = getAccessLevel(entity, entityType);
+        return allowsAllData(accessLevel);
     };
 
     const isAdmin = useCallback((): boolean => {
@@ -381,7 +484,11 @@ export const usePermissions = () => {
         permissions,
         loading,
         error,
+        // Permission-Prüfung
         hasPermission,
+        canView,
+        getAccessLevel,
+        canSeeAllData,
         isAdmin,
         // Organisation-spezifische Berechtigungen
         canManageOrganization,

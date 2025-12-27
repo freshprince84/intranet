@@ -30,11 +30,13 @@ interface MenuItem {
     disabled?: boolean; // Deaktiviert, wenn Profil unvollständig
 }
 
-// Definiere, welche Seiten immer sichtbar sein sollen (ohne Berechtigungsprüfung)
-const alwaysVisiblePages: PageName[] = ['dashboard', 'settings', 'profile'];
+// Seiten die immer sichtbar sind (Basis-Seiten für alle User)
+// Diese werden im Seed mit all_both für alle Rollen konfiguriert
+// Aber als Fallback hier behalten für den Fall dass keine Permissions geladen sind
+const FALLBACK_ALWAYS_VISIBLE: PageName[] = ['dashboard', 'settings', 'profile'];
 
 const Sidebar: React.FC = () => {
-    const { hasPermission, isProfileComplete } = usePermissions();
+    const { hasPermission, canView, isProfileComplete } = usePermissions();
     const { isCollapsed, toggleCollapsed } = useSidebar();
     const [position, setPosition] = useState<'left' | 'right'>('left');
     // ✅ PERFORMANCE: Nur pathname verwenden, nicht gesamtes Location-Objekt (verhindert unnötige Re-Renders)
@@ -157,22 +159,27 @@ const Sidebar: React.FC = () => {
         group: 'settings'
     };
 
-    // Filtere die Menüelemente basierend auf Berechtigungen und den immer sichtbaren Seiten
+    // Filtere die Menüelemente basierend auf Berechtigungen
+    // Verwendet canView() aus usePermissions für echte Permission-Prüfung
     const authorizedMenuItems = [
         ...baseMenuItems.filter(item => {
-            // Profil-Seite immer sichtbar
+            // Profil-Seite immer sichtbar (Basis-Seite)
             if (item.page === 'profile') return true;
-            // Wenn Profil unvollständig: Nur alwaysVisiblePages erlauben
-            if (!isProfileComplete() && !alwaysVisiblePages.includes(item.page)) {
+            
+            // Wenn Profil unvollständig: Nur Basis-Seiten erlauben
+            if (!isProfileComplete() && !FALLBACK_ALWAYS_VISIBLE.includes(item.page)) {
                 return false;
             }
-            return alwaysVisiblePages.includes(item.page) || hasPermission(item.page);
+            
+            // Prüfe Berechtigung über canView (nutzt neues AccessLevel-System)
+            // Falls keine Permissions geladen: Fallback auf Basis-Seiten
+            return canView(item.page, 'page') || FALLBACK_ALWAYS_VISIBLE.includes(item.page);
         }),
-        // Settings ist jetzt immer sichtbar (Teil von alwaysVisiblePages)
+        // Settings ist immer sichtbar
         settingsItem
     ].map(item => ({
         ...item,
-        disabled: !isProfileComplete() && item.page !== 'profile' && !alwaysVisiblePages.includes(item.page)
+        disabled: !isProfileComplete() && item.page !== 'profile' && !FALLBACK_ALWAYS_VISIBLE.includes(item.page)
     }));
 
     // Gruppiere die Menüelemente nach ihren Gruppen

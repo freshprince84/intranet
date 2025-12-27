@@ -1,155 +1,190 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+// ========================================
+// ZENTRALE PERMISSION DEFINITIONEN
+// ========================================
+// Diese Definitionen sind synchron mit backend/src/config/permissions.ts
+// Hier inline für Seed-Kompatibilität (Prisma Seed hat spezielle Import-Einschränkungen)
 
-// Definiere AccessLevel als String-Literale entsprechend dem Enum in schema.prisma
-type AccessLevel = 'read' | 'write' | 'both' | 'none';
-const AccessLevel = {
-  read: 'read' as AccessLevel,
-  write: 'write' as AccessLevel,
-  both: 'both' as AccessLevel,
-  none: 'none' as AccessLevel
-};
+type NewAccessLevel = 'none' | 'own_read' | 'own_both' | 'all_read' | 'all_both';
+
+interface PermissionEntity {
+  entity: string;
+  entityType: 'page' | 'box' | 'tab' | 'button';
+  description: string;
+  parent?: string;
+  ownershipFields?: string[];
+}
+
+// ALLE PAGES
+const CENTRAL_PAGES: PermissionEntity[] = [
+  { entity: 'dashboard', entityType: 'page', description: 'Dashboard-Seite' },
+  { entity: 'worktracker', entityType: 'page', description: 'Worktracker-Seite' },
+  { entity: 'consultations', entityType: 'page', description: 'Beratungsstunden-Seite' },
+  { entity: 'team_worktime_control', entityType: 'page', description: 'Workcenter-Seite' },
+  { entity: 'payroll', entityType: 'page', description: 'Lohnabrechnungs-Seite' },
+  { entity: 'cerebro', entityType: 'page', description: 'Cerebro Wiki-Seite' },
+  { entity: 'organization_management', entityType: 'page', description: 'Organisations-Verwaltung' },
+  { entity: 'price_analysis', entityType: 'page', description: 'Preisanalyse-Seite' },
+  { entity: 'settings', entityType: 'page', description: 'Einstellungen-Seite' },
+  { entity: 'profile', entityType: 'page', description: 'Profil-Seite' },
+  { entity: 'tour_management', entityType: 'page', description: 'Touren-Verwaltung' },
+];
+
+// ALLE BOXES
+const CENTRAL_BOXES: PermissionEntity[] = [
+  { entity: 'requests', entityType: 'box', description: 'Requests-Box', parent: 'dashboard' },
+  { entity: 'worktime', entityType: 'box', description: 'Zeiterfassungs-Box', parent: 'worktracker' },
+  { entity: 'consultation_tracker', entityType: 'box', description: 'Beratungs-Tracker', parent: 'consultations' },
+  { entity: 'consultation_list', entityType: 'box', description: 'Beratungsliste', parent: 'consultations' },
+];
+
+// ALLE TABS
+const CENTRAL_TABS: PermissionEntity[] = [
+  { entity: 'todos', entityType: 'tab', description: 'To-Dos Tab', parent: 'worktracker' },
+  { entity: 'reservations', entityType: 'tab', description: 'Reservations Tab', parent: 'worktracker' },
+  { entity: 'tour_bookings', entityType: 'tab', description: 'Tour Bookings Tab', parent: 'worktracker' },
+  { entity: 'working_times', entityType: 'tab', description: 'Arbeitszeiten Tab', parent: 'team_worktime_control' },
+  { entity: 'shift_planning', entityType: 'tab', description: 'Schichtplanung Tab', parent: 'team_worktime_control' },
+  { entity: 'task_analytics', entityType: 'tab', description: 'Task Analytics Tab', parent: 'team_worktime_control' },
+  { entity: 'request_analytics', entityType: 'tab', description: 'Request Analytics Tab', parent: 'team_worktime_control' },
+  { entity: 'consultation_invoices', entityType: 'tab', description: 'Beratungsrechnungen Tab', parent: 'payroll' },
+  { entity: 'monthly_reports', entityType: 'tab', description: 'Monatsrechnungen Tab', parent: 'payroll' },
+  { entity: 'payroll_reports', entityType: 'tab', description: 'Lohnabrechnungen Tab', parent: 'payroll' },
+  { entity: 'users', entityType: 'tab', description: 'Users Tab', parent: 'organization_management' },
+  { entity: 'roles', entityType: 'tab', description: 'Roles Tab', parent: 'organization_management' },
+  { entity: 'branches', entityType: 'tab', description: 'Branches Tab', parent: 'organization_management' },
+  { entity: 'tour_providers', entityType: 'tab', description: 'Tour Providers Tab', parent: 'organization_management' },
+  { entity: 'organization_settings', entityType: 'tab', description: 'Organisation-Einstellungen', parent: 'organization_management' },
+  { entity: 'join_requests', entityType: 'tab', description: 'Beitrittsanfragen Tab', parent: 'organization_management' },
+  { entity: 'password_manager', entityType: 'tab', description: 'Passwort-Manager Tab', parent: 'settings' },
+  { entity: 'price_analysis_listings', entityType: 'tab', description: 'OTA Listings', parent: 'price_analysis' },
+  { entity: 'price_analysis_recommendations', entityType: 'tab', description: 'Preisempfehlungen', parent: 'price_analysis' },
+  { entity: 'price_analysis_rules', entityType: 'tab', description: 'Preisregeln', parent: 'price_analysis' },
+  { entity: 'price_analysis_rate_shopping', entityType: 'tab', description: 'Rate Shopping', parent: 'price_analysis' },
+];
+
+// ALLE BUTTONS
+const CENTRAL_BUTTONS: PermissionEntity[] = [
+  // Request Buttons
+  { entity: 'request_create', entityType: 'button', description: 'Request erstellen', parent: 'requests' },
+  { entity: 'request_edit', entityType: 'button', description: 'Request bearbeiten', parent: 'requests' },
+  { entity: 'request_delete', entityType: 'button', description: 'Request löschen', parent: 'requests' },
+  { entity: 'request_status_change', entityType: 'button', description: 'Request Status ändern', parent: 'requests' },
+  // Task Buttons
+  { entity: 'task_create', entityType: 'button', description: 'Task erstellen', parent: 'todos' },
+  { entity: 'task_edit', entityType: 'button', description: 'Task bearbeiten', parent: 'todos' },
+  { entity: 'task_delete', entityType: 'button', description: 'Task löschen', parent: 'todos' },
+  { entity: 'task_status_change', entityType: 'button', description: 'Task Status ändern', parent: 'todos' },
+  // Reservation Buttons
+  { entity: 'reservation_create', entityType: 'button', description: 'Reservation erstellen', parent: 'reservations' },
+  { entity: 'reservation_edit', entityType: 'button', description: 'Reservation bearbeiten', parent: 'reservations' },
+  { entity: 'reservation_delete', entityType: 'button', description: 'Reservation löschen', parent: 'reservations' },
+  { entity: 'reservation_send_invitation', entityType: 'button', description: 'Einladung senden', parent: 'reservations' },
+  { entity: 'reservation_send_passcode', entityType: 'button', description: 'Passcode senden', parent: 'reservations' },
+  // Tour Booking Buttons
+  { entity: 'tour_booking_create', entityType: 'button', description: 'Tour Buchung erstellen', parent: 'tour_bookings' },
+  { entity: 'tour_booking_edit', entityType: 'button', description: 'Tour Buchung bearbeiten', parent: 'tour_bookings' },
+  { entity: 'tour_booking_cancel', entityType: 'button', description: 'Tour Buchung stornieren', parent: 'tour_bookings' },
+  // Worktime Buttons
+  { entity: 'worktime_start', entityType: 'button', description: 'Arbeitszeit starten', parent: 'worktime' },
+  { entity: 'worktime_stop', entityType: 'button', description: 'Arbeitszeit stoppen', parent: 'worktime' },
+  // Consultation Buttons
+  { entity: 'consultation_start', entityType: 'button', description: 'Beratung starten', parent: 'consultation_tracker' },
+  { entity: 'consultation_stop', entityType: 'button', description: 'Beratung stoppen', parent: 'consultation_tracker' },
+  { entity: 'consultation_plan', entityType: 'button', description: 'Beratung planen', parent: 'consultation_tracker' },
+  { entity: 'consultation_edit', entityType: 'button', description: 'Beratung bearbeiten', parent: 'consultation_list' },
+  { entity: 'consultation_delete', entityType: 'button', description: 'Beratung löschen', parent: 'consultation_list' },
+  // Client Buttons
+  { entity: 'client_create', entityType: 'button', description: 'Client erstellen', parent: 'consultation_tracker' },
+  { entity: 'client_edit', entityType: 'button', description: 'Client bearbeiten', parent: 'consultation_list' },
+  { entity: 'client_delete', entityType: 'button', description: 'Client löschen', parent: 'consultation_list' },
+  // Working Times Buttons
+  { entity: 'working_time_create', entityType: 'button', description: 'Arbeitszeit erstellen', parent: 'working_times' },
+  { entity: 'working_time_edit', entityType: 'button', description: 'Arbeitszeit bearbeiten', parent: 'working_times' },
+  { entity: 'working_time_delete', entityType: 'button', description: 'Arbeitszeit löschen', parent: 'working_times' },
+  // Shift Planning Buttons
+  { entity: 'shift_create', entityType: 'button', description: 'Schicht erstellen', parent: 'shift_planning' },
+  { entity: 'shift_edit', entityType: 'button', description: 'Schicht bearbeiten', parent: 'shift_planning' },
+  { entity: 'shift_delete', entityType: 'button', description: 'Schicht löschen', parent: 'shift_planning' },
+  { entity: 'shift_swap_request', entityType: 'button', description: 'Schichttausch anfragen', parent: 'shift_planning' },
+  // User Buttons
+  { entity: 'user_create', entityType: 'button', description: 'User erstellen', parent: 'users' },
+  { entity: 'user_edit', entityType: 'button', description: 'User bearbeiten', parent: 'users' },
+  { entity: 'user_delete', entityType: 'button', description: 'User löschen', parent: 'users' },
+  // Role Buttons
+  { entity: 'role_create', entityType: 'button', description: 'Rolle erstellen', parent: 'roles' },
+  { entity: 'role_edit', entityType: 'button', description: 'Rolle bearbeiten', parent: 'roles' },
+  { entity: 'role_delete', entityType: 'button', description: 'Rolle löschen', parent: 'roles' },
+  { entity: 'role_copy', entityType: 'button', description: 'Rolle kopieren', parent: 'roles' },
+  // Branch Buttons
+  { entity: 'branch_create', entityType: 'button', description: 'Branch erstellen', parent: 'branches' },
+  { entity: 'branch_edit', entityType: 'button', description: 'Branch bearbeiten', parent: 'branches' },
+  { entity: 'branch_delete', entityType: 'button', description: 'Branch löschen', parent: 'branches' },
+  // Tour Provider Buttons
+  { entity: 'tour_provider_create', entityType: 'button', description: 'Tour Provider erstellen', parent: 'tour_providers' },
+  { entity: 'tour_provider_edit', entityType: 'button', description: 'Tour Provider bearbeiten', parent: 'tour_providers' },
+  { entity: 'tour_provider_delete', entityType: 'button', description: 'Tour Provider löschen', parent: 'tour_providers' },
+  // Organization Buttons
+  { entity: 'organization_edit', entityType: 'button', description: 'Organisation bearbeiten', parent: 'organization_settings' },
+  // Join Request Buttons
+  { entity: 'join_request_approve', entityType: 'button', description: 'Beitrittsanfrage genehmigen', parent: 'join_requests' },
+  { entity: 'join_request_reject', entityType: 'button', description: 'Beitrittsanfrage ablehnen', parent: 'join_requests' },
+  // Invoice Buttons
+  { entity: 'invoice_create', entityType: 'button', description: 'Rechnung erstellen', parent: 'consultation_invoices' },
+  { entity: 'invoice_download', entityType: 'button', description: 'Rechnung herunterladen', parent: 'consultation_invoices' },
+  { entity: 'invoice_mark_paid', entityType: 'button', description: 'Rechnung als bezahlt markieren', parent: 'consultation_invoices' },
+  // Password Manager Buttons
+  { entity: 'password_entry_create', entityType: 'button', description: 'Passwort-Eintrag erstellen', parent: 'password_manager' },
+  { entity: 'password_entry_edit', entityType: 'button', description: 'Passwort-Eintrag bearbeiten', parent: 'password_manager' },
+  { entity: 'password_entry_delete', entityType: 'button', description: 'Passwort-Eintrag löschen', parent: 'password_manager' },
+  // Price Analysis Buttons
+  { entity: 'price_rule_create', entityType: 'button', description: 'Preisregel erstellen', parent: 'price_analysis_rules' },
+  { entity: 'price_rule_edit', entityType: 'button', description: 'Preisregel bearbeiten', parent: 'price_analysis_rules' },
+  { entity: 'price_rule_delete', entityType: 'button', description: 'Preisregel löschen', parent: 'price_analysis_rules' },
+  { entity: 'price_recommendation_apply', entityType: 'button', description: 'Preisempfehlung anwenden', parent: 'price_analysis_recommendations' },
+  { entity: 'rate_shopping_run', entityType: 'button', description: 'Rate Shopping starten', parent: 'price_analysis_rate_shopping' },
+  // Cerebro Buttons
+  { entity: 'cerebro_article_create', entityType: 'button', description: 'Artikel erstellen', parent: 'cerebro' },
+  { entity: 'cerebro_article_edit', entityType: 'button', description: 'Artikel bearbeiten', parent: 'cerebro' },
+  { entity: 'cerebro_article_delete', entityType: 'button', description: 'Artikel löschen', parent: 'cerebro' },
+  { entity: 'cerebro_media_upload', entityType: 'button', description: 'Medien hochladen', parent: 'cerebro' },
+  { entity: 'cerebro_link_add', entityType: 'button', description: 'Link hinzufügen', parent: 'cerebro' },
+  // Tour Management Buttons
+  { entity: 'tour_create', entityType: 'button', description: 'Tour erstellen', parent: 'tour_management' },
+  { entity: 'tour_edit', entityType: 'button', description: 'Tour bearbeiten', parent: 'tour_management' },
+  { entity: 'tour_delete', entityType: 'button', description: 'Tour löschen', parent: 'tour_management' },
+];
+
+// ALLE ENTITIES KOMBINIERT
+const ALL_ENTITIES_COMBINED: PermissionEntity[] = [
+  ...CENTRAL_PAGES,
+  ...CENTRAL_BOXES,
+  ...CENTRAL_TABS,
+  ...CENTRAL_BUTTONS,
+];
+
+// ========================================
+// ACCESS LEVEL DEFINITIONEN
+// ========================================
+// NEUES FORMAT: 'none' | 'own_read' | 'own_both' | 'all_read' | 'all_both'
+// Altes Format (read/write/both) wird für Abwärtskompatibilität beibehalten
+type AccessLevel = 'read' | 'write' | 'both' | 'none' | NewAccessLevel;
 
 const prisma = new PrismaClient();
 
 // ========================================
-// VOLLSTÄNDIGE PERMISSION DEFINITIONS
+// FLACHE LISTEN FÜR LEGACY-KOMPATIBILITÄT
 // ========================================
+// Extrahiert aus den zentralen Definitionen
 
-// ALLE SEITEN IM SYSTEM
-const ALL_PAGES = [
-  'dashboard',
-  'worktracker', 
-  'consultations',
-  'team_worktime_control', // = workcenter
-  'payroll', // = lohnabrechnung
-  'organization_management', // = organisation (Hauptseite)
-  'cerebro',
-  'settings',
-  'profile',
-  'tour_management', // NEU: Touren-Verwaltung
-  'password_manager', // NEU: Passwort-Manager
-  'price_analysis', // NEU: Preisanalyse
-  'price_analysis_listings', // NEU: Preisanalyse - Inserate
-  'price_analysis_recommendations', // NEU: Preisanalyse - Empfehlungen
-  'price_analysis_rules', // NEU: Preisanalyse - Regeln
-  'price_analysis_rate_shopping' // NEU: Preisanalyse - Rate Shopping
-];
+const ALL_PAGES = CENTRAL_PAGES.map(p => p.entity);
+const ALL_BOXES = CENTRAL_BOXES.map(b => b.entity);
+const ALL_TABS = CENTRAL_TABS.map(t => t.entity);
+const ALL_BUTTONS = CENTRAL_BUTTONS.map(b => b.entity);
 
-// ALLE TABELLEN IM SYSTEM
-const ALL_TABLES = [
-  'requests',           // auf dashboard
-  'tasks',             // auf worktracker
-  'reservations',      // auf worktracker (in To Do's Box)
-  'users',             // auf organization_management
-  'roles',             // auf organization_management
-  'organization',      // auf organization_management
-  'team_worktime',     // auf team_worktime_control
-  'worktime',          // auf worktracker
-  'clients',           // auf consultations
-  'consultation_invoices', // auf consultations
-  'branches',          // auf settings/system
-  'notifications',     // allgemein
-  'settings',          // auf settings
-  'monthly_reports',    // auf consultations/reports
-  'organization_join_requests', // auf organization_management
-  'organization_users',  // auf organization_management
-  'tours',             // NEU: auf tour_management
-  'tour_bookings',     // NEU: auf tour_management
-  'tour_providers',    // NEU: auf organization_management
-  'price_analysis_listings', // NEU: auf price_analysis_listings
-  'price_analysis_recommendations', // NEU: auf price_analysis_recommendations
-  'price_analysis_rules' // NEU: auf price_analysis_rules
-];
-
-// ALLE BUTTONS IM SYSTEM
-const ALL_BUTTONS = [
-  // Database Management Buttons (Settings/System)
-  'database_reset_table',
-  'database_logs',
-  
-  // Invoice Functions Buttons
-  'invoice_create',
-  'invoice_download', 
-  'invoice_mark_paid',
-  'invoice_settings',
-  
-  // Todo/Task Buttons (Worktracker)
-  'todo_create',
-  'todo_edit',
-  'todo_delete',
-  'task_create',
-  'task_edit', 
-  'task_delete',
-  
-  // User Management Buttons
-  'user_create',
-  'user_edit',
-  'user_delete',
-  'role_assign',
-  'role_create',
-  'role_edit',
-  'role_delete',
-  
-  // Organization Management Buttons
-  'organization_create',
-  'organization_edit',
-  'organization_delete',
-  
-  // Worktime Buttons
-  'worktime_start',
-  'worktime_stop', 
-  'worktime_edit',
-  'worktime_delete',
-  
-  // General Cerebro Button
-  'cerebro',
-  
-  // Consultation Buttons
-  'consultation_start',
-  'consultation_stop',
-  'consultation_edit',
-  
-  // Client Management Buttons
-  'client_create',
-  'client_edit',
-  'client_delete',
-  
-  // Settings Buttons
-  'settings_system',
-  'settings_notifications',
-  'settings_profile',
-  
-  // Payroll Buttons
-  'payroll_generate',
-  'payroll_export',
-  'payroll_edit',
-  
-  // Tour Management Buttons
-  'tour_create',
-  'tour_edit',
-  'tour_delete',
-  'tour_view',
-  'tour_booking_create',
-  'tour_booking_edit',
-  'tour_booking_cancel',
-  'tour_provider_create',
-  'tour_provider_edit',
-  'tour_provider_delete',
-  
-  // Password Manager Buttons
-  'password_entry_create',
-  'password_entry_edit',
-  'password_entry_delete',
-  
-  // Price Analysis Buttons
-  'price_analysis_create_rule',
-  'price_analysis_edit_rule',
-  'price_analysis_delete_rule',
-  'price_analysis_apply_recommendation',
-  'price_analysis_reject_recommendation',
-  'price_analysis_run_rate_shopping'
-];
+// Legacy-Kompatibilität: ALL_TABLES enthält Boxes + Tabs
+const ALL_TABLES = [...ALL_BOXES, ...ALL_TABS];
 
 async function main() {
   try {
