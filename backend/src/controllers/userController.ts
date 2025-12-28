@@ -1438,6 +1438,25 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             return res.status(404).json({ message: 'Rolle nicht gefunden' });
         }
         
+        // ✅ Hole aktuelle aktive Rolle VOR der Transaktion (wird in Transaktion auf lastUsed=false gesetzt)
+        const currentActiveRole = await prisma.userRole.findFirst({
+            where: {
+                userId,
+                lastUsed: true
+            },
+            include: {
+                role: {
+                    select: {
+                        organizationId: true
+                    }
+                }
+            }
+        });
+        
+        // Prüfe, ob sich die Organisation geändert hat
+        const organizationChanged = !currentActiveRole || 
+            currentActiveRole.role.organizationId !== newRole.organizationId;
+        
         // Transaktion starten - alle Prisma-Operationen innerhalb der Transaktion
         await prisma.$transaction(async (tx) => {
             // Prüfen, ob die Rolle dem Benutzer zugewiesen ist
@@ -1461,9 +1480,9 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
                 data: { lastUsed: true }
             });
 
-            // ✅ Branch für neue Organisation aktivieren
+            // ✅ Branch nur wechseln, wenn sich die Organisation geändert hat
             // Branches sind pro Organisation - bei Org-Wechsel muss die Branch der neuen Org aktiviert werden
-            if (newRole.organizationId) {
+            if (newRole.organizationId && organizationChanged) {
                 // Alle Branches auf lastUsed=false
                 await tx.usersBranches.updateMany({
                     where: { userId },

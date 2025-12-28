@@ -233,7 +233,7 @@ const Requests: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const { user } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, currentRole } = usePermissions();
   
   // Status-Funktionen (verwende zentrale Utils mit Übersetzungsunterstützung)
   // ❌ ENTFERNT: getStatusLabel Wrapper - getStatusText wird direkt verwendet (Phase 3)
@@ -770,6 +770,46 @@ const Requests: React.FC = () => {
     
     initialize();
   }, []); // ✅ FIX: Leere Dependencies wie im Standard-Pattern geplant
+
+  // ✅ ROLLENWECHSEL: Reagiere auf Rollenwechsel und lade Requests neu
+  useEffect(() => {
+    // Nur neu laden wenn:
+    // 1. Initial Load bereits erfolgt ist (initialLoadAttemptedRef.current === true)
+    // 2. currentRole vorhanden ist
+    // 3. currentRole sich geändert hat (durch Dependency)
+    if (!initialLoadAttemptedRef.current || !currentRole) {
+      return;
+    }
+    
+    const reload = async () => {
+      try {
+        // 1. Filter laden (wartet auf State-Update)
+        const filters = await loadFilters(REQUESTS_TABLE_ID);
+        
+        // 2. Default-Filter anwenden (zurücksetzen auf Default)
+        const defaultFilter = filters.find(f => f.name === 'Aktuell');
+        if (defaultFilter) {
+          await handleFilterChange(
+            defaultFilter.name,
+            defaultFilter.id,
+            defaultFilter.conditions,
+            defaultFilter.operators
+          );
+          return; // Daten werden durch handleFilterChange geladen
+        }
+        
+        // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+        await fetchRequests(undefined, undefined, false, 20, 0);
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[Requests] Fehler beim Neuladen nach Rollenwechsel:', error);
+        }
+      }
+    };
+    
+    reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRole?.id]); // ✅ Nur currentRole?.id als Dependency - loadFilters, handleFilterChange, fetchRequests sind stabil
 
   // ✅ SORTIERUNG: Neuladen wenn sich die Sortierung ändert
   useEffect(() => {
