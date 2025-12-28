@@ -757,224 +757,170 @@ async function main() {
     console.log('📋 Erstelle Rollen für Organisationen...');
 
     // Org 1 Rollen: Admin, User, Hamburger
-    let org1AdminRole = await prisma.role.findFirst({
+    const org1AdminRole = await prisma.role.upsert({
       where: {
+        name_organizationId: {
+          name: 'Admin',
+          organizationId: org1.id
+        }
+      },
+      update: {
+        description: 'Administrator von La Familia Hostel'
+      },
+      create: {
         name: 'Admin',
+        description: 'Administrator von La Familia Hostel',
         organizationId: org1.id
       }
     });
-    if (!org1AdminRole) {
-      org1AdminRole = await prisma.role.create({
-        data: {
-          name: 'Admin',
-          description: 'Administrator von La Familia Hostel',
-          organizationId: org1.id
-        }
-      });
-    } else {
-      org1AdminRole = await prisma.role.update({
-        where: { id: org1AdminRole.id },
-        data: {
-          description: 'Administrator von La Familia Hostel'
-        }
-      });
-    }
     console.log(`✅ Org 1 Admin-Rolle: ${org1AdminRole.name} (ID: ${org1AdminRole.id})`);
 
-    let org1UserRole = await prisma.role.findFirst({
+    const org1UserRole = await prisma.role.upsert({
       where: {
+        name_organizationId: {
+          name: 'User',
+          organizationId: org1.id
+        }
+      },
+      update: {
+        description: 'User-Rolle für La Familia Hostel'
+      },
+      create: {
         name: 'User',
+        description: 'User-Rolle für La Familia Hostel',
         organizationId: org1.id
       }
     });
-    if (!org1UserRole) {
-      org1UserRole = await prisma.role.create({
-        data: {
-          name: 'User',
-          description: 'User-Rolle für La Familia Hostel',
-          organizationId: org1.id
-        }
-      });
-    } else {
-      org1UserRole = await prisma.role.update({
-        where: { id: org1UserRole.id },
-        data: {
-          description: 'User-Rolle für La Familia Hostel'
-        }
-      });
-    }
     console.log(`✅ Org 1 User-Rolle: ${org1UserRole.name} (ID: ${org1UserRole.id})`);
 
-    let org1HamburgerRole = await prisma.role.findFirst({
+    const org1HamburgerRole = await prisma.role.upsert({
       where: {
+        name_organizationId: {
+          name: 'Hamburger',
+          organizationId: org1.id
+        }
+      },
+      update: {
+        description: 'Hamburger-Rolle für La Familia Hostel'
+      },
+      create: {
         name: 'Hamburger',
+        description: 'Hamburger-Rolle für La Familia Hostel',
         organizationId: org1.id
       }
     });
-    if (!org1HamburgerRole) {
-      org1HamburgerRole = await prisma.role.create({
-        data: {
-          name: 'Hamburger',
-          description: 'Hamburger-Rolle für La Familia Hostel',
-          organizationId: org1.id
-        }
-      });
-    } else {
-      org1HamburgerRole = await prisma.role.update({
-        where: { id: org1HamburgerRole.id },
-        data: {
-          description: 'Hamburger-Rolle für La Familia Hostel'
-        }
-      });
-    }
     console.log(`✅ Org 1 Hamburger-Rolle: ${org1HamburgerRole.name} (ID: ${org1HamburgerRole.id})`);
 
     // Org 2 Rollen: Admin, User, Hamburger
-    let org2AdminRole = await prisma.role.findFirst({
+    const org2AdminRole = await prisma.role.upsert({
       where: {
+        name_organizationId: {
+          name: 'Admin',
+          organizationId: org2.id
+        }
+      },
+      update: {
+        description: 'Administrator von Mosaik'
+      },
+      create: {
         name: 'Admin',
+        description: 'Administrator von Mosaik',
         organizationId: org2.id
       }
     });
-    if (!org2AdminRole) {
-      org2AdminRole = await prisma.role.create({
-        data: {
-          name: 'Admin',
-          description: 'Administrator von Mosaik',
-          organizationId: org2.id
-        }
-      });
-    } else {
-      org2AdminRole = await prisma.role.update({
-        where: { id: org2AdminRole.id },
-        data: {
-          description: 'Administrator von Mosaik'
-        }
-      });
-    }
     console.log(`✅ Org 2 Admin-Rolle: ${org2AdminRole.name} (ID: ${org2AdminRole.id})`);
 
-    let org2UserRole = await prisma.role.findFirst({
+    const org2UserRole = await prisma.role.upsert({
       where: {
+        name_organizationId: {
+          name: 'User',
+          organizationId: org2.id
+        }
+      },
+      update: {
+        description: 'User-Rolle für Mosaik'
+      },
+      create: {
         name: 'User',
+        description: 'User-Rolle für Mosaik',
         organizationId: org2.id
       }
     });
-    if (!org2UserRole) {
-      org2UserRole = await prisma.role.create({
-        data: {
-          name: 'User',
-          description: 'User-Rolle für Mosaik',
-          organizationId: org2.id
-        }
-      });
-    } else {
-      org2UserRole = await prisma.role.update({
-        where: { id: org2UserRole.id },
-        data: {
-          description: 'User-Rolle für Mosaik'
-        }
-      });
-    }
     console.log(`✅ Org 2 User-Rolle: ${org2UserRole.name} (ID: ${org2UserRole.id})`);
 
-    let org2HamburgerRole = await prisma.role.findFirst({
+    const org2HamburgerRole = await prisma.role.upsert({
       where: {
+        name_organizationId: {
+          name: 'Hamburger',
+          organizationId: org2.id
+        }
+      },
+      update: {
+        description: 'Hamburger-Rolle für Mosaik'
+      },
+      create: {
         name: 'Hamburger',
+        description: 'Hamburger-Rolle für Mosaik',
         organizationId: org2.id
       }
     });
-    if (!org2HamburgerRole) {
-      org2HamburgerRole = await prisma.role.create({
-        data: {
-          name: 'Hamburger',
-          description: 'Hamburger-Rolle für Mosaik',
-          organizationId: org2.id
-        }
-      });
-    } else {
-      org2HamburgerRole = await prisma.role.update({
-        where: { id: org2HamburgerRole.id },
-        data: {
-          description: 'Hamburger-Rolle für Mosaik'
-        }
-      });
-    }
     console.log(`✅ Org 2 Hamburger-Rolle: ${org2HamburgerRole.name} (ID: ${org2HamburgerRole.id})`);
 
     // Org 1 Legal-Rolle (Derecho)
-    let org1LegalRole = await prisma.role.findFirst({
+    const org1LegalRole = await prisma.role.upsert({
       where: {
+        name_organizationId: {
+          name: 'Derecho',
+          organizationId: org1.id
+        }
+      },
+      update: {
+        description: 'Legal-Rolle für Sozialversicherungen (La Familia Hostel)'
+      },
+      create: {
         name: 'Derecho',
+        description: 'Legal-Rolle für Sozialversicherungen (La Familia Hostel)',
         organizationId: org1.id
       }
     });
-    if (!org1LegalRole) {
-      org1LegalRole = await prisma.role.create({
-        data: {
-          name: 'Derecho',
-          description: 'Legal-Rolle für Sozialversicherungen (La Familia Hostel)',
-          organizationId: org1.id
-        }
-      });
-    } else {
-      org1LegalRole = await prisma.role.update({
-        where: { id: org1LegalRole.id },
-        data: {
-          description: 'Legal-Rolle für Sozialversicherungen (La Familia Hostel)'
-        }
-      });
-    }
     console.log(`✅ Org 1 Legal-Rolle (Derecho): ${org1LegalRole.name} (ID: ${org1LegalRole.id})`);
 
     // Org 2 Legal-Rolle (Derecho)
-    let org2LegalRole = await prisma.role.findFirst({
+    const org2LegalRole = await prisma.role.upsert({
       where: {
+        name_organizationId: {
+          name: 'Derecho',
+          organizationId: org2.id
+        }
+      },
+      update: {
+        description: 'Legal-Rolle für Sozialversicherungen (Mosaik)'
+      },
+      create: {
         name: 'Derecho',
+        description: 'Legal-Rolle für Sozialversicherungen (Mosaik)',
         organizationId: org2.id
       }
     });
-    if (!org2LegalRole) {
-      org2LegalRole = await prisma.role.create({
-        data: {
-          name: 'Derecho',
-          description: 'Legal-Rolle für Sozialversicherungen (Mosaik)',
-          organizationId: org2.id
-        }
-      });
-    } else {
-      org2LegalRole = await prisma.role.update({
-        where: { id: org2LegalRole.id },
-        data: {
-          description: 'Legal-Rolle für Sozialversicherungen (Mosaik)'
-        }
-      });
-    }
     console.log(`✅ Org 2 Legal-Rolle (Derecho): ${org2LegalRole.name} (ID: ${org2LegalRole.id})`);
 
     // Standard-Organisation Rollen (für Rückwärtskompatibilität)
-    let orgAdminRole = await prisma.role.findFirst({
+    const orgAdminRole = await prisma.role.upsert({
       where: {
+        name_organizationId: {
+          name: 'Admin',
+          organizationId: defaultOrganization.id
+        }
+      },
+      update: {
+        description: 'Administrator der Standard-Organisation'
+      },
+      create: {
         name: 'Admin',
+        description: 'Administrator der Standard-Organisation',
         organizationId: defaultOrganization.id
       }
     });
-    if (!orgAdminRole) {
-      orgAdminRole = await prisma.role.create({
-        data: {
-          name: 'Admin',
-          description: 'Administrator der Standard-Organisation',
-          organizationId: defaultOrganization.id
-        }
-      });
-    } else {
-      orgAdminRole = await prisma.role.update({
-        where: { id: orgAdminRole.id },
-        data: {
-          description: 'Administrator der Standard-Organisation'
-        }
-      });
-    }
     console.log(`✅ Standard-Organisations-Admin-Rolle: ${orgAdminRole.name} (ID: ${orgAdminRole.id})`);
 
     // Berechtigungen für alle Organisations-Rollen erstellen
@@ -1060,16 +1006,16 @@ async function main() {
     const adminUser = await prisma.user.upsert({
       where: { username: 'admin' },
       update: {
-        firstName: 'Pat',
-        lastName: 'Admin',
+        firstName: null,
+        lastName: null,
         active: true // Admin muss immer aktiv sein
       },
       create: {
         username: 'admin',
         email: 'admin@example.com',
         password: hashedPassword,
-        firstName: 'Pat',
-        lastName: 'Admin',
+        firstName: null,
+        lastName: null,
         active: true
       },
       include: {
