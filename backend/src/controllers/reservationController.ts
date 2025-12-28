@@ -14,6 +14,18 @@ import { isAdminOrOwner } from '../middleware/organization';
 import { filterCache } from '../services/filterCache';
 
 /**
+ * Utility: Erkennt ob ein String eine Telefonnummer oder Email ist
+ */
+function detectContactType(value: string): 'phone' | 'email' {
+  // Email-Format: enthält @ und .
+  if (value.includes('@') && value.includes('.')) {
+    return 'email';
+  }
+  // Telefonnummer: enthält nur Ziffern, +, Leerzeichen, Bindestriche
+  return 'phone';
+}
+
+/**
  * POST /api/reservations
  * Erstellt eine neue Reservierung manuell
  */
@@ -110,60 +122,6 @@ export const createReservation = async (req: Request, res: Response) => {
     const settings = organization.settings as any;
     const autoSend = settings?.lobbyPms?.autoSendReservationInvitation !== false; // Default: true (Rückwärtskompatibilität)
 
-    // NEU: Queue-basierte Verarbeitung (wenn aktiviert UND autoSend = true)
-    const queueEnabled = process.env.QUEUE_ENABLED === 'true';
-    const isQueueHealthy = queueEnabled ? await checkQueueHealth() : false;
-
-    if (autoSend && queueEnabled && isQueueHealthy && contactType === 'phone' && reservation.guestPhone) {
-      // Füge Job zur Queue hinzu
-      try {
-        await reservationQueue.add(
-          'process-reservation',
-          {
-            reservationId: reservation.id,
-            organizationId: reservation.organizationId,
-            amount: amount,
-            currency: currency,
-            contactType: contactType,
-            guestPhone: reservation.guestPhone,
-            guestName: reservation.guestName,
-          },
-          {
-            priority: 1, // Hohe Priorität für manuelle Reservierungen
-            jobId: `reservation-${reservation.id}`, // Eindeutige ID für Idempotenz
-          }
-        );
-
-        logger.log(`[Reservation] ✅ Job zur Queue hinzugefügt für Reservierung ${reservation.id}`);
-
-        // Hole aktuelle Reservierung (ohne Updates)
-        const finalReservation = await prisma.reservation.findUnique({
-          where: { id: reservation.id },
-          include: {
-            organization: {
-              select: {
-                id: true,
-                name: true,
-                displayName: true,
-                settings: true
-              }
-            },
-            task: true
-          }
-        });
-
-        // Sofortige Antwort - Job läuft im Hintergrund
-        return res.status(201).json({
-          success: true,
-          data: finalReservation || reservation,
-          message: 'Reservierung erstellt. Benachrichtigung wird im Hintergrund versendet.',
-        });
-      } catch (queueError) {
-        logger.error('[Reservation] Fehler beim Hinzufügen zur Queue, verwende Fallback:', queueError);
-        // Fallback auf synchrone Logik
-      }
-    }
-
     // Wenn autoSend = false, überspringe automatischen Versand
     if (!autoSend) {
       logger.log(`[Reservation] Automatischer Versand ist deaktiviert für Organisation ${reservation.organizationId}`);
@@ -190,47 +148,58 @@ export const createReservation = async (req: Request, res: Response) => {
       });
     }
 
-    // FALLBACK: Synchrone Logik (wenn Queue deaktiviert oder Fehler)
-    // Verwende neue Service-Methode sendReservationInvitation()
-    if (contactType === 'phone' && reservation.guestPhone) {
-      try {
-        const result = await ReservationNotificationService.sendReservationInvitation(
-          reservation.id,
-          {
+    // NEU: Sofort-Versendung nur wenn Check-in-Datum heute oder in Vergangenheit
+    // UND autoSend aktiviert
+    // Sonst wartet auf Scheduler (um 08:00, 1 Tag vor Check-in)
+    if (reservation.checkInDate) {
+      const checkInDate = new Date(reservation.checkInDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      checkInDate.setHours(0, 0, 0, 0);
+      
+      // Prüfe ob Check-in-Datum heute oder in Vergangenheit
+      const isTodayOrPast = checkInDate <= today;
+      
+      if (isTodayOrPast) {
+        // Sofort versenden (analog zu lobbyPmsService und emailReservationService)
+        try {
+          logger.log(`[Reservation] Check-in-Date heute/vergangen → versende sofort für Reservierung ${reservation.id}`);
+          
+          // Versende je nach verfügbaren Kontaktdaten
+          const options: any = {
             amount,
             currency
+          };
+          
+          if (reservation.guestEmail) {
+            options.guestEmail = reservation.guestEmail;
           }
-        );
-
-        if (result.success) {
-          logger.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht erfolgreich versendet`);
-        } else {
-          logger.warn(`[Reservation] ⚠️ Reservierung ${reservation.id} erstellt, aber WhatsApp-Nachricht fehlgeschlagen: ${result.error}`);
-        }
-      } catch (error) {
-        logger.error('[Reservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', error);
-        // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
-      }
-    } else if (contactType === 'email' && reservation.guestEmail) {
-      // NEU: Email-Versendung für contactType === 'email'
-      try {
-        const result = await ReservationNotificationService.sendReservationInvitation(
-          reservation.id,
-          {
-            guestEmail: reservation.guestEmail,
-            amount,
-            currency
+          if (reservation.guestPhone) {
+            options.guestPhone = reservation.guestPhone;
           }
-        );
-
-        if (result.success) {
-          logger.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und Email erfolgreich versendet`);
-        } else {
-          logger.warn(`[Reservation] ⚠️ Reservierung ${reservation.id} erstellt, aber Email fehlgeschlagen: ${result.error}`);
+          
+          const result = await ReservationNotificationService.sendReservationInvitation(
+            reservation.id,
+            options
+          );
+          
+          if (result.success) {
+            // Markiere als versendet
+            await prisma.reservation.update({
+              where: { id: reservation.id },
+              data: { invitationSentAt: new Date() }
+            });
+            logger.log(`[Reservation] ✅ Sofort-Versendung erfolgreich für Reservierung ${reservation.id}`);
+          } else {
+            logger.warn(`[Reservation] ⚠️ Sofort-Versendung fehlgeschlagen für Reservierung ${reservation.id}: ${result.error}`);
+          }
+        } catch (error) {
+          logger.error(`[Reservation] Fehler beim sofortigen Versenden für Reservierung ${reservation.id}:`, error);
+          // Fehler nicht weiterwerfen, da Reservation erfolgreich erstellt wurde
         }
-      } catch (error) {
-        logger.error('[Reservation] ❌ Fehler beim Versenden der Email:', error);
-        // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
+      } else {
+        // Check-in-Date ist in der Zukunft → Scheduler wird versenden
+        logger.log(`[Reservation] Check-in-Date ist in der Zukunft (${checkInDate.toISOString()}) → Scheduler wird versenden`);
       }
     }
 
