@@ -85,19 +85,24 @@ const PayrollComponent: React.FC = () => {
   const payrollAccessLevel = getAccessLevel('payroll_reports', 'tab');
   const canSeeAllUsers = payrollAccessLevel === 'all_both' || payrollAccessLevel === 'all_read';
 
+  // ✅ FIX: Bei own_both: Direkt eigenen User setzen (kein Dropdown)
+  useEffect(() => {
+    if (!canSeeAllUsers && user?.id && !selectedUser) {
+      // Bei own_both: Direkt eigenen User auswählen
+      setSelectedUser(user.id);
+    }
+  }, [canSeeAllUsers, user?.id, selectedUser]);
+
   // ✅ FIX: Filtere User basierend auf Berechtigung
   const users = useMemo(() => {
     if (canSeeAllUsers) {
       return allUsers; // Alle User anzeigen
     }
-    // Nur eigenen User anzeigen
-    if (user?.id) {
-      return allUsers.filter(u => u.id === user.id);
-    }
+    // Bei own_both: Keine User-Liste nötig (Dropdown wird nicht angezeigt)
     return [];
-  }, [allUsers, canSeeAllUsers, user?.id]);
+  }, [allUsers, canSeeAllUsers]);
 
-  // Benutzer laden (nur aktive User)
+  // Benutzer laden (nur wenn all_both - bei own_both nicht nötig)
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -109,11 +114,11 @@ const PayrollComponent: React.FC = () => {
       }
     };
 
-    // ✅ FIX: Prüfe Berechtigung für payroll_reports Tab (nicht 'payroll')
-    if (hasPermission('payroll_reports', 'read', 'tab')) {
+    // ✅ FIX: Nur User laden wenn all_both (bei own_both nicht nötig)
+    if (hasPermission('payroll_reports', 'read', 'tab') && canSeeAllUsers) {
       fetchUsers();
     }
-  }, [hasPermission, t]);
+  }, [hasPermission, canSeeAllUsers, t]);
 
   // Bestehende Abrechnungen laden, wenn ein Benutzer ausgewählt wird
   const fetchPayrolls = useCallback(async () => {
@@ -326,23 +331,26 @@ const PayrollComponent: React.FC = () => {
         </div>
       )}
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('payroll.payrollComponent.selectEmployee')}
-        </label>
-        <select
-          className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white"
-          value={selectedUser || ''}
-          onChange={handleUserChange}
-        >
-          <option value="">-- {t('payroll.payrollComponent.pleaseSelect')} --</option>
-          {users.map(user => (
-            <option key={user.id} value={user.id}>
-              {user.firstName} {user.lastName}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* ✅ FIX: Dropdown nur anzeigen wenn all_both (bei own_both direkt eigene Abrechnung) */}
+      {canSeeAllUsers && (
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('payroll.payrollComponent.selectEmployee')}
+          </label>
+          <select
+            className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white"
+            value={selectedUser || ''}
+            onChange={handleUserChange}
+          >
+            <option value="">-- {t('payroll.payrollComponent.pleaseSelect')} --</option>
+            {users.map(user => (
+              <option key={user.id} value={user.id}>
+                {user.firstName} {user.lastName}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {selectedUser && (
         <>
