@@ -354,177 +354,183 @@ const PayrollComponent: React.FC = () => {
 
       {selectedUser && (
         <>
-          {/* Hinweis bei read-only */}
-          {!canEditPayroll && (
-            <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                {t('payroll.payrollComponent.noEditPermission')}
-              </p>
-            </div>
+          {/* ✅ FIX: Oberer Teil (Formular) nur anzeigen wenn all_both (bei own_both nur bestehende Abrechnungen) */}
+          {canSeeAllUsers && (
+            <>
+              {/* Hinweis bei read-only */}
+              {!canEditPayroll && (
+                <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    {t('payroll.payrollComponent.noEditPermission')}
+                  </p>
+                </div>
+              )}
+
+              {/* Perioden-Auswahl */}
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-4 dark:text-white">{t('payroll.payrollComponent.period')}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.periodStart')}
+                    </label>
+                    <input
+                      type="date"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={periodStart ? periodStart.toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        const date = e.target.value ? new Date(e.target.value) : null;
+                        setPeriodStart(date);
+                      }}
+                      disabled={!canEditPayroll}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.periodEnd')}
+                    </label>
+                    <input
+                      type="date"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={periodEnd ? periodEnd.toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        const date = e.target.value ? new Date(e.target.value) : null;
+                        setPeriodEnd(date);
+                      }}
+                      disabled={!canEditPayroll}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-4 dark:text-white">{t('payroll.payrollComponent.enterHours')}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.regularHours')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white"
+                      value={hours.regular}
+                      onChange={(e) => handleHoursChange(e, 'regular')}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.overtimeHours')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={hours.overtime}
+                      onChange={(e) => handleHoursChange(e, 'overtime')}
+                      disabled={!canEditPayroll}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.nightHours')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={hours.night}
+                      onChange={(e) => handleHoursChange(e, 'night')}
+                      disabled={!canEditPayroll}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.holidayHours')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={hours.holidayHours}
+                      onChange={(e) => handleHoursChange(e, 'holidayHours')}
+                      disabled={!canEditPayroll}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.sundayHolidayHours')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={hours.sundayHoliday}
+                      onChange={(e) => handleHoursChange(e, 'sundayHoliday')}
+                      disabled={!canEditPayroll}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.overtimeNightHours')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={hours.overtimeNight}
+                      onChange={(e) => handleHoursChange(e, 'overtimeNight')}
+                      disabled={!canEditPayroll}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.overtimeSundayHolidayHours')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={hours.overtimeSundayHoliday}
+                      onChange={(e) => handleHoursChange(e, 'overtimeSundayHoliday')}
+                      disabled={!canEditPayroll}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('payroll.payrollComponent.overtimeNightSundayHolidayHours')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={hours.overtimeNightSundayHoliday}
+                      onChange={(e) => handleHoursChange(e, 'overtimeNightSundayHoliday')}
+                      disabled={!canEditPayroll}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  className="mt-4 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-800 disabled:cursor-not-allowed"
+                  onClick={saveHours}
+                  disabled={loading || !canEditPayroll}
+                >
+                  {loading ? t('payroll.payrollComponent.saving') : t('payroll.payrollComponent.saveAndCalculate')}
+                </button>
+              </div>
+            </>
           )}
 
-          {/* Perioden-Auswahl */}
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">{t('payroll.payrollComponent.period')}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.periodStart')}
-                </label>
-                <input
-                  type="date"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={periodStart ? periodStart.toISOString().split('T')[0] : ''}
-                  onChange={(e) => {
-                    const date = e.target.value ? new Date(e.target.value) : null;
-                    setPeriodStart(date);
-                  }}
-                  disabled={!canEditPayroll}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.periodEnd')}
-                </label>
-                <input
-                  type="date"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={periodEnd ? periodEnd.toISOString().split('T')[0] : ''}
-                  onChange={(e) => {
-                    const date = e.target.value ? new Date(e.target.value) : null;
-                    setPeriodEnd(date);
-                  }}
-                  disabled={!canEditPayroll}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-4 dark:text-white">{t('payroll.payrollComponent.enterHours')}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.regularHours')}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white"
-                  value={hours.regular}
-                  onChange={(e) => handleHoursChange(e, 'regular')}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.overtimeHours')}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={hours.overtime}
-                  onChange={(e) => handleHoursChange(e, 'overtime')}
-                  disabled={!canEditPayroll}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.nightHours')}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={hours.night}
-                  onChange={(e) => handleHoursChange(e, 'night')}
-                  disabled={!canEditPayroll}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.holidayHours')}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={hours.holidayHours}
-                  onChange={(e) => handleHoursChange(e, 'holidayHours')}
-                  disabled={!canEditPayroll}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.sundayHolidayHours')}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={hours.sundayHoliday}
-                  onChange={(e) => handleHoursChange(e, 'sundayHoliday')}
-                  disabled={!canEditPayroll}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.overtimeNightHours')}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={hours.overtimeNight}
-                  onChange={(e) => handleHoursChange(e, 'overtimeNight')}
-                  disabled={!canEditPayroll}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.overtimeSundayHolidayHours')}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={hours.overtimeSundayHoliday}
-                  onChange={(e) => handleHoursChange(e, 'overtimeSundayHoliday')}
-                  disabled={!canEditPayroll}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('payroll.payrollComponent.overtimeNightSundayHolidayHours')}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  value={hours.overtimeNightSundayHoliday}
-                  onChange={(e) => handleHoursChange(e, 'overtimeNightSundayHoliday')}
-                  disabled={!canEditPayroll}
-                />
-              </div>
-            </div>
-
-            <button
-              className="mt-4 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-800 disabled:cursor-not-allowed"
-              onClick={saveHours}
-              disabled={loading || !canEditPayroll}
-            >
-              {loading ? t('payroll.payrollComponent.saving') : t('payroll.payrollComponent.saveAndCalculate')}
-            </button>
-          </div>
-
+          {/* ✅ FIX: Unterer Teil (Nóminas existentes) immer anzeigen wenn selectedUser vorhanden */}
           {payrolls.length > 0 && (
             <div className="mb-6">
               <h2 className="text-xl font-semibold mb-4 dark:text-white">{t('payroll.payrollComponent.existingPayrolls')}</h2>
