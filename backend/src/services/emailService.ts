@@ -1071,8 +1071,9 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
     : 'Arial, sans-serif';
 
   // Logo-HTML (falls vorhanden) - Größe wie im Frontend (h-10 = 40px)
+  // WICHTIG: max-width und max-height für E-Mail-Client-Kompatibilität (Outlook ignoriert oft CSS)
   const logoHtml = logo
-    ? `<img src="${logo}" alt="${headerTitle}" style="height: 40px; width: auto; display: block;" />`
+    ? `<img src="${logo}" alt="${headerTitle}" style="height: 40px; max-height: 40px; width: auto; max-width: 200px; display: block;" />`
     : '';
 
   return `
@@ -1118,7 +1119,9 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
     }
     .logo-container img {
       height: 40px;
+      max-height: 40px;
       width: auto;
+      max-width: 200px;
       display: block;
       object-fit: contain;
     }

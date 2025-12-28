@@ -928,9 +928,9 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           let emailHtmlContent = emailMessage
             .replace(/\n/g, '<br>')
             .replace(new RegExp(checkInLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
-              `<a href="${checkInLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: 600;">${checkInLabel}</a>`)
+              `<br><a href="${checkInLink}" class="button">${checkInLabel}</a>`)
             .replace(new RegExp(paymentLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
-              `<a href="${paymentLink}" style="color: ${buttonColor}; text-decoration: none; font-weight: 600;">${paymentLabel}</a>`);
+              `<br><a href="${paymentLink}" class="button">${paymentLabel}</a>`);
           
           const emailTemplate = await this.getMessageTemplate(
             reservation.branchId,
@@ -2269,8 +2269,8 @@ ${contentText}
         <p>We are pleased to welcome you to La Familia Hostel! 🎊</p>
         <p>In case that you arrive after 18:00 or before 09:00, our recepcion 🛎️ will be closed.</p>
         <p>We would then kindly ask you to complete check-in & payment online in advance:</p>
-        <p><strong>Check-In:</strong> <a href="${checkInLink}" style="color: ${linkColor}; text-decoration: none; font-weight: 600;">Online Check-in</a></p>
-        <p><strong>Please make the payment in advance:</strong> <a href="${paymentLink}" style="color: ${linkColor}; text-decoration: none; font-weight: 600;">Make Payment</a></p>
+        <p><strong>Check-In:</strong><br><a href="${checkInLink}" class="button">Online Check-in</a></p>
+        <p><strong>Please make the payment in advance:</strong><br><a href="${paymentLink}" class="button">Make Payment</a></p>
         <p>Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.</p>
         <p>Thank you!</p>
         <p>We look forward to seeing you soon!</p>
@@ -2307,8 +2307,8 @@ We look forward to seeing you soon!
         <p>¡Nos complace darte la bienvenida a La Familia Hostel! 🎊</p>
         <p>En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.</p>
         <p>Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:</p>
-        <p><strong>Check-In:</strong> <a href="${checkInLink}" style="color: ${linkColor}; text-decoration: none; font-weight: 600;">Check-in en línea</a></p>
-        <p><strong>Por favor, realiza el pago por adelantado:</strong> <a href="${paymentLink}" style="color: ${linkColor}; text-decoration: none; font-weight: 600;">Realizar pago</a></p>
+        <p><strong>Check-In:</strong><br><a href="${checkInLink}" class="button">Check-in en línea</a></p>
+        <p><strong>Por favor, realiza el pago por adelantado:</strong><br><a href="${paymentLink}" class="button">Realizar pago</a></p>
         <p>Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.</p>
         <p>¡Gracias!</p>
         <p>¡Esperamos verte pronto!</p>
