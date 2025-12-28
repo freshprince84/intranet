@@ -84,6 +84,18 @@ const Header: React.FC = () => {
         roleSubMenuTimeoutRef.current = setTimeout(() => {
             setIsRoleSubMenuOpen(false);
             roleSubMenuTimeoutRef.current = undefined; // Ref zurücksetzen nach Ausführung
+            // ✅ WICHTIG: Wenn Untermenü geschlossen wird, auch Hauptmenü schließen
+            // (nur wenn nicht gerade ein anderes Untermenü geöffnet wird)
+            if (!isBranchSubMenuOpen && !isOpeningSubMenuRef.current) {
+                // Starte Timeout für Hauptmenü (wird gelöscht, wenn man wieder über Hauptmenü hovert)
+                if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current);
+                }
+                timeoutRef.current = setTimeout(() => {
+                    setIsProfileMenuOpen(false);
+                    timeoutRef.current = undefined;
+                }, 1000);
+            }
         }, 2500); // Längerer Timeout für Untermenü (2.5 Sekunden)
     };
 
@@ -109,6 +121,18 @@ const Header: React.FC = () => {
         branchSubMenuTimeoutRef.current = setTimeout(() => {
             setIsBranchSubMenuOpen(false);
             branchSubMenuTimeoutRef.current = undefined; // Ref zurücksetzen nach Ausführung
+            // ✅ WICHTIG: Wenn Untermenü geschlossen wird, auch Hauptmenü schließen
+            // (nur wenn nicht gerade ein anderes Untermenü geöffnet wird)
+            if (!isRoleSubMenuOpen && !isOpeningSubMenuRef.current) {
+                // Starte Timeout für Hauptmenü (wird gelöscht, wenn man wieder über Hauptmenü hovert)
+                if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current);
+                }
+                timeoutRef.current = setTimeout(() => {
+                    setIsProfileMenuOpen(false);
+                    timeoutRef.current = undefined;
+                }, 1000);
+            }
         }, 2500); // Längerer Timeout für Untermenü (2.5 Sekunden)
     };
 

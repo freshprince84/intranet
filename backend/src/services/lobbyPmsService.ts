@@ -1179,13 +1179,25 @@ export class LobbyPmsService {
 
       // PIN-Versand: Wenn Check-in-Link abgeschlossen UND bezahlt → versende PIN
       if (checkInDataUploadedChanged && paymentStatus === PaymentStatus.paid && !reservation.doorPin) {
-        try {
-          logger.log(`[LobbyPMS] Check-in-Link abgeschlossen und bezahlt → versende PIN für Reservierung ${reservation.id}`);
-          const { ReservationNotificationService } = await import('./reservationNotificationService');
-          await ReservationNotificationService.generatePinAndSendNotification(reservation.id);
-        } catch (error) {
-          logger.error(`[LobbyPMS] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
-          // Fehler nicht weiterwerfen, da PIN-Versand optional ist
+        // NEU: Prüfe autoSend (analog zu Trigger 1)
+        const branch = branchId ? await prisma.branch.findUnique({
+          where: { id: branchId },
+          select: { autoSendReservationInvitation: true }
+        }) : null;
+        
+        const autoSend = branch?.autoSendReservationInvitation ?? false;
+        
+        if (autoSend) {
+          try {
+            logger.log(`[LobbyPMS] Check-in-Link abgeschlossen und bezahlt → versende PIN für Reservierung ${reservation.id}`);
+            const { ReservationNotificationService } = await import('./reservationNotificationService');
+            await ReservationNotificationService.generatePinAndSendNotification(reservation.id);
+          } catch (error) {
+            logger.error(`[LobbyPMS] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
+            // Fehler nicht weiterwerfen, da PIN-Versand optional ist
+          }
+        } else {
+          logger.log(`[LobbyPMS] autoSend ist deaktiviert → PIN wird nicht versendet für Reservierung ${reservation.id}`);
         }
       }
 

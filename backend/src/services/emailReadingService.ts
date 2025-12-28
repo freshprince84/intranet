@@ -359,5 +359,63 @@ export class EmailReadingService {
       return null;
     }
   }
+
+  /**
+   * Lädt Email-Konfiguration aus Branch-Settings (mit Fallback auf Organization)
+   */
+  static async loadConfigFromBranch(branchId: number): Promise<EmailConfig | null> {
+    try {
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { 
+          emailSettings: true, 
+          organizationId: true 
+        }
+      });
+
+      if (!branch) {
+        return null;
+      }
+
+      // Prüfe Branch Email Settings
+      if (branch.emailSettings) {
+        const { decryptBranchApiSettings } = await import('../utils/encryption');
+        const branchSettings = decryptBranchApiSettings(branch.emailSettings as any);
+        const emailSettings = branchSettings?.email || branchSettings;
+        const imapConfig = emailSettings?.imap;
+
+        // Prüfe ob IMAP aktiviert ist
+        if (imapConfig?.enabled && imapConfig.host && imapConfig.user && imapConfig.password) {
+          return {
+            host: imapConfig.host,
+            port: imapConfig.port || (imapConfig.secure ? 993 : 143),
+            secure: imapConfig.secure !== false,
+            user: imapConfig.user,
+            password: imapConfig.password, // Bereits entschlüsselt
+            folder: imapConfig.folder || 'INBOX',
+            processedFolder: imapConfig.processedFolder
+          };
+        }
+      }
+
+      // Fallback: Lade aus Organisation
+      if (branch.organizationId) {
+        return await this.loadConfigFromOrganization(branch.organizationId);
+      }
+
+      return null;
+    } catch (error) {
+      logger.error(`[EmailReading] Fehler beim Laden der Konfiguration für Branch ${branchId}:`, error);
+      // Fallback: Lade aus Organisation
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { organizationId: true }
+      });
+      if (branch?.organizationId) {
+        return await this.loadConfigFromOrganization(branch.organizationId);
+      }
+      return null;
+    }
+  }
 }
 

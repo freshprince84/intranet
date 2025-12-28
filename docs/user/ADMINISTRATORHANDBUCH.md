@@ -140,53 +140,102 @@ Als Administrator haben Sie Zugriff auf sensible personenbezogene Daten:
 
 ### Standardrollen
 
-Das System enthält folgende vordefinierte Rollen:
-- **Administrator**: Vollzugriff auf alle Systembereiche
-- **Manager**: Zugriff auf Team-Worktime-Control und Berichterstellung
-- **HR**: Zugriff auf Personalverwaltung und Lohnabrechnung
-- **Mitarbeiter**: Basiszugriff auf eigene Zeiterfassung und Tasks
+Das System enthält folgende vordefinierte Standardrollen:
+
+- **Administrator**: Vollzugriff auf alle Systembereiche (`all_both` für alles)
+  - Kann alle Daten aller Benutzer sehen und bearbeiten
+  - Kann Benutzer, Rollen und Berechtigungen verwalten
+  - Kann Systemeinstellungen konfigurieren
+  - Kann Organisationen erstellen und verwalten
+
+- **User**: Selektiver Zugriff (`own_both` für eigene Daten, `all_both` für bestimmte Bereiche)
+  - Kann eigene Arbeitszeit erfassen
+  - Kann eigene Aufgaben einsehen und verwalten
+  - Kann Anfragen stellen
+  - Kann Wiki-Artikel lesen und bearbeiten
+  - **Kein Zugriff auf:** Workcenter, Organisation, Preisanalyse
+
+- **Hamburger**: Minimaler Zugriff (nur lesen, meist `all_read` oder `none`)
+  - Basis-Berechtigungen für grundlegende Funktionen
+  - Dashboard anzeigen (`all_read`)
+  - Einstellungen und Profil verwalten (`all_both`)
+  - Cerebro Wiki lesen (`all_read`)
+  - **KEINE Zugriff auf Organisation-Seite**
+
+**Hinweis:** 
+- Neue Registrierungen erhalten automatisch die **User-Rolle** (ohne Organisation)
+- Beim Gründen einer Organisation erhält der Gründer die **Admin-Rolle** der neuen Organisation
+- Beim Beitritt zu einer Organisation erhält der Benutzer die **Hamburger-Rolle** der Organisation
 
 ### Rolle erstellen
 
-1. Navigieren Sie zu "Rollenverwaltung"
-2. Klicken Sie auf "Neue Rolle erstellen"
+1. Navigieren Sie zu **Organisation → Roles Tab**
+2. Klicken Sie auf "Rolle erstellen"
 3. Geben Sie einen Namen und eine Beschreibung ein
-4. Weisen Sie Berechtigungen zu (siehe [Berechtigungssystem](#berechtigungssystem))
+4. Setzen Sie Berechtigungen für alle Pages/Boxes/Tabs/Buttons (siehe [Berechtigungssystem](#berechtigungssystem))
 5. Klicken Sie auf "Speichern"
 
 ### Rolle bearbeiten
 
-1. Suchen Sie die Rolle in der Rollenliste
-2. Klicken Sie auf das Bearbeiten-Symbol
+1. Navigieren Sie zu **Organisation → Roles Tab**
+2. Klicken Sie auf "Bearbeiten" bei der gewünschten Rolle
 3. Ändern Sie Name, Beschreibung oder Berechtigungen
 4. Klicken Sie auf "Speichern"
+
+### Rolle kopieren
+
+1. Navigieren Sie zu **Organisation → Roles Tab**
+2. Klicken Sie auf "Kopieren" bei der gewünschten Rolle
+3. Die neue Rolle übernimmt alle Berechtigungen der kopierten Rolle
+4. Sie können dann die Berechtigungen anpassen
+
+**Wichtig:** Rollen können pro Organisation kopiert werden. Standardrollen (Admin, User, Hamburger) werden beim Erstellen einer Organisation automatisch kopiert.
 
 ## Berechtigungssystem
 
 Das System verwendet ein granulares Berechtigungssystem mit drei Komponenten:
 
-1. **EntityType**: Definiert die Art des Objekts (z.B. 'page', 'table')
-2. **EntityName**: Name des spezifischen Objekts (z.B. 'team_worktime', 'user_management')
-3. **AccessLevel**: Zugriffsebene ('read', 'write', 'both')
+1. **EntityType**: Definiert die Art des Objekts (`'page'`, `'box'`, `'tab'`, `'button'`)
+2. **Entity**: Name des spezifischen Objekts (z.B. `'worktracker'`, `'todos'`, `'task_create'`)
+3. **AccessLevel**: Zugriffsebene (`'none'`, `'own_read'`, `'own_both'`, `'all_read'`, `'all_both'`)
+
+### Hierarchie
+
+```
+PAGE (Seitenebene - Sidebar/Footer)
+  └── BOX (Container auf Seiten)
+        └── TAB (Tabs innerhalb von Seiten)
+              └── BUTTON (Aktions-Buttons)
+```
+
+### AccessLevel-Bedeutung
+
+- **`none`**: Kein Zugriff (Element nicht sichtbar/nicht erlaubt)
+- **`own_read`**: Nur eigene Daten lesen
+- **`own_both`**: Eigene Daten lesen und bearbeiten
+- **`all_read`**: Alle Daten lesen (innerhalb der Organisation/Branch)
+- **`all_both`**: Alle Daten lesen und bearbeiten (voller Zugriff, Admin)
 
 ### Berechtigungen zuweisen
 
 Jede Rolle hat spezifische Berechtigungszuweisungen:
 
 ```
-{entityType: 'page', entityName: 'team_worktime', accessLevel: 'both'}
+{entity: 'todos', entityType: 'tab', accessLevel: 'own_both'}
 ```
 
-Dies würde vollen Zugriff auf die Team-Worktime-Control-Seite gewähren.
+Dies würde Zugriff auf den To-Dos Tab gewähren, aber nur für eigene Tasks.
 
 ### Wichtige Berechtigungen
 
-- **worktime** (entityType: 'page'): Zugriff auf die Zeiterfassungsseite
-- **worktime_edit** (entityType: 'table'): Berechtigung zum Bearbeiten von Zeiteinträgen
-- **team_worktime** (entityType: 'page'): Zugriff auf die Team-Zeiterfassungsseite
-- **user_management** (entityType: 'page'): Zugriff auf die Organisation
-- **role_management** (entityType: 'page'): Zugriff auf die Rollenverwaltung
-- **cerebro_admin** (entityType: 'page'): Zugriff auf die Cerebro-Wiki-Administration
+- **`dashboard`** (entityType: `'page'`): Zugriff auf die Dashboard-Seite
+- **`worktracker`** (entityType: `'page'`): Zugriff auf die Worktracker-Seite
+- **`todos`** (entityType: `'tab'`): Zugriff auf den To-Dos Tab
+- **`task_create`** (entityType: `'button'`): Berechtigung zum Erstellen von Tasks
+- **`organization_management`** (entityType: `'page'`): Zugriff auf die Organisation-Seite
+- **`cerebro`** (entityType: `'page'`): Zugriff auf die Cerebro-Wiki-Seite
+
+**Hinweis:** Wenn eine Page auf `none` gesetzt ist, sind alle untergeordneten Boxes, Tabs und Buttons automatisch nicht zugänglich.
 
 ## Systemeinstellungen
 

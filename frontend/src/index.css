@@ -1641,13 +1641,21 @@ div[class*="sidepane-panel-container"][class*="translate-x-0"] {
   }
 }
 
-/* Sidepane Position: Berücksichtigt grünen Schatten bei laufender Zeiterfassung */
-/* Der grüne Schatten hat einen blur von 15px + spread von 5px = max. 20px Ausdehnung */
-/* Header ist 4rem (64px), Schatten dehnt sich 20px nach unten aus */
-/* Sidepane muss bei 64px + 20px = 84px (5.25rem) beginnen, damit Schatten vollständig darunter liegt */
+/* Sidepane Position: Standard bündig mit Top-Menü (64px) */
 .sidepane-panel-container[class*="top-16"],
 .sidepane-panel-container.fixed.top-16,
 div.fixed.top-16.bottom-0.right-0.sidepane-panel-container {
+  top: 4rem !important; /* 64px - Standard, bündig mit Top-Menü */
+  transition: top 300ms ease-out !important; /* Smooth Transition für top-Änderung */
+}
+
+/* Sidepane Position: Bei aktiver Zeiterfassung 20px Abstand für grünen Schatten (84px) */
+/* Der grüne Schatten hat einen blur von 15px + spread von 5px = max. 20px Ausdehnung */
+/* Header ist 4rem (64px), Schatten dehnt sich 20px nach unten aus */
+/* Sidepane muss bei 64px + 20px = 84px (5.25rem) beginnen, damit Schatten vollständig darunter liegt */
+body.worktime-tracking-active .sidepane-panel-container[class*="top-16"],
+body.worktime-tracking-active .sidepane-panel-container.fixed.top-16,
+body.worktime-tracking-active div.fixed.top-16.bottom-0.right-0.sidepane-panel-container {
   top: 5.25rem !important; /* 84px - Header (64px) + Schatten-Ausdehnung (20px) */
 }
 

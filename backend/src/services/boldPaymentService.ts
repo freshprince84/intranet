@@ -801,13 +801,25 @@ export class BoldPaymentService {
 
               // Versende PIN nur wenn Check-in-Link abgeschlossen ODER bereits eingecheckt
               if (shouldSendPin && ttlockCode) {
-                try {
-                  logger.log(`[Bold Payment Webhook] Check-in-Link abgeschlossen/Check-in durchgeführt → versende PIN für Reservierung ${reservation.id}`);
-                  const { ReservationNotificationService } = await import('./reservationNotificationService');
-                  await ReservationNotificationService.generatePinAndSendNotification(reservation.id);
-                } catch (error) {
-                  logger.error(`[Bold Payment Webhook] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
-                  // Fehler nicht weiterwerfen, da PIN-Versand optional ist
+                // NEU: Prüfe autoSend (analog zu Trigger 1)
+                const branch = updatedReservation.branchId ? await prisma.branch.findUnique({
+                  where: { id: updatedReservation.branchId },
+                  select: { autoSendReservationInvitation: true }
+                }) : null;
+                
+                const autoSend = branch?.autoSendReservationInvitation ?? false;
+                
+                if (autoSend) {
+                  try {
+                    logger.log(`[Bold Payment Webhook] Check-in-Link abgeschlossen/Check-in durchgeführt → versende PIN für Reservierung ${reservation.id}`);
+                    const { ReservationNotificationService } = await import('./reservationNotificationService');
+                    await ReservationNotificationService.generatePinAndSendNotification(reservation.id);
+                  } catch (error) {
+                    logger.error(`[Bold Payment Webhook] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
+                    // Fehler nicht weiterwerfen, da PIN-Versand optional ist
+                  }
+                } else {
+                  logger.log(`[Bold Payment Webhook] autoSend ist deaktiviert → PIN wird nicht versendet für Reservierung ${reservation.id}`);
                 }
               } else if (!shouldSendPin) {
                 // ⚠️ Check-in-Link noch nicht abgeschlossen - PIN wird nicht versendet

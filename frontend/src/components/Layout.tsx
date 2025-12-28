@@ -40,6 +40,19 @@ const Layout: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // ✅ SIDEPANE ALIGNMENT: Setze body-Klasse für Sidepane-Positionierung bei aktiver Zeiterfassung
+  useEffect(() => {
+    if (isTracking) {
+      document.body.classList.add('worktime-tracking-active');
+    } else {
+      document.body.classList.remove('worktime-tracking-active');
+    }
+    
+    return () => {
+      document.body.classList.remove('worktime-tracking-active');
+    };
+  }, [isTracking]);
+
   return (
     <div className={`min-h-screen dark:bg-gray-900 ${
       isTabletOrLarger ? 'fixed-height-container' : ''

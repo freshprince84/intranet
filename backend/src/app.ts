@@ -203,8 +203,8 @@ ReservationAutoCancelScheduler.start();
 // NEU: Automatische Versendung von Check-in-Einladungen (1 Tag vor Check-in um 08:00 Uhr in Zeitzone der Organisation)
 ReservationAutoInvitationScheduler.start();
 
-// Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
-// EmailReservationScheduler.start();
+// Email-Import: Prüft pro Branch (wenn Branch.emailSettings.imap.enabled === true)
+EmailReservationScheduler.start();
 
 // Starte Queue Workers (wenn aktiviert)
 startWorkers().catch((error) => {

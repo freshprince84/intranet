@@ -28,11 +28,11 @@ export class EmailReservationScheduler {
     const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten
 
     this.checkInterval = setInterval(async () => {
-      await this.checkAllOrganizations();
+      await this.checkAllBranches();
     }, CHECK_INTERVAL_MS);
 
     // Führe sofort einen Check aus beim Start
-    this.checkAllOrganizations();
+    this.checkAllBranches();
 
     this.isRunning = true;
   }
@@ -50,56 +50,72 @@ export class EmailReservationScheduler {
   }
 
   /**
-   * Prüft alle Organisationen auf neue Reservation-Emails
+   * Prüft alle Branches auf neue Reservation-Emails
    */
-  private static async checkAllOrganizations(): Promise<void> {
+  private static async checkAllBranches(): Promise<void> {
     try {
-      logger.log('[EmailReservationScheduler] Starte Email-Check für alle Organisationen...');
+      logger.log('[EmailReservationScheduler] Starte Email-Check für alle Branches...');
 
-      // Hole alle Organisationen
-      const organizations = await prisma.organization.findMany({
-        select: {
-          id: true,
-          name: true,
-          settings: true
+      // Hole alle Branches
+      const branches = await prisma.branch.findMany({
+        where: {
+          organizationId: { not: null }
+        },
+        include: {
+          organization: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
         }
       });
 
       let totalProcessed = 0;
 
-      // Prüfe jede Organisation
-      for (const org of organizations) {
+      // Prüfe jede Branch
+      for (const branch of branches) {
         try {
-          // Prüfe ob Email-Reading aktiviert ist
-          if (!org.settings || typeof org.settings !== 'object') {
-            continue;
+          // Prüfe ob Email-Reading aktiviert ist (Branch Settings)
+          const { decryptBranchApiSettings } = await import('../utils/encryption');
+          let emailReadingEnabled = false;
+          
+          if (branch.emailSettings) {
+            const branchSettings = decryptBranchApiSettings(branch.emailSettings as any);
+            const emailSettings = branchSettings?.email || branchSettings;
+            emailReadingEnabled = emailSettings?.imap?.enabled === true;
           }
-
-          const orgSettings = org.settings as any;
-          const emailReading = orgSettings.emailReading;
-
-          // ⚠️ WICHTIG: Email-Reading für Organisation 1 (La Familia Hostel) ist STANDARDMÄSSIG aktiviert
-          // Das Seed-Script stellt sicher, dass Email-Reading für Organisation 1 immer aktiviert ist
-          if (!emailReading || !emailReading.enabled) {
-            // Für Organisation 1: Warnung, wenn Email-Reading deaktiviert ist
-            if (org.id === 1) {
-              logger.warn(`[EmailReservationScheduler] ⚠️ Email-Reading für Organisation 1 ist deaktiviert - sollte standardmäßig aktiviert sein!`);
+          
+          // Fallback: Prüfe Organization Settings
+          if (!emailReadingEnabled && branch.organizationId) {
+            const organization = await prisma.organization.findUnique({
+              where: { id: branch.organizationId },
+              select: { settings: true }
+            });
+            
+            if (organization?.settings && typeof organization.settings === 'object') {
+              const orgSettings = organization.settings as any;
+              const emailReading = orgSettings.emailReading;
+              emailReadingEnabled = emailReading?.enabled === true;
             }
-            continue;
           }
 
-          logger.log(`[EmailReservationScheduler] Prüfe Organisation ${org.id} (${org.name})...`);
+          if (!emailReadingEnabled) {
+            continue; // Email-Reading für diese Branch deaktiviert
+          }
 
-          // Prüfe auf neue Emails
-          const processedCount = await EmailReservationService.checkForNewReservationEmails(org.id);
+          logger.log(`[EmailReservationScheduler] Prüfe Branch ${branch.id} (${branch.name})...`);
+
+          // Prüfe auf neue Emails für diese Branch
+          const processedCount = await EmailReservationService.checkForNewReservationEmailsForBranch(branch.id);
           totalProcessed += processedCount;
 
           if (processedCount > 0) {
-            logger.log(`[EmailReservationScheduler] ✅ Organisation ${org.id}: ${processedCount} Reservation(s) erstellt`);
+            logger.log(`[EmailReservationScheduler] ✅ Branch ${branch.id}: ${processedCount} Reservation(s) erstellt`);
           }
         } catch (error) {
-          logger.error(`[EmailReservationScheduler] Fehler bei Organisation ${org.id}:`, error);
-          // Weiter mit nächster Organisation
+          logger.error(`[EmailReservationScheduler] Fehler bei Branch ${branch.id}:`, error);
+          // Weiter mit nächster Branch
         }
       }
 
@@ -111,6 +127,15 @@ export class EmailReservationScheduler {
     } catch (error) {
       logger.error('[EmailReservationScheduler] Fehler beim Email-Check:', error);
     }
+  }
+
+  /**
+   * Prüft alle Organisationen auf neue Reservation-Emails (Legacy-Methode, wird durch checkAllBranches() ersetzt)
+   * @deprecated Verwende checkAllBranches() stattdessen
+   */
+  private static async checkAllOrganizations(): Promise<void> {
+    // Delegiere an checkAllBranches()
+    await this.checkAllBranches();
   }
 
   /**
@@ -130,9 +155,9 @@ export class EmailReservationScheduler {
         throw error;
       }
     } else {
-      // Prüfe alle Organisationen
-      await this.checkAllOrganizations();
-      return 0; // Anzahl wird in checkAllOrganizations geloggt
+      // Prüfe alle Branches
+      await this.checkAllBranches();
+      return 0; // Anzahl wird in checkAllBranches geloggt
     }
   }
 }

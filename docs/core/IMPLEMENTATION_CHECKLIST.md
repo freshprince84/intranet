@@ -166,8 +166,10 @@ const adminPermissionMap: Record<string, AccessLevel> = {
 
 - [ ] **`usePermissions()` Hook importiert** → `import { usePermissions } from '../hooks/usePermissions.ts';`
 - [ ] **Berechtigungen für Seiten geprüft** → `hasPermission('new_feature_page', 'read', 'page')`
-- [ ] **Berechtigungen für Tabellen geprüft** → `hasPermission('new_feature_table', 'read', 'table')`
+- [ ] **Berechtigungen für Tabs geprüft** → `canView('new_feature_tab', 'tab')` (für Sichtbarkeit)
 - [ ] **Berechtigungen für Buttons geprüft** → `hasPermission('new_feature_button', 'write', 'button')`
+- [ ] **Tab-Filterung implementiert** → Tabs werden basierend auf `canView()` gefiltert
+- [ ] **Datenfilterung implementiert** → `getAccessLevel()` und `canSeeAllData()` für Dropdowns/Filter
 - [ ] **UI-Elemente basierend auf Berechtigungen angezeigt/versteckt**
 
 **Beispiel:**
@@ -176,15 +178,25 @@ const adminPermissionMap: Record<string, AccessLevel> = {
 import { usePermissions } from '../hooks/usePermissions.ts';
 
 const MyComponent = () => {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, canView, getAccessLevel, canSeeAllData } = usePermissions();
+  
+  // Tab-Sichtbarkeit
+  const showTab = canView('new_feature_tab', 'tab');
+  
+  // Button-Berechtigung
+  const canEdit = hasPermission('new_feature_button', 'write', 'button');
+  
+  // Datenfilterung
+  const accessLevel = getAccessLevel('new_feature_data', 'tab');
+  const showAllData = canSeeAllData('new_feature_data', 'tab');
   
   return (
     <div>
-      {hasPermission('new_feature_page', 'read', 'page') && (
-        <div>Inhalt</div>
-      )}
-      {hasPermission('new_feature_button', 'write', 'button') && (
-        <button>Action</button>
+      {showTab && (
+        <Tab>
+          {canEdit && <button>Action</button>}
+          {showAllData ? <UserDropdown /> : <OwnData />}
+        </Tab>
       )}
     </div>
   );

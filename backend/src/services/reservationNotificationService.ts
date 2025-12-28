@@ -1295,12 +1295,8 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         }
       }
 
-      // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
-      // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
+      // WhatsApp-Versendung mit TTLock-Code
       if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
-        logger.log(`[ReservationNotification] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${doorPin ? `(${doorPin})` : ''} wird nur im Frontend angezeigt`);
-        // TODO: Wieder aktivieren, wenn gewünscht
-        /*
         try {
           const whatsappService = reservation.branchId
             ? new WhatsAppService(undefined, reservation.branchId)
@@ -1337,19 +1333,70 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             roomDisplay = reservation.roomDescription?.trim() || 'N/A';
           }
           
-          const whatsappSuccessResult = await whatsappService.sendCheckInConfirmation(
-            reservation.guestName,
+          // Lade WhatsApp-Template aus Branch Settings
+          const whatsappTemplate = await this.getMessageTemplate(
+            reservation.branchId,
+            reservation.organizationId,
+            'checkInConfirmation',
+            languageCode
+          );
+          
+          const greeting = languageCode === 'en' 
+            ? `Hello ${reservation.guestName},`
+            : `Hola ${reservation.guestName},`;
+          
+          // Formatiere roomDescription für Nachricht (nur wenn vorhanden)
+          let contentText: string;
+          if (languageCode === 'en') {
+            const roomInfo = roomDescription && roomDescription !== 'N/A' 
+              ? `- Room: ${roomDisplay}\n- Description: ${roomDescription}`
+              : `- Room: ${roomDisplay}`;
+            contentText = `Your check-in has been completed successfully!\n\nYour room information:\n${roomInfo}\n\nAccess:\n- Door PIN: ${doorPin || 'N/A'}`;
+          } else {
+            const roomInfo = roomDescription && roomDescription !== 'N/A'
+              ? `- Habitación: ${roomDisplay}\n- Descripción: ${roomDescription}`
+              : `- Habitación: ${roomDisplay}`;
+            contentText = `¡Tu check-in se ha completado exitosamente!\n\nInformación de tu habitación:\n${roomInfo}\n\nAcceso:\n- PIN de la puerta: ${doorPin || 'N/A'}`;
+          }
+          
+          // Template-Name aus Settings oder Fallback
+          const templateName = whatsappTemplate?.whatsappTemplateName || 
+            process.env.WHATSAPP_TEMPLATE_CHECKIN_CONFIRMATION || 
+            'reservation_checkin_completed';
+          
+          // Template-Parameter: Ersetze Platzhalter
+          const contentTextWithReplacements = contentText
+            .replace(/\{\{roomNumber\}\}/g, roomDisplay)
+            .replace(/\{\{roomDisplay\}\}/g, roomDisplay)
+            .replace(/\{\{roomDescription\}\}/g, roomDescription && roomDescription !== 'N/A' ? roomDescription : '')
+            .replace(/\{\{doorPin\}\}/g, doorPin || 'N/A')
+            .replace(/\{\{guestName\}\}/g, reservation.guestName);
+          
+          const templateParams = whatsappTemplate?.whatsappTemplateParams?.length > 0
+            ? whatsappTemplate.whatsappTemplateParams.map((param: string) => {
+                return param
+                  .replace(/\{\{1\}\}/g, greeting)
+                  .replace(/\{\{2\}\}/g, contentTextWithReplacements)
+                  .replace(/\{\{guestName\}\}/g, reservation.guestName)
+                  .replace(/\{\{roomDisplay\}\}/g, roomDisplay)
+                  .replace(/\{\{roomNumber\}\}/g, roomDisplay)
+                  .replace(/\{\{roomDescription\}\}/g, roomDescription && roomDescription !== 'N/A' ? roomDescription : '')
+                  .replace(/\{\{doorPin\}\}/g, doorPin || 'N/A');
+              })
+            : [greeting, contentTextWithReplacements];
+          
+          const messageText = `${greeting}\n\n${contentTextWithReplacements}\n\n${languageCode === 'en' ? 'We wish you a pleasant stay!' : '¡Te deseamos una estancia agradable!'}`;
+          
+          whatsappSuccess = await whatsappService.sendMessageWithFallback(
             reservation.guestPhone,
-            roomDisplay, // Formatierte Zimmer-Anzeige
-            roomDescription, // roomDescription aus Branch-Settings
-            doorPin || 'N/A',
-            doorAppName || 'TTLock',
+            messageText,
+            templateName,
+            templateParams,
             {
               guestNationality: reservation.guestNationality,
               guestPhone: reservation.guestPhone
             }
           );
-          whatsappSuccess = whatsappSuccessResult;
           
           if (whatsappSuccess) {
             logger.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
@@ -1393,8 +1440,24 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         } catch (error) {
           logger.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
           whatsappError = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
+          
+          // Log fehlgeschlagene WhatsApp-Notification
+          try {
+            await this.logNotification(
+              reservationId,
+              'pin',
+              'whatsapp',
+              false,
+              {
+                sentTo: reservation.guestPhone,
+                message: messageText || undefined,
+                errorMessage: whatsappError
+              }
+            );
+          } catch (logError) {
+            logger.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene WhatsApp-Notification:`, logError);
+          }
         }
-        */
       } else {
         if (!notificationChannels.includes('whatsapp')) {
           logger.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);

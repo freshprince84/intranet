@@ -134,15 +134,28 @@ Die Rollenauswahl wirkt sich auf die verfügbaren Berechtigungen aus. Mit der er
 
 ### Permissions-Objekt
 
-Das Permissions-Objekt im Benutzerkontext wurde erweitert, um zwischen Seiten- und Tabellenberechtigungen zu unterscheiden:
+Das Permissions-Objekt im Benutzerkontext wurde erweitert, um zwischen Seiten-, Box-, Tab- und Button-Berechtigungen zu unterscheiden:
 
 ```typescript
 interface Permission {
-  entity: string;       // Identifiziert Seite oder Tabelle
-  entityType: string;   // 'page' oder 'table'
-  accessLevel: 'read' | 'write' | 'both' | 'none';
+  entity: string;       // Identifiziert Seite, Box, Tab oder Button
+  entityType: string;   // 'page', 'box', 'tab' oder 'button'
+  accessLevel: 'none' | 'own_read' | 'own_both' | 'all_read' | 'all_both';
 }
 ```
+
+**AccessLevel-Bedeutung:**
+- `none`: Kein Zugriff
+- `own_read`: Nur eigene Daten lesen
+- `own_both`: Eigene Daten lesen und bearbeiten
+- `all_read`: Alle Daten lesen (innerhalb der Organisation/Branch)
+- `all_both`: Alle Daten lesen und bearbeiten (voller Zugriff, Admin)
+
+**Legacy-Support:**
+Das System unterstützt auch das alte AccessLevel-Format:
+- `'read'` → wird konvertiert zu `'all_read'`
+- `'write'` → wird konvertiert zu `'own_both'`
+- `'both'` → wird konvertiert zu `'all_both'`
 
 ### Berechtigungsprüfung
 
@@ -151,8 +164,8 @@ Die `hasPermission`-Funktion wurde aktualisiert, um die erweiterte Struktur zu u
 ```typescript
 const hasPermission = (
   entity: string, 
-  accessLevel: 'read' | 'write', 
-  entityType: 'page' | 'table' = 'page'
+  requiredAccess: 'read' | 'write', 
+  entityType: 'page' | 'box' | 'tab' | 'button' = 'page'
 ): boolean => {
   const permission = permissions.find(
     p => p.entity === entity && p.entityType === entityType
@@ -160,8 +173,49 @@ const hasPermission = (
   
   if (!permission) return false;
   
-  if (permission.accessLevel === 'both') return true;
-  return permission.accessLevel === accessLevel;
+  // Konvertiere Legacy-AccessLevel
+  const accessLevel = convertLegacyAccessLevel(permission.accessLevel);
+  
+  // Prüfe ob AccessLevel ausreichend ist
+  if (accessLevel === 'none') return false;
+  if (accessLevel === 'all_both') return true; // Admin hat immer Zugriff
+  
+  if (requiredAccess === 'read') {
+    return accessLevel === 'all_read' || 
+           accessLevel === 'all_both' ||
+           accessLevel === 'own_read' ||
+           accessLevel === 'own_both';
+  }
+  
+  if (requiredAccess === 'write') {
+    return accessLevel === 'all_both' || accessLevel === 'own_both';
+  }
+  
+  return false;
+};
+```
+
+**Zusätzliche Funktionen:**
+
+```typescript
+// Prüft ob Element sichtbar ist (AccessLevel != 'none')
+const canView = (entity: string, entityType: string = 'page'): boolean => {
+  const accessLevel = getAccessLevel(entity, entityType);
+  return accessLevel !== 'none';
+};
+
+// Holt das AccessLevel für eine Entity
+const getAccessLevel = (entity: string, entityType: string = 'page'): AccessLevel => {
+  const permission = permissions.find(
+    p => p.entity === entity && p.entityType === entityType
+  );
+  return permission ? convertLegacyAccessLevel(permission.accessLevel) : 'none';
+};
+
+// Prüft ob User alle Daten sehen darf (nicht nur eigene)
+const canSeeAllData = (entity: string, entityType: string = 'page'): boolean => {
+  const accessLevel = getAccessLevel(entity, entityType);
+  return accessLevel === 'all_both' || accessLevel === 'all_read';
 };
 ```
 
@@ -169,10 +223,17 @@ const hasPermission = (
 
 ```tsx
 // Seitenzugriff prüfen (für Navigation)
-{hasPermission('dashboard', 'read') && <DashboardLink />}
+{canView('dashboard', 'page') && <DashboardLink />}
 
-// Tabellenaktion prüfen (für CRUD-Operationen)
-{hasPermission('tasks', 'write', 'table') && <CreateTaskButton />}
+// Tab-Sichtbarkeit prüfen
+{canView('todos', 'tab') && <TodosTab />}
+
+// Button-Berechtigung prüfen
+{hasPermission('task_create', 'write', 'button') && <CreateTaskButton />}
+
+// AccessLevel für Datenfilterung
+const accessLevel = getAccessLevel('payroll_reports', 'tab');
+const showUserDropdown = canSeeAllData('payroll_reports', 'tab');
 ```
 
 ## Beispiel-Nutzung
