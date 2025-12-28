@@ -60,10 +60,10 @@ class BranchCache {
                 // ✅ SICHERHEIT: getDataIsolationFilter berücksichtigen
                 const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
                 // ✅ PERFORMANCE: READ-Operation OHNE executeWithRetry (blockiert nicht bei vollem Pool)
+                // ✅ FIX: Lade ALLE Branches des Users (nicht nur lastUsed), damit Frontend alle anzeigen kann
                 const userBranches = yield prisma_1.prisma.usersBranches.findMany({
                     where: {
                         userId: userId,
-                        lastUsed: true,
                         branch: branchFilter // ✅ Datenisolation!
                     },
                     include: {

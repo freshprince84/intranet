@@ -833,14 +833,24 @@ const Requests: React.FC = () => {
 
   // getActiveFilterCount wird direkt inline verwendet (filterConditions.length)
 
+  // Status-Priorität für Sortierung
+  const getRequestStatusPriority = (status: Request['status']): number => {
+    switch (status) {
+      case 'approval': return 1;
+      case 'to_improve': return 2;
+      case 'approved': return 3;
+      case 'denied': return 4;
+      default: return 99;
+    }
+  };
+
   const filteredAndSortedRequests = useMemo(() => {
     // ✅ FAKT: Wenn selectedFilterId gesetzt ist, wurden Requests bereits server-seitig gefiltert
     // ✅ FAKT: Wenn filterConditions gesetzt sind (ohne selectedFilterId), wurden Requests bereits server-seitig gefiltert
-    // ✅ FAKT: Wenn sortConfig gesetzt ist, wurden Requests bereits server-seitig sortiert
     // ✅ NUR searchTerm wird client-seitig gefiltert (nicht server-seitig)
     const requestsToFilter = requests;
     
-    return requestsToFilter
+    const filtered = requestsToFilter
       .filter(request => {
         // ✅ NUR Globale Suchfunktion (searchTerm) wird client-seitig angewendet
         if (searchTerm) {
@@ -862,8 +872,76 @@ const Requests: React.FC = () => {
         
         return true;
       });
-      // ❌ ENTFERNT: Client-seitige Sortierung, da Server jetzt sortiert (Phase 4)
-  }, [requests, searchTerm]);
+
+    // Hilfsfunktion zum Extrahieren von Werten für Sortierung
+    const getSortValue = (request: Request, columnId: string): any => {
+      switch (columnId) {
+        case 'title':
+          return request.title.toLowerCase();
+        case 'status':
+          return getRequestStatusPriority(request.status);
+        case 'requestedBy':
+        case 'requestedBy.firstName':
+          return `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
+        case 'responsible':
+        case 'responsible.firstName':
+          return `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
+        case 'branch':
+        case 'branch.name':
+          return request.branch.name.toLowerCase();
+        case 'dueDate':
+          return request.dueDate ? new Date(request.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+        case 'type':
+          return request.type?.toLowerCase() || '';
+        case 'description':
+          return (request.description || '').toLowerCase();
+        default:
+          return '';
+      }
+    };
+    
+    const sorted = filtered.sort((a, b) => {
+      // Hauptsortierung (sortConfig) - für Table & Card gleich (synchron)
+      if (sortConfig.key) {
+        const valueA = getSortValue(a, sortConfig.key);
+        const valueB = getSortValue(b, sortConfig.key);
+        
+        let comparison = 0;
+        if (typeof valueA === 'number' && typeof valueB === 'number') {
+          comparison = valueA - valueB;
+        } else {
+          // ✅ OPTIMIERUNG: Vermeide String() Konvertierung wenn bereits String
+          const strA = typeof valueA === 'string' ? valueA : String(valueA);
+          const strB = typeof valueB === 'string' ? valueB : String(valueB);
+          comparison = strA.localeCompare(strB);
+        }
+        
+        if (comparison !== 0) {
+          return sortConfig.direction === 'asc' ? comparison : -comparison;
+        }
+      }
+      
+      // Fallback: Standardsortierung (wenn keine benutzerdefinierte Sortierung)
+      const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      
+      if (aDate !== bDate) {
+        return aDate - bDate;
+      }
+      
+      const aStatusPrio = getRequestStatusPriority(a.status);
+      const bStatusPrio = getRequestStatusPriority(b.status);
+      
+      if (aStatusPrio !== bStatusPrio) {
+        return aStatusPrio - bStatusPrio;
+      }
+      
+      // ✅ OPTIMIERUNG: toLowerCase() für konsistente Sortierung
+      return a.title.toLowerCase().localeCompare(b.title.toLowerCase());
+    });
+    
+    return sorted;
+  }, [requests, searchTerm, sortConfig]);
 
   // ✅ MEMORY-LEAK-FIX: Ref für aktuelle Operatoren (verhindert fetchRequests-Recreation)
   const filterLogicalOperatorsRef = useRef(filterLogicalOperators);
