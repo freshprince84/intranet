@@ -187,13 +187,33 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                     emailSubject: '',
                     emailContent: ''
                 }
+            },
+            groupCheckInInvitation: {
+                en: {
+                    whatsappTemplateName: '',
+                    whatsappTemplateParams: [] as string[],
+                    emailSubject: '',
+                    emailContent: ''
+                },
+                es: {
+                    whatsappTemplateName: '',
+                    whatsappTemplateParams: [] as string[],
+                    emailSubject: '',
+                    emailContent: ''
+                },
+                de: {
+                    whatsappTemplateName: '',
+                    whatsappTemplateParams: [] as string[],
+                    emailSubject: '',
+                    emailContent: ''
+                }
             }
         },
         autoSendReservationInvitation: false
     });
     const [activeSettingsTab, setActiveSettingsTab] = useState<'whatsapp' | 'lobbypms' | 'boldpayment' | 'doorsystem' | 'email' | 'messages'>('whatsapp');
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
-    const [selectedTemplateType, setSelectedTemplateType] = useState<'checkInInvitation' | 'checkInConfirmation'>('checkInInvitation');
+    const [selectedTemplateType, setSelectedTemplateType] = useState<'checkInInvitation' | 'checkInConfirmation' | 'groupCheckInInvitation'>('checkInInvitation');
     const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'es' | 'de'>('en');
     const [searchTerm, setSearchTerm] = useState('');
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -354,6 +374,26 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                         emailSubject: '',
                         emailContent: ''
                     }
+                },
+                groupCheckInInvitation: {
+                    en: {
+                        whatsappTemplateName: '',
+                        whatsappTemplateParams: [] as string[],
+                        emailSubject: '',
+                        emailContent: ''
+                    },
+                    es: {
+                        whatsappTemplateName: '',
+                        whatsappTemplateParams: [] as string[],
+                        emailSubject: '',
+                        emailContent: ''
+                    },
+                    de: {
+                        whatsappTemplateName: '',
+                        whatsappTemplateParams: [] as string[],
+                        emailSubject: '',
+                        emailContent: ''
+                    }
                 }
             },
             autoSendReservationInvitation: false
@@ -472,6 +512,11 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                     de: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' }
                 },
                 checkInConfirmation: {
+                    en: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
+                    es: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
+                    de: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' }
+                },
+                groupCheckInInvitation: {
                     en: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
                     es: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
                     de: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' }
@@ -2743,7 +2788,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                         </label>
                                                                         <select
                                                                             value={selectedTemplateType}
-                                                                            onChange={(e) => setSelectedTemplateType(e.target.value as 'checkInInvitation' | 'checkInConfirmation')}
+                                                                            onChange={(e) => setSelectedTemplateType(e.target.value as 'checkInInvitation' | 'checkInConfirmation' | 'groupCheckInInvitation')}
                                                                             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
                                                                         >
                                                                             <option value="checkInInvitation">
@@ -2751,6 +2796,9 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                             </option>
                                                                             <option value="checkInConfirmation">
                                                                                 {t('branches.messageType.checkInConfirmation', { defaultValue: 'Check-in-Bestätigung' })}
+                                                                            </option>
+                                                                            <option value="groupCheckInInvitation">
+                                                                                {t('branches.messageType.groupCheckInInvitation', { defaultValue: 'Gruppen-Einladung (mehrere Betten)' })}
                                                                             </option>
                                                                         </select>
                                                                     </div>
@@ -2897,7 +2945,9 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                                                                                         <span className="font-mono">
                                                                                             {selectedTemplateType === 'checkInInvitation' 
                                                                                                 ? t('branches.templateVariables.checkInInvitation', { defaultValue: '{{guestName}}, {{checkInLink}}, {{paymentLink}}' })
-                                                                                                : t('branches.templateVariables.checkInConfirmation', { defaultValue: '{{guestName}}, {{roomDisplay}}, {{doorPin}}, {{doorAppName}}' })
+                                                                                                : selectedTemplateType === 'groupCheckInInvitation'
+                                                                                                    ? t('branches.templateVariables.groupCheckInInvitation', { defaultValue: '{{guestName}}, {{bedsCount}}, {{reservationList}}, {{totalAmount}}, {{combinedPaymentLink}}, {{checkInLink}}' })
+                                                                                                    : t('branches.templateVariables.checkInConfirmation', { defaultValue: '{{guestName}}, {{roomDisplay}}, {{doorPin}}, {{doorAppName}}' })
                                                                                             }
                                                                                         </span>
                                                                                     </p>
