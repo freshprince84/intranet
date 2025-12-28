@@ -140,7 +140,14 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
       case 'monthlyConsultationReport':
       case 'cerebroCarticle':
       case 'carticle':
-        return { organizationId: req.organizationId };
+        // Artikel mit organizationId: null sind globale Artikel und sollten immer angezeigt werden
+        // Artikel mit organizationId: req.organizationId gehören zur Organisation
+        return {
+          OR: [
+            { organizationId: null },
+            { organizationId: req.organizationId }
+          ]
+        };
       case 'user':
         return {
           roles: {
@@ -316,14 +323,17 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
     case 'monthlyConsultationReport':
     case 'cerebroCarticle':
     case 'carticle':
-      // Einfache Filterung nach organizationId
-      // WICHTIG: Wenn organizationId null/undefined ist, gibt es keine Ergebnisse
+      // Artikel mit organizationId: null sind globale Artikel und sollten immer angezeigt werden
+      // Artikel mit organizationId: req.organizationId gehören zur Organisation
       if (!req.organizationId) {
-        // Keine Organisation: Garantiert keine Ergebnisse (sicherer als leeres Objekt)
-        return { id: -1 };
+        // Standalone User: Nur globale Artikel (organizationId: null)
+        return { organizationId: null };
       }
       return {
-        organizationId: req.organizationId
+        OR: [
+          { organizationId: null },
+          { organizationId: req.organizationId }
+        ]
       };
     
     case 'user':
