@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { cerebroApi, CerebroArticleDetail, CerebroExternalLink } from '../../api/cerebroApi.ts';
+import { cerebroApi, CerebroArticleDetail } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import GitHubMarkdownViewer from './GitHubMarkdownViewer.tsx';
 import MarkdownPreview from '../MarkdownPreview.tsx';
@@ -54,9 +54,6 @@ const ArticleView: React.FC = () => {
   const [article, setArticle] = useState<CerebroArticleDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [githubLinks, setGithubLinks] = useState<CerebroExternalLink[]>([]);
-  const [selectedGithubLink, setSelectedGithubLink] = useState<CerebroExternalLink | null>(null);
-  const [isInternalDocument, setIsInternalDocument] = useState<boolean>(false);
   
   // Überprüfen der Berechtigungen an die richtigen Berechtigungen anpassen
   const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
@@ -72,15 +69,6 @@ const ArticleView: React.FC = () => {
         // Artikel und verknüpfte Daten laden
         const articleData = await cerebroApi.articles.getArticleBySlug(slug);
         setArticle(articleData);
-        
-        // Sortiere GitHub-Markdown Links
-        const github = articleData.externalLinks.filter(link => link.type === 'github_markdown');
-        
-        setGithubLinks(github);
-        
-        // selectedGithubLink wird später in checkIfInternalDocument gesetzt
-        // Nur für interne Dokumente wird ein GitHub-Link ausgewählt
-        
         setError(null);
       } catch (err) {
         console.error('Fehler beim Laden des Artikels:', err);
@@ -93,34 +81,6 @@ const ArticleView: React.FC = () => {
     fetchArticle();
   }, [slug]);
   
-  // Prüfe, ob Artikel ein internes Dokument ist (nur für interne Dokumente werden GitHub-Tabs angezeigt)
-  useEffect(() => {
-    const checkIfInternalDocument = async () => {
-      if (!article) return;
-      
-      // Prüfe, ob Artikel ein internes Dokument ist
-      // Ein Artikel ist ein internes Dokument, wenn er einen githubPath hat
-      const isInternal = article.githubPath !== null;
-      
-      setIsInternalDocument(isInternal);
-      
-      // Nur für interne Dokumente: GitHub-Link auswählen
-      if (isInternal && githubLinks.length > 0) {
-        setSelectedGithubLink(githubLinks[0]);
-      } else {
-        // Für normale Artikel: Kein GitHub-Link ausgewählt
-        setSelectedGithubLink(null);
-      }
-    };
-    
-    if (article) {
-      checkIfInternalDocument();
-    } else {
-      // Kein Artikel geladen = definitiv kein internes Dokument
-      setIsInternalDocument(false);
-      setSelectedGithubLink(null);
-    }
-  }, [article, githubLinks]);
   
   const handleDeleteArticle = async () => {
     if (!article || !window.confirm(t('cerebro.messages.deleteConfirm'))) {
@@ -161,71 +121,20 @@ const ArticleView: React.FC = () => {
   
   // Artikel-Komponente rendern
   const renderContent = () => {
-    // Nur für interne Dokumente: GitHub-Markdown anzeigen, wenn ausgewählt
-    if (isInternalDocument && selectedGithubLink) {
-      // GitHub-Markdown-Links parsen
-      const parseGitHubUrl = (url: string): { owner: string; repo: string; path: string; branch: string; } | null => {
-        try {
-          let owner = '';
-          let repo = '';
-          let path = '';
-          let branch = '';
-          
-          if (url.includes('raw.githubusercontent.com')) {
-            const parts = url.replace('https://raw.githubusercontent.com/', '').split('/');
-            owner = parts[0];
-            repo = parts[1];
-            branch = parts[2];
-            path = parts.slice(3).join('/');
-          } else if (url.includes('github.com')) {
-            const parts = url.replace('https://github.com/', '').split('/');
-            owner = parts[0];
-            repo = parts[1];
-            const typeIndex = parts.indexOf('blob') !== -1 ? parts.indexOf('blob') : parts.indexOf('raw');
-            branch = parts[typeIndex + 1];
-            path = parts.slice(typeIndex + 2).join('/');
-          } else {
-            return null;
-          }
-          
-          return { owner, repo, path, branch };
-        } catch (err) {
-          console.error('Fehler beim Parsen der GitHub-URL:', err);
-          return null;
-        }
-      };
-      
-      const githubInfo = parseGitHubUrl(selectedGithubLink.url);
-      
-      if (githubInfo) {
-        return (
-          <div>
-            <div className="bg-gray-100 p-2 rounded mb-4 flex justify-between items-center text-xs">
-              <div>
-                <span className="font-mono text-gray-600">{githubInfo.owner}/{githubInfo.repo}/{githubInfo.path}</span>
-                <span className="ml-2 px-2 py-1 bg-gray-200 rounded">{githubInfo.branch}</span>
-              </div>
-              <a 
-                href={selectedGithubLink.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 flex items-center"
-              >
-                <Icon.Link /> {t('cerebro.actions.viewOnGitHub')}
-              </a>
-            </div>
-            <GitHubMarkdownViewer
-              owner={githubInfo.owner}
-              repo={githubInfo.repo}
-              path={githubInfo.path}
-              branch={githubInfo.branch}
-            />
-          </div>
-        );
-      }
+    // EINFACHE REGEL: githubPath vorhanden → von GitHub laden, sonst → aus DB
+    if (article.githubPath) {
+      // Content von GitHub laden
+      return (
+        <GitHubMarkdownViewer
+          owner="freshprince84"
+          repo="intranet"
+          path={article.githubPath}
+          branch="main"
+        />
+      );
     }
     
-    // Generiere attachmentMetadata aus Medien
+    // Content aus Datenbank anzeigen
     const attachmentMetadata = article.media.map(media => ({
       id: parseInt(media.id, 10),
       fileName: media.filename,
@@ -233,11 +142,6 @@ const ArticleView: React.FC = () => {
       url: getCerebroMediaUrl(parseInt(media.id, 10))
     }));
     
-    // WICHTIG: Zeige ALLE Medien IMMER separat an, unabhängig davon, ob sie im Content referenziert sind
-    // Der Markdown-Link im Content ist optional und zeigt nur einen Link (keine Vorschau)
-    // Die separate Anzeige zeigt IMMER die Vorschau (wie bei Requests & Tasks)
-    
-    // MarkdownPreview mit showImagePreview verwenden
     return (
       <div>
         <MarkdownPreview 
@@ -386,40 +290,7 @@ const ArticleView: React.FC = () => {
       </div>
       
       <div className="mb-6">
-        {/* GitHub-Links als Tabs anzeigen, NUR für interne Dokumente */}
-        {githubLinks.length > 0 && isInternalDocument && (
-          <div className="mb-4">
-            <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
-              <div className="flex">
-                {githubLinks.map(link => (
-                  <button
-                    key={link.id}
-                    className={`py-2 px-4 font-medium text-sm ${
-                      selectedGithubLink?.id === link.id
-                        ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                    }`}
-                    onClick={() => setSelectedGithubLink(link)}
-                  >
-                    {link.title || 'GitHub'}
-                  </button>
-                ))}
-                <button
-                  className={`py-2 px-4 font-medium text-sm ${
-                    !selectedGithubLink
-                      ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                  onClick={() => setSelectedGithubLink(null)}
-                >
-                  {t('cerebro.article')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Inhalt des Artikels oder ausgewählter GitHub-Markdown */}
+        {/* Inhalt des Artikels */}
         <div className="prose dark:prose-invert max-w-full overflow-x-hidden">
           {renderContent()}
         </div>

@@ -213,10 +213,11 @@ async function importMarkdownFile(
 
     if (existing) {
       // Aktualisiere bestehenden Artikel
+      // WICHTIG: content auf null setzen, da Content von GitHub geladen wird
       await prisma.cerebroCarticle.update({
         where: { id: existing.id },
         data: {
-          content,
+          content: null,
           parentId,
           githubPath: filePath,
           isPublished: true
@@ -225,10 +226,11 @@ async function importMarkdownFile(
       console.log(`✅ Aktualisiert: ${title}`);
     } else {
       // Erstelle neuen Artikel
+      // WICHTIG: content auf null setzen, da Content von GitHub geladen wird
       await prisma.cerebroCarticle.create({
         data: {
           title,
-          content,
+          content: null,
           slug,
           parentId,
           createdById: adminUserId,
