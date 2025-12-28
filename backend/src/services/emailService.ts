@@ -1071,9 +1071,9 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
     : 'Arial, sans-serif';
 
   // Logo-HTML (falls vorhanden) - Größe wie im Frontend (h-10 = 40px)
-  // WICHTIG: max-width und max-height für E-Mail-Client-Kompatibilität (Outlook ignoriert oft CSS)
+  // WICHTIG: HTML-Attribute width/height für Outlook zwingend erforderlich!
   const logoHtml = logo
-    ? `<img src="${logo}" alt="${headerTitle}" style="height: 40px; max-height: 40px; width: auto; max-width: 200px; display: block;" />`
+    ? `<img src="${logo}" alt="${headerTitle}" height="40" style="height: 40px; width: auto; border: 0; display: block;" />`
     : '';
 
   return `
@@ -1098,48 +1098,22 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
       overflow: hidden;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 20px;
-      background-color: transparent;
-      border-bottom: 1px solid #e5e7eb;
+    /* Outlook-kompatible Button-Styles */
+    .button-table {
+      margin: 10px 0;
     }
-    .header h1 {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 600;
-      color: ${primaryColor};
-    }
-    .logo-container {
-      display: flex;
-      align-items: center;
-    }
-    .logo-container img {
-      height: 40px;
-      max-height: 40px;
-      width: auto;
-      max-width: 200px;
-      display: block;
-      object-fit: contain;
-    }
-    .content {
-      padding: 30px;
-      background-color: #ffffff;
-    }
-    .button {
-      display: inline-block;
-      padding: 12px 24px;
+    .button-cell {
       background-color: ${buttonColor};
-      color: white;
-      text-decoration: none;
       border-radius: 6px;
-      margin: 10px 5px;
+      padding: 12px 24px;
+      text-align: center;
     }
-    .button:hover {
-      opacity: 0.9;
+    .button-link {
+      color: #ffffff !important;
+      text-decoration: none !important;
+      font-weight: bold;
+      display: inline-block;
+      font-family: ${fontFamily};
     }
     .footer {
       text-align: center;
@@ -1153,13 +1127,22 @@ export const generateEmailTemplate = (options: EmailTemplateOptions): string => 
 </head>
 <body>
   <div class="email-wrapper">
-    <div class="header">
-      ${headerTitle ? `<h1>${headerTitle}</h1>` : ''}
-      ${logoHtml ? `<div class="logo-container">${logoHtml}</div>` : ''}
-    </div>
-    <div class="content">
+    <!-- Header Tabelle für Outlook -->
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: transparent; border-bottom: 1px solid #e5e7eb;">
+      <tr>
+        <td align="left" style="padding: 20px;">
+          ${headerTitle ? `<h1 style="margin: 0; font-size: 20px; font-weight: 600; color: ${primaryColor};">${headerTitle}</h1>` : ''}
+        </td>
+        <td align="right" style="padding: 20px;">
+          ${logoHtml}
+        </td>
+      </tr>
+    </table>
+    
+    <div class="content" style="padding: 30px; background-color: #ffffff;">
       ${content}
     </div>
+    
     <div class="footer">
       <p>${footerText}</p>
     </div>

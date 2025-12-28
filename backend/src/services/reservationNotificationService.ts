@@ -928,9 +928,9 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           let emailHtmlContent = emailMessage
             .replace(/\n/g, '<br>')
             .replace(new RegExp(checkInLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
-              `<br><a href="${checkInLink}" class="button">${checkInLabel}</a>`)
+              ReservationNotificationService.generateButtonHtml(checkInLabel, checkInLink, buttonColor))
             .replace(new RegExp(paymentLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
-              `<br><a href="${paymentLink}" class="button">${paymentLabel}</a>`);
+              ReservationNotificationService.generateButtonHtml(paymentLabel, paymentLink, buttonColor));
           
           const emailTemplate = await this.getMessageTemplate(
             reservation.branchId,
@@ -1121,11 +1121,21 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
   }
 
   /**
+   * @deprecated Verwende stattdessen sendPasscodeNotification()
    * Generiert PIN-Code und sendet Mitteilung (unabhängig von Check-in-Status)
    * 
    * @param reservationId - ID der Reservierung
    */
   static async generatePinAndSendNotification(reservationId: number): Promise<void> {
+    // Delegiere an sendPasscodeNotification für Vereinheitlichung
+    return this.sendPasscodeNotification(reservationId);
+  }
+
+  /**
+   * @deprecated Diese Methode wird nicht mehr verwendet - Code bleibt für Referenz
+   * Alte Implementierung von generatePinAndSendNotification
+   */
+  private static async _oldGeneratePinAndSendNotification(reservationId: number): Promise<void> {
     try {
       const reservation = await prisma.reservation.findUnique({
         where: { id: reservationId },
@@ -2097,11 +2107,22 @@ ${contentText}
   }
 
   /**
+   * @deprecated Verwende stattdessen sendPasscodeNotification()
    * Sendet Check-in-Bestätigung nach erfolgreichem Check-in
    * 
    * @param reservationId - ID der Reservierung
    */
   static async sendCheckInConfirmation(reservationId: number): Promise<void> {
+    // Delegiere an sendPasscodeNotification für Vereinheitlichung
+    // WICHTIG: Status-Prüfung muss vorher im Aufrufer erfolgen!
+    return this.sendPasscodeNotification(reservationId);
+  }
+
+  /**
+   * @deprecated Diese Methode wird nicht mehr verwendet - Code bleibt für Referenz
+   * Alte Implementierung von sendCheckInConfirmation
+   */
+  private static async _oldSendCheckInConfirmation(reservationId: number): Promise<void> {
     try {
       const reservation = await prisma.reservation.findUnique({
         where: { id: reservationId },
@@ -2221,6 +2242,42 @@ ${contentText}
   }
 
   /**
+   * @deprecated Diese Methode wird nicht mehr verwendet - Code bleibt für Referenz
+   * Alte Implementierung von sendCheckInConfirmation
+   */
+  private static async _oldSendCheckInConfirmation(reservationId: number): Promise<void> {
+    try {
+      const reservation = await prisma.reservation.findUnique({
+        where: { id: reservationId },
+        include: { organization: true, branch: true }
+      });
+
+      if (!reservation) {
+        throw new Error(`Reservierung ${reservationId} nicht gefunden`);
+      }
+
+      if (reservation.status !== ReservationStatus.checked_in) {
+        throw new Error(`Reservierung ${reservationId} ist nicht eingecheckt`);
+      }
+
+  /**
+   * Generiert einen Outlook-kompatiblen Button (HTML-Tabelle)
+   */
+  private static generateButtonHtml(text: string, url: string, color: string = '#2563eb'): string {
+    return `
+      <table class="button-table" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td class="button-cell" align="center" bgcolor="${color}" style="background-color: ${color}; border-radius: 6px; padding: 12px 24px;">
+            <a href="${url}" class="button-link" target="_blank" style="font-family: Arial, sans-serif; color: #ffffff; text-decoration: none; font-weight: bold; display: inline-block;">
+              ${text}
+            </a>
+          </td>
+        </tr>
+      </table>
+    `.trim();
+  }
+
+  /**
    * Sendet Check-in-Einladung per E-Mail
    */
   private static async sendCheckInInvitationEmail(
@@ -2257,6 +2314,9 @@ ${contentText}
     }
 
     const linkColor = branding?.colors?.primary || '#2563eb';
+    const checkInButton = this.generateButtonHtml(isEnglish ? 'Online Check-in' : 'Check-in en línea', checkInLink, linkColor);
+    const paymentButton = this.generateButtonHtml(isEnglish ? 'Make Payment' : 'Realizar pago', paymentLink, linkColor);
+
     let subject: string;
     let content: string;
     let text: string;
@@ -2269,8 +2329,13 @@ ${contentText}
         <p>We are pleased to welcome you to La Familia Hostel! 🎊</p>
         <p>In case that you arrive after 18:00 or before 09:00, our recepcion 🛎️ will be closed.</p>
         <p>We would then kindly ask you to complete check-in & payment online in advance:</p>
-        <p><strong>Check-In:</strong><br><a href="${checkInLink}" class="button">Online Check-in</a></p>
-        <p><strong>Please make the payment in advance:</strong><br><a href="${paymentLink}" class="button">Make Payment</a></p>
+        
+        <p><strong>Check-In:</strong></p>
+        ${checkInButton}
+        
+        <p><strong>Please make the payment in advance:</strong></p>
+        ${paymentButton}
+        
         <p>Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.</p>
         <p>Thank you!</p>
         <p>We look forward to seeing you soon!</p>
@@ -2307,8 +2372,13 @@ We look forward to seeing you soon!
         <p>¡Nos complace darte la bienvenida a La Familia Hostel! 🎊</p>
         <p>En caso de que llegues después de las 18:00 o antes de las 09:00, nuestra recepción 🛎️ estará cerrada.</p>
         <p>Te pedimos amablemente que completes el check-in y el pago en línea con anticipación:</p>
-        <p><strong>Check-In:</strong><br><a href="${checkInLink}" class="button">Check-in en línea</a></p>
-        <p><strong>Por favor, realiza el pago por adelantado:</strong><br><a href="${paymentLink}" class="button">Realizar pago</a></p>
+        
+        <p><strong>Check-In:</strong></p>
+        ${checkInButton}
+        
+        <p><strong>Por favor, realiza el pago por adelantado:</strong></p>
+        ${paymentButton}
+        
         <p>Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.</p>
         <p>¡Gracias!</p>
         <p>¡Esperamos verte pronto!</p>
