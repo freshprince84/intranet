@@ -1156,7 +1156,7 @@ const updateInvoiceSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
 exports.updateInvoiceSettings = updateInvoiceSettings;
 // Aktive Rolle eines Benutzers wechseln
 const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b, _c, _d;
     try {
         // Verwende entweder req.user?.id oder req.userId, falls verfügbar
         const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || parseInt(req.userId, 10);
@@ -1174,6 +1174,35 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
         });
         if (!newRole) {
             return res.status(404).json({ message: 'Rolle nicht gefunden' });
+        }
+        // ✅ Hole aktuelle aktive Rolle VOR der Transaktion (wird in Transaktion auf lastUsed=false gesetzt)
+        const currentActiveRole = yield prisma_1.prisma.userRole.findFirst({
+            where: {
+                userId,
+                lastUsed: true
+            },
+            include: {
+                role: {
+                    select: {
+                        organizationId: true
+                    }
+                }
+            }
+        });
+        // Prüfe, ob sich die Organisation geändert hat
+        // WICHTIG: Beide organizationId können null sein (Standardrollen ohne Organisation)
+        // In diesem Fall sollte die Branch NICHT wechseln (gleiche "null"-Organisation)
+        const currentOrgId = (_c = (_b = currentActiveRole === null || currentActiveRole === void 0 ? void 0 : currentActiveRole.role) === null || _b === void 0 ? void 0 : _b.organizationId) !== null && _c !== void 0 ? _c : null;
+        const newOrgId = (_d = newRole.organizationId) !== null && _d !== void 0 ? _d : null;
+        // Wenn die aktuelle Rolle die gleiche ist wie die neue Rolle, dann hat sich nichts geändert
+        const isSameRole = (currentActiveRole === null || currentActiveRole === void 0 ? void 0 : currentActiveRole.roleId) === roleId;
+        // Organisation hat sich geändert, wenn:
+        // 1. Keine aktuelle Rolle existiert (erster Rollenwechsel)
+        // 2. Es ist eine andere Rolle UND die Organisation ist unterschiedlich
+        const organizationChanged = !currentActiveRole || (!isSameRole && currentOrgId !== newOrgId);
+        // Debug-Log für Troubleshooting
+        if (process.env.NODE_ENV === 'development') {
+            logger_1.logger.log(`[switchUserRole] User ${userId}: currentRoleId=${currentActiveRole === null || currentActiveRole === void 0 ? void 0 : currentActiveRole.roleId}, newRoleId=${roleId}, isSameRole=${isSameRole}, currentOrgId=${currentOrgId}, newOrgId=${newOrgId}, organizationChanged=${organizationChanged}`);
         }
         // Transaktion starten - alle Prisma-Operationen innerhalb der Transaktion
         yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
@@ -1194,9 +1223,9 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 where: { id: userRole.id },
                 data: { lastUsed: true }
             });
-            // ✅ Branch für neue Organisation aktivieren
+            // ✅ Branch nur wechseln, wenn sich die Organisation geändert hat
             // Branches sind pro Organisation - bei Org-Wechsel muss die Branch der neuen Org aktiviert werden
-            if (newRole.organizationId) {
+            if (newRole.organizationId && organizationChanged) {
                 // Alle Branches auf lastUsed=false
                 yield tx.usersBranches.updateMany({
                     where: { userId },

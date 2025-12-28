@@ -1454,8 +1454,23 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
         });
         
         // Prüfe, ob sich die Organisation geändert hat
-        const organizationChanged = !currentActiveRole || 
-            currentActiveRole.role.organizationId !== newRole.organizationId;
+        // WICHTIG: Beide organizationId können null sein (Standardrollen ohne Organisation)
+        // In diesem Fall sollte die Branch NICHT wechseln (gleiche "null"-Organisation)
+        const currentOrgId = currentActiveRole?.role?.organizationId ?? null;
+        const newOrgId = newRole.organizationId ?? null;
+        
+        // Wenn die aktuelle Rolle die gleiche ist wie die neue Rolle, dann hat sich nichts geändert
+        const isSameRole = currentActiveRole?.roleId === roleId;
+        
+        // Organisation hat sich geändert, wenn:
+        // 1. Keine aktuelle Rolle existiert (erster Rollenwechsel)
+        // 2. Es ist eine andere Rolle UND die Organisation ist unterschiedlich
+        const organizationChanged = !currentActiveRole || (!isSameRole && currentOrgId !== newOrgId);
+        
+        // Debug-Log für Troubleshooting
+        if (process.env.NODE_ENV === 'development') {
+            logger.log(`[switchUserRole] User ${userId}: currentRoleId=${currentActiveRole?.roleId}, newRoleId=${roleId}, isSameRole=${isSameRole}, currentOrgId=${currentOrgId}, newOrgId=${newOrgId}, organizationChanged=${organizationChanged}`);
+        }
         
         // Transaktion starten - alle Prisma-Operationen innerhalb der Transaktion
         await prisma.$transaction(async (tx) => {

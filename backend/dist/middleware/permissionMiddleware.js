@@ -63,9 +63,12 @@ const OWNERSHIP_FIELDS = {
     'request_edit': ['requesterId', 'responsibleId'],
     'request_delete': ['requesterId'],
     // Tasks
-    'todos': ['responsibleId', 'qualityControlId', 'roleId'],
+    // ✅ FIX: roleId entfernt für own_both - nur responsibleId und qualityControlId
+    // roleId wird nur verwendet, wenn accessLevel all_both ist (siehe getDataIsolationFilter)
+    'todos': ['responsibleId', 'qualityControlId'],
     'task_create': ['responsibleId'],
-    'task_edit': ['responsibleId', 'qualityControlId', 'roleId'],
+    // ✅ FIX: roleId entfernt für own_both - nur responsibleId und qualityControlId
+    'task_edit': ['responsibleId', 'qualityControlId'],
     'task_delete': ['responsibleId'],
     // Reservations
     'reservations': ['branchId'],

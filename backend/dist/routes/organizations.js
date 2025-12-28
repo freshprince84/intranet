@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const organization_1 = require("../middleware/organization");
+const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
 const organizationController_1 = require("../controllers/organizationController");
 const joinRequestController_1 = require("../controllers/joinRequestController");
 const router = express_1.default.Router();
@@ -30,7 +31,8 @@ router.get('/current', organizationController_1.getCurrentOrganization);
 router.get('/current/stats', organizationController_1.getOrganizationStats);
 router.get('/current/language', organizationController_1.getOrganizationLanguage);
 router.put('/current/language', organizationController_1.updateOrganizationLanguage);
-router.put('/current', organizationController_1.updateCurrentOrganization);
+// ✅ FIX: Organisation Bearbeitung erfordert organization_edit Button-Berechtigung
+router.put('/current', (0, permissionMiddleware_1.checkPermission)('organization_edit', 'write', 'button'), organizationController_1.updateCurrentOrganization);
 // Join Request Routen
 router.get('/join-requests', organizationController_1.getJoinRequests);
 router.patch('/join-requests/:id', joinRequestController_1.processJoinRequest);
