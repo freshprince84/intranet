@@ -327,19 +327,15 @@ const GitHubFileView: React.FC = () => {
         // Überprüfe, ob es einen Datenbankartikel mit diesem Slug gibt
         const article = await cerebroApi.articles.getArticleBySlug(slug);
         
-        // Prüfen, ob es ein GitHub Markdown-Artikel ist
-        // Dies wird in ArticleViewWithRouter bereits geprüft, aber wir prüfen es hier zur Sicherheit nochmal
-        const markdownFolder = await cerebroApi.articles.getArticleBySlug('markdown-folder');
-        if (markdownFolder && article.parentId === markdownFolder.id) {
-          // Hat der Artikel einen githubPath?
-          if (article.githubPath) {
-            setMdFile({
-              path: article.githubPath,
-              title: article.title
-            });
-            setLoading(false);
-            return;
-          }
+        // Prüfen, ob der Artikel einen githubPath hat
+        // Wenn ja, ist es ein GitHub Markdown-Artikel und sollte als Markdown-Datei angezeigt werden
+        if (article.githubPath) {
+          setMdFile({
+            path: article.githubPath,
+            title: article.title
+          });
+          setLoading(false);
+          return;
         }
         
         // Es handelt sich um einen normalen Artikel, also kein GitHub-Datei-Pfad notwendig
@@ -468,27 +464,11 @@ const ArticleViewWithRouter: React.FC = () => {
         setArticleExists(true);
         
         // Prüfe, ob der Artikel ein Markdown-Artikel ist
-        try {
-          const markdownFolder = await cerebroApi.articles.getArticleBySlug('markdown-folder');
-          
-          // Ein Artikel ist ein Markdown-Artikel, wenn:
-          // 1. Er ein Kind des markdown-folders ist ODER
-          // 2. Er einen githubPath hat
-          if ((markdownFolder && article.parentId === markdownFolder.id) || article.githubPath) {
-            setIsMarkdownFile(true);
-          } else {
-            setIsMarkdownFile(false);
-          }
-        } catch (err) {
-          // Wenn der Markdown-Ordner nicht gefunden wird, prüfe nur auf githubPath
-          if (process.env.NODE_ENV === 'development') {
-          console.warn('Markdown-Ordner nicht gefunden:', err);
-          }
-          if (article.githubPath) {
-            setIsMarkdownFile(true);
-          } else {
-            setIsMarkdownFile(false);
-          }
+        // Ein Artikel ist ein Markdown-Artikel, wenn er einen githubPath hat
+        if (article.githubPath) {
+          setIsMarkdownFile(true);
+        } else {
+          setIsMarkdownFile(false);
         }
         
         setLoading(false);
