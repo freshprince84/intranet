@@ -267,7 +267,7 @@ const getReservationCardMetadataFromColumnOrder = (columnOrder: string[]): strin
 const Worktracker: React.FC = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const { hasPermission, permissions, isAdmin } = usePermissions();
+    const { hasPermission, permissions, isAdmin, currentRole, canView } = usePermissions();
     const location = useLocation();
     const navigate = useNavigate();
     const { showMessage } = useMessage();
@@ -1020,6 +1020,88 @@ const Worktracker: React.FC = () => {
         initialize();
     }, [activeTab]); // ✅ STANDARD: Nur activeTab als Dependency (loadFilters ist stabil, Handler via Refs)
     
+    // ✅ ROLLENWECHSEL: Reagiere auf Rollenwechsel und lade Tasks neu
+    useEffect(() => {
+        // Nur neu laden wenn:
+        // 1. Initial Load bereits erfolgt ist (initialLoadAttemptedRef.current.todos === true)
+        // 2. currentRole vorhanden ist
+        // 3. currentRole sich geändert hat (durch Dependency)
+        // 4. Aktiver Tab ist 'todos'
+        if (!initialLoadAttemptedRef.current.todos || !currentRole || activeTab !== 'todos') {
+            return;
+        }
+        
+        const reload = async () => {
+            try {
+                // 1. Filter laden (wartet auf State-Update)
+                const filters = await loadFilters(TODOS_TABLE_ID);
+                
+                // 2. Default-Filter anwenden (zurücksetzen auf Default)
+                const defaultFilter = filters.find(f => f.name === 'Aktuell');
+                if (defaultFilter) {
+                    await handleFilterChangeRef.current(
+                        defaultFilter.name,
+                        defaultFilter.id,
+                        defaultFilter.conditions,
+                        defaultFilter.operators
+                    );
+                    return; // Daten werden durch handleFilterChangeRef geladen
+                }
+                
+                // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+                await loadTasks(undefined, undefined, false, 20, 0);
+            } catch (error) {
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('[Worktracker Tasks] Fehler beim Neuladen nach Rollenwechsel:', error);
+                }
+            }
+        };
+        
+        reload();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentRole?.id, activeTab]); // ✅ Nur currentRole?.id und activeTab als Dependencies - loadFilters, handleFilterChangeRef, loadTasks sind stabil
+    
+    // ✅ ROLLENWECHSEL: Reagiere auf Rollenwechsel und lade Reservations neu
+    useEffect(() => {
+        // Nur neu laden wenn:
+        // 1. Initial Load bereits erfolgt ist (initialLoadAttemptedRef.current.reservations === true)
+        // 2. currentRole vorhanden ist
+        // 3. currentRole sich geändert hat (durch Dependency)
+        // 4. Aktiver Tab ist 'reservations'
+        if (!initialLoadAttemptedRef.current.reservations || !currentRole || activeTab !== 'reservations') {
+            return;
+        }
+        
+        const reload = async () => {
+            try {
+                // 1. Filter laden (wartet auf State-Update)
+                const filters = await loadFilters(RESERVATIONS_TABLE_ID);
+                
+                // 2. Default-Filter anwenden (zurücksetzen auf Default)
+                const defaultFilter = filters.find(f => f.name === 'Hoy');
+                if (defaultFilter) {
+                    await handleReservationFilterChangeRef.current(
+                        defaultFilter.name,
+                        defaultFilter.id,
+                        defaultFilter.conditions,
+                        defaultFilter.operators
+                    );
+                    return; // Daten werden durch handleReservationFilterChangeRef geladen
+                }
+                
+                // 3. Fallback: Daten ohne Filter laden (sollte nie passieren)
+                await loadReservations(undefined, undefined, undefined, false, 20, 0);
+            } catch (error) {
+                if (process.env.NODE_ENV === 'development') {
+                    console.error('[Worktracker Reservations] Fehler beim Neuladen nach Rollenwechsel:', error);
+                }
+            }
+        };
+        
+        reload();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentRole?.id, activeTab]); // ✅ Nur currentRole?.id und activeTab als Dependencies - loadFilters, handleReservationFilterChangeRef, loadReservations sind stabil
+    
     // Infinite Scroll Handler für Tasks
     // ✅ PERFORMANCE: filterConditions als useRef verwenden (verhindert Re-Render-Loops)
     const filterConditionsRef = useRef(filterConditions);
@@ -1152,7 +1234,8 @@ const Worktracker: React.FC = () => {
     
     
     useEffect(() => {
-        if (activeTab === 'tourBookings' && hasPermission('tour_bookings', 'read', 'table')) {
+        // ✅ FIX: Verwende canView() für Tab-Sichtbarkeit
+        if (activeTab === 'tourBookings' && canView('tour_bookings', 'tab')) {
             loadTourBookings(false, 20, 0);
         }
     }, [activeTab]);
@@ -2226,7 +2309,8 @@ const Worktracker: React.FC = () => {
                                                 {t('reservations.title', 'Reservations')}
                                             </button>
                                         )}
-                                        {hasPermission('tour_bookings', 'read', 'table') && (
+                                        {/* ✅ FIX: Verwende canView() für Tab-Sichtbarkeit (analog zu reservations) */}
+                                        {canView('tour_bookings', 'tab') && (
                                             <button
                                                 onClick={() => setActiveTab('tourBookings')}
                                                 className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
@@ -3632,7 +3716,8 @@ const Worktracker: React.FC = () => {
                     {/* Header mit Create-Button */}
                     <div className="flex items-center gap-1.5">
                         {/* Create-Button - LINKS positioniert */}
-                        {hasPermission('tour_bookings', 'write', 'table') && (
+                        {/* ✅ FIX: tour_bookings als 'tab' prüfen, nicht 'table' */}
+                        {hasPermission('tour_bookings', 'write', 'tab') && (
                             <div className="relative group">
                                 <button
                                     onClick={() => setIsCreateTourBookingModalOpen(true)}
@@ -3844,7 +3929,8 @@ const Worktracker: React.FC = () => {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <div className="flex items-center gap-2">
-                                                        {hasPermission('tour_bookings', 'write', 'table') && (
+                                                        {/* ✅ FIX: tour_bookings als 'tab' prüfen, nicht 'table' */}
+                                                        {hasPermission('tour_bookings', 'write', 'tab') && (
                                                             <button
                                                                 onClick={() => {
                                                                     setSelectedBookingForEdit(booking);

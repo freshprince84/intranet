@@ -247,8 +247,8 @@ const OrganizationSettings: React.FC = () => {
                         {organization.domain || t('organization.noDomain')}
                       </p>
             </div>
-                    {/* ✅ FIX: Prüfe organization_edit Button-Berechtigung */}
-                    {(canManageOrganization() || hasPermission('organization_edit', 'write', 'button')) && (
+                    {/* ✅ FIX: Prüfe NUR organization_edit Button-Berechtigung (canManageOrganization entfernt) */}
+                    {hasPermission('organization_edit', 'write', 'button') && (
                       <button
                         onClick={() => {
                           // ✅ PERFORMANCE: Modal öffnet sofort - Settings werden im Modal geladen wenn benötigt
