@@ -477,6 +477,143 @@ export class BoldPaymentService {
   }
 
   /**
+   * Erstellt einen kombinierten Zahlungslink für mehrere Reservationen
+   * 
+   * Verwendet für Gruppen-Reservationen (gleicher Gast, gleiche Daten).
+   * Der Gesamtbetrag wird mit 5% Aufschlag berechnet.
+   * 
+   * @param reservations - Array von Reservationen
+   * @param totalAmount - Gesamtbetrag aller Reservationen
+   * @param currency - Währung (z.B. "COP")
+   * @param primaryReservationId - ID der primären Reservation (für Reference)
+   * @returns Payment Link URL
+   */
+  async createCombinedPaymentLink(
+    reservations: Array<{ id: number; guestName: string; amount?: any }>,
+    totalAmount: number,
+    currency: string = 'COP',
+    primaryReservationId: number
+  ): Promise<string> {
+    // Stelle sicher, dass Settings geladen sind
+    const needsLoadSettings = !this.apiUrl || 
+                              this.apiUrl === 'https://sandbox.bold.co' || 
+                              !this.merchantId;
+    
+    if (needsLoadSettings) {
+      await this.loadSettings();
+    }
+
+    try {
+      // Mindestbeträge prüfen
+      const MIN_AMOUNTS: Record<string, number> = {
+        'COP': 10000,
+        'USD': 1,
+        'EUR': 1,
+      };
+
+      const minAmount = MIN_AMOUNTS[currency] || 1;
+      if (totalAmount < minAmount) {
+        throw new Error(
+          `Betrag zu niedrig: ${totalAmount} ${currency}. Mindestbetrag: ${minAmount} ${currency}`
+        );
+      }
+
+      // 5% Aufschlag für Kartenzahlung hinzufügen
+      const CARD_PAYMENT_SURCHARGE_PERCENT = 0.05;
+      
+      let totalWithSurcharge: number;
+      if (currency === 'COP') {
+        const surcharge = Math.round(totalAmount * CARD_PAYMENT_SURCHARGE_PERCENT);
+        totalWithSurcharge = Math.round(totalAmount) + surcharge;
+      } else {
+        const surcharge = Math.round(totalAmount * CARD_PAYMENT_SURCHARGE_PERCENT * 100) / 100;
+        totalWithSurcharge = Math.round((totalAmount + surcharge) * 100) / 100;
+      }
+
+      // Reference mit GROUP-Prefix
+      const timestamp = Date.now();
+      const reference = `RES-GROUP-${primaryReservationId}-${timestamp}`.substring(0, 60);
+      
+      // Gastnamen aus erster Reservation
+      const guestName = reservations[0]?.guestName || 'Gast';
+      
+      // Beschreibung mit Anzahl Reservationen
+      const description = `Zahlung ${reservations.length} Reservierungen (${guestName}) inkl. 5%`.substring(0, 100);
+
+      logger.log(`[BoldPaymentService] createCombinedPaymentLink: ${reservations.length} Reservationen, Gesamtbetrag=${totalAmount} ${currency}, mit 5%=${totalWithSurcharge} ${currency}`);
+
+      const payload: any = {
+        amount_type: 'CLOSE',
+        amount: {
+          currency: currency,
+          total_amount: totalWithSurcharge,
+          subtotal: totalWithSurcharge,
+          taxes: [],
+          tip_amount: 0
+        },
+        reference: reference,
+        description: description
+      };
+
+      // callback_url falls https verfügbar
+      const appUrl = process.env.APP_URL;
+      if (appUrl && appUrl.startsWith('https://')) {
+        payload.callback_url = `${appUrl}/api/bold-payment/webhook`;
+      }
+
+      logger.log('[Bold Payment] Combined Payload:', JSON.stringify(payload, null, 2));
+
+      const response = await this.axiosInstance.post<{
+        payload?: {
+          payment_link: string;
+          url: string;
+        };
+        errors?: any[];
+      }>(
+        '/online/link/v1',
+        payload
+      );
+
+      const paymentLinkUrl = response.data.payload?.url;
+
+      if (paymentLinkUrl) {
+        logger.log(`[BoldPaymentService] ✅ Combined Payment-Link erstellt: ${paymentLinkUrl}`);
+        return paymentLinkUrl;
+      }
+
+      if (response.data.errors && response.data.errors.length > 0) {
+        const errorMessages = response.data.errors.map((e: any) => 
+          e.message || JSON.stringify(e)
+        ).join(', ');
+        throw new Error(`Bold Payment Fehler: ${errorMessages}`);
+      }
+
+      throw new Error('Ungültige Antwort von Bold Payment API');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<any>;
+        const status = axiosError.response?.status;
+        const responseData = axiosError.response?.data;
+        
+        logger.error('[Bold Payment] Combined API Error:', {
+          status,
+          data: responseData
+        });
+
+        let errorMessage = 'Unbekannter Fehler';
+        if (responseData?.errors && Array.isArray(responseData.errors)) {
+          errorMessage = responseData.errors.map((e: any) => e.message || JSON.stringify(e)).join('; ');
+        } else if (responseData?.message) {
+          errorMessage = responseData.message;
+        }
+        
+        throw new Error(`Bold Payment API Fehler (${status}): ${errorMessage}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Ruft den Status eines Zahlungslinks ab
    * 
    * Verwendet die "API Link de pagos" (Botón de pagos) von Bold Payment.
@@ -813,7 +950,7 @@ export class BoldPaymentService {
                   try {
                     logger.log(`[Bold Payment Webhook] Check-in-Link abgeschlossen/Check-in durchgeführt → versende PIN für Reservierung ${reservation.id}`);
                     const { ReservationNotificationService } = await import('./reservationNotificationService');
-                    await ReservationNotificationService.generatePinAndSendNotification(reservation.id);
+                    await ReservationNotificationService.sendPasscodeNotification(reservation.id);
                   } catch (error) {
                     logger.error(`[Bold Payment Webhook] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
                     // Fehler nicht weiterwerfen, da PIN-Versand optional ist

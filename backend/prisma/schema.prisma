@@ -1198,6 +1198,10 @@ model Reservation {
   guestNationality         String? // Nationalität des Gastes (für SIRE)
   guestPassportNumber      String? // Passnummer (für SIRE)
   guestBirthDate           DateTime? // Geburtsdatum (für SIRE)
+  // Gruppierung für zusammenhängende Reservationen (gleicher Gast, gleiche Daten, gleiche Kontaktdaten)
+  reservationGroupId       String? // Hash aus checkIn+checkOut+contact+branch für Gruppierung
+  isPrimaryInGroup         Boolean                      @default(true) // Primäre Reservation erhält die Mitteilung
+  combinedPaymentLink      String? // Zahlungslink für Gesamtbetrag der Gruppe
   organizationId           Int
   organization             Organization                 @relation(fields: [organizationId], references: [id])
   branchId                 Int? // NEU: Optional für Branch-Zuordnung
@@ -1219,6 +1223,7 @@ model Reservation {
   @@index([paymentStatus])
   @@index([paymentDeadline]) // Für automatische Stornierung
   @@index([autoCancelEnabled]) // Für automatische Stornierung
+  @@index([reservationGroupId]) // Für Gruppen-Abfragen
 }
 
 model ReservationSyncHistory {

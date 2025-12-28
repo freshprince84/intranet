@@ -117,6 +117,15 @@ export const createReservation = async (req: Request, res: Response) => {
       }
     });
 
+    // Gruppierung: Weise Reservation einer Gruppe zu
+    try {
+      const { ReservationGroupingService } = await import('../services/reservationGroupingService');
+      reservation = await ReservationGroupingService.assignToGroup(reservation) as any;
+    } catch (groupError) {
+      logger.warn(`[Reservation] Fehler bei Gruppenzuweisung für Reservierung ${reservation.id}:`, groupError);
+      // Fehler nicht weiterwerfen, da Gruppierung optional ist
+    }
+
     // Prüfe Einstellung: Automatischer Versand aktiviert?
     const organization = reservation.organization;
     const settings = organization.settings as any;
@@ -636,7 +645,7 @@ export const generatePinAndSendNotification = async (req: Request, res: Response
 
     // Rufe Service-Methode auf, die unabhängig vom Check-in-Status funktioniert
     try {
-    await ReservationNotificationService.generatePinAndSendNotification(reservationId);
+      await ReservationNotificationService.sendPasscodeNotification(reservationId);
       logger.log(`[Reservation] ✅ PIN-Generierung abgeschlossen für Reservierung ${reservationId}`);
     } catch (error) {
       logger.error(`[Reservation] ❌ Fehler bei PIN-Generierung für Reservierung ${reservationId}:`, error);

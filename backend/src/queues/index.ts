@@ -1,6 +1,5 @@
 import { Worker as BullMQWorker } from 'bullmq';
 import { createReservationWorker } from './workers/reservationWorker';
-import { createUpdateGuestContactWorker } from './workers/updateGuestContactWorker';
 import { createImageGenerationWorker } from './workers/imageGenerationWorker';
 import { checkQueueHealth, getRedisConnection } from '../services/queueService';
 import { logger } from '../utils/logger';
@@ -45,22 +44,6 @@ export async function startWorkers(): Promise<void> {
 
     reservationWorker.on('error', (err) => {
       logger.error('[Queue] ❌ Reservation Worker-Fehler:', err);
-    });
-
-    // Update Guest Contact Worker
-    const updateGuestContactWorker = createUpdateGuestContactWorker(connection);
-    workers.push(updateGuestContactWorker);
-
-    updateGuestContactWorker.on('completed', (job) => {
-      logger.log(`[Queue] ✅ UpdateGuestContact Job ${job.id} erfolgreich abgeschlossen`);
-    });
-
-    updateGuestContactWorker.on('failed', (job, err) => {
-      logger.error(`[Queue] ❌ UpdateGuestContact Job ${job?.id} fehlgeschlagen:`, err.message);
-    });
-
-    updateGuestContactWorker.on('error', (err) => {
-      logger.error('[Queue] ❌ UpdateGuestContact Worker-Fehler:', err);
     });
 
     // Image Generation Worker

@@ -6,10 +6,18 @@ import { logger } from '../utils/logger';
  * Service für die Synchronisation von Reservierungen von LobbyPMS API pro Branch
  * 
  * Ersetzt den Email-basierten Import durch API-basierten Import
+ * 
+ * Führt zwei getrennte Sync-Prozesse aus:
+ * 1. Import neuer Reservationen (creation_date >= letzte 24 Stunden)
+ * 2. Aktualisierung bestehender Reservationen (check_out_date >= heute)
  */
 export class LobbyPmsReservationSyncService {
   /**
    * Synchronisiert Reservierungen für einen Branch
+   * 
+   * Führt zwei getrennte Sync-Prozesse aus:
+   * 1. Import neuer Reservationen (creation_date >= letzte 24 Stunden)
+   * 2. Aktualisierung bestehender Reservationen (check_out_date >= heute)
    * 
    * @param branchId - Branch-ID
    * @param startDate - Startdatum (optional, default: heute)
@@ -82,11 +90,29 @@ export class LobbyPmsReservationSyncService {
       // Erstelle LobbyPMS Service für Branch
       const lobbyPmsService = await LobbyPmsService.createForBranch(branchId);
 
-      // Hole Reservierungen von LobbyPMS und synchronisiere sie
+      // 1. Import neuer Reservationen (letzte 24 Stunden)
       // fetchReservations filtert jetzt nach creation_date, nicht nach Check-in!
       const syncedCount = await lobbyPmsService.syncReservations(syncStartDate);
 
-      logger.log(`[LobbyPmsSync] Branch ${branchId}: ${syncedCount} Reservierungen synchronisiert`);
+      // 2. NEU: Aktualisiere bestehende Reservationen (check_out_date >= heute)
+      let updatedCount = 0;
+      try {
+        updatedCount = await lobbyPmsService.syncExistingReservations();
+        if (updatedCount > 0) {
+          logger.log(`[LobbyPmsSync] Branch ${branchId}: ${updatedCount} bestehende Reservationen aktualisiert`);
+        }
+      } catch (error) {
+        logger.error(`[LobbyPmsSync] Fehler beim Aktualisieren bestehender Reservationen für Branch ${branchId}:`, error);
+        // Fehler nicht weiterwerfen, da Import erfolgreich war
+        // Aktualisierung ist optional, Import ist kritisch
+      }
+
+      // Verbessertes Logging
+      if (syncedCount > 0 || updatedCount > 0) {
+        logger.log(`[LobbyPmsSync] Branch ${branchId}: ${syncedCount} neue Reservierungen importiert, ${updatedCount} bestehende Reservierungen aktualisiert`);
+      } else {
+        logger.log(`[LobbyPmsSync] Branch ${branchId}: Keine Änderungen (${syncedCount} neue, ${updatedCount} aktualisiert)`);
+      }
 
       // OPTIMIERUNG: Speichere erfolgreiche Sync-Zeit
       if (syncedCount >= 0) { // Auch bei 0 (keine neuen Reservierungen) speichern

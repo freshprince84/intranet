@@ -315,7 +315,6 @@ export const API_ENDPOINTS = {
     RESERVATIONS: {
         BASE: '/lobby-pms/reservations',
         BY_ID: (id: number) => `/lobby-pms/reservations/${id}`,
-        CHECK_IN: (id: number) => `/lobby-pms/reservations/${id}/check-in`,
         SYNC: '/lobby-pms/sync',
         SYNC_FULL: '/lobby-pms/sync-full', // ✅ MEMORY: Vollständiger Sync nach check_out_date
         VALIDATE: '/lobby-pms/validate',
@@ -327,7 +326,6 @@ export const API_ENDPOINTS = {
         BASE: '/reservations',
         CREATE: '/reservations',
         BY_ID: (id: number) => `/reservations/${id}`,
-        UPDATE_GUEST_CONTACT: (id: number) => `/reservations/${id}/guest-contact`,
         GENERATE_PIN_AND_SEND: (id: number) => `/reservations/${id}/generate-pin-and-send`,
         SEND_INVITATION: (id: number) => `/reservations/${id}/send-invitation`,
         SEND_PASSCODE: (id: number) => `/reservations/${id}/send-passcode`,

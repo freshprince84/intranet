@@ -142,6 +142,79 @@ Wir wünschen Ihnen einen angenehmen Aufenthalt!`
 };
 
 /**
+ * Default-Templates für Gruppen-Einladungen (mehrere Betten für gleichen Gast)
+ * Variablen: {{guestName}}, {{bedsCount}}, {{reservationList}}, {{totalAmount}}, {{combinedPaymentLink}}, {{checkInLink}}
+ */
+const DEFAULT_GROUP_CHECKIN_INVITATION_TEMPLATES = {
+  en: {
+    whatsappTemplateName: 'reservation_group_checkin_invitation_en',
+    whatsappTemplateParams: ['{{1}}', '{{2}}', '{{3}}', '{{4}}', '{{5}}'],
+    emailSubject: 'Welcome to La Familia Hostel - Group Reservation',
+    emailContent: `Hello {{guestName}},
+
+Thank you for your reservation of {{bedsCount}} beds! 🎊
+
+Here are your payment links:
+
+{{reservationList}}
+
+📌 Or pay everything together (Total: {{totalAmount}} + 5%):
+{{combinedPaymentLink}}
+
+Online Check-in:
+{{checkInLink}}
+
+Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.
+
+We look forward to seeing you soon!`
+  },
+  es: {
+    whatsappTemplateName: 'reservation_group_checkin_invitation',
+    whatsappTemplateParams: ['{{1}}', '{{2}}', '{{3}}', '{{4}}', '{{5}}'],
+    emailSubject: 'Bienvenido a La Familia Hostel - Reserva Grupal',
+    emailContent: `Hola {{guestName}},
+
+¡Gracias por tu reserva de {{bedsCount}} camas! 🎊
+
+Aquí están tus enlaces de pago:
+
+{{reservationList}}
+
+📌 O puedes pagar todo junto (Total: {{totalAmount}} + 5%):
+{{combinedPaymentLink}}
+
+Check-in en línea:
+{{checkInLink}}
+
+Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.
+
+¡Te esperamos pronto!`
+  },
+  de: {
+    whatsappTemplateName: 'reservation_group_checkin_invitation_de',
+    whatsappTemplateParams: ['{{1}}', '{{2}}', '{{3}}', '{{4}}', '{{5}}'],
+    emailSubject: 'Willkommen im La Familia Hostel - Gruppenreservierung',
+    emailContent: `Hallo {{guestName}},
+
+Vielen Dank für Ihre Reservierung von {{bedsCount}} Betten! 🎊
+
+Hier sind Ihre Zahlungslinks:
+
+{{reservationList}}
+
+📌 Oder alles zusammen bezahlen (Gesamt: {{totalAmount}} + 5%):
+{{combinedPaymentLink}}
+
+Online Check-in:
+{{checkInLink}}
+
+Bitte schreiben Sie uns kurz, sobald Sie sowohl den Check-in als auch die Zahlung abgeschlossen haben, damit wir Ihnen Ihren PIN-Code 🔑 für die Eingangstür senden können.
+
+Wir freuen uns darauf, Sie bald zu sehen!`
+  }
+};
+
+/**
  * Service für automatische Benachrichtigungen zu Reservierungen
  * 
  * Orchestriert E-Mail/WhatsApp-Versand, Zahlungslinks und Türsystem-PINs
@@ -152,14 +225,14 @@ export class ReservationNotificationService {
    * 
    * @param branchId - Branch ID (optional)
    * @param organizationId - Organization ID
-   * @param templateType - Typ des Templates ('checkInInvitation' | 'checkInConfirmation')
+   * @param templateType - Typ des Templates ('checkInInvitation' | 'checkInConfirmation' | 'groupCheckInInvitation')
    * @param language - Sprache ('en' | 'es' | 'de')
    * @returns Template oder null
    */
   private static async getMessageTemplate(
     branchId: number | null,
     organizationId: number,
-    templateType: 'checkInInvitation' | 'checkInConfirmation',
+    templateType: 'checkInInvitation' | 'checkInConfirmation' | 'groupCheckInInvitation',
     language: 'en' | 'es' | 'de'
   ): Promise<typeof DEFAULT_CHECKIN_INVITATION_TEMPLATES.en | null> {
     try {
@@ -208,6 +281,8 @@ export class ReservationNotificationService {
       // 3. Fallback auf Hardcoded Defaults
       if (templateType === 'checkInInvitation') {
         return DEFAULT_CHECKIN_INVITATION_TEMPLATES[language];
+      } else if (templateType === 'groupCheckInInvitation') {
+        return DEFAULT_GROUP_CHECKIN_INVITATION_TEMPLATES[language];
       } else {
         return DEFAULT_CHECKIN_CONFIRMATION_TEMPLATES[language];
       }
@@ -216,6 +291,8 @@ export class ReservationNotificationService {
       // Fallback auf Defaults bei Fehler
       if (templateType === 'checkInInvitation') {
         return DEFAULT_CHECKIN_INVITATION_TEMPLATES[language];
+      } else if (templateType === 'groupCheckInInvitation') {
+        return DEFAULT_GROUP_CHECKIN_INVITATION_TEMPLATES[language];
       } else {
         return DEFAULT_CHECKIN_CONFIRMATION_TEMPLATES[language];
       }
@@ -523,10 +600,36 @@ export class ReservationNotificationService {
         throw new Error(`Reservierung ${reservationId} nicht gefunden`);
       }
 
+      // GRUPPEN-LOGIK: Prüfe ob dies die primäre Reservation in einer Gruppe ist
+      // Wenn nicht primär: Mitteilung überspringen (wird über primäre Reservation versendet)
+      if (reservation.reservationGroupId && !reservation.isPrimaryInGroup) {
+        logger.log(`[ReservationNotification] Reservation ${reservationId} ist nicht primär in Gruppe ${reservation.reservationGroupId} - überspringe Versand`);
+        return { 
+          success: true, 
+          messageSent: false,
+          error: 'Nicht primäre Reservation in Gruppe - Mitteilung wird über primäre Reservation versendet'
+        };
+      }
+
+      // GRUPPEN-LOGIK: Lade alle Gruppenmitglieder (falls Gruppe existiert)
+      let groupReservations: typeof reservation[] = [reservation];
+      let isGroupReservation = false;
+      
+      if (reservation.reservationGroupId) {
+        const { ReservationGroupingService } = await import('./reservationGroupingService');
+        const members = await ReservationGroupingService.findGroupMembers(reservation.reservationGroupId);
+        
+        if (members.length > 1) {
+          groupReservations = members as any[];
+          isGroupReservation = true;
+          logger.log(`[ReservationNotification] Gruppen-Reservation erkannt: ${members.length} Mitglieder für Gruppe ${reservation.reservationGroupId}`);
+        }
+      }
+
       // Verwende optionale Kontaktinfo oder Reservation-Daten
       const guestPhone = options?.guestPhone || reservation.guestPhone;
       const guestEmail = options?.guestEmail || reservation.guestEmail;
-      const amount = options?.amount || reservation.amount || 0;
+      let amount = options?.amount || reservation.amount || 0;
       const currency = options?.currency || reservation.currency || 'COP';
 
       // Prüfe ob Kontaktinfo vorhanden ist
@@ -542,9 +645,89 @@ export class ReservationNotificationService {
       let errorMessage: string | null = null;
       let whatsappSuccess = false;
       let emailSuccess = false;
+      let combinedPaymentLink: string | null = null;
+      let reservationListText: string = '';
 
-      // Schritt 1: Payment-Link IMMER erstellen (wenn Telefonnummer ODER Email vorhanden)
-      if (guestPhone || guestEmail) {
+      // GRUPPEN-LOGIK: Erstelle individuelle Zahlungslinks für alle Gruppenmitglieder
+      if (isGroupReservation) {
+        logger.log(`[ReservationNotification] Erstelle Zahlungslinks für ${groupReservations.length} Gruppenmitglieder...`);
+        
+        let totalAmount = 0;
+        const reservationListItems: string[] = [];
+        
+        for (let i = 0; i < groupReservations.length; i++) {
+          const res = groupReservations[i];
+          const resAmount = Number(res.amount || 0);
+          totalAmount += resAmount;
+          
+          // Erstelle individuellen Payment-Link falls nicht vorhanden
+          if (!res.paymentLink && resAmount > 0) {
+            try {
+              const boldService = res.branchId
+                ? await BoldPaymentService.createForBranch(res.branchId)
+                : new BoldPaymentService(res.organizationId);
+              
+              const individualPaymentLink = await boldService.createPaymentLink(
+                res,
+                resAmount,
+                res.currency || 'COP',
+                `Zahlung Bett ${i + 1} - ${res.guestName}`
+              );
+              
+              // Speichere Payment-Link in Reservation
+              await prisma.reservation.update({
+                where: { id: res.id },
+                data: { paymentLink: individualPaymentLink }
+              });
+              
+              res.paymentLink = individualPaymentLink;
+            } catch (linkError) {
+              logger.error(`[ReservationNotification] Fehler beim Erstellen des Payment-Links für Reservation ${res.id}:`, linkError);
+            }
+          }
+          
+          // Liste für Nachricht erstellen
+          const roomInfo = res.roomDescription || res.roomNumber || `Bett ${i + 1}`;
+          reservationListItems.push(
+            `${i + 1}. ${roomInfo}: ${resAmount} ${res.currency || 'COP'}\n   Zahlungslink: ${res.paymentLink || '(wird erstellt)'}`
+          );
+        }
+        
+        reservationListText = reservationListItems.join('\n\n');
+        
+        // Erstelle kombinierten Zahlungslink
+        if (totalAmount > 0) {
+          try {
+            const boldService = reservation.branchId
+              ? await BoldPaymentService.createForBranch(reservation.branchId)
+              : new BoldPaymentService(reservation.organizationId);
+            
+            combinedPaymentLink = await boldService.createCombinedPaymentLink(
+              groupReservations.map(r => ({ id: r.id, guestName: r.guestName, amount: r.amount })),
+              totalAmount,
+              currency,
+              reservation.id
+            );
+            
+            // Speichere combined Payment Link in primärer Reservation
+            await prisma.reservation.update({
+              where: { id: reservation.id },
+              data: { combinedPaymentLink }
+            });
+            
+            logger.log(`[ReservationNotification] ✅ Combined Payment-Link erstellt: ${combinedPaymentLink}`);
+          } catch (combinedError) {
+            logger.error(`[ReservationNotification] Fehler beim Erstellen des Combined Payment-Links:`, combinedError);
+          }
+        }
+        
+        // Für Gruppen: Verwende den Payment-Link der primären Reservation als Haupt-Link
+        paymentLink = reservation.paymentLink;
+        amount = totalAmount;
+      }
+
+      // Schritt 1: Payment-Link erstellen (wenn nicht Gruppenreservation - für Gruppen wurde oben bereits erstellt)
+      if ((guestPhone || guestEmail) && !isGroupReservation) {
         // Verwende bestehenden Payment-Link, falls vorhanden
         if (reservation.paymentLink) {
           paymentLink = reservation.paymentLink;
@@ -612,9 +795,12 @@ export class ReservationNotificationService {
       }
 
       // Schritt 3: WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden)
-      if (guestPhone && paymentLink) {
+      // Für Gruppen: Mindestens combinedPaymentLink muss vorhanden sein
+      const hasValidPaymentLink = isGroupReservation ? (combinedPaymentLink || paymentLink) : paymentLink;
+      
+      if (guestPhone && hasValidPaymentLink) {
         try {
-          logger.log(`[ReservationNotification] Sende WhatsApp-Nachricht für Reservierung ${reservationId}...`);
+          logger.log(`[ReservationNotification] Sende WhatsApp-Nachricht für Reservierung ${reservationId}${isGroupReservation ? ` (Gruppe: ${groupReservations.length} Mitglieder)` : ''}...`);
           
           // Verwende Custom Message oder Standard-Nachricht
           if (options?.customMessage) {
@@ -623,34 +809,72 @@ export class ReservationNotificationService {
             sentMessage = sentMessage
               .replace(/\{\{guestName\}\}/g, reservation.guestName)
               .replace(/\{\{checkInLink\}\}/g, checkInLink)
-              .replace(/\{\{paymentLink\}\}/g, paymentLink);
+              .replace(/\{\{paymentLink\}\}/g, paymentLink || '')
+              .replace(/\{\{combinedPaymentLink\}\}/g, combinedPaymentLink || '')
+              .replace(/\{\{reservationList\}\}/g, reservationListText)
+              .replace(/\{\{bedsCount\}\}/g, groupReservations.length.toString())
+              .replace(/\{\{totalAmount\}\}/g, `${Number(amount)} ${currency}`);
           } else {
-            // NEU: Lade Template aus Branch Settings (mit Fallback auf Defaults)
+            // Lade Template aus Branch Settings (mit Fallback auf Defaults)
             const { CountryLanguageService } = require('./countryLanguageService');
             const languageCode = CountryLanguageService.getLanguageForReservation({
               guestNationality: reservation.guestNationality,
               guestPhone: reservation.guestPhone
             }) as 'en' | 'es' | 'de';
 
+            // GRUPPEN-LOGIK: Verwende Gruppen-Template für Gruppen-Reservationen
+            const templateType = isGroupReservation ? 'groupCheckInInvitation' : 'checkInInvitation';
+            
             const template = await this.getMessageTemplate(
               reservation.branchId,
               reservation.organizationId,
-              'checkInInvitation',
+              templateType,
               languageCode
             );
 
             if (template) {
               // Ersetze Variablen im Template
-              sentMessage = this.replaceTemplateVariables(template.emailContent, {
-                guestName: reservation.guestName,
-                checkInLink: checkInLink,
-                paymentLink: paymentLink
-              });
+              if (isGroupReservation) {
+                // Gruppen-Template: Zusätzliche Variablen
+                sentMessage = this.replaceTemplateVariables(template.emailContent, {
+                  guestName: reservation.guestName,
+                  checkInLink: checkInLink,
+                  paymentLink: paymentLink || '',
+                  combinedPaymentLink: combinedPaymentLink || '',
+                  reservationList: reservationListText,
+                  bedsCount: groupReservations.length.toString(),
+                  totalAmount: `${Number(amount)} ${currency}`
+                });
+              } else {
+                // Standard-Template
+                sentMessage = this.replaceTemplateVariables(template.emailContent, {
+                  guestName: reservation.guestName,
+                  checkInLink: checkInLink,
+                  paymentLink: paymentLink || ''
+                });
+              }
             } else {
               // Fallback auf alte hardcodierte Nachricht (sollte nicht passieren)
               logger.warn(`[ReservationNotification] Kein Template gefunden, verwende Fallback`);
             if (languageCode === 'en') {
-              sentMessage = `Hello ${reservation.guestName},
+              if (isGroupReservation) {
+                sentMessage = `Hello ${reservation.guestName},
+
+Thank you for your reservation of ${groupReservations.length} beds!
+
+Here are your payment links:
+
+${reservationListText}
+
+📌 Or pay everything together (Total: ${Number(amount)} ${currency} + 5%):
+${combinedPaymentLink}
+
+Online Check-in:
+${checkInLink}
+
+We look forward to seeing you soon!`;
+              } else {
+                sentMessage = `Hello ${reservation.guestName},
 
 We are pleased to welcome you to La Familia Hostel!
 
@@ -663,8 +887,26 @@ ${paymentLink}
 Please write us briefly once you have completed both the check-in and payment. Thank you!
 
 We look forward to seeing you tomorrow!`;
+              }
             } else {
-              sentMessage = `Hola ${reservation.guestName},
+              if (isGroupReservation) {
+                sentMessage = `Hola ${reservation.guestName},
+
+¡Gracias por tu reserva de ${groupReservations.length} camas!
+
+Aquí están tus enlaces de pago:
+
+${reservationListText}
+
+📌 O puedes pagar todo junto (Total: ${Number(amount)} ${currency} + 5%):
+${combinedPaymentLink}
+
+Check-in en línea:
+${checkInLink}
+
+¡Te esperamos pronto!`;
+              } else {
+                sentMessage = `Hola ${reservation.guestName},
 
 ¡Nos complace darte la bienvenida a La Familia Hostel!
 
@@ -677,6 +919,7 @@ ${paymentLink}
 Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago. ¡Gracias!
 
 ¡Te esperamos mañana!`;
+              }
               }
             }
           }
@@ -2237,31 +2480,6 @@ ${contentText}
       logger.log(`[ReservationNotification] Check-in-Bestätigung versendet für Reservierung ${reservationId}`);
     } catch (error) {
       logger.error(`[ReservationNotification] Fehler beim Versand der Check-in-Bestätigung:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * @deprecated Diese Methode wird nicht mehr verwendet - Code bleibt für Referenz
-   * Alte Implementierung von sendCheckInConfirmation
-   */
-  private static async _oldSendCheckInConfirmation(reservationId: number): Promise<void> {
-    try {
-      const reservation = await prisma.reservation.findUnique({
-        where: { id: reservationId },
-        include: { organization: true, branch: true }
-      });
-
-      if (!reservation) {
-        throw new Error(`Reservierung ${reservationId} nicht gefunden`);
-      }
-
-      if (reservation.status !== ReservationStatus.checked_in) {
-        throw new Error(`Reservierung ${reservationId} ist nicht eingecheckt`);
-      }
-      // Alte Implementierung - nicht mehr verwendet
-    } catch (error) {
-      logger.error(`[ReservationNotification] Fehler in _oldSendCheckInConfirmation:`, error);
       throw error;
     }
   }

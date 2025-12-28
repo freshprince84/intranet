@@ -6,7 +6,6 @@ import {
   getReservationById,
   syncReservations,
   syncFullReservations,
-  checkInReservation,
   handleWebhook,
   validateConnection,
 } from '../controllers/lobbyPmsController';
@@ -24,7 +23,6 @@ router.use(organizationMiddleware);
 // Reservierungen
 router.get('/reservations', getReservations);
 router.get('/reservations/:id', getReservationById);
-router.put('/reservations/:id/check-in', checkInReservation);
 
 // Synchronisation
 router.post('/sync', syncReservations);

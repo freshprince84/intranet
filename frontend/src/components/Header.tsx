@@ -81,21 +81,19 @@ const Header: React.FC = () => {
         if (roleSubMenuTimeoutRef.current) {
             clearTimeout(roleSubMenuTimeoutRef.current);
         }
+        // ✅ WICHTIG: Hauptmenü-Timeout gleichzeitig starten (gleiche Dauer wie Untermenü)
+        if (!isBranchSubMenuOpen && !isOpeningSubMenuRef.current) {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(() => {
+                setIsProfileMenuOpen(false);
+                timeoutRef.current = undefined;
+            }, 2500); // Gleiche Dauer wie Untermenü
+        }
         roleSubMenuTimeoutRef.current = setTimeout(() => {
             setIsRoleSubMenuOpen(false);
             roleSubMenuTimeoutRef.current = undefined; // Ref zurücksetzen nach Ausführung
-            // ✅ WICHTIG: Wenn Untermenü geschlossen wird, auch Hauptmenü schließen
-            // (nur wenn nicht gerade ein anderes Untermenü geöffnet wird)
-            if (!isBranchSubMenuOpen && !isOpeningSubMenuRef.current) {
-                // Starte Timeout für Hauptmenü (wird gelöscht, wenn man wieder über Hauptmenü hovert)
-                if (timeoutRef.current) {
-                    clearTimeout(timeoutRef.current);
-                }
-                timeoutRef.current = setTimeout(() => {
-                    setIsProfileMenuOpen(false);
-                    timeoutRef.current = undefined;
-                }, 1000);
-            }
         }, 2500); // Längerer Timeout für Untermenü (2.5 Sekunden)
     };
 
@@ -118,21 +116,19 @@ const Header: React.FC = () => {
         if (branchSubMenuTimeoutRef.current) {
             clearTimeout(branchSubMenuTimeoutRef.current);
         }
+        // ✅ WICHTIG: Hauptmenü-Timeout gleichzeitig starten (gleiche Dauer wie Untermenü)
+        if (!isRoleSubMenuOpen && !isOpeningSubMenuRef.current) {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(() => {
+                setIsProfileMenuOpen(false);
+                timeoutRef.current = undefined;
+            }, 2500); // Gleiche Dauer wie Untermenü
+        }
         branchSubMenuTimeoutRef.current = setTimeout(() => {
             setIsBranchSubMenuOpen(false);
             branchSubMenuTimeoutRef.current = undefined; // Ref zurücksetzen nach Ausführung
-            // ✅ WICHTIG: Wenn Untermenü geschlossen wird, auch Hauptmenü schließen
-            // (nur wenn nicht gerade ein anderes Untermenü geöffnet wird)
-            if (!isRoleSubMenuOpen && !isOpeningSubMenuRef.current) {
-                // Starte Timeout für Hauptmenü (wird gelöscht, wenn man wieder über Hauptmenü hovert)
-                if (timeoutRef.current) {
-                    clearTimeout(timeoutRef.current);
-                }
-                timeoutRef.current = setTimeout(() => {
-                    setIsProfileMenuOpen(false);
-                    timeoutRef.current = undefined;
-                }, 1000);
-            }
         }, 2500); // Längerer Timeout für Untermenü (2.5 Sekunden)
     };
 

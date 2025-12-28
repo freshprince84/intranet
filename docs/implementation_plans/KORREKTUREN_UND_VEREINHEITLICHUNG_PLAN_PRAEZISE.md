@@ -283,3 +283,5 @@
 - **Code wird einfacher**: Weniger Redundanzen, keine überflüssigen Prüfungen
 - **Logik wird korrekt**: Wenn Email vorhanden → Email, wenn Telefonnummer vorhanden → WhatsApp, wenn beides → beides
 
+
+

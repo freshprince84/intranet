@@ -5,8 +5,6 @@ import axiosInstance from '../../config/axios.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { Reservation, ReservationStatus, PaymentStatus } from '../../types/reservation.ts';
 import useMessage from '../../hooks/useMessage.ts';
-import CheckInForm from './CheckInForm.tsx';
-import GuestContactModal from './GuestContactModal.tsx';
 import ReservationNotificationLogs from './ReservationNotificationLogs.tsx';
 import {
   ArrowLeftIcon,
@@ -34,8 +32,6 @@ const ReservationDetails: React.FC = () => {
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCheckInForm, setShowCheckInForm] = useState(false);
-  const [showGuestContactModal, setShowGuestContactModal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // Wird erhöht, um Notification-Logs neu zu laden
 
   const getLocale = () => {
@@ -98,11 +94,6 @@ const ReservationDetails: React.FC = () => {
     loadReservation();
   }, [id]);
 
-  const handleCheckInSuccess = () => {
-    setShowCheckInForm(false);
-    loadReservation();
-    showMessage(t('reservations.checkInSuccess', 'Check-in erfolgreich durchgeführt'), 'success');
-  };
 
   if (loading) {
     return (
@@ -134,18 +125,6 @@ const ReservationDetails: React.FC = () => {
     );
   }
 
-  const canCheckIn = reservation.status === ReservationStatus.CONFIRMED;
-  
-  // Prüfe ob Modal angezeigt werden soll (bei Status-Shift wenn guestPhone/Email fehlt)
-  // Modal soll erscheinen wenn:
-  // - Status ist confirmed oder notification_sent
-  // - guestPhone UND guestEmail fehlen
-  const shouldShowGuestContactModal = 
-    reservation && 
-    (reservation.status === ReservationStatus.CONFIRMED || reservation.status === ReservationStatus.NOTIFICATION_SENT) &&
-    !reservation.guestPhone && 
-    !reservation.guestEmail;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -157,25 +136,6 @@ const ReservationDetails: React.FC = () => {
           <ArrowLeftIcon className="h-5 w-5 mr-2" />
           {t('common.back', 'Zurück')}
         </button>
-
-        <div className="flex items-center gap-2">
-          {shouldShowGuestContactModal && (
-            <button
-              onClick={() => setShowGuestContactModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              {t('reservations.addContact', 'Kontakt hinzufügen')}
-            </button>
-          )}
-          {canCheckIn && (
-            <button
-              onClick={() => setShowCheckInForm(true)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              {t('reservations.checkIn', 'Check-in durchführen')}
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Details Card */}
@@ -364,27 +324,6 @@ const ReservationDetails: React.FC = () => {
       </div>
 
       {/* Check-in Form Modal */}
-      {showCheckInForm && (
-        <CheckInForm
-          reservation={reservation}
-          onSuccess={handleCheckInSuccess}
-          onCancel={() => setShowCheckInForm(false)}
-        />
-      )}
-
-      {/* Guest Contact Modal */}
-      {showGuestContactModal && reservation && (
-        <GuestContactModal
-          isOpen={showGuestContactModal}
-          onClose={() => setShowGuestContactModal(false)}
-          reservation={reservation}
-          onSuccess={() => {
-            loadReservation();
-            setShowGuestContactModal(false);
-          }}
-        />
-      )}
-
       {/* Notification Logs - zeigt alle versendeten Mitteilungen */}
       <div className="mt-6">
         <ReservationNotificationLogs reservationId={reservation.id} refreshKey={refreshKey} />

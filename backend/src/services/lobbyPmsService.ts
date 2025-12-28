@@ -1122,12 +1122,16 @@ export class LobbyPmsService {
     const branchId: number = this.branchId;
 
     // WICHTIG: existingReservation wurde bereits oben geholt (für guestName Fallback)
-    // Verwende die bereits geladene Reservation für checkInDataUploaded-Status
+    // Verwende die bereits geladene Reservation für checkInDataUploaded-Status und Status-Änderungen
 
     // Prüfe ob checkInDataUploaded bereits gesetzt war
     const wasAlreadyUploaded = existingReservation?.checkInDataUploaded || false;
     const isNowUploaded = hasCompletedCheckInLink;
     const checkInDataUploadedChanged = !wasAlreadyUploaded && isNowUploaded;
+    
+    // Prüfe ob Status zu checked_in wechselt
+    const oldStatus = existingReservation?.status || ReservationStatus.confirmed;
+    const statusChangedToCheckedIn = oldStatus !== ReservationStatus.checked_in && status === ReservationStatus.checked_in;
 
     const reservationData = {
       lobbyReservationId: bookingId,
@@ -1152,13 +1156,22 @@ export class LobbyPmsService {
     };
 
     // Upsert: Erstelle oder aktualisiere Reservierung
-    const reservation = await prisma.reservation.upsert({
+    let reservation = await prisma.reservation.upsert({
       where: {
         lobbyReservationId: bookingId
       },
       create: reservationData,
       update: reservationData
     });
+
+      // Gruppierung: Weise Reservation einer Gruppe zu (bei Import)
+      try {
+        const { ReservationGroupingService } = await import('./reservationGroupingService');
+        reservation = await ReservationGroupingService.assignToGroup(reservation);
+      } catch (groupError) {
+        logger.warn(`[LobbyPMS] Fehler bei Gruppenzuweisung für Reservierung ${reservation.id}:`, groupError);
+        // Fehler nicht weiterwerfen, da Gruppierung optional ist
+      }
 
       // Erstelle Sync-History-Eintrag
       await prisma.reservationSyncHistory.create({
@@ -1177,7 +1190,31 @@ export class LobbyPmsService {
         // Fehler nicht weiterwerfen, da Task-Erstellung optional ist
       }
 
-      // PIN-Versand: Wenn Check-in-Link abgeschlossen UND bezahlt → versende PIN
+      // PIN-Versand: Wenn Status zu checked_in wechselt → versende PIN
+      if (statusChangedToCheckedIn) {
+        // NEU: Prüfe autoSend (analog zu Trigger 1)
+        const branch = branchId ? await prisma.branch.findUnique({
+          where: { id: branchId },
+          select: { autoSendReservationInvitation: true }
+        }) : null;
+        
+        const autoSend = branch?.autoSendReservationInvitation ?? false;
+        
+        if (autoSend) {
+          try {
+            logger.log(`[LobbyPMS] Status zu checked_in gewechselt → versende PIN für Reservierung ${reservation.id}`);
+            const { ReservationNotificationService } = await import('./reservationNotificationService');
+            await ReservationNotificationService.sendPasscodeNotification(reservation.id);
+          } catch (error) {
+            logger.error(`[LobbyPMS] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
+            // Fehler nicht weiterwerfen, da PIN-Versand optional ist
+          }
+        } else {
+          logger.log(`[LobbyPMS] autoSend ist deaktiviert → PIN wird nicht versendet für Reservierung ${reservation.id}`);
+        }
+      }
+      
+      // PIN-Versand: Wenn Check-in-Link abgeschlossen UND bezahlt → versende PIN (Trigger 2)
       if (checkInDataUploadedChanged && paymentStatus === PaymentStatus.paid && !reservation.doorPin) {
         // NEU: Prüfe autoSend (analog zu Trigger 1)
         const branch = branchId ? await prisma.branch.findUnique({
@@ -1191,7 +1228,7 @@ export class LobbyPmsService {
           try {
             logger.log(`[LobbyPMS] Check-in-Link abgeschlossen und bezahlt → versende PIN für Reservierung ${reservation.id}`);
             const { ReservationNotificationService } = await import('./reservationNotificationService');
-            await ReservationNotificationService.generatePinAndSendNotification(reservation.id);
+            await ReservationNotificationService.sendPasscodeNotification(reservation.id);
           } catch (error) {
             logger.error(`[LobbyPMS] Fehler beim Versenden der PIN für Reservierung ${reservation.id}:`, error);
             // Fehler nicht weiterwerfen, da PIN-Versand optional ist
@@ -1314,6 +1351,64 @@ export class LobbyPmsService {
 
     logger.log(`[LobbyPMS] Vollständiger Sync abgeschlossen: ${syncedCount} Reservierungen synchronisiert`);
     return syncedCount;
+  }
+
+  /**
+   * Aktualisiert bestehende Reservationen (Status, Payment-Status, etc.)
+   * 
+   * Prüft alle Reservationen mit check_out_date >= heute
+   * Aktualisiert bestehende Reservationen in der lokalen DB
+   * 
+   * WICHTIG: Diese Methode aktualisiert NUR bestehende Reservationen.
+   * Neue Reservationen werden durch syncReservations() importiert.
+   * 
+   * @returns Anzahl aktualisierter Reservationen
+   */
+  async syncExistingReservations(): Promise<number> {
+    // Lade Settings falls noch nicht geladen
+    if (!this.apiKey) {
+      await this.loadSettings();
+    }
+
+    // Filter nach check_out_date >= heute
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    logger.log(`[LobbyPMS] Starte Aktualisierung bestehender Reservationen mit check_out_date >= ${today.toISOString()}`);
+
+    // Rufe fetchReservationsByCheckoutDate auf
+    // WICHTIG: fetchReservationsByCheckoutDate filtert nach check_out_date >= today
+    const lobbyReservations = await this.fetchReservationsByCheckoutDate(today);
+    let updatedCount = 0;
+
+    for (const lobbyReservation of lobbyReservations) {
+      try {
+        // syncReservation() verwendet upsert, aktualisiert also bestehende Reservationen
+        // Wenn Reservation nicht existiert, wird sie erstellt (aber das sollte selten sein)
+        await this.syncReservation(lobbyReservation);
+        updatedCount++;
+      } catch (error) {
+        const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id || 'unknown');
+        logger.error(`[LobbyPMS] Fehler beim Aktualisieren der Reservierung ${bookingId}:`, error);
+        // Erstelle Sync-History mit Fehler
+        const existingReservation = await prisma.reservation.findUnique({
+          where: { lobbyReservationId: bookingId }
+        });
+        if (existingReservation) {
+          await prisma.reservationSyncHistory.create({
+            data: {
+              reservationId: existingReservation.id,
+              syncType: 'error',
+              syncData: lobbyReservation as any,
+              errorMessage: error instanceof Error ? error.message : 'Unbekannter Fehler'
+            }
+          });
+        }
+      }
+    }
+
+    logger.log(`[LobbyPMS] Aktualisierung abgeschlossen: ${updatedCount} Reservationen aktualisiert`);
+    return updatedCount;
   }
 
   /**

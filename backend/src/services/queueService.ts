@@ -184,48 +184,6 @@ export const paymentQueue = new Proxy({} as Queue, {
 });
 
 /**
- * Update Guest Contact Queue
- * Verarbeitet Jobs für Guest Contact Updates (Payment-Link, TTLock, WhatsApp)
- * Lazy Initialization: Queue wird nur erstellt, wenn gebraucht
- */
-let updateGuestContactQueueInstance: Queue | null = null;
-export function getUpdateGuestContactQueue(): Queue {
-  if (!updateGuestContactQueueInstance) {
-    updateGuestContactQueueInstance = new Queue('update-guest-contact', {
-      connection: getConnection(),
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
-        },
-        removeOnComplete: {
-          age: 24 * 3600,
-          count: 1000,
-        },
-        removeOnFail: {
-          age: 7 * 24 * 3600,
-        },
-      },
-    });
-  }
-  return updateGuestContactQueueInstance;
-}
-
-// Export für Rückwärtskompatibilität
-export const updateGuestContactQueue = new Proxy({} as Queue, {
-  get(target, prop) {
-    const queue = getUpdateGuestContactQueue();
-    const value = queue[prop as keyof Queue];
-    // Wenn es eine Funktion ist, binde sie an die Queue-Instanz
-    if (typeof value === 'function') {
-      return value.bind(queue);
-    }
-    return value;
-  },
-});
-
-/**
  * Image Generation Queue
  * Verarbeitet Jobs für Bildgenerierung (Tours, Reservations, etc.)
  * Lazy Initialization: Queue wird nur erstellt, wenn gebraucht
@@ -309,7 +267,6 @@ export async function closeQueues(): Promise<void> {
       reservationQueueInstance,
       notificationQueueInstance,
       paymentQueueInstance,
-      updateGuestContactQueueInstance,
       imageGenerationQueueInstance,
     ].filter((q) => q !== null) as Queue[];
 

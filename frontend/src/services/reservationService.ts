@@ -33,15 +33,6 @@ export const reservationService = {
     return response.data.data || response.data;
   },
 
-  /**
-   * Aktualisiert Kontaktinformation (Telefonnummer oder Email)
-   */
-  async updateGuestContact(id: number, contact: string): Promise<Reservation> {
-    const response = await axiosInstance.put(`${API_BASE}/${id}/guest-contact`, {
-      contact
-    });
-    return response.data.data || response.data;
-  },
 
   /**
    * Generiert PIN-Code und sendet Mitteilung (unabhängig von Zahlungsstatus/Check-in-Status)

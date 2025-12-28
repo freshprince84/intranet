@@ -91,6 +91,15 @@ export class EmailReservationService {
 
       logger.log(`[EmailReservation] Reservation ${reservation.id} erstellt aus Email (Code: ${parsedEmail.reservationCode})`);
 
+      // Gruppierung: Weise Reservation einer Gruppe zu
+      try {
+        const { ReservationGroupingService } = await import('./reservationGroupingService');
+        reservation = await ReservationGroupingService.assignToGroup(reservation) as any;
+      } catch (groupError) {
+        logger.warn(`[EmailReservation] Fehler bei Gruppenzuweisung für Reservierung ${reservation.id}:`, groupError);
+        // Fehler nicht weiterwerfen, da Gruppierung optional ist
+      }
+
       // NEU: Sofort-Versendung wenn Check-in-Date heute oder in Vergangenheit
       // UND autoSendReservationInvitation aktiviert
       if (reservation.checkInDate) {
