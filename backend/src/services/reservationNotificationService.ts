@@ -8,6 +8,7 @@ import { TaskAutomationService } from './taskAutomationService';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
+import { CountryLanguageService } from './countryLanguageService';
 
 /**
  * Default-Templates für Mitteilungen (Fallback wenn keine Branch Settings vorhanden)
@@ -816,7 +817,6 @@ export class ReservationNotificationService {
               .replace(/\{\{totalAmount\}\}/g, `${Number(amount)} ${currency}`);
           } else {
             // Lade Template aus Branch Settings (mit Fallback auf Defaults)
-            const { CountryLanguageService } = require('./countryLanguageService');
             const languageCode = CountryLanguageService.getLanguageForReservation({
               guestNationality: reservation.guestNationality,
               guestPhone: reservation.guestPhone
@@ -931,8 +931,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           // Grund: Session Messages sind günstiger, Template Messages funktionieren immer
           
           // NEU: Lade Template-Name und Parameter aus Branch Settings
-          const { CountryLanguageService: CLS2 } = require('./countryLanguageService');
-          const whatsappLanguageCode = CLS2.getLanguageForReservation({
+          const whatsappLanguageCode = CountryLanguageService.getLanguageForReservation({
             guestNationality: reservation.guestNationality,
             guestPhone: reservation.guestPhone
           }) as 'en' | 'es' | 'de';
@@ -1072,7 +1071,6 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             sentMessage = emailMessage;
           } else {
             // NEU: Lade Template aus Branch Settings (mit Fallback auf Defaults)
-            const { CountryLanguageService } = require('./countryLanguageService');
             const languageCode = CountryLanguageService.getLanguageForReservation({
               guestNationality: reservation.guestNationality,
               guestPhone: reservation.guestPhone
@@ -1151,8 +1149,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           }
 
           // NEU: Lade Email-Sprache vor Link-Labels
-          const { CountryLanguageService: CLS } = require('./countryLanguageService');
-          const emailLanguageCode = CLS.getLanguageForReservation({
+          const emailLanguageCode = CountryLanguageService.getLanguageForReservation({
             guestNationality: reservation.guestNationality,
             guestPhone: reservation.guestPhone
           }) as 'en' | 'es' | 'de';
@@ -1556,7 +1553,6 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
             : new WhatsAppService(reservation.organizationId);
           
           // Ermittle Sprache für roomDescription
-          const { CountryLanguageService } = require('./countryLanguageService');
           const languageCode = CountryLanguageService.getLanguageForReservation({
             guestNationality: reservation.guestNationality,
             guestPhone: reservation.guestPhone
@@ -1895,7 +1891,6 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           .replace(/\{\{passcode\}\}/g, doorPin);
       } else {
         // NEU: Lade Template aus Branch Settings (mit Fallback auf Defaults)
-        const { CountryLanguageService } = require('./countryLanguageService');
         const languageCode = CountryLanguageService.getLanguageForReservation({
           guestNationality: reservation.guestNationality,
           guestPhone: reservation.guestPhone
@@ -2065,7 +2060,6 @@ ${contentText}
             // Erkenne Sprache für Template
             let languageCode: string;
             if (reservation.guestNationality) {
-              const { CountryLanguageService } = require('./countryLanguageService');
               languageCode = CountryLanguageService.getLanguageForReservation({
                 guestNationality: reservation.guestNationality,
                 guestPhone: reservation.guestPhone
@@ -2142,7 +2136,6 @@ ${contentText}
           } else {
             // Verwende Standard-Template
             // Lade roomDescription aus Branch-Settings
-            const { CountryLanguageService } = require('./countryLanguageService');
             const languageCode = CountryLanguageService.getLanguageForReservation({
               guestNationality: reservation.guestNationality,
               guestPhone: reservation.guestPhone
@@ -2454,7 +2447,6 @@ ${contentText}
           : new WhatsAppService(reservation.organizationId);
         
         // Ermittle Sprache für roomDescription
-        const { CountryLanguageService } = require('./countryLanguageService');
         const languageCode = CountryLanguageService.getLanguageForReservation({
           guestNationality: reservation.guestNationality,
           guestPhone: reservation.guestPhone
@@ -2510,7 +2502,6 @@ ${contentText}
     paymentLink: string
   ): Promise<void> {
     // Bestimme Sprache basierend auf Gast-Nationalität (Standard: Spanisch)
-    const { CountryLanguageService } = require('./countryLanguageService');
     const languageCode = CountryLanguageService.getLanguageForReservation({
       guestNationality: reservation.guestNationality,
       guestPhone: reservation.guestPhone
@@ -2660,7 +2651,6 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
     doorAppName: string | null
   ): Promise<void> {
     // Ermittle Sprache für Übersetzungen
-    const { CountryLanguageService } = require('./countryLanguageService');
     const languageCode = CountryLanguageService.getLanguageForReservation({
       guestNationality: reservation.guestNationality,
       guestPhone: reservation.guestPhone
