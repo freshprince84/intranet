@@ -27,6 +27,7 @@ const Header: React.FC = () => {
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
     const roleSubMenuTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
     const branchSubMenuTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+    const isOpeningSubMenuRef = useRef<boolean>(false); // Track ob gerade ein Untermenü geöffnet wird
     const roleMenuButtonRef = useRef<HTMLButtonElement>(null);
     const roleSubMenuRef = useRef<HTMLDivElement>(null);
     const branchMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -38,21 +39,33 @@ const Header: React.FC = () => {
     };
 
     const handleMouseLeave = () => {
-        timeoutRef.current = setTimeout(() => {
-            setIsProfileMenuOpen(false);
-            setIsRoleSubMenuOpen(false);
-            setIsNotificationOpen(false);
-        }, 1000);
+        // ✅ WICHTIG: Nur schließen, wenn KEIN Untermenü offen ist UND nicht gerade eines geöffnet wird
+        // Wenn ein Untermenü offen ist oder gerade geöffnet wird, wird es von seinem eigenen Handler geschlossen
+        if (!isRoleSubMenuOpen && !isBranchSubMenuOpen && !isOpeningSubMenuRef.current) {
+            // Vorherigen Timeout löschen, falls vorhanden
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(() => {
+                setIsProfileMenuOpen(false);
+                setIsRoleSubMenuOpen(false);
+                setIsNotificationOpen(false);
+                timeoutRef.current = undefined; // Ref zurücksetzen nach Ausführung
+            }, 1000);
+        }
     };
 
     const handleMouseEnter = () => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
+            timeoutRef.current = undefined; // Ref zurücksetzen
         }
     };
 
     // Separate Handler für Rollen-Untermenü mit längerem Timeout
     const handleRoleSubMenuMouseEnter = () => {
+        // ✅ WICHTIG: Markiere, dass Untermenü aktiv ist (verhindert handleMouseLeave)
+        isOpeningSubMenuRef.current = true;
         // ✅ WICHTIG: Timeout IMMER löschen, auch wenn Ref undefined ist
         if (roleSubMenuTimeoutRef.current) {
             clearTimeout(roleSubMenuTimeoutRef.current);
@@ -62,6 +75,8 @@ const Header: React.FC = () => {
     };
 
     const handleRoleSubMenuMouseLeave = () => {
+        // ✅ WICHTIG: Markiere, dass Untermenü verlassen wird
+        isOpeningSubMenuRef.current = false;
         // ✅ WICHTIG: Vorherigen Timeout löschen, falls vorhanden
         if (roleSubMenuTimeoutRef.current) {
             clearTimeout(roleSubMenuTimeoutRef.current);
@@ -74,6 +89,8 @@ const Header: React.FC = () => {
 
     // Separate Handler für Branch-Untermenü mit längerem Timeout
     const handleBranchSubMenuMouseEnter = () => {
+        // ✅ WICHTIG: Markiere, dass Untermenü aktiv ist (verhindert handleMouseLeave)
+        isOpeningSubMenuRef.current = true;
         // ✅ WICHTIG: Timeout IMMER löschen, auch wenn Ref undefined ist
         if (branchSubMenuTimeoutRef.current) {
             clearTimeout(branchSubMenuTimeoutRef.current);
@@ -83,6 +100,8 @@ const Header: React.FC = () => {
     };
 
     const handleBranchSubMenuMouseLeave = () => {
+        // ✅ WICHTIG: Markiere, dass Untermenü verlassen wird
+        isOpeningSubMenuRef.current = false;
         // ✅ WICHTIG: Vorherigen Timeout löschen, falls vorhanden
         if (branchSubMenuTimeoutRef.current) {
             clearTimeout(branchSubMenuTimeoutRef.current);
@@ -95,16 +114,40 @@ const Header: React.FC = () => {
 
     // Neues Event-Handling für das Hovern über den "Rolle wechseln"-Button
     const handleRoleMenuMouseEnter = () => {
+        // ✅ WICHTIG: Markiere, dass ein Untermenü geöffnet wird (verhindert handleMouseLeave)
+        isOpeningSubMenuRef.current = true;
+        // ✅ WICHTIG: Timeout löschen BEVOR State gesetzt wird
         handleMouseEnter();
+        // ✅ WICHTIG: Auch Untermenü-Timeouts löschen
+        if (roleSubMenuTimeoutRef.current) {
+            clearTimeout(roleSubMenuTimeoutRef.current);
+            roleSubMenuTimeoutRef.current = undefined;
+        }
         setIsRoleSubMenuOpen(true);
         setIsBranchSubMenuOpen(false);
+        // ✅ WICHTIG: Nach kurzer Verzögerung Flag zurücksetzen (State-Update ist dann durch)
+        setTimeout(() => {
+            isOpeningSubMenuRef.current = false;
+        }, 50);
     };
 
     // Neues Event-Handling für das Hovern über den "Standort wechseln"-Button
     const handleBranchMenuMouseEnter = () => {
+        // ✅ WICHTIG: Markiere, dass ein Untermenü geöffnet wird (verhindert handleMouseLeave)
+        isOpeningSubMenuRef.current = true;
+        // ✅ WICHTIG: Timeout löschen BEVOR State gesetzt wird
         handleMouseEnter();
+        // ✅ WICHTIG: Auch Untermenü-Timeouts löschen
+        if (branchSubMenuTimeoutRef.current) {
+            clearTimeout(branchSubMenuTimeoutRef.current);
+            branchSubMenuTimeoutRef.current = undefined;
+        }
         setIsBranchSubMenuOpen(true);
         setIsRoleSubMenuOpen(false);
+        // ✅ WICHTIG: Nach kurzer Verzögerung Flag zurücksetzen (State-Update ist dann durch)
+        setTimeout(() => {
+            isOpeningSubMenuRef.current = false;
+        }, 50);
     };
 
     // Event-Handling für das Hovern über andere Menüpunkte
