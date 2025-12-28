@@ -2259,6 +2259,12 @@ ${contentText}
       if (reservation.status !== ReservationStatus.checked_in) {
         throw new Error(`Reservierung ${reservationId} ist nicht eingecheckt`);
       }
+      // Alte Implementierung - nicht mehr verwendet
+    } catch (error) {
+      logger.error(`[ReservationNotification] Fehler in _oldSendCheckInConfirmation:`, error);
+      throw error;
+    }
+  }
 
   /**
    * Generiert einen Outlook-kompatiblen Button (HTML-Tabelle)
