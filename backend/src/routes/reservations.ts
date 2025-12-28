@@ -2,7 +2,7 @@ import express from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
 import { checkPermission } from '../middleware/permissionMiddleware';
-import { getAllReservations, createReservation, updateGuestContact, getReservationById, generatePinAndSendNotification, sendReservationInvitation, getReservationNotificationLogs, sendPasscode } from '../controllers/reservationController';
+import { getAllReservations, createReservation, getReservationById, generatePinAndSendNotification, sendReservationInvitation, getReservationNotificationLogs, sendPasscode } from '../controllers/reservationController';
 import { logger } from '../utils/logger';
 
 const router = express.Router();
@@ -47,7 +47,6 @@ router.get('/:id/notification-logs', checkPermission('reservations', 'read', 'ta
   logger.log('[Reservations Route] Reservation ID:', req.params.id);
   getReservationNotificationLogs(req, res).catch(next);
 });
-router.put('/:id/guest-contact', checkPermission('reservation_edit', 'write', 'button'), updateGuestContact);
 router.get('/:id', checkPermission('reservations', 'read', 'tab'), getReservationById);
 
 export default router;

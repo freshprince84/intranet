@@ -49,7 +49,7 @@ import { checkAndStopExceededWorktimes } from './controllers/worktimeController'
 import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
 import { ReservationScheduler } from './services/reservationScheduler';
 // Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
-// import { EmailReservationScheduler } from './services/emailReservationScheduler';
+import { EmailReservationScheduler } from './services/emailReservationScheduler';
 import { LobbyPmsReservationScheduler } from './services/lobbyPmsReservationScheduler';
 import { ReservationAutoCancelScheduler } from './services/reservationAutoCancelScheduler';
 import { ReservationAutoInvitationScheduler } from './services/reservationAutoInvitationScheduler';
