@@ -109,7 +109,13 @@ async function testCancelledReservationEndpoints() {
       'reservations',
       'bookings',
       'reservation',
-      'booking'
+      'booking',
+      'available-rooms',
+      'rooms',
+      'cancelled',
+      'cancellations',
+      'cancel',
+      'status'
     ];
 
     // GET-Endpoints (ohne Suffix)
@@ -138,6 +144,12 @@ async function testCancelledReservationEndpoints() {
           { reservation_id: lobbyReservationId },
           { bookingId: lobbyReservationId },
           { reservationId: lobbyReservationId },
+          { booking_id: lobbyReservationId, status: 'cancelled' },
+          { booking_id: lobbyReservationId, status: 'cancelado' },
+          { id: lobbyReservationId, include_cancelled: true },
+          { id: lobbyReservationId, include_cancelled: 1 },
+          { booking_id: lobbyReservationId, with_status: 'all' },
+          { booking_id: lobbyReservationId, with_status: 'cancelled' },
         ];
 
         for (const params of queryParams) {
@@ -152,7 +164,7 @@ async function testCancelledReservationEndpoints() {
     }
 
     // 3. Alternative Path-Strukturen: /resource/{id}/show, /resource/{id}/get, etc.
-    const pathSuffixes = ['', '/show', '/get', '/details', '/info'];
+    const pathSuffixes = ['', '/show', '/get', '/details', '/info', '/status', '/cancelled'];
     for (const basePath of basePaths) {
       for (const resourceName of resourceNames) {
         for (const suffix of pathSuffixes) {
@@ -165,6 +177,51 @@ async function testCancelledReservationEndpoints() {
           }
         }
       }
+    }
+
+    // 4. Status-basierte Endpoints: /resource?status=cancelled&booking_id={id}
+    for (const basePath of basePaths) {
+      for (const resourceName of resourceNames) {
+        const baseResourcePath = `${basePath}/${resourceName}`.replace(/\/+/g, '/');
+        const statusParams = [
+          { status: 'cancelled', booking_id: lobbyReservationId },
+          { status: 'cancelado', booking_id: lobbyReservationId },
+          { status: 'cancelled', id: lobbyReservationId },
+          { filter: 'cancelled', booking_id: lobbyReservationId },
+          { include: 'cancelled', booking_id: lobbyReservationId },
+        ];
+        
+        for (const params of statusParams) {
+          const queryString = new URLSearchParams(params as any).toString();
+          getEndpoints.push({
+            path: `${baseResourcePath}?${queryString}`,
+            desc: `GET ${baseResourcePath}?${queryString}`,
+            params: params
+          });
+        }
+      }
+    }
+
+    // 5. Spezielle Endpoints: /cancelled/{id}, /cancellations/{id}, etc.
+    const specialEndpoints = [
+      `/cancelled/${lobbyReservationId}`,
+      `/cancellations/${lobbyReservationId}`,
+      `/cancel/${lobbyReservationId}`,
+      `/api/v1/cancelled/${lobbyReservationId}`,
+      `/api/v2/cancelled/${lobbyReservationId}`,
+      `/api/v1/cancellations/${lobbyReservationId}`,
+      `/api/v2/cancellations/${lobbyReservationId}`,
+      `/api/v1/bookings/${lobbyReservationId}/status`,
+      `/api/v2/bookings/${lobbyReservationId}/status`,
+      `/api/v1/reservations/${lobbyReservationId}/status`,
+      `/api/v2/reservations/${lobbyReservationId}/status`,
+    ];
+    
+    for (const endpoint of specialEndpoints) {
+      getEndpoints.push({
+        path: endpoint,
+        desc: `GET ${endpoint}`,
+      });
     }
 
     let foundEndpoint: string | null = null;
