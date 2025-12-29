@@ -15,25 +15,48 @@ async function testCancelledReservationEndpoints() {
     // Reservation ID zum Testen (gecancelt in LobbyPMS)
     const testReservationId = '18586160';
 
-    // Hole Branch mit LobbyPMS Settings (Branch 3 oder 4)
-    const branch = await prisma.branch.findFirst({
+    // Hole Reservation aus DB um Branch zu finden
+    const reservation = await prisma.reservation.findFirst({
       where: {
-        id: { in: [3, 4] },
-        lobbyPmsSettings: { not: null }
+        lobbyReservationId: testReservationId
       },
       select: {
         id: true,
-        name: true,
-        lobbyPmsSettings: true
+        lobbyReservationId: true,
+        status: true,
+        branchId: true,
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            lobbyPmsSettings: true
+          }
+        }
       }
     });
 
-    if (!branch?.lobbyPmsSettings) {
-      console.log('❌ Kein Branch mit LobbyPMS Settings gefunden');
+    if (!reservation) {
+      console.log(`❌ Reservation ${testReservationId} nicht in DB gefunden`);
       return;
     }
 
-    console.log(`✅ Branch gefunden: ${branch.name} (ID: ${branch.id})`);
+    if (!reservation.branchId || !reservation.branch) {
+      console.log(`❌ Reservation ${testReservationId} hat keinen Branch`);
+      return;
+    }
+
+    const branch = reservation.branch;
+
+    if (!branch.lobbyPmsSettings) {
+      console.log(`❌ Branch ${branch.name} (ID: ${branch.id}) hat keine LobbyPMS Settings`);
+      return;
+    }
+
+    console.log(`✅ Reservation gefunden:`);
+    console.log(`   ID: ${reservation.id}`);
+    console.log(`   LobbyReservationId: ${reservation.lobbyReservationId}`);
+    console.log(`   Status in DB: ${reservation.status}`);
+    console.log(`   Branch: ${branch.name} (ID: ${branch.id})`);
 
     // Lade LobbyPMS Settings
     const settings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
