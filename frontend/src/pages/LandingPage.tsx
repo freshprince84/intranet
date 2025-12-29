@@ -51,21 +51,26 @@ const LandingPage: React.FC = () => {
 
   // SEO & Meta
   useEffect(() => {
-    document.title = t('landing.seo.title');
-    const description = t('landing.seo.description');
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute('content', description);
-    } else {
-      const meta = document.createElement('meta');
-      meta.name = 'description';
-      meta.content = description;
-      document.head.appendChild(meta);
+    if (!isLoading && !user) {
+      document.title = t('landing.seo.title');
+      const description = t('landing.seo.description');
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute('content', description);
+      } else {
+        const meta = document.createElement('meta');
+        meta.name = 'description';
+        meta.content = description;
+        document.head.appendChild(meta);
+      }
     }
-  }, [t]);
+  }, [t, isLoading, user]);
 
   // Schema.org
   const jsonLd = useMemo(() => {
+    if (isLoading || user) {
+      return '';
+    }
     return JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'Product',
@@ -79,7 +84,7 @@ const LandingPage: React.FC = () => {
         priceCurrency: 'CHF',
       },
     });
-  }, [t]);
+  }, [t, isLoading, user]);
 
   // Warten auf Authentifizierung
   if (isLoading) {
