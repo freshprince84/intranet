@@ -1,153 +1,52 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination, Autoplay } from 'swiper/modules';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import DeviceFrame from '../components/DeviceFrame.tsx';
 import LanguageSelector from '../components/LanguageSelector.tsx';
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
 import {
   ArrowRightIcon,
   CheckCircleIcon,
-  ClockIcon,
-  CommandLineIcon,
-  DocumentCheckIcon,
-  FingerPrintIcon,
-  InboxArrowDownIcon,
-  LinkIcon,
-  ShieldCheckIcon,
   SparklesIcon,
-  Squares2X2Icon,
-  UserGroupIcon,
+  ClockIcon,
+  CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 
-type Feature = {
-  key: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  descriptionKey: string;
-};
-
-type AudienceCard = {
-  key: string;
-  points: string[];
-};
-
-type FAQItem = {
-  questionKey: string;
-  answerKey: string;
-};
-
+// Assets
 const IMG_WORKTRACKER = '/landing-assets/worktracker.png';
 const IMG_CONSULTATIONS = '/landing-assets/consultations.png';
 const IMG_DOCUMENT = '/landing-assets/document-recognition.png';
 const IMG_TEAM = '/landing-assets/team-worktime.png';
-const IMG_CEREBRO = '/landing-assets/cerebro.png';
 const IMG_MOBILE = '/landing-assets/mobile.png';
 
-const CTAIconButton: React.FC<{
-  to: string;
-  title: string;
-  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-}> = ({ to, title, Icon }) => (
-  <Link
-    to={to}
-    className="inline-flex items-center justify-center rounded-full bg-blue-600 text-white p-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-    title={title}
-    aria-label={title}
+// Reusable Components
+const FeatureCard = ({
+  children,
+  className = '',
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: '-50px' }}
+    transition={{ duration: 0.5, delay }}
+    className={`bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700 ${className}`}
   >
-    <Icon className="h-5 w-5" />
-    <span className="sr-only">{title}</span>
-  </Link>
+    {children}
+  </motion.div>
 );
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
-  const [demoForm, setDemoForm] = useState({
-    name: '',
-    organization: '',
-    contact: '',
-    size: '',
-    useCase: '',
-  });
+  const { scrollYProgress } = useScroll();
+  const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
 
-  const featureClusters: Array<{ titleKey: string; features: Feature[] }> = [
-    {
-      titleKey: 'landing.features.operations.title',
-      features: [
-        { key: 'worktime', icon: ClockIcon, descriptionKey: 'landing.features.operations.worktime' },
-        { key: 'worktracker', icon: Squares2X2Icon, descriptionKey: 'landing.features.operations.worktracker' },
-        { key: 'teamControl', icon: UserGroupIcon, descriptionKey: 'landing.features.operations.teamControl' },
-      ],
-    },
-    {
-      titleKey: 'landing.features.knowledge.title',
-      features: [
-        { key: 'cerebro', icon: InboxArrowDownIcon, descriptionKey: 'landing.features.knowledge.cerebro' },
-        { key: 'workflow', icon: CommandLineIcon, descriptionKey: 'landing.features.knowledge.workflow' },
-      ],
-    },
-    {
-      titleKey: 'landing.features.billing.title',
-      features: [
-        { key: 'consultations', icon: CheckCircleIcon, descriptionKey: 'landing.features.billing.consultations' },
-        { key: 'invoices', icon: DocumentCheckIcon, descriptionKey: 'landing.features.billing.invoices' },
-      ],
-    },
-    {
-      titleKey: 'landing.features.ai.title',
-      features: [
-        { key: 'documentRecognition', icon: FingerPrintIcon, descriptionKey: 'landing.features.ai.documentRecognition' },
-        { key: 'filters', icon: SparklesIcon, descriptionKey: 'landing.features.ai.filters' },
-      ],
-    },
-    {
-      titleKey: 'landing.features.integration.title',
-      features: [
-        { key: 'lobbypms', icon: LinkIcon, descriptionKey: 'landing.features.integration.lobbypms' },
-        { key: 'mobile', icon: ShieldCheckIcon, descriptionKey: 'landing.features.integration.mobile' },
-      ],
-    },
-  ];
-
-  const audiences: AudienceCard[] = [
-    {
-      key: 'hospitality',
-      points: [
-        'landing.audience.hospitality.point1',
-        'landing.audience.hospitality.point2',
-        'landing.audience.hospitality.point3',
-      ],
-    },
-    {
-      key: 'consulting',
-      points: [
-        'landing.audience.consulting.point1',
-        'landing.audience.consulting.point2',
-        'landing.audience.consulting.point3',
-      ],
-    },
-  ];
-
-  const faqs: FAQItem[] = [
-    { questionKey: 'landing.faq.integration.q', answerKey: 'landing.faq.integration.a' },
-    { questionKey: 'landing.faq.support.q', answerKey: 'landing.faq.support.a' },
-    { questionKey: 'landing.faq.security.q', answerKey: 'landing.faq.security.a' },
-    { questionKey: 'landing.faq.onboarding.q', answerKey: 'landing.faq.onboarding.a' },
-  ];
-
-  const handleDemoChange = (field: keyof typeof demoForm) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setDemoForm((prev) => ({ ...prev, [field]: event.target.value }));
-  };
-
-  const handleDemoSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    // Hinweis: Backend-Endpoint/Mailto muss projektseitig konfiguriert werden.
-    alert(t('landing.cta.formFallback'));
-  };
-
+  // SEO & Meta
   useEffect(() => {
     document.title = t('landing.seo.title');
     const description = t('landing.seo.description');
@@ -160,20 +59,11 @@ const LandingPage: React.FC = () => {
       meta.content = description;
       document.head.appendChild(meta);
     }
-
-    // Optional: canonical/hreflang Konfiguration, wenn Domain/Subdomain gesetzt werden soll
-    // const canonicalHref = `${window.location.origin}/landing`;
-    // let canonicalLink = document.querySelector("link[rel='canonical']");
-    // if (!canonicalLink) {
-    //   canonicalLink = document.createElement('link');
-    //   canonicalLink.setAttribute('rel', 'canonical');
-    //   document.head.appendChild(canonicalLink);
-    // }
-    // canonicalLink.setAttribute('href', canonicalHref);
   }, [t]);
 
+  // Schema.org
   const jsonLd = useMemo(() => {
-    const data = {
+    return JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'Product',
       name: t('landing.schema.productName'),
@@ -185,440 +75,234 @@ const LandingPage: React.FC = () => {
         price: '0',
         priceCurrency: 'CHF',
       },
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.8',
-        reviewCount: '24',
-      },
-      review: [
-        {
-          '@type': 'Review',
-          author: { '@type': 'Person', name: 'Operations Lead' },
-          reviewBody: t('landing.proof.review1'),
-          reviewRating: { '@type': 'Rating', ratingValue: '5' },
-        },
-        {
-          '@type': 'Review',
-          author: { '@type': 'Person', name: 'Consulting Lead' },
-          reviewBody: t('landing.proof.review2'),
-          reviewRating: { '@type': 'Rating', ratingValue: '5' },
-        },
-      ],
-    };
-    return JSON.stringify(data);
+    });
   }, [t]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <header className="sticky top-0 z-20 bg-white/90 dark:bg-gray-900/90 backdrop-blur border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 dark:selection:bg-blue-900">
+      
+      {/* Header - Glassmorphism */}
+      <header className="sticky top-0 z-50 bg-white/70 dark:bg-gray-950/70 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
               IN
             </div>
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t('landing.hero.label')}</p>
-              <p className="font-semibold">{t('landing.hero.title')}</p>
-            </div>
+            <span className="font-semibold tracking-tight">Intranet</span>
           </div>
-          <nav className="flex items-center gap-3">
+          <nav className="flex items-center gap-4">
             <LanguageSelector />
             <Link
-              to="/register"
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-medium text-sm"
-            >
-              {t('landing.hero.ctaRegister')}
-            </Link>
-            <Link
               to="/login"
-              className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors text-sm"
+              className="text-sm font-medium hover:text-blue-600 transition-colors"
             >
               {t('landing.hero.ctaLogin')}
+            </Link>
+            <Link
+              to="/register"
+              className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              {t('landing.hero.ctaRegister')}
             </Link>
           </nav>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-        <motion.section
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="grid md:grid-cols-2 gap-10 items-center"
-        >
-          <div className="space-y-6">
-            <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold">{t('landing.hero.badge')}</p>
-            <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight">{t('landing.hero.headline')}</h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300">{t('landing.hero.subline')}</p>
-            <div className="flex items-center gap-3 flex-wrap">
+      <main className="space-y-32 pb-32">
+        
+        {/* Hero Section */}
+        <section className="pt-24 px-6 max-w-7xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="space-y-8 mb-16"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs font-semibold tracking-wide uppercase">
+              <SparklesIcon className="w-4 h-4" />
+              {t('landing.hero.badge')}
+            </div>
+            <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-balance text-gray-900 dark:text-white max-w-4xl mx-auto">
+              {t('landing.hero.headline')}
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto text-balance font-light">
+              {t('landing.hero.subline')}
+            </p>
+            <div className="flex items-center justify-center gap-4">
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center rounded-lg bg-blue-600 text-white px-6 py-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors font-semibold"
+                className="group bg-blue-600 text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
               >
                 {t('landing.hero.ctaRegister')}
-                <ArrowRightIcon className="h-5 w-5 ml-2" />
+                <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
-                to="/login"
-                className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                to="#contact"
+                className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
               >
-                {t('landing.hero.ctaLogin')}
+                {t('landing.hero.ctaDemo')}
               </Link>
             </div>
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-                <p className="text-2xl font-bold text-blue-600">24/7</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.stats.uptime')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('landing.stats.uptimeDesc')}</p>
-              </div>
-              <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-                <p className="text-2xl font-bold text-blue-600">120+</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.stats.automation')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('landing.stats.automationDesc')}</p>
-              </div>
-              <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-                <p className="text-2xl font-bold text-blue-600">3</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.stats.languages')}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('landing.stats.languagesDesc')}</p>
-              </div>
-            </div>
-          </div>
-          <Swiper
-            modules={[Navigation, Pagination, Autoplay]}
-            spaceBetween={30}
-            slidesPerView={1}
-            navigation
-            pagination={{ clickable: true }}
-            autoplay={{ delay: 5000, disableOnInteraction: false }}
-            className="w-full"
+          </motion.div>
+
+          <motion.div 
+            style={{ scale: heroScale, opacity: heroOpacity }}
+            className="relative mx-auto max-w-6xl shadow-2xl rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900"
           >
-            <SwiperSlide>
-              <DeviceFrame type="browser">
-                <div className="group relative">
-                  <img
-                    src={IMG_WORKTRACKER}
-                    alt={t('landing.assets.placeholderWorktracker')}
-                    loading="lazy"
-                    className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
-                    <SparklesIcon className="h-10 w-10 text-white mb-2 animate-pulse" />
-                    <p className="text-white font-bold text-xl sm:text-2xl mb-1">{t('landing.features.labels.worktracker')}</p>
-                    <p className="text-blue-100 text-sm">{t('landing.features.operations.worktracker')}</p>
-                  </div>
-                </div>
-              </DeviceFrame>
-            </SwiperSlide>
-            <SwiperSlide>
-              <DeviceFrame type="browser">
-                <div className="group relative">
-                  <img
-                    src={IMG_CONSULTATIONS}
-                    alt={t('landing.assets.placeholderConsultations')}
-                    loading="lazy"
-                    className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
-                    <CheckCircleIcon className="h-10 w-10 text-white mb-2 animate-bounce" />
-                    <p className="text-white font-bold text-xl sm:text-2xl mb-1">{t('landing.features.labels.consultations')}</p>
-                    <p className="text-blue-100 text-sm">{t('landing.features.billing.consultations')}</p>
-                  </div>
-                </div>
-              </DeviceFrame>
-            </SwiperSlide>
-            <SwiperSlide>
-              <DeviceFrame type="browser">
-                <div className="group relative">
-                  <img
-                    src={IMG_DOCUMENT}
-                    alt={t('landing.assets.placeholderDocument')}
-                    loading="lazy"
-                    className="w-full h-64 sm:h-96 md:h-[500px] object-contain transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
-                    <FingerPrintIcon className="h-10 w-10 text-white mb-2 animate-pulse" />
-                    <p className="text-white font-bold text-xl sm:text-2xl mb-1">{t('landing.features.labels.documentRecognition')}</p>
-                    <p className="text-blue-100 text-sm">{t('landing.features.ai.documentRecognition')}</p>
-                  </div>
-                </div>
-              </DeviceFrame>
-            </SwiperSlide>
-          </Swiper>
-        </motion.section>
+             <DeviceFrame type="browser">
+                <img
+                  src={IMG_WORKTRACKER}
+                  alt="Dashboard Preview"
+                  className="w-full h-auto object-cover"
+                />
+             </DeviceFrame>
+             <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-gray-950 via-transparent to-transparent opacity-20 pointer-events-none" />
+          </motion.div>
+        </section>
 
-        <motion.section
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="grid md:grid-cols-2 gap-8"
-          id="audiences"
-        >
-          {audiences.map((audience) => (
-            <div key={audience.key} className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm animate-fade-in-up">
-              <h2 className="text-2xl font-bold mb-4">{t(`landing.audience.${audience.key}.title`)}</h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">{t(`landing.audience.${audience.key}.description`)}</p>
-              <ul className="space-y-3">
-                {audience.points.map((point) => (
-                  <li key={point} className="flex items-start gap-3">
-                    <CheckCircleIcon className="h-5 w-5 text-blue-600 mt-0.5" />
-                    <span>{t(point)}</span>
-                  </li>
-                ))}
-              </ul>
+        {/* Feature Grid: Operations */}
+        <section className="px-6 max-w-7xl mx-auto">
+            <div className="mb-12">
+                <h2 className="text-3xl font-semibold tracking-tight">{t('landing.features.operations.title')}</h2>
+                <p className="text-gray-500 text-lg mt-2">{t('landing.features.title')}</p>
             </div>
-            ))}
-        </motion.section>
-
-        <motion.section
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="space-y-6"
-          id="features"
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold">{t('landing.features.title')}</h2>
-            <CTAIconButton to="#contact" title={t('landing.hero.ctaDemo')} Icon={SparklesIcon} />
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {featureClusters.map((cluster) => (
-              <div key={cluster.titleKey} className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm space-y-4">
-                <h3 className="text-xl font-semibold">{t(cluster.titleKey)}</h3>
-                <div className="space-y-3">
-                  {cluster.features.map((feature) => (
-                    <div key={feature.key} className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center">
-                        <feature.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{t(`landing.features.labels.${feature.key}`)}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">{t(feature.descriptionKey)}</p>
-                      </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[500px]">
+                {/* Large Card */}
+                <FeatureCard className="md:col-span-2 relative group">
+                    <div className="absolute top-8 left-8 z-10 max-w-md">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-4 shadow-lg">
+                            <ClockIcon className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-2xl font-semibold mb-2">{t('landing.features.labels.teamControl')}</h3>
+                        <p className="text-gray-500">{t('landing.features.operations.teamControl')}</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="grid gap-6 md:grid-cols-3 animate-fade-in-up">
-            {/* Großes Feature (2 Spalten) */}
-            <div className="md:col-span-2 space-y-2">
-              <DeviceFrame type="browser">
-                <div className="group relative">
-                  <img
-                    src={IMG_TEAM}
-                    alt={t('landing.features.labels.teamControl')}
-                    loading="lazy"
-                    className="w-full h-96 sm:h-[500px] md:h-[600px] object-contain transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <p className="text-white font-semibold text-lg">{t('landing.features.labels.teamControl')}</p>
-                  </div>
-                </div>
-              </DeviceFrame>
-              <div className="mt-4 text-center">
-                <p className="text-base font-medium text-gray-900 dark:text-gray-100">{t('landing.features.screenshots.teamControl')}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('landing.features.screenshots.teamControlDesc')}</p>
-              </div>
-            </div>
-            {/* Kleine Features (1 Spalte) */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <DeviceFrame type="browser">
-                  <div className="group relative">
-                    <img
-                      src={IMG_CEREBRO}
-                      alt={t('landing.features.labels.cerebro')}
-                      loading="lazy"
-                      className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                      <p className="text-white font-semibold text-sm">{t('landing.features.labels.cerebro')}</p>
+                    <div className="absolute inset-x-8 bottom-0 top-40 overflow-hidden rounded-t-2xl shadow-2xl border-t border-l border-r border-gray-200 dark:border-gray-700 translate-y-8 group-hover:translate-y-6 transition-transform duration-500">
+                         <img src={IMG_TEAM} alt="Team Control" className="w-full h-full object-cover object-top" />
                     </div>
-                  </div>
-                </DeviceFrame>
-                <div className="mt-2 text-center">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.features.screenshots.cerebro')}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{t('landing.features.screenshots.cerebroDesc')}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <DeviceFrame type="phone">
-                  <div className="group relative">
-                    <img
-                      src={IMG_MOBILE}
-                      alt={t('landing.features.labels.mobile')}
-                      loading="lazy"
-                      className="w-full h-48 sm:h-64 object-contain transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-blue-600/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                      <p className="text-white font-semibold text-sm">{t('landing.features.labels.mobile')}</p>
+                </FeatureCard>
+
+                {/* Tall Card */}
+                <FeatureCard className="md:col-span-1 relative bg-gray-50 dark:bg-gray-900">
+                    <div className="absolute top-8 left-8 right-8 z-10">
+                        <h3 className="text-2xl font-semibold mb-2">{t('landing.features.labels.mobile')}</h3>
+                        <p className="text-gray-500 text-sm">{t('landing.features.integration.mobile')}</p>
                     </div>
-                  </div>
-                </DeviceFrame>
-                <div className="mt-2 text-center">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('landing.features.screenshots.mobile')}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{t('landing.features.screenshots.mobileDesc')}</p>
+                    <div className="absolute inset-0 flex items-end justify-center pb-8 pt-32">
+                         <div className="w-48 transform translate-y-4 hover:translate-y-0 transition-transform duration-500">
+                            <DeviceFrame type="phone">
+                                <img src={IMG_MOBILE} alt="Mobile App" className="w-full h-full object-cover" />
+                            </DeviceFrame>
+                         </div>
+                    </div>
+                </FeatureCard>
+            </div>
+        </section>
+
+        {/* Feature Grid: Intelligence & Billing */}
+        <section className="px-6 max-w-7xl mx-auto">
+            <div className="mb-12">
+                 <h2 className="text-3xl font-semibold tracking-tight">{t('landing.features.ai.title')}</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <FeatureCard className="p-8 flex flex-col justify-between h-[400px]">
+                    <div>
+                        <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center mb-4 shadow-lg">
+                            <SparklesIcon className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-2xl font-semibold mb-2">{t('landing.features.labels.documentRecognition')}</h3>
+                        <p className="text-gray-500">{t('landing.features.ai.documentRecognition')}</p>
+                    </div>
+                    <div className="mt-8 rounded-xl overflow-hidden shadow-inner border border-gray-100 bg-gray-50 relative h-48">
+                         <img src={IMG_DOCUMENT} alt="AI Docs" className="w-full h-full object-cover opacity-80" />
+                         <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent" />
+                    </div>
+                 </FeatureCard>
+
+                 <FeatureCard className="p-8 flex flex-col justify-between h-[400px] bg-gray-900 text-white border-none">
+                    <div>
+                        <div className="w-10 h-10 rounded-xl bg-green-500 text-white flex items-center justify-center mb-4 shadow-lg">
+                            <CurrencyDollarIcon className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-2xl font-semibold mb-2">{t('landing.features.labels.consultations')}</h3>
+                        <p className="text-gray-400">{t('landing.features.billing.consultations')}</p>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                        <div className="bg-white/10 backdrop-blur rounded-lg p-3 text-sm flex-1 border border-white/10">
+                            <div className="opacity-50 text-xs uppercase mb-1">Total</div>
+                            <div className="text-xl font-mono">CHF 1,240.00</div>
+                        </div>
+                         <div className="bg-white/10 backdrop-blur rounded-lg p-3 text-sm flex-1 border border-white/10">
+                            <div className="opacity-50 text-xs uppercase mb-1">Status</div>
+                            <div className="text-green-400 font-medium flex items-center gap-1">
+                                <CheckCircleIcon className="w-3 h-3" /> Paid
+                            </div>
+                        </div>
+                    </div>
+                 </FeatureCard>
+            </div>
+        </section>
+
+        {/* Reviews / Proof */}
+        <section className="px-6 max-w-4xl mx-auto text-center">
+            <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                className="bg-gray-50 dark:bg-gray-800/50 rounded-3xl p-12"
+            >
+                <div className="flex justify-center gap-1 text-yellow-500 mb-6">
+                    {[...Array(5)].map((_, i) => (
+                        <SparklesIcon key={i} className="w-5 h-5 fill-current" />
+                    ))}
                 </div>
-              </div>
-            </div>
-          </div>
-        </motion.section>
+                <blockquote className="text-2xl font-medium text-gray-900 dark:text-white mb-6 leading-relaxed">
+                    "{t('landing.proof.review1')}"
+                </blockquote>
+                <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                    {t('landing.proof.hospitality.title')}
+                </div>
+            </motion.div>
+        </section>
 
-        <motion.section
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="grid md:grid-cols-3 gap-6"
-          id="proof"
-        >
-          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm">
-            <p className="text-sm uppercase tracking-wide text-blue-600 font-semibold mb-2">{t('landing.proof.badge')}</p>
-            <p className="text-2xl font-bold mb-2">{t('landing.proof.title')}</p>
-            <p className="text-gray-600 dark:text-gray-300">{t('landing.proof.description')}</p>
-          </div>
-          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm relative overflow-hidden">
-            <div className="flex items-center gap-1 text-yellow-500 mb-4">
-              {[...Array(5)].map((_, i) => (
-                <SparklesIcon key={i} className="h-4 w-4 fill-current" />
-              ))}
+        {/* CTA */}
+        <section id="contact" className="px-6 max-w-7xl mx-auto text-center pb-24">
+            <div className="bg-blue-600 rounded-3xl p-12 md:p-24 text-white overflow-hidden relative">
+                <div className="relative z-10 max-w-2xl mx-auto space-y-8">
+                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight">{t('landing.cta.title')}</h2>
+                    <p className="text-blue-100 text-xl">{t('landing.cta.subtitle')}</p>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <Link
+                            to="/register"
+                            className="w-full sm:w-auto bg-white text-blue-600 px-8 py-4 rounded-full text-lg font-bold hover:bg-blue-50 transition-colors shadow-lg"
+                        >
+                            {t('landing.hero.ctaRegister')}
+                        </Link>
+                         <Link
+                            to="mailto:demo@intranet.com"
+                            className="w-full sm:w-auto bg-blue-700 text-white border border-blue-500 px-8 py-4 rounded-full text-lg font-medium hover:bg-blue-800 transition-colors"
+                        >
+                            {t('landing.cta.formTitle')}
+                        </Link>
+                    </div>
+                </div>
+                
+                {/* Decorative Background Elements */}
+                <div className="absolute top-0 left-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -translate-x-1/2 -translate-y-1/2"></div>
+                <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-1/3 translate-y-1/3"></div>
             </div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-lg shadow-inner">H</div>
-              <div>
-                <p className="font-bold text-gray-900 dark:text-white leading-tight">{t('landing.proof.hospitality.title')}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider">Operations</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 italic leading-relaxed">"{t('landing.proof.review1')}"</p>
-          </div>
-          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm relative overflow-hidden">
-            <div className="flex items-center gap-1 text-yellow-500 mb-4">
-              {[...Array(5)].map((_, i) => (
-                <SparklesIcon key={i} className="h-4 w-4 fill-current" />
-              ))}
-            </div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center font-bold text-white text-lg shadow-inner">C</div>
-              <div>
-                <p className="font-bold text-gray-900 dark:text-white leading-tight">{t('landing.proof.consulting.title')}</p>
-                <p className="text-xs text-green-600 dark:text-green-400 font-semibold uppercase tracking-wider">Consulting</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 italic leading-relaxed">"{t('landing.proof.review2')}"</p>
-          </div>
-        </motion.section>
+        </section>
 
-        <motion.section
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="grid md:grid-cols-2 gap-8 items-center"
-          id="contact"
-        >
-          <div className="space-y-4">
-            <h2 className="text-3xl font-bold">{t('landing.cta.title')}</h2>
-            <p className="text-gray-600 dark:text-gray-300">{t('landing.cta.subtitle')}</p>
-            <div className="flex items-center gap-3">
-              <CTAIconButton to="/register" title={t('landing.hero.ctaRegister')} Icon={ArrowRightIcon} />
-              <CTAIconButton to="/login" title={t('landing.hero.ctaLogin')} Icon={CheckCircleIcon} />
-            </div>
-          </div>
-          <div className="p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm space-y-4">
-            <h3 className="text-xl font-semibold">{t('landing.cta.formTitle')}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300">{t('landing.cta.formHint')}</p>
-            <form className="space-y-3" onSubmit={handleDemoSubmit}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input
-                  value={demoForm.name}
-                  onChange={handleDemoChange('name')}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('landing.cta.formName')}
-                  aria-label={t('landing.cta.formName')}
-                />
-                <input
-                  value={demoForm.organization}
-                  onChange={handleDemoChange('organization')}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('landing.cta.formOrganization')}
-                  aria-label={t('landing.cta.formOrganization')}
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input
-                  value={demoForm.contact}
-                  onChange={handleDemoChange('contact')}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('landing.cta.formContact')}
-                  aria-label={t('landing.cta.formContact')}
-                />
-                <input
-                  value={demoForm.size}
-                  onChange={handleDemoChange('size')}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('landing.cta.formSize')}
-                  aria-label={t('landing.cta.formSize')}
-                />
-              </div>
-              <textarea
-                value={demoForm.useCase}
-                onChange={handleDemoChange('useCase')}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder={t('landing.cta.formUseCase')}
-                aria-label={t('landing.cta.formUseCase')}
-              />
-              <div className="flex items-center gap-3">
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center rounded-full bg-blue-600 text-white p-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                  title={t('landing.cta.formSubmit')}
-                  aria-label={t('landing.cta.formSubmit')}
-                >
-                  <SparklesIcon className="h-5 w-5" />
-                  <span className="sr-only">{t('landing.cta.formSubmit')}</span>
-                </button>
-                <span className="text-sm text-gray-500 dark:text-gray-400">{t('landing.cta.formSecondary')}</span>
-              </div>
-            </form>
-          </div>
-        </motion.section>
-
-        <motion.section
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-          className="space-y-4"
-          id="faq"
-        >
-          <h2 className="text-3xl font-bold">{t('landing.faq.title')}</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            {faqs.map((faq) => (
-              <div key={faq.questionKey} className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm">
-                <p className="font-semibold mb-2">{t(faq.questionKey)}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">{t(faq.answerKey)}</p>
-              </div>
-            ))}
-          </div>
-        </motion.section>
       </main>
 
-      <footer className="border-t border-gray-200 dark:border-gray-800 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <p className="font-semibold">{t('landing.footer.title')}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('landing.footer.copy')}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <CTAIconButton to="/register" title={t('landing.hero.ctaRegister')} Icon={ArrowRightIcon} />
-            <CTAIconButton to="/login" title={t('landing.hero.ctaLogin')} Icon={CheckCircleIcon} />
-            <CTAIconButton to="#contact" title={t('landing.hero.ctaDemo')} Icon={SparklesIcon} />
-          </div>
+      <footer className="border-t border-gray-100 dark:border-gray-800 py-12 bg-gray-50 dark:bg-gray-950">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="text-sm text-gray-500">
+                © {new Date().getFullYear()} Intranet Platform. {t('landing.footer.copy')}
+            </div>
+            <div className="flex gap-6">
+                <Link to="/login" className="text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">{t('landing.hero.ctaLogin')}</Link>
+                <Link to="/register" className="text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">{t('landing.hero.ctaRegister')}</Link>
+            </div>
         </div>
       </footer>
 
