@@ -79,6 +79,79 @@ const BranchCard: React.FC<{
 // TableID für gespeicherte Filter
 const BRANCHES_TABLE_ID = 'branches-table';
 
+/**
+ * Default-Templates für Gruppen-Einladungen (mehrere Betten für gleichen Gast)
+ * Variablen: {{guestName}}, {{bedsCount}}, {{reservationList}}, {{totalAmount}}, {{combinedPaymentLink}}, {{checkInLink}}
+ */
+const DEFAULT_GROUP_CHECKIN_INVITATION_TEMPLATES = {
+    en: {
+        whatsappTemplateName: 'reservation_group_checkin_invitation_en',
+        whatsappTemplateParams: ['{{1}}', '{{2}}', '{{3}}', '{{4}}', '{{5}}'],
+        emailSubject: 'Welcome to La Familia Hostel - Group Reservation',
+        emailContent: `Hello {{guestName}},
+
+Thank you for your reservation of {{bedsCount}} beds! 🎊
+
+Here are your payment links:
+
+{{reservationList}}
+
+📌 Or pay everything together (Total: {{totalAmount}} + 5%):
+{{combinedPaymentLink}}
+
+Online Check-in:
+{{checkInLink}}
+
+Please write us briefly once you have completed both the check-in and the payment, so we can send you your pin code 🔑 for the entrance door.
+
+We look forward to seeing you soon!`
+    },
+    es: {
+        whatsappTemplateName: 'reservation_group_checkin_invitation',
+        whatsappTemplateParams: ['{{1}}', '{{2}}', '{{3}}', '{{4}}', '{{5}}'],
+        emailSubject: 'Bienvenido a La Familia Hostel - Reserva Grupal',
+        emailContent: `Hola {{guestName}},
+
+¡Gracias por tu reserva de {{bedsCount}} camas! 🎊
+
+Aquí están tus enlaces de pago:
+
+{{reservationList}}
+
+📌 O puedes pagar todo junto (Total: {{totalAmount}} + 5%):
+{{combinedPaymentLink}}
+
+Check-in en línea:
+{{checkInLink}}
+
+Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago, para que podamos enviarte tu código PIN 🔑 para la puerta de entrada.
+
+¡Te esperamos pronto!`
+    },
+    de: {
+        whatsappTemplateName: 'reservation_group_checkin_invitation_de',
+        whatsappTemplateParams: ['{{1}}', '{{2}}', '{{3}}', '{{4}}', '{{5}}'],
+        emailSubject: 'Willkommen im La Familia Hostel - Gruppenreservierung',
+        emailContent: `Hallo {{guestName}},
+
+Vielen Dank für Ihre Reservierung von {{bedsCount}} Betten! 🎊
+
+Hier sind Ihre Zahlungslinks:
+
+{{reservationList}}
+
+📌 Oder alles zusammen bezahlen (Gesamt: {{totalAmount}} + 5%):
+{{combinedPaymentLink}}
+
+Online Check-in:
+{{checkInLink}}
+
+Bitte schreiben Sie uns kurz, sobald Sie sowohl den Check-in als auch die Zahlung abgeschlossen haben, damit wir Ihnen Ihren PIN-Code 🔑 für die Eingangstür senden können.
+
+Wir freuen uns darauf, Sie bald zu sehen!`
+    }
+};
+
 const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
     const { t } = useTranslation();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -112,7 +185,6 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
             syncEnabled: true,
             autoCreateTasks: false,
             lateCheckInThreshold: '22:00',
-            notificationChannels: ['email'] as string[],
             autoSendInvitation: false
         },
         boldPaymentSettings: {
@@ -291,7 +363,6 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                 syncEnabled: true,
                 autoCreateTasks: false,
                 lateCheckInThreshold: '22:00',
-                notificationChannels: ['email'] as string[],
                 autoSendInvitation: false
             },
             boldPaymentSettings: {
@@ -375,26 +446,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                         emailContent: ''
                     }
                 },
-                groupCheckInInvitation: {
-                    en: {
-                        whatsappTemplateName: '',
-                        whatsappTemplateParams: [] as string[],
-                        emailSubject: '',
-                        emailContent: ''
-                    },
-                    es: {
-                        whatsappTemplateName: '',
-                        whatsappTemplateParams: [] as string[],
-                        emailSubject: '',
-                        emailContent: ''
-                    },
-                    de: {
-                        whatsappTemplateName: '',
-                        whatsappTemplateParams: [] as string[],
-                        emailSubject: '',
-                        emailContent: ''
-                    }
-                }
+                groupCheckInInvitation: DEFAULT_GROUP_CHECKIN_INVITATION_TEMPLATES
             },
             autoSendReservationInvitation: false
         });
@@ -459,7 +511,6 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                 syncEnabled: existingLobbyPms.syncEnabled !== undefined ? existingLobbyPms.syncEnabled : true,
                 autoCreateTasks: existingLobbyPms.autoCreateTasks || false,
                 lateCheckInThreshold: existingLobbyPms.lateCheckInThreshold || '22:00',
-                notificationChannels: existingLobbyPms.notificationChannels || ['email'],
                 autoSendInvitation: existingLobbyPms.autoSendInvitation || false
             },
             boldPaymentSettings: {
@@ -505,23 +556,48 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
                     processedFolder: ''
                 }
             },
-            messageTemplates: existingMessageTemplates || {
-                checkInInvitation: {
-                    en: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
-                    es: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
-                    de: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' }
-                },
-                checkInConfirmation: {
-                    en: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
-                    es: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
-                    de: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' }
-                },
-                groupCheckInInvitation: {
-                    en: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
-                    es: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
-                    de: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' }
+            messageTemplates: (() => {
+                // Verwende vorhandene Templates oder leere Struktur
+                const templates = existingMessageTemplates || {
+                    checkInInvitation: {
+                        en: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
+                        es: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
+                        de: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' }
+                    },
+                    checkInConfirmation: {
+                        en: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
+                        es: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
+                        de: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' }
+                    },
+                    groupCheckInInvitation: {
+                        en: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
+                        es: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' },
+                        de: { whatsappTemplateName: '', whatsappTemplateParams: [], emailSubject: '', emailContent: '' }
+                    }
+                };
+                
+                // Prüfe ob groupCheckInInvitation leer ist und fülle mit Defaults
+                if (!templates.groupCheckInInvitation || 
+                    !templates.groupCheckInInvitation.en?.emailContent ||
+                    templates.groupCheckInInvitation.en.emailContent.trim() === '') {
+                    templates.groupCheckInInvitation = DEFAULT_GROUP_CHECKIN_INVITATION_TEMPLATES;
+                } else {
+                    // Stelle sicher, dass alle Sprachen vorhanden sind (füge Defaults für fehlende hinzu)
+                    templates.groupCheckInInvitation = {
+                        en: templates.groupCheckInInvitation.en?.emailContent?.trim() 
+                            ? templates.groupCheckInInvitation.en 
+                            : DEFAULT_GROUP_CHECKIN_INVITATION_TEMPLATES.en,
+                        es: templates.groupCheckInInvitation.es?.emailContent?.trim() 
+                            ? templates.groupCheckInInvitation.es 
+                            : DEFAULT_GROUP_CHECKIN_INVITATION_TEMPLATES.es,
+                        de: templates.groupCheckInInvitation.de?.emailContent?.trim() 
+                            ? templates.groupCheckInInvitation.de 
+                            : DEFAULT_GROUP_CHECKIN_INVITATION_TEMPLATES.de
+                    };
                 }
-            },
+                
+                return templates;
+            })(),
             autoSendReservationInvitation: existingAutoSend
         });
         setIsModalOpen(true);

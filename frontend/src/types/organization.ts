@@ -68,7 +68,6 @@ export interface OrganizationSettings {
     syncEnabled?: boolean;
     autoCreateTasks?: boolean;
     lateCheckInThreshold?: string;
-    notificationChannels?: ('email' | 'whatsapp')[];
     autoSendReservationInvitation?: boolean; // Default: true (Rückwärtskompatibilität)
   };
   

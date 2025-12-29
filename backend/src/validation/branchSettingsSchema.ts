@@ -11,7 +11,6 @@ export const branchLobbyPmsSettingsSchema = z.object({
   syncEnabled: z.boolean().default(true),
   autoCreateTasks: z.boolean().default(true),
   lateCheckInThreshold: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
-  notificationChannels: z.array(z.enum(['email', 'whatsapp'])).default(['email']),
   autoSendReservationInvitation: z.boolean().default(true)
 });
 

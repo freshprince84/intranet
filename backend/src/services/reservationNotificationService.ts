@@ -449,7 +449,6 @@ export class ReservationNotificationService {
           }
 
           const lateCheckInThreshold = lobbyPmsSettings.lateCheckInThreshold || '18:00';
-          const notificationChannels = lobbyPmsSettings.notificationChannels || ['email'];
 
           logger.log(`[ReservationNotification] Verarbeite Organisation ${organization.id}...`);
 
@@ -505,7 +504,7 @@ export class ReservationNotificationService {
                   const checkInLink = generateLobbyPmsCheckInLink(reservation);
 
                   // Versende Benachrichtigungen
-                  if (notificationChannels.includes('email') && reservation.guestEmail) {
+                  if (reservation.guestEmail) {
                     await this.sendCheckInInvitationEmail(
                       reservation,
                       checkInLink,
@@ -513,7 +512,7 @@ export class ReservationNotificationService {
                     );
                   }
 
-                  if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
+                  if (reservation.guestPhone) {
                     const whatsappService = reservation.branchId
                       ? new WhatsAppService(undefined, reservation.branchId)
                       : new WhatsAppService(organization.id);
@@ -1397,17 +1396,13 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       if (reservation.branchId && reservation.branch?.doorSystemSettings) {
         const branchSettings = decryptBranchApiSettings(reservation.branch.doorSystemSettings as any);
         doorSystemSettings = branchSettings?.doorSystem || branchSettings;
-        // Für notificationChannels: Fallback auf Organisation
         const orgSettings = decryptApiSettings(reservation.organization.settings as any);
         decryptedSettings = orgSettings;
       } else {
         decryptedSettings = decryptApiSettings(reservation.organization.settings as any);
         doorSystemSettings = decryptedSettings?.doorSystem;
       }
-      
-      const notificationChannels = decryptedSettings?.lobbyPms?.notificationChannels || ['email'];
 
-      logger.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
       logger.log(`[ReservationNotification] Guest Phone: ${reservation.guestPhone || 'N/A'}`);
       logger.log(`[ReservationNotification] Settings entschlüsselt:`, {
         hasDoorSystem: !!doorSystemSettings,
@@ -1497,7 +1492,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
         ? `Hola ${reservation.guestName},\n\n¡Bienvenido a La Familia Hostel!\n\nTu código de acceso TTLock:\n${doorPin}\n\n¡Te esperamos!`
         : null;
 
-      if (notificationChannels.includes('email') && reservation.guestEmail) {
+      if (reservation.guestEmail) {
         try {
           await this.sendCheckInConfirmationEmail(
             reservation,
@@ -1546,7 +1541,7 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       }
 
       // WhatsApp-Versendung mit TTLock-Code
-      if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
+      if (reservation.guestPhone) {
         try {
           const whatsappService = reservation.branchId
             ? new WhatsAppService(undefined, reservation.branchId)
@@ -1708,9 +1703,6 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
           }
         }
       } else {
-        if (!notificationChannels.includes('whatsapp')) {
-          logger.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
-        }
         if (!reservation.guestPhone) {
           logger.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
         }
@@ -1790,17 +1782,13 @@ Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in
       if (reservation.branchId && reservation.branch?.doorSystemSettings) {
         const branchSettings = decryptBranchApiSettings(reservation.branch.doorSystemSettings as any);
         doorSystemSettings = branchSettings?.doorSystem || branchSettings;
-        // Für notificationChannels: Fallback auf Organisation
         const orgSettings = decryptApiSettings(reservation.organization.settings as any);
         decryptedSettings = orgSettings;
       } else {
         decryptedSettings = decryptApiSettings(reservation.organization.settings as any);
         doorSystemSettings = decryptedSettings?.doorSystem;
       }
-      
-      const notificationChannels = decryptedSettings?.lobbyPms?.notificationChannels || ['email'];
 
-      logger.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
       logger.log(`[ReservationNotification] Guest Phone: ${finalGuestPhone || 'N/A'}`);
       logger.log(`[ReservationNotification] Guest Email: ${finalGuestEmail || 'N/A'}`);
       logger.log(`[ReservationNotification] Settings entschlüsselt:`, {
@@ -1985,7 +1973,7 @@ ${contentText}
       let emailError: string | null = null;
       let whatsappError: string | null = null;
 
-      if (notificationChannels.includes('email') && finalGuestEmail) {
+      if (finalGuestEmail) {
         try {
           // Erstelle temporäre Reservierung mit angepassten Kontaktdaten für E-Mail
           const emailReservation = {
@@ -2042,7 +2030,7 @@ ${contentText}
       }
 
       // WhatsApp-Versendung mit TTLock-Code
-      if (notificationChannels.includes('whatsapp') && finalGuestPhone) {
+      if (finalGuestPhone) {
         try {
           const whatsappService = reservation.branchId
             ? new WhatsAppService(undefined, reservation.branchId)
@@ -2292,9 +2280,6 @@ ${contentText}
           }
         }
       } else {
-        if (!notificationChannels.includes('whatsapp')) {
-          logger.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
-        }
         if (!finalGuestPhone) {
           logger.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
         }
@@ -2381,14 +2366,11 @@ ${contentText}
       if (reservation.branchId && reservation.branch?.doorSystemSettings) {
         const branchSettings = decryptBranchApiSettings(reservation.branch.doorSystemSettings as any);
         doorSystemSettings = branchSettings?.doorSystem || branchSettings;
-        // Für notificationChannels: Fallback auf Organisation
         settings = decryptApiSettings(reservation.organization.settings as any);
       } else {
         settings = decryptApiSettings(reservation.organization.settings as any);
         doorSystemSettings = settings?.doorSystem;
       }
-      
-      const notificationChannels = settings?.lobbyPms?.notificationChannels || ['email'];
 
       // Erstelle TTLock Passcode
       let doorPin: string | null = null;
@@ -2428,7 +2410,7 @@ ${contentText}
       }
 
       // Versende Benachrichtigungen
-      if (notificationChannels.includes('email') && reservation.guestEmail) {
+      if (reservation.guestEmail) {
         await this.sendCheckInConfirmationEmail(
           reservation,
           doorPin,
@@ -2438,7 +2420,7 @@ ${contentText}
 
       // ⚠️ TEMPORÄR DEAKTIVIERT: WhatsApp-Versendung nach TTLock-Webhook
       // TTLock-Code wird weiterhin erstellt und im Frontend angezeigt, aber nicht versendet
-      if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
+      if (reservation.guestPhone) {
         logger.log(`[ReservationNotification] ⚠️ WhatsApp-Versendung temporär deaktiviert - TTLock-Code ${doorPin ? `(${doorPin})` : ''} wird nur im Frontend angezeigt`);
         // TODO: Wieder aktivieren, wenn gewünscht
         /*

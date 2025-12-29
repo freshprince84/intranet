@@ -1088,13 +1088,21 @@ export class LobbyPmsService {
     }
     
     // Status: API gibt checked_in/checked_out Booleans zurück
+    // WICHTIG: Prüfe zuerst das status-Feld (für cancelled, no_show, etc.)
+    // Dann prüfe checked_in/checked_out Booleans (für checked_in/checked_out)
     let status: ReservationStatus = ReservationStatus.confirmed;
+    
+    // Prüfe zuerst explizites status-Feld (hat Vorrang für cancelled, no_show, etc.)
+    if (lobbyReservation.status) {
+      status = mapStatus(lobbyReservation.status);
+    }
+    
+    // Dann prüfe checked_in/checked_out Booleans (überschreibt nur wenn status nicht explizit gesetzt war)
+    // WICHTIG: checked_out hat Vorrang vor checked_in
     if (lobbyReservation.checked_out) {
       status = ReservationStatus.checked_out;
     } else if (lobbyReservation.checked_in) {
       status = ReservationStatus.checked_in;
-    } else if (lobbyReservation.status) {
-      status = mapStatus(lobbyReservation.status);
     }
     
     // Payment Status: API gibt paid_out und total_to_pay zurück
@@ -1381,11 +1389,25 @@ export class LobbyPmsService {
     const lobbyReservations = await this.fetchReservationsByCheckoutDate(today);
     let updatedCount = 0;
 
+    logger.log(`[LobbyPMS] Gefunden ${lobbyReservations.length} Reservationen zur Aktualisierung`);
+
     for (const lobbyReservation of lobbyReservations) {
       try {
+        const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id || 'unknown');
+        const statusFromApi = lobbyReservation.status || (lobbyReservation.checked_out ? 'checked_out' : lobbyReservation.checked_in ? 'checked_in' : 'unknown');
+        
+        // Logge Status für Debugging
+        logger.log(`[LobbyPMS] Aktualisiere Reservation ${bookingId} mit Status: ${statusFromApi}`);
+        
         // syncReservation() verwendet upsert, aktualisiert also bestehende Reservationen
         // Wenn Reservation nicht existiert, wird sie erstellt (aber das sollte selten sein)
-        await this.syncReservation(lobbyReservation);
+        const updatedReservation = await this.syncReservation(lobbyReservation);
+        
+        // Logge wenn Status geändert wurde
+        if (updatedReservation.status === ReservationStatus.cancelled) {
+          logger.log(`[LobbyPMS] ✅ Reservation ${bookingId} wurde auf 'cancelled' aktualisiert`);
+        }
+        
         updatedCount++;
       } catch (error) {
         const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id || 'unknown');
