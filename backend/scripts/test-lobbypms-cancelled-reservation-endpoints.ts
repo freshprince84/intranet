@@ -188,11 +188,40 @@ async function testCancelledReservationEndpoints() {
         const response = await axiosInstance.get(endpoint.path, config);
 
         if (response.status === 200) {
+          // Prüfe ob Response HTML ist (nicht JSON)
+          const contentType = response.headers['content-type'] || '';
+          const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+          
+          if (contentType.includes('text/html') || responseText.includes('<!doctype html>') || responseText.includes('<html')) {
+            // HTML-Response ignorieren (nicht die API)
+            continue;
+          }
+          
           successCount++;
           console.log(`\n✅ ${endpoint.desc}`);
           console.log(`   Status: ${response.status}`);
           
-          const data = response.data?.data || response.data;
+          let data = response.data?.data || response.data;
+          
+          // Prüfe ob Response ein Array ist (z.B. /api/v1/bookings?booking_id=...)
+          if (Array.isArray(data)) {
+            console.log(`   📋 Response ist Array mit ${data.length} Einträgen`);
+            
+            // Suche nach der gesuchten Reservation im Array
+            const foundReservation = data.find((item: any) => 
+              String(item.booking_id || item.id) === lobbyReservationId
+            );
+            
+            if (foundReservation) {
+              console.log(`   ✅ Reservation ${lobbyReservationId} im Array gefunden!`);
+              data = foundReservation;
+            } else {
+              console.log(`   ❌ Reservation ${lobbyReservationId} NICHT im Array gefunden`);
+              console.log(`   📦 Erste Reservation im Array:`, JSON.stringify(data[0], null, 2).substring(0, 300));
+              continue; // Weiter mit nächstem Endpoint
+            }
+          }
+          
           const status = data?.status || 'N/A';
           const bookingId = String(data?.booking_id || data?.id || 'N/A');
           
