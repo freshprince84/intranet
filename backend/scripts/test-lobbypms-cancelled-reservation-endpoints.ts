@@ -318,31 +318,106 @@ async function testCancelledReservationEndpoints() {
     console.log(`   Erfolgreich (200): ${successCount}`);
     console.log(`   Nicht gefunden (404): ${testedCount - successCount}`);
 
-    // Prüfe ob in Liste enthalten
-    console.log(`\n\n📋 Prüfe ob in Liste /api/v1/bookings enthalten:`);
-    try {
-      const response = await axiosInstance.get('/api/v1/bookings', {
-        params: {
-          per_page: 100,
+    // Prüfe ob in Liste enthalten - mit verschiedenen Status-Parametern
+    console.log(`\n\n📋 Prüfe ob in Liste /api/v1/bookings enthalten (mit verschiedenen Status-Parametern):`);
+    
+    // Teste verschiedene Status-Werte (basierend auf LobbyBookings Frontend: status=0)
+    const statusValues = [null, 0, 1, 2, 3, -1, 'cancelled', 'cancelado', 'all'];
+    
+    for (const statusValue of statusValues) {
+      try {
+        const params: any = {
+          per_page: 1000, // Mehr Ergebnisse
           page: 1
+        };
+        
+        if (statusValue !== null) {
+          params.status = statusValue;
+        }
+        
+        const response = await axiosInstance.get('/api/v1/bookings', { params });
+
+        const bookings = response.data?.data || response.data || [];
+        const count = Array.isArray(bookings) ? bookings.length : 0;
+        const found = Array.isArray(bookings) ? bookings.find((b: any) => 
+          String(b.booking_id || b.id) === lobbyReservationId
+        ) : null;
+
+        if (found) {
+          console.log(`\n   🎯 ✅ GEFUNDEN mit status=${statusValue}:`);
+          console.log(`      Status in Response: ${found.status || 'N/A'}`);
+          console.log(`      Booking ID: ${found.booking_id || found.id}`);
+          console.log(`      Total in Array: ${count}`);
+          console.log(`      📦 Response:`, JSON.stringify(found, null, 2).substring(0, 500));
+          foundEndpoint = `/api/v1/bookings?status=${statusValue}`;
+          foundStatus = found.status;
+        } else {
+          console.log(`   status=${statusValue}: ${count} Reservationen, Reservation ${lobbyReservationId} NICHT gefunden`);
+        }
+      } catch (error: any) {
+        if (error.response?.status !== 404) {
+          console.log(`   status=${statusValue}: Fehler ${error.response?.status || error.code}`);
+        }
+      }
+    }
+
+    // Teste auch LobbyBookings API (app.lobbybookings.com) - Channel Manager
+    console.log(`\n\n📋 Teste LobbyBookings API (Channel Manager):`);
+    try {
+      // LobbyBookings verwendet app.lobbybookings.com statt api.lobbypms.com
+      const lobbyBookingsUrl = apiUrl.replace('api.lobbypms.com', 'app.lobbybookings.com');
+      const lobbyBookingsInstance: AxiosInstance = axios.create({
+        baseURL: lobbyBookingsUrl,
+        timeout: 30000,
+        headers: {
+          'Authorization': `Bearer ${lobbyPmsSettings.apiKey}`,
+          'Content-Type': 'application/json'
         }
       });
 
-      const bookings = response.data?.data || response.data || [];
-      const found = Array.isArray(bookings) ? bookings.find((b: any) => 
-        String(b.booking_id || b.id) === testReservationId
-      ) : null;
+      // Teste verschiedene Endpoints basierend auf Screenshot
+      const lobbyBookingsEndpoints = [
+        '/api/bookings?channel=0&status=0&booking=&size=1000&page=1',
+        '/api/bookings?channel=0&status=1&booking=&size=1000&page=1',
+        '/api/bookings?channel=0&status=2&booking=&size=1000&page=1',
+        '/api/bookings?channel=0&status=-1&booking=&size=1000&page=1',
+        `/api/bookings?channel=0&status=0&booking=${lobbyReservationId}&size=1000&page=1`,
+        `/api/bookings?channel=0&status=1&booking=${lobbyReservationId}&size=1000&page=1`,
+        `/api/bookings?channel=0&status=2&booking=${lobbyReservationId}&size=1000&page=1`,
+      ];
 
-      if (found) {
-        console.log(`   ✅ Reservation in Liste gefunden`);
-        console.log(`   🎯 Status in Liste: ${found.status || 'N/A'}`);
-      } else {
-        console.log(`   ❌ Reservation NICHT in Liste enthalten`);
-        console.log(`   📊 Anzahl Reservationen in Liste: ${Array.isArray(bookings) ? bookings.length : 'N/A'}`);
-        console.log(`   ⚠️  Gecancelte Reservationen werden aus Liste gefiltert!`);
+      for (const endpoint of lobbyBookingsEndpoints) {
+        try {
+          const response = await lobbyBookingsInstance.get(endpoint, {
+            validateStatus: (status) => status < 500
+          });
+
+          if (response.status === 200) {
+            const bookings = response.data?.data || response.data || [];
+            const count = Array.isArray(bookings) ? bookings.length : 0;
+            const found = Array.isArray(bookings) ? bookings.find((b: any) => 
+              String(b.booking_id || b.id) === lobbyReservationId
+            ) : null;
+
+            if (found) {
+              console.log(`\n   🎯 ✅ GEFUNDEN in LobbyBookings mit ${endpoint}:`);
+              console.log(`      Status in Response: ${found.status || 'N/A'}`);
+              console.log(`      Booking ID: ${found.booking_id || found.id}`);
+              console.log(`      Total in Array: ${count}`);
+              console.log(`      📦 Response:`, JSON.stringify(found, null, 2).substring(0, 500));
+              foundEndpoint = endpoint;
+              foundStatus = found.status;
+              break;
+            } else {
+              console.log(`   ${endpoint}: ${count} Reservationen, NICHT gefunden`);
+            }
+          }
+        } catch (error: any) {
+          // Ignoriere Fehler
+        }
       }
     } catch (error: any) {
-      console.log(`   ❌ Fehler: ${error.response?.status || error.code} - ${error.message}`);
+      console.log(`   ⚠️  LobbyBookings API nicht erreichbar: ${error.message}`);
     }
 
     // Zusammenfassung
