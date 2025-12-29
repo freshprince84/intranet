@@ -89,54 +89,148 @@ async function testCancelledReservationEndpoints() {
       }
     });
 
-    console.log(`\n🔍 Teste LobbyPMS API Endpoints für gecancelte Reservation ${testReservationId}:\n`);
+    // Verwende lobbyReservationId (nicht lokale DB-ID)
+    const lobbyReservationId = reservation.lobbyReservationId || testReservationId;
+    console.log(`\n🔍 Teste LobbyPMS API Endpoints für gecancelte Reservation:`);
+    console.log(`   LobbyReservationId: ${lobbyReservationId}`);
+    console.log(`   (Lokale DB-ID: ${reservation.id})\n`);
 
-    // Liste aller möglichen Endpoints
-    const endpoints = [
-      { path: `/api/v1/bookings/${testReservationId}`, desc: 'GET /api/v1/bookings/{id}' },
-      { path: `/api/v2/bookings/${testReservationId}`, desc: 'GET /api/v2/bookings/{id}' },
-      { path: `/reservations/${testReservationId}`, desc: 'GET /reservations/{id}' },
-      { path: `/api/v1/reservations/${testReservationId}`, desc: 'GET /api/v1/reservations/{id}' },
-      { path: `/api/v2/reservations/${testReservationId}`, desc: 'GET /api/v2/reservations/{id}' },
-      { path: `/bookings/${testReservationId}`, desc: 'GET /bookings/{id}' },
+    // Systematisch ALLE möglichen Endpoint-Varianten testen
+    const basePaths = [
+      '', // Root
+      '/api',
+      '/api/v1',
+      '/api/v2',
+      '/v1',
+      '/v2'
     ];
+
+    const resourceNames = [
+      'reservations',
+      'bookings',
+      'reservation',
+      'booking'
+    ];
+
+    // GET-Endpoints (ohne Suffix)
+    const getEndpoints: Array<{ path: string; desc: string; params?: any }> = [];
+
+    // 1. Path-Parameter Varianten: /resource/{id}
+    for (const basePath of basePaths) {
+      for (const resourceName of resourceNames) {
+        const fullPath = `${basePath}/${resourceName}/${lobbyReservationId}`.replace(/\/+/g, '/');
+        getEndpoints.push({
+          path: fullPath,
+          desc: `GET ${fullPath}`,
+        });
+      }
+    }
+
+    // 2. Query-Parameter Varianten: /resource?booking_id={id}, /resource?id={id}, etc.
+    for (const basePath of basePaths) {
+      for (const resourceName of resourceNames) {
+        const baseResourcePath = `${basePath}/${resourceName}`.replace(/\/+/g, '/');
+        
+        // Verschiedene Query-Parameter-Namen
+        const queryParams = [
+          { booking_id: lobbyReservationId },
+          { id: lobbyReservationId },
+          { reservation_id: lobbyReservationId },
+          { bookingId: lobbyReservationId },
+          { reservationId: lobbyReservationId },
+        ];
+
+        for (const params of queryParams) {
+          const queryString = new URLSearchParams(params as any).toString();
+          getEndpoints.push({
+            path: `${baseResourcePath}?${queryString}`,
+            desc: `GET ${baseResourcePath}?${queryString}`,
+            params: params
+          });
+        }
+      }
+    }
+
+    // 3. Alternative Path-Strukturen: /resource/{id}/show, /resource/{id}/get, etc.
+    const pathSuffixes = ['', '/show', '/get', '/details', '/info'];
+    for (const basePath of basePaths) {
+      for (const resourceName of resourceNames) {
+        for (const suffix of pathSuffixes) {
+          if (suffix) {
+            const fullPath = `${basePath}/${resourceName}/${lobbyReservationId}${suffix}`.replace(/\/+/g, '/');
+            getEndpoints.push({
+              path: fullPath,
+              desc: `GET ${fullPath}`,
+            });
+          }
+        }
+      }
+    }
 
     let foundEndpoint: string | null = null;
     let foundStatus: string | null = null;
+    let testedCount = 0;
+    let successCount = 0;
 
-    for (const endpoint of endpoints) {
-      console.log(`\n${endpoint.desc}:`);
+    console.log(`📊 Teste ${getEndpoints.length} Endpoint-Varianten...\n`);
+
+    for (const endpoint of getEndpoints) {
+      testedCount++;
       try {
-        const response = await axiosInstance.get(endpoint.path, {
-          validateStatus: (status) => status < 500
-        });
+        const config: any = {
+          validateStatus: (status: number) => status < 500
+        };
+        
+        if (endpoint.params) {
+          config.params = endpoint.params;
+        }
+
+        const response = await axiosInstance.get(endpoint.path, config);
 
         if (response.status === 200) {
-          console.log(`   ✅ Status: ${response.status}`);
-          const data = response.data?.data || response.data;
-          console.log(`   🎯 Status in LobbyPMS: ${data?.status || 'N/A'}`);
-          console.log(`   🆔 Booking ID: ${data?.booking_id || data?.id || 'N/A'}`);
+          successCount++;
+          console.log(`\n✅ ${endpoint.desc}`);
+          console.log(`   Status: ${response.status}`);
           
-          if (data?.status === 'cancelled' || data?.status === 'cancelado') {
+          const data = response.data?.data || response.data;
+          const status = data?.status || 'N/A';
+          const bookingId = String(data?.booking_id || data?.id || 'N/A');
+          
+          console.log(`   🎯 Status in LobbyPMS: ${status}`);
+          console.log(`   🆔 Booking ID: ${bookingId}`);
+          
+          if (status === 'cancelled' || status === 'cancelado') {
             console.log(`   ⚠️  ✅ Reservation ist GECANCELT in LobbyPMS!`);
             foundEndpoint = endpoint.path;
-            foundStatus = data?.status;
+            foundStatus = status;
           }
           
-          console.log(`   📦 Response (erste 300 Zeichen):`, JSON.stringify(data, null, 2).substring(0, 300));
-        } else {
-          console.log(`   ❌ Status: ${response.status}`);
+          // Zeige vollständige Response für erfolgreiche Endpoints
+          console.log(`   📦 Response:`, JSON.stringify(data, null, 2).substring(0, 500));
+        } else if (response.status !== 404) {
+          // Zeige nur non-404 Fehler (404 ist zu häufig)
+          console.log(`\n⚠️  ${endpoint.desc}`);
+          console.log(`   Status: ${response.status}`);
           if (response.data) {
             console.log(`   📦 Error Response:`, JSON.stringify(response.data, null, 2).substring(0, 200));
           }
         }
       } catch (error: any) {
-        console.log(`   ❌ Fehler: ${error.response?.status || error.code} - ${error.message}`);
-        if (error.response?.data) {
-          console.log(`   📦 Error Response:`, JSON.stringify(error.response.data, null, 2).substring(0, 200));
+        if (error.response?.status && error.response.status !== 404) {
+          // Zeige nur non-404 Fehler
+          console.log(`\n⚠️  ${endpoint.desc}`);
+          console.log(`   Fehler: ${error.response.status} - ${error.message}`);
+          if (error.response?.data) {
+            console.log(`   📦 Error Response:`, JSON.stringify(error.response.data, null, 2).substring(0, 200));
+          }
         }
       }
     }
+
+    console.log(`\n\n📊 Test-Statistik:`);
+    console.log(`   Getestet: ${testedCount} Endpoints`);
+    console.log(`   Erfolgreich (200): ${successCount}`);
+    console.log(`   Nicht gefunden (404): ${testedCount - successCount}`);
 
     // Prüfe ob in Liste enthalten
     console.log(`\n\n📋 Prüfe ob in Liste /api/v1/bookings enthalten:`);
