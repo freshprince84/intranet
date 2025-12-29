@@ -83,16 +83,17 @@ instance.interceptors.response.use(
       // Prüfe ob Endpoint ausgeschlossen werden soll
       const shouldExclude = excludedPaths.some(path => requestPath.includes(path));
       
-      // Prüfe ob bereits auf Login-Seite
+      // Prüfe ob bereits auf Login-Seite oder LandingPage
       const isOnLoginPage = window.location.pathname === '/login';
+      const isOnLandingPage = window.location.pathname === '/' || window.location.pathname === '/landing';
       
       // Prüfe ob bereits Weiterleitung läuft
       if (isRedirecting) {
         return Promise.reject(error);
       }
       
-      // Nur weiterleiten wenn nicht ausgeschlossen und nicht bereits auf Login
-      if (!shouldExclude && !isOnLoginPage) {
+      // Nur weiterleiten wenn nicht ausgeschlossen und nicht bereits auf Login oder LandingPage
+      if (!shouldExclude && !isOnLoginPage && !isOnLandingPage) {
         isRedirecting = true;
         
         // Token entfernen
