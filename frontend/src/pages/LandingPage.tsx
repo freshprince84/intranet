@@ -49,16 +49,6 @@ const LandingPage: React.FC = () => {
   const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
 
-  // Warten auf Authentifizierung
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
-
-  // Eingeloggte User zum Dashboard weiterleiten
-  if (user) {
-    return <Navigate to="/app/dashboard" replace />;
-  }
-
   // SEO & Meta
   useEffect(() => {
     document.title = t('landing.seo.title');
@@ -90,6 +80,16 @@ const LandingPage: React.FC = () => {
       },
     });
   }, [t]);
+
+  // Warten auf Authentifizierung
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  // Eingeloggte User zum Dashboard weiterleiten
+  if (user) {
+    return <Navigate to="/app/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans selection:bg-blue-100 dark:selection:bg-blue-900">
