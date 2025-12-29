@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import DeviceFrame from '../components/DeviceFrame.tsx';
 import LanguageSelector from '../components/LanguageSelector.tsx';
+import { useAuth } from '../hooks/useAuth.tsx';
+import LoadingScreen from '../components/LoadingScreen.tsx';
 import {
   ArrowRightIcon,
   CheckCircleIcon,
@@ -42,9 +44,20 @@ const FeatureCard = ({
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
+  const { user, isLoading } = useAuth();
   const { scrollYProgress } = useScroll();
   const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+
+  // Warten auf Authentifizierung
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  // Eingeloggte User zum Dashboard weiterleiten
+  if (user) {
+    return <Navigate to="/app/dashboard" replace />;
+  }
 
   // SEO & Meta
   useEffect(() => {
