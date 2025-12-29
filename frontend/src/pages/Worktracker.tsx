@@ -3059,7 +3059,7 @@ const Worktracker: React.FC = () => {
                                                         icon: <HomeIcon className="h-4 w-4" />,
                                                         label: t('reservations.room', 'Zimmer'),
                                                         value: roomDisplayText,
-                                                        section: 'main'
+                                                        section: 'header-right'
                                                     });
                                                 }
                                                 
@@ -3068,7 +3068,7 @@ const Worktracker: React.FC = () => {
                                                     icon: <CalendarIcon className="h-4 w-4" />,
                                                     label: t('reservations.checkInOut', 'Check-in/Check-out'),
                                                     value: `${formatDate(reservation.checkInDate)} - ${formatDate(reservation.checkOutDate)}`,
-                                                    section: 'main'
+                                                    section: 'header-right'
                                                 });
                                                 
                                                 // Links: Telefon/Email unter Titel (gleiche Zeile wie Status)

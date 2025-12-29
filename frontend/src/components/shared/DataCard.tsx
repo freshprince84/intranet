@@ -15,7 +15,7 @@ export interface MetadataItem {
     fileType: string;
     url: string;
   }>; // Attachment-Metadaten für Vorschau
-  section?: 'left' | 'main' | 'main-second' | 'main-third' | 'right' | 'right-inline' | 'center' | 'full'; // Position im Layout
+  section?: 'left' | 'main' | 'main-second' | 'main-third' | 'right' | 'right-inline' | 'center' | 'full' | 'header-right'; // Position im Layout
 }
 
 export interface DataCardProps {
@@ -473,14 +473,14 @@ const DataCard: React.FC<DataCardProps> = ({
             )}
           </div>
           {/* Rechts: Datum (50%) */}
-          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0" style={{ width: '50%', justifyContent: 'flex-end' }}>
-            {metadata.filter(item => item.section === 'right-inline').map((item, index) => (
-              <React.Fragment key={index}>
+          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0 flex-wrap justify-end" style={{ width: '50%' }}>
+            {metadata.filter(item => item.section === 'right-inline' || item.section === 'header-right').map((item, index) => (
+              <div key={index} className="flex items-center gap-1 whitespace-nowrap ml-2">
                 {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
+                <span className={`${item.className || 'text-gray-900 dark:text-white'}`}>
                   {typeof item.value === 'string' ? item.value : item.value}
                 </span>
-              </React.Fragment>
+              </div>
             ))}
           </div>
         </div>
@@ -520,6 +520,21 @@ const DataCard: React.FC<DataCardProps> = ({
       
       {/* Desktop Layout (sm und größer) */}
       <div className="hidden sm:block">
+        {/* Header Right Section - für Room/Check-in Daten über dem Titel */}
+        {metadata.filter(item => item.section === 'header-right').length > 0 && (
+          <div className="flex justify-end gap-3 mb-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 pb-2">
+            {metadata.filter(item => item.section === 'header-right').map((item, index) => (
+              <div key={index} className="flex items-center gap-1.5">
+                {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                {item.label && <span className="font-medium">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
+                <span className={item.className || 'text-gray-900 dark:text-white'}>
+                  {typeof item.value === 'string' ? item.value : item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Container für Titel links und alle Metadaten rechts - Grid-Layout mit 2 Spalten */}
         <div className="grid items-center gap-4 mb-2" style={{ gridTemplateColumns: '1fr auto' }}>
           {/* ✅ REFACTORING: Titel-Rendering mit Helper-Funktion */}
@@ -681,19 +696,18 @@ const DataCard: React.FC<DataCardProps> = ({
                 ))}
               </div>
               
-              {/* Rechts: Status-Badges und Rest */}
-              <div className="flex flex-col gap-2 items-end">
+              {/* Rechts: Status-Badges und Rest - Grid Layout für saubere Ausrichtung */}
+              <div className="grid grid-cols-[auto_auto] gap-x-3 gap-y-2 items-center justify-end">
                 {metadata.filter(item => item.section === 'right').map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-1 sm:gap-1.5 justify-end text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400"
-                  >
-                    {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                    {item.label && <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
-                    <span className={`${item.className || 'text-gray-900 dark:text-white'} break-words`}>
+                  <React.Fragment key={index}>
+                    <div className="flex items-center justify-end gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                      {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                      {item.label && <span className="font-medium text-right">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
+                    </div>
+                    <div className={`flex justify-end text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl ${item.className || 'text-gray-900 dark:text-white'} break-words text-right`}>
                       {typeof item.value === 'string' ? item.value : item.value}
-                    </span>
-                  </div>
+                    </div>
+                  </React.Fragment>
                 ))}
               </div>
             </div>
