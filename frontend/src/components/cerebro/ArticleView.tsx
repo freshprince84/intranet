@@ -61,38 +61,22 @@ const ArticleView: React.FC = () => {
   
   useEffect(() => {
     const fetchArticle = async () => {
-      if (!slug) {
-        console.log('[ArticleView] Kein Slug vorhanden');
-        return;
-      }
-      
-      console.log('[ArticleView] Lade Artikel mit Slug:', slug);
+      if (!slug) return;
       
       try {
         setLoading(true);
-        
-        // Artikel und verknüpfte Daten laden
-        const articleData = await cerebroApi.articles.getArticleBySlug(slug);
-        console.log('[ArticleView] Artikel geladen:', {
-          id: articleData.id,
-          title: articleData.title,
-          slug: articleData.slug,
-          githubPath: articleData.githubPath
-        });
-        setArticle(articleData);
         setError(null);
+        const articleData = await cerebroApi.articles.getArticleBySlug(slug);
+        setArticle(articleData);
       } catch (err: any) {
-        console.error('[ArticleView] Fehler beim Laden des Artikels:', err);
-        console.error('[ArticleView] Slug war:', slug);
-        console.error('[ArticleView] Fehler-Details:', err?.response?.data || err?.message);
-        setError(t('cerebro.messages.loadError'));
+        setError(err?.response?.data?.message || t('cerebro.messages.loadError'));
       } finally {
         setLoading(false);
       }
     };
     
     fetchArticle();
-  }, [slug]);
+  }, [slug, t]);
   
   
   const handleDeleteArticle = async () => {

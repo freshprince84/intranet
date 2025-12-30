@@ -336,11 +336,6 @@ const CerebroSearch: React.FC = () => {
   );
 };
 
-// Artikelansicht - vereinfacht: ArticleView prüft selbst, ob githubPath vorhanden ist
-const ArticleViewWithRouter: React.FC = () => {
-  return <ArticleView />;
-};
-
 // Hauptkomponente als Router
 const Cerebro: React.FC = () => {
   return (
@@ -350,11 +345,11 @@ const Cerebro: React.FC = () => {
         <Route path="all" element={<CerebroAllArticles />} />
         <Route path="search" element={<CerebroSearch />} />
         <Route path="create" element={<ArticleEdit />} />
-        <Route path=":slug" element={<ArticleViewWithRouter />} />
         <Route path=":slug/edit" element={<ArticleEdit />} />
         <Route path=":slug/media/add" element={<AddMedia />} />
         <Route path=":slug/link/add" element={<AddExternalLink />} />
         <Route path=":slug/github/add" element={<GitHubLinkManagerWrapper />} />
+        <Route path=":slug" element={<ArticleView />} />
       </Route>
     </Routes>
   );

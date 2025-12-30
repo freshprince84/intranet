@@ -277,45 +277,55 @@ const CompetitorGroupsTab: React.FC = () => {
         <div className="space-y-6">
             {/* Header mit Actions */}
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                <div className="mb-4 flex items-center gap-2">
+                    {hasPermission('price_analysis', 'write', 'page') && (
+                        <div className="relative group">
+                            <button
+                                onClick={() => {
+                                    setFormData({
+                                        name: '',
+                                        description: '',
+                                        city: currentBranch?.city || '',
+                                        country: currentBranch?.country || ''
+                                    });
+                                    setShowCreateModal(true);
+                                }}
+                                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                style={{ width: '30.19px', height: '30.19px' }}
+                                aria-label={t('priceAnalysis.competitors.createGroup', 'Neue Gruppe')}
+                            >
+                                <PlusIcon className="h-4 w-4" />
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                {t('priceAnalysis.competitors.createGroup', 'Neue Gruppe')}
+                            </div>
+                        </div>
+                    )}
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                         {t('priceAnalysis.competitors.title', 'Konkurrenzgruppen')}
                     </h2>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2 ml-auto">
                         <select
                             value={roomType}
                             onChange={(e) => setRoomType(e.target.value as 'private' | 'dorm')}
-                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm"
+                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
                         >
                             <option value="private">{t('priceAnalysis.roomType.private', 'Privatzimmer')}</option>
                             <option value="dorm">{t('priceAnalysis.roomType.dorm', 'Schlafsaal')}</option>
                         </select>
-                        <button
-                            onClick={handleDiscoverCompetitors}
-                            disabled={discovering || !currentBranch}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                        >
-                            <SparklesIcon className="h-4 w-4" />
-                            {discovering 
-                                ? t('priceAnalysis.competitors.discovering', 'Suche...')
-                                : t('priceAnalysis.competitors.discover', 'KI: Konkurrenten finden')
-                            }
-                        </button>
-                        <button
-                            onClick={() => {
-                                setFormData({
-                                    name: '',
-                                    description: '',
-                                    city: currentBranch?.city || '',
-                                    country: currentBranch?.country || ''
-                                });
-                                setShowCreateModal(true);
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-                        >
-                            <PlusIcon className="h-4 w-4" />
-                            {t('priceAnalysis.competitors.createGroup', 'Neue Gruppe')}
-                        </button>
+                        <div className="relative group">
+                            <button
+                                onClick={handleDiscoverCompetitors}
+                                disabled={discovering || !currentBranch || !hasPermission('price_analysis', 'write', 'page')}
+                                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={t('priceAnalysis.competitors.discover', 'KI: Konkurrenten finden')}
+                            >
+                                <SparklesIcon className={`h-5 w-5 ${discovering ? 'animate-pulse' : ''}`} />
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                {t('priceAnalysis.competitors.discover', 'KI: Konkurrenten finden')}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -347,20 +357,26 @@ const CompetitorGroupsTab: React.FC = () => {
                                     </p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleSearchPrices(group.id)}
-                                        disabled={searchingPrices === group.id}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
-                                    >
-                                        <MagnifyingGlassIcon className="h-4 w-4" />
-                                        {searchingPrices === group.id
-                                            ? t('priceAnalysis.competitors.searching', 'Suche...')
-                                            : t('priceAnalysis.competitors.searchPrices', 'Preise suchen')
-                                        }
-                                    </button>
+                                    <div className="relative group">
+                                        <button
+                                            onClick={() => handleSearchPrices(group.id)}
+                                            disabled={searchingPrices === group.id}
+                                            className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title={t('priceAnalysis.competitors.searchPrices', 'Preise suchen')}
+                                        >
+                                            <MagnifyingGlassIcon className={`h-5 w-5 ${searchingPrices === group.id ? 'animate-pulse' : ''}`} />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {searchingPrices === group.id
+                                                ? t('priceAnalysis.competitors.searching', 'Suche...')
+                                                : t('priceAnalysis.competitors.searchPrices', 'Preise suchen')
+                                            }
+                                        </div>
+                                    </div>
                                     <button
                                         onClick={() => handleDeleteGroup(group.id)}
                                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                        title={t('priceAnalysis.competitors.deleteConfirm', 'Wirklich löschen?')}
                                     >
                                         <TrashIcon className="h-5 w-5" />
                                     </button>
@@ -373,13 +389,18 @@ const CompetitorGroupsTab: React.FC = () => {
                                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                         {t('priceAnalysis.competitors.competitors', 'Konkurrenten')}
                                     </h4>
-                                    <button
-                                        onClick={() => setShowAddCompetitorModal(group.id)}
-                                        className="flex items-center gap-1 px-2 py-1 text-sm text-blue-600 hover:text-blue-700"
-                                    >
-                                        <PlusIcon className="h-4 w-4" />
-                                        {t('priceAnalysis.competitors.add', 'Hinzufügen')}
-                                    </button>
+                                    <div className="relative group">
+                                        <button
+                                            onClick={() => setShowAddCompetitorModal(group.id)}
+                                            className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                            title={t('priceAnalysis.competitors.add', 'Hinzufügen')}
+                                        >
+                                            <PlusIcon className="h-5 w-5" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {t('priceAnalysis.competitors.add', 'Hinzufügen')}
+                                        </div>
+                                    </div>
                                 </div>
                                 {group.competitors.length === 0 ? (
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -477,21 +498,33 @@ const CompetitorGroupsTab: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex gap-2 mt-6">
-                            <button
-                                onClick={handleCreateGroup}
-                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                            >
-                                {t('common.create', 'Erstellen')}
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowCreateModal(false);
-                                    setFormData({ name: '', description: '', city: '', country: '' });
-                                }}
-                                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
-                            >
-                                {t('common.cancel', 'Abbrechen')}
-                            </button>
+                            <div className="relative group">
+                                <button
+                                    onClick={handleCreateGroup}
+                                    className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                                    title={t('common.create', 'Erstellen')}
+                                >
+                                    <PlusIcon className="h-5 w-5" />
+                                </button>
+                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                    {t('common.create', 'Erstellen')}
+                                </div>
+                            </div>
+                            <div className="relative group">
+                                <button
+                                    onClick={() => {
+                                        setShowCreateModal(false);
+                                        setFormData({ name: '', description: '', city: '', country: '' });
+                                    }}
+                                    className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                    title={t('common.cancel', 'Abbrechen')}
+                                >
+                                    <XMarkIcon className="h-5 w-5" />
+                                </button>
+                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                    {t('common.cancel', 'Abbrechen')}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
