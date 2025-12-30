@@ -28,8 +28,10 @@ git rm -r --cached frontend/build 2>/dev/null || true
 git rm -r --cached backend/dist 2>/dev/null || true
 set -e
 
-# Git Pull ausführen
-git pull
+# Git Pull ausführen (mit Rebase für divergente Branches)
+set +e
+git pull --rebase 2>/dev/null || git reset --hard origin/main
+set -e
 echo "✅ Git Pull abgeschlossen"
 echo ""
 
