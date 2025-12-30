@@ -156,6 +156,8 @@ async function deployToProduction(): Promise<DeploymentResult> {
   
   // Schritt 2: Deployment-Skript ausführen
   console.error(`[MCP Deployment] Schritt 2: Führe Deployment-Skript aus...`);
+  console.error(`[MCP Deployment] DEPLOY_SCRIPT_PATH env: ${process.env.DEPLOY_SCRIPT_PATH}`);
+  console.error(`[MCP Deployment] SERVER_CONFIG.deployScript: ${SERVER_CONFIG.deployScript}`);
   const command = `cd ${SERVER_CONFIG.serverPath} && bash ${SERVER_CONFIG.deployScript}`;
   console.error(`[MCP Deployment] Befehl: ${command}`);
   
