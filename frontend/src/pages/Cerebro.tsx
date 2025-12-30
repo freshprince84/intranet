@@ -134,7 +134,7 @@ const CerebroLayout: React.FC = () => {
   // Suche-Handler
   const handleSearch = () => {
     if (searchTerm.trim()) {
-      navigate(`/cerebro/search?q=${encodeURIComponent(searchTerm)}`);
+      navigate(`/app/cerebro/search?q=${encodeURIComponent(searchTerm)}`);
     } else {
       navigate('/app/cerebro/all');
     }
