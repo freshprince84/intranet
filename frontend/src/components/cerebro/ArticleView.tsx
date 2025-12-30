@@ -86,7 +86,7 @@ const ArticleView: React.FC = () => {
     
     try {
       await cerebroApi.articles.deleteArticle(article.id);
-      navigate('/cerebro');
+      navigate('/app/cerebro');
     } catch (err) {
       console.error('Fehler beim Löschen des Artikels:', err);
       alert(t('cerebro.messages.deleteError'));

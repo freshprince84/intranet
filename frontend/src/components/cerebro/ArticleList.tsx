@@ -113,7 +113,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
   
   // Zum Artikel navigieren
   const navigateToArticle = (slug: string) => {
-    navigate(`/cerebro/${slug}`);
+    navigate(`/app/cerebro/${slug}`);
   };
   
   // Neuen Artikel erstellen

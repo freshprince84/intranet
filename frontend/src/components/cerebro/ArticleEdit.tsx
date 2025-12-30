@@ -255,7 +255,7 @@ const ArticleEdit: React.FC = () => {
         </div>
         <button
           className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
-          onClick={() => navigate('/cerebro')}
+          onClick={() => navigate('/app/cerebro')}
         >
           {t('cerebro.actions.backToOverview')}
         </button>
@@ -345,7 +345,7 @@ const ArticleEdit: React.FC = () => {
     if (slug) {
       navigate(`/cerebro/${slug}`);
     } else {
-      navigate('/cerebro');
+      navigate('/app/cerebro');
     }
   };
   
