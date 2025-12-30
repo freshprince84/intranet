@@ -5,7 +5,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "types": ["node"],
+    "lib": ["es2020"]
   },
   "ts-node": {
     "compilerOptions": {
