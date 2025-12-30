@@ -2,6 +2,9 @@ import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { cacheCleanupService } from './cacheCleanupService';
 
+// AccessLevel Type
+type AccessLevel = 'none' | 'own_read' | 'own_both' | 'all_read' | 'all_both';
+
 /**
  * Cache-Eintrag für Filter-Listen
  */
@@ -45,10 +48,12 @@ class FilterListCache {
    * 
    * @param userId - User-ID
    * @param tableId - Table-ID
+   * @param accessLevel - AccessLevel für Filterung (optional, für Abwärtskompatibilität)
    * @returns Filter-Listen oder null wenn nicht gefunden
    */
-  async getFilters(userId: number, tableId: string): Promise<any[] | null> {
-    const cacheKey = `${userId}:${tableId}`;
+  async getFilters(userId: number, tableId: string, accessLevel?: AccessLevel): Promise<any[] | null> {
+    // ✅ FILTER-BERECHTIGUNGEN: Cache-Key mit AccessLevel (falls vorhanden)
+    const cacheKey = accessLevel ? `${userId}:${tableId}:${accessLevel}` : `${userId}:${tableId}`;
     
     // 1. Prüfe Cache
     const cached = this.filterListCache.get(cacheKey);
@@ -67,7 +72,7 @@ class FilterListCache {
       });
 
       // 3. Parse die JSON-Strings zurück in Arrays
-      const parsedFilters = savedFilters.map(filter => {
+      let parsedFilters = savedFilters.map(filter => {
         return {
           id: filter.id,
           userId: filter.userId,
@@ -82,13 +87,28 @@ class FilterListCache {
         };
       });
 
-      // 4. Speichere im Cache
+      // ✅ FILTER-BERECHTIGUNGEN: Filterung VOR dem Caching (wenn AccessLevel vorhanden)
+      if (accessLevel && (accessLevel === 'own_both' || accessLevel === 'own_read')) {
+        const STANDARD_FILTER_NAMES = ['Aktuell', 'Archiv', 'Hoy', 'Morgen', 'Gestern', 'Alle', 'Alle Artikel', 'Alle Einträge', 'Aktive'];
+        parsedFilters = parsedFilters.filter(f => {
+          // Standard-Filter immer behalten
+          if (STANDARD_FILTER_NAMES.includes(f.name)) {
+            return true;
+          }
+          // Eigene Filter behalten
+          return f.userId === userId;
+        });
+      } else if (accessLevel === 'none') {
+        parsedFilters = [];
+      }
+
+      // 4. Speichere im Cache (gefilterte Daten)
       this.filterListCache.set(cacheKey, {
         filters: parsedFilters,
         timestamp: Date.now()
       });
 
-      logger.log(`[FilterListCache] 💾 Cache-Miss für Filter-Liste ${cacheKey} - aus DB geladen und gecacht`);
+      logger.log(`[FilterListCache] 💾 Cache-Miss für Filter-Liste ${cacheKey} - aus DB geladen, gefiltert und gecacht`);
 
       return parsedFilters;
     } catch (error) {
@@ -102,10 +122,12 @@ class FilterListCache {
    * 
    * @param userId - User-ID
    * @param tableId - Table-ID
+   * @param accessLevel - AccessLevel für Filterung (optional, für Abwärtskompatibilität)
    * @returns Filter-Gruppen oder null wenn nicht gefunden
    */
-  async getFilterGroups(userId: number, tableId: string): Promise<any[] | null> {
-    const cacheKey = `${userId}:${tableId}`;
+  async getFilterGroups(userId: number, tableId: string, accessLevel?: AccessLevel): Promise<any[] | null> {
+    // ✅ FILTER-BERECHTIGUNGEN: Cache-Key mit AccessLevel (falls vorhanden)
+    const cacheKey = accessLevel ? `${userId}:${tableId}:${accessLevel}` : `${userId}:${tableId}`;
     
     // 1. Prüfe Cache
     const cached = this.filterGroupListCache.get(cacheKey);
@@ -134,8 +156,7 @@ class FilterListCache {
       });
 
       // 3. Parse die JSON-Strings der Filter zurück in Arrays
-      // ✅ FIX: Filtere User-Filter-Gruppen nach aktiven Usern
-      const parsedGroups = await Promise.all(groups.map(async (group) => {
+      let parsedGroups = await Promise.all(groups.map(async (group) => {
         let filters = group.filters.map(filter => {
           return {
             id: filter.id,
@@ -207,13 +228,49 @@ class FilterListCache {
         };
       }));
 
-      // 4. Speichere im Cache
+      // ✅ FILTER-BERECHTIGUNGEN: Filterung VOR dem Caching (wenn AccessLevel vorhanden)
+      if (accessLevel === 'none') {
+        parsedGroups = [];
+      } else if (accessLevel && (accessLevel === 'own_both' || accessLevel === 'own_read')) {
+        // Lade alle zugewiesenen Rollen-Namen (alle, nicht nur aktive)
+        const userRoles = await prisma.userRole.findMany({
+          where: { userId },
+          include: {
+            role: {
+              select: { name: true }
+            }
+          }
+        });
+        const userRoleNames = userRoles.map(ur => ur.role.name);
+
+        parsedGroups = parsedGroups
+          .map(group => {
+            // Filtergruppe "Benutzer": Komplett entfernen
+            if (group.name === 'Benutzer' || group.name === 'Users' || group.name === 'Usuarios') {
+              return null;
+            }
+
+            // Filtergruppe "Rollen": Nur Filter mit zugewiesenen Rollen
+            if (group.name === 'Rollen' || group.name === 'Roles') {
+              const filteredFilters = group.filters.filter(filter =>
+                userRoleNames.includes(filter.name)
+              );
+              return { ...group, filters: filteredFilters };
+            }
+
+            // Andere Filtergruppen: Alle Filter behalten
+            return group;
+          })
+          .filter(g => g !== null) as typeof parsedGroups;
+      }
+
+      // 4. Speichere im Cache (gefilterte Daten)
       this.filterGroupListCache.set(cacheKey, {
         groups: parsedGroups,
         timestamp: Date.now()
       });
 
-      logger.log(`[FilterListCache] 💾 Cache-Miss für Filter-Gruppen ${cacheKey} - aus DB geladen und gecacht`);
+      logger.log(`[FilterListCache] 💾 Cache-Miss für Filter-Gruppen ${cacheKey} - aus DB geladen, gefiltert und gecacht`);
 
       return parsedGroups;
     } catch (error) {
@@ -230,10 +287,23 @@ class FilterListCache {
    * @param tableId - Table-ID
    */
   invalidate(userId: number, tableId: string): void {
-    const cacheKey = `${userId}:${tableId}`;
-    this.filterListCache.delete(cacheKey);
-    this.filterGroupListCache.delete(cacheKey);
-    logger.log(`[FilterListCache] 🗑️ Cache invalidiert für ${cacheKey}`);
+    // ✅ FILTER-BERECHTIGUNGEN: Invalidiere alle AccessLevel-Varianten
+    const accessLevels: AccessLevel[] = ['none', 'own_read', 'own_both', 'all_read', 'all_both'];
+    let deletedCount = 0;
+
+    // Invalidiere Cache ohne AccessLevel (für Abwärtskompatibilität)
+    const baseCacheKey = `${userId}:${tableId}`;
+    if (this.filterListCache.delete(baseCacheKey)) deletedCount++;
+    if (this.filterGroupListCache.delete(baseCacheKey)) deletedCount++;
+
+    // Invalidiere Cache mit allen AccessLevel-Varianten
+    for (const level of accessLevels) {
+      const cacheKey = `${userId}:${tableId}:${level}`;
+      if (this.filterListCache.delete(cacheKey)) deletedCount++;
+      if (this.filterGroupListCache.delete(cacheKey)) deletedCount++;
+    }
+
+    logger.log(`[FilterListCache] 🗑️ Cache invalidiert für ${userId}:${tableId} (${deletedCount} Einträge gelöscht)`);
   }
 
   /**

@@ -118,7 +118,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
   
   // Neuen Artikel erstellen
   const navigateToCreateArticle = () => {
-    navigate('/cerebro/create');
+    navigate('/app/cerebro/create');
   };
   
   // Formatierungsfunktion für Datum

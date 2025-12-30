@@ -45,6 +45,7 @@ router.get('/:id/room-descriptions/:categoryId', getRoomDescription);
 // Competitor-Discovery (spezifisch, vor /:id)
 router.post(
   '/:branchId/discover-competitors',
+  authenticate,
   checkPermission('price_analysis', 'write', 'page'),
   competitorGroupController.discoverCompetitors
 );

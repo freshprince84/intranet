@@ -136,7 +136,7 @@ const CerebroLayout: React.FC = () => {
     if (searchTerm.trim()) {
       navigate(`/cerebro/search?q=${encodeURIComponent(searchTerm)}`);
     } else {
-      navigate('/cerebro/all');
+      navigate('/app/cerebro/all');
     }
   };
   
@@ -221,7 +221,7 @@ const CerebroLayout: React.FC = () => {
               onSearchChange={setSearchTerm}
               onSearchSubmit={handleSearch}
               canCreateArticle={canCreateArticle}
-              onCreateArticle={() => navigate('/cerebro/create')}
+              onCreateArticle={() => navigate('/app/cerebro/create')}
               onFilterClick={() => setIsFilterPaneOpen(!isFilterPaneOpen)}
               onSortClick={handleSortClick}
               onSortChange={handleSortChange}

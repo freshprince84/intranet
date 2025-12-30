@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { logger } from '../utils/logger.ts';
-import { ClockIcon, ListBulletIcon, ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, ListBulletIcon, ArrowPathIcon, ExclamationTriangleIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { useWorktime } from '../contexts/WorktimeContext.tsx';
@@ -50,6 +50,10 @@ const WorktimeTracker: React.FC = () => {
     const [statusError, setStatusError] = useState<string | null>(null);
     // Mobile Bottom Sheet State
     const [isExpanded, setIsExpanded] = useState(false);
+    const sheetRef = useRef<HTMLDivElement>(null);
+    const touchStartY = useRef<number>(0);
+    const touchCurrentY = useRef<number>(0);
+    const isDragging = useRef<boolean>(false);
     
     const { user } = useAuth();
     const { isTracking: contextTracking, updateTrackingStatus, checkTrackingStatus } = useWorktime();
@@ -417,35 +421,58 @@ const WorktimeTracker: React.FC = () => {
         );
     }
 
+    // Swipe handlers for mobile bottom sheet
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartY.current = e.touches[0].clientY;
+        isDragging.current = true;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging.current) return;
+        touchCurrentY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = () => {
+        if (!isDragging.current) return;
+        isDragging.current = false;
+        
+        const deltaY = touchCurrentY.current - touchStartY.current;
+        const threshold = 50; // Minimum swipe distance
+        
+        if (deltaY < -threshold) {
+            // Swipe up - expand
+            setIsExpanded(true);
+        } else if (deltaY > threshold) {
+            // Swipe down - collapse
+            setIsExpanded(false);
+        }
+        
+        touchStartY.current = 0;
+        touchCurrentY.current = 0;
+    };
+
     return (
-        <div className={`
-            bg-white dark:bg-gray-800 
-            sm:rounded-lg sm:border sm:border-gray-300 sm:dark:border-gray-700 sm:p-6 sm:mb-6 
-            fixed left-0 right-0 rounded-t-xl border-t border-gray-300 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]
-            transition-all duration-300 ease-in-out
-            sm:static sm:shadow-none sm:transform-none sm:bottom-auto
-            ${isExpanded ? 'bottom-0 z-50' : 'bottom-[60px] z-40'}
-        `}>
-            {/* Mobile Handle & Collapsed View */}
-            <div 
-                className="w-full flex flex-col items-center cursor-pointer sm:hidden"
-                onClick={() => setIsExpanded(!isExpanded)}
-            >
+        <div 
+            ref={sheetRef}
+            className={`
+                bg-white dark:bg-gray-800 
+                sm:rounded-lg sm:border sm:border-gray-300 sm:dark:border-gray-700 sm:p-6 sm:mb-6 
+                fixed left-0 right-0 rounded-t-xl border-t border-gray-300 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]
+                transition-transform duration-300 ease-in-out
+                sm:static sm:shadow-none sm:transform-none sm:bottom-auto sm:translate-y-0
+                ${isExpanded ? 'bottom-0 z-50 translate-y-0' : 'bottom-0 z-40 translate-y-[calc(100%-48px)]'}
+            `}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
+            {/* Mobile Handle - nur Lasche zum Hochziehen */}
+            <div className="w-full flex flex-col items-center sm:hidden touch-none">
                 {/* Handle */}
-                <div className="w-full flex justify-center pt-2 pb-1">
+                <div className="w-full flex justify-center pt-2 pb-2">
                     <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
                 </div>
-                
-                {/* Collapsed Info Header (Height ~20px + padding) */}
-                <div className="w-full px-4 pb-2 flex justify-between items-center h-8">
-                    <span className={`text-sm font-semibold flex items-center ${isTracking ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                        {isTracking 
-                            ? <><ClockIcon className="h-4 w-4 mr-1" /> {elapsedTime}</>
-                            : <><ClockIcon className="h-4 w-4 mr-1" /> {t('worktime.tracker.start')}</>
-                        }
-                    </span>
-                    <div className={`w-3 h-3 rounded-full ${isTracking ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
-                </div>
+                <ChevronUpIcon className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
             </div>
 
             {/* Main Content Container */}

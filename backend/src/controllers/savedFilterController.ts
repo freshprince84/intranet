@@ -17,8 +17,6 @@ const TABLE_ID_TO_ENTITY: Record<string, { entity: string; entityType: 'box' | '
   'request-analytics-table': { entity: 'request_analytics', entityType: 'tab' },
 };
 
-// Standard-Filter-Namen (werden nicht gefiltert, außer bei none)
-const STANDARD_FILTER_NAMES = ['Aktuell', 'Archiv', 'Hoy', 'Morgen', 'Gestern', 'Alle', 'Alle Artikel', 'Alle Einträge', 'Aktive'];
 
 // Schnittstellendefinitionen
 interface SavedFilterRequest {
@@ -92,81 +90,7 @@ async function getAccessLevelForTableId(
   }
 }
 
-/**
- * Lädt alle Rollen-Namen, die dem User zugewiesen sind (alle, nicht nur aktive)
- */
-async function getUserAssignedRoleNames(userId: number): Promise<string[]> {
-  try {
-    const userRoles = await prisma.userRole.findMany({
-      where: { userId },
-      include: {
-        role: {
-          select: { name: true }
-        }
-      }
-    });
 
-    return userRoles.map(ur => ur.role.name);
-  } catch (error) {
-    logger.error(`[getUserAssignedRoleNames] Fehler für User ${userId}:`, error);
-    return [];
-  }
-}
-
-/**
- * Filtert Filter basierend auf AccessLevel
- */
-async function filterFiltersByPermission(
-  filters: SavedFilter[],
-  filterGroups: FilterGroup[],
-  accessLevel: AccessLevel,
-  userId: number
-): Promise<{ filters: SavedFilter[]; groups: FilterGroup[] }> {
-  // Bei none: Keine Filter
-  if (accessLevel === 'none') {
-    return { filters: [], groups: [] };
-  }
-
-  // Bei all_both/all_read: Alle Filter behalten
-  if (accessLevel === 'all_both' || accessLevel === 'all_read') {
-    return { filters, groups: filterGroups };
-  }
-
-  // Bei own_both/own_read: Filter filtern
-  // 1. Nur eigene Filter behalten (oder Standard-Filter)
-  const ownFilters = filters.filter(f => {
-    // Standard-Filter immer behalten
-    if (STANDARD_FILTER_NAMES.includes(f.name)) {
-      return true;
-    }
-    // Eigene Filter behalten
-    return f.userId === userId;
-  });
-
-  // 2. Filtergruppen filtern
-  const userRoleNames = await getUserAssignedRoleNames(userId);
-  const filteredGroups = filterGroups
-    .map(group => {
-      // Filtergruppe "Benutzer": Komplett entfernen
-      if (group.name === 'Benutzer' || group.name === 'Users' || group.name === 'Usuarios') {
-        return null;
-      }
-
-      // Filtergruppe "Rollen": Nur Filter mit zugewiesenen Rollen
-      if (group.name === 'Rollen' || group.name === 'Roles') {
-        const filteredFilters = group.filters.filter(filter =>
-          userRoleNames.includes(filter.name)
-        );
-        return { ...group, filters: filteredFilters };
-      }
-
-      // Andere Filtergruppen: Alle Filter behalten (falls vorhanden)
-      return group;
-    })
-    .filter(g => g !== null) as FilterGroup[];
-
-  return { filters: ownFilters, groups: filteredGroups };
-}
 
 // Funktion zum Abrufen aller gespeicherten Filter eines Benutzers für eine Tabelle
 // ✅ PERFORMANCE: Verwendet FilterListCache statt direkter DB-Query
@@ -189,22 +113,14 @@ export const getUserSavedFilters = async (req: AuthenticatedRequest, res: Respon
       // ✅ FILTER-BERECHTIGUNGEN: Ermittle AccessLevel für Table-Id
       const accessLevel = await getAccessLevelForTableId(userId, roleId, tableId);
 
-      // ✅ PERFORMANCE: Verwende FilterListCache statt direkter DB-Query
-      const parsedFilters = await filterListCache.getFilters(userId, tableId);
+      // ✅ PERFORMANCE: Verwende FilterListCache mit AccessLevel (Filterung erfolgt im Cache-Service)
+      const parsedFilters = await filterListCache.getFilters(userId, tableId, accessLevel);
 
       if (!parsedFilters) {
         return res.status(500).json({ message: 'Fehler beim Laden der Filter' });
       }
 
-      // ✅ FILTER-BERECHTIGUNGEN: Filtere Filter basierend auf AccessLevel
-      const { filters: filteredFilters } = await filterFiltersByPermission(
-        parsedFilters as SavedFilter[],
-        [], // Filtergruppen werden separat geladen
-        accessLevel,
-        userId
-      );
-
-      return res.status(200).json(filteredFilters);
+      return res.status(200).json(parsedFilters);
     } catch (prismaError) {
       logger.error('Prisma-Fehler beim Abrufen der Filter:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
@@ -472,22 +388,14 @@ export const getFilterGroups = async (req: AuthenticatedRequest, res: Response) 
       // ✅ FILTER-BERECHTIGUNGEN: Ermittle AccessLevel für Table-Id
       const accessLevel = await getAccessLevelForTableId(userId, roleId, tableId);
 
-      // ✅ PERFORMANCE: Verwende FilterListCache statt direkter DB-Query
-      const parsedGroups = await filterListCache.getFilterGroups(userId, tableId);
+      // ✅ PERFORMANCE: Verwende FilterListCache mit AccessLevel (Filterung erfolgt im Cache-Service)
+      const parsedGroups = await filterListCache.getFilterGroups(userId, tableId, accessLevel);
 
       if (!parsedGroups) {
         return res.status(500).json({ message: 'Fehler beim Laden der Filter-Gruppen' });
       }
 
-      // ✅ FILTER-BERECHTIGUNGEN: Filtere Filtergruppen basierend auf AccessLevel
-      const { groups: filteredGroups } = await filterFiltersByPermission(
-        [], // Filter werden separat geladen
-        parsedGroups as FilterGroup[],
-        accessLevel,
-        userId
-      );
-
-      return res.status(200).json(filteredGroups);
+      return res.status(200).json(parsedGroups);
     } catch (prismaError) {
       logger.error('Prisma-Fehler beim Abrufen der Gruppen:', prismaError);
       return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
