@@ -30,7 +30,8 @@ set -e
 
 # Git Pull ausführen (mit Rebase für divergente Branches)
 set +e
-git pull --rebase 2>/dev/null || git reset --hard origin/main
+git fetch origin
+git reset --hard origin/main
 set -e
 echo "✅ Git Pull abgeschlossen"
 echo ""
