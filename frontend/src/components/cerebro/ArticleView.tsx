@@ -107,7 +107,7 @@ const ArticleView: React.FC = () => {
         <h3 className="font-bold">{t('common.error')}</h3>
         <p>{error || t('cerebro.messages.articleNotFound')}</p>
         <button 
-          onClick={() => navigate('/cerebro')}
+          onClick={() => navigate('/app/cerebro')}
           className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center"
         >
           <Icon.ArrowLeft /> {t('cerebro.actions.back')}
@@ -241,7 +241,7 @@ const ArticleView: React.FC = () => {
       {/* Aktionsbereich oben (Button-Leiste) */}
       <div className="flex justify-between items-center mb-4">
         <button 
-          onClick={() => navigate('/cerebro')}
+          onClick={() => navigate('/app/cerebro')}
           className="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
           aria-label={t('cerebro.back')}
         >

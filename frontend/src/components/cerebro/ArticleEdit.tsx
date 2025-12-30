@@ -343,7 +343,7 @@ const ArticleEdit: React.FC = () => {
   // Abbrechen
   const handleCancel = () => {
     if (slug) {
-      navigate(`/cerebro/${slug}`);
+      navigate(`/app/cerebro/${slug}`);
     } else {
       navigate('/app/cerebro');
     }
