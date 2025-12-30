@@ -77,7 +77,7 @@ echo ""
 # 7.5. Cerebro Content-Bereinigung
 echo "🧹 Schritt 7.5: Cerebro Content-Bereinigung..."
 cd /var/www/intranet/backend
-npx ts-node ../scripts/backend/cleanupCerebroContent.ts || true
+npx ts-node --compiler-options '{"module":"commonjs"}' ../scripts/backend/cleanupCerebroContent.ts || true
 echo "✅ Cerebro Content-Bereinigung abgeschlossen"
 echo ""
 
