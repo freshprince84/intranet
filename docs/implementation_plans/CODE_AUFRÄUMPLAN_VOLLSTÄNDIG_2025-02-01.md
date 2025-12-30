@@ -504,6 +504,360 @@
 
 ---
 
+## 🎯 PHASE 6: MEMORY LEAKS PRÜFEN & BEHEBEN
+
+### 6.1 setTimeout/setInterval Cleanup prüfen
+
+**Problem:**
+- 44 Dateien verwenden `setTimeout`/`setInterval`
+- Nicht alle haben Cleanup-Funktionen
+
+**Betroffene Dateien (Top 10):**
+- `SavedFilterTags.tsx`: 6 setTimeout
+- `OnboardingContext.tsx`: 11 setTimeout
+- `Header.tsx`: 10 setTimeout
+- `NotificationBell.tsx`: 2 setInterval
+- `WorktimeContext.tsx`: 3 setInterval
+- `TeamWorktimeControl.tsx`: 2 setInterval
+- `MonthlyReportsTab.tsx`: 2 setTimeout
+- `LifecycleView.tsx`: 4 setTimeout
+- `OnboardingTour.tsx`: 4 setTimeout
+- `FilterContext.tsx`: 3 setTimeout
+
+**Lösung:**
+1. Alle `setTimeout`/`setInterval` identifizieren
+2. Prüfen ob Cleanup vorhanden ist
+3. Fehlende Cleanup-Funktionen hinzufügen
+4. Pattern: `useEffect(() => { const id = setTimeout(...); return () => clearTimeout(id); }, [])`
+
+**Risiko:** 🔴 HOCH - Memory Leaks wenn nicht behoben
+
+---
+
+### 6.2 addEventListener Cleanup prüfen
+
+**Problem:**
+- 61 Dateien verwenden `addEventListener`
+- Nicht alle haben `removeEventListener` in Cleanup
+
+**Betroffene Dateien (Top 10):**
+- `BranchManagementTab.tsx`: 1 addEventListener
+- `SavedFilterTags.tsx`: 5 addEventListener
+- `Layout.tsx`: 2 addEventListener
+- `Sidebar.tsx`: 2 addEventListener
+- `TableColumnConfig.tsx`: 2 addEventListener
+- `RoleManagementTab.tsx`: 1 addEventListener
+- `UserManagementTab.tsx`: 1 addEventListener
+- `ToursTab.tsx`: 1 addEventListener
+- `TeamWorktimeControl.tsx`: 1 addEventListener
+- `OnboardingTour.tsx`: 1 addEventListener
+
+**Lösung:**
+1. Alle `addEventListener` identifizieren
+2. Prüfen ob `removeEventListener` in Cleanup vorhanden ist
+3. Fehlende Cleanup-Funktionen hinzufügen
+4. Pattern: `useEffect(() => { window.addEventListener(...); return () => window.removeEventListener(...); }, [])`
+
+**Risiko:** 🔴 HOCH - Memory Leaks wenn nicht behoben
+
+---
+
+### 6.3 createObjectURL Cleanup prüfen
+
+**Problem:**
+- 21 Dateien verwenden `createObjectURL`
+- Nicht alle haben `revokeObjectURL` in Cleanup
+
+**Betroffene Dateien:**
+- `ArticleEdit.tsx`
+- `IdentificationDocumentList.tsx`
+- `Settings.tsx`
+- `WorktimeStats.tsx`
+- `TourExportDialog.tsx`
+- `EditRequestModal.tsx`
+- `CreateRequestModal.tsx`
+- `MonthlyReportsTab.tsx`
+- `LifecycleView.tsx`
+- `MarkdownPreview.tsx`
+- `InvoiceSuccessModal.tsx`
+- `MyDocumentsTab.tsx`
+- `InvoiceManagementTab.tsx`
+- `EditTaskModal.tsx`
+- `CreateTaskModal.tsx`
+- `AddMedia.tsx`
+- `ContractCreationModal.tsx`
+- `CertificateCreationModal.tsx`
+- `CertificateEditModal.tsx`
+- `ContractEditModal.tsx`
+- `InvoiceDetailModal.tsx`
+
+**Lösung:**
+1. Alle `createObjectURL` identifizieren
+2. Prüfen ob `revokeObjectURL` in Cleanup vorhanden ist
+3. Fehlende Cleanup-Funktionen hinzufügen
+4. Pattern: `useEffect(() => { const url = URL.createObjectURL(...); return () => URL.revokeObjectURL(url); }, [])`
+
+**Risiko:** 🟡 MITTEL - Memory Leaks wenn nicht behoben
+
+---
+
+## 🎯 PHASE 7: PERFORMANCE-RISIKEN PRÜFEN
+
+### 7.1 Code-Änderungen auf Performance-Impact prüfen
+
+**Risiken bei Code-Änderungen:**
+
+1. **Große Dateien aufteilen:**
+   - **Risiko:** Mehr Imports, mehr Module-Loading
+   - **Impact:** 🟢 NIEDRIG - Code-Splitting verbessert Performance
+   - **Lösung:** Lazy Loading für große Komponenten
+
+2. **Filter-Logik konsolidieren:**
+   - **Risiko:** Zusätzliche Funktionsaufrufe
+   - **Impact:** 🟢 NIEDRIG - Funktionen sind optimiert
+   - **Lösung:** `useMemo` für teure Berechnungen
+
+3. **CRUD-Operationen konsolidieren:**
+   - **Risiko:** Zusätzliche Abstraktionsebene
+   - **Impact:** 🟢 NIEDRIG - Keine Performance-Einbußen
+   - **Lösung:** BaseController ist dünne Wrapper-Schicht
+
+4. **Error-Handling standardisieren:**
+   - **Risiko:** Zusätzliche Hook-Aufrufe
+   - **Impact:** 🟢 NIEDRIG - Hooks sind optimiert
+   - **Lösung:** `useErrorHandling` ist bereits optimiert
+
+**Performance-Checkliste:**
+- [ ] Keine unnötigen Re-Renders durch Code-Änderungen
+- [ ] `useMemo`/`useCallback` bleiben erhalten
+- [ ] Keine zusätzlichen API-Calls
+- [ ] Keine zusätzlichen Datenbank-Queries
+
+---
+
+### 7.2 Infinite Scroll Memory-Management prüfen
+
+**Aktueller Zustand:**
+- `Worktracker.tsx`: Max 100 Items im State (Zeile 649-657)
+- `Requests.tsx`: Max 100 Items im State (Zeile 422-430)
+- Reservations: `displayLimit` State (Zeile 494)
+
+**Risiko bei Code-Änderungen:**
+- **Risiko:** Memory-Limits werden versehentlich entfernt
+- **Impact:** 🔴 HOCH - Memory Leaks wenn Limits entfernt werden
+- **Lösung:** Memory-Limits explizit dokumentieren und testen
+
+**Checkliste:**
+- [ ] Memory-Limits bleiben erhalten (max 100 Items)
+- [ ] Alte Items werden entfernt wenn Limit erreicht
+- [ ] Tab-Wechsel löscht nicht verwendete Arrays
+
+---
+
+## 🎯 PHASE 8: ÜBERSETZUNGEN PRÜFEN
+
+### 8.1 Hardcoded Texte identifizieren
+
+**Problem:**
+- Bei Code-Änderungen können hardcoded Texte übersehen werden
+- Neue Komponenten müssen Übersetzungen haben
+
+**Lösung:**
+1. Vor jeder Code-Änderung prüfen:
+   - Werden neue Texte hinzugefügt?
+   - Werden bestehende Texte geändert?
+   - Werden neue Komponenten erstellt?
+2. Alle Texte durch `t()` ersetzen
+3. Übersetzungskeys in `de.json`, `en.json`, `es.json` hinzufügen
+
+**Checkliste:**
+- [ ] Keine hardcoded deutschen Texte in Frontend
+- [ ] Keine hardcoded deutschen Texte in Backend-Responses
+- [ ] Alle neuen Komponenten haben Übersetzungen
+- [ ] Alle 3 Sprachen (de, en, es) getestet
+
+**Quick-Check:**
+```bash
+# Suche nach hardcoded deutschen Texten
+grep -r '"[A-ZÄÖÜ][a-zäöüß\s]+"' frontend/src --include="*.tsx" --include="*.ts" | grep -v "t("
+```
+
+---
+
+### 8.2 Backend-Übersetzungen prüfen
+
+**Problem:**
+- Backend-Controller enthalten hardcoded deutsche Fehlermeldungen
+- Notifications müssen übersetzt sein
+
+**Betroffene Bereiche:**
+- Error-Messages in Controllern
+- Notification-Messages
+- Response-Messages
+
+**Lösung:**
+1. Alle Backend-Controller prüfen
+2. Hardcoded Texte durch `translations.ts` Funktionen ersetzen
+3. User-Sprache aus Request ermitteln
+
+**Checkliste:**
+- [ ] Alle Error-Messages verwenden `translations.ts`
+- [ ] Alle Notification-Messages verwenden `translations.ts`
+- [ ] User-Sprache wird korrekt ermittelt
+
+---
+
+## 🎯 PHASE 9: NOTIFICATIONS PRÜFEN
+
+### 9.1 Notifications bei Code-Änderungen prüfen
+
+**Problem:**
+- Bei Code-Änderungen können Notifications übersehen werden
+- Neue Features müssen Notifications haben
+
+**Lösung:**
+1. Vor jeder Code-Änderung prüfen:
+   - Werden neue Aktionen hinzugefügt (create/update/delete)?
+   - Werden bestehende Aktionen geändert?
+   - Werden neue Features erstellt?
+2. Notifications für wichtige Aktionen hinzufügen
+3. Backend-Übersetzungen in `translations.ts` hinzufügen
+4. Frontend-Übersetzungen in `i18n/locales/` hinzufügen
+
+**Checkliste:**
+- [ ] Alle wichtigen Aktionen haben Notifications
+- [ ] `createNotificationIfEnabled` wird korrekt verwendet
+- [ ] `relatedEntityId` und `relatedEntityType` werden verwendet (NICHT `targetId`/`targetType`)
+- [ ] Backend-Übersetzungen vorhanden
+- [ ] Frontend-Übersetzungen vorhanden
+
+---
+
+## 🎯 PHASE 10: BERECHTIGUNGEN PRÜFEN
+
+### 10.1 Berechtigungen bei Code-Änderungen prüfen
+
+**Problem:**
+- Bei Code-Änderungen können Berechtigungen übersehen werden
+- Neue Features müssen Berechtigungen haben
+
+**Lösung:**
+1. Vor jeder Code-Änderung prüfen:
+   - Werden neue Seiten/Tabs/Buttons erstellt?
+   - Werden bestehende Seiten/Tabs/Buttons geändert?
+   - Werden neue Features erstellt?
+2. Berechtigungen in `seed.ts` hinzufügen
+3. Frontend-Berechtigungen mit `usePermissions()` prüfen
+4. Backend-Berechtigungen mit `checkPermission` prüfen
+
+**Checkliste:**
+- [ ] Neue Seiten/Tabs/Buttons in `seed.ts` hinzugefügt
+- [ ] Berechtigungen für alle Rollen definiert
+- [ ] Frontend verwendet `usePermissions()` Hook
+- [ ] Backend verwendet `checkPermission` Middleware
+- [ ] Seed-File getestet (`npx prisma db seed`)
+
+---
+
+## ⚠️ RISIKEN FÜR DIE UMSETZUNG
+
+### Risiko 1: Funktionalität wird versehentlich geändert
+
+**Risiko:** 🔴 HOCH
+**Beschreibung:** Bei Code-Refactoring können Funktionalitäten versehentlich geändert werden
+**Mitigation:**
+- Vor/Nach-Vergleich für alle Features
+- Schrittweise Umsetzung (nicht alles auf einmal)
+- Tests nach jeder Änderung
+- Code-Reviews
+
+---
+
+### Risiko 2: Memory Leaks werden eingeführt
+
+**Risiko:** 🔴 HOCH
+**Beschreibung:** Bei Code-Änderungen können Memory Leaks eingeführt werden
+**Mitigation:**
+- Memory Leak Checkliste befolgen (siehe Phase 6)
+- Alle setTimeout/setInterval/addEventListener/createObjectURL prüfen
+- Cleanup-Funktionen immer hinzufügen
+- Browser DevTools Memory Snapshot vor/nach Änderungen
+
+---
+
+### Risiko 3: Performance wird verschlechtert
+
+**Risiko:** 🟡 MITTEL
+**Beschreibung:** Code-Änderungen können Performance verschlechtern
+**Mitigation:**
+- Performance-Checkliste befolgen (siehe Phase 7)
+- Keine unnötigen Re-Renders
+- `useMemo`/`useCallback` bleiben erhalten
+- Keine zusätzlichen API-Calls
+
+---
+
+### Risiko 4: Übersetzungen werden übersehen
+
+**Risiko:** 🟡 MITTEL
+**Beschreibung:** Bei Code-Änderungen können Übersetzungen übersehen werden
+**Mitigation:**
+- Übersetzungs-Checkliste befolgen (siehe Phase 8)
+- Quick-Check vor jedem Commit
+- Alle 3 Sprachen testen
+
+---
+
+### Risiko 5: Notifications werden übersehen
+
+**Risiko:** 🟡 MITTEL
+**Beschreibung:** Bei Code-Änderungen können Notifications übersehen werden
+**Mitigation:**
+- Notifications-Checkliste befolgen (siehe Phase 9)
+- Alle wichtigen Aktionen prüfen
+- Backend- und Frontend-Übersetzungen hinzufügen
+
+---
+
+### Risiko 6: Berechtigungen werden übersehen
+
+**Risiko:** 🟡 MITTEL
+**Beschreibung:** Bei Code-Änderungen können Berechtigungen übersehen werden
+**Mitigation:**
+- Berechtigungs-Checkliste befolgen (siehe Phase 10)
+- Seed-File aktualisieren
+- Frontend- und Backend-Berechtigungen prüfen
+
+---
+
+## 📋 VOLLSTÄNDIGE CHECKLISTE FÜR JEDE CODE-ÄNDERUNG
+
+### Vor der Änderung:
+- [ ] Code-Analyse durchgeführt
+- [ ] Risiken identifiziert
+- [ ] Mitigation-Strategien definiert
+- [ ] Test-Strategie definiert
+
+### Während der Änderung:
+- [ ] Funktionalität bleibt gleich
+- [ ] Keine UX-Änderungen
+- [ ] Memory Leak Checkliste befolgt
+- [ ] Performance-Checkliste befolgt
+- [ ] Übersetzungs-Checkliste befolgt
+- [ ] Notifications-Checkliste befolgt
+- [ ] Berechtigungs-Checkliste befolgt
+
+### Nach der Änderung:
+- [ ] Vor/Nach-Vergleich durchgeführt
+- [ ] Alle Features getestet
+- [ ] Memory Leaks geprüft (Browser DevTools)
+- [ ] Performance geprüft
+- [ ] Alle 3 Sprachen getestet
+- [ ] Notifications getestet
+- [ ] Berechtigungen getestet
+
+---
+
 ## ⚠️ WICHTIGE HINWEISE
 
 1. **Funktionalität muss gleich bleiben** - Alle Änderungen sind intern/unter der Haube
@@ -511,13 +865,19 @@
 3. **Teststrategie:** Vor/Nach-Vergleich - Alle Features müssen identisch funktionieren
 4. **Schrittweise Umsetzung** - Nicht alles auf einmal, sondern Schritt für Schritt
 5. **Bei Unklarheiten nachfragen** - Keine Risiken eingehen, vorher NACHFRAGEN
+6. **Memory Leaks vermeiden** - Alle Cleanup-Funktionen hinzufügen
+7. **Performance nicht verschlechtern** - Keine unnötigen Re-Renders oder API-Calls
+8. **Übersetzungen nicht vergessen** - Alle Texte müssen übersetzt sein
+9. **Notifications nicht vergessen** - Alle wichtigen Aktionen müssen Notifications haben
+10. **Berechtigungen nicht vergessen** - Alle neuen Features müssen Berechtigungen haben
 
 ---
 
 ## 📝 NÄCHSTE SCHRITTE
 
-1. ✅ Plan erstellt
+1. ✅ Plan erstellt und vollständig geprüft
 2. ⏳ User-Feedback einholen
 3. ⏳ Prioritäten bestätigen
 4. ⏳ Schrittweise Umsetzung starten
+5. ⏳ Nach jeder Phase: Vollständige Checkliste durchführen
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getTest, getAllBranches, getUserBranches, switchUserBranch, createBranch, updateBranch, deleteBranch, getRoomDescriptions, updateRoomDescriptions, getRoomDescription } from '../controllers/branchController';
 import { competitorGroupController } from '../controllers/competitorGroupController';
 import { authMiddleware } from '../middleware/auth';
+import authenticate from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
 import { checkPermission } from '../middleware/permissionMiddleware';
 
