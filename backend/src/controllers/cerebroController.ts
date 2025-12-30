@@ -192,9 +192,14 @@ export const getArticleBySlug = async (req: Request, res: Response) => {
     try {
         const { slug } = req.params;
         
+        logger.log(`[getArticleBySlug] Suche Artikel mit Slug: "${slug}"`);
+        logger.log(`[getArticleBySlug] UserId: ${req.userId}, OrganizationId: ${(req as any).organizationId}`);
+        
         // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
         // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
         const articleFilter = req.userId ? getDataIsolationFilter(req as any, 'cerebroCarticle') : {};
+        
+        logger.log(`[getArticleBySlug] Filter:`, JSON.stringify(articleFilter, null, 2));
         
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const article = await prisma.cerebroCarticle.findFirst({
