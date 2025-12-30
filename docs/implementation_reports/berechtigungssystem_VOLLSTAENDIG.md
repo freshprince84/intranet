@@ -234,3 +234,4 @@ Die Konvertierung erfolgt automatisch in:
 - **Lösung:** Zentrale Dateien `backend/src/config/permissions.ts` und `frontend/src/config/permissions.ts`
 - **Vorteil:** Einheitliche Definitionen, einfache Wartung
 
+

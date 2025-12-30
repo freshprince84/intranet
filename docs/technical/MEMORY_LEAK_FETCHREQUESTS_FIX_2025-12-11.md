@@ -120,3 +120,4 @@ Der Fix reduziert das Memory-Leak bei Filter-Änderungen, aber **~1 GB RAM** ble
 
 
 
+

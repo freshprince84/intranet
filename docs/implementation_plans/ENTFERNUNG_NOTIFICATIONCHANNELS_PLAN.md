@@ -362,3 +362,4 @@ async function addWhatsAppToNotificationChannels() {
 - **NUR vereinfachen**: Code ohne unnötige Konfigurationsebene
 - **NUR testen**: Nach Änderungen alle Notification-Methoden testen
 
+
