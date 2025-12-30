@@ -23,7 +23,7 @@ conn.on('ready', () => {
   console.log('✅ SSH-Verbindung hergestellt');
   console.log('🚀 Starte Deployment...\n');
   
-  conn.exec('cd /var/www/intranet && bash deploy_to_server.sh', (err, stream) => {
+  conn.exec('cd /var/www/intranet && bash scripts/utils/deploy_to_server.sh', (err, stream) => {
     if (err) {
       console.error('❌ Fehler:', err);
       conn.end();
