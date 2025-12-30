@@ -64,7 +64,7 @@ echo ""
 # 6. Filter-Cleanup und Seed ausführen
 echo "🧹 Schritt 6: Filter-Cleanup..."
 cd /var/www/intranet/backend
-npx ts-node ../scripts/backend/cleanupUserFilters.ts || true
+npx ts-node scripts/backend/cleanupUserFilters.ts || true
 echo "✅ Filter-Cleanup abgeschlossen"
 echo ""
 
@@ -77,7 +77,8 @@ echo ""
 # 7.5. Cerebro Content-Bereinigung
 echo "🧹 Schritt 7.5: Cerebro Content-Bereinigung..."
 cd /var/www/intranet/backend
-npx ts-node --compiler-options '{"module":"commonjs"}' ../scripts/backend/cleanupCerebroContent.ts || true
+# Script muss von backend-Verzeichnis aus aufgerufen werden, damit Prisma Client gefunden wird
+NODE_PATH=/var/www/intranet/backend/node_modules npx ts-node ../scripts/backend/cleanupCerebroContent.ts || true
 echo "✅ Cerebro Content-Bereinigung abgeschlossen"
 echo ""
 
