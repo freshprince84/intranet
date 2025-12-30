@@ -132,7 +132,7 @@ async function deployToProduction() {
     const updateScriptCommand = `cd ${SERVER_CONFIG.serverPath} && git fetch origin && git reset --hard origin/main`;
     const updateResult = await executeSSHCommand(updateScriptCommand, 30000);
     if (!updateResult.success) {
-        console.error(`[MCP Deployment] ⚠️ Warnung: Script-Aktualisierung fehlgeschlagen, fahre trotzdem fort...`);
+        console.error(`[MCP Deployment] ⚠️ Warnung: Script-Aktualisierung fehlgeschlagen: ${updateResult.error}`);
     }
     else {
         console.error(`[MCP Deployment] ✅ Deployment-Skript aktualisiert`);
@@ -145,7 +145,9 @@ async function deployToProduction() {
     console.error(`[MCP Deployment] Befehl: ${command}`);
     const result = await executeSSHCommand(command, 600000); // 10 Minuten Timeout für Deployment
     // Kombiniere Outputs
-    const combinedOutput = cleanupResult.output + "\n\n" + result.output;
+    const combinedOutput = cleanupResult.output + "\n\n" +
+        (updateResult.output ? `[Script Update]\n${updateResult.output}\n\n` : '') +
+        result.output;
     const combinedResult = {
         success: result.success,
         output: combinedOutput,
