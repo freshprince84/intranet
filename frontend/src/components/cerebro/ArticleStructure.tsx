@@ -304,7 +304,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
                   currentSlug={slug}
                   expandedIds={expandedIds}
                   onToggleExpand={handleToggleExpand}
-                  onArticleClick={(slug) => navigate(`/cerebro/${slug}`)}
+                  onArticleClick={(slug) => navigate(`/app/cerebro/${slug}`)}
                 />
               </div>
             )}
@@ -328,7 +328,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
                     {markdownFolder.children.map((mdFile) => (
                       <Link 
                         key={mdFile.id}
-                        to={`/cerebro/${mdFile.slug}`}
+                        to={`/app/cerebro/${mdFile.slug}`}
                         className={`block truncate px-2 py-1 rounded-md ${
                           mdFile.slug === slug
                             ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300'
