@@ -127,8 +127,18 @@ async function deployToProduction() {
     else {
         console.error(`[MCP Deployment] ✅ Build-Dateien bereinigt`);
     }
-    // Schritt 2: Deployment-Skript ausführen
-    console.error(`[MCP Deployment] Schritt 2: Führe Deployment-Skript aus...`);
+    // Schritt 2: Deployment-Skript aktualisieren (falls nötig)
+    console.error(`[MCP Deployment] Schritt 2: Aktualisiere Deployment-Skript...`);
+    const updateScriptCommand = `cd ${SERVER_CONFIG.serverPath} && git fetch origin && git reset --hard origin/main`;
+    const updateResult = await executeSSHCommand(updateScriptCommand, 30000);
+    if (!updateResult.success) {
+        console.error(`[MCP Deployment] ⚠️ Warnung: Script-Aktualisierung fehlgeschlagen, fahre trotzdem fort...`);
+    }
+    else {
+        console.error(`[MCP Deployment] ✅ Deployment-Skript aktualisiert`);
+    }
+    // Schritt 3: Deployment-Skript ausführen
+    console.error(`[MCP Deployment] Schritt 3: Führe Deployment-Skript aus...`);
     console.error(`[MCP Deployment] DEPLOY_SCRIPT_PATH env: ${process.env.DEPLOY_SCRIPT_PATH}`);
     console.error(`[MCP Deployment] SERVER_CONFIG.deployScript: ${SERVER_CONFIG.deployScript}`);
     const command = `cd ${SERVER_CONFIG.serverPath} && bash ${SERVER_CONFIG.deployScript}`;
