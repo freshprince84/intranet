@@ -374,6 +374,18 @@ export const API_ENDPOINTS = {
             LISTINGS: '/price-analysis/ota/listings',
             RATE_SHOPPING: '/price-analysis/ota/rate-shopping',
             DISCOVER: '/price-analysis/ota/discover'
+        },
+        COMPETITOR_GROUPS: {
+            BASE: '/competitor-groups',
+            BY_ID: (id: number) => `/competitor-groups/${id}`,
+            COMPETITORS: (id: number) => `/competitor-groups/${id}/competitors`,
+            SEARCH_PRICES: (id: number) => `/competitor-groups/${id}/search-prices`
+        },
+        COMPETITORS: {
+            BY_ID: (id: number) => `/competitors/${id}`
+        },
+        BRANCHES: {
+            DISCOVER_COMPETITORS: (branchId: number) => `/branches/${branchId}/discover-competitors`
         }
     }
 };

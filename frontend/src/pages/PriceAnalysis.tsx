@@ -5,12 +5,13 @@ import OTAListingsTab from '../components/priceAnalysis/OTAListingsTab.tsx';
 import AnalysisTab from '../components/priceAnalysis/AnalysisTab.tsx';
 import PriceRecommendationsTab from '../components/priceAnalysis/PriceRecommendationsTab.tsx';
 import PricingRulesTab from '../components/priceAnalysis/PricingRulesTab.tsx';
+import CompetitorGroupsTab from '../components/priceAnalysis/CompetitorGroupsTab.tsx';
 
 const PriceAnalysis: React.FC = () => {
     const { t } = useTranslation();
     const { hasPermission, loading: permissionsLoading } = usePermissions();
 
-    const [activeTab, setActiveTab] = useState<'listings' | 'analysis' | 'recommendations' | 'rules'>('listings');
+    const [activeTab, setActiveTab] = useState<'listings' | 'analysis' | 'recommendations' | 'rules' | 'competitors'>('listings');
 
     // Prüfe Berechtigung
     if (permissionsLoading) {
@@ -87,6 +88,17 @@ const PriceAnalysis: React.FC = () => {
                     >
                         {t('priceAnalysis.tabRules')}
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('competitors')}
+                        className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
+                            activeTab === 'competitors'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                        }`}
+                    >
+                        {t('priceAnalysis.tabCompetitors', 'Konkurrenten')}
+                    </button>
                 </nav>
             </div>
 
@@ -95,6 +107,7 @@ const PriceAnalysis: React.FC = () => {
             {activeTab === 'analysis' && <AnalysisTab />}
             {activeTab === 'recommendations' && <PriceRecommendationsTab />}
             {activeTab === 'rules' && <PricingRulesTab />}
+            {activeTab === 'competitors' && <CompetitorGroupsTab />}
         </div>
     );
 };

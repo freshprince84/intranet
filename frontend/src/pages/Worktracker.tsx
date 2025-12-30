@@ -2246,6 +2246,50 @@ const Worktracker: React.FC = () => {
 
                     {/* ✅ REFACTORING: Tasks-Box vereinheitlicht - EINMAL für beide Ansichten (Mobile & Desktop) */}
                     <div className="worktracker-tasks-box dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
+                            {/* Tab-Navigation */}
+                            <div className="border-b border-gray-200 dark:border-gray-700 mb-4 px-3 sm:px-4 md:px-6">
+                                <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto overflow-y-hidden">
+                                    <button
+                                        onClick={() => setActiveTab('todos')}
+                                        className={`py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
+                                            activeTab === 'todos'
+                                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                        }`}
+                                    >
+                                        <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                                        {t('tasks.title', "To Do's")}
+                                    </button>
+                                    {hasPermission('reservations', 'read', 'tab') && (
+                                        <button
+                                            onClick={() => setActiveTab('reservations')}
+                                            className={`py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
+                                                activeTab === 'reservations'
+                                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                            }`}
+                                        >
+                                            <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                                            {t('reservations.title', 'Reservations')}
+                                        </button>
+                                    )}
+                                    {/* ✅ FIX: Verwende canView() für Tab-Sichtbarkeit (analog zu reservations) */}
+                                    {canView('tour_bookings', 'tab') && (
+                                        <button
+                                            onClick={() => setActiveTab('tourBookings')}
+                                            className={`py-2 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
+                                                activeTab === 'tourBookings'
+                                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                            }`}
+                                        >
+                                            <ClipboardDocumentListIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                                            {t('tourBookings.title', 'Tour-Buchungen')}
+                                        </button>
+                                    )}
+                                </nav>
+                            </div>
+
                             <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
                                 {/* Linke Seite: "Neuer Task/Reservation"-Button */}
                                 <div className="flex items-center">
@@ -2280,50 +2324,6 @@ const Worktracker: React.FC = () => {
                                             </div>
                                         </div>
                                     )}
-                                </div>
-                                
-                                {/* Mitte: Tab-Navigation */}
-                                <div className="flex items-center">
-                                    <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto overflow-y-hidden">
-                                        <button
-                                            onClick={() => setActiveTab('todos')}
-                                            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
-                                                activeTab === 'todos'
-                                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                                            }`}
-                                        >
-                                            <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                            {t('tasks.title', "To Do's")}
-                                        </button>
-                                        {hasPermission('reservations', 'read', 'tab') && (
-                                            <button
-                                                onClick={() => setActiveTab('reservations')}
-                                                className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
-                                                    activeTab === 'reservations'
-                                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                                                }`}
-                                            >
-                                                <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                {t('reservations.title', 'Reservations')}
-                                            </button>
-                                        )}
-                                        {/* ✅ FIX: Verwende canView() für Tab-Sichtbarkeit (analog zu reservations) */}
-                                        {canView('tour_bookings', 'tab') && (
-                                            <button
-                                                onClick={() => setActiveTab('tourBookings')}
-                                                className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 flex items-center gap-1.5 ${
-                                                    activeTab === 'tourBookings'
-                                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                                                }`}
-                                            >
-                                                <ClipboardDocumentListIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                                {t('tourBookings.title', 'Tour-Buchungen')}
-                                            </button>
-                                        )}
-                                    </nav>
                                 </div>
                                 
                                 {/* Rechte Seite: Suchfeld, Sync-Button (nur Reservations), Filter-Button, Status-Filter, Spalten-Konfiguration */}

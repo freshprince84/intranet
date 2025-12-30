@@ -59,7 +59,7 @@ type AnyRequest = Request & {
 /**
  * Konvertiert Legacy-AccessLevel zu neuem Format
  */
-function convertLegacyAccessLevel(level: string): NewAccessLevel {
+export function convertLegacyAccessLevel(level: string): NewAccessLevel {
     switch (level) {
         case 'read': return 'all_read';
         case 'write': return 'own_both';

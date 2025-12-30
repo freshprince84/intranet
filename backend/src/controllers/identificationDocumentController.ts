@@ -13,7 +13,7 @@ import { getUserNotificationText, getUserLanguage } from '../utils/translations'
 // Konfiguration für Datei-Upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../../uploads/documents');
+    const uploadDir = path.join(__dirname, '../../uploads/documents');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -84,7 +84,7 @@ export const addDocument = async (req: Request, res: Response) => {
           const buffer = Buffer.from(base64Data, 'base64');
           
           const fileName = `document-${userId}-${Date.now()}.jpg`;
-          const filePath = path.join(__dirname, '../../../uploads/documents', fileName);
+          const filePath = path.join(__dirname, '../../uploads/documents', fileName);
           
           fs.writeFileSync(filePath, buffer);
           documentFilePath = filePath.replace(/\\/g, '/');
@@ -435,7 +435,7 @@ export const updateDocument = async (req: Request, res: Response) => {
           const buffer = Buffer.from(base64Data, 'base64');
           
           const fileName = `document-${existingDoc.userId}-${Date.now()}.jpg`;
-          const filePath = path.join(__dirname, '../../../uploads/documents', fileName);
+          const filePath = path.join(__dirname, '../../uploads/documents', fileName);
           
           fs.writeFileSync(filePath, buffer);
           updateData.documentFile = filePath.replace(/\\/g, '/');

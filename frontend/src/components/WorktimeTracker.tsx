@@ -48,6 +48,9 @@ const WorktimeTracker: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [showWorkTimeModal, setShowWorkTimeModal] = useState(false);
     const [statusError, setStatusError] = useState<string | null>(null);
+    // Mobile Bottom Sheet State
+    const [isExpanded, setIsExpanded] = useState(false);
+    
     const { user } = useAuth();
     const { isTracking: contextTracking, updateTrackingStatus, checkTrackingStatus } = useWorktime();
     const { branches, selectedBranch, setSelectedBranch } = useBranch();
@@ -415,13 +418,44 @@ const WorktimeTracker: React.FC = () => {
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 sm:mb-6">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold flex items-center dark:text-white">
-                    <ClockIcon className="h-6 w-6 mr-2" />
-                    {t('worktime.tracker.title')}
-                </h2>
+        <div className={`
+            bg-white dark:bg-gray-800 
+            sm:rounded-lg sm:border sm:border-gray-300 sm:dark:border-gray-700 sm:p-6 sm:mb-6 
+            fixed bottom-0 left-0 right-0 z-40 rounded-t-xl border-t border-gray-300 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]
+            transition-transform duration-300 ease-in-out
+            sm:static sm:shadow-none sm:transform-none
+            ${isExpanded ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}
+        `}>
+            {/* Mobile Handle & Collapsed View */}
+            <div 
+                className="w-full flex flex-col items-center cursor-pointer sm:hidden"
+                onClick={() => setIsExpanded(!isExpanded)}
+            >
+                {/* Handle */}
+                <div className="w-full flex justify-center pt-2 pb-1">
+                    <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                </div>
+                
+                {/* Collapsed Info Header (Height ~20px + padding) */}
+                <div className="w-full px-4 pb-2 flex justify-between items-center h-8">
+                    <span className={`text-sm font-semibold flex items-center ${isTracking ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                        {isTracking 
+                            ? <><ClockIcon className="h-4 w-4 mr-1" /> {elapsedTime}</>
+                            : <><ClockIcon className="h-4 w-4 mr-1" /> {t('worktime.tracker.start')}</>
+                        }
+                    </span>
+                    <div className={`w-3 h-3 rounded-full ${isTracking ? 'bg-green-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                </div>
             </div>
+
+            {/* Main Content Container */}
+            <div className="p-4 sm:p-0 pt-0 max-h-[70vh] overflow-y-auto sm:max-h-none sm:overflow-visible">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold flex items-center dark:text-white">
+                        <ClockIcon className="h-6 w-6 mr-2" />
+                        {t('worktime.tracker.title')}
+                    </h2>
+                </div>
             
             {statusError && (
                 <div className="mb-4 p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-700 rounded-md flex justify-between items-center">
@@ -515,6 +549,7 @@ const WorktimeTracker: React.FC = () => {
             {showWorkTimeModal && (
                 <WorktimeModal isOpen={showWorkTimeModal} onClose={closeWorkTimeModal} />
             )}
+            </div>
         </div>
     );
 };

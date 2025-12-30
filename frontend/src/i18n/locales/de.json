@@ -82,5 +82,62 @@
     "schema": {
       "productName": "Intranet Plattform"
     }
+  },
+  "priceAnalysis": {
+    "title": "Preisanalyse",
+    "listings": "OTA Listings",
+    "tabAnalysis": "Analyse",
+    "tabRecommendations": "Empfehlungen",
+    "tabRules": "Regeln",
+    "tabCompetitors": "Konkurrenten",
+    "loading": "Lädt...",
+    "noListings": "Keine OTA-Listings gefunden",
+    "noAnalyses": "Keine Preisanalysen gefunden",
+    "platform": "Plattform",
+    "roomType": {
+      "dorm": "Schlafsaal",
+      "private": "Privatzimmer"
+    },
+    "competitors": {
+      "title": "Konkurrenzgruppen",
+      "discover": "KI: Konkurrenten finden",
+      "discovering": "Suche...",
+      "discovered": "{{count}} Konkurrenten gefunden",
+      "noneFound": "Keine Konkurrenten gefunden",
+      "createGroup": "Neue Gruppe",
+      "groupCreated": "Konkurrenzgruppe erstellt",
+      "groupDeleted": "Gruppe gelöscht",
+      "deleteConfirm": "Wirklich löschen?",
+      "noGroups": "Keine Konkurrenzgruppen gefunden",
+      "competitors": "Konkurrenten",
+      "noCompetitors": "Keine Konkurrenten",
+      "add": "Hinzufügen",
+      "addCompetitor": "Konkurrent hinzufügen",
+      "competitorAdded": "Konkurrent hinzugefügt",
+      "competitorDeleted": "Konkurrent gelöscht",
+      "deleteCompetitorConfirm": "Konkurrent wirklich löschen?",
+      "searchPrices": "Preise suchen",
+      "searching": "Suche...",
+      "searchStarted": "Preissuche gestartet",
+      "name": "Name",
+      "description": "Beschreibung",
+      "city": "Stadt",
+      "country": "Land",
+      "searchName": "Suchname",
+      "bookingComUrl": "Booking.com URL",
+      "hostelworldUrl": "Hostelworld URL",
+      "lastPriceFound": "Letzter Preis",
+      "fillRequired": "Bitte alle Pflichtfelder ausfüllen",
+      "nameRequired": "Name ist erforderlich"
+    }
+  },
+  "common": {
+    "error": "Fehler",
+    "errorOccurred": "Ein Fehler ist aufgetreten",
+    "noPermission": "Keine Berechtigung",
+    "loading": "Lädt...",
+    "create": "Erstellen",
+    "cancel": "Abbrechen",
+    "add": "Hinzufügen"
   }
 }

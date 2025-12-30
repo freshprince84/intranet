@@ -245,6 +245,7 @@ model Branch {
   priceRecommendations          PriceRecommendation[]
   pricingRules                  PricingRule[]
   rateShoppingJobs              RateShoppingJob[]
+  competitorGroups              CompetitorGroup[]
 }
 
 model UsersBranches {
@@ -1824,7 +1825,8 @@ model OTAListing {
   updatedAt DateTime @updatedAt
 
   // Relations
-  priceData OTAPriceData[]
+  priceData   OTAPriceData[]
+  competitors Competitor[]
 
   @@unique([platform, listingId, city]) // Eindeutig pro Plattform, Listing und Stadt
   @@index([city])
@@ -1996,6 +1998,66 @@ model PricingRule {
   @@index([branchId])
   @@index([isActive])
   @@index([priority])
+}
+
+model CompetitorGroup {
+  id       Int    @id @default(autoincrement())
+  branchId Int
+  branch   Branch @relation(fields: [branchId], references: [id])
+
+  // Gruppen-Informationen
+  name        String // Name der Konkurrenzgruppe (z.B. "Medellín Hostels")
+  description String? // Beschreibung
+
+  // Ort
+  city    String // Stadt (z.B. "Medellín")
+  country String? // Land (z.B. "Kolumbien")
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Metadaten
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  competitors Competitor[]
+
+  @@index([branchId])
+  @@index([city])
+  @@index([isActive])
+}
+
+model Competitor {
+  id                Int             @id @default(autoincrement())
+  competitorGroupId Int
+  competitorGroup   CompetitorGroup @relation(fields: [competitorGroupId], references: [id], onDelete: Cascade)
+
+  // Hostel-Informationen
+  name       String // Hostel-Name (z.B. "Los Patios Hostel")
+  searchName String? // Alternative Suchbegriffe (z.B. "Los Patios Medellín")
+
+  // OTA-Informationen (optional, falls bereits bekannt)
+  bookingComUrl  String? // Booking.com URL
+  hostelworldUrl String? // Hostelworld URL
+  otherUrls      Json? // Weitere URLs (Array)
+
+  // Zuordnung zu OTAListing (falls bereits vorhanden)
+  otaListingId Int?
+  otaListing   OTAListing? @relation(fields: [otaListingId], references: [id])
+
+  // Status
+  isActive         Boolean   @default(true)
+  lastSearchedAt   DateTime? // Wann wurde zuletzt gesucht?
+  lastPriceFoundAt DateTime? // Wann wurde zuletzt ein Preis gefunden?
+
+  // Metadaten
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([competitorGroupId])
+  @@index([isActive])
+  @@index([otaListingId])
 }
 
 model RateShoppingJob {

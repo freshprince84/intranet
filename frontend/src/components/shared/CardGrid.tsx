@@ -24,9 +24,9 @@ const CardGrid: React.FC<CardGridProps> = ({
   className = ''
 }) => {
   const gapClass = {
-    sm: 'gap-0.5',
-    md: 'gap-0.5',
-    lg: 'gap-1'
+    sm: 'gap-2',
+    md: 'gap-4',
+    lg: 'gap-6'
   }[gap];
 
   // Immer 1 Spalte für bessere Übersichtlichkeit - Cards nehmen volle Breite ein

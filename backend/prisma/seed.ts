@@ -1596,38 +1596,6 @@ async function main() {
             }
           });
           
-          // ✅ PHASE 4: "Meine Aufgaben" Filter (responsible = user OR qc = user OR responsible = rolle OR qc = rolle)
-          await prisma.savedFilter.upsert({
-            where: {
-              userId_tableId_name: {
-                userId,
-                tableId: todosTableId,
-                name: 'Meine Aufgaben'
-              }
-            },
-            update: {
-              conditions: JSON.stringify([
-                { column: 'responsible', operator: 'equals', value: '__CURRENT_USER__' },
-                { column: 'qualityControl', operator: 'equals', value: '__CURRENT_USER__' },
-                { column: 'responsible', operator: 'equals', value: '__CURRENT_ROLE__' },
-                { column: 'qualityControl', operator: 'equals', value: '__CURRENT_ROLE__' }
-              ]),
-              operators: JSON.stringify(['OR', 'OR', 'OR'])
-            },
-            create: {
-              userId,
-              tableId: todosTableId,
-              name: 'Meine Aufgaben',
-              conditions: JSON.stringify([
-                { column: 'responsible', operator: 'equals', value: '__CURRENT_USER__' },
-                { column: 'qualityControl', operator: 'equals', value: '__CURRENT_USER__' },
-                { column: 'responsible', operator: 'equals', value: '__CURRENT_ROLE__' },
-                { column: 'qualityControl', operator: 'equals', value: '__CURRENT_ROLE__' }
-              ]),
-              operators: JSON.stringify(['OR', 'OR', 'OR'])
-            }
-          });
-          
           // Standard-Filter für Requests (requests-table)
           const requestsTableId = 'requests-table';
           

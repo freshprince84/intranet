@@ -9,6 +9,15 @@ import useMessage from '../hooks/useMessage.ts';
 import { useFilterContext } from '../contexts/FilterContext.tsx';
 import { logger } from '../utils/logger.ts';
 import { useResizeObserver } from '../hooks/useResizeObserver.ts';
+import { usePermissions } from '../hooks/usePermissions.ts';
+
+// Mapping Table-Id zu Entity + EntityType
+const TABLE_ID_TO_ENTITY: Record<string, { entity: string; entityType: 'box' | 'tab' }> = {
+  'worktracker-todos': { entity: 'todos', entityType: 'tab' },
+  'todo-analytics-table': { entity: 'task_analytics', entityType: 'tab' },
+  'requests-table': { entity: 'requests', entityType: 'box' },
+  'request-analytics-table': { entity: 'request_analytics', entityType: 'tab' },
+};
 
 interface SavedFilter {
   id: number;
@@ -54,6 +63,11 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const { t } = useTranslation();
   const { showMessage } = useMessage();
   const filterContext = useFilterContext();
+  const { getAccessLevel } = usePermissions();
+  
+  // ✅ FILTER-BERECHTIGUNGEN: Prüfe AccessLevel für Table-Id
+  const mapping = TABLE_ID_TO_ENTITY[tableId];
+  const accessLevel = mapping ? getAccessLevel(mapping.entity, mapping.entityType) : 'all_both';
   
   // Übersetze Filter-Namen beim Anzeigen
   const translateFilterName = (name: string): string => {
@@ -945,6 +959,11 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }
   };
   
+  // ✅ FILTER-BERECHTIGUNGEN: Bei none: Komponente komplett ausblenden (NACH allen Hooks!)
+  if (accessLevel === 'none') {
+    return null;
+  }
+
   if (loading) {
     return <div className="flex justify-center items-center py-2">{t('common.loadingFilters')}</div>;
   }
@@ -958,7 +977,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   }
 
   return (
-    <div ref={containerRef} className="filter-tags-container flex items-center gap-1.5 sm:gap-2 mb-3 mt-1 overflow-x-auto">
+    <div ref={containerRef} className="filter-tags-container flex items-center gap-1.5 sm:gap-2 mb-3 mt-1 overflow-x-auto py-2 min-h-[50px] scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
       {/* Dynamische Anzahl Filter inline anzeigen mit optimistischer Anzeige */}
       <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 flex-nowrap">
         {/* Gruppen-Dropdowns */}
