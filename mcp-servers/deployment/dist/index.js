@@ -16,7 +16,7 @@ const SERVER_CONFIG = {
     privateKeyPath: process.env.DEPLOY_SSH_KEY_PATH || path.join(process.env.HOME || process.env.USERPROFILE || "", ".ssh", "intranet_rsa"),
     passphrase: process.env.DEPLOY_SSH_KEY_PASSPHRASE || undefined,
     serverPath: process.env.DEPLOY_SERVER_PATH || "/var/www/intranet",
-    deployScript: process.env.DEPLOY_SCRIPT_PATH || "/var/www/intranet/deploy_to_server.sh",
+    deployScript: process.env.DEPLOY_SCRIPT_PATH || "/var/www/intranet/scripts/utils/deploy_to_server.sh",
 };
 /**
  * Führt SSH-Befehl auf dem Server aus

@@ -26,7 +26,7 @@ const SERVER_CONFIG = {
   ),
   passphrase: process.env.DEPLOY_SSH_KEY_PASSPHRASE || undefined,
   serverPath: process.env.DEPLOY_SERVER_PATH || "/var/www/intranet",
-  deployScript: process.env.DEPLOY_SCRIPT_PATH || "/var/www/intranet/deploy_to_server.sh",
+  deployScript: process.env.DEPLOY_SCRIPT_PATH || "/var/www/intranet/scripts/utils/deploy_to_server.sh",
 };
 
 interface DeploymentResult {
