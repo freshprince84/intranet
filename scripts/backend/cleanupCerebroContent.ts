@@ -5,7 +5,15 @@
  * da der Content von GitHub geladen wird und nicht in der DB gespeichert werden soll.
  */
 
-const { PrismaClient } = require('@prisma/client');
+const path = require('path');
+
+// Stelle sicher, dass Prisma Client aus dem backend-Verzeichnis geladen wird
+// Das Script wird von backend/ aus aufgerufen, daher ist process.cwd() = /var/www/intranet/backend
+const backendNodeModules = path.resolve(process.cwd(), 'node_modules');
+const prismaClientPath = path.join(backendNodeModules, '@prisma/client');
+
+// Lade Prisma Client direkt aus dem backend-Verzeichnis
+const { PrismaClient } = require(prismaClientPath);
 
 const prisma = new PrismaClient();
 
