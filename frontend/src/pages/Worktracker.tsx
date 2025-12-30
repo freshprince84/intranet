@@ -2245,9 +2245,9 @@ const Worktracker: React.FC = () => {
                 <div className="w-full mb-4" style={{ display: 'flex', flexDirection: 'column' }}>
 
                     {/* ✅ REFACTORING: Tasks-Box vereinheitlicht - EINMAL für beide Ansichten (Mobile & Desktop) */}
-                    <div className="worktracker-tasks-box dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
+                    <div className="worktracker-tasks-box dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20 mt-4">
                             {/* Tab-Navigation */}
-                            <div className="border-b border-gray-200 dark:border-gray-700 mb-4 px-3 sm:px-4 md:px-6">
+                            <div className="border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 md:px-6">
                                 <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto overflow-y-hidden">
                                     <button
                                         onClick={() => setActiveTab('todos')}
@@ -2290,57 +2290,54 @@ const Worktracker: React.FC = () => {
                                 </nav>
                             </div>
 
-                            <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
+                            <div className="flex flex-wrap items-center gap-2 mb-4 px-3 sm:px-4 md:px-6 pt-4">
                                 {/* Linke Seite: "Neuer Task/Reservation"-Button */}
-                                <div className="flex items-center">
-                                    {activeTab === 'todos' && hasPermission('tasks', 'write', 'table') && (
-                                        <div className="relative group">
-                                            <button
-                                                onClick={() => setIsCreateModalOpen(true)}
-                                                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
-                                                style={{ width: '30.19px', height: '30.19px' }}
-                                                aria-label={t('tasks.createTask')}
-                                                data-onboarding="create-task-button"
-                                            >
-                                                <PlusIcon className="h-4 w-4" />
-                                            </button>
-                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                {t('tasks.createTask')}
-                                            </div>
+                                {activeTab === 'todos' && hasPermission('tasks', 'write', 'table') && (
+                                    <div className="relative group">
+                                        <button
+                                            onClick={() => setIsCreateModalOpen(true)}
+                                            className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                            style={{ width: '30.19px', height: '30.19px' }}
+                                            aria-label={t('tasks.createTask')}
+                                            data-onboarding="create-task-button"
+                                        >
+                                            <PlusIcon className="h-4 w-4" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {t('tasks.createTask')}
                                         </div>
-                                    )}
-                                    {activeTab === 'reservations' && hasPermission('reservations', 'write', 'tab') && (
-                                        <div className="relative group">
-                                            <button
-                                                onClick={() => setIsCreateReservationModalOpen(true)}
-                                                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
-                                                style={{ width: '30.19px', height: '30.19px' }}
-                                                aria-label={t('reservations.createReservation.button', 'Neue Reservierung')}
-                                            >
-                                                <PlusIcon className="h-4 w-4" />
-                                            </button>
-                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                {t('reservations.createReservation.button', 'Neue Reservierung')}
-                                            </div>
+                                    </div>
+                                )}
+                                {activeTab === 'reservations' && hasPermission('reservations', 'write', 'tab') && (
+                                    <div className="relative group">
+                                        <button
+                                            onClick={() => setIsCreateReservationModalOpen(true)}
+                                            className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                            style={{ width: '30.19px', height: '30.19px' }}
+                                            aria-label={t('reservations.createReservation.button', 'Neue Reservierung')}
+                                        >
+                                            <PlusIcon className="h-4 w-4" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {t('reservations.createReservation.button', 'Neue Reservierung')}
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                                 
-                                {/* Rechte Seite: Suchfeld, Sync-Button (nur Reservations), Filter-Button, Status-Filter, Spalten-Konfiguration */}
-                                <div className="flex items-center gap-1.5">
-                                    <input
-                                        type="text"
-                                        placeholder={t('common.search') + '...'}
-                                        className="w-[120px] sm:w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        value={activeTab === 'todos' ? searchTerm : reservationSearchTerm}
-                                        onChange={(e) => {
-                                            if (activeTab === 'todos') {
-                                                setSearchTerm(e.target.value);
-                                            } else {
-                                                setReservationSearchTerm(e.target.value);
-                                            }
-                                        }}
-                                    />
+                                {/* Suchfeld */}
+                                <input
+                                    type="text"
+                                    placeholder={t('common.search') + '...'}
+                                    className="w-[120px] sm:w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                    value={activeTab === 'todos' ? searchTerm : reservationSearchTerm}
+                                    onChange={(e) => {
+                                        if (activeTab === 'todos') {
+                                            setSearchTerm(e.target.value);
+                                        } else {
+                                            setReservationSearchTerm(e.target.value);
+                                        }
+                                    }}
+                                />
                                     
                                     {/* Sync-Button für Reservations */}
                                     {activeTab === 'reservations' && (
@@ -2541,7 +2538,6 @@ const Worktracker: React.FC = () => {
                                             showMainSort={true}
                                         />
                                     </div>
-                                </div>
                             </div>
 
                             {/* Filter-Pane */}

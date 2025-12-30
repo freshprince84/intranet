@@ -417,6 +417,32 @@ export class WhatsAppMessageHandler {
       
       logger.log('[WhatsApp Message Handler] Suche mit Formaten:', uniqueFormats);
       
+      // DEBUG: Zeige alle User mit Telefonnummern (für Debugging)
+      const allUsersWithPhone = await prisma.user.findMany({
+        where: {
+          phoneNumber: { not: null }
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
+          branches: {
+            select: {
+              branchId: true
+            }
+          }
+        },
+        take: 20
+      });
+      
+      logger.log('[WhatsApp Message Handler] DEBUG: Alle User mit Telefonnummern:', allUsersWithPhone.map(u => ({
+        id: u.id,
+        name: `${u.firstName} ${u.lastName}`,
+        phone: u.phoneNumber,
+        branches: u.branches.map(b => b.branchId)
+      })));
+      
       // Versuche exakte Übereinstimmung mit allen Formaten
       let user = await prisma.user.findFirst({
         where: {
@@ -496,27 +522,49 @@ export class WhatsAppMessageHandler {
           phoneNumber: userWithBranches.phoneNumber
         };
       } else {
-        logger.warn('[WhatsApp Message Handler] Kein User gefunden für Telefonnummer:', phoneNumber);
+        logger.warn('[WhatsApp Message Handler] Kein User gefunden für Telefonnummer:', {
+          originalPhone: phoneNumber,
+          normalizedPhone: normalizedPhone,
+          searchFormats: uniqueFormats,
+          branchId: branchId
+        });
         
-        // Debug: Zeige alle User mit ähnlichen Telefonnummern
-        const allUsers = await prisma.user.findMany({
+        // DEBUG: Prüfe ob User mit dieser Telefonnummer existiert (ohne Branch-Filter)
+        const userWithoutBranch = await prisma.user.findFirst({
           where: {
-            phoneNumber: { not: null }
+            OR: uniqueFormats.map(format => ({ phoneNumber: format }))
           },
           select: {
             id: true,
             firstName: true,
             lastName: true,
-            phoneNumber: true
-          },
-          take: 10
+            phoneNumber: true,
+            branches: {
+              select: {
+                branchId: true,
+                branch: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
+          }
         });
         
-        logger.log('[WhatsApp Message Handler] Verfügbare User mit Telefonnummer:', allUsers.map(u => ({
-          id: u.id,
-          name: `${u.firstName} ${u.lastName}`,
-          phone: u.phoneNumber
-        })));
+        if (userWithoutBranch) {
+          logger.warn('[WhatsApp Message Handler] User gefunden, aber nicht im Branch!', {
+            userId: userWithoutBranch.id,
+            userName: `${userWithoutBranch.firstName} ${userWithoutBranch.lastName}`,
+            userPhone: userWithoutBranch.phoneNumber,
+            userBranches: userWithoutBranch.branches.map(b => ({ id: b.branchId, name: b.branch.name })),
+            targetBranchId: branchId,
+            message: 'User ist nicht im angegebenen Branch zugeordnet!'
+          });
+        } else {
+          logger.warn('[WhatsApp Message Handler] Kein User mit dieser Telefonnummer gefunden (auch ohne Branch-Filter)');
+        }
       }
 
       return user;

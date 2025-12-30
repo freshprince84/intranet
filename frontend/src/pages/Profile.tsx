@@ -124,6 +124,16 @@ const Profile: React.FC = () => {
         if (documentListRef.current) {
           documentListRef.current.loadDocuments();
         }
+        
+        // Auth-Context-User aktualisieren, damit OnboardingContext die Dokumente sieht
+        // Backend lädt identificationDocuments IMMER, daher einfach fetchCurrentUser() aufrufen
+        try {
+          await fetchCurrentUser();
+        } catch (error) {
+          console.error('Fehler beim Aktualisieren des Auth-Context-Users:', error);
+          // Fehler blockiert nicht den Upload, aber Tour-Assistent wird möglicherweise nicht aktualisiert
+        }
+        
         showMessage(t('profile.documentUploadSuccess', { defaultValue: 'Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.' }), 'success');
         
         // Schließe Onboarding-Schritt ab, wenn aktiv

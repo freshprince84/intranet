@@ -186,17 +186,22 @@ export class WhatsAppFunctionHandlers {
    */
   static async get_requests(
     args: any,
-    userId: number,
+    userId: number | null,
     roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Prüfe ob roleId vorhanden ist
+      // 1. Prüfe ob User identifiziert wurde
+      if (!userId) {
+        throw new Error('Du musst registriert sein, um Requests abzurufen. Bitte füge deine Telefonnummer zu deinem Profil hinzu.');
+      }
+      
+      // 2. Prüfe ob roleId vorhanden ist
       if (!roleId) {
         throw new Error('Keine Rolle gefunden. Bitte wende dich an einen Administrator.');
       }
       
-      // 2. Prüfe Berechtigung
+      // 3. Prüfe Berechtigung
       const hasPermission = await checkUserPermission(
         userId,
         roleId,
@@ -209,14 +214,14 @@ export class WhatsAppFunctionHandlers {
         throw new Error('Keine Berechtigung für Requests');
       }
       
-      // 2. Parse Arguments
+      // 4. Parse Arguments
       const status = args.status;
       const dueDate = args.dueDate === 'today' 
         ? new Date() 
         : args.dueDate ? new Date(args.dueDate) : undefined;
       const targetUserId = args.userId || userId;
       
-      // 3. Baue Where-Clause
+      // 5. Baue Where-Clause
       const where: any = {
         branchId: branchId,
         OR: [
@@ -245,7 +250,7 @@ export class WhatsAppFunctionHandlers {
         }
       }
       
-      // 4. Lade Daten
+      // 6. Lade Daten
       const requests = await prisma.request.findMany({
         where,
         include: {
@@ -268,7 +273,7 @@ export class WhatsAppFunctionHandlers {
         take: 20
       });
       
-      // 5. Formatiere für KI
+      // 7. Formatiere für KI
       return requests.map(r => ({
         id: r.id,
         title: r.title,
@@ -291,17 +296,22 @@ export class WhatsAppFunctionHandlers {
    */
   static async get_todos(
     args: any,
-    userId: number,
+    userId: number | null,
     roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Prüfe ob roleId vorhanden ist
+      // 1. Prüfe ob User identifiziert wurde
+      if (!userId) {
+        throw new Error('Du musst registriert sein, um Todos abzurufen. Bitte füge deine Telefonnummer zu deinem Profil hinzu.');
+      }
+      
+      // 2. Prüfe ob roleId vorhanden ist
       if (!roleId) {
         throw new Error('Keine Rolle gefunden. Bitte wende dich an einen Administrator.');
       }
       
-      // 2. Prüfe Berechtigung
+      // 3. Prüfe Berechtigung
       const hasPermission = await checkUserPermission(
         userId,
         roleId,
@@ -314,14 +324,14 @@ export class WhatsAppFunctionHandlers {
         throw new Error('Keine Berechtigung für Tasks');
       }
       
-      // 2. Parse Arguments
+      // 4. Parse Arguments
       const status = args.status;
       const dueDate = args.dueDate === 'today' 
         ? new Date() 
         : args.dueDate ? new Date(args.dueDate) : undefined;
       const targetUserId = args.userId || userId;
       
-      // 3. Baue Where-Clause
+      // 5. Baue Where-Clause
       const where: any = {
         branchId: branchId,
         OR: [
@@ -349,7 +359,7 @@ export class WhatsAppFunctionHandlers {
         }
       }
       
-      // 4. Lade Daten
+      // 6. Lade Daten
       const tasks = await prisma.task.findMany({
         where,
         include: {
@@ -372,7 +382,7 @@ export class WhatsAppFunctionHandlers {
         take: 20
       });
       
-      // 5. Formatiere für KI
+      // 7. Formatiere für KI
       return tasks.map(t => ({
         id: t.id,
         title: t.title,
@@ -394,17 +404,22 @@ export class WhatsAppFunctionHandlers {
    */
   static async get_worktime(
     args: any,
-    userId: number,
+    userId: number | null,
     roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Prüfe ob roleId vorhanden ist
+      // 1. Prüfe ob User identifiziert wurde
+      if (!userId) {
+        throw new Error('Du musst registriert sein, um Arbeitszeiten abzurufen. Bitte füge deine Telefonnummer zu deinem Profil hinzu.');
+      }
+      
+      // 2. Prüfe ob roleId vorhanden ist
       if (!roleId) {
         throw new Error('Keine Rolle gefunden. Bitte wende dich an einen Administrator.');
       }
       
-      // 2. Prüfe Berechtigung
+      // 3. Prüfe Berechtigung
       const hasPermission = await checkUserPermission(
         userId,
         roleId,
@@ -417,7 +432,7 @@ export class WhatsAppFunctionHandlers {
         throw new Error('Keine Berechtigung für Arbeitszeiten');
       }
       
-      // 2. Parse Arguments
+      // 4. Parse Arguments
       const targetUserId = args.userId || userId;
       let date: Date | undefined;
       let startDate: Date | undefined;
@@ -468,14 +483,14 @@ export class WhatsAppFunctionHandlers {
         where.endTime = null;
       }
       
-      // 4. Lade Daten
+      // 6. Lade Daten
       const worktimes = await prisma.workTime.findMany({
         where,
         orderBy: { startTime: 'desc' },
         take: 50
       });
       
-      // 5. Berechne Gesamtzeit
+      // 7. Berechne Gesamtzeit
       let totalMinutes = 0;
       worktimes.forEach(wt => {
         if (wt.endTime) {
@@ -491,7 +506,7 @@ export class WhatsAppFunctionHandlers {
       const totalHours = Math.floor(totalMinutes / 60);
       const remainingMinutes = totalMinutes % 60;
       
-      // 6. Formatiere für KI
+      // 8. Formatiere für KI
       return {
         totalHours,
         totalMinutes: remainingMinutes,
@@ -517,17 +532,22 @@ export class WhatsAppFunctionHandlers {
    */
   static async get_cerebro_articles(
     args: any,
-    userId: number,
+    userId: number | null,
     roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Prüfe ob roleId vorhanden ist
+      // 1. Prüfe ob User identifiziert wurde
+      if (!userId) {
+        throw new Error('Du musst registriert sein, um Cerebro-Artikel abzurufen. Bitte füge deine Telefonnummer zu deinem Profil hinzu.');
+      }
+      
+      // 2. Prüfe ob roleId vorhanden ist
       if (!roleId) {
         throw new Error('Keine Rolle gefunden. Bitte wende dich an einen Administrator.');
       }
       
-      // 2. Prüfe Berechtigung
+      // 3. Prüfe Berechtigung
       const hasPermission = await checkUserPermission(
         userId,
         roleId,
@@ -540,7 +560,7 @@ export class WhatsAppFunctionHandlers {
         throw new Error('Keine Berechtigung für Cerebro-Artikel');
       }
       
-      // 2. Parse Arguments
+      // 4. Parse Arguments
       const searchTerm = args.searchTerm;
       const tags = args.tags || [];
       const limit = args.limit || 10;
@@ -586,7 +606,7 @@ export class WhatsAppFunctionHandlers {
         where.OR = orConditions;
       }
       
-      // 4. Lade Daten
+      // 6. Lade Daten
       const articles = await prisma.cerebroCarticle.findMany({
         where,
         include: {
@@ -606,7 +626,7 @@ export class WhatsAppFunctionHandlers {
         take: limit
       });
       
-      // 5. Formatiere für KI
+      // 7. Formatiere für KI
       return articles.map(a => ({
         id: a.id,
         title: a.title,
@@ -628,22 +648,27 @@ export class WhatsAppFunctionHandlers {
    */
   static async get_user_info(
     args: any,
-    userId: number,
+    userId: number | null,
     roleId: number | null,
     branchId: number
   ): Promise<any> {
     try {
-      // 1. Parse Arguments
+      // 1. Prüfe ob User identifiziert wurde
+      if (!userId) {
+        throw new Error('Du musst registriert sein, um deine Informationen abzurufen. Bitte füge deine Telefonnummer zu deinem Profil hinzu.');
+      }
+      
+      // 2. Parse Arguments
       const targetUserId = args.userId || userId;
       
-      // 2. Prüfe ob User eigene Daten abruft oder andere
+      // 3. Prüfe ob User eigene Daten abruft oder andere
       if (targetUserId !== userId) {
         // TODO: Prüfe ob User Berechtigung hat, andere User-Daten zu sehen
         // Für jetzt: Nur eigene Daten erlauben
         throw new Error('Nur eigene User-Informationen können abgerufen werden');
       }
       
-      // 3. Lade User-Daten
+      // 4. Lade User-Daten
       const user = await prisma.user.findUnique({
         where: { id: targetUserId },
         include: {
@@ -664,7 +689,7 @@ export class WhatsAppFunctionHandlers {
         throw new Error('User nicht gefunden');
       }
       
-      // 4. Formatiere für KI
+      // 5. Formatiere für KI
       return {
         id: user.id,
         firstName: user.firstName,

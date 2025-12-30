@@ -21,10 +21,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage.ts';
 import { logger } from '../utils/logger.ts';
+import { useAuth } from '../hooks/useAuth.tsx';
 
 const NotificationBell: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { activeLanguage } = useLanguage();
+  const { fetchCurrentUser } = useAuth();
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -107,6 +109,16 @@ const NotificationBell: React.FC = () => {
       logger.log('Verarbeitete Benachrichtigungen:', notifications);
       }
       setNotifications(notifications);
+      
+      // Prüfe ob joinApproved Notification vorhanden ist
+      const hasJoinApproved = notifications.some(n => n.type === 'joinApproved' && !n.read);
+      if (hasJoinApproved) {
+        // User aktualisieren damit Tour-Schritt angezeigt wird
+        fetchCurrentUser().catch(error => {
+          console.error('Fehler beim Aktualisieren des Users nach Org-Beitritt:', error);
+        });
+      }
+      
       setError(null);
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
@@ -117,7 +129,7 @@ const NotificationBell: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [open, t]);
+  }, [open, t, fetchCurrentUser]);
 
   const markAsRead = async (id: number) => {
     try {
@@ -161,6 +173,8 @@ const NotificationBell: React.FC = () => {
         return '/roles';
       case 'worktime':
         return '/worktime';
+      case 'joinApproved':
+        return '/dashboard'; // Navigiere zum Dashboard, wo Tour-Schritt angezeigt wird
       default:
         return '/';
     }
@@ -169,6 +183,13 @@ const NotificationBell: React.FC = () => {
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.read) {
       markAsRead(notification.id);
+    }
+    
+    // Wenn joinApproved Notification, User aktualisieren damit Tour-Schritt angezeigt wird
+    if (notification.type === 'joinApproved') {
+      fetchCurrentUser().catch(error => {
+        console.error('Fehler beim Aktualisieren des Users nach Org-Beitritt:', error);
+      });
     }
     
     const route = getRouteForNotificationType(notification);

@@ -457,11 +457,10 @@ const DataCard: React.FC<DataCardProps> = ({
     >
       {/* Mobile Layout (sm und kleiner) */}
       <div className="block sm:hidden">
-        {/* Zeile 1: Resp/QC links, Datum rechts (50:50) */}
+        {/* Zeile 1: Resp/QC links, Titel + Datum rechts */}
         <div className="flex items-center justify-between gap-2 mb-2">
           {/* Links: Resp und QC nebeneinander */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            {/* ✅ REFACTORING: Metadaten-Rendering mit Helper-Funktion */}
             {metadata.filter(item => item.section === 'main' || (!item.section && (item.label === 'Angefragt von' || item.label === 'Verantwortlicher'))).map((item, index) => 
               renderMetadataItem(item, index, 'mobile')
             )}
@@ -472,50 +471,24 @@ const DataCard: React.FC<DataCardProps> = ({
               renderMetadataItem(item, index, 'mobile')
             )}
           </div>
-          {/* Rechts: Datum (50%) */}
-          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0 flex-wrap justify-end" style={{ width: '50%' }}>
-            {metadata.filter(item => item.section === 'right-inline' || item.section === 'header-right').map((item, index) => (
-              <div key={index} className="flex items-center gap-1 whitespace-nowrap ml-2">
-                {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                <span className={`${item.className || 'text-gray-900 dark:text-white'}`}>
-                  {typeof item.value === 'string' ? item.value : item.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        {/* Zeile 2: Titel (60-70%) | Status (30-40%) */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          {/* ✅ REFACTORING: Titel-Rendering mit Helper-Funktion */}
-          <div className="flex-1 min-w-0" style={{ flex: '0 0 65%' }}>
-            {renderTitle(title, subtitle, 'mobile')}
-          </div>
-          {/* ✅ REFACTORING: Status-Rendering mit Helper-Funktion */}
-          <div className="flex-shrink-0" style={{ flex: '0 0 35%', justifyContent: 'flex-end' }}>
-            {renderStatus(status, 'mobile', t)}
+          {/* Rechts: Titel + Datum */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="text-right">
+              {renderTitle(title, subtitle, 'mobile')}
             </div>
-        </div>
-        
-        {/* Right-Metadaten für Mobile - unter Status, NUR wenn KEIN 3-Spalten-Layout aktiv ist */}
-        {metadata.filter(item => item.section === 'right').length > 0 && metadata.filter(item => item.section === 'center').length === 0 && (
-          <div className="flex flex-col items-end gap-1 mb-2">
-            {metadata.filter(item => item.section === 'right').map((item, index) => {
-              return (
-                <div
-                  key={index}
-                  className="flex items-center gap-1 justify-end text-xs text-gray-600 dark:text-gray-400"
-                >
+            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+              {metadata.filter(item => item.section === 'right-inline' || item.section === 'header-right').map((item, index) => (
+                <div key={index} className="flex items-center gap-1">
                   {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                  {item.label && <span className="font-medium mr-1 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
-                  <span className={`${item.className || 'text-gray-900 dark:text-white'} break-words`}>
+                  <span className={item.className || 'text-gray-900 dark:text-white'}>
                     {typeof item.value === 'string' ? item.value : item.value}
                   </span>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+            {renderStatus(status, 'mobile', t)}
           </div>
-        )}
+        </div>
       </div>
       
       {/* Desktop Layout (sm und größer) */}
@@ -663,9 +636,26 @@ const DataCard: React.FC<DataCardProps> = ({
         <div className="flex flex-col gap-3 sm:gap-4 mb-3 sm:mb-4">
           {/* 3-Spalten-Layout für Reservations (wenn center-Section vorhanden) */}
           {hasCenterSection ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start justify-items-start">
-              {/* Links: Titel-Bereich (Telefon/Email unter Titel) */}
-              <div className="flex flex-col gap-2 items-start w-full">
+            <>
+              {/* Mobile: Titel + Datum in einer Zeile */}
+              <div className="block sm:hidden flex items-center justify-between gap-2 mb-2">
+                <div className="flex-1 min-w-0">
+                  {renderTitle(title, subtitle, 'mobile')}
+                </div>
+                <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  {metadata.filter(item => item.section === 'header-right').map((item, index) => (
+                    <div key={index} className="flex items-center gap-1">
+                      {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                      <span className={item.className || 'text-gray-900 dark:text-white'}>
+                        {typeof item.value === 'string' ? item.value : item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+                {/* Links: Titel-Bereich (Telefon/Email unter Titel) */}
+                <div className="flex flex-col gap-2 items-start w-full">
                 {metadata.filter(item => item.section === 'left').map((item, index) => (
                   <div
                     key={index}
@@ -696,21 +686,20 @@ const DataCard: React.FC<DataCardProps> = ({
                 ))}
               </div>
               
-              {/* Rechts: Status-Badges und Rest - Grid Layout für saubere Ausrichtung */}
-              <div className="grid grid-cols-[auto_auto] gap-x-3 gap-y-2 items-center justify-end">
+              {/* Rechts: Status-Badges und Rest - rechtsbündig ausgerichtet */}
+              <div className="flex flex-col gap-2 items-end">
                 {metadata.filter(item => item.section === 'right').map((item, index) => (
-                  <React.Fragment key={index}>
-                    <div className="flex items-center justify-end gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                      {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                      {item.label && <span className="font-medium text-right">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
-                    </div>
-                    <div className={`flex justify-end text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl ${item.className || 'text-gray-900 dark:text-white'} break-words text-right`}>
+                  <div key={index} className="flex items-center gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400">
+                    {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                    {item.label && <span className="font-medium whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
+                    <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
                       {typeof item.value === 'string' ? item.value : item.value}
-                    </div>
-                  </React.Fragment>
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>
+            </>
           ) : (
             <>
               {/* Links: Niederlassung (meist ausgeblendet) - nur wenn keine center-Section */}

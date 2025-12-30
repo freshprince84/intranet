@@ -702,6 +702,35 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
     }
   }, [user, isActive, currentStep, filteredSteps, completedSteps, completeStep]);
 
+  // Automatischer Tour-Start wenn User inaktive Org-Rolle erhält
+  useEffect(() => {
+    if (!user) return;
+    
+    const shouldShowTour = hasInactiveOrgRole();
+    
+    if (shouldShowTour && !isActive) {
+      // Prüfe ob Tour bereits gestartet wurde
+      if (status?.onboardingStartedAt) {
+        // Tour fortsetzen
+        setIsActive(true);
+        // Finde switch_role_after_join Schritt
+        const stepIndex = filteredSteps.findIndex(s => s.id === 'switch_role_after_join');
+        if (stepIndex !== -1) {
+          setCurrentStep(stepIndex);
+          if (!modalDismissedRef.current) {
+            setModalDismissed(false);
+          }
+        }
+      } else {
+        // Tour starten
+        setTimeout(() => {
+          startTour();
+        }, 500);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasInactiveOrgRole, isActive, user, status, filteredSteps]);
+
   // Tour zurücksetzen
   const resetTour = useCallback(async () => {
     try {

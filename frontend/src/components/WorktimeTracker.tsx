@@ -421,10 +421,10 @@ const WorktimeTracker: React.FC = () => {
         <div className={`
             bg-white dark:bg-gray-800 
             sm:rounded-lg sm:border sm:border-gray-300 sm:dark:border-gray-700 sm:p-6 sm:mb-6 
-            fixed bottom-0 left-0 right-0 z-40 rounded-t-xl border-t border-gray-300 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]
-            transition-transform duration-300 ease-in-out
-            sm:static sm:shadow-none sm:transform-none
-            ${isExpanded ? 'translate-y-0' : 'translate-y-[calc(100%-48px)]'}
+            fixed left-0 right-0 rounded-t-xl border-t border-gray-300 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]
+            transition-all duration-300 ease-in-out
+            sm:static sm:shadow-none sm:transform-none sm:bottom-auto
+            ${isExpanded ? 'bottom-0 z-50' : 'bottom-[60px] z-40'}
         `}>
             {/* Mobile Handle & Collapsed View */}
             <div 
