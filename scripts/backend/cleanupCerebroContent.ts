@@ -5,7 +5,7 @@
  * da der Content von GitHub geladen wird und nicht in der DB gespeichert werden soll.
  */
 
-import { PrismaClient } from '@prisma/client';
+const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
