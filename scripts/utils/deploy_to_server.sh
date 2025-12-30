@@ -1,39 +1,23 @@
 #!/bin/bash
 # Vollständiges Deployment-Skript für Hetzner Server
-# Führt alle Schritte aus: Git Pull, Migrationen, Seed, Import, Builds
-
-set -e  # Exit on error
+# Führt alle Schritte aus: Code von Git holen, Migrationen, Seed, Builds
 
 echo "🚀 Starte Deployment auf Hetzner Server..."
 echo ""
 
-# 1. Git Pull
-echo "📥 Schritt 1: Git Pull..."
+# 1. Code von Git holen
+echo "📥 Schritt 1: Code von Git holen..."
 cd /var/www/intranet
 
-# Löse Git-Konflikte auf
-echo "   🔧 Löse Git-Konflikte auf..."
-set +e
-git reset --hard HEAD || true
-git merge --abort 2>/dev/null || true
-set -e
+# Lösche Build-Ordner (werden beim Build neu erstellt)
+echo "   🗑️  Lösche Build-Ordner..."
+rm -rf frontend/build backend/dist 2>/dev/null || true
 
-# Lösche Build-Ordner komplett (werden beim Build sowieso neu erstellt)
-echo "   🗑️  Lösche Build-Ordner (werden beim Build neu erstellt)..."
-rm -rf frontend/build
-rm -rf backend/dist
-# Entferne Build-Dateien aus Git-Index falls vorhanden
-set +e
-git rm -r --cached frontend/build 2>/dev/null || true
-git rm -r --cached backend/dist 2>/dev/null || true
-set -e
-
-# Git Pull ausführen (mit Rebase für divergente Branches)
-set +e
+# Code von Git holen - einfach: fetch und reset auf origin/main
+echo "   📥 Hole neuesten Code von Git..."
 git fetch origin
 git reset --hard origin/main
-set -e
-echo "✅ Git Pull abgeschlossen"
+echo "✅ Code aktualisiert"
 echo ""
 
 # 2. Dependencies installieren (Backend)
