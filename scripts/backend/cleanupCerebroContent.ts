@@ -31,7 +31,7 @@ async function cleanupCerebroContent() {
     console.log(`📊 Gefunden: ${articlesWithGithubPath.length} Artikel mit githubPath`);
     
     // Zähle Artikel, die noch content haben
-    const articlesWithContent = articlesWithGithubPath.filter(a => a.content !== null);
+    const articlesWithContent = articlesWithGithubPath.filter((a: { content: string | null }) => a.content !== null);
     console.log(`📝 Davon haben noch content: ${articlesWithContent.length} Artikel`);
     
     if (articlesWithContent.length === 0) {
@@ -59,7 +59,7 @@ async function cleanupCerebroContent() {
     // Zeige einige Beispiele
     if (articlesWithContent.length > 0) {
       console.log('\n📋 Beispiele bereinigter Artikel:');
-      articlesWithContent.slice(0, 5).forEach(article => {
+      articlesWithContent.slice(0, 5).forEach((article: { title: string; githubPath: string | null }) => {
         console.log(`   - ${article.title} (${article.githubPath})`);
       });
       if (articlesWithContent.length > 5) {
