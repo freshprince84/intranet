@@ -143,24 +143,34 @@ passcodeCleanupTimeout = setTimeout(async () => {
     const { ReservationPasscodeCleanupScheduler } = await import('./services/reservationPasscodeCleanupScheduler');
     ReservationPasscodeCleanupScheduler.start();
     
-    // Rate Shopping Scheduler
-    const { RateShoppingScheduler } = await import('./services/rateShoppingScheduler');
-    RateShoppingScheduler.start();
+    // ⚠️ ENTWICKLUNG: Externe API Scheduler deaktivieren, um IP-Sperrungen zu vermeiden
+    const disableExternalApiSchedulers = process.env.DISABLE_EXTERNAL_API_SCHEDULERS === 'true' || process.env.NODE_ENV === 'development';
     
-    // Pricing Rule Scheduler (Preisregeln automatisch ausführen)
-    const { PricingRuleScheduler } = await import('./services/pricingRuleScheduler');
-    PricingRuleScheduler.start();
-    
-    // Occupancy Monitoring Scheduler (Occupancy-Änderungen überwachen)
-    const { OccupancyMonitoringService } = await import('./services/occupancyMonitoringService');
-    // Prüfe alle 12 Stunden auf Occupancy-Änderungen
-    setInterval(async () => {
-      await OccupancyMonitoringService.checkAllBranches();
-    }, 12 * 60 * 60 * 1000); // 12 Stunden
-    // Führe sofort einen Check aus
-    OccupancyMonitoringService.checkAllBranches().catch(err => {
-      logger.error('[OccupancyMonitoring] Fehler beim ersten Check:', err);
-    });
+    if (disableExternalApiSchedulers) {
+      logger.log('⚠️ [ENTWICKLUNG] Externe API Scheduler sind DEAKTIVIERT (DISABLE_EXTERNAL_API_SCHEDULERS=true)');
+      logger.log('   - Rate Shopping Scheduler');
+      logger.log('   - Pricing Rule Scheduler');
+      logger.log('   - Occupancy Monitoring Service');
+    } else {
+      // Rate Shopping Scheduler
+      const { RateShoppingScheduler } = await import('./services/rateShoppingScheduler');
+      RateShoppingScheduler.start();
+      
+      // Pricing Rule Scheduler (Preisregeln automatisch ausführen)
+      const { PricingRuleScheduler } = await import('./services/pricingRuleScheduler');
+      PricingRuleScheduler.start();
+      
+      // Occupancy Monitoring Scheduler (Occupancy-Änderungen überwachen)
+      const { OccupancyMonitoringService } = await import('./services/occupancyMonitoringService');
+      // Prüfe alle 12 Stunden auf Occupancy-Änderungen
+      setInterval(async () => {
+        await OccupancyMonitoringService.checkAllBranches();
+      }, 12 * 60 * 60 * 1000); // 12 Stunden
+      // ⚠️ ENTWICKLUNG: Sofortiger Check beim Start deaktiviert (verhindert IP-Sperrung)
+      // OccupancyMonitoringService.checkAllBranches().catch(err => {
+      //   logger.error('[OccupancyMonitoring] Fehler beim ersten Check:', err);
+      // });
+    }
   } catch (error) {
     logger.error('[Timer] Fehler beim Starten des Passcode-Cleanup-Schedulers:', error);
   }

@@ -29,8 +29,8 @@ export class PricingRuleScheduler {
     // Prüfe alle 6 Stunden
     const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 Stunden
 
-    // Führe sofort einen Check aus beim Start
-    this.checkAllBranches();
+    // ⚠️ ENTWICKLUNG: Sofortiger Check beim Start deaktiviert (verhindert Fehler bei fehlender Branch-Tabelle)
+    // this.checkAllBranches();
 
     // Dann alle 6 Stunden
     this.checkInterval = setInterval(async () => {
@@ -59,8 +59,10 @@ export class PricingRuleScheduler {
     try {
       logger.log('[PricingRuleScheduler] Starte Preisregel-Prüfung für alle Branches');
 
-      // Hole alle Branches mit aktiven Preisregeln
-      const branches = await prisma.branch.findMany({
+      // Prüfe ob Branch-Tabelle existiert (P2021 = Tabelle existiert nicht)
+      let branches;
+      try {
+        branches = await prisma.branch.findMany({
         where: {
           pricingRules: {
             some: {
@@ -73,6 +75,14 @@ export class PricingRuleScheduler {
           name: true
         }
       });
+      } catch (error: any) {
+        // Prisma Fehler P2021 = Tabelle existiert nicht
+        if (error?.code === 'P2021') {
+          logger.log('[PricingRuleScheduler] Branch-Tabelle existiert nicht in der Datenbank. Überspringe Preisregel-Prüfung.');
+          return;
+        }
+        throw error;
+      }
 
       if (branches.length === 0) {
         logger.log('[PricingRuleScheduler] Keine Branches mit aktiven Preisregeln gefunden');

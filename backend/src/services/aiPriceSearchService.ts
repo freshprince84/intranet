@@ -15,6 +15,15 @@ export class AIPriceSearchService {
   private static readonly DEFAULT_MODEL = 'gpt-4o';
   private static readonly DEFAULT_TEMPERATURE = 0.3; // Niedrig für strukturierte Daten
   private static readonly DEFAULT_MAX_TOKENS = 2000;
+  
+  // Rate-Limiting: Max 1 Request pro Sekunde
+  private static readonly RATE_LIMIT_DELAY_MS = 1000;
+  private static lastRequestTime: number = 0;
+  
+  // Retry-Konfiguration für 429-Fehler
+  private static readonly MAX_RETRIES = 3;
+  private static readonly INITIAL_RETRY_DELAY_MS = 2000; // 2 Sekunden
+  private static readonly MAX_RETRY_DELAY_MS = 60000; // 60 Sekunden
 
   /**
    * 🔍 KI-basierte Competitor-Discovery
@@ -52,12 +61,21 @@ export class AIPriceSearchService {
       });
 
       if (!branch) {
+        logger.error(`[AIPriceSearchService] Branch ${branchId} nicht gefunden`);
         throw new Error(`Branch ${branchId} nicht gefunden`);
       }
 
       if (!branch.city) {
+        logger.error(`[AIPriceSearchService] Branch ${branchId} hat keine Stadt-Information`);
         throw new Error(`Branch ${branchId} hat keine Stadt-Information`);
       }
+
+      logger.debug(`[AIPriceSearchService] Branch-Daten geladen:`, {
+        name: branch.name,
+        city: branch.city,
+        country: branch.country,
+        organization: branch.organization?.name || branch.organization?.displayName
+      });
 
       // 2. Erstelle KI-Prompt
       const prompt = this.createCompetitorDiscoveryPrompt(
@@ -71,13 +89,45 @@ export class AIPriceSearchService {
         maxCompetitors
       );
 
+      logger.debug(`[AIPriceSearchService] Prompt erstellt (${prompt.length} Zeichen)`);
+
       // 3. Rufe OpenAI API auf
-      const competitors = await this.callOpenAI(prompt, 'competitor-discovery');
+      let competitors: string;
+      try {
+        competitors = await this.callOpenAI(prompt, 'competitor-discovery');
+        logger.debug(`[AIPriceSearchService] OpenAI Response erhalten (${competitors.length} Zeichen)`);
+      } catch (openAIError: any) {
+        logger.error(`[AIPriceSearchService] OpenAI API Fehler:`, {
+          message: openAIError?.message,
+          status: openAIError?.response?.status,
+          statusText: openAIError?.response?.statusText,
+          data: openAIError?.response?.data
+        });
+        
+        // Spezifische Fehlermeldungen für verschiedene OpenAI-Fehler
+        if (openAIError?.response?.status === 401) {
+          throw new Error('OpenAI API Key ungültig (401 Unauthorized)');
+        } else if (openAIError?.response?.status === 429) {
+          throw new Error('OpenAI API Rate Limit erreicht (429 Too Many Requests)');
+        } else if (openAIError?.code === 'ECONNABORTED' || openAIError?.message?.includes('timeout')) {
+          throw new Error('OpenAI API Timeout - Bitte später erneut versuchen');
+        } else if (openAIError?.response?.status) {
+          throw new Error(`OpenAI API Fehler (${openAIError.response.status}): ${openAIError.response.statusText}`);
+        } else {
+          throw new Error(`OpenAI API Fehler: ${openAIError?.message || 'Unbekannter Fehler'}`);
+        }
+      }
 
       // 4. Validiere und parse Response
-      const parsedCompetitors = this.parseCompetitorDiscoveryResponse(competitors);
-
-      logger.info(`[AIPriceSearchService] Competitor-Discovery abgeschlossen: ${parsedCompetitors.length} Competitors gefunden`);
+      let parsedCompetitors: CompetitorDiscoveryResult[];
+      try {
+        parsedCompetitors = this.parseCompetitorDiscoveryResponse(competitors);
+        logger.info(`[AIPriceSearchService] Competitor-Discovery abgeschlossen: ${parsedCompetitors.length} Competitors gefunden`);
+      } catch (parseError) {
+        logger.error(`[AIPriceSearchService] Fehler beim Parsen der OpenAI Response:`, parseError);
+        logger.error(`[AIPriceSearchService] Response war:`, competitors);
+        throw new Error(`Fehler beim Parsen der OpenAI Response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      }
 
       return parsedCompetitors;
     } catch (error) {
@@ -303,55 +353,147 @@ WICHTIG:
   }
 
   /**
-   * Ruft OpenAI API auf
+   * Rate-Limiting: Wartet bis genug Zeit seit dem letzten Request vergangen ist
+   */
+  private static async waitForRateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.RATE_LIMIT_DELAY_MS) {
+      const waitTime = this.RATE_LIMIT_DELAY_MS - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastRequestTime = Date.now();
+  }
+
+  /**
+   * Berechnet Retry-Delay mit Exponential Backoff
+   */
+  private static calculateRetryDelay(attempt: number): number {
+    const exponentialDelay = this.INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+    const jitter = Math.random() * 1000; // Zufällige Variation (0-1 Sekunde)
+    return Math.min(exponentialDelay + jitter, this.MAX_RETRY_DELAY_MS);
+  }
+
+  /**
+   * Ruft OpenAI API auf mit Rate-Limiting und Retry-Logik
    */
   private static async callOpenAI(prompt: string, context: string): Promise<string> {
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
     if (!OPENAI_API_KEY) {
+      logger.error('[AIPriceSearchService] OPENAI_API_KEY nicht gesetzt in Umgebungsvariablen');
       throw new Error('OPENAI_API_KEY nicht gesetzt');
     }
 
-    try {
-      const response = await axios.post(
-        this.OPENAI_API_URL,
-        {
-          model: this.DEFAULT_MODEL,
-          messages: [
-            {
-              role: 'system',
-              content: 'Du bist ein hilfreicher Assistent, der strukturierte JSON-Daten zurückgibt. Antworte NUR mit JSON, keine zusätzlichen Erklärungen.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: this.DEFAULT_TEMPERATURE,
-          max_tokens: this.DEFAULT_MAX_TOKENS
-          // Note: response_format nur bei gpt-4o und gpt-4-turbo verfügbar
-          // Für bessere Kompatibilität lassen wir es weg und parsen manuell
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENAI_API_KEY}`
-          },
-          timeout: 30000
-        }
-      );
-
-      const content = response.data.choices[0].message.content;
-      logger.debug(`[AIPriceSearchService] OpenAI Response (${context}):`, content);
-      
-      return content;
-    } catch (error) {
-      logger.error(`[AIPriceSearchService] OpenAI API Fehler (${context}):`, error);
-      if (axios.isAxiosError(error)) {
-        logger.error(`[AIPriceSearchService] Status:`, error.response?.status);
-        logger.error(`[AIPriceSearchService] Data:`, error.response?.data);
-      }
-      throw error;
+    // Prüfe ob Key gültig aussieht (beginnt mit sk-)
+    if (!OPENAI_API_KEY.startsWith('sk-')) {
+      logger.warn('[AIPriceSearchService] OPENAI_API_KEY sieht ungültig aus (sollte mit "sk-" beginnen)');
     }
+
+    logger.debug(`[AIPriceSearchService] Rufe OpenAI API auf (${context}), Model: ${this.DEFAULT_MODEL}, Attempt: 1/${this.MAX_RETRIES}`);
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
+      try {
+        // Rate-Limiting: Warte bis genug Zeit vergangen ist
+        await this.waitForRateLimit();
+
+        if (attempt > 1) {
+          logger.info(`[AIPriceSearchService] Retry ${attempt}/${this.MAX_RETRIES} für ${context}`);
+        }
+
+        const response = await axios.post(
+          this.OPENAI_API_URL,
+          {
+            model: this.DEFAULT_MODEL,
+            messages: [
+              {
+                role: 'system',
+                content: 'Du bist ein hilfreicher Assistent, der strukturierte JSON-Daten zurückgibt. Antworte NUR mit JSON, keine zusätzlichen Erklärungen.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            temperature: this.DEFAULT_TEMPERATURE,
+            max_tokens: this.DEFAULT_MAX_TOKENS
+            // Note: response_format nur bei gpt-4o und gpt-4-turbo verfügbar
+            // Für bessere Kompatibilität lassen wir es weg und parsen manuell
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            timeout: 30000
+          }
+        );
+
+        if (!response.data?.choices?.[0]?.message?.content) {
+          logger.error(`[AIPriceSearchService] OpenAI Response hat unerwartetes Format:`, response.data);
+          throw new Error('OpenAI API Response hat unerwartetes Format');
+        }
+
+        const content = response.data.choices[0].message.content;
+        logger.debug(`[AIPriceSearchService] OpenAI Response (${context}) erhalten, Länge: ${content.length} Zeichen`);
+        
+        return content;
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Logge detaillierte Fehlerinformationen
+        if (axios.isAxiosError(error)) {
+          const status = error.response?.status;
+          const statusText = error.response?.statusText;
+          const data = error.response?.data;
+          
+          logger.error(`[AIPriceSearchService] OpenAI API Fehler (${context}), Attempt ${attempt}/${this.MAX_RETRIES}:`, {
+            status,
+            statusText,
+            data,
+            message: error.message
+          });
+        } else {
+          logger.error(`[AIPriceSearchService] Fehler (${context}), Attempt ${attempt}/${this.MAX_RETRIES}:`, error);
+        }
+
+        // Prüfe ob es ein Rate-Limit-Fehler (429) ist
+        if (axios.isAxiosError(error) && error.response?.status === 429) {
+          const retryAfter = error.response.headers['retry-after']
+            ? parseInt(error.response.headers['retry-after']) * 1000
+            : null;
+          
+          const delay = retryAfter || this.calculateRetryDelay(attempt);
+          
+          if (attempt < this.MAX_RETRIES) {
+            logger.warn(
+              `[AIPriceSearchService] Rate Limit erreicht (${context}), Retry ${attempt}/${this.MAX_RETRIES} nach ${Math.round(delay / 1000)}s`
+            );
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue; // Retry
+          } else {
+            logger.error(
+              `[AIPriceSearchService] Rate Limit erreicht (${context}), alle Retries fehlgeschlagen`
+            );
+            throw new Error(`OpenAI API Rate Limit erreicht nach ${this.MAX_RETRIES} Versuchen`);
+          }
+        }
+
+        // Für andere Fehler: Loggen und werfen (kein Retry)
+        logger.error(`[AIPriceSearchService] OpenAI API Fehler (${context}):`, error);
+        if (axios.isAxiosError(error)) {
+          logger.error(`[AIPriceSearchService] Status:`, error.response?.status);
+          logger.error(`[AIPriceSearchService] Data:`, error.response?.data);
+        }
+        throw error;
+      }
+    }
+
+    // Sollte nie erreicht werden, aber TypeScript braucht es
+    throw lastError || new Error('OpenAI API Aufruf fehlgeschlagen');
   }
 
   /**
