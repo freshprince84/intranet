@@ -252,7 +252,7 @@ const ArticleView: React.FC = () => {
           {hasCerebroButtonPermission && (
             <>
               <button 
-                onClick={() => navigate(`/cerebro/${slug}/edit`)}
+                onClick={() => navigate(`/app/cerebro/${slug}/edit`)}
                 className="p-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900"
                 aria-label="Bearbeiten"
               >
@@ -297,14 +297,14 @@ const ArticleView: React.FC = () => {
       {hasCerebroButtonPermission && (
         <div className="mb-6 flex space-x-2">
           <Link 
-            to={`/cerebro/${slug}/media/add`}
+            to={`/app/cerebro/${slug}/media/add`}
             className="p-2 rounded-full text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900"
             aria-label={t('cerebro.addMedia')}
           >
             <PlusIcon className="h-5 w-5" />
           </Link>
           <Link 
-            to={`/cerebro/${slug}/link/add`}
+            to={`/app/cerebro/${slug}/link/add`}
             className="p-2 rounded-full text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900"
             aria-label={t('cerebro.addLink')}
           >
