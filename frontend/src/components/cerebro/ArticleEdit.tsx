@@ -331,7 +331,7 @@ const ArticleEdit: React.FC = () => {
       }
       
       // Navigation erst nach erfolgreichem Upload aller Medien
-      navigate(`/cerebro/${savedArticle.slug}`);
+      navigate(`/app/cerebro/${savedArticle.slug}`);
     } catch (err: any) {
       console.error('Fehler beim Speichern des Artikels:', err);
       const errorMessage = err?.response?.data?.message || err?.message || 'Fehler beim Speichern des Artikels. Bitte versuchen Sie es später erneut.';
