@@ -578,7 +578,7 @@ export class WhatsAppAiService {
         type: 'function',
         function: {
           name: 'get_user_info',
-          description: 'Holt Informationen über einen User (Name, Email, Rollen). Wenn keine userId angegeben, verwendet aktuellen User.',
+          description: 'Holt Informationen über einen User (Name, Email, Rollen). Wenn keine userId angegeben, verwendet aktuellen User. WICHTIG: Rufe diese Funktion IMMER auf, wenn der User nach seiner Identität fragt (z.B. "quien soy", "who am I", "wer bin ich", "dime quien soy", "cuál es mi nombre").',
           parameters: {
             type: 'object',
             properties: {
@@ -1156,7 +1156,9 @@ export class WhatsAppAiService {
       prompt += '- get_worktime: Hole Arbeitszeiten für einen User (date, startDate, endDate) - NUR für Mitarbeiter\n';
       prompt += '- get_cerebro_articles: Hole Cerebro-Artikel basierend auf Suchbegriffen oder Tags - NUR für Mitarbeiter\n';
       prompt += '- get_user_info: Hole User-Informationen (Name, Email, Rollen) - NUR für Mitarbeiter\n';
+      prompt += '\nWICHTIG: Wenn der User nach seiner Identität fragt (z.B. "quien soy", "who am I", "wer bin ich", "dime quien soy", "cuál es mi nombre"), rufe IMMER get_user_info() auf!\n';
       prompt += '\nBeispiele für Mitarbeiter-Funktionen:';
+      prompt += '\n  - "quien soy" / "who am I" / "wer bin ich" → get_user_info()';
       prompt += '\n  - "solicitudes abiertas de hoy" → get_requests({ status: "approval", dueDate: "today" })';
       prompt += '\n  - "wie lange habe ich heute gearbeitet" → get_worktime({ date: "today" })';
       prompt += '\n  - "welche cerebro artikel gibt es zu notfällen" → get_cerebro_articles({ tags: ["notfall"] })';
