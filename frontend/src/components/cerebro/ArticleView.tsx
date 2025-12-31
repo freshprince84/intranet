@@ -311,7 +311,7 @@ const ArticleView: React.FC = () => {
             <PlusIcon className="h-5 w-5" />
           </Link>
           <Link 
-            to={`/cerebro/${slug}/github/add`}
+            to={`/app/cerebro/${slug}/github/add`}
             className="p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             aria-label={t('cerebro.addGitHubMarkdown')}
           >
