@@ -48,17 +48,22 @@ async function executeSSHCommand(
     let output = "";
     let errorOutput = "";
 
-    // SSH-Key lesen
+    // SSH-Key lesen - versuche verschiedene Quellen (inkl. MCP-Umgebungsvariablen)
     let privateKey: string;
     try {
       privateKey = fs.readFileSync(SERVER_CONFIG.privateKeyPath, "utf8");
     } catch (err) {
-      resolve({
-        success: false,
-        output: "",
-        error: `SSH-Key nicht gefunden: ${SERVER_CONFIG.privateKeyPath}`,
-      });
-      return;
+      // Versuche Umgebungsvariable (von MCP/Cursor aus mcp.json bereitgestellt)
+      if (process.env.DEPLOY_SSH_KEY) {
+        privateKey = process.env.DEPLOY_SSH_KEY;
+      } else {
+        resolve({
+          success: false,
+          output: "",
+          error: `SSH-Key nicht gefunden: ${SERVER_CONFIG.privateKeyPath}. MCP-Umgebungsvariable DEPLOY_SSH_KEY auch nicht gesetzt.`,
+        });
+        return;
+      }
     }
 
     conn
