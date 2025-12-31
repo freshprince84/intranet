@@ -158,6 +158,10 @@ export const competitorGroupController = {
       const { branchId } = req.params;
       const { roomType, maxCompetitors } = req.body;
 
+      if (!branchId) {
+        return res.status(400).json({ error: 'branchId ist erforderlich' });
+      }
+
       if (!roomType || (roomType !== 'private' && roomType !== 'dorm')) {
         return res.status(400).json({ error: 'roomType muss "private" oder "dorm" sein' });
       }
@@ -177,9 +181,52 @@ export const competitorGroupController = {
         competitors,
         count: competitors.length
       });
-    } catch (error) {
+    } catch (error: any) {
       logger.error('[CompetitorGroupController] Fehler bei Competitor-Discovery:', error);
-      res.status(500).json({ error: 'Fehler bei Competitor-Discovery' });
+      
+      // Detaillierte Fehlerbehandlung
+      let errorMessage = 'Fehler bei Competitor-Discovery';
+      let statusCode = 500;
+
+      if (error instanceof Error) {
+        // OpenAI API-Fehler
+        if (error.message.includes('OPENAI_API_KEY')) {
+          errorMessage = 'OpenAI API Key nicht konfiguriert';
+          statusCode = 500;
+        } else if (error.message.includes('Branch') && error.message.includes('nicht gefunden')) {
+          errorMessage = `Branch ${req.params.branchId} nicht gefunden`;
+          statusCode = 404;
+        } else if (error.message.includes('Stadt-Information')) {
+          errorMessage = 'Branch hat keine Stadt-Information';
+          statusCode = 400;
+        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          errorMessage = 'OpenAI API Key ungültig';
+          statusCode = 500;
+        } else if (error.message.includes('429') || error.message.includes('Rate limit')) {
+          errorMessage = 'OpenAI API Rate Limit erreicht. Bitte später erneut versuchen.';
+          statusCode = 429;
+        } else if (error.message.includes('timeout') || error.message.includes('Timeout')) {
+          errorMessage = 'OpenAI API Timeout. Bitte später erneut versuchen.';
+          statusCode = 504;
+        } else {
+          errorMessage = error.message || errorMessage;
+        }
+      }
+
+      // Logge zusätzliche Details für Debugging
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        logger.error('[CompetitorGroupController] OpenAI API Response:', {
+          status: axiosError.response?.status,
+          statusText: axiosError.response?.statusText,
+          data: axiosError.response?.data
+        });
+      }
+
+      res.status(statusCode).json({ 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined
+      });
     }
   },
 

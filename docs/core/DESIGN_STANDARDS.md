@@ -132,24 +132,89 @@ Alle Hauptcontainer auf Seiten müssen dem folgenden Design entsprechen:
 ### System-Boxen
 Die folgenden Boxen sind offiziell im System definiert:
 
-#### Hauptboxen
-1. **Dashboard/Arbeitszeitstatistik Box**
-   - Zeigt Wochenstatistiken der Arbeitszeit als interaktives Diagramm
-   - Exportfunktion für Arbeitszeitdaten als Excel-Datei
-   - Farbliche Unterscheidung zwischen Zeiten unter (blau) und über (rot) der Sollarbeitszeit
-2. **Dashboard/Requests Box**
-3. **Worktracker/Zeiterfassung Box**
-4. **Worktracker/To Do's Box**
-5. **Settings Box**
-6. **UserManagement Box**
-7. **Profile Box**
-8. **NotificationList Box**
-9. **Workcenter Box** 
-10. **Lohnabrechnung Box**
+#### Hauptboxen (nach Menü-Reihenfolge)
+
+**1. Dashboard** (`/app/dashboard`)
+- **WorktimeStats Box** - Wochenstatistiken der Arbeitszeit als interaktives Diagramm
+  - Exportfunktion für Arbeitszeitdaten als Excel-Datei
+  - Farbliche Unterscheidung zwischen Zeiten unter (blau) und über (rot) der Sollarbeitszeit
+- **Requests Box** - Anträge/Anfragen-Übersicht mit Tabelle/Cards-Ansicht
+- **AppDownload Box** - Mobile App Download-Bereich
+
+**2. Worktracker** (`/app/worktracker`)
+- **WorktimeTracker Box** - Zeiterfassung (Start/Stop)
+- **WorktimeList Box** - Arbeitszeitliste
+- **To Do's/Reservations/Tour Bookings Box** - Hauptbox mit Tabs:
+  - **todos** Tab - To Do's Tabelle/Cards
+  - **reservations** Tab - Reservierungen Tabelle/Cards
+  - **tourBookings** Tab - Tour-Buchungen Tabelle/Cards
+
+**3. Consultations** (`/app/consultations`)
+- **ConsultationTracker Box** - Beratungsstunden-Tracker (Start/Stop)
+- **ConsultationList Box** - Beratungsstunden-Liste
+
+**4. Team Worktime Control / Workcenter** (`/app/team-worktime-control`)
+- **Hauptbox mit Tabs:**
+  - **worktimes** Tab - Aktive Benutzer & Zeiterfassungen
+  - **shifts** Tab - Schichtplaner
+  - **todos** Tab - To Do Analytics
+  - **requests** Tab - Request Analytics
+
+**5. Payroll** (`/app/payroll`)
+- **Hauptbox mit Tabs:**
+  - **invoices** Tab - Rechnungsverwaltung
+  - **monthly-reports** Tab - Monatsberichte
+  - **payroll** Tab - Lohnabrechnung
+
+**6. Cerebro** (`/app/cerebro/*`)
+- **CerebroHeader Box** - Kopfzeile mit Suche, Filter, Create-Button
+- **ArticleStructure Box** - Seitenleiste mit Artikelbaum
+- **ArticleList Box** - Artikelliste
+- **ArticleView Box** - Artikelansicht
+- **ArticleEdit Box** - Artikelbearbeitung
+
+**7. Organization** (`/app/organization`)
+- **Hauptbox mit Tabs:**
+  - **users** Tab - Benutzerverwaltung
+  - **roles** Tab - Rollenverwaltung
+  - **branches** Tab - Niederlassungsverwaltung
+    - Sub-Tabs (beim Bearbeiten): whatsapp, lobbypms, boldpayment, doorsystem, email, messages
+  - **providers** Tab - Touren/Anbieter
+    - Sub-Toggle: tours / providers
+  - **organization** Tab - Organisationseinstellungen & Join-Requests
+
+**8. Price Analysis** (`/app/price-analysis`)
+- **Hauptbox mit Tabs:**
+  - **listings** Tab - OTA Listings
+  - **analysis** Tab - Preisanalyse
+  - **recommendations** Tab - Preisempfehlungen
+  - **rules** Tab - Preisregeln
+  - **competitors** Tab - Konkurrenten-Gruppen
+
+**9. Settings** (`/app/settings`)
+- **Hauptbox mit Tabs:**
+  - **personal** Tab - Persönliche Einstellungen (Sprache, Dark Mode, Monatsabrechnung, Onboarding)
+  - **notifications** Tab - Benachrichtigungseinstellungen
+  - **system** Tab - Systemeinstellungen (Logo-Upload, Upload-Verzeichnisse, Datenbank-Management, LobbyPMS Sync)
+  - **password_manager** Tab - Passwort-Manager
+
+**10. Profile** (`/app/profile`)
+- **Hauptbox mit Tabs:**
+  - **profile** Tab - Benutzerprofil (Username, Email, Sprache, Dokument-Upload, ID-Daten)
+  - **documents** Tab - Identifikationsdokumente
+  - **lifecycle** Tab - Mitarbeiterlebenszyklus
+  - **myDocuments** Tab - Meine Dokumente
+
+**11. Notifications** (`/app/notifications`)
+- **NotificationList Box** - Benachrichtigungsliste mit Pagination, Lesen/Löschen-Aktionen
 
 #### Authentifizierungsboxen (separat gelistet)
-- **Login Box**
-- **Register Box**
+- **Login Box** (`/login`)
+- **Register Box** (`/register`)
+- **ForgotPassword Box** (`/forgot-password`)
+- **ResetPassword Box** (`/reset-password`)
+- **LandingPage Box** (`/` und `/landing`)
+- **MobileAppLanding Box** (`/mobile-app`)
 
 ### Standardisierte Box-Typen
 

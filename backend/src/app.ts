@@ -195,17 +195,28 @@ export const cleanupTimers = () => {
 // Starte Reservation Scheduler
 ReservationScheduler.start();
 
-// Starte LobbyPMS-Reservation Scheduler (ersetzt Email-Import)
-LobbyPmsReservationScheduler.start();
+// ⚠️ ENTWICKLUNG: Externe API Scheduler deaktivieren, um IP-Sperrungen zu vermeiden
+const disableExternalApiSchedulers = process.env.DISABLE_EXTERNAL_API_SCHEDULERS === 'true' || process.env.NODE_ENV === 'development';
 
-// Automatische Stornierung von nicht bezahlten Reservierungen
-ReservationAutoCancelScheduler.start();
+if (disableExternalApiSchedulers) {
+  logger.log('⚠️ [ENTWICKLUNG] Externe API Scheduler sind DEAKTIVIERT (DISABLE_EXTERNAL_API_SCHEDULERS=true)');
+  logger.log('   - LobbyPMS Reservation Scheduler');
+  logger.log('   - Reservation Auto Cancel Scheduler');
+  logger.log('   - Reservation Auto Invitation Scheduler');
+  logger.log('   - Email Reservation Scheduler');
+} else {
+  // Starte LobbyPMS-Reservation Scheduler (ersetzt Email-Import)
+  LobbyPmsReservationScheduler.start();
 
-// NEU: Automatische Versendung von Check-in-Einladungen (1 Tag vor Check-in um 08:00 Uhr in Zeitzone der Organisation)
-ReservationAutoInvitationScheduler.start();
+  // Automatische Stornierung von nicht bezahlten Reservierungen
+  ReservationAutoCancelScheduler.start();
 
-// Email-Import: Prüft pro Branch (wenn Branch.emailSettings.imap.enabled === true)
-EmailReservationScheduler.start();
+  // NEU: Automatische Versendung von Check-in-Einladungen (1 Tag vor Check-in um 08:00 Uhr in Zeitzone der Organisation)
+  ReservationAutoInvitationScheduler.start();
+
+  // Email-Import: Prüft pro Branch (wenn Branch.emailSettings.imap.enabled === true)
+  EmailReservationScheduler.start();
+}
 
 // Starte Queue Workers (wenn aktiviert)
 startWorkers().catch((error) => {

@@ -504,16 +504,19 @@ export class WhatsAppMessageHandler {
         // Prüfe ob User im Branch ist
         const isInBranch = userWithBranches.branches.some(b => b.branchId === branchId);
         if (!isInBranch) {
-          logger.warn('[WhatsApp Message Handler] User ist nicht im Branch!', {
+          logger.warn('[WhatsApp Message Handler] ⚠️ User ist nicht im identifizierten Branch, aber existiert in anderen Branches!', {
             userId: userWithBranches.id,
+            userName: `${userWithBranches.firstName} ${userWithBranches.lastName}`,
             targetBranchId: branchId,
-            userBranches: userWithBranches.branches.map(b => b.branchId)
+            userBranches: userWithBranches.branches.map(b => ({ id: b.branchId, name: b.branch.name }))
           });
-          // User nicht im Branch - return null
-          return null;
+          // WICHTIG: User trotzdem zurückgeben, auch wenn nicht im identifizierten Branch
+          // Dies ermöglicht es, dass der User trotzdem identifiziert wird und Funktionen nutzen kann
+          // Die Branch-Zuordnung ist für die Identifikation nicht kritisch
+          logger.log('[WhatsApp Message Handler] ✅ User wird trotzdem identifiziert (nicht im Branch, aber existiert)');
         }
         
-        // User ist im Branch - return user (ohne branches für Kompatibilität)
+        // User existiert - return user (auch wenn nicht im identifizierten Branch)
         user = {
           id: userWithBranches.id,
           firstName: userWithBranches.firstName,
