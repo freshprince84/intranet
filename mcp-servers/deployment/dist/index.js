@@ -9,12 +9,13 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// Server-Konfiguration (kann über Umgebungsvariablen überschrieben werden)
+// Server-Konfiguration - wird aus mcp.json geladen (Cursor liest diese automatisch)
+// Falls nicht verfügbar, werden Umgebungsvariablen oder Standardwerte verwendet
 const SERVER_CONFIG = {
     host: process.env.DEPLOY_SERVER_HOST || "65.109.228.106",
     username: process.env.DEPLOY_SERVER_USER || "root",
     privateKeyPath: process.env.DEPLOY_SSH_KEY_PATH || path.join(process.env.HOME || process.env.USERPROFILE || "", ".ssh", "intranet_rsa"),
-    passphrase: process.env.DEPLOY_SSH_KEY_PASSPHRASE || undefined,
+    passphrase: process.env.DEPLOY_SSH_KEY_PASSPHRASE || "Intranet123!",
     serverPath: process.env.DEPLOY_SERVER_PATH || "/var/www/intranet",
     deployScript: process.env.DEPLOY_SCRIPT_PATH || "/var/www/intranet/scripts/utils/deploy_to_server.sh",
 };
