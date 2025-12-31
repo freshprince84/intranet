@@ -501,8 +501,26 @@ WICHTIG:
    */
   private static parseCompetitorDiscoveryResponse(response: string): CompetitorDiscoveryResult[] {
     try {
+      // Entferne Markdown-Code-Blöcke (```json ... ``` oder ``` ... ```)
+      let cleanedResponse = response.trim();
+      
+      // Entferne ```json am Anfang
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.replace(/^```json\s*/i, '');
+      } else if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/^```\s*/, '');
+      }
+      
+      // Entferne ``` am Ende
+      if (cleanedResponse.endsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/\s*```$/, '');
+      }
+      
+      // Trimme nochmal nach Entfernen der Code-Blöcke
+      cleanedResponse = cleanedResponse.trim();
+      
       // Versuche JSON zu parsen
-      const parsed = JSON.parse(response);
+      const parsed = JSON.parse(cleanedResponse);
       
       // Falls es ein Array ist, direkt zurückgeben
       if (Array.isArray(parsed)) {
@@ -523,8 +541,8 @@ WICHTIG:
       return [];
     } catch (error) {
       logger.error('[AIPriceSearchService] Fehler beim Parsen der Competitor-Discovery Response:', error);
-      logger.error('[AIPriceSearchService] Response:', response);
-      return [];
+      logger.error('[AIPriceSearchService] Response (erste 500 Zeichen):', response.substring(0, 500));
+      throw error; // Werfe Fehler weiter, damit Controller ihn behandeln kann
     }
   }
 

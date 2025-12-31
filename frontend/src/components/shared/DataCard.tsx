@@ -455,41 +455,49 @@ const DataCard: React.FC<DataCardProps> = ({
       className={`bg-white dark:bg-gray-800 rounded-lg ${borderClass} p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''} w-full overflow-hidden ${className}`}
       onClick={onClick}
     >
-      {/* Mobile Layout (sm und kleiner) */}
-      <div className="block sm:hidden">
-        {/* Zeile 1: Resp/QC links, Titel + Datum rechts */}
-        <div className="flex items-center justify-between gap-2 mb-2">
-          {/* Links: Resp und QC nebeneinander */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {metadata.filter(item => item.section === 'main' || (!item.section && (item.label === 'Angefragt von' || item.label === 'Verantwortlicher'))).map((item, index) => 
-              renderMetadataItem(item, index, 'mobile')
-            )}
-            {metadata.filter(item => item.section === 'main-second' || (!item.section && item.label === 'Qualitätskontrolle')).map((item, index) => 
-              renderMetadataItem(item, index, 'mobile')
-            )}
-            {metadata.filter(item => item.section === 'main-third' || (!item.section && item.label === 'Verantwortlicher')).map((item, index) => 
-              renderMetadataItem(item, index, 'mobile')
-            )}
-          </div>
-          {/* Rechts: Titel + Datum */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="text-right">
-              {renderTitle(title, subtitle, 'mobile')}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-              {metadata.filter(item => item.section === 'right-inline' || item.section === 'header-right').map((item, index) => (
-                <div key={index} className="flex items-center gap-1">
-                  {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                  <span className={item.className || 'text-gray-900 dark:text-white'}>
-                    {typeof item.value === 'string' ? item.value : item.value}
-                  </span>
+      {/* Mobile Layout (sm und kleiner) - nur wenn KEIN 3-Spalten-Layout */}
+      {(() => {
+        const hasCenterSection = metadata.filter(item => item.section === 'center').length > 0;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4b31729e-838f-41ed-a421-2153ac4e6c3c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DataCard.tsx:461',message:'Mobile Layout check',data:{hasCenterSection,willRender:!hasCenterSection},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        return !hasCenterSection ? (
+          <div className="block sm:hidden">
+            {/* Zeile 1: Resp/QC links, Titel + Datum rechts */}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              {/* Links: Resp und QC nebeneinander */}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {metadata.filter(item => item.section === 'main' || (!item.section && (item.label === 'Angefragt von' || item.label === 'Verantwortlicher'))).map((item, index) => 
+                  renderMetadataItem(item, index, 'mobile')
+                )}
+                {metadata.filter(item => item.section === 'main-second' || (!item.section && item.label === 'Qualitätskontrolle')).map((item, index) => 
+                  renderMetadataItem(item, index, 'mobile')
+                )}
+                {metadata.filter(item => item.section === 'main-third' || (!item.section && item.label === 'Verantwortlicher')).map((item, index) => 
+                  renderMetadataItem(item, index, 'mobile')
+                )}
+              </div>
+              {/* Rechts: Titel + Datum */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="text-right">
+                  {renderTitle(title, subtitle, 'mobile')}
                 </div>
-              ))}
+                <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  {metadata.filter(item => item.section === 'right-inline' || item.section === 'header-right').map((item, index) => (
+                    <div key={index} className="flex items-center gap-1">
+                      {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                      <span className={item.className || 'text-gray-900 dark:text-white'}>
+                        {typeof item.value === 'string' ? item.value : item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {renderStatus(status, 'mobile', t)}
+              </div>
             </div>
-            {renderStatus(status, 'mobile', t)}
           </div>
-        </div>
-      </div>
+        ) : null;
+      })()}
       
       {/* Desktop Layout (sm und größer) */}
       <div className="hidden sm:block">
@@ -659,11 +667,11 @@ const DataCard: React.FC<DataCardProps> = ({
                 {metadata.filter(item => item.section === 'left').map((item, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 w-full"
+                    className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 w-full justify-start"
                   >
                     {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                     {item.label && <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
-                    <span className={item.className || 'text-gray-900 dark:text-white'}>
+                    <span className={`${item.className || 'text-gray-900 dark:text-white'} text-left`}>
                       {typeof item.value === 'string' ? item.value : item.value}
                     </span>
                   </div>
