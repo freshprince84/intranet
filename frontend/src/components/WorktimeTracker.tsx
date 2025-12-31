@@ -458,25 +458,22 @@ const WorktimeTracker: React.FC = () => {
                 bg-white dark:bg-gray-800 
                 sm:rounded-lg sm:border sm:border-gray-300 sm:dark:border-gray-700 sm:p-6 sm:mb-6 
                 fixed left-0 right-0 rounded-t-xl border-t border-gray-300 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]
-                transition-transform duration-300 ease-in-out
-                sm:static sm:shadow-none sm:transform-none sm:bottom-auto sm:translate-y-0
-                ${isExpanded ? 'bottom-0 z-50 translate-y-0' : 'bottom-0 z-40 translate-y-[calc(100%-48px)]'}
+                transition-all duration-300 ease-in-out z-40
+                sm:static sm:shadow-none sm:z-auto
+                ${isExpanded ? 'bottom-[60px] max-h-[70vh]' : 'bottom-[60px] max-h-[48px] overflow-hidden'}
             `}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
-            {/* Mobile Handle - nur Lasche zum Hochziehen */}
-            <div className="w-full flex flex-col items-center sm:hidden touch-none">
-                {/* Handle */}
-                <div className="w-full flex justify-center pt-2 pb-2">
-                    <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                </div>
+            {/* Mobile Handle - Lasche zum Hochziehen */}
+            <div className="w-full flex flex-col items-center sm:hidden touch-none h-[48px] justify-center">
+                <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mb-1"></div>
                 <ChevronUpIcon className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
             </div>
 
             {/* Main Content Container */}
-            <div className="p-4 sm:p-0 pt-0 max-h-[70vh] overflow-y-auto sm:max-h-none sm:overflow-visible">
+            <div className="p-4 sm:p-0 pt-0 overflow-y-auto sm:overflow-visible">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold flex items-center dark:text-white">
                         <ClockIcon className="h-6 w-6 mr-2" />
