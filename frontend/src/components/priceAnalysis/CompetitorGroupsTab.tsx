@@ -214,13 +214,27 @@ const CompetitorGroupsTab: React.FC = () => {
             return;
         }
 
+        const group = competitorGroups.find(g => g.id === groupId);
+        if (!group) {
+            showMessage(t('priceAnalysis.competitors.groupNotFound', 'Gruppe nicht gefunden'), 'error');
+            return;
+        }
+
+        const competitorCount = group.competitors.filter(c => c.isActive).length;
+        if (competitorCount === 0) {
+            showMessage(t('priceAnalysis.competitors.noActiveCompetitors', 'Keine aktiven Konkurrenten in dieser Gruppe'), 'error');
+            return;
+        }
+
         setSearchingPrices(groupId);
         try {
             const startDate = new Date();
             const endDate = new Date();
             endDate.setMonth(endDate.getMonth() + 3);
+            const dateRange = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            const estimatedSearches = competitorCount * dateRange;
 
-            await axiosInstance.post(
+            const response = await axiosInstance.post(
                 API_ENDPOINTS.PRICE_ANALYSIS.COMPETITOR_GROUPS.SEARCH_PRICES(groupId),
                 {
                     startDate: startDate.toISOString().split('T')[0],
@@ -229,13 +243,17 @@ const CompetitorGroupsTab: React.FC = () => {
                 }
             );
 
-            showMessage(t('priceAnalysis.competitors.searchStarted', 'Preissuche gestartet'), 'success');
+            const message = response.data.note || t('priceAnalysis.competitors.searchStarted', 'Preissuche gestartet');
+            showMessage(
+                `${message} (${competitorCount} Konkurrenten × ${dateRange} Tage = ~${estimatedSearches} Preis-Suchen. Dies kann 15-30 Minuten dauern.)`,
+                'info'
+            );
         } catch (error: any) {
             handleError(error);
         } finally {
             setSearchingPrices(null);
         }
-    }, [roomType, hasPermission, showMessage, t, handleError]);
+    }, [roomType, hasPermission, showMessage, t, handleError, competitorGroups]);
 
     const handleDeleteGroup = useCallback(async (groupId: number) => {
         if (!window.confirm(t('priceAnalysis.competitors.deleteConfirm', 'Wirklich löschen?'))) {

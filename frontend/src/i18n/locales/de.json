@@ -139,5 +139,47 @@
     "create": "Erstellen",
     "cancel": "Abbrechen",
     "add": "Hinzufügen"
+  },
+  "login": {
+    "title": "Anmelden",
+    "username": "Benutzername oder E-Mail",
+    "password": "Passwort",
+    "submit": "Anmelden",
+    "submitting": "Wird angemeldet...",
+    "noAccount": "Noch kein Konto?",
+    "register": "Registrieren",
+    "forgotPassword": "Passwort vergessen?",
+    "loginFailed": "Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldedaten."
+  },
+  "forgotPassword": {
+    "title": "Passwort zurücksetzen",
+    "description": "Geben Sie Ihre E-Mail-Adresse ein. Wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.",
+    "email": "E-Mail-Adresse",
+    "emailPlaceholder": "ihre.email@beispiel.com",
+    "submit": "Link senden",
+    "submitting": "Wird gesendet...",
+    "success": "Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen Ihres Passworts gesendet.",
+    "checkEmail": "Bitte überprüfen Sie Ihr Postfach und folgen Sie den Anweisungen.",
+    "backToLogin": "Zurück zur Anmeldung",
+    "error": "Fehler beim Senden der E-Mail. Bitte versuchen Sie es erneut."
+  },
+  "resetPassword": {
+    "title": "Neues Passwort festlegen",
+    "description": "Geben Sie Ihr neues Passwort ein.",
+    "newPassword": "Neues Passwort",
+    "passwordPlaceholder": "Mindestens 8 Zeichen",
+    "passwordHint": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+    "confirmPassword": "Passwort bestätigen",
+    "confirmPasswordPlaceholder": "Passwort wiederholen",
+    "submit": "Passwort zurücksetzen",
+    "submitting": "Wird zurückgesetzt...",
+    "success": "Passwort erfolgreich zurückgesetzt. Sie werden gleich zur Anmeldeseite weitergeleitet.",
+    "redirecting": "Weiterleitung zur Anmeldeseite...",
+    "backToLogin": "Zurück zur Anmeldung",
+    "noToken": "Ungültiger oder fehlender Token. Bitte fordern Sie einen neuen Link an.",
+    "requestNewLink": "Neuen Link anfordern",
+    "passwordsDoNotMatch": "Die Passwörter stimmen nicht überein.",
+    "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+    "error": "Fehler beim Zurücksetzen des Passworts. Bitte versuchen Sie es erneut."
   }
 }

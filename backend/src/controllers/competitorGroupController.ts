@@ -327,19 +327,47 @@ export const competitorGroupController = {
 
       logger.info(`[CompetitorGroupController] Starte Preissuche für CompetitorGroup ${id}`);
 
+      // Lade CompetitorGroup um Anzahl Competitors zu kennen
+      const competitorGroup = await prisma.competitorGroup.findUnique({
+        where: { id: Number(id) },
+        include: {
+          competitors: {
+            where: { isActive: true }
+          }
+        }
+      });
+
+      if (!competitorGroup) {
+        return res.status(404).json({ error: 'CompetitorGroup nicht gefunden' });
+      }
+
+      const competitorCount = competitorGroup.competitors.length;
+      const dateRange = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
+      const estimatedSearches = competitorCount * dateRange;
+
+      logger.info(`[CompetitorGroupController] Preissuche: ${competitorCount} Competitors, ${dateRange} Tage, ~${estimatedSearches} Preis-Suchen`);
+
       // Starte Preissuche asynchron (nicht blockieren)
       AIPriceSearchService.searchPrices(
         Number(id),
         new Date(startDate),
         new Date(endDate),
         roomType
-      ).catch(error => {
-        logger.error(`[CompetitorGroupController] Fehler bei Preissuche für CompetitorGroup ${id}:`, error);
-      });
+      )
+        .then(pricesFound => {
+          logger.info(`[CompetitorGroupController] ✅ Preissuche abgeschlossen für CompetitorGroup ${id}: ${pricesFound} Preise gefunden`);
+        })
+        .catch(error => {
+          logger.error(`[CompetitorGroupController] ❌ Fehler bei Preissuche für CompetitorGroup ${id}:`, error);
+        });
 
       res.json({
         message: 'Preissuche gestartet',
-        competitorGroupId: Number(id)
+        competitorGroupId: Number(id),
+        competitorCount,
+        dateRange,
+        estimatedSearches,
+        note: 'Die Preissuche läuft im Hintergrund. Dies kann einige Minuten dauern. Preise werden automatisch in OTAPriceData gespeichert.'
       });
     } catch (error) {
       logger.error('[CompetitorGroupController] Fehler beim Starten der Preissuche:', error);

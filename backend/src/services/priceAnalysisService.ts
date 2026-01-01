@@ -148,6 +148,8 @@ export class PriceAnalysisService {
       const otaRoomType = roomType === 'compartida' ? 'dorm' : 'private';
 
       // Hole OTA-Listings für diese Stadt und Zimmertyp
+      // WICHTIG: Berücksichtigt ALLE OTAListings (Rate Shopping + AI Search)
+      // Filtert nach Stadt, Land und Zimmertyp, nicht nach Platform
       const listings = await prisma.oTAListing.findMany({
         where: {
           city: branch.city,
