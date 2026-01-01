@@ -508,11 +508,11 @@ const WorktimeStats: React.FC = () => {
     const targetWorkHours = user?.normalWorkingHours ?? 7.6;
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-6 sm:p-6">
+            <div className="flex items-center justify-between mb-2 sm:mb-4">
                 <div className="flex items-center pl-2 sm:pl-0 flex-shrink min-w-0">
-                    <ChartBarIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 dark:text-white flex-shrink-0" />
-                    <h2 className="text-base sm:text-lg md:text-xl font-semibold dark:text-white truncate">{t('worktime.stats.title')}</h2>
+                    <ChartBarIcon className="h-[1.1rem] w-[1.1rem] sm:h-6 sm:w-6 mr-1 sm:mr-2 dark:text-white flex-shrink-0" />
+                    <h2 className="text-xs sm:text-sm font-semibold dark:text-white truncate">{t('worktime.stats.title')}</h2>
                 </div>
                 
                 {/* Tab-Navigation */}

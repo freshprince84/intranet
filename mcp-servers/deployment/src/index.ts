@@ -15,7 +15,8 @@ import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Server-Konfiguration (kann über Umgebungsvariablen überschrieben werden)
+// Server-Konfiguration - wird aus mcp.json geladen (Cursor liest diese automatisch)
+// Falls nicht verfügbar, werden Umgebungsvariablen oder Standardwerte verwendet
 const SERVER_CONFIG = {
   host: process.env.DEPLOY_SERVER_HOST || "65.109.228.106",
   username: process.env.DEPLOY_SERVER_USER || "root",
@@ -24,7 +25,7 @@ const SERVER_CONFIG = {
     ".ssh",
     "intranet_rsa"
   ),
-  passphrase: process.env.DEPLOY_SSH_KEY_PASSPHRASE || undefined,
+  passphrase: process.env.DEPLOY_SSH_KEY_PASSPHRASE || "Intranet123!",
   serverPath: process.env.DEPLOY_SERVER_PATH || "/var/www/intranet",
   deployScript: process.env.DEPLOY_SCRIPT_PATH || "/var/www/intranet/scripts/utils/deploy_to_server.sh",
 };
@@ -47,17 +48,22 @@ async function executeSSHCommand(
     let output = "";
     let errorOutput = "";
 
-    // SSH-Key lesen
+    // SSH-Key lesen - versuche verschiedene Quellen (inkl. MCP-Umgebungsvariablen)
     let privateKey: string;
     try {
       privateKey = fs.readFileSync(SERVER_CONFIG.privateKeyPath, "utf8");
     } catch (err) {
-      resolve({
-        success: false,
-        output: "",
-        error: `SSH-Key nicht gefunden: ${SERVER_CONFIG.privateKeyPath}`,
-      });
-      return;
+      // Versuche Umgebungsvariable (von MCP/Cursor aus mcp.json bereitgestellt)
+      if (process.env.DEPLOY_SSH_KEY) {
+        privateKey = process.env.DEPLOY_SSH_KEY;
+      } else {
+        resolve({
+          success: false,
+          output: "",
+          error: `SSH-Key nicht gefunden: ${SERVER_CONFIG.privateKeyPath}. MCP-Umgebungsvariable DEPLOY_SSH_KEY auch nicht gesetzt.`,
+        });
+        return;
+      }
     }
 
     conn
