@@ -593,18 +593,18 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         return (
           <div key={index} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
             {isImage ? (
-              // Bild-Vorschau - groß und prominent
+              // Bild-Vorschau - vollständig angezeigt
               <div>
                 <img 
                   src={url} 
                   alt={attachment.alt} 
                   loading="lazy"
-                  className="w-full h-auto max-h-96 object-contain" 
+                  className="w-full h-auto object-contain" 
                   style={{ display: 'block' }}
                 />
               </div>
             ) : isPdf ? (
-              // PDF-Vorschau
+              // PDF-Vorschau - vollständig angezeigt
               <div className="p-3">
                 <div className="flex items-center mb-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -623,7 +623,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                 <iframe 
                   src={`${url}#view=FitH`} 
                   className="w-full rounded border dark:border-gray-600"
-                  style={{ height: '400px' }}
+                  style={{ height: '100vh', minHeight: '600px' }}
                   title={attachment.alt}
                 />
               </div>
@@ -940,7 +940,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                   src={url} 
                   alt={attachment.alt} 
                   loading="lazy"
-                  className="w-full h-auto max-h-96 object-contain" 
+                  className="w-full h-auto object-contain" 
                   style={{ display: 'block' }}
                 />
               </div>

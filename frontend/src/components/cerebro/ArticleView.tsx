@@ -165,7 +165,7 @@ const ArticleView: React.FC = () => {
                         <img 
                           src={mediaUrl} 
                           alt={media.filename} 
-                          className="w-full h-auto max-h-96 object-contain" 
+                          className="w-full h-auto object-contain" 
                           style={{ display: 'block' }}
                         />
                       </div>
@@ -186,7 +186,7 @@ const ArticleView: React.FC = () => {
                         <iframe 
                           src={`${mediaUrl}#view=FitH`} 
                           className="w-full rounded border dark:border-gray-600"
-                          style={{ height: '400px' }}
+                          style={{ height: '100vh', minHeight: '600px' }}
                           title={media.filename}
                         />
                       </div>
@@ -207,7 +207,6 @@ const ArticleView: React.FC = () => {
                         <video 
                           controls 
                           className="w-full rounded"
-                          style={{ maxHeight: '400px' }}
                         >
                           <source src={mediaUrl} type={media.mimetype} />
                           Ihr Browser unterstützt das Video-Tag nicht.
