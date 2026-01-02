@@ -460,7 +460,10 @@ const WorktimeTracker: React.FC = () => {
                 fixed left-0 right-0 rounded-t-xl border-t border-gray-300 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]
                 transition-all duration-300 ease-in-out z-40
                 sm:static sm:shadow-none sm:z-auto
-                ${isExpanded ? 'bottom-[60px] max-h-[70vh]' : 'bottom-[60px] max-h-[48px] overflow-hidden'}
+                ${isExpanded 
+                    ? 'bottom-[60px] max-h-[70vh] sm:bottom-auto sm:max-h-none' 
+                    : 'bottom-[60px] max-h-[48px] overflow-hidden sm:bottom-auto sm:max-h-none sm:overflow-visible'
+                }
             `}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
