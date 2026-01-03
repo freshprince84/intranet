@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { FilterCondition } from '../components/FilterRow.tsx';
+import { useAuth } from '../hooks/useAuth';
 
 interface SortDirection {
   column: string;
@@ -63,6 +64,10 @@ interface FilterProviderProps {
 }
 
 export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
+  const { user } = useAuth();
+  const currentRoleId = user?.roles?.find(r => r.lastUsed)?.role?.id;
+  const previousRoleIdRef = useRef<number | undefined>(currentRoleId);
+  
   const [filters, setFilters] = useState<Record<string, SavedFilter[]>>({});
   const [filterGroups, setFilterGroups] = useState<Record<string, FilterGroup[]>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
@@ -93,6 +98,21 @@ export const FilterProvider: React.FC<FilterProviderProps> = ({ children }) => {
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
+  
+  // ✅ ROLLENWECHSEL: Reagiere auf Rollenwechsel und invalidiere alle Filter-Caches
+  useEffect(() => {
+    if (previousRoleIdRef.current !== undefined && previousRoleIdRef.current !== currentRoleId) {
+      // Rollenwechsel erkannt - invalidiere alle Filter-Caches
+      setFilters({});
+      setFilterGroups({});
+      filterCacheTimestamps.current = {};
+      loadedTablesRef.current.clear();
+      loadingPromises.current = {};
+      setLoading({});
+      setErrors({});
+    }
+    previousRoleIdRef.current = currentRoleId;
+  }, [currentRoleId]);
   
   // ✅ PERFORMANCE: Lade Filter für eine tableId
   const loadFilters = useCallback(async (tableId: string): Promise<SavedFilter[]> => {

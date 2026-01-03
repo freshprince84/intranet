@@ -1530,6 +1530,29 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
         // ✅ BranchCache invalidieren (Branch hat sich geändert)
         const { branchCache } = await import('../services/branchCache');
         branchCache.clear();
+        
+        // ✅ FILTER-BERECHTIGUNGEN: Filter-Cache invalidieren bei Rollenwechsel
+        // AccessLevel ändert sich beim Rollenwechsel, daher müssen alle Filter-Caches invalidiert werden
+        const { filterListCache } = await import('../services/filterListCache');
+        // Invalidiere Filter-Cache für alle relevanten Table-IDs
+        const TABLE_IDS = [
+          'worktracker-todos',
+          'todo-analytics-table',
+          'requests-table',
+          'request-analytics-table',
+          'worktracker-reservations',
+          'join-requests-table',
+          'CEREBRO_ARTICLES',
+          'worktracker-tours',
+          'password-manager-table',
+          'my-join-requests-table',
+          'branches-table',
+          'roles-table',
+          'workcenter-table'
+        ];
+        TABLE_IDS.forEach(tableId => {
+          filterListCache.invalidate(userId, tableId);
+        });
 
         // Benutzer mit aktualisierten Rollen zurückgeben
         const updatedUser = await prisma.user.findUnique({

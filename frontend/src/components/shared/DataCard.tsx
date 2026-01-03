@@ -481,7 +481,7 @@ const DataCard: React.FC<DataCardProps> = ({
               {renderTitle(title, subtitle, 'desktop')}
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
-              {metadata.filter(item => item.section === 'header-right').map((item, index) => (
+              {metadata.filter(item => item.section === 'header-right' || item.section === 'right-inline').map((item, index) => (
                 <div key={index} className="flex items-center gap-1">
                   {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                   {item.label && <span className="font-medium">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
