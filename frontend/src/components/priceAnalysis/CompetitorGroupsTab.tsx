@@ -6,7 +6,7 @@ import { useError } from '../../contexts/ErrorContext.tsx';
 import { useBranch } from '../../contexts/BranchContext.tsx';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
-import { PlusIcon, MagnifyingGlassIcon, TrashIcon, PencilIcon, SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, TrashIcon, PencilIcon, SparklesIcon, XMarkIcon, Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline';
 
 interface Competitor {
     id: number;
@@ -32,6 +32,36 @@ interface CompetitorGroup {
     updatedAt: string;
 }
 
+interface OTAListing {
+    id: number;
+    branchId: number | null;
+    platform: string;
+    listingId: string;
+    listingUrl: string | null;
+    city: string;
+    country: string | null;
+    roomType: string;
+    roomName: string | null;
+    isActive: boolean;
+    discoveredAt: string;
+    lastScrapedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    priceData: OTAPriceData[];
+}
+
+interface OTAPriceData {
+    id: number;
+    listingId: number;
+    date: string;
+    price: number;
+    currency: string;
+    available: boolean;
+    availableRooms: number | null;
+    scrapedAt: string;
+    source: string | null;
+}
+
 const CompetitorGroupsTab: React.FC = () => {
     const { t } = useTranslation();
     const { hasPermission } = usePermissions();
@@ -47,7 +77,10 @@ const CompetitorGroupsTab: React.FC = () => {
     });
 
     const [competitorGroups, setCompetitorGroups] = useState<CompetitorGroup[]>([]);
+    const [listings, setListings] = useState<OTAListing[]>([]);
     const [loading, setLoading] = useState(false);
+    const [listingsLoading, setListingsLoading] = useState(false);
+    const [viewMode, setViewMode] = useState<'groups' | 'listings'>('groups');
     const [discovering, setDiscovering] = useState(false);
     const [searchingPrices, setSearchingPrices] = useState<number | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -88,11 +121,32 @@ const CompetitorGroupsTab: React.FC = () => {
         }
     }, [currentBranch, handleError]);
 
+    const loadListings = useCallback(async () => {
+        if (!currentBranch) return;
+
+        setListingsLoading(true);
+        try {
+            const response = await axiosInstance.get(API_ENDPOINTS.PRICE_ANALYSIS.OTA.LISTINGS, {
+                params: {
+                    branchId: currentBranch.id
+                }
+            });
+            setListings(response.data);
+        } catch (error: any) {
+            handleError(error);
+        } finally {
+            setListingsLoading(false);
+        }
+    }, [currentBranch, handleError]);
+
     useEffect(() => {
         if (currentBranch) {
             loadCompetitorGroups();
+            if (viewMode === 'listings') {
+                loadListings();
+            }
         }
-    }, [currentBranch, loadCompetitorGroups]);
+    }, [currentBranch, loadCompetitorGroups, viewMode, loadListings]);
 
     const handleDiscoverCompetitors = useCallback(async () => {
         if (!currentBranch) {
@@ -323,33 +377,151 @@ const CompetitorGroupsTab: React.FC = () => {
                         {t('priceAnalysis.competitors.title', 'Konkurrenzgruppen')}
                     </h2>
                     <div className="flex items-center gap-2 ml-auto">
-                        <select
-                            value={roomType}
-                            onChange={(e) => setRoomType(e.target.value as 'private' | 'dorm')}
-                            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                        >
-                            <option value="private">{t('priceAnalysis.roomType.private', 'Privatzimmer')}</option>
-                            <option value="dorm">{t('priceAnalysis.roomType.dorm', 'Schlafsaal')}</option>
-                        </select>
                         <div className="relative group">
                             <button
-                                onClick={handleDiscoverCompetitors}
-                                disabled={discovering || !currentBranch || !hasPermission('price_analysis', 'write', 'page')}
-                                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={t('priceAnalysis.competitors.discover', 'KI: Konkurrenten finden')}
+                                onClick={() => {
+                                    const newMode = viewMode === 'groups' ? 'listings' : 'groups';
+                                    setViewMode(newMode);
+                                    if (newMode === 'listings') {
+                                        loadListings();
+                                    }
+                                }}
+                                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                title={viewMode === 'groups' ? t('priceAnalysis.competitors.showListings', 'Alle Listings anzeigen') : t('priceAnalysis.competitors.showGroups', 'Gruppen anzeigen')}
                             >
-                                <SparklesIcon className={`h-5 w-5 ${discovering ? 'animate-pulse' : ''}`} />
+                                {viewMode === 'groups' ? (
+                                    <ListBulletIcon className="h-5 w-5" />
+                                ) : (
+                                    <Squares2X2Icon className="h-5 w-5" />
+                                )}
                             </button>
                             <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                {t('priceAnalysis.competitors.discover', 'KI: Konkurrenten finden')}
+                                {viewMode === 'groups' ? t('priceAnalysis.competitors.showListings', 'Alle Listings anzeigen') : t('priceAnalysis.competitors.showGroups', 'Gruppen anzeigen')}
                             </div>
                         </div>
+                        {viewMode === 'groups' && (
+                            <>
+                                <select
+                                    value={roomType}
+                                    onChange={(e) => setRoomType(e.target.value as 'private' | 'dorm')}
+                                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                                >
+                                    <option value="private">{t('priceAnalysis.roomType.private', 'Privatzimmer')}</option>
+                                    <option value="dorm">{t('priceAnalysis.roomType.dorm', 'Schlafsaal')}</option>
+                                </select>
+                                <div className="relative group">
+                                    <button
+                                        onClick={handleDiscoverCompetitors}
+                                        disabled={discovering || !currentBranch || !hasPermission('price_analysis', 'write', 'page')}
+                                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title={t('priceAnalysis.competitors.discover', 'KI: Konkurrenten finden')}
+                                    >
+                                        <SparklesIcon className={`h-5 w-5 ${discovering ? 'animate-pulse' : ''}`} />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('priceAnalysis.competitors.discover', 'KI: Konkurrenten finden')}
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Competitor Groups List */}
-            {competitorGroups.length === 0 ? (
+            {/* Content based on view mode */}
+            {viewMode === 'listings' ? (
+                /* OTAListings View */
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+                    {listingsLoading ? (
+                        <div className="text-center py-4">
+                            {t('priceAnalysis.loading', 'Lädt...')}
+                        </div>
+                    ) : listings.length === 0 ? (
+                        <div className="text-center py-4 text-gray-600 dark:text-gray-400">
+                            {t('priceAnalysis.noListings', 'Keine Listings gefunden')}
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                            {t('priceAnalysis.platform', 'Plattform')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                            {t('branches.city', 'Stadt')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                            {t('priceAnalysis.roomType', 'Zimmertyp')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                            {t('priceAnalysis.roomName', 'Zimmername')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                            {t('priceAnalysis.listingUrl', 'Listing URL')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                            {t('priceAnalysis.status', 'Status')}
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
+                                            {t('priceAnalysis.lastScraped', 'Zuletzt gesucht')}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {listings.map((listing) => (
+                                        <tr key={listing.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {listing.platform}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {listing.city}{listing.country ? `, ${listing.country}` : ''}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {listing.roomType === 'dorm' ? t('priceAnalysis.dorm', 'Dorm') : t('priceAnalysis.private', 'Privatzimmer')}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {listing.roomName || '-'}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {listing.listingUrl ? (
+                                                    <a 
+                                                        href={listing.listingUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                    >
+                                                        {t('common.view', 'Ansehen')}
+                                                    </a>
+                                                ) : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                    listing.isActive 
+                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                                }`}>
+                                                    {listing.isActive ? t('priceAnalysis.active', 'Aktiv') : t('priceAnalysis.inactive', 'Inaktiv')}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                {listing.lastScrapedAt
+                                                    ? new Date(listing.lastScrapedAt).toLocaleDateString()
+                                                    : listing.priceData.length > 0
+                                                    ? new Date(listing.priceData[0].scrapedAt).toLocaleDateString()
+                                                    : '-'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                /* Competitor Groups View */
+                <>
+                    {competitorGroups.length === 0 ? (
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 text-center text-gray-500 dark:text-gray-400">
                     {t('priceAnalysis.competitors.noGroups', 'Keine Konkurrenzgruppen gefunden')}
                 </div>
@@ -460,7 +632,13 @@ const CompetitorGroupsTab: React.FC = () => {
                         </div>
                     ))}
                 </div>
+                )}
+            </>
             )}
+
+            {/* Modals (only shown in groups view) */}
+            {viewMode === 'groups' && (
+                <>
 
             {/* Create Group Modal */}
             {showCreateModal && (
@@ -632,6 +810,8 @@ const CompetitorGroupsTab: React.FC = () => {
                         </div>
                     </div>
                 </div>
+                )}
+            </>
             )}
         </div>
     );

@@ -1163,14 +1163,157 @@ export class LobbyPmsService {
       branchId: branchId,
     };
 
-    // Upsert: Erstelle oder aktualisiere Reservierung
-    let reservation = await prisma.reservation.upsert({
+    // 1. Prüfe ob bereits Reservation mit lobbyReservationId existiert
+    const existingByLobbyId = await prisma.reservation.findUnique({
+      where: { lobbyReservationId: bookingId }
+    });
+
+    let reservation: Reservation;
+
+    if (existingByLobbyId) {
+      // Normale Logik: Update bestehende Reservation
+      reservation = await prisma.reservation.update({
+        where: { id: existingByLobbyId.id },
+        data: reservationData
+      });
+    } else {
+      // 2. Prüfe ob "potential" Reservation mit gleicher Telefonnummer existiert
+      if (guestPhone) {
+        try {
+          const { LanguageDetectionService } = await import('./languageDetectionService');
+          const normalizedLobbyPhone = LanguageDetectionService.normalizePhoneNumber(guestPhone);
+          
+          // Suche "potential" Reservationen mit gleicher Telefonnummer
+          // Prüfe auch Datum-Überlappung (für bessere Zuordnung)
+          const potentialReservations = await prisma.reservation.findMany({
+            where: {
+              branchId: branchId,
+              status: ReservationStatus.potential,
+              // Prüfe Datum-Überlappung (alle 4 Fälle)
+              OR: [
+                {
+                  // Fall 1: Potential startet vor LobbyPMS, endet während/nach LobbyPMS
+                  checkInDate: { lte: checkInDate },
+                  checkOutDate: { gte: checkInDate }
+                },
+                {
+                  // Fall 2: Potential startet während LobbyPMS, endet nach LobbyPMS
+                  checkInDate: { lte: checkOutDate },
+                  checkOutDate: { gte: checkOutDate }
+                },
+                {
+                  // Fall 3: Potential ist komplett innerhalb von LobbyPMS
+                  checkInDate: { gte: checkInDate },
+                  checkOutDate: { lte: checkOutDate }
+                },
+                {
+                  // Fall 4: LobbyPMS ist komplett innerhalb von Potential
+                  checkInDate: { lte: checkInDate },
+                  checkOutDate: { gte: checkOutDate }
+                }
+              ]
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+
+          // Prüfe Telefonnummer-Übereinstimmung (normalisiert)
+          let matchingPotentialReservation = null;
+          for (const potentialReservation of potentialReservations) {
+            if (potentialReservation.guestPhone) {
+              const normalizedPotentialPhone = LanguageDetectionService.normalizePhoneNumber(potentialReservation.guestPhone);
+              
+              // Vergleich mit verschiedenen Formaten
+              if (normalizedLobbyPhone === normalizedPotentialPhone ||
+                  normalizedLobbyPhone.replace(/^\+/, '') === normalizedPotentialPhone.replace(/^\+/, '') ||
+                  normalizedLobbyPhone.replace(/[\s\-\(\)]/g, '') === normalizedPotentialPhone.replace(/[\s\-\(\)]/g, '')) {
+                matchingPotentialReservation = potentialReservation;
+                break;
+              }
+            }
+          }
+
+          if (matchingPotentialReservation) {
+            logger.log(`[LobbyPMS] Zusammenführung: "potential" Reservation ${matchingPotentialReservation.id} mit LobbyPMS-Reservation ${bookingId}`);
+            
+            // Zusammenführung: Aktualisiere "potential" Reservation
+            reservation = await prisma.reservation.update({
+              where: { id: matchingPotentialReservation.id },
+              data: {
+                ...reservationData,
+                lobbyReservationId: bookingId, // WICHTIG: Setze lobbyReservationId
+                status: ReservationStatus.confirmed, // Status von "potential" auf "confirmed"
+                // Behalte vorhandene Daten, falls LobbyPMS-Daten fehlen
+                guestName: guestName || matchingPotentialReservation.guestName,
+                guestEmail: guestEmail || matchingPotentialReservation.guestEmail,
+                guestPhone: guestPhone || matchingPotentialReservation.guestPhone
+              }
+            });
+
+            // Verknüpfe WhatsApp-Nachrichten (falls noch nicht verknüpft)
+            try {
+              const normalizedPhoneForMessages = LanguageDetectionService.normalizePhoneNumber(guestPhone || matchingPotentialReservation.guestPhone || '');
+              
+              if (normalizedPhoneForMessages) {
+                await prisma.whatsAppMessage.updateMany({
+                  where: {
+                    phoneNumber: normalizedPhoneForMessages,
+                    branchId: branchId,
+                    reservationId: null // Nur Nachrichten ohne Reservation
+                  },
+                  data: {
+                    reservationId: reservation.id
+                  }
+                });
+                
+                logger.log(`[LobbyPMS] WhatsApp-Nachrichten mit Reservation ${reservation.id} verknüpft`);
+              }
+            } catch (messageError) {
+              logger.error('[LobbyPMS] Fehler beim Verknüpfen der WhatsApp-Nachrichten:', messageError);
+              // Fehler nicht weiterwerfen, nur loggen
+            }
+
+            // Erstelle Sync-History-Eintrag mit Hinweis auf Zusammenführung
+            await prisma.reservationSyncHistory.create({
+              data: {
+                reservationId: reservation.id,
+                syncType: 'merged_from_potential',
+                syncData: {
+                  ...lobbyReservation as any,
+                  mergedFromPotentialReservationId: matchingPotentialReservation.id
+                }
+              }
+            });
+
+            logger.log(`[LobbyPMS] ✅ Zusammenführung abgeschlossen: Reservation ${reservation.id} (vorher "potential" ${matchingPotentialReservation.id})`);
+            
+            // Weiter mit Gruppierung (wie normal)
+            try {
+              const { ReservationGroupingService } = await import('./reservationGroupingService');
+              reservation = await ReservationGroupingService.assignToGroup(reservation);
+            } catch (groupError) {
+              logger.warn(`[LobbyPMS] Fehler bei Gruppenzuweisung für Reservierung ${reservation.id}:`, groupError);
+            }
+
+            // Sync-History wurde bereits oben erstellt (merged_from_potential), kein zusätzlicher Eintrag nötig
+
+            // Task-Erstellung erfolgt im normalen Flow (nach return), daher hier nicht nötig
+            return reservation;
+          }
+        } catch (mergeError) {
+          logger.error('[LobbyPMS] Fehler beim Prüfen auf "potential" Reservation:', mergeError);
+          // Weiter mit normaler Logik, wenn Fehler auftritt
+        }
+      }
+      
+      // 3. Normale Logik: Erstelle neue Reservation
+      reservation = await prisma.reservation.upsert({
       where: {
         lobbyReservationId: bookingId
       },
       create: reservationData,
       update: reservationData
     });
+    }
 
       // Gruppierung: Weise Reservation einer Gruppe zu (bei Import)
       try {

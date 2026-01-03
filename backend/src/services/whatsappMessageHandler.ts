@@ -39,11 +39,12 @@ export class WhatsAppMessageHandler {
       const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
       logger.log('[WhatsApp Message Handler] Telefonnummer:', {
         original: phoneNumber,
-        normalized: normalizedPhone
+        normalized: normalizedPhone,
+        branchId: branchId
       });
 
-      // 2. Identifiziere User via phoneNumber
-      const user = await this.identifyUser(normalizedPhone, branchId);
+      // 2. Identifiziere User via phoneNumber (übergib ORIGINAL, nicht normalisiert - identifyUser normalisiert selbst)
+      const user = await this.identifyUser(phoneNumber, branchId);
       logger.log('[WhatsApp Message Handler] User-Identifikation:', {
         phoneNumber: normalizedPhone,
         branchId: branchId,
@@ -151,6 +152,38 @@ export class WhatsAppMessageHandler {
       // Aktualisiere mergedContext mit konsistenter Sprache
       mergedContext.language = language;
       await ContextService.updateContext(conversation.id, { language }, 'WhatsAppConversation');
+      
+      // 2.5. Erstelle Notification für User (wenn User gefunden)
+      if (user) {
+        try {
+          const { createNotificationIfEnabled } = await import('../controllers/notificationController');
+          
+          // Erstelle Notification
+          const { NotificationType } = await import('@prisma/client');
+          await createNotificationIfEnabled({
+            userId: user.id,
+            title: language === 'de' 
+              ? 'Neue WhatsApp-Nachricht' 
+              : language === 'en'
+              ? 'New WhatsApp message'
+              : 'Nuevo mensaje de WhatsApp',
+            message: messageText.length > 100 
+              ? messageText.substring(0, 100) + '...' 
+              : messageText,
+            type: NotificationType.system,
+            relatedEntityId: conversation.id,
+            relatedEntityType: 'whatsapp_conversation'
+          });
+          
+          logger.log('[WhatsApp Message Handler] Notification für User erstellt:', {
+            userId: user.id,
+            conversationId: conversation.id
+          });
+        } catch (notificationError) {
+          // Fehler nicht weiterwerfen, nur loggen (Notification ist nicht kritisch)
+          logger.error('[WhatsApp Message Handler] Fehler beim Erstellen der Notification:', notificationError);
+        }
+      }
       
       // ConversationState berechnen
       await ConversationService.processMessage(
@@ -412,10 +445,15 @@ export class WhatsAppMessageHandler {
         phoneNumber.replace(/[\s-]/g, ''), // Ohne Leerzeichen/Bindestriche
       ];
       
-      // Entferne Duplikate
-      const uniqueFormats = [...new Set(searchFormats)];
+      // Entferne Duplikate und leere Strings
+      const uniqueFormats = [...new Set(searchFormats)].filter(f => f && f.length > 0);
       
-      logger.log('[WhatsApp Message Handler] Suche mit Formaten:', uniqueFormats);
+      logger.log('[WhatsApp Message Handler] Suche mit Formaten:', {
+        formats: uniqueFormats,
+        original: phoneNumber,
+        normalized: normalizedPhone,
+        branchId: branchId
+      });
       
       // DEBUG: Zeige alle User mit Telefonnummern (für Debugging)
       const allUsersWithPhone = await prisma.user.findMany({

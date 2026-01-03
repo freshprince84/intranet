@@ -114,6 +114,8 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
         logger.log('[WhatsApp Webhook] Eingehende Nachricht:', {
           from: fromNumber,
+          fromType: typeof fromNumber,
+          fromLength: fromNumber?.length,
           text: messageText,
           phoneNumberId: phoneNumberId,
           isGroupMessage: isGroupMessage,
@@ -154,11 +156,17 @@ export const handleWebhook = async (req: Request, res: Response) => {
             logger.error('[WhatsApp Webhook] Fehler beim Laden der Conversation:', convError);
           }
           
-          // Prüfe ob es eine Reservation zu dieser Telefonnummer gibt
+          // Prüfe ob es eine AKTUELLE Reservation zu dieser Telefonnummer gibt
+          // Aktuell = heute >= checkInDate && heute <= checkOutDate
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
           const reservation = await prisma.reservation.findFirst({
             where: {
               guestPhone: normalizedPhone,
-              branchId: branchId
+              branchId: branchId,
+              checkInDate: { lte: today }, // Check-in ist heute oder früher
+              checkOutDate: { gte: today }  // Check-out ist heute oder später
             },
             orderBy: {
               checkInDate: 'desc'

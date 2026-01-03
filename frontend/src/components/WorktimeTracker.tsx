@@ -51,6 +51,7 @@ const WorktimeTracker: React.FC = () => {
     // Mobile Bottom Sheet State
     const [isExpanded, setIsExpanded] = useState(false);
     const sheetRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const touchStartY = useRef<number>(0);
     const touchCurrentY = useRef<number>(0);
     const isDragging = useRef<boolean>(false);
@@ -423,17 +424,41 @@ const WorktimeTracker: React.FC = () => {
 
     // Swipe handlers for mobile bottom sheet
     const handleTouchStart = (e: React.TouchEvent) => {
-        touchStartY.current = e.touches[0].clientY;
-        isDragging.current = true;
+        const touchY = e.touches[0].clientY;
+        const target = e.target as HTMLElement;
+        
+        // Prüfe ob Touch am Handle oder am oberen Rand des Sheets startet
+        const isHandle = target.closest('.worktime-handle') !== null;
+        const scrollContainer = scrollContainerRef.current;
+        const isTopOfSheet = scrollContainer && scrollContainer.scrollTop === 0;
+        const sheetRect = sheetRef.current?.getBoundingClientRect();
+        const isTopArea = sheetRect && touchY < (sheetRect.top + 100); // 100px Toleranz
+        
+        if (isHandle || (isExpanded && isTopOfSheet && isTopArea)) {
+            touchStartY.current = touchY;
+            isDragging.current = true;
+            // Verhindere Pull-to-Refresh
+            e.preventDefault();
+            // Verhindere Body-Scroll während Drag
+            document.body.style.overflow = 'hidden';
+        }
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!isDragging.current) return;
+        
         touchCurrentY.current = e.touches[0].clientY;
+        
+        // Verhindere Pull-to-Refresh während Drag
+        e.preventDefault();
     };
 
     const handleTouchEnd = () => {
         if (!isDragging.current) return;
+        
+        // Body-Scroll wieder erlauben
+        document.body.style.overflow = '';
+        
         isDragging.current = false;
         
         const deltaY = touchCurrentY.current - touchStartY.current;
@@ -450,6 +475,14 @@ const WorktimeTracker: React.FC = () => {
         touchStartY.current = 0;
         touchCurrentY.current = 0;
     };
+
+    // Cleanup bei Unmount
+    useEffect(() => {
+        return () => {
+            // Stelle sicher, dass Body-Scroll wieder aktiv ist
+            document.body.style.overflow = '';
+        };
+    }, []);
 
     return (
         <div 
@@ -470,13 +503,28 @@ const WorktimeTracker: React.FC = () => {
             onTouchEnd={handleTouchEnd}
         >
             {/* Mobile Handle - Lasche zum Hochziehen */}
-            <div className="w-full flex flex-col items-center sm:hidden touch-none h-[48px] justify-center">
+            <div 
+                className="w-full flex flex-col items-center sm:hidden h-[48px] justify-center worktime-handle"
+                style={{ touchAction: 'pan-y' }}
+            >
                 <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mb-1"></div>
                 <ChevronUpIcon className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
             </div>
 
             {/* Main Content Container */}
-            <div className="p-4 sm:p-0 pt-0 overflow-y-auto sm:overflow-visible">
+            <div 
+                ref={scrollContainerRef}
+                className="p-4 sm:p-0 pt-0 overflow-y-auto sm:overflow-visible"
+                onTouchStart={(e) => {
+                    // Wenn nicht am oberen Rand, erlaube normales Scrollen
+                    const container = e.currentTarget;
+                    if (container.scrollTop > 0) {
+                        // Normales Scrollen erlauben, kein Sheet-Drag
+                        return;
+                    }
+                }}
+                style={{ touchAction: isExpanded ? 'pan-y' : 'auto' }}
+            >
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold flex items-center dark:text-white">
                         <ClockIcon className="h-6 w-6 mr-2" />
