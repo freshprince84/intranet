@@ -412,6 +412,14 @@ const WorktimeTracker: React.FC = () => {
         return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
     };
 
+    // Cleanup bei Unmount
+    useEffect(() => {
+        return () => {
+            // Stelle sicher, dass Body-Scroll wieder aktiv ist
+            document.body.style.overflow = '';
+        };
+    }, []);
+
     if (isLoading) {
         return (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 mb-6">
@@ -475,14 +483,6 @@ const WorktimeTracker: React.FC = () => {
         touchStartY.current = 0;
         touchCurrentY.current = 0;
     };
-
-    // Cleanup bei Unmount
-    useEffect(() => {
-        return () => {
-            // Stelle sicher, dass Body-Scroll wieder aktiv ist
-            document.body.style.overflow = '';
-        };
-    }, []);
 
     return (
         <div 
