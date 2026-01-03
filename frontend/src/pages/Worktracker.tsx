@@ -267,7 +267,58 @@ const getReservationCardMetadataFromColumnOrder = (columnOrder: string[]): strin
 const Worktracker: React.FC = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const { hasPermission, permissions, isAdmin, currentRole, canView } = usePermissions();
+    const { hasPermission, permissions, isAdmin, currentRole, canView, getAccessLevel } = usePermissions();
+    
+    // ✅ BUTTON-BERECHTIGUNGEN: Helper für Ownership-Prüfung (Tasks)
+    const canEditTask = useCallback((task: Task): boolean => {
+        const editAccessLevel = getAccessLevel('task_edit', 'button');
+        if (editAccessLevel === 'all_both') return true;
+        if (editAccessLevel === 'own_both') {
+            return task.responsibleId === user?.id || task.qualityControl?.id === user?.id;
+        }
+        return false;
+    }, [getAccessLevel, user?.id]);
+    
+    const canDeleteTask = useCallback((task: Task): boolean => {
+        const deleteAccessLevel = getAccessLevel('task_delete', 'button');
+        if (deleteAccessLevel === 'all_both') return true;
+        if (deleteAccessLevel === 'own_both') {
+            return task.responsibleId === user?.id || task.qualityControl?.id === user?.id;
+        }
+        return false;
+    }, [getAccessLevel, user?.id]);
+    
+    const canChangeTaskStatus = useCallback((task: Task): boolean => {
+        const statusAccessLevel = getAccessLevel('task_status_change', 'button');
+        if (statusAccessLevel === 'all_both') return true;
+        if (statusAccessLevel === 'own_both') {
+            return task.responsibleId === user?.id || task.qualityControl?.id === user?.id;
+        }
+        return false;
+    }, [getAccessLevel, user?.id]);
+    
+    // ✅ BUTTON-BERECHTIGUNGEN: Helper für Ownership-Prüfung (Reservations)
+    const canSendReservationInvitation = useCallback((reservation: Reservation): boolean => {
+        const accessLevel = getAccessLevel('reservation_send_invitation', 'button');
+        if (accessLevel === 'all_both') return true;
+        // Bei 'own_both' prüfen wir, ob User in der gleichen Branch arbeitet
+        if (accessLevel === 'own_both') {
+            const userBranchIds = user?.branches?.map(b => b.branchId) || [];
+            return userBranchIds.includes(reservation.branchId);
+        }
+        return false;
+    }, [getAccessLevel, user?.branches]);
+    
+    const canSendReservationPasscode = useCallback((reservation: Reservation): boolean => {
+        const accessLevel = getAccessLevel('reservation_send_passcode', 'button');
+        if (accessLevel === 'all_both') return true;
+        if (accessLevel === 'own_both') {
+            const userBranchIds = user?.branches?.map(b => b.branchId) || [];
+            return userBranchIds.includes(reservation.branchId);
+        }
+        return false;
+    }, [getAccessLevel, user?.branches]);
+
     const location = useLocation();
     const navigate = useNavigate();
     const { showMessage } = useMessage();
@@ -1340,10 +1391,8 @@ const Worktracker: React.FC = () => {
     const renderStatusButtons = (task: Task): JSX.Element[] => {
         const buttons: JSX.Element[] = [];
         
-        // Prüfe, ob der Benutzer Schreibberechtigungen für Tasks hat
-        const canModifyTasks = hasPermission('tasks', 'write', 'table');
-        
-        if (!canModifyTasks) return buttons;
+        // Prüfe, ob der Benutzer Schreibberechtigungen für Tasks hat (Ownership-basiert)
+        if (!canChangeTaskStatus(task)) return buttons;
         
         // ✅ FIX: Admin kann alle Tasks status-shiften, unabhängig von isResponsibleForTask
         const userIsAdmin = isAdmin();
@@ -2293,7 +2342,7 @@ const Worktracker: React.FC = () => {
                             <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
                                 {/* Linke Seite: "Neuer Task/Reservation"-Button */}
                                 <div className="flex items-center">
-                                    {activeTab === 'todos' && hasPermission('tasks', 'write', 'table') && (
+                                    {activeTab === 'todos' && hasPermission('task_create', 'write', 'button') && (
                                         <div className="relative group">
                                             <button
                                                 onClick={() => setIsCreateModalOpen(true)}
@@ -2309,7 +2358,7 @@ const Worktracker: React.FC = () => {
                                             </div>
                                         </div>
                                     )}
-                                    {activeTab === 'reservations' && hasPermission('reservations', 'write', 'tab') && (
+                                    {activeTab === 'reservations' && hasPermission('reservation_create', 'write', 'button') && (
                                         <div className="relative group">
                                             <button
                                                 onClick={() => setIsCreateReservationModalOpen(true)}
@@ -2769,7 +2818,7 @@ const Worktracker: React.FC = () => {
                                                                             <div className="status-buttons">
                                                                                 {renderStatusButtons(task)}
                                                                             </div>
-                                                                            {hasPermission('tasks', 'write', 'table') && (
+                                                                            {canEditTask(task) && (
                                                                                 <div className="relative group">
                                                                                     <button
                                                                                         onClick={() => {
@@ -2785,7 +2834,7 @@ const Worktracker: React.FC = () => {
                                                                                     </div>
                                                                                 </div>
                                                                             )}
-                                                                            {hasPermission('tasks', 'both', 'table') && (
+                                                                            {hasPermission('task_create', 'write', 'button') && (
                                                                                 <div className="relative group">
                                                                                     <button
                                                                                         onClick={() => handleCopyTask(task)}
@@ -2798,7 +2847,7 @@ const Worktracker: React.FC = () => {
                                                                                     </div>
                                                                                 </div>
                                                                             )}
-                                                                            {hasPermission('tasks', 'delete', 'table') && (
+                                                                            {canDeleteTask(task) && (
                                                                                 <div className="relative group">
                                                                                     <button
                                                                                         onClick={() => handleDeleteTask(task.id)}
@@ -2939,7 +2988,7 @@ const Worktracker: React.FC = () => {
                                                         <div className="status-buttons">
                                                             {renderStatusButtons(task)}
                                                         </div>
-                                                        {hasPermission('tasks', 'write', 'table') && (
+                                                        {canEditTask(task) && (
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -2951,7 +3000,7 @@ const Worktracker: React.FC = () => {
                                                                 <PencilIcon className="h-4 w-4" />
                                                             </button>
                                                         )}
-                                                        {hasPermission('tasks', 'both', 'table') && (
+                                                        {hasPermission('task_create', 'write', 'button') && (
                                                             <div className="relative group">
                                                                 <button
                                                                     onClick={(e) => {
@@ -3218,11 +3267,13 @@ const Worktracker: React.FC = () => {
                                                     });
                                                 }
                                                 
-                                                // Action-Buttons für Einladung senden und PIN-Generierung
-                                                const hasWritePermission = hasPermission('reservations', 'write', 'tab');
-                                                const actionButtons = hasWritePermission ? (
+                                                // Action-Buttons für Einladung senden und PIN-Generierung (mit Button-Berechtigungen)
+                                                const showInvitationButton = canSendReservationInvitation(reservation);
+                                                const showPasscodeButton = canSendReservationPasscode(reservation);
+                                                const actionButtons = (showInvitationButton || showPasscodeButton) ? (
                                                     <div className="flex items-center space-x-2">
                                                         {/* Einladung senden Button */}
+                                                        {showInvitationButton && (
                                                         <div className="relative group">
                                                             <button
                                                                 onClick={(e) => {
@@ -3238,8 +3289,10 @@ const Worktracker: React.FC = () => {
                                                                 {t('reservations.sendInvitation.title')}
                                                             </div>
                                                         </div>
+                                                        )}
                                                         
                                                         {/* Key-Button für PIN-Generierung */}
+                                                        {showPasscodeButton && (
                                                         <div className="relative group">
                                                             <button
                                                                 onClick={(e) => {
@@ -3255,6 +3308,7 @@ const Worktracker: React.FC = () => {
                                                                 {t('reservations.sendPasscode.title')}
                                                             </div>
                                                         </div>
+                                                        )}
                                                     </div>
                                                 ) : null;
                                                 
@@ -3522,59 +3576,59 @@ const Worktracker: React.FC = () => {
                                                                             return (
                                                                                 <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                                     <div className="flex space-x-2 action-buttons">
-                                                                                        {hasPermission('reservations', 'write', 'tab') && (
-                                                                                            <>
-                                                                                                {/* Einladung senden Button */}
-                                                                                                <div className="relative group">
-                                                                                                    <button
-                                                                                                        onClick={(e) => {
-                                                                                                            e.stopPropagation();
-                                                                                                            setSelectedReservationForInvitation(reservation);
-                                                                                                            setIsSendInvitationSidepaneOpen(true);
-                                                                                                        }}
-                                                                                                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                                    >
-                                                                                                        <PaperAirplaneIcon className="h-4 w-4" />
-                                                                                                    </button>
-                                                                                                    <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('reservations.sendInvitation.title')}
-                                                                                                    </div>
+                                                                                        {/* Einladung senden Button */}
+                                                                                        {canSendReservationInvitation(reservation) && (
+                                                                                            <div className="relative group">
+                                                                                                <button
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        setSelectedReservationForInvitation(reservation);
+                                                                                                        setIsSendInvitationSidepaneOpen(true);
+                                                                                                    }}
+                                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                                >
+                                                                                                    <PaperAirplaneIcon className="h-4 w-4" />
+                                                                                                </button>
+                                                                                                <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                    {t('reservations.sendInvitation.title')}
                                                                                                 </div>
-                                                                                                
-                                                                                                {/* Key-Button für PIN-Generierung */}
-                                                                                                <div className="relative group">
-                                                                                                    <button
-                                                                                                        onClick={(e) => {
-                                                                                                            e.stopPropagation();
-                                                                                                            setSelectedReservationForPasscode(reservation);
-                                                                                                            setIsSendPasscodeSidepaneOpen(true);
-                                                                                                        }}
-                                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
-                                                                                                    >
-                                                                                                        <KeyIcon className="h-4 w-4" />
-                                                                                                    </button>
-                                                                                                    <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('reservations.sendPasscode.title')}
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                
-                                                                                                {/* Details Button */}
-                                                                                                <div className="relative group">
-                                                                                                    <button
-                                                                                                        onClick={(e) => {
-                                                                                                            e.stopPropagation();
-                                                                                                            navigate(`/reservations/${reservation.id}`);
-                                                                                                        }}
-                                                                                                        className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                                                                                                    >
-                                                                                                        <InformationCircleIcon className="h-4 w-4" />
-                                                                                                    </button>
-                                                                                                    <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                                        {t('common.viewDetails')}
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            </>
+                                                                                            </div>
                                                                                         )}
+                                                                                        
+                                                                                        {/* Key-Button für PIN-Generierung */}
+                                                                                        {canSendReservationPasscode(reservation) && (
+                                                                                            <div className="relative group">
+                                                                                                <button
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        setSelectedReservationForPasscode(reservation);
+                                                                                                        setIsSendPasscodeSidepaneOpen(true);
+                                                                                                    }}
+                                                                                                    className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300"
+                                                                                                >
+                                                                                                    <KeyIcon className="h-4 w-4" />
+                                                                                                </button>
+                                                                                                <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                    {t('reservations.sendPasscode.title')}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        )}
+                                                                                        
+                                                                                        {/* Details Button - immer sichtbar wenn Tab zugänglich */}
+                                                                                        <div className="relative group">
+                                                                                            <button
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    navigate(`/reservations/${reservation.id}`);
+                                                                                                }}
+                                                                                                className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                                            >
+                                                                                                <InformationCircleIcon className="h-4 w-4" />
+                                                                                            </button>
+                                                                                            <div className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                                {t('common.viewDetails')}
+                                                                                            </div>
+                                                                                        </div>
                                                                                     </div>
                                                                                 </td>
                                                                             );
@@ -3716,8 +3770,8 @@ const Worktracker: React.FC = () => {
                     {/* Header mit Create-Button */}
                     <div className="flex items-center gap-1.5">
                         {/* Create-Button - LINKS positioniert */}
-                        {/* ✅ FIX: tour_bookings als 'tab' prüfen, nicht 'table' */}
-                        {hasPermission('tour_bookings', 'write', 'tab') && (
+                        {/* ✅ BUTTON-BERECHTIGUNGEN: tour_booking_create Button prüfen */}
+                        {hasPermission('tour_booking_create', 'write', 'button') && (
                             <div className="relative group">
                                 <button
                                     onClick={() => setIsCreateTourBookingModalOpen(true)}
@@ -3929,8 +3983,8 @@ const Worktracker: React.FC = () => {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <div className="flex items-center gap-2">
-                                                        {/* ✅ FIX: tour_bookings als 'tab' prüfen, nicht 'table' */}
-                                                        {hasPermission('tour_bookings', 'write', 'tab') && (
+                                                        {/* ✅ BUTTON-BERECHTIGUNGEN: tour_booking_edit Button prüfen */}
+                                                        {hasPermission('tour_booking_edit', 'write', 'button') && (
                                                             <button
                                                                 onClick={() => {
                                                                     setSelectedBookingForEdit(booking);

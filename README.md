@@ -31,6 +31,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [ENTWICKLUNGSUMGEBUNG.md](docs/core/ENTWICKLUNGSUMGEBUNG.md) - Setup der Entwicklungsumgebung
 - [ARCHITEKTUR.md](docs/technical/ARCHITEKTUR.md) - Systemarchitektur und Technologie-Stack
 - [CODING_STANDARDS.md](docs/core/CODING_STANDARDS.md) - Programmierrichtlinien und Best Practices
+- [BERECHTIGUNGEN_BUTTON_STANDARD.md](docs/core/BERECHTIGUNGEN_BUTTON_STANDARD.md) - ⚠️ **KRITISCH: Standard für Button-Berechtigungen**
 - [DESIGN_STANDARDS.md](docs/core/DESIGN_STANDARDS.md) - UI/UX-Designrichtlinien und Komponenten
 - [FRONTEND_TECHNOLOGIEN.md](docs/technical/FRONTEND_TECHNOLOGIEN.md) - Frontend-Technologien und Best Practices
 

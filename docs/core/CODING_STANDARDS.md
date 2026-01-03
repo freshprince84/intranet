@@ -6,16 +6,17 @@ Dieses Dokument definiert die verbindlichen Coding-Standards für das Intranet-P
 
 1. [🚨 STRENGSTENS VERBOTEN: Vermutungen bei Analysen und Planungen](#-strengstens-verboten-vermutungen-bei-analysen-und-planungen)
 2. [⚠️ KRITISCH: Übersetzungen (I18N) - IMMER bei neuen Features!](#-kritisch-übersetzungen-i18n---immer-bei-neuen-features)
-3. [Allgemeine Richtlinien](#allgemeine-richtlinien)
-4. [TypeScript-Standards](#typescript-standards)
-5. [React Best Practices](#react-best-practices)
-6. [HTTP-Client-Standards](#http-client-standards)
-7. [Zeitzonenbehandlung](#zeitzonenbehandlung)
-8. [Fehlerbehandlung](#fehlerbehandlung)
-9. [Kommentare und Dokumentation](#kommentare-und-dokumentation)
-10. [Testing](#testing)
-11. [Performance](#performance)
-12. [DRY-Implementierung für UI-Komponenten](#dry-implementierung-für-ui-komponenten)
+3. [⚠️ KRITISCH: Berechtigungen für Buttons](#-kritisch-berechtigungen-für-buttons)
+4. [Allgemeine Richtlinien](#allgemeine-richtlinien)
+5. [TypeScript-Standards](#typescript-standards)
+6. [React Best Practices](#react-best-practices)
+7. [HTTP-Client-Standards](#http-client-standards)
+8. [Zeitzonenbehandlung](#zeitzonenbehandlung)
+9. [Fehlerbehandlung](#fehlerbehandlung)
+10. [Kommentare und Dokumentation](#kommentare-und-dokumentation)
+11. [Testing](#testing)
+12. [Performance](#performance)
+13. [DRY-Implementierung für UI-Komponenten](#dry-implementierung-für-ui-komponenten)
 
 ## 🚨 STRENGSTENS VERBOTEN: Vermutungen bei Analysen und Planungen
 
@@ -115,6 +116,59 @@ grep -r '"[A-ZÄÖÜ][a-zäöüß\s]+"' frontend/src --include="*.tsx" --include
 ```
 
 **Wenn dieser Befehl Ergebnisse liefert → Übersetzungen fehlen!**
+
+## ⚠️ KRITISCH: Berechtigungen für Buttons
+
+**🚨 GRUNDREGEL: Für jeden Button (Create, Edit, Delete) MUSS die entsprechende Button-Berechtigung geprüft werden, NICHT die übergeordnete Box/Tab-Berechtigung!**
+
+📖 **Vollständige Dokumentation:** [BERECHTIGUNGEN_BUTTON_STANDARD.md](BERECHTIGUNGEN_BUTTON_STANDARD.md)
+
+### Quick Reference:
+
+```tsx
+// ❌ FALSCH: Box/Tab-Berechtigung für Button
+{hasPermission('requests', 'write', 'table') && (
+  <button onClick={() => setIsCreateModalOpen(true)}>
+    <PlusIcon className="h-4 w-4" />
+  </button>
+)}
+
+// ✅ RICHTIG: Button-Berechtigung
+{hasPermission('request_create', 'write', 'button') && (
+  <button onClick={() => setIsCreateModalOpen(true)}>
+    <PlusIcon className="h-4 w-4" />
+  </button>
+)}
+```
+
+### Button-Entitäten (Namenskonvention):
+- Create: `{entity}_create` (z.B. `request_create`, `task_create`)
+- Edit: `{entity}_edit` (z.B. `request_edit`, `task_edit`)
+- Delete: `{entity}_delete` (z.B. `request_delete`, `task_delete`)
+
+### Ownership-Prüfung bei `own_both`:
+
+```tsx
+// ✅ RICHTIG: Button-Berechtigung mit Ownership-Prüfung
+{(() => {
+  const editAccessLevel = getAccessLevel('request_edit', 'button');
+  if (editAccessLevel === 'all_both') return true;
+  if (editAccessLevel === 'own_both') {
+    return request.requestedBy.id === user?.id || request.responsible.id === user?.id;
+  }
+  return false;
+})() && (
+  <button onClick={() => handleEdit(request)}>
+    <PencilIcon className="h-5 w-5" />
+  </button>
+)}
+```
+
+### Checkliste für neue Komponenten:
+- [ ] Button-Entitäten aus `frontend/src/config/permissions.ts` prüfen
+- [ ] Für jeden Button die entsprechende Button-Berechtigung verwenden
+- [ ] Bei `own_both`: Ownership-Prüfung hinzufügen
+- [ ] NIEMALS Box/Tab-Berechtigung für Buttons verwenden
 
 ### Weitere Ressourcen:
 

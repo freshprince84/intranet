@@ -57,8 +57,8 @@ const CerebroLayout: React.FC = () => {
     direction: 'asc' 
   });
   
-  // Berechtigungen
-  const canCreateArticle = hasPermission('cerebro', 'both', 'button') || hasPermission('cerebro', 'both', 'page');
+  // ✅ BUTTON-BERECHTIGUNGEN: Korrekte Button-Entität verwenden
+  const canCreateArticle = hasPermission('cerebro_article_create', 'write', 'button');
   
   // Spalten-Definitionen
   const cerebroColumns = useMemo(() => [

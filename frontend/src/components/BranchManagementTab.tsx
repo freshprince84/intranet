@@ -298,10 +298,10 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = () => {
     const { openSidepane, closeSidepane } = useSidepane();
     const { handleError: handleErrorContext } = useError();
 
-    // Berechtigungen prüfen
-    const canCreate = hasPermission('branches', 'write', 'table');
-    const canEdit = hasPermission('branches', 'write', 'table');
-    const canDelete = hasPermission('branches', 'write', 'table');
+    // Berechtigungen prüfen (Button-Berechtigungen)
+    const canCreate = hasPermission('branch_create', 'write', 'button');
+    const canEdit = hasPermission('branch_edit', 'write', 'button');
+    const canDelete = hasPermission('branch_delete', 'write', 'button');
 
     // Branches laden
     const fetchBranches = useCallback(async () => {

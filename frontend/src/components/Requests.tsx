@@ -233,7 +233,26 @@ const Requests: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const { user } = useAuth();
-  const { hasPermission, currentRole } = usePermissions();
+  const { hasPermission, getAccessLevel, currentRole } = usePermissions();
+  
+  // ✅ BUTTON-BERECHTIGUNGEN: Helper für Ownership-Prüfung
+  const canEditRequest = useCallback((request: Request): boolean => {
+    const editAccessLevel = getAccessLevel('request_edit', 'button');
+    if (editAccessLevel === 'all_both') return true;
+    if (editAccessLevel === 'own_both') {
+      return request.requestedBy.id === user?.id || request.responsible.id === user?.id;
+    }
+    return false;
+  }, [getAccessLevel, user?.id]);
+  
+  const canDeleteRequest = useCallback((request: Request): boolean => {
+    const deleteAccessLevel = getAccessLevel('request_delete', 'button');
+    if (deleteAccessLevel === 'all_both') return true;
+    if (deleteAccessLevel === 'own_both') {
+      return request.requestedBy.id === user?.id || request.responsible.id === user?.id;
+    }
+    return false;
+  }, [getAccessLevel, user?.id]);
   
   // Status-Funktionen (verwende zentrale Utils mit Übersetzungsunterstützung)
   // ❌ ENTFERNT: getStatusLabel Wrapper - getStatusText wird direkt verwendet (Phase 3)
@@ -1118,7 +1137,7 @@ const Requests: React.FC = () => {
       <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
           {/* Linke Seite: "Neuer Request"-Button */}
           <div className="flex items-center">
-            {hasPermission('requests', 'write', 'table') && (
+            {hasPermission('request_create', 'write', 'button') && (
               <div className="relative group">
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
@@ -1475,7 +1494,7 @@ const Requests: React.FC = () => {
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex space-x-2 action-buttons">
                                   <div className="status-buttons">
-                                  {request.status === 'approval' && hasPermission('requests', 'write', 'table') && (
+                                  {request.status === 'approval' && hasPermission('request_status_change', 'write', 'button') && (
                                     <>
                                       <div className="relative group">
                                         <button
@@ -1512,7 +1531,7 @@ const Requests: React.FC = () => {
                                       </div>
                                     </>
                                   )}
-                                  {request.status === 'to_improve' && hasPermission('requests', 'write', 'table') && (
+                                  {request.status === 'to_improve' && hasPermission('request_status_change', 'write', 'button') && (
                                     <>
                                       <div className="relative group">
                                         <button
@@ -1538,7 +1557,7 @@ const Requests: React.FC = () => {
                                       </div>
                                     </>
                                   )}
-                                  {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
+                                  {(request.status === 'approved' || request.status === 'denied') && hasPermission('request_status_change', 'write', 'button') && (
                                     <div className="relative group">
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'approval')}
@@ -1552,7 +1571,7 @@ const Requests: React.FC = () => {
                                     </div>
                                   )}
                                   </div>
-                                  {hasPermission('requests', 'write', 'table') && (
+                                  {canEditRequest(request) && (
                                     <button
                                       onClick={() => {
                                         setSelectedRequest(request);
@@ -1563,7 +1582,7 @@ const Requests: React.FC = () => {
                                       <PencilIcon className="h-5 w-5" />
                                     </button>
                                   )}
-                                  {hasPermission('requests', 'both', 'table') && (
+                                  {hasPermission('request_create', 'write', 'button') && (
                                     <div className="relative group">
                                       <button
                                         onClick={() => handleCopyRequest(request)}
@@ -1707,7 +1726,7 @@ const Requests: React.FC = () => {
                   const actionButtons = (
                     <div className="flex items-center space-x-2">
                       {/* Status-Buttons */}
-                      {request.status === 'approval' && hasPermission('requests', 'write', 'table') && (
+                      {request.status === 'approval' && hasPermission('request_status_change', 'write', 'button') && (
                         <>
                           <div className="relative group">
                             <button
@@ -1753,7 +1772,7 @@ const Requests: React.FC = () => {
                           </div>
                         </>
                       )}
-                      {request.status === 'to_improve' && hasPermission('requests', 'write', 'table') && (
+                      {request.status === 'to_improve' && hasPermission('request_status_change', 'write', 'button') && (
                         <>
                           <div className="relative group">
                             <button
@@ -1785,7 +1804,7 @@ const Requests: React.FC = () => {
                           </div>
                         </>
                       )}
-                      {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
+                      {(request.status === 'approved' || request.status === 'denied') && hasPermission('request_status_change', 'write', 'button') && (
                         <div className="relative group">
                           <button
                             onClick={(e) => {
@@ -1801,7 +1820,7 @@ const Requests: React.FC = () => {
                           </div>
                         </div>
                       )}
-                      {hasPermission('requests', 'write', 'table') && (
+                      {canEditRequest(request) && (
                         <div className="relative group">
                           <button
                             onClick={(e) => {
@@ -1818,7 +1837,7 @@ const Requests: React.FC = () => {
                           </div>
                         </div>
                       )}
-                      {hasPermission('requests', 'both', 'table') && (
+                      {hasPermission('request_create', 'write', 'button') && (
                         <div className="relative group">
                           <button
                             onClick={(e) => {
@@ -1854,10 +1873,10 @@ const Requests: React.FC = () => {
                       status={{
                         label: getStatusText(request.status, 'request', t),
                         color: getStatusColor(request.status, 'request'),
-                        onPreviousClick: previousStatus && hasPermission('requests', 'write', 'table')
+                        onPreviousClick: previousStatus && hasPermission('request_status_change', 'write', 'button')
                           ? () => handleStatusChange(request.id, previousStatus)
                           : undefined,
-                        onNextClick: firstNextStatus && hasPermission('requests', 'write', 'table')
+                        onNextClick: firstNextStatus && hasPermission('request_status_change', 'write', 'button')
                           ? () => handleStatusChange(request.id, firstNextStatus)
                           : undefined
                       }}

@@ -68,10 +68,8 @@ const ArticleEdit: React.FC = () => {
     };
   }, []); // Nur beim Unmount
   
-  // Überprüfen der Berechtigungen - an die richtigen Berechtigungen anpassen
-  const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
-  const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
-  const canEditArticles = hasCerebroButtonPermission || hasCerebroPagePermission;
+  // ✅ BUTTON-BERECHTIGUNGEN: Korrekte Button-Entität verwenden
+  const canEditArticles = hasPermission('cerebro_article_edit', 'write', 'button');
   
   // Medientyp bestimmen
   const getMediaType = (fileType: string): 'image' | 'video' | 'pdf' | 'other' => {

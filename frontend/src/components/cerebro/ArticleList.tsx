@@ -25,7 +25,8 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
   
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
-  const canCreateArticle = hasPermission('cerebro', 'write', 'cerebro');
+  // ✅ BUTTON-BERECHTIGUNGEN: Korrekte Button-Entität verwenden
+  const canCreateArticle = hasPermission('cerebro_article_create', 'write', 'button');
   
   // Artikel laden
   useEffect(() => {

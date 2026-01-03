@@ -457,31 +457,27 @@ const DataCard: React.FC<DataCardProps> = ({
     >
 
 
-      {/* Metadaten - strukturiertes Layout (für andere Komponenten) */}
+      {/* Metadaten - strukturiertes Layout */}
       {(() => {
         const hasCenterSection = metadata.filter(item => item.section === 'center').length > 0;
-        const relevantMetadata = metadata.filter(item => 
-          item.section !== 'full' && 
-          item.section !== 'main' && 
-          item.section !== 'main-second' && 
-          item.section !== 'right-inline'
-        );
+        const mainItems = metadata.filter(item => item.section === 'main' || item.section === 'main-second' || item.section === 'main-third');
+        const leftItems = metadata.filter(item => item.section === 'left');
+        const rightItems = metadata.filter(item => item.section === 'right');
+        const centerItems = metadata.filter(item => item.section === 'center');
+        const headerRightItems = metadata.filter(item => item.section === 'header-right' || item.section === 'right-inline');
+        const defaultItems = metadata.filter(item => !item.section && item.label !== 'Angefragt von' && item.label !== 'Verantwortlicher' && !item.descriptionContent);
         
-        // Wenn center-Section vorhanden ist, müssen left, center oder right vorhanden sein
-        // Wenn keine center-Section vorhanden ist, müssen left oder right vorhanden sein (aber nicht center)
-        const shouldRender = hasCenterSection 
-          ? (relevantMetadata.filter(item => item.section === 'left' || item.section === 'center' || item.section === 'right').length > 0)
-          : (relevantMetadata.filter(item => item.section === 'left' || item.section === 'right' || (!item.section && item.label !== 'Angefragt von' && item.label !== 'Verantwortlicher')).length > 0);
+        const hasContent = hasCenterSection || leftItems.length > 0 || rightItems.length > 0 || mainItems.length > 0 || defaultItems.length > 0 || status;
         
-        return shouldRender ? (
+        return hasContent ? (
         <div className="flex flex-col gap-3 sm:gap-4 mb-3 sm:mb-4">
-          {/* Titel + Datum oben (für alle) */}
-          <div className="flex items-center justify-between gap-2 mb-2">
+          {/* Zeile 1: Titel + Datum */}
+          <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
               {renderTitle(title, subtitle, 'desktop')}
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
-              {metadata.filter(item => item.section === 'header-right' || item.section === 'right-inline').map((item, index) => (
+              {headerRightItems.map((item, index) => (
                 <div key={index} className="flex items-center gap-1">
                   {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                   {item.label && <span className="font-medium">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
@@ -493,16 +489,35 @@ const DataCard: React.FC<DataCardProps> = ({
             </div>
           </div>
           
+          {/* Zeile 2: Status + Main-Felder (User etc.) */}
+          {(status || mainItems.length > 0) && (
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              {/* Status links */}
+              <div className="flex items-center gap-2">
+                {renderStatus(status, 'desktop', t)}
+              </div>
+              {/* Main-Felder rechts */}
+              <div className="flex items-center gap-3 flex-wrap">
+                {mainItems.map((item, index) => (
+                  <div key={index} className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400">
+                    {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                    {item.label && <span className="font-medium">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
+                    <span className={item.className || 'text-gray-900 dark:text-white'}>
+                      {typeof item.value === 'string' ? item.value : item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           {/* 3-Spalten-Layout für Reservations (wenn center-Section vorhanden) */}
-          {hasCenterSection ? (
+          {hasCenterSection && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                {/* Links: Telefon/Email/Branch */}
-                <div className="flex flex-col gap-2 items-start w-full">
-                {metadata.filter(item => item.section === 'left').map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 w-full"
-                  >
+              {/* Links */}
+              <div className="flex flex-col gap-2 items-start w-full">
+                {leftItems.map((item, index) => (
+                  <div key={index} className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 w-full">
                     {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                     {item.label && <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
                     <span className={`${item.className || 'text-gray-900 dark:text-white'} text-left`}>
@@ -512,13 +527,10 @@ const DataCard: React.FC<DataCardProps> = ({
                 ))}
               </div>
               
-              {/* Mitte: Links (Zahlungslink, Check-in Link) */}
+              {/* Mitte */}
               <div className="flex flex-col gap-2 items-center">
-                {metadata.filter(item => item.section === 'center').map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400"
-                  >
+                {centerItems.map((item, index) => (
+                  <div key={index} className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400">
                     {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                     {item.label && <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
                     <span className={`${item.className || 'text-gray-900 dark:text-white'} break-words`}>
@@ -528,9 +540,9 @@ const DataCard: React.FC<DataCardProps> = ({
                 ))}
               </div>
               
-              {/* Rechts: Status-Badges und Rest - rechtsbündig ausgerichtet */}
+              {/* Rechts */}
               <div className="flex flex-col gap-2 items-end">
-                {metadata.filter(item => item.section === 'right').map((item, index) => (
+                {rightItems.map((item, index) => (
                   <div key={index} className="flex items-end gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 justify-end">
                     {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                     {item.label && <span className="font-medium whitespace-nowrap text-right">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
@@ -541,61 +553,30 @@ const DataCard: React.FC<DataCardProps> = ({
                 ))}
               </div>
             </div>
-          ) : (
-            <>
-              {/* Links: Niederlassung (meist ausgeblendet) - nur wenn keine center-Section */}
-              {metadata.filter(item => item.section === 'left').length > 0 && (
-                <div className="flex flex-wrap gap-2 sm:gap-3">
-                  {metadata.filter(item => item.section === 'left').map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400"
-                    >
-                      {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                      {item.label && <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
-                      <span className={item.className || 'text-gray-900 dark:text-white'}>
-                        {typeof item.value === 'string' ? item.value : item.value}
-                      </span>
-                    </div>
-                  ))}
+          )}
+          
+          {/* Wenn keine center-Section: left + default items */}
+          {!hasCenterSection && (leftItems.length > 0 || defaultItems.length > 0) && (
+            <div className="flex flex-col gap-2 sm:gap-2.5">
+              {leftItems.map((item, index) => (
+                <div key={`left-${index}`} className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400">
+                  {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                  {item.label && <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>}
+                  <span className={item.className || 'text-gray-900 dark:text-white'}>
+                    {typeof item.value === 'string' ? item.value : item.value}
+                  </span>
                 </div>
-              )}
-
-              {/* Haupt-Metadaten: Alle außer "Angefragt von" und "Verantwortlicher" (die sind jetzt im Header) */}
-              {metadata.filter(item => {
-                const section = item.section;
-                if (section === 'main' || section === 'main-second' || section === 'right-inline' || section === 'center') return false;
-                return !section && item.label !== 'Angefragt von' && item.label !== 'Verantwortlicher';
-              }).length > 0 && (
-                <div className="flex flex-col gap-2 sm:gap-2.5">
-                  {metadata
-                    .filter(item => {
-                      const section = item.section;
-                      if (section === 'main' || section === 'main-second' || section === 'right-inline' || section === 'center') return false;
-                      return !section && item.label !== 'Angefragt von' && item.label !== 'Verantwortlicher';
-                    })
-                    .map((item, index) => {
-                      // Spezielle Behandlung für Beschreibung mit expandierbarem Inhalt
-                      if (item.descriptionContent) {
-                        return <DescriptionMetadataItem key={index} item={item} />;
-                      }
-                      
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400"
-                        >
-                          {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                          <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>
-                          <span className={`flex-1 min-w-0 break-words ${item.className || 'text-gray-900 dark:text-white'}`}>
-                            {typeof item.value === 'string' ? item.value : item.value}
-                          </span>
-                        </div>
-                      );
-                    })}
+              ))}
+              {defaultItems.map((item, index) => (
+                <div key={`default-${index}`} className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400">
+                  {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                  <span className="font-medium mr-1 sm:mr-2 whitespace-nowrap">{item.label.endsWith(':') ? item.label : `${item.label}:`}</span>
+                  <span className={`flex-1 min-w-0 break-words ${item.className || 'text-gray-900 dark:text-white'}`}>
+                    {typeof item.value === 'string' ? item.value : item.value}
+                  </span>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
         </div>
         ) : null;

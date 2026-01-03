@@ -1373,9 +1373,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 onEdit={prepareRoleForEditing}
                 onDelete={handleDelete}
                 onCopy={handleCopyRole}
-                canEdit={!readOnly && hasPermission('roles', 'write', 'table') && !isStandardRole(role.id, role.name)}
-                canDelete={!readOnly && hasPermission('roles', 'write', 'table') && !isStandardRole(role.id, role.name)}
-                canCopy={!readOnly && hasPermission('roles', 'write', 'table') && isStandardRole(role.id, role.name)}
+                canEdit={!readOnly && hasPermission('role_edit', 'write', 'button') && !isStandardRole(role.id, role.name)}
+                canDelete={!readOnly && hasPermission('role_delete', 'write', 'button') && !isStandardRole(role.id, role.name)}
+                canCopy={!readOnly && hasPermission('role_copy', 'write', 'button') && isStandardRole(role.id, role.name)}
               />
             ))}
           </div>
@@ -1410,9 +1410,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 onEdit={prepareRoleForEditing}
                 onDelete={handleDelete}
                 onCopy={handleCopyRole}
-                canEdit={!readOnly && hasPermission('roles', 'write', 'table') && !isStandardRole(role.id, role.name)}
-                canDelete={!readOnly && hasPermission('roles', 'write', 'table') && !isStandardRole(role.id, role.name)}
-                canCopy={!readOnly && hasPermission('roles', 'write', 'table') && isStandardRole(role.id, role.name)}
+                canEdit={!readOnly && hasPermission('role_edit', 'write', 'button') && !isStandardRole(role.id, role.name)}
+                canDelete={!readOnly && hasPermission('role_delete', 'write', 'button') && !isStandardRole(role.id, role.name)}
+                canCopy={!readOnly && hasPermission('role_copy', 'write', 'button') && isStandardRole(role.id, role.name)}
               />
             ))}
           </div>
@@ -1535,7 +1535,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         <div className="flex items-center justify-between mb-4">
           {/* Linke Seite: "Neue Rolle erstellen"-Button */}
           <div className="flex items-center">
-            {!readOnly && hasPermission('roles', 'write', 'table') && (
+            {!readOnly && hasPermission('role_create', 'write', 'button') && (
               <div className="relative group">
                 <button
                   onClick={() => setIsModalOpen(true)}
