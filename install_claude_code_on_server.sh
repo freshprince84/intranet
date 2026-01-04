@@ -20,26 +20,20 @@ apt-get update -qq
 apt-get install -y curl wget git build-essential
 
 echo ""
-echo "2. Node.js installieren (falls nicht vorhanden)..."
-if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    apt-get install -y nodejs
-fi
-
-echo "   Node Version: $(node --version)"
-echo "   NPM Version: $(npm --version)"
+echo "2. Claude Code CLI installieren (via offizielles Installations-Script)..."
+curl -fsSL https://claude.ai/install.sh | bash
 
 echo ""
-echo "3. Claude Code CLI installieren..."
-npm install -g @anthropic-ai/claude-code
+echo "3. Prüfe Claude Code Installation..."
+# Reload PATH
+export PATH="$HOME/.local/bin:$PATH"
 
-echo ""
-echo "4. Prüfe Claude Code Installation..."
-if command -v claude-code &> /dev/null; then
+if command -v claude &> /dev/null; then
     echo "✓ Claude Code erfolgreich installiert!"
-    claude-code --version
+    claude --version
 else
     echo "✗ Installation fehlgeschlagen!"
+    echo "Bitte prüfe: ls -la ~/.local/bin/ | grep claude"
     exit 1
 fi
 
@@ -52,12 +46,19 @@ echo "Nächste Schritte:"
 echo "1. API Key setzen:"
 echo "   export ANTHROPIC_API_KEY='dein-api-key'"
 echo ""
-echo "2. Claude Code starten:"
-echo "   cd /var/www/intranet"
-echo "   claude-code"
+echo "2. PATH updaten (wichtig!):"
+echo "   export PATH=\"\$HOME/.local/bin:\$PATH\""
+echo "   # Oder: source ~/.bashrc"
 echo ""
-echo "3. Oder im Hintergrund mit Screen:"
+echo "3. Installation prüfen:"
+echo "   claude doctor"
+echo ""
+echo "4. Claude Code starten:"
+echo "   cd /var/www/intranet"
+echo "   claude"
+echo ""
+echo "5. Oder im Hintergrund mit Screen:"
 echo "   screen -S claude"
-echo "   claude-code"
+echo "   claude"
 echo "   # Detach mit: Ctrl+A dann D"
 echo ""
