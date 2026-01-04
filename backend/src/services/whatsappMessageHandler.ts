@@ -35,15 +35,15 @@ export class WhatsAppMessageHandler {
     groupId?: string
   ): Promise<string> {
     try {
-      // 0. LOGGING: Zeige dass handleIncomingMessage aufgerufen wurde
-      logger.log('[WhatsApp Message Handler] ⚡ handleIncomingMessage aufgerufen:', {
+      // 0. KRITISCHES LOGGING - sollte IMMER ausgegeben werden
+      logger.log('[WhatsApp Message Handler] ⚠️ HANDLE INCOMING MESSAGE CALLED:', {
         phoneNumber: phoneNumber,
         messageText: messageText?.substring(0, 50),
         branchId: branchId,
         mediaUrl: mediaUrl,
         groupId: groupId
       });
-
+      
       // 1. Normalisiere Telefonnummer
       const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
       logger.log('[WhatsApp Message Handler] Telefonnummer:', {

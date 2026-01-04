@@ -271,3 +271,4 @@ const canPerformAction = (
 **Erstellt:** 2025-01-31  
 **Status:** ✅ STANDARD DEFINIERT
 
+

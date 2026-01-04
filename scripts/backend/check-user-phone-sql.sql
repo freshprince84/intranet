@@ -84,3 +84,4 @@ LEFT JOIN "User" u ON wc."userId" = u.id
 WHERE wc."phoneNumber" LIKE '%41787192338%'
 ORDER BY wc."lastMessageAt" DESC;
 
+

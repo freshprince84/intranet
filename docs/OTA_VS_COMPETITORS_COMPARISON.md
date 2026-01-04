@@ -159,3 +159,4 @@
 - Behält Flexibilität (andere Quellen können OTAListings erstellen)
 - Klare Trennung: Verwaltung vs. Anzeige
 
+

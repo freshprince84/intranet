@@ -187,3 +187,4 @@ Die LobbyPMS API filtert gecancelte Reservationen komplett aus:
 4. ⏭️ Testing auf Produktivserver
 
 
+

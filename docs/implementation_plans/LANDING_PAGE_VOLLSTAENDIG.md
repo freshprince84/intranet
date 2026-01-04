@@ -217,3 +217,4 @@ Dieses Dokument fasst alle Analysen, Pläne und Umsetzungen zur Landing Page zus
 - **Spanisch**: `frontend/src/i18n/locales/es.json` - Key: `landing.*`
 
 
+

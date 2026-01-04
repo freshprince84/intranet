@@ -235,3 +235,4 @@ Die Konvertierung erfolgt automatisch in:
 - **Vorteil:** Einheitliche Definitionen, einfache Wartung
 
 
+

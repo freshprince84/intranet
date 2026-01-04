@@ -156,3 +156,4 @@ return (
 - **Mobile:** Fixed Bottom Sheet mit korrekter Position und Höhenbegrenzung
 - **Desktop:** Static Position, normale Höhe, kein Overflow-Hidden, vollständig sichtbar
 
+
