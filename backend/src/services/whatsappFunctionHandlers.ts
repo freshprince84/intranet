@@ -326,9 +326,27 @@ export class WhatsAppFunctionHandlers {
       
       // 4. Parse Arguments
       const status = args.status;
-      const dueDate = args.dueDate === 'today' 
-        ? new Date() 
-        : args.dueDate ? new Date(args.dueDate) : undefined;
+      
+      // OPTIMIERUNG: Besseres Datum-Parsing (behebt Invalid Date Error)
+      let dueDate: Date | undefined = undefined;
+      if (args.dueDate) {
+        if (args.dueDate === 'today') {
+          dueDate = new Date();
+        } else {
+          // Prüfe, ob das Datum gültig ist
+          const parsedDate = new Date(args.dueDate);
+          if (!isNaN(parsedDate.getTime())) {
+            dueDate = parsedDate;
+          } else {
+            logger.warn('[WhatsApp Function Handlers] Ungültiges Datum in get_todos:', {
+              dueDate: args.dueDate,
+              userId: userId
+            });
+            // Ignoriere ungültiges Datum statt Fehler zu werfen
+          }
+        }
+      }
+      
       const targetUserId = args.userId || userId;
       
       // 5. Baue Where-Clause

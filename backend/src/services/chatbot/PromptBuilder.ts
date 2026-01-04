@@ -50,7 +50,7 @@ export class PromptBuilder {
     // 1. Language-Instructions (ganz am Anfang für maximale Priorität)
     const languageInstruction = this.getLanguageInstructions(finalLanguage);
     components.push(languageInstruction);
-    components.push(languageInstruction); // Wiederholung für maximale Betonung
+    // OPTIMIERUNG: Wiederholung entfernt - eine Anweisung reicht aus (~500-800 Tokens gespart)
     
     // 2. Basis-Prompt
     components.push(this.getBasePrompt(finalLanguage, aiConfig));

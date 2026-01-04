@@ -185,8 +185,19 @@ export class WhatsAppAiService {
     // 4. Prüfe ob Function Calling aktiviert werden soll
     // WICHTIG: check_room_availability sollte auch für Gäste verfügbar sein!
     const isEmployee = !!conversationContext?.userId;
-    // Für Zimmerverfügbarkeit: Function auch für Gäste aktivieren
-    const functionDefinitions = this.getFunctionDefinitions();
+    
+    // OPTIMIERUNG: Function Definitions nur senden, wenn wahrscheinlich benötigt
+    // Prüfe, ob die Nachricht wahrscheinlich eine Function benötigt (z.B. "todos", "requests", "buchen", etc.)
+    const messageLower = message.toLowerCase().trim();
+    const needsFunctionCalling = WhatsAppAiService.messageNeedsFunctionCalling(messageLower, conversationContext);
+    const functionDefinitions = needsFunctionCalling ? this.getFunctionDefinitions() : [];
+    
+    if (!needsFunctionCalling) {
+      logger.log('[WhatsApp AI Service] Function Definitions nicht gesendet (Nachricht benötigt wahrscheinlich keine Functions):', {
+        message: message.substring(0, 50),
+        reason: 'Einfache Nachricht ohne Function-Keywords'
+      });
+    }
 
     // 5. Rufe OpenAI API auf
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -265,13 +276,26 @@ export class WhatsAppAiService {
         }
       }
       
+      // OPTIMIERUNG: Message History nur senden, wenn wahrscheinlich benötigt
+      // Prüfe, ob die Nachricht sehr kurz ist und keine Konversations-Kontext-Wörter enthält
+      const needsMessageHistory = WhatsAppAiService.messageNeedsHistory(message, messageHistory.length);
+      const messagesToSend = needsMessageHistory ? messageHistory : [];
+      
+      if (!needsMessageHistory && messageHistory.length > 0) {
+        logger.log('[WhatsApp AI Service] Message History nicht gesendet (Nachricht benötigt wahrscheinlich keinen Kontext):', {
+          message: message.substring(0, 50),
+          historyLength: messageHistory.length,
+          reason: 'Einfache Nachricht ohne Konversations-Kontext'
+        });
+      }
+      
       // Erster API Call (mit Function Definitions, falls aktiviert)
       const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
           {
             role: 'system',
             content: systemPrompt
           },
-        ...messageHistory, // Füge Message History hinzu
+        ...messagesToSend, // OPTIMIERUNG: Nur relevante History
           {
             role: 'user',
             content: message
@@ -1323,6 +1347,99 @@ export class WhatsAppAiService {
     // Keine Sprache erkannt
     logger.log(`[detectLanguageFromMessage] Keine Sprache erkannt für: "${message.substring(0, 50)}"`);
     return null;
+  }
+
+  /**
+   * Prüft ob eine Nachricht wahrscheinlich Function Calling benötigt
+   * 
+   * @param messageLower - Nachricht in Kleinbuchstaben
+   * @param conversationContext - Conversation Context
+   * @returns true wenn Function Calling wahrscheinlich benötigt wird
+   */
+  private static messageNeedsFunctionCalling(messageLower: string, conversationContext?: any): boolean {
+    // Sehr kurze Nachrichten (Begrüßungen, Smalltalk) benötigen keine Functions
+    if (messageLower.length < 10) {
+      const simpleGreetings = ['hallo', 'hi', 'hola', 'hey', 'guten tag', 'buenos días', 'buenas', 'danke', 'gracias', 'thanks', 'ok', 'okay', 'ja', 'si', 'nein', 'no'];
+      if (simpleGreetings.some(greeting => messageLower.includes(greeting))) {
+        return false;
+      }
+    }
+    
+    // Keywords, die auf Function-Anfragen hindeuten
+    const functionKeywords = [
+      // Daten-Abfragen
+      'todos', 'todo', 'tasks', 'aufgaben', 'tareas',
+      'requests', 'request', 'solicitudes', 'solicitud',
+      'arbeitszeit', 'worktime', 'tiempo de trabajo',
+      'cerebro', 'artikel', 'articles',
+      'user', 'usuario', 'benutzer', 'wer bin ich', 'quien soy', 'who am i',
+      
+      // Buchungen
+      'buchen', 'reservar', 'reservation', 'reservación', 'buchung',
+      'verfügbarkeit', 'availability', 'disponibilidad',
+      'zimmer', 'room', 'habitación', 'dorm', 'dormitory',
+      'tour', 'tours', 'touren',
+      
+      // Konversations-Kontext (könnte Function benötigen)
+      'meine', 'my', 'mis', 'mein', 'mi',
+      'heute', 'today', 'hoy',
+      'morgen', 'tomorrow', 'mañana',
+      'woche', 'week', 'semana',
+      'offen', 'open', 'abiertos', 'abiertas',
+      'status', 'estado',
+      'fällig', 'due', 'vencimiento'
+    ];
+    
+    // Prüfe, ob die Nachricht Function-Keywords enthält
+    const hasFunctionKeywords = functionKeywords.some(keyword => messageLower.includes(keyword));
+    
+    // Wenn Context vorhanden ist (z.B. aktive Buchung), könnte Function benötigt werden
+    const hasActiveContext = conversationContext?.booking || conversationContext?.tour;
+    
+    return hasFunctionKeywords || hasActiveContext;
+  }
+
+  /**
+   * Prüft ob eine Nachricht Message History benötigt
+   * 
+   * @param message - Original-Nachricht
+   * @param historyLength - Anzahl der History-Nachrichten
+   * @returns true wenn Message History wahrscheinlich benötigt wird
+   */
+  private static messageNeedsHistory(message: string, historyLength: number): boolean {
+    // Wenn keine History vorhanden ist, brauchen wir sie auch nicht zu senden
+    if (historyLength === 0) {
+      return false;
+    }
+    
+    const messageLower = message.toLowerCase().trim();
+    
+    // Sehr kurze Nachrichten (< 15 Zeichen) ohne Kontext-Wörter benötigen keine History
+    if (messageLower.length < 15) {
+      const simpleResponses = ['ok', 'okay', 'ja', 'si', 'yes', 'nein', 'no', 'danke', 'gracias', 'thanks', 'hallo', 'hi', 'hola', 'hey'];
+      if (simpleResponses.some(response => messageLower === response || messageLower.startsWith(response + ' '))) {
+        return false;
+      }
+    }
+    
+    // Nachrichten mit Konversations-Kontext-Wörtern benötigen History
+    const contextKeywords = [
+      'das', 'dies', 'this', 'ese', 'esa',
+      'vorher', 'before', 'antes',
+      'nochmal', 'again', 'otra vez',
+      'was', 'what', 'qué',
+      'wie', 'how', 'cómo',
+      'warum', 'why', 'por qué',
+      'wann', 'when', 'cuándo',
+      'wo', 'where', 'dónde'
+    ];
+    
+    const hasContextKeywords = contextKeywords.some(keyword => messageLower.includes(keyword));
+    
+    // Wenn die Nachricht sehr lang ist (> 50 Zeichen), könnte History hilfreich sein
+    const isLongMessage = message.length > 50;
+    
+    return hasContextKeywords || isLongMessage;
   }
 
   /**
