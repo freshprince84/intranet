@@ -162,6 +162,18 @@ export class WhatsAppMessageHandler {
       mergedContext.language = language;
       await ContextService.updateContext(conversation.id, { language }, 'WhatsAppConversation');
       
+      // KRITISCH: Füge userId und roleId zu mergedContext hinzu (für Function Handlers)
+      if (user) {
+        mergedContext.userId = user.id;
+        mergedContext.roleId = roleId;
+        logger.log('[WhatsApp Message Handler] ✅ userId und roleId zu mergedContext hinzugefügt:', {
+          userId: user.id,
+          roleId: roleId
+        });
+      } else {
+        logger.warn('[WhatsApp Message Handler] ⚠️ KEIN USER GEFUNDEN - userId und roleId werden NICHT zu mergedContext hinzugefügt!');
+      }
+      
       // 2.5. Erstelle Notification für User (wenn User gefunden)
       if (user) {
         try {

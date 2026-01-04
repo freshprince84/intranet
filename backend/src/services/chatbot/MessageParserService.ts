@@ -26,6 +26,8 @@ export interface ParsedMessage {
  */
 export interface ConversationContext {
   language: string; // IMMER vorhanden
+  userId?: number | null; // User ID (für Function Handlers)
+  roleId?: number | null; // Role ID (für Function Handlers)
   booking?: {
     checkInDate?: string;
     checkOutDate?: string;
